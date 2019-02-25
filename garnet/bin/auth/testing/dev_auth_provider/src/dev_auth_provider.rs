@@ -211,30 +211,19 @@ mod tests {
     use fidl_fuchsia_auth::AuthProviderProxy;
     use fuchsia_zircon as zx;
 
-    fn set_up() -> Result<(fasync::Executor, AuthProviderProxy), failure::Error> {
-        let exec = fasync::Executor::new()?;
-        let (server_chan, client_chan) = zx::Channel::create()?;
-        let client_chan = fasync::Channel::from_channel(client_chan)?;
+    fn get_auth_provider_connection_proxy() -> AuthProviderProxy {
+        let (server_chan, client_chan) = zx::Channel::create().expect("Channel creation failed.");
+        let client_chan = fasync::Channel::from_channel(client_chan)
+            .expect("Channel client creation failed.");
         let server_end = ServerEnd::<AuthProviderMarker>::new(server_chan);
         AuthProvider::spawn(server_end);
-        let proxy = AuthProviderProxy::new(client_chan);
-        Ok((exec, proxy))
+        AuthProviderProxy::new(client_chan)
     }
 
-    fn async_test<F, Fut>(f: F)
-    where
-        F: FnOnce(AuthProviderProxy) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let (mut exec, dev_auth_provider) = set_up().expect("Test set up should not have failed.");
-        let test_fut = f(dev_auth_provider);
-        exec.run_singlethreaded(test_fut)
-            .expect("executor run failed.")
-    }
-
-    #[test]
-    fn test_get_persistent_credential() {
-        async_test(|dev_auth_provider| {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_persistent_credential() -> Result<(), Error> {
+        let dev_auth_provider = get_auth_provider_connection_proxy();
+        await!(
             dev_auth_provider
                 .get_persistent_credential(None, None)
                 .map_ok(move |response| {
@@ -257,15 +246,16 @@ mod tests {
                     assert!(url.unwrap().contains(USER_PROFILE_INFO_URL));
                     assert!(image_url.unwrap().contains(USER_PROFILE_INFO_IMAGE_URL));
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_access_token() {
-        async_test(|dev_auth_provider| {
-            let credential = "rt_".to_string() + &generate_random_string();
-            let client_id = generate_random_string();
-            let mut scopes = vec![].into_iter();
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_access_token() -> Result<(), Error> {
+        let dev_auth_provider = get_auth_provider_connection_proxy();
+        let credential = "rt_".to_string() + &generate_random_string();
+        let client_id = generate_random_string();
+        let mut scopes = vec![].into_iter();
+        await!(
             dev_auth_provider
                 .get_app_access_token(&credential, Some(&client_id), &mut scopes)
                 .map_ok(move |response| match response {
@@ -283,13 +273,14 @@ mod tests {
                         "AuthProviderStatus not correct. Or response doesn't contain access_token."
                     ),
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_id_token() {
-        async_test(|dev_auth_provider| {
-            let credential = "rt_".to_string() + &generate_random_string();
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_id_token() -> Result<(), Error> {
+        let dev_auth_provider = get_auth_provider_connection_proxy();
+        let credential = "rt_".to_string() + &generate_random_string();
+        await!(
             dev_auth_provider
                 .get_app_id_token(&credential, None)
                 .map_ok(move |response| match response {
@@ -303,12 +294,13 @@ mod tests {
                         "AuthProviderStatus not correct. Or response doesn't contain id_token."
                     ),
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_firebase_token() {
-        async_test(|dev_auth_provider| {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_firebase_token() -> Result<(), Error> {
+        let dev_auth_provider = get_auth_provider_connection_proxy();
+        await!(
             dev_auth_provider
                 .get_app_firebase_token("test_id_token", "test_firebase_api_key")
                 .map_ok(move |response| match response {
@@ -321,19 +313,20 @@ mod tests {
                          firebase_token."
                     ),
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_revoke_app_or_persistent_credential() {
-        async_test(|dev_auth_provider| {
-            let credential = "testing_credential";
+    #[fasync::run_until_stalled(test)]
+    async fn test_revoke_app_or_persistent_credential() -> Result<(), Error> {
+        let dev_auth_provider = get_auth_provider_connection_proxy();
+        let credential = "testing_credential";
+        await!(
             dev_auth_provider
                 .revoke_app_or_persistent_credential(credential)
                 .map_ok(move |response| {
                     assert_eq!(response, AuthProviderStatus::Ok);
                 })
-        });
+        )
     }
 
 }

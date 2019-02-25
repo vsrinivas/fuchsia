@@ -218,14 +218,13 @@ mod tests {
     use fidl_fuchsia_auth::CredentialEcKey;
     use fuchsia_zircon as zx;
 
-    fn set_up() -> Result<(fasync::Executor, AuthProviderProxy), failure::Error> {
-        let exec = fasync::Executor::new()?;
-        let (server_chan, client_chan) = zx::Channel::create()?;
-        let client_chan = fasync::Channel::from_channel(client_chan)?;
+    fn get_auth_provider_proxy() -> AuthProviderProxy {
+        let (server_chan, client_chan) = zx::Channel::create().expect("Failed to create channel");
+        let client_chan = fasync::Channel::from_channel(client_chan)
+            .expect("Failed to create channel client");
         let server_end = ServerEnd::<AuthProviderMarker>::new(server_chan);
         AuthProvider::spawn(server_end);
-        let proxy = AuthProviderProxy::new(client_chan);
-        Ok((exec, proxy))
+        AuthProviderProxy::new(client_chan)
     }
 
     // Returns the client_end of the 'AttestationSigner' component.
@@ -246,91 +245,85 @@ mod tests {
         };
     }
 
-    fn async_test<F, Fut>(f: F)
-    where
-        F: FnOnce(AuthProviderProxy) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let (mut exec, dev_auth_provider_iotid) =
-            set_up().expect("Test set up should not have failed.");
-        let test_fut = f(dev_auth_provider_iotid);
-        exec.run_singlethreaded(test_fut)
-            .expect("executor run failed.")
-    }
-
-    #[test]
-    fn test_get_persistent_credential() {
-        async_test(|dev_auth_provider_iotid| {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_persistent_credential() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        await!(
             dev_auth_provider_iotid
                 .get_persistent_credential(None, None)
                 .map_ok(move |response| {
                     let (status, _, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_access_token() {
-        async_test(|dev_auth_provider_iotid| {
-            let credential = "rt_".to_string() + &generate_random_string();
-            let client_id = generate_random_string();
-            let mut scopes = vec![].into_iter();
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_access_token() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        let credential = "rt_".to_string() + &generate_random_string();
+        let client_id = generate_random_string();
+        let mut scopes = vec![].into_iter();
+        await!(
             dev_auth_provider_iotid
                 .get_app_access_token(&credential, Some(&client_id), &mut scopes)
                 .map_ok(move |response| {
                     let (status, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_id_token() {
-        async_test(|dev_auth_provider_iotid| {
-            let credential = "rt_".to_string() + &generate_random_string();
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_id_token() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        let credential = "rt_".to_string() + &generate_random_string();
+        await!(
             dev_auth_provider_iotid
                 .get_app_id_token(&credential, None)
                 .map_ok(move |response| {
                     let (status, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_firebase_token() {
-        async_test(|dev_auth_provider_iotid| {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_firebase_token() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        await!(
             dev_auth_provider_iotid
                 .get_app_firebase_token("test_id_token", "test_firebase_api_key")
                 .map_ok(move |response| {
                     let (status, _) = response;
                     assert_eq!(status, AuthProviderStatus::BadRequest);
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_revoke_app_or_persistent_credential() {
-        async_test(|dev_auth_provider_iotid| {
-            let credential = "testing_credential";
+    #[fasync::run_until_stalled(test)]
+    async fn test_revoke_app_or_persistent_credential() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        let credential = "testing_credential";
+        await!(
             dev_auth_provider_iotid
                 .revoke_app_or_persistent_credential(credential)
                 .map_ok(move |response| {
                     assert_eq!(response, AuthProviderStatus::Ok);
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_persistent_credential_from_attestation_jwt() {
-        async_test(|dev_auth_provider_iotid| {
-            let attestation_signer = get_attestation_signer();
-            let mut jwt_params = AttestationJwtParams {
-                credential_eckey: get_credential_key(),
-                certificate_chain: vec![],
-                auth_code: "test_auth_code".to_string(),
-            };
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_persistent_credential_from_attestation_jwt() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        let attestation_signer = get_attestation_signer();
+        let mut jwt_params = AttestationJwtParams {
+            credential_eckey: get_credential_key(),
+            certificate_chain: vec![],
+            auth_code: "test_auth_code".to_string(),
+        };
+        await!(
             dev_auth_provider_iotid
                 .get_persistent_credential_from_attestation_jwt(
                     attestation_signer,
@@ -370,20 +363,21 @@ mod tests {
                     );
                     assert!(id.contains(USER_PROFILE_INFO_ID_DOMAIN));
                 })
-        });
+        )
     }
 
-    #[test]
-    fn test_get_app_access_token_from_assertion_jwt() {
-        async_test(|dev_auth_provider_iotid| {
-            let attestation_signer = get_attestation_signer();
-            let mut jwt_params = AssertionJwtParams {
-                credential_eckey: get_credential_key(),
-                challenge: Some("test_challenge".to_string()),
-            };
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_access_token_from_assertion_jwt() -> Result<(), Error> {
+        let dev_auth_provider_iotid = get_auth_provider_proxy();
+        let attestation_signer = get_attestation_signer();
+        let mut jwt_params = AssertionJwtParams {
+            credential_eckey: get_credential_key(),
+            challenge: Some("test_challenge".to_string()),
+        };
 
-            let credential = "rt_".to_string() + &generate_random_string();
-            let mut scopes = vec![].into_iter();
+        let credential = "rt_".to_string() + &generate_random_string();
+        let mut scopes = vec![].into_iter();
+        await!(
             dev_auth_provider_iotid
                 .get_app_access_token_from_assertion_jwt(
                     attestation_signer,
@@ -413,6 +407,6 @@ mod tests {
                     assert_eq!(expires_in, CHALLENGE_LIFETIME.as_secs());
                     assert!(challenge.contains("ch_"));
                 })
-        });
+        )
     }
 }

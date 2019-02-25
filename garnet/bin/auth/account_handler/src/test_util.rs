@@ -118,14 +118,12 @@ mod tests {
 
     const TEST_DIR: &str = "/some/dir";
 
-    #[test]
-    fn test_context_fake() {
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_context_fake() {
         let fake_context = Arc::new(FakeAccountHandlerContext::new(TEST_DIR));
         let client_end = spawn_context_channel(fake_context.clone());
         let proxy = client_end.into_proxy().unwrap();
-        let dir_future = proxy.get_account_dir_parent();
-        let dir = executor.run_singlethreaded(dir_future).unwrap();
+        let dir = await!(proxy.get_account_dir_parent()).unwrap();
         assert_eq!(dir, TEST_DIR);
     }
 }
