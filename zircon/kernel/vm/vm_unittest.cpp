@@ -973,6 +973,55 @@ static bool vmo_lookup_test() {
     END_TEST;
 }
 
+static bool vmo_lookup_clone_test() {
+    BEGIN_TEST;
+    static const size_t page_count = 4;
+    static const size_t alloc_size = PAGE_SIZE * page_count;
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, alloc_size, &vmo);
+    ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
+
+    fbl::RefPtr<VmObject> clone;
+    status = vmo->CloneCOW(false, 0, alloc_size, false, &clone);
+    ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+    ASSERT_TRUE(clone, "vmobject creation\n");
+
+    // Commit the whole original VMO and the first and last page of the clone.
+    status = vmo->CommitRange(0, alloc_size);
+    ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+    status = clone->CommitRange(0, PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+    status = clone->CommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+
+    // Lookup the paddrs for both VMOs.
+    paddr_t vmo_lookup[page_count] = {};
+    paddr_t clone_lookup[page_count] = {};
+    auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
+        static_cast<paddr_t*>(ctx)[index] = pa;
+        return ZX_OK;
+    };
+    status = vmo->Lookup(0, alloc_size, lookup_func, &vmo_lookup);
+    EXPECT_EQ(ZX_OK, status, "vmo lookup\n");
+    status = clone->Lookup(0, alloc_size, lookup_func, &clone_lookup);
+    EXPECT_EQ(ZX_OK, status, "vmo lookup\n");
+
+    // Check that lookup returns a valid paddr for each index and that
+    // they match/don't match when appropriate.
+    for (unsigned i = 0; i < page_count; i++) {
+        EXPECT_NE(0ul, vmo_lookup[i], "Bad paddr\n");
+        EXPECT_NE(0ul, clone_lookup[i], "Bad paddr\n");
+        if (i == 0 || i == page_count - 1) {
+            EXPECT_NE(vmo_lookup[i], clone_lookup[i], "paddr mismatch");
+        } else {
+            EXPECT_EQ(vmo_lookup[i], clone_lookup[i], "paddr mismatch");
+        }
+    }
+
+    END_TEST;
+}
+
 // TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
@@ -1339,6 +1388,7 @@ VM_UNITTEST(vmo_double_remap_test)
 VM_UNITTEST(vmo_read_write_smoke_test)
 VM_UNITTEST(vmo_cache_test)
 VM_UNITTEST(vmo_lookup_test)
+VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(arch_noncontiguous_map)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last

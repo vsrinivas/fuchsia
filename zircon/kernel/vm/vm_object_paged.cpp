@@ -1152,7 +1152,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len,
                 if (status != ZX_OK) {
                     return ZX_ERR_NO_MEMORY;
                 }
-                const size_t index = (off - start_page_offset) / PAGE_SIZE;
+                const size_t index = (missing_off - start_page_offset) / PAGE_SIZE;
                 status = lookup_fn(context, missing_off, index, pa);
                 if (status != ZX_OK) {
                     if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
