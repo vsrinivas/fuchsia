@@ -277,10 +277,12 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 
 DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
     int dwarf_register_number, int64_t offset) {
+  auto reg = debug_ipc::DWARFToRegisterID(data_provider_->GetArch(),
+                                          dwarf_register_number);
   // This function doesn't set the result_type_ because it is called from
   // different contexts. The callers should set the result_type_ as appropriate
   // for their operation.
-  if (auto reg_data = data_provider_->GetRegister(dwarf_register_number)) {
+  if (auto reg_data = data_provider_->GetRegister(reg)) {
     // Register data available synchronously.
     Push(*reg_data + offset);
     return Completion::kSync;
@@ -288,8 +290,8 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
 
   // Must request async.
   data_provider_->GetRegisterAsync(
-      dwarf_register_number, [weak_eval = weak_factory_.GetWeakPtr(), offset](
-                                 const Err& err, uint64_t value) {
+      reg, [weak_eval = weak_factory_.GetWeakPtr(), offset](const Err& err,
+                                                            uint64_t value) {
         if (!weak_eval)
           return;
         if (err.has_error()) {

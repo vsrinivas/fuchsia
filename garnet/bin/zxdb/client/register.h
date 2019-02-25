@@ -45,18 +45,6 @@ class RegisterSet {
   // Shorthand for looking over the category map.
   const Register* operator[](debug_ipc::RegisterID) const;
 
-  // DWARF mapping -------------------------------------------------------------
-
-  // If the provided DWARF reg id doesn't match the architecture or is an
-  // unknown value, this will return null.
-  const Register* GetRegisterFromDWARF(uint32_t dwarf_reg_id) const;
-
-  // Value shorthands. Uses GetDWARFRegister.
-  bool GetRegisterValueFromDWARF(uint32_t dwarf_reg_id, uint64_t* out) const;
-  // For >64 bit long registers.
-  bool GetRegisterDataFromDWARF(uint32_t dwarf_reg_id,
-                                std::vector<uint8_t>* out) const;
-
  private:
   CategoryMap category_map_;
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;

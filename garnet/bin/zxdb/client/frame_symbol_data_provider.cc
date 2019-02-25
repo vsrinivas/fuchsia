@@ -10,7 +10,6 @@
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/client/register_dwarf.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
@@ -24,26 +23,30 @@ namespace {
 
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
+debug_ipc::Arch ArchForFrame(Frame* frame) {
+  if (!frame)
+    return debug_ipc::Arch::kUnknown;
+  return frame->GetThread()->session()->arch();
+}
+
 }  // namespace
 
 FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
-    : frame_(frame) {}
+    : frame_(frame), arch_(ArchForFrame(frame)) {}
 
 FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
 void FrameSymbolDataProvider::DisownFrame() { frame_ = nullptr; }
 
+debug_ipc::Arch FrameSymbolDataProvider::GetArch() { return arch_; }
+
 std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
-    int dwarf_register_number) {
+    debug_ipc::RegisterID id) {
   if (!frame_)
     return std::nullopt;
 
-  if (dwarf_register_number == kRegisterIP)
-    return frame_->GetAddress();
-
   // Some common registers are known without having to do a register request.
-  switch (GetSpecialRegisterTypeFromDWARFRegisterID(frame_->session()->arch(),
-                                                    dwarf_register_number)) {
+  switch (debug_ipc::GetSpecialRegisterType(id)) {
     case debug_ipc::SpecialRegisterType::kIP:
       return frame_->GetAddress();
     case debug_ipc::SpecialRegisterType::kSP:
@@ -59,7 +62,7 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
   return std::nullopt;
 }
 
-void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
+void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
                                                GetRegisterCallback callback) {
   // TODO(brettw) registers are not available except when this frame is the
   // top stack frame. Currently, there is no management of this and the frame
@@ -73,9 +76,9 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   // stack frames.
   if (!frame_ || !IsTopFrame()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [ dwarf_register_number, cb = std::move(callback) ]() {
-          cb(Err(fxl::StringPrintf("Register %d unavailable.",
-                                   dwarf_register_number)),
+        FROM_HERE, [id, cb = std::move(callback)]() {
+          cb(Err(fxl::StringPrintf("Register %s unavailable.",
+                                   debug_ipc::RegisterIDToString(id))),
              0);
         });
     return;
@@ -85,17 +88,14 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   // TODO: Other categories will need to be supported here (eg. floating point).
   frame_->GetThread()->ReadRegisters(
       {debug_ipc::RegisterCategory::Type::kGeneral},
-      [ dwarf_register_number, cb = std::move(callback) ](
-          const Err& err, const RegisterSet& regs) {
-        uint64_t value = 0;
+      [id, cb = std::move(callback)](const Err& err, const RegisterSet& regs) {
         if (err.has_error()) {
           cb(err, 0);
-        } else if (regs.GetRegisterValueFromDWARF(dwarf_register_number,
-                                                  &value)) {
-          cb(Err(), value);  // Success.
+        } else if (auto reg = regs[id]) {
+          cb(Err(), reg->GetValue());  // Success.
         } else {
-          cb(Err(fxl::StringPrintf("Register %d unavailable.",
-                                   dwarf_register_number)),
+          cb(Err(fxl::StringPrintf("Register %s unavailable.",
+                                   debug_ipc::RegisterIDToString(id))),
              0);
         }
       });
@@ -114,9 +114,8 @@ void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
     return;
   }
 
-  frame_->GetBasePointerAsync([cb = std::move(cb)](uint64_t value) {
-    cb(Err(), value);
-  });
+  frame_->GetBasePointerAsync(
+      [cb = std::move(cb)](uint64_t value) { cb(Err(), value); });
 }
 
 void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
@@ -133,7 +132,7 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   // system. Prevent those.
   if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [ address, size, cb = std::move(callback) ]() {
+        FROM_HERE, [address, size, cb = std::move(callback)]() {
           cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64
                                    " is too large.",
                                    size, address)),
@@ -143,8 +142,9 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   }
 
   frame_->GetThread()->GetProcess()->ReadMemory(
-      address, size, [ address, size, cb = std::move(callback) ](
-                         const Err& err, MemoryDump dump) {
+      address, size,
+      [address, size, cb = std::move(callback)](const Err& err,
+                                                MemoryDump dump) {
         if (err.has_error()) {
           cb(err, std::vector<uint8_t>());
           return;

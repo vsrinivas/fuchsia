@@ -23,15 +23,16 @@ class FrameSymbolDataProvider : public SymbolDataProvider {
   void DisownFrame();
 
   // SymbolDataProvider implementation:
-  std::optional<uint64_t> GetRegister(int dwarf_register_number) override;
-  void GetRegisterAsync(int dwarf_register_number,
+  debug_ipc::Arch GetArch() override;
+  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id) override;
+  void GetRegisterAsync(debug_ipc::RegisterID id,
                         GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
   void GetMemoryAsync(uint64_t address, uint32_t size,
                       GetMemoryCallback callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-      std::function<void(const Err&)> cb) override;
+                   std::function<void(const Err&)> cb) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(FrameSymbolDataProvider);
@@ -46,6 +47,7 @@ class FrameSymbolDataProvider : public SymbolDataProvider {
 
   // The associated frame, possibly null if the frame has been disowned.
   Frame* frame_;
+  debug_ipc::Arch arch_;
 };
 
 }  // namespace zxdb

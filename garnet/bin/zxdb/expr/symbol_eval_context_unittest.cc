@@ -87,6 +87,8 @@ void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
       });
 }
 
+const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
+
 }  // namespace
 
 TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
@@ -109,7 +111,7 @@ TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
 TEST_F(SymbolEvalContextTest, FoundSynchronous) {
   constexpr uint64_t kValue = 12345678;
   provider()->set_ip(0x1010);
-  provider()->AddRegisterValue(0, true, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
       fxl::WeakPtr<const ProcessSymbols>(),
@@ -132,7 +134,7 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
 
 TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
   constexpr uint64_t kValue = 12345678;
-  provider()->AddRegisterValue(0, false, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
@@ -212,7 +214,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
 
   // Our parameter "Derived* this = kObjectAddr" is passed in register 0.
   provider()->set_ip(0x1000);
-  provider()->AddRegisterValue(0, false, kObjectAddr);
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kObjectAddr);
   auto this_var = MakeVariableForTest(
       "this", derived_ptr, 0x1000, 0x2000,
       {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
@@ -263,7 +265,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
 // This is a larger test that runs the EvalContext through ExprNode.Eval.
 TEST_F(SymbolEvalContextTest, NodeIntegation) {
   constexpr uint64_t kValue = 12345678;
-  provider()->AddRegisterValue(0, false, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
   provider()->set_ip(0x1010);
 
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(

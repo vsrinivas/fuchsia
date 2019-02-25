@@ -33,12 +33,14 @@ class SymbolVariableResolverTest : public testing::Test {
   fxl::RefPtr<MockSymbolDataProvider> provider_;
 };
 
+const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
+
 }  // namespace
 
 // Test a lookup of the value where everything is found.
 TEST_F(SymbolVariableResolverTest, FoundAndNot) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider()->AddRegisterValue(0, true, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
 
   provider()->set_ip(0x1010);
 
@@ -69,7 +71,7 @@ TEST_F(SymbolVariableResolverTest, FoundAndNot) {
 // This lookup has the IP out of range of the variable's validity.
 TEST_F(SymbolVariableResolverTest, RangeMiss) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider()->AddRegisterValue(0, true, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
 
   provider()->set_ip(0x3000);
   auto var = MakeUint64VariableForTest(
@@ -124,7 +126,7 @@ TEST_F(SymbolVariableResolverTest, DwarfEvalFailure) {
 TEST_F(SymbolVariableResolverTest, CharValue) {
   constexpr uint64_t kValue = 0x1234567890123;
   constexpr int8_t kValueLo = 0x23;  // Low byte of kValue.
-  provider()->AddRegisterValue(0, true, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
   provider()->set_ip(0x1010);
 
   // Make a variable and override type with a "char" type.

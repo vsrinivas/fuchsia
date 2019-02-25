@@ -12,7 +12,6 @@
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
-#include "garnet/bin/zxdb/client/register_dwarf.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"

@@ -25,7 +25,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // Adds the given canned result for the given register. Set synchronous if
   // the register contents should be synchronously available, false if it
   // should require a callback to retrieve.
-  void AddRegisterValue(int register_num, bool synchronous, uint64_t value);
+  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
+                        uint64_t value);
 
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
@@ -35,8 +36,9 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   MemoryWrites GetMemoryWrites() { return std::move(memory_writes_); }
 
   // SymbolDataProvider implementation.
-  std::optional<uint64_t> GetRegister(int dwarf_register_number) override;
-  void GetRegisterAsync(int dwarf_register_number,
+  debug_ipc::Arch GetArch() override;
+  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id) override;
+  void GetRegisterAsync(debug_ipc::RegisterID id,
                         GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
@@ -63,7 +65,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;
-  std::map<int, RegData> regs_;
+  std::map<debug_ipc::RegisterID, RegData> regs_;
 
   RegisteredMemory mem_;
 

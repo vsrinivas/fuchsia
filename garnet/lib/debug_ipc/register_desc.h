@@ -6,6 +6,9 @@
 
 #include <stdint.h>
 
+#include <optional>
+#include <string>
+
 // Holds constant description values for all the register data for all the
 // supported architectures.
 // The enum definitions mirror the structs defined in the debug information
@@ -13,17 +16,27 @@
 
 namespace debug_ipc {
 
-enum class Arch : uint32_t;         // Forward declaration
-enum class RegisterID : uint32_t;   // Forward declaration.
+enum class Arch : uint32_t;        // Forward declaration
+enum class RegisterID : uint32_t;  // Forward declaration.
 
 enum class SpecialRegisterType { kNone, kIP, kSP, kBP };
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
+debug_ipc::RegisterID StringToRegisterID(const std::string&);
 
 // Returns the register ID for the given special register.
 debug_ipc::RegisterID GetSpecialRegisterID(debug_ipc::Arch,
                                            SpecialRegisterType);
 
+// Returns the special register type for a register ID.
+SpecialRegisterType GetSpecialRegisterType(RegisterID id);
+
+// Converts RegisterID to/from the ID numbers used by DWARF.
+RegisterID DWARFToRegisterID(Arch, uint32_t dwarf_reg_id);
+std::optional<uint32_t> RegisterIDToDWARF(RegisterID);
+
+// Find out what arch a register ID belongs to
+Arch GetArchForRegisterID(debug_ipc::RegisterID);
 // These ranges permit to make transformation from registerID to category and
 // make some formal verifications.
 constexpr uint32_t kARMv8GeneralBegin = 1000;
@@ -32,7 +45,6 @@ constexpr uint32_t kARMv8VectorBegin = 1100;
 constexpr uint32_t kARMv8VectorEnd = 1299;
 constexpr uint32_t kARMv8DebugBegin = 1300;
 constexpr uint32_t kARMv8DebugEnd = 1399;
-
 
 constexpr uint32_t kX64GeneralBegin = 2000;
 constexpr uint32_t kX64GeneralEnd = 2099;

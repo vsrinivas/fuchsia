@@ -137,48 +137,4 @@ TEST(RegisterSet, RegisterMap) {
   EXPECT_EQ(reg->GetValue(), 0x01020304u);
 }
 
-TEST(RegisterSet, DWARFMappings) {
-  std::vector<RegisterCategory> categories;
-  RegisterCategory cat1;
-  cat1.type = RegisterCategory::Type::kGeneral;
-  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_sp, 2));
-  cat1.registers.push_back(CreateRegister(RegisterID::kARMv8_cpsr, 4));
-  categories.push_back(cat1);
-
-  // Sanity check
-  ASSERT_EQ(*(uint8_t*)&(cat1.registers[0].data[0]), 0x02u);
-  ASSERT_EQ(*(uint16_t*)&(cat1.registers[1].data[0]), 0x0304u);
-
-  RegisterCategory cat2;
-  cat2.type = RegisterCategory::Type::kVector;
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x0, 2));
-  cat2.registers.push_back(CreateRegister(RegisterID::kARMv8_x1, 4));
-  categories.push_back(cat2);
-
-  RegisterSet set(debug_ipc::Arch::kArm64, categories);
-
-  const Register* reg = set.GetRegisterFromDWARF(1);
-  ASSERT_TRUE(reg);
-  EXPECT_EQ(reg->id(), RegisterID::kARMv8_x1);
-  EXPECT_EQ(reg->GetValue(), 0x01020304u);
-  uint64_t val;
-  ASSERT_TRUE(set.GetRegisterValueFromDWARF(1, &val));
-  EXPECT_EQ(val, 0x01020304u);
-
-  reg = set.GetRegisterFromDWARF(32);
-  ASSERT_TRUE(reg);
-  EXPECT_EQ(reg->id(), RegisterID::kARMv8_sp);
-  EXPECT_EQ(reg->GetValue(), 0x0102u);
-  ASSERT_TRUE(set.GetRegisterValueFromDWARF(32, &val));
-  EXPECT_EQ(val, 0x0102u);
-
-  reg = set.GetRegisterFromDWARF(10000);
-  EXPECT_FALSE(reg);
-
-  // Wrong architecture
-  set.set_arch(debug_ipc::Arch::kX64);
-  for (size_t i = 0; i < 40; i++)
-    ASSERT_FALSE(set.GetRegisterFromDWARF(i));
-}
-
 }  // namespace zxdb

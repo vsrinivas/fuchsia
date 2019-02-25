@@ -5,7 +5,6 @@
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/client/register_dwarf.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -52,33 +51,6 @@ const Register* RegisterSet::operator[](debug_ipc::RegisterID id) const {
     }
   }
   return found_reg;
-}
-
-const Register* RegisterSet::GetRegisterFromDWARF(uint32_t dwarf_reg_id) const {
-  debug_ipc::RegisterID reg_id = GetDWARFRegisterID(arch_, dwarf_reg_id);
-  // If kUnknown, this will return null.
-  return (*this)[reg_id];
-}
-
-bool RegisterSet::GetRegisterValueFromDWARF(uint32_t dwarf_reg_id,
-                                            uint64_t* out) const {
-  const Register* reg = GetRegisterFromDWARF(dwarf_reg_id);
-  if (!reg)
-    return false;
-  *out = reg->GetValue();
-  return true;
-}
-
-bool RegisterSet::GetRegisterDataFromDWARF(uint32_t dwarf_reg_id,
-                                           std::vector<uint8_t>* data) const {
-  const Register* reg = GetRegisterFromDWARF(dwarf_reg_id);
-  if (!reg)
-    return false;
-
-  data->clear();
-  data->reserve(reg->size());
-  data->insert(data->begin(), reg->begin(), reg->end());
-  return true;
 }
 
 // Register --------------------------------------------------------------------

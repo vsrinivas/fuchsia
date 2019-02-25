@@ -10,6 +10,7 @@
 #include <optional>
 #include <vector>
 
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -34,19 +35,11 @@ class SymbolDataProvider
       std::function<void(const Err&, std::vector<uint8_t>)>;
   using GetRegisterCallback = std::function<void(const Err&, uint64_t)>;
 
-  // Special register numbers (normal DWARF registers are never negative).
-  // These will be mapped to the corresponding platform-specific registers for
-  // the current platform.
-  //
-  // These are guaranteed available synchronously. If the synchronous getter
-  // returns failure for them, it means the register isn't available in the
-  // current context.
-  static constexpr int kRegisterIP = -1;
-
+  virtual debug_ipc::Arch GetArch() = 0;
   // Request for synchronous register data. If the register data can be provided
   // synchronously, the data will be returned. If synchronous data is not
   // available, the caller should call GetRegisterAsync().
-  virtual std::optional<uint64_t> GetRegister(int dwarf_register_number) = 0;
+  virtual std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id) = 0;
 
   // Request for register data with an asynchronous callback. The callback will
   // be issued when the register data is available.
@@ -55,7 +48,7 @@ class SymbolDataProvider
   // the register is not available now (maybe the thread is running), success
   // will be set to false. When the register value contains valid data, success
   // will indicate true.
-  virtual void GetRegisterAsync(int dwarf_register_number,
+  virtual void GetRegisterAsync(debug_ipc::RegisterID id,
                                 GetRegisterCallback callback) = 0;
 
   // Synchronously returns the frame base pointer if possible. As with
@@ -84,7 +77,7 @@ class SymbolDataProvider
   // Asynchronously writes to the given memory. The callback will be issued
   // when the write is complete.
   virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-      std::function<void(const Err&)> cb) = 0;
+                           std::function<void(const Err&)> cb) = 0;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(SymbolDataProvider);

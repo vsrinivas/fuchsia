@@ -88,6 +88,11 @@ void DwarfExprEvalTest::DoEvalTest(
   EXPECT_TRUE(callback_issued);
 }
 
+const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
+const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
+const debug_ipc::RegisterID kDWARFReg6ID = debug_ipc::RegisterID::kARMv8_x6;
+const debug_ipc::RegisterID kDWARFReg9ID = debug_ipc::RegisterID::kARMv8_x9;
+
 }  // namespace
 
 TEST_F(DwarfExprEvalTest, NoResult) {
@@ -156,7 +161,7 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
 // Tests synchronously reading a single register.
 TEST_F(DwarfExprEvalTest, SyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider()->AddRegisterValue(0, true, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
 
   DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kSync,
              kValue, DwarfExprEval::ResultType::kValue);
@@ -168,7 +173,7 @@ TEST_F(DwarfExprEvalTest, SyncRegister) {
 // Also tests DW_OP_nop.
 TEST_F(DwarfExprEvalTest, SyncRegisterAsNumber) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider()->AddRegisterValue(1, true, kValue);
+  provider()->AddRegisterValue(kDWARFReg1ID, true, kValue);
 
   // Use "regx" which will read the register number as a ULEB following it.
   // The byte is the ULEB-encoded version of 1 (high bit set to indicate it's
@@ -185,7 +190,7 @@ TEST_F(DwarfExprEvalTest, SyncRegisterAsNumber) {
 // Tests asynchronously reading a single register.
 TEST_F(DwarfExprEvalTest, AsyncRegister) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider()->AddRegisterValue(0, false, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
 
   DoEvalTest({llvm::dwarf::DW_OP_reg0}, true, DwarfExprEval::Completion::kAsync,
              kValue, DwarfExprEval::ResultType::kValue);
@@ -204,7 +209,7 @@ TEST_F(DwarfExprEvalTest, SyncInvalidOp) {
 // Tests synchronously hitting an invalid opcode (async error handling).
 TEST_F(DwarfExprEvalTest, AsyncInvalidOp) {
   constexpr uint64_t kValue = 0x1234567890123;
-  provider()->AddRegisterValue(0, false, kValue);
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
 
   // Make a program that consists of getting an async register and then
   // executing an invalid opcode. Can't use DW_OP_lo_user because that's a GNU
@@ -250,8 +255,8 @@ TEST_F(DwarfExprEvalTest, Addr) {
 }
 
 TEST_F(DwarfExprEvalTest, Breg) {
-  provider()->AddRegisterValue(0, true, 100);
-  provider()->AddRegisterValue(9, false, 200);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, 100);
+  provider()->AddRegisterValue(kDWARFReg9ID, false, 200);
 
   // reg0 (=100) + 129 = 229 (synchronous).
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
@@ -267,8 +272,8 @@ TEST_F(DwarfExprEvalTest, Breg) {
 }
 
 TEST_F(DwarfExprEvalTest, Bregx) {
-  provider()->AddRegisterValue(0, true, 100);
-  provider()->AddRegisterValue(9, false, 200);
+  provider()->AddRegisterValue(kDWARFReg0ID, true, 100);
+  provider()->AddRegisterValue(kDWARFReg9ID, false, 200);
 
   // reg0 (=100) + 129 = 229 (synchronous).
   // Note: 129 in SLEB is 0x81, 0x01 (example in DWARF spec).
@@ -701,7 +706,7 @@ TEST_F(DwarfExprEvalTest, Deref) {
       llvm::dwarf::DW_OP_constu, 0x30, llvm::dwarf::DW_OP_minus};
 
   constexpr uint64_t kReg6 = 0x1000;
-  provider()->AddRegisterValue(6, true, kReg6);
+  provider()->AddRegisterValue(kDWARFReg6ID, true, kReg6);
   constexpr int64_t kOffsetFromReg6 = -40;
 
   // Contents of the data at [reg6 - 40]

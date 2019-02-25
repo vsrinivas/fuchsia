@@ -25,7 +25,8 @@ SymbolVariableResolver::SymbolVariableResolver(
 SymbolVariableResolver::~SymbolVariableResolver() = default;
 
 void SymbolVariableResolver::ResolveVariable(
-    const SymbolContext& symbol_context, const Variable* var, Callback cb) const {
+    const SymbolContext& symbol_context, const Variable* var,
+    Callback cb) const {
   auto state = fxl::MakeRefCounted<ResolutionState>(std::move(cb));
 
   // Need to explicitly take a reference to the type.
@@ -35,7 +36,8 @@ void SymbolVariableResolver::ResolveVariable(
     return;
   }
 
-  auto ip = data_provider_->GetRegister(SymbolDataProvider::kRegisterIP);
+  auto ip = data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(
+      data_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP));
   if (!ip) {
     OnComplete(state, Err("No location available."), ExprValue());
     return;
@@ -61,12 +63,13 @@ void SymbolVariableResolver::ResolveVariable(
   }
 
   // Schedule the expression to be evaluated.
-  state->dwarf_eval.Eval(data_provider_, symbol_context, loc_entry->expression, [
-    state, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()
-  ](DwarfExprEval * eval, const Err& err) {
-    if (weak_this)
-      weak_this->OnDwarfEvalComplete(state, err, std::move(type));
-  });
+  state->dwarf_eval.Eval(
+      data_provider_, symbol_context, loc_entry->expression,
+      [state, type = std::move(type), weak_this = weak_factory_.GetWeakPtr()](
+          DwarfExprEval* eval, const Err& err) {
+        if (weak_this)
+          weak_this->OnDwarfEvalComplete(state, err, std::move(type));
+      });
 }
 
 void SymbolVariableResolver::OnDwarfEvalComplete(
@@ -86,11 +89,12 @@ void SymbolVariableResolver::OnDwarfEvalComplete(
     // The DWARF expression produced the exact value (it's not in memory).
     uint32_t type_size = type->byte_size();
     if (type_size > sizeof(uint64_t)) {
-      OnComplete(state, Err(fxl::StringPrintf(
-                            "Result size insufficient for type of size %u. "
-                            "Please file a bug with a repro case.",
-                            type_size)),
-                 ExprValue());
+      OnComplete(
+          state,
+          Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
+                                "Please file a bug with a repro case.",
+                                type_size)),
+          ExprValue());
       return;
     }
     std::vector<uint8_t> data;
@@ -100,7 +104,7 @@ void SymbolVariableResolver::OnDwarfEvalComplete(
   } else {
     // The DWARF result is a pointer to the value.
     ResolvePointer(data_provider_, result_int, std::move(type),
-                   [ state, weak_this = weak_factory_.GetWeakPtr() ](
+                   [state, weak_this = weak_factory_.GetWeakPtr()](
                        const Err& err, ExprValue value) {
                      if (weak_this)
                        weak_this->OnComplete(state, err, std::move(value));

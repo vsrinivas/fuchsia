@@ -18,6 +18,7 @@
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -41,10 +42,11 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
   }
 
   // SymbolDataProvider implementation.
-  std::optional<uint64_t> GetRegister(int dwarf_register_number) override {
+  debug_ipc::Arch GetArch() override { return debug_ipc::Arch::kUnknown; }
+  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID) override {
     return std::nullopt;
   }
-  void GetRegisterAsync(int dwarf_register_number,
+  void GetRegisterAsync(debug_ipc::RegisterID,
                         GetRegisterCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });

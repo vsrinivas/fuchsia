@@ -10,16 +10,17 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
 
-void MockSymbolDataProvider::AddRegisterValue(int register_num,
+void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id,
                                               bool synchronous,
                                               uint64_t value) {
-  regs_[register_num] = RegData(synchronous, value);
+  regs_[id] = RegData(synchronous, value);
 }
 
 void MockSymbolDataProvider::AddMemory(uint64_t address,
@@ -27,12 +28,16 @@ void MockSymbolDataProvider::AddMemory(uint64_t address,
   mem_[address] = std::move(data);
 }
 
+debug_ipc::Arch MockSymbolDataProvider::GetArch() {
+  return debug_ipc::Arch::kArm64;
+}
+
 std::optional<uint64_t> MockSymbolDataProvider::GetRegister(
-    int dwarf_register_number) {
-  if (dwarf_register_number == kRegisterIP)
+    debug_ipc::RegisterID id) {
+  if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP)
     return ip_;
 
-  const auto& found = regs_.find(dwarf_register_number);
+  const auto& found = regs_.find(id);
   if (found == regs_.end())
     return std::nullopt;
 
@@ -42,17 +47,16 @@ std::optional<uint64_t> MockSymbolDataProvider::GetRegister(
   return found->second.value;
 }
 
-void MockSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
+void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
                                               GetRegisterCallback callback) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [callback, weak_provider = weak_factory_.GetWeakPtr(),
-                  dwarf_register_number]() {
+      FROM_HERE, [callback, weak_provider = weak_factory_.GetWeakPtr(), id]() {
         if (!weak_provider) {
           // Destroyed before callback ready.
           return;
         }
 
-        const auto& found = weak_provider->regs_.find(dwarf_register_number);
+        const auto& found = weak_provider->regs_.find(id);
         if (found == weak_provider->regs_.end())
           callback(Err("Failed"), 0);
         callback(Err(), found->second.value);
