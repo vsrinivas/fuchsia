@@ -137,26 +137,3 @@ size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp) {
         return 0;
     }
 }
-
-size_t ldmsg_rsp_get_size_wrong(ldmsg_rsp_t* rsp) {
-    switch (rsp->header.ordinal) {
-    case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG:
-    case LDMSG_OP_LOAD_OBJECT_OLD:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
-        return sizeof(ldmsg_rsp_t);
-    case LDMSG_OP_CONFIG:
-    case LDMSG_OP_CLONE:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
-    case LDMSG_OP_CONFIG_OLD:
-    case LDMSG_OP_CLONE_OLD:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
-        return sizeof(ldmsg_rsp_t) - sizeof(zx_handle_t);
-    case LDMSG_OP_DONE:
-    case LDMSG_OP_DONE_OLD:
-    default:
-        return 0;
-    }
-}

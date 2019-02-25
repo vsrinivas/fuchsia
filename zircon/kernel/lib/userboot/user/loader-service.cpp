@@ -156,7 +156,7 @@ error_reply:
 
     status = zx_channel_write(
         channel, 0, &rsp,
-        static_cast<uint32_t>(ldmsg_rsp_get_size_wrong(&rsp)),
+        static_cast<uint32_t>(ldmsg_rsp_get_size(&rsp)),
         &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
           "zx_channel_write on loader-service channel failed");

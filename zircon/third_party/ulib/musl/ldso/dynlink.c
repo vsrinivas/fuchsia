@@ -2443,9 +2443,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
     }
 
     size_t expected_reply_size = ldmsg_rsp_get_size(&rsp);
-    size_t expected_reply_size_wrong = ldmsg_rsp_get_size_wrong(&rsp);
-    if (reply_size != expected_reply_size
-        && reply_size != expected_reply_size_wrong) {
+    if (reply_size != expected_reply_size) {
         error("loader service reply %u bytes != %u",
               reply_size, expected_reply_size);
         status = ZX_ERR_INVALID_ARGS;
@@ -2536,7 +2534,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
     if ((status = _zx_channel_call(loader_svc, 0, ZX_TIME_INFINITE,
                                    &call, &reply_size, &handle_count)) != ZX_OK) {
         // Do nothing.
-    } else if ((reply_size != ldmsg_rsp_get_size(&rsp) && reply_size != ldmsg_rsp_get_size_wrong(&rsp)) ||
+    } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) ||
                (rsp.header.ordinal != LDMSG_OP_CLONE && rsp.header.ordinal != LDMSG_OP_CLONE_OLD)) {
         status = ZX_ERR_INVALID_ARGS;
     } else if (rsp.rv != ZX_OK) {

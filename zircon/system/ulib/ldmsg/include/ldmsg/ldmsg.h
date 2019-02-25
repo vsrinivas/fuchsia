@@ -120,7 +120,4 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len,
 // header. If the ordinal is invalid, this function will return 0.
 size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp);
 
-// A wrong version of ldmsg_rsp_get_size that is needed for a soft transition.
-size_t ldmsg_rsp_get_size_wrong(ldmsg_rsp_t* rsp);
-
 __END_CDECLS
