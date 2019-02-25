@@ -41,3 +41,68 @@ Finally, run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target
 that you want to work on and open the corresponding directory in VSCode.
 
 [this VSCode plugin]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust
+
+## emacs
+
+### Synopsis
+
+You will be using [flycheck](https://www.flycheck.org/en/latest/) to compile
+your Rust files when you save them.  flycheck will parse those outputs and
+highlight errors.  You'll also use
+[flycheck-rust](https://github.com/flycheck/flycheck-rust) so that it will
+compile with cargo and not with rustc.  Both are available from
+[melpa](https://melpa.org/#/).
+
+### Instructions
+
+If you don't yet have melpa, follow the instructions
+[here](https://melpa.org/#/getting-started).
+
+Install `flycheck` and `flycheck-rust` in `M-x list-packages`.  Type `i`
+to queue for installation what you are missing and then `x` to execute.
+
+Next, make sure that flycheck-rust is run at startup.  Put this in your `.emacs` files:
+
+```elisp
+(with-eval-after-load 'rust-mode
+  (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
+```
+
+You'll want cargo to run "check" and not "test" so set
+`flycheck-rust-check-tests` to `nil`.  You can do this by typing `C-h v
+flycheck-rust-check-tests<RET>` and then customizing the variable in the normal
+way.
+
+Now, you'll want to make sure that the default `cargo` and `rustc` that you are
+using are Fuchsia versions of those.  From your fuchsia root, type:
+
+```elisp
+rustup toolchain link fuchsia $PWD/buildtools/linux-x64/rust && rustup default fuchsia
+```
+
+Run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target that you
+want to work on.
+
+You can [read about](http://www.flycheck.org/en/latest/user/error-reports.html)
+adjusting flycheck to display your errors as you like.  Type `C-h v
+flycheck-highlighting-mode<RET>` and customize it.  Also customize `C-h v
+flycheck-indiation-mode<RET>`.
+
+Now restart emacs and try it out.
+
+### Test and debug
+
+To test that it works, you can run `M-x flycheck-compile` and see the
+command-line that flycheck is using to check syntax.  It ought to look like one
+of these depending on whether you are in a lib or bin:
+
+```sh
+cargo check --lib --message-format\=json
+cargo check --bin recovery_netstack --message-format\=json
+```
+
+If it runs `rustc` instead of `cargo`, that's because you didn't `fx gen-cargo`.
+
+Note that it might report errors on the first line of the current file.  Those are
+actually errors from a different file.  The error's comment will name the
+problematic file.
