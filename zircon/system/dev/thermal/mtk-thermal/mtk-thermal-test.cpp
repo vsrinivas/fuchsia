@@ -4,17 +4,15 @@
 
 #include "mtk-thermal.h"
 
-#include <tuple>
-
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <lib/mock-function/mock-function.h>
 #include <lib/sync/completion.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
-#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -49,90 +47,6 @@ constexpr thermal_temperature_info_t TripPoint(uint32_t temp, int32_t opp) {
 }  // namespace
 
 namespace thermal {
-
-template <typename R, typename... Ts>
-class FunctionMock {
-public:
-    FunctionMock& ExpectCall(R ret, Ts... args) {
-        has_expectations_ = true;
-        expectations_.push_back(Expectation{ret, std::make_tuple(args...)});
-        return *this;
-    }
-
-    FunctionMock& ExpectNoCall() {
-        has_expectations_ = true;
-        return *this;
-    }
-
-    R Call(Ts... args) {
-        R ret = 0;
-        CallHelper(&ret, args...);
-        return ret;
-    }
-
-    bool HasExpectations() const { return has_expectations_; }
-
-    void VerifyAndClear() {
-        EXPECT_EQ(expectation_index_, expectations_.size());
-
-        expectations_.reset();
-        expectation_index_ = 0;
-    }
-
-private:
-    struct Expectation {
-        R ret_value;
-        std::tuple<Ts...> args;
-    };
-
-    void CallHelper(R* ret, Ts... args) {
-        ASSERT_LT(expectation_index_, expectations_.size());
-
-        Expectation exp = expectations_[expectation_index_++];
-        EXPECT_TRUE(exp.args == std::make_tuple(args...));
-        *ret = exp.ret_value;
-    }
-
-    bool has_expectations_ = false;
-    fbl::Vector<Expectation> expectations_;
-    size_t expectation_index_ = 0;
-};
-
-template <typename... Ts>
-class FunctionMock<void, Ts...> {
-public:
-    FunctionMock& ExpectCall(Ts... args) {
-        has_expectations_ = true;
-        expectations_.push_back(std::make_tuple(args...));
-        return *this;
-    }
-
-    FunctionMock& ExpectNoCall() {
-        has_expectations_ = true;
-        return *this;
-    }
-
-    void Call(Ts... args) { CallHelper(args...); }
-
-    bool HasExpectations() const { return has_expectations_; }
-
-    void VerifyAndClear() {
-        ASSERT_EQ(expectation_index_, expectations_.size());
-
-        expectations_.reset();
-        expectation_index_ = 0;
-    }
-
-private:
-    void CallHelper(Ts... args) {
-        ASSERT_LT(expectation_index_, expectations_.size());
-        EXPECT_TRUE(expectations_[expectation_index_++] == std::make_tuple(args...));
-    }
-
-    bool has_expectations_ = false;
-    fbl::Vector<std::tuple<Ts...>> expectations_;
-    size_t expectation_index_ = 0;
-};
 
 class MtkThermalTest : public MtkThermal {
 public:
@@ -180,10 +94,18 @@ public:
     ddk_mock::MockMmioRegRegion& pmic_wrap_regs() { return mock_pmic_wrap_regs_; }
     ddk_mock::MockMmioRegRegion& infracfg_regs() { return mock_infracfg_regs_; }
 
-    FunctionMock<void, uint16_t, uint32_t>& mock_PmicWrite() { return mock_pmic_write_; }
-    FunctionMock<uint32_t>& mock_GetTemperature() { return mock_get_temperature_; }
-    FunctionMock<zx_status_t, uint16_t, uint32_t>& mock_SetDvfsOpp() { return mock_set_dvfs_opp_; }
-    FunctionMock<zx_status_t, size_t>& mock_SetTripPoint() { return mock_set_trip_point_; }
+    mock_function::MockFunction<void, uint16_t, uint32_t>& mock_PmicWrite() {
+        return mock_pmic_write_;
+    }
+    mock_function::MockFunction<uint32_t>& mock_GetTemperature() {
+        return mock_get_temperature_;
+    }
+    mock_function::MockFunction<zx_status_t, uint16_t, uint32_t>& mock_SetDvfsOpp() {
+        return mock_set_dvfs_opp_;
+    }
+    mock_function::MockFunction<zx_status_t, size_t>& mock_SetTripPoint() {
+        return mock_set_trip_point_;
+    }
 
     void VerifyAll() {
         for (size_t i = 0; i < kThermalRegCount; i++) {
@@ -292,10 +214,10 @@ private:
     ddk_mock::MockMmioRegRegion mock_pmic_wrap_regs_;
     ddk_mock::MockMmioRegRegion mock_infracfg_regs_;
 
-    FunctionMock<void, uint16_t, uint32_t> mock_pmic_write_;
-    FunctionMock<uint32_t> mock_get_temperature_;
-    FunctionMock<zx_status_t, uint16_t, uint32_t> mock_set_dvfs_opp_;
-    FunctionMock<zx_status_t, size_t> mock_set_trip_point_;
+    mock_function::MockFunction<void, uint16_t, uint32_t> mock_pmic_write_;
+    mock_function::MockFunction<uint32_t> mock_get_temperature_;
+    mock_function::MockFunction<zx_status_t, uint16_t, uint32_t> mock_set_dvfs_opp_;
+    mock_function::MockFunction<zx_status_t, size_t> mock_set_trip_point_;
 
     volatile bool thread_stop_ = false;
     sync_completion_t signal_;
