@@ -11,6 +11,7 @@ use {
         data_writer,
         mac::{self, OptionalField},
         mgmt_writer,
+        sequence::SequenceManager,
     },
 };
 
@@ -20,13 +21,20 @@ pub fn write_open_auth_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
-    seq_ctrl: u16,
+    seq_mgr: &mut SequenceManager,
 ) -> Result<BufferWriter<B>, Error> {
     let mut frame_ctrl = mac::FrameControl(0);
     frame_ctrl.set_frame_subtype(mac::MGMT_SUBTYPE_AUTH);
+    let mut seq_ctrl = mac::SequenceControl(0);
+    seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     let mut w = mgmt_writer::write_mgmt_hdr(
         BufferWriter::new(buf),
-        mgmt_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
+        mgmt_writer::FixedFields::sent_from_client(
+            frame_ctrl,
+            bssid,
+            client_addr,
+            seq_ctrl.value(),
+        ),
         None,
     )?;
 
@@ -39,14 +47,21 @@ pub fn write_deauth_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
-    seq_ctrl: u16,
     reason_code: mac::ReasonCode,
+    seq_mgr: &mut SequenceManager,
 ) -> Result<BufferWriter<B>, Error> {
     let mut frame_ctrl = mac::FrameControl(0);
     frame_ctrl.set_frame_subtype(mac::MGMT_SUBTYPE_DEAUTH);
+    let mut seq_ctrl = mac::SequenceControl(0);
+    seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     let mut w = mgmt_writer::write_mgmt_hdr(
         BufferWriter::new(buf),
-        mgmt_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
+        mgmt_writer::FixedFields::sent_from_client(
+            frame_ctrl,
+            bssid,
+            client_addr,
+            seq_ctrl.value(),
+        ),
         None,
     )?;
 
@@ -60,13 +75,20 @@ pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
-    seq_ctrl: u16,
+    seq_mgr: &mut SequenceManager,
 ) -> Result<BufferWriter<B>, Error> {
     let mut frame_ctrl = mac::FrameControl(0);
     frame_ctrl.set_frame_subtype(mac::DATA_SUBTYPE_NULL_DATA);
+    let mut seq_ctrl = mac::SequenceControl(0);
+    seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     let w = data_writer::write_data_hdr(
         BufferWriter::new(buf),
-        data_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
+        data_writer::FixedFields::sent_from_client(
+            frame_ctrl,
+            bssid,
+            client_addr,
+            seq_ctrl.value(),
+        ),
         data_writer::OptionalFields::none(),
     )?;
     Ok(w)
@@ -119,7 +141,8 @@ mod tests {
     #[test]
     fn open_auth_frame() {
         let mut buf = [99u8; 30];
-        let written_bytes = write_open_auth_frame(&mut buf[..], [1; 6], [2; 6], 42)
+        let mut seq_mgr = SequenceManager::new();
+        let written_bytes = write_open_auth_frame(&mut buf[..], [1; 6], [2; 6], &mut seq_mgr)
             .expect("failed writing frame")
             .written_bytes();
         assert_eq!(30, written_bytes);
@@ -131,7 +154,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
-                42, 0, // Sequence Control
+                0, 0, // Sequence Control
                 // Auth body
                 0, 0, // Auth Algorithm Number
                 1, 0, // Auth Txn Seq Number
@@ -144,10 +167,16 @@ mod tests {
     #[test]
     fn deauth_frame() {
         let mut buf = [99u8; 26];
-        let written_bytes =
-            write_deauth_frame(&mut buf[..], [1; 6], [2; 6], 42, mac::ReasonCode::Timeout)
-                .expect("failed writing frame")
-                .written_bytes();
+        let mut seq_mgr = SequenceManager::new();
+        let written_bytes = write_deauth_frame(
+            &mut buf[..],
+            [1; 6],
+            [2; 6],
+            mac::ReasonCode::Timeout,
+            &mut seq_mgr,
+        )
+        .expect("failed writing frame")
+        .written_bytes();
         assert_eq!(26, written_bytes);
         assert_eq!(
             [
@@ -157,7 +186,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
-                42, 0, // Sequence Control
+                0, 0, // Sequence Control
                 // Deauth body
                 0x27, 0 // Reason code
             ],
@@ -168,7 +197,8 @@ mod tests {
     #[test]
     fn keep_alive_resp_frame() {
         let mut buf = [3u8; 25];
-        let written_bytes = write_keep_alive_resp_frame(&mut buf[..], [1; 6], [2; 6], 42)
+        let mut seq_mgr = SequenceManager::new();
+        let written_bytes = write_keep_alive_resp_frame(&mut buf[..], [1; 6], [2; 6], &mut seq_mgr)
             .expect("failed writing frame")
             .written_bytes();
         assert_eq!(24, written_bytes);
@@ -179,7 +209,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
-                42, 0, // Sequence Control
+                0, 0, // Sequence Control
                 3  // Trailing bytes
             ],
             buf

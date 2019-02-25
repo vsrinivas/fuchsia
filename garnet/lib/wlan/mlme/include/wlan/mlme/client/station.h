@@ -67,6 +67,9 @@ class Station : public ClientInterface {
     void ResetStats() override;
 
    private:
+    using SequenceManager =
+        std::unique_ptr<rust_mlme_sequence_manager_t, void (*)(rust_mlme_sequence_manager_t*)>;
+
     static constexpr size_t kAssocBcnCountTimeout = 20;
     static constexpr size_t kSignalReportBcnCountTimeout = 10;
     static constexpr size_t kAutoDeauthBcnCountTimeout = 100;
@@ -130,8 +133,8 @@ class Station : public ClientInterface {
     DeviceInterface* device_;
     TimerManager<> timer_mgr_;
     ChannelScheduler* chan_sched_;
-    Sequence seq_;
     JoinContext* join_ctx_;
+    SequenceManager seq_mgr_;
 
     WlanState state_ = WlanState::kIdle;
     TimeoutId auth_timeout_;

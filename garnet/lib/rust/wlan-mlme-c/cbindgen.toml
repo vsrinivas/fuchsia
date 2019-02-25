@@ -28,6 +28,7 @@ include = ["BufferProvider", "InBuf", "OutBuf", "ReasonCode", "StatusCode"]
 "BufferProvider" = "rust_mlme_buffer_provider_ops_t"
 "InBuf" = "rust_mlme_in_buf_t"
 "OutBuf" = "rust_mlme_out_buf_t"
+"SequenceManager" = "rust_mlme_sequence_manager_t"
 "ReasonCode" = "wlan_reason_code"
 "StatusCode" = "wlan_status_code"
 

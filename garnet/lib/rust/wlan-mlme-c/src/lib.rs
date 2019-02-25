@@ -18,3 +18,4 @@ pub mod utils;
 
 pub mod auth;
 pub mod client;
+pub mod sequence;

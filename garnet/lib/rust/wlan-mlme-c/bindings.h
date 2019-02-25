@@ -183,6 +183,11 @@ typedef enum {
 } wlan_status_code;
 
 /**
+ * Manages all SNS for a STA.
+ */
+typedef struct rust_mlme_sequence_manager_t rust_mlme_sequence_manager_t;
+
+/**
  * An input buffer will always be returned to its original owner when no longer
  * being used. An input buffer is used for every buffer handed from C++ to Rust.
  */
@@ -233,19 +238,31 @@ typedef struct {
 extern "C" int32_t rust_mlme_is_valid_open_auth_resp(const uint8_t *data,
                                                      uintptr_t len);
 
+extern "C" void rust_mlme_sequence_manager_delete(
+    rust_mlme_sequence_manager_t *mgr);
+
+extern "C" rust_mlme_sequence_manager_t *rust_mlme_sequence_manager_new(void);
+
+extern "C" uint32_t rust_mlme_sequence_manager_next_sns1(
+    rust_mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6]);
+
+extern "C" uint32_t rust_mlme_sequence_manager_next_sns2(
+    rust_mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6],
+    uint16_t tid);
+
 extern "C" int32_t rust_mlme_write_eth_frame(
     rust_mlme_buffer_provider_ops_t provider, const uint8_t (*dst_addr)[6],
     const uint8_t (*src_addr)[6], uint16_t protocol_id, const uint8_t *payload,
     uintptr_t payload_len, rust_mlme_out_buf_t *out_buf);
 
 extern "C" int32_t rust_mlme_write_keep_alive_resp_frame(
-    rust_mlme_buffer_provider_ops_t provider, const uint8_t (*bssid)[6],
-    const uint8_t (*client_addr)[6], uint16_t seq_ctrl,
-    rust_mlme_out_buf_t *out_buf);
+    rust_mlme_buffer_provider_ops_t provider,
+    rust_mlme_sequence_manager_t *seq_mgr, const uint8_t (*bssid)[6],
+    const uint8_t (*client_addr)[6], rust_mlme_out_buf_t *out_buf);
 
 extern "C" int32_t rust_mlme_write_open_auth_frame(
-    rust_mlme_buffer_provider_ops_t provider, const uint8_t (*bssid)[6],
-    const uint8_t (*client_addr)[6], uint16_t seq_ctrl,
-    rust_mlme_out_buf_t *out_buf);
+    rust_mlme_buffer_provider_ops_t provider,
+    rust_mlme_sequence_manager_t *seq_mgr, const uint8_t (*bssid)[6],
+    const uint8_t (*client_addr)[6], rust_mlme_out_buf_t *out_buf);
 
 #endif /* GARNET_LIB_RUST_WLAN_MLME_ABI_H_ */
