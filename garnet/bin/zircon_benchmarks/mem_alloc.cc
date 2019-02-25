@@ -85,6 +85,56 @@ static_assert(
     "amortizes malloc() calls over as many slab objects as the Static "
     "SmallBlockAllocator.");
 
+/*** Instanced slab allocator definitions ***/
+template <typename AllocatorTraits>
+class InstancedSlabAllocator;
+
+template <size_t ObjSize, size_t SlabSize>
+struct InstancedSlabAllocatorTraits
+    : public fbl::SlabAllocatorTraits<
+          fbl::RefPtr<
+              SlabDataBuf<InstancedSlabAllocatorTraits<ObjSize, SlabSize>>>,
+          SlabSize> {
+  using AllocT =
+      InstancedSlabAllocator<InstancedSlabAllocatorTraits<ObjSize, SlabSize>>;
+  static constexpr char kName[] = "SlabInstanced";
+  static constexpr size_t kUserBufSize = ObjSize;
+  static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
+};
+
+template <typename AllocatorTraits>
+class InstancedSlabAllocator {
+ public:
+  static constexpr size_t kUserBufSize = AllocatorTraits::kUserBufSize;
+
+  InstancedSlabAllocator() : allocator_(kMaxSlabs) {}
+  auto New() { return allocator_.New(); }
+
+ private:
+  static constexpr size_t kMaxSizeBytes = kLiveAllocLimitBytes;
+  static constexpr size_t kMaxSlabs =
+      (kMaxSizeBytes /
+       (fbl::SlabAllocator<AllocatorTraits>::AllocsPerSlab * kUserBufSize)) +
+      1 /* Round up */;
+
+  fbl::SlabAllocator<AllocatorTraits> allocator_;
+};
+
+using InstancedSmallBlockAllocatorTraits =
+    InstancedSlabAllocatorTraits<kSmallBlockSizeBytes,
+                                 fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
+using InstancedLargeBlockAllocatorTraits =
+    InstancedSlabAllocatorTraits<kLargeBlockSizeBytes,
+                                 kLargeBlockSizeBytes * 187>;
+
+static_assert(
+    fbl::SlabAllocator<InstancedLargeBlockAllocatorTraits>::AllocsPerSlab ==
+        fbl::SlabAllocator<InstancedSmallBlockAllocatorTraits>::AllocsPerSlab,
+    "Please adjust the SLAB_SIZE parameter for "
+    "InstancedLargeBlockAllocatorTraits, so that the "
+    "InstancedLargeBlockAllocator amortizes malloc() calls over as many slab "
+    "objects as the InstancedSmallBlockAllocator.");
+
 /*** Benchmark code ***/
 // Utility function called from RetainAndFreeOldest() and RetainAndFreeRandom().
 template <typename AllocatorT>
@@ -208,12 +258,16 @@ void RegisterTest(const char* bench_name) {
                ALLOCATION_PATTERN<ALLOCATOR_TRAITS::AllocT>>(             \
       #ALLOCATION_PATTERN);
 
-#define REGISTER_PERF_TEST(ALLOCATION_PATTERN)                    \
-  do {                                                            \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,               \
-                                StaticSmallBlockAllocatorTraits); \
-    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,               \
-                                StaticLargeBlockAllocatorTraits); \
+#define REGISTER_PERF_TEST(ALLOCATION_PATTERN)                       \
+  do {                                                               \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
+                                StaticSmallBlockAllocatorTraits);    \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
+                                StaticLargeBlockAllocatorTraits);    \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
+                                InstancedSmallBlockAllocatorTraits); \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
+                                InstancedLargeBlockAllocatorTraits); \
   } while (0)
 
 void RegisterTests() {
