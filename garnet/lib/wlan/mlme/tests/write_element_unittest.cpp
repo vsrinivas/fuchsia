@@ -393,5 +393,14 @@ TEST(WriteElement, PrepWithExtAddr) {
     EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
 }
 
+TEST(WriteElement, Perr) {
+    uint8_t destinations[] = { 3, 4 };
+    Buf buf;
+    WritePerr(&buf.w, { .element_ttl = 1, .num_destinations = 2, }, destinations);
+
+    const uint8_t expected[] = { 132, 4, 1, 2, 3, 4 };
+    EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
+}
+
 } // namespace common
 } // namespace wlan

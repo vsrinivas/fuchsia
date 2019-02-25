@@ -34,6 +34,7 @@ void WritePreq(BufferWriter* w, const PreqHeader& header,
                const PreqMiddle& middle, Span<const PreqPerTarget> per_target);
 void WritePrep(BufferWriter* w, const PrepHeader& header,
                const common::MacAddr* target_external_addr, const PrepTail& tail);
+void WritePerr(BufferWriter* w, const PerrHeader& header, Span<const uint8_t> destinations);
 
 } // namespace common
 } // namespace wlan

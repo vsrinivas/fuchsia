@@ -144,5 +144,9 @@ void WritePrep(BufferWriter* w, const PrepHeader& header,
     Write(w, element_id::kPrep, header, ext_bytes, tail);
 }
 
+void WritePerr(BufferWriter* w, const PerrHeader& header, Span<const uint8_t> destinations) {
+    Write(w, element_id::kPerr, header, destinations);
+}
+
 } // namespace common
 } // namespace wlan
