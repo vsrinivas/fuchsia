@@ -635,8 +635,13 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
     std::vector<std::unique_ptr<raw::ComposeProtocol>> superinterfaces;
     std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
 
-    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kInterface));
+    error_reporter_->ReportWarning(last_token_.location(),
+                                   "The interface syntax is deprecated and will "
+                                   "be discontinued on Monday March 4th, 2019. At that time, this "
+                                   "warning will turn into a parse error. Please use protocol "
+                                   "syntax instead, see https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-023.md#syntactic-changes");
 
+    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kInterface));
     if (!Ok())
         return Fail();
 

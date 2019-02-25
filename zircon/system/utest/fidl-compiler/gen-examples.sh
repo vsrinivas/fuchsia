@@ -20,9 +20,9 @@ EOF
 
 for file; do
 
-  echo "    {\"$file\", R\"FIDL("
+  printf "    {\"$file\", R\"FIDL("
   cat "$file"
-  echo ")FIDL\"},"
+  printf ")FIDL\"},"
 done
 
 echo '};'

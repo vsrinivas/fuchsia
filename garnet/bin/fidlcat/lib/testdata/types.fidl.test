@@ -4,7 +4,7 @@
 
 library test.fidlcat.examples;
 
-interface this_is_an_interface {
+protocol this_is_an_interface {
     String(string s);
     Bool(bool b);
     Int8(int8 i8);

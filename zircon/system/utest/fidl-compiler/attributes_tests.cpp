@@ -21,7 +21,7 @@ bool no_two_same_attribute_test() {
 library fidl.test.dupattributes;
 
 [dup = "first", dup = "second"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -43,7 +43,7 @@ library fidl.test.dupattributes;
 
 /// first
 [Doc = "second"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -87,7 +87,7 @@ bool warn_on_close_attribute_test() {
 library fidl.test.dupattributes;
 
 [Duc = "should be Doc"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -109,7 +109,7 @@ bool warnings_as_errors_test() {
 library fidl.test.dupattributes;
 
 [Duc = "should be Doc"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -132,7 +132,7 @@ bool empty_transport() {
 library fidl.test.transportattributes;
 
 [Transport]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -152,7 +152,7 @@ bool bogus_transport() {
 library fidl.test.transportattributes;
 
 [Transport = "Bogus"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -172,7 +172,7 @@ bool channel_transport() {
 library fidl.test.transportattributes;
 
 [Transport = "Channel"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -191,7 +191,7 @@ bool socket_control_transport() {
 library fidl.test.transportattributes;
 
 [Transport = "SocketControl"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -210,7 +210,7 @@ bool multiple_transports() {
 library fidl.test.transportattributes;
 
 [Transport = "SocketControl, OvernetStream"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -229,7 +229,7 @@ bool multiple_transports_with_bogus() {
 library fidl.test.transportattributes;
 
 [Transport = "SocketControl,Bogus, OvernetStream"]
-interface A {
+protocol A {
     MethodA();
 };
 
@@ -277,7 +277,7 @@ table MyTable {
 };
 
 [Layout = "Simple"]
-interface MyInterface {
+protocol MyInterface {
     [Layout = "Simple"]
     MyMethod();
 };
@@ -341,7 +341,7 @@ bool constraint_only_three_members_on_method() {
     TestLibrary library(R"FIDL(
 library fidl.test;
 
-interface MyInterface {
+protocol MyInterface {
     [MustHaveThreeMembers] MyMethod();
 };
 
@@ -369,7 +369,7 @@ bool constraint_only_three_members_on_interface() {
 library fidl.test;
 
 [MustHaveThreeMembers]
-interface MyInterface {
+protocol MyInterface {
     MyMethod();
     MySecondMethod();
 };

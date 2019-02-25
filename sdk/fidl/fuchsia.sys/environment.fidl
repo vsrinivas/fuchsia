@@ -25,7 +25,8 @@ struct EnvironmentOptions {
 //
 // Applications run inside environments, which provide ambient services and
 // support for their lifecycle.
-[Discoverable] interface Environment {
+[Discoverable]
+protocol Environment {
     // Creates a new environment nested inside this environment.
     //
     // When applications are created inside the nested environment using the

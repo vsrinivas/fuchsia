@@ -11,7 +11,7 @@ library fuchsia.accessibility.semantics;
 /// semantics manager supplies an interface to update, commit and delete information from the
 /// semantic tree for that view.
 [Discoverable]
-interface SemanticsManager {
+protocol SemanticsManager {
     RegisterView(handle<event> view_ref, // TODO: replace with ViewRef type once it exists
                  SemanticActionListener listener,
                  request<SemanticTree> semantic_tree_request);
@@ -22,7 +22,7 @@ interface SemanticsManager {
 /// for breaking up changes into multiple update and delete calls that conform to these limits. The
 /// commit function must always be called at the end of a full update push to signal the end of an
 /// update.
-interface SemanticTree {
+protocol SemanticTree {
     // Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
     // DeleteSemanticNodes.
     Commit();
@@ -36,7 +36,7 @@ interface SemanticTree {
 
 /// A semantic provider is the client-side interface that the manager can use to
 /// ask clients to perform accessibility actions.
-interface SemanticActionListener {
+protocol SemanticActionListener {
     // Asks the semantics provider to perform an accessibility action on the
     // node with node id in the front-end.
     OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
