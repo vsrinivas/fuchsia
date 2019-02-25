@@ -12,6 +12,8 @@ static_library("inferior_control") {
     "arch.h",
     "breakpoint.cc",
     "breakpoint.h",
+    "delegate.cc",
+    "delegate.h",
     "exception_port.cc",
     "exception_port.h",
     "io_loop.cc",

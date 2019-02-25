@@ -62,18 +62,6 @@ zx_koid_t GetProcessId(zx_handle_t process) {
 
 }  // namespace
 
-void Process::Delegate::OnThreadSuspension(Thread* thread) {
-  // nothing to do by default
-}
-
-void Process::Delegate::OnThreadResumption(Thread* thread) {
-  // nothing to do by default
-}
-
-void Process::Delegate::OnThreadTermination(Thread* thread) {
-  // nothing to do by default
-}
-
 // static
 const char* Process::StateName(Process::State state) {
 #define CASE_TO_STR(x)    \

@@ -44,7 +44,7 @@ class TestServer : public Server, public ::testing::Test {
   bool TestFailureExit();
 
  protected:
-  // Process::Delegate overrides.
+  // Delegate overrides.
   void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override;
   void OnThreadExiting(Process* process, Thread* thread, zx_handle_t eport,

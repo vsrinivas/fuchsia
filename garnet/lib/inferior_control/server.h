@@ -12,6 +12,7 @@
 #include <lib/zx/job.h>
 #include <src/lib/files/unique_fd.h>
 
+#include "delegate.h"
 #include "exception_port.h"
 #include "io_loop.h"
 #include "process.h"
@@ -19,12 +20,16 @@
 
 namespace inferior_control {
 
-// Server implements the main loop and handles commands.
+// Server implements the main loop and handles client operations and inferior
+// events (exceptions, etc).
+//
+// TODO(dje): It might be useful to separate out |Delegate| here.
+// It is used as a "mixin" to simplify early clients.
 //
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods such as set_current_process() and SetCurrentThread()
 // which modify its internal state.
-class Server : public Process::Delegate {
+class Server : public Delegate {
  public:
   // Starts the main loop, and returns when the main loop exits.
   // Returns true if the main loop exits cleanly, or false in the case of an
