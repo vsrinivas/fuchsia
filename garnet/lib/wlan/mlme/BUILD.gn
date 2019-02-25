@@ -86,6 +86,7 @@ source_set("mlme") {
     "mesh/write_mp_action.cpp",
     "packet.cpp",
     "parse_beacon.cpp",
+    "rate_limiter.cpp",
     "rates_elements.cpp",
     "service.cpp",
     "timer.cpp",
