@@ -450,11 +450,12 @@ Incompatible requests include.
 
 Presuming that the request is valid, drivers **should** round the request to the
 nearest supported gain step size.  For example, if a stream can control its
-gain on the range from -60.0 to 0.0 dB, a request to set the gain to -33.3 dB
-will result in a gain of -33.5 being applied.  A request for a gain of -33.2 dB
-will result in a gain of -33.0 being applied.
+gain on the range from -60.0 to 0.0 dB, using a gain step size of 0.5 dB, then a
+request to set the gain to -33.3 dB **should** result in a gain of -33.5 being
+applied.  A request to that same stream for a gain of -33.2 dB **should** result
+in a gain of -33.0 being applied.
 
-Applications **may** choose not to receive an acknowledgement of a SET_GAIN
+Applications **may** choose not to receive an acknowledgement of a `SET_GAIN`
 command by setting the `AUDIO_FLAG_NO_ACK` flag on their command.  No response
 message will be sent to the application, regardless of the success or failure of
 the command.  If an acknowledgement was requested by the application, drivers
@@ -467,10 +468,11 @@ request was a success).
 The external latency of an audio stream is defined as the amount of time it
 takes outbound audio to travel from the system's interconnect to the speakers
 themselves, or inbound audio to travel from the microphone to the system's
-interconnect.  For example, if an external codec connected to the system using a
-TDM interconnect introduced a 4 frame delay between reception of a TDM frame and
-rendering of the frame at the speakers themselves, the external delay of this
-audio path would be 4 audio frames.
+interconnect.  As an example, consider an external codec connected to the system
+using a TDM interconnect: if this interconnect introduces a 4 frame delay
+between the reception of a TDM frame and the rendering of that frame at the
+speakers themselves, then the external delay of this audio path is the time
+duration equivalent to 4 audio frames.
 
 External delay is reported in the `external_delay_nsec` field of a successful
 `AUDIO_STREAM_CMD_SET_FORMAT` response as a non-negative number of nanoseconds.
@@ -506,21 +508,21 @@ timestamp referenced from `ZX_CLOCK_MONOTONIC` indicating the last time the plug
 state changed.
 
 Three valid plug-detect notification flags (PDNF) are currently defined:
- * `AUDIO_PDNF_HARDWIRED` Set when the stream hardware is considered to be
+ * `AUDIO_PDNF_HARDWIRED` is set when the stream hardware is considered to be
    "hardwired".  In other words, the stream is considered to be connected as
    long as the device is published.  Examples include a set of built-in
    speakers, a pair of USB headphones, or a pluggable audio device with no plug
    detection functionality.
- * `AUDIO_PDNF_CAN_NOTIFY` Set when the stream hardware is capable of
-   asynchronously detecting that a device's plug state has changed, then sending
-   a notification message if requested by the client.
- * `AUDIO_PDNF_PLUGGED` Set when the stream hardware considers the stream to be
+ * `AUDIO_PDNF_CAN_NOTIFY` is set when the stream hardware is capable of both
+   asynchronously detecting that a device's plug state has changed, and sending
+   a notification message if the client has requested these notifications.
+ * `AUDIO_PDNF_PLUGGED` is set when the stream hardware considers the stream to be
    currently in the "plugged-in" state.
 
-Drivers for "hardwired" streams **must not** set the `CAN_NOTIFY` flag, and
-**must** set the `PLUGGED` flag.  In addition, the plug state time of the
-response to the `PLUG_DETECT` message **should** always be set to the time at
-which the stream device was published by the driver.
+When responding to the `PLUG_DETECT` message, drivers for "hardwired" streams
+**must not** set the `CAN_NOTIFY` flag, and **must** set the `PLUGGED` flag.
+Additionally, these drivers **should** always set the plug state time to the
+time at which the stream device was published by the driver.
 
 Applications **may** choose not to receive an acknowledgement of a `PLUG_DETECT`
 command by setting the `AUDIO_FLAG_NO_ACK` flag on their command.  No response
@@ -536,11 +538,11 @@ plug state changes, using the flags field of the `AUDIO_STREAM_CMD_PLUG_DETECT`
 command.
 
 Two valid flags are currently defined:
- * `AUDIO_PDF_ENABLE NOTIFICATIONS` Set by clients in order to request that the
-   stream proactively generate `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages when
-   its plug state changes, if the stream has this capability.
- * `AUDIO_PDF_DISABLE_NOTIFICATIONS` Set by clients in order to request that NO
-   subsequent `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages should be sent,
+ * `AUDIO_PDF_ENABLE NOTIFICATIONS` is set by clients in order to request that
+   the stream proactively generate `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages
+   when its plug state changes, if the stream has this capability.
+ * `AUDIO_PDF_DISABLE_NOTIFICATIONS` is set by clients in order to request that
+   NO subsequent `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages should be sent,
    regardless of the stream's ability to generate them.
 
 In order to request the current plug state without altering the current
@@ -669,7 +671,7 @@ report the actual number of frames of audio it will use in the buffer via the
 This number **may** be larger than the `min_ring_buffer_frames` request from the
 client but **must not** be either smaller than this number, nor larger than the
 size (when converted to bytes) of the VMO as reported by
-[zx_vmo_get_size()](../syscalls/vmo_get_size.md)
+[zx_vmo_get_size()](../syscalls/vmo_get_size.md).
 
 ### Starting and Stopping the ring-buffer
 

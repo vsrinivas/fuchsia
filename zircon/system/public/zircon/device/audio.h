@@ -44,6 +44,7 @@ typedef uint32_t audio_cmd_t;
 #define AUDIO_RB_POSITION_NOTIFY        ((audio_cmd_t)0x4000)
 
 // Flags used to modify commands.
+// The NO_ACK flag can be used with the SET_GAIN and PLUG_DETECT commands.
 #define AUDIO_FLAG_NO_ACK               ((audio_cmd_t)0x80000000)
 
 typedef struct audio_cmd_hdr {
