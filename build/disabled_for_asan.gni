@@ -1,7 +1,2 @@
 disabled_for_asan = [
-  # CF-584
-  "/pkgfs/packages/components_binary_test/0/test/components_binary_argv_test",
-
-  # CF-585
-  "/pkgfs/packages/run_tests/0/test/run_return_value_shell_test",
 ]
