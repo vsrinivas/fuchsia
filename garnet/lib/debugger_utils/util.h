@@ -115,6 +115,11 @@ std::string GetObjectName(const zx::object_base& object);
 // invalid values.
 const char* ExceptionName(uint32_t type);
 
+// Fetch the return code of an exited process.
+// It is the caller's responsibility to only call this when the process
+// has exited.
+zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code);
+
 // Return the string form of the exception's name.
 // Returns "UNKNOWN(value)" for bad |type|.
 // This does not take a |zx_excp_type_t| value because it also handles

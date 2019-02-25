@@ -417,9 +417,9 @@ void RspServer::OnProcessTermination(inferior_control::Process* process) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Process " << process->GetName() << " exited";
   SetCurrentThread(nullptr);
-  int exit_code = process->ExitCode();
+  int return_code = process->return_code();
   StopReplyPacket stop_reply(StopReplyPacket::Type::kProcessExited);
-  stop_reply.SetSignalNumber(exit_code);
+  stop_reply.SetSignalNumber(return_code);
   packet = stop_reply.Build();
   QueueStopNotification(fxl::StringView(packet.data(), packet.size()));
 }

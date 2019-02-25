@@ -108,9 +108,7 @@ bool TestServer::TestSuccessfulExit() {
     FXL_LOG(ERROR) << "inferior still live";
     return false;
   }
-  // We can't get the exit code from |inferior| as we've detached. Instead
-  // we save it on process exit.
-  if (!exit_code_set_ || exit_code_ != 0) {
+  if (!inferior->return_code_set() || inferior->return_code() != 0) {
     FXL_LOG(ERROR) << "inferior didn't cleanly exit";
     return false;
   }
@@ -135,9 +133,7 @@ bool TestServer::TestFailureExit() {
     FXL_LOG(ERROR) << "inferior still live";
     return false;
   }
-  // We can't get the exit code from |inferior| as we've detached. Instead
-  // we save it on process exit.
-  if (exit_code_set_ && exit_code_ == 0) {
+  if (inferior->return_code_set() && inferior->return_code() == 0) {
     FXL_LOG(ERROR) << "inferior successfully exited";
     return false;
   }
@@ -173,11 +169,8 @@ void TestServer::OnThreadExiting(Process* process, Thread* thread,
 void TestServer::OnProcessTermination(Process* process) {
   FXL_DCHECK(process);
 
-  // Save the exit code for later testing.
-  exit_code_ = process->ExitCode();
-  exit_code_set_ = true;
-
-  printf("Process %s is gone, rc %d\n", process->GetName().c_str(), exit_code_);
+  printf("Process %s is gone, rc %d\n", process->GetName().c_str(),
+         process->return_code());
 
   // Process is gone, exit main loop.
   QuitMessageLoop(true);

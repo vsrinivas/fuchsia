@@ -841,21 +841,6 @@ bool Process::CheckDsosList(Thread* thread) {
   return true;
 }
 
-int Process::ExitCode() {
-  FXL_DCHECK(state_ == State::kGone);
-  zx_info_process_t info;
-  auto status = zx_object_get_info(handle(), ZX_INFO_PROCESS, &info,
-                                   sizeof(info), NULL, NULL);
-  if (status == ZX_OK) {
-    FXL_LOG(INFO) << "Process exited with code " << info.return_code;
-    return info.return_code;
-  } else {
-    FXL_LOG(ERROR) << "Error getting process exit code: "
-                   << debugger_utils::ZxErrorString(status);
-    return -1;
-  }
-}
-
 const debugger_utils::dsoinfo_t* Process::GetExecDso() {
   return dso_get_main_exec(dsos_);
 }
@@ -866,6 +851,7 @@ debugger_utils::dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const {
 
 void Process::OnTermination() {
   set_state(Process::State::kGone);
+  RecordReturnCode();
   delegate_->OnProcessTermination(this);
 
   // After detaching the process's state is cleared.
@@ -879,6 +865,20 @@ void Process::OnTermination() {
   }
 
   FXL_LOG(INFO) << "Process " << pid << " now marked as dead";
+}
+
+void Process::RecordReturnCode() {
+  FXL_DCHECK(state_ == State::kGone);
+  zx_status_t status = debugger_utils::GetProcessReturnCode(handle_,
+                                                            &return_code_);
+  if (status == ZX_OK) {
+    return_code_set_ = true;
+    FXL_VLOG(2) << "Process " << GetName() << " exited with return code "
+                << return_code_;
+  } else {
+    FXL_LOG(ERROR) << "Error getting process exit code: "
+                   << debugger_utils::ZxErrorString(status);
+  }
 }
 
 void Process::Dump() {

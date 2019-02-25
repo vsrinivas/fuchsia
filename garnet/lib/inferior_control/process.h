@@ -72,6 +72,12 @@ class Process final {
         const zx_exception_context_t& context) = 0;
   };
 
+  // This value is used as the return code if something prevents us from
+  // obtaining it from the process.
+  static constexpr int kDefaultFailureReturnCode = -1;
+
+  static const char* StateName(Process::State state);
+
   explicit Process(Server* server, Delegate* delegate_,
                    std::shared_ptr<sys::ServiceDirectory> services);
   ~Process();
@@ -93,7 +99,8 @@ class Process final {
   // Change the state to |new_state|.
   void set_state(State new_state);
 
-  static const char* StateName(Process::State state);
+  int return_code() const { return return_code_; }
+  bool return_code_set() const { return return_code_set_; }
 
   // Creates and initializes the inferior process, via ProcessBuilder, but does
   // not start it. set_argv() must have already been called.
@@ -210,9 +217,6 @@ class Process final {
   // on failure.
   bool WriteMemory(uintptr_t address, const void* data, size_t length);
 
-  // Fetch the process's exit code.
-  int ExitCode();
-
   bool attached_running() const { return attached_running_; }
 
   // See if the list of loaded dsos has been built, and if not build it.
@@ -316,6 +320,9 @@ class Process final {
   // Record new thread |thread_handle,thread_id|.
   Thread* AddThread(zx_handle_t thread_handle, zx_koid_t thread_id);
 
+  // Record the process's return code.
+  void RecordReturnCode();
+
   // The server that owns us (non-owning).
   Server* server_;
 
@@ -400,6 +407,11 @@ class Process final {
 
   // If true then building the dso list failed, don't try again.
   bool dsos_build_failed_ = false;
+
+  // Processes are detached from when they exit.
+  // Save the return code for later testing.
+  int return_code_ = kDefaultFailureReturnCode;
+  bool return_code_set_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Process);
 };

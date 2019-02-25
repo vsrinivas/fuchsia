@@ -242,7 +242,7 @@ void IptServer::OnProcessTermination(inferior_control::Process* process) {
   FXL_DCHECK(process);
 
   printf("Process %s is gone, rc %d\n", process->GetName().c_str(),
-         process->ExitCode());
+         process->return_code());
 
   // If the process is gone, unset current thread, and exit main loop.
   SetCurrentThread(nullptr);

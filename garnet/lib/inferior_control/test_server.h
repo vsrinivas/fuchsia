@@ -43,9 +43,6 @@ class TestServer : public Server, public ::testing::Test {
   bool TestSuccessfulExit();
   bool TestFailureExit();
 
-  int exit_code() const { return exit_code_; }
-  bool exit_code_set() const { return exit_code_set_; }
-
  protected:
   // Process::Delegate overrides.
   void OnThreadStarting(Process* process, Thread* thread,
@@ -61,14 +58,10 @@ class TestServer : public Server, public ::testing::Test {
                             const zx_exception_context_t& context) override;
 
  private:
-  // Processes are detached from when they exit.
-  // Save the exit code for later testing.
-  int exit_code_ = -1;
-  bool exit_code_set_ = false;
-
   // exception_port_.Quit() can only be called after a successful call to
   // exception_port_.Run(), so keep track of whether Run() succeeded.
   bool exception_port_started_ = false;
+
   std::shared_ptr<sys::ServiceDirectory> services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestServer);
