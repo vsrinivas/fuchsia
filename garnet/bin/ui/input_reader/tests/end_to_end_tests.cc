@@ -11,6 +11,7 @@
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/input_reader/tests/mock_device_watcher.h"
 #include "garnet/bin/ui/input_reader/tests/mock_hid_decoder.h"
+#include "garnet/bin/ui/input_reader/tests/sensor_test_data.h"
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
@@ -214,6 +215,33 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
   // and y to the units described by the paradise report.
   EXPECT_EQ(39, last_report_.mouse->rel_x);
   EXPECT_EQ(78, last_report_.mouse->rel_y);
+}
+
+TEST_F(ReaderInterpreterInputTest, SensorTest) {
+  // Create the paradise report descriptor.
+  size_t desc_len = sizeof(lightmeter_report_desc);
+  const uint8_t* desc_data = lightmeter_report_desc;
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the MockHidDecoder with our report descriptor.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
+  RunLoopUntilIdle();
+
+  // Create a single light report.
+  uint8_t report_data[] = {
+      0x04,        // Report ID
+      0x12, 0x24,  // Illuminance
+  };
+  std::vector<uint8_t> report(report_data, report_data + sizeof(report_data));
+
+  // Send the touch report.
+  device->Send(report, sizeof(report_data));
+  RunLoopUntilIdle();
+
+  // Check that the report matches.
+  ASSERT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.sensor);
+  EXPECT_EQ(0x2412, last_report_.sensor->scalar());
 }
 
 }  // namespace mozart

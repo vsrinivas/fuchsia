@@ -15,6 +15,7 @@ enum class Protocol : uint32_t {
   Touch,
   Touchpad,
   Gamepad,
+  Sensor,
   LightSensor,
   Buttons,
   // The ones below are hacks that need to be removed.
@@ -57,6 +58,7 @@ enum class MouseDeviceType {
 
 enum class SensorDeviceType {
   NONE,
+  HID,
   PARADISE,
   AMBIENT_LIGHT,
 };

@@ -52,9 +52,9 @@ source_set("interface_tests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.input",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/tests/mocks",
+    "//sdk/fidl/fuchsia.ui.input",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
   ]
@@ -101,6 +101,7 @@ executable("input_reader_unittests") {
 
   sources = [
     "mouse_test.cc",
+    "sensor_test.cc",
     "touchpad_test.cc",
     "touchscreen_test.cc",
   ]

@@ -16,6 +16,7 @@
 #include "garnet/bin/ui/input_reader/hardcoded.h"
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
+#include "garnet/bin/ui/input_reader/sensor.h"
 #include "garnet/bin/ui/input_reader/touchpad.h"
 #include "garnet/bin/ui/input_reader/touchscreen.h"
 
@@ -114,8 +115,9 @@ class InputInterpreter {
   Protocol protocol_;
   TouchScreen touchscreen_ = {};
   Touchpad touchpad_ = {};
-  Mouse mouse_;
-  Hardcoded hardcoded_;
+  Mouse mouse_ = {};
+  Sensor sensor_ = {};
+  Hardcoded hardcoded_ = {};
 };
 
 }  // namespace mozart

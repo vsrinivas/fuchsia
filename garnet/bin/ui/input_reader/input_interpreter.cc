@@ -396,6 +396,11 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
+  } else if (protocol == Protocol::Sensor) {
+    FXL_VLOG(2) << "Device " << name() << " has sensor";
+    sensor_device_type_ = SensorDeviceType::HID;
+    sensor_report_ = fuchsia::ui::input::InputReport::New();
+    sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
   } else if (protocol == Protocol::LightSensor) {
     FXL_VLOG(2) << "Device " << name() << " has an ambient light sensor";
     sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
@@ -744,6 +749,19 @@ bool InputInterpreter::Read(bool discard) {
   }
 
   switch (sensor_device_type_) {
+    case SensorDeviceType::HID: {
+      if (sensor_.ParseReport(report.data(), rc, sensor_report_.get())) {
+        if (!discard) {
+          sensor_report_->event_time = InputEventTimestampNow();
+          sensor_report_->trace_id = TRACE_NONCE();
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           sensor_report_->trace_id);
+          sensor_devices_[sensor_idx_]->DispatchReport(
+              CloneReport(*sensor_report_));
+        }
+      }
+      break;
+    }
     case SensorDeviceType::PARADISE:
       if (hardcoded_.ParseParadiseSensorReport(report.data(), rc, &sensor_idx_,
                                                sensor_report_.get())) {
@@ -787,9 +805,6 @@ Protocol ExtractProtocol(hid::Usage input) {
     hid::Usage usage;
     Protocol protocol;
   } usage_to_protocol[] = {
-      {{static_cast<uint16_t>(Page::kSensor),
-        static_cast<uint32_t>(Sensor::kAmbientLight)},
-       Protocol::LightSensor},
       {{static_cast<uint16_t>(Page::kConsumer),
         static_cast<uint32_t>(Consumer::kConsumerControl)},
        Protocol::Buttons},
@@ -804,6 +819,11 @@ Protocol ExtractProtocol(hid::Usage input) {
        Protocol::Mouse},
       // Add more sensors here
   };
+
+  if (input.page == Page::kSensor) {
+    return Protocol::Sensor;
+  }
+
   for (auto& j : usage_to_protocol) {
     if (input.page == j.usage.page && input.usage == j.usage.usage) {
       return j.protocol;
@@ -858,9 +878,9 @@ bool InputInterpreter::ConsumeDescriptor(Device::Descriptor* descriptor) {
   }
   if (descriptor->has_sensor) {
     has_sensors_ = true;
-    sensor_device_type_ = descriptor->sensor_type;
-    sensor_descriptors_[descriptor->sensor_id] =
-        std::move(descriptor->sensor_descriptor);
+    sensor_idx_ = 0;
+    sensor_device_type_ = SensorDeviceType::HID;
+    sensor_descriptors_[sensor_idx_] = std::move(descriptor->sensor_descriptor);
   }
   return true;
 }
@@ -1008,6 +1028,17 @@ bool InputInterpreter::ParseProtocol() {
         hardcoded_.ParseButtonsDescriptor(input_desc->input_fields,
                                           input_desc->input_count);
         break;
+      case Protocol::Sensor: {
+        Device::Descriptor device_descriptor = {};
+        if (!sensor_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
+          FXL_LOG(ERROR) << "invalid sensor descriptor for " << name();
+          return false;
+        }
+        if (!ConsumeDescriptor(&device_descriptor)) {
+          return false;
+        }
+        break;
+      }
       case Protocol::Touchpad: {
         Device::Descriptor device_descriptor = {};
         if (!touchpad_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
