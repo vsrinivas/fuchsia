@@ -6,7 +6,7 @@
 
 namespace talkback {
 
-TalkbackImpl::TalkbackImpl(component::StartupContext* startup_context) {
+TalkbackImpl::TalkbackImpl(sys::StartupContext* startup_context) {
   manager_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Cannot connect to a11y manager";
   });
@@ -15,8 +15,8 @@ TalkbackImpl::TalkbackImpl(component::StartupContext* startup_context) {
   });
   manager_.events().OnNodeAction =
       fit::bind_member(this, &TalkbackImpl::OnNodeAction);
-  startup_context->ConnectToEnvironmentService(manager_.NewRequest());
-  startup_context->ConnectToEnvironmentService(tts_.NewRequest());
+  startup_context->svc()->Connect(manager_.NewRequest());
+  startup_context->svc()->Connect(tts_.NewRequest());
 }
 
 void TalkbackImpl::Tap(fuchsia::ui::viewsv1::ViewTreeToken token,

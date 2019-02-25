@@ -6,10 +6,10 @@
 
 namespace accessibility_test {
 
-MockSemanticsProvider::MockSemanticsProvider(component::StartupContext* context,
+MockSemanticsProvider::MockSemanticsProvider(sys::StartupContext* context,
                                              zx_koid_t view_id)
     : binding_(this), context_(context), view_id_(view_id) {
-  context_->ConnectToEnvironmentService(root_.NewRequest());
+  context_->svc()->Connect(root_.NewRequest());
   root_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Cannot connect to semantics root.";
   });

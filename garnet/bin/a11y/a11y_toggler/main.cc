@@ -6,11 +6,10 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/startup_context.h>
 
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
 namespace {
@@ -28,8 +27,8 @@ class A11yToggler {
 A11yToggler::A11yToggler(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto context_ = component::StartupContext::CreateFromStartupInfo();
-  context_->ConnectToEnvironmentService(a11y_toggler_.NewRequest());
+  auto context_ = sys::StartupContext::CreateFromStartupInfo();
+  context_->svc()->Connect(a11y_toggler_.NewRequest());
   a11y_toggler_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Connection error connecting to a11y toggler.";
     quit_callback_();

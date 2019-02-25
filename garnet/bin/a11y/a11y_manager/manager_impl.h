@@ -9,9 +9,9 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

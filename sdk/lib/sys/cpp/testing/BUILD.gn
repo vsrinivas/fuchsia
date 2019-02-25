@@ -2,22 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_source_set.gni")
+source_set("testing") {
+  testonly = true
 
-sdk_source_set("testing") {
-  category = "internal"
-
-  sdk_name = "component_cpp_testing"
-
-  include_base = "//sdk"
   sources = [
     "service_directory_for_test.cc",
     "service_directory_for_test.h",
     "startup_context_for_test.cc",
     "startup_context_for_test.h",
+    "test_with_context.cc",
+    "test_with_context.h",
   ]
 
   public_deps = [
+    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/fidl/fuchsia-io",

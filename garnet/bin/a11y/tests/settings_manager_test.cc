@@ -4,9 +4,10 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 
+#include <lib/sys/cpp/testing/test_with_context.h>
+
 #include "garnet/bin/a11y/a11y_manager/settings_manager.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace a11y_manager {
 namespace {
@@ -21,7 +22,7 @@ struct ExpectedSettings {
   ColorCorrection color_correction = ColorCorrection::DISABLED;
 };
 
-class SettingsManagerUnitTest : public component::testing::TestWithContext {
+class SettingsManagerUnitTest : public sys::testing::TestWithContext {
  public:
 
   void SetUp() override {

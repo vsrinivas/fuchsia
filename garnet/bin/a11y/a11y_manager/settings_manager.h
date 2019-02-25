@@ -7,9 +7,11 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/startup_context.h>
+#include <lib/fxl/macros.h>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
+#include <math.h>
 
 namespace a11y_manager {
 
@@ -45,7 +47,7 @@ class SettingsManagerImpl : public fuchsia::accessibility::SettingsManager {
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const fuchsia::accessibility::Settings& new_settings);
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> bindings_;
 
   fuchsia::accessibility::Settings settings_;

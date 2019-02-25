@@ -7,7 +7,7 @@
 namespace a11y_manager {
 
 App::App()
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(sys::StartupContext::CreateFromStartupInfo()),
       semantic_tree_(std::make_unique<SemanticTree>()),
       a11y_manager_(std::make_unique<ManagerImpl>()),
       toggler_impl_(std::make_unique<TogglerImpl>()),

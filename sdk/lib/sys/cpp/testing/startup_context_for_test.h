@@ -68,7 +68,44 @@ class StartupContextForTest final : public sys::StartupContext {
     return fake_svc_;
   };
 
+  // Defines the testing surface to be used in conjunction with
+  // |StartupContextForTest|.
+  class Controller {
+   public:
+    // Adds the specified interface to the set of incoming services in mocked
+    // context.
+    //
+    // Adds a supported service with the given |service_name|, using the given
+    // |interface_request_handler|.
+    //
+    // A typical usage may be:
+    //
+    //   AddService(foobar_bindings_.GetHandler(this));
+    //
+    template <typename Interface>
+    zx_status_t AddService(
+        fidl::InterfaceRequestHandler<Interface> handler,
+        const std::string& service_name = Interface::Name_) const {
+      return context_->service_directory_for_test()->AddService(
+          std::move(handler), service_name);
+    }
+
+   protected:
+    Controller(StartupContextForTest* context) : context_(context){};
+
+   private:
+    friend class StartupContextForTest;
+    StartupContextForTest* context_;
+  };
+
+  // Returns |Controller| for tests.
+  // Tests should move the |StartupContextForTest| into the code under test, and
+  // use the |Controller| to perform and verify interactions.
+  Controller& controller() { return controller_; }
+
  private:
+  Controller controller_;
+
   fuchsia::io::DirectoryPtr outgoing_directory_ptr_;
   fuchsia::io::DirectoryPtr public_directory_ptr_;
   std::shared_ptr<ServiceDirectoryForTest> fake_svc_;

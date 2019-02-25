@@ -4,12 +4,12 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/testing/test_with_context.h>
 
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 #include "garnet/bin/a11y/tests/mocks/mock_semantics_provider.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace a11y_manager_test {
@@ -32,7 +32,7 @@ const std::string kSemanticTree8 =
     "            Node_id: 5, Label:Node-5\n"
     "            Node_id: 6, Label:Node-6\n";
 // Unit tests for garnet/bin/a11y/a11y_manager/semantic_tree.h
-class SemanticTreeTest : public component::testing::TestWithContext {
+class SemanticTreeTest : public sys::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();
@@ -50,7 +50,7 @@ class SemanticTreeTest : public component::testing::TestWithContext {
       int number_of_nodes_per_view,
       accessibility_test::MockSemanticsProvider *provider);
   a11y_manager::SemanticTree tree_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
 };
 
 // Create a test node with only a node id and a label.

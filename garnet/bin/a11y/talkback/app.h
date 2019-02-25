@@ -7,10 +7,10 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include "garnet/bin/a11y/talkback/gesture_detector.h"
 #include "garnet/bin/a11y/talkback/talkback_impl.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -24,7 +24,7 @@ class App {
   ~App() = default;
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::StartupContext> startup_context_;
 
   std::unique_ptr<TalkbackImpl> talkback_;
   std::unique_ptr<GestureDetector> gesture_detector_;

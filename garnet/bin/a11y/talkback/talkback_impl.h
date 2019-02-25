@@ -9,9 +9,9 @@
 #include <fuchsia/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include "garnet/bin/a11y/talkback/gesture_listener.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -28,7 +28,7 @@ namespace talkback {
 // to simulate one finger, but that is handled only in the gesture recognizer.
 class TalkbackImpl : public GestureListener {
  public:
-  explicit TalkbackImpl(component::StartupContext* startup_context);
+  explicit TalkbackImpl(sys::StartupContext* startup_context);
   ~TalkbackImpl() = default;
 
  private:

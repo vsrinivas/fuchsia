@@ -15,6 +15,7 @@ StartupContextForTest::StartupContextForTest(
     fuchsia::io::DirectoryPtr directory_ptr, async_dispatcher_t* dispatcher)
     : StartupContext(svc, directory_ptr.NewRequest(dispatcher).TakeChannel(),
                      dispatcher),
+      controller_(this),
       outgoing_directory_ptr_(std::move(directory_ptr)),
       fake_svc_(svc) {
   fdio_service_connect_at(

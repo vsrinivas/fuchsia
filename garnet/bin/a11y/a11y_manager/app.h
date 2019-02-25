@@ -9,13 +9,13 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include "garnet/bin/a11y/a11y_manager/manager_impl.h"
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 #include "garnet/bin/a11y/a11y_manager/semantics/semantics_manager_impl.h"
 #include "garnet/bin/a11y/a11y_manager/settings_manager.h"
 #include "garnet/bin/a11y/a11y_manager/toggler_impl.h"
-#include "lib/component/cpp/startup_context.h"
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
@@ -30,7 +30,7 @@ class App {
   ~App() = default;
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::StartupContext> startup_context_;
 
   std::unique_ptr<SemanticTree> semantic_tree_;
   std::unique_ptr<ManagerImpl> a11y_manager_;
