@@ -7,8 +7,6 @@
 mod forwarding;
 mod icmp;
 mod igmp;
-#[cfg(test)]
-mod testdata;
 mod types;
 
 pub use self::types::*;

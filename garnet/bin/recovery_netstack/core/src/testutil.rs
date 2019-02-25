@@ -146,11 +146,18 @@ pub fn parse_ip_packet<I: Ip>(
 /// Parse an ICMP packet.
 ///
 /// `parse_icmp_packet` parses an ICMP packet, returning the body along with
-/// some important fields.
-pub fn parse_icmp_packet<I: Ip, C, M: for<'a> IcmpMessage<I, &'a [u8], Code = C>>(
+/// some important fields. Before returning, it invokes the callback `f` on the
+/// parsed packet.
+pub fn parse_icmp_packet<
+    I: Ip,
+    C,
+    M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
+    F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
+>(
     mut buf: &[u8],
     src_ip: I::Addr,
     dst_ip: I::Addr,
+    f: F,
 ) -> Result<(M, C), ParseError>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
@@ -160,6 +167,7 @@ where
         (&mut buf).parse_with::<_, IcmpPacket<I, _, M>>(IcmpParseArgs::new(src_ip, dst_ip))?;
     let message = packet.message().clone();
     let code = packet.code();
+    f(&packet);
     Ok((message, code))
 }
 
@@ -186,13 +194,15 @@ pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
 /// `parse_icmp_packet_in_ip_packet_in_ethernet_frame` parses an ICMP packet in
 /// an IP packet in an Ethernet frame, returning the message and code from the
 /// ICMP packet along with some important fields from both the IP and Ethernet
-/// headers.
+/// headers. Before returning, it invokes the callback `f` on the parsed packet.
 pub fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
     I: Ip,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
+    F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
 >(
     mut buf: &[u8],
+    f: F,
 ) -> Result<(Mac, Mac, I::Addr, I::Addr, M, C), ParseError>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
@@ -206,7 +216,7 @@ where
         debug!("unexpected IP protocol: {} (wanted {})", proto, I::IP_PROTO);
         return Err(ParseError::NotExpected);
     }
-    let (message, code) = parse_icmp_packet(body, src_ip, dst_ip)?;
+    let (message, code) = parse_icmp_packet(body, src_ip, dst_ip, f)?;
     Ok((src_mac, dst_mac, src_ip, dst_ip, message, code))
 }
 
@@ -484,10 +494,11 @@ mod tests {
         set_logger_for_test();
         use crate::wire::testdata::icmp_dest_unreachable::*;
         let (body, ..) = parse_ip_packet::<Ipv4>(&IP_PACKET_BYTES).unwrap();
-        let (_, code) = parse_icmp_packet::<Ipv4, _, IcmpDestUnreachable>(
+        let (_, code) = parse_icmp_packet::<Ipv4, _, IcmpDestUnreachable, _>(
             body,
             Ipv4Addr::new([172, 217, 6, 46]),
             Ipv4Addr::new([192, 168, 0, 105]),
+            |_| {},
         )
         .unwrap();
         assert_eq!(code, Icmpv4DestUnreachableCode::DestHostUnreachable);
@@ -498,8 +509,9 @@ mod tests {
         set_logger_for_test();
         use crate::wire::testdata::icmp_echo_ethernet::*;
         let (src_mac, dst_mac, src_ip, dst_ip, _, _) =
-            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpEchoReply>(
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpEchoReply, _>(
                 &REPLY_ETHERNET_FRAME_BYTES,
+                |_| {},
             )
             .unwrap();
         assert_eq!(src_mac, Mac::new([0x50, 0xc7, 0xbf, 0x1d, 0xf4, 0xd2]));

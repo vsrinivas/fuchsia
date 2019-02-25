@@ -561,7 +561,7 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketBuilder for IcmpPacketBuilder<
 /// Some ICMP messages do not use codes. In Rust, the `IcmpMessage::Code` type
 /// associated with these messages is `IcmpUnusedCode`. The only valid numerical
 /// value for this code is 0.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct IcmpUnusedCode;
 
 impl Into<u8> for IcmpUnusedCode {
@@ -570,7 +570,7 @@ impl Into<u8> for IcmpUnusedCode {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(C, packed)]
 struct IdAndSeq {
     id: [u8; 2],
@@ -578,6 +578,14 @@ struct IdAndSeq {
 }
 
 impl IdAndSeq {
+    fn new(id: u16, seq: u16) -> IdAndSeq {
+        let mut id_bytes = [0; 2];
+        let mut seq_bytes = [0; 2];
+        NetworkEndian::write_u16(&mut id_bytes, id);
+        NetworkEndian::write_u16(&mut seq_bytes, seq);
+        IdAndSeq { id: id_bytes, seq: seq_bytes }
+    }
+
     fn id(&self) -> u16 {
         NetworkEndian::read_u16(&self.id)
     }

@@ -19,7 +19,7 @@ pub struct IcmpDestUnreachable {
 impl_from_bytes_as_bytes_unaligned!(IcmpDestUnreachable);
 
 /// An ICMP Echo Request message.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(C, packed)]
 pub struct IcmpEchoRequest {
     pub(super) id_seq: IdAndSeq,
@@ -28,13 +28,17 @@ pub struct IcmpEchoRequest {
 }
 
 impl IcmpEchoRequest {
+    pub fn new(id: u16, seq: u16) -> IcmpEchoRequest {
+        IcmpEchoRequest { id_seq: IdAndSeq::new(id, seq) }
+    }
+
     pub fn reply(self) -> IcmpEchoReply {
         IcmpEchoReply { id_seq: self.id_seq }
     }
 }
 
 /// An ICMP Echo Reply message.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(C, packed)]
 pub struct IcmpEchoReply {
     pub(super) id_seq: IdAndSeq,
