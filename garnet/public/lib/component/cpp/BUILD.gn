@@ -34,21 +34,34 @@ source_set("cpp") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
+
+  # This library is deprecated.
+  #
+  # Use //sdk/lib/sys/cpp instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    "//garnet/bin/*",
+    "//garnet/drivers/*",
+    "//garnet/examples/*",
+    "//garnet/lib/*",
+    "//garnet/public/lib/*",
+    "//garnet/tests/e2e_input_tests:*",
+    "//peridot/*",
+    "//src/ledger/cloud_provider_firestore/*",
+    "//src/ledger/cloud_provider_in_memory/*",
+    "//third_party/dart/runtime/*",
+    "//topaz/app/term:*",
+    "//topaz/auth_providers/google:*",
+    "//topaz/bin/ui/skottie_viewer:*",
+    "//topaz/runtime/dart_runner:*",
+    "//topaz/runtime/flutter_runner:*",
+    "//topaz/tests/web_runner_tests:*",
+    "//vendor/*",
+  ]
 }
 
 source_set("environment_services") {
-  visibility = [
-    "//garnet/bin/appmgr:bin",
-    "//garnet/bin/debug_agent/integration_tests",
-    "//garnet/bin/debug_agent:bin",
-    "//garnet/bin/debug_agent:integration_tests",
-    "//garnet/bin/debugserver:bin",
-    "//garnet/bin/developer/tiles_ctl:bin",
-    "//garnet/bin/insntrace:bin",
-    "//garnet/bin/run:bin",
-    "//garnet/drivers/wlan/wlan:*",
-    "testing",
-  ]
   sources = [
     "environment_services_helper.cc",
     "environment_services_helper.h",
@@ -56,5 +69,16 @@ source_set("environment_services") {
 
   public_deps = [
     ":cpp",
+  ]
+
+  # This library is deprecated.
+  #
+  # Use //sdk/lib/sys/cpp instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    "//garnet/bin/appmgr:*",
+    "//garnet/drivers/wlan/wlan:*",
+    "testing",
   ]
 }
