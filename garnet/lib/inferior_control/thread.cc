@@ -107,7 +107,7 @@ void Thread::Clear() {
 }
 
 zx_handle_t Thread::GetExceptionPortHandle() {
-  return process_->server()->exception_port().handle();
+  return process_->server()->exception_port_handle();
 }
 
 fxl::WeakPtr<Thread> Thread::AsWeakPtr() {
@@ -218,7 +218,7 @@ void Thread::OnSignal(zx_signals_t signals) {
     }
 }
 
-bool Thread::TryNext() {
+bool Thread::TryNext(zx_handle_t eport) {
   if (state() != State::kInException && state() != State::kNew) {
     FXL_LOG(ERROR) << "Cannot try-next thread " << GetName()
                    << " while in state " << StateName(state());
@@ -229,8 +229,7 @@ bool Thread::TryNext() {
               << ": trying next exception handler";
 
   zx_status_t status =
-      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(),
-                                    ZX_RESUME_TRY_NEXT);
+      zx_task_resume_from_exception(handle_, eport, ZX_RESUME_TRY_NEXT);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to try-next thread "
                    << GetName() << ": "
@@ -241,7 +240,7 @@ bool Thread::TryNext() {
   return true;
 }
 
-bool Thread::ResumeFromException() {
+bool Thread::ResumeFromException(zx_handle_t eport) {
   if (state() != State::kInException && state() != State::kNew) {
     FXL_LOG(ERROR) << "Cannot resume thread " << GetName()
                    << " while in state: " << StateName(state());
@@ -254,7 +253,7 @@ bool Thread::ResumeFromException() {
   FXL_VLOG(2) << "Resuming thread " << GetDebugName() << " after an exception";
 
   zx_status_t status =
-      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
+      zx_task_resume_from_exception(handle_, eport, 0);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to resume thread " << GetName() << ": "
                    << debugger_utils::ZxErrorString(status);
@@ -265,7 +264,7 @@ bool Thread::ResumeFromException() {
   return true;
 }
 
-bool Thread::ResumeAfterSoftwareBreakpointInstruction() {
+bool Thread::ResumeAfterSoftwareBreakpointInstruction(zx_handle_t eport) {
   FXL_DCHECK(state() == State::kInException);
   if (!registers_->RefreshGeneralRegisters()) {
     return false;
@@ -280,13 +279,13 @@ bool Thread::ResumeAfterSoftwareBreakpointInstruction() {
   if (!registers_->WriteGeneralRegisters()) {
     return false;
   }
-  if (!ResumeFromException()) {
+  if (!ResumeFromException(eport)) {
     return false;
   }
   return true;
 }
 
-void Thread::ResumeForExit() {
+void Thread::ResumeForExit(zx_handle_t eport) {
   switch (state()) {
     case State::kNew:
     case State::kInException:
@@ -300,7 +299,7 @@ void Thread::ResumeForExit() {
   FXL_VLOG(2) << "Thread " << GetDebugName() << " is exiting";
 
   auto status =
-      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
+      zx_task_resume_from_exception(handle_, eport, 0);
   if (status < 0) {
     // This might fail if the process has been killed in the interim.
     // It shouldn't otherwise fail. Just log the failure, nothing else
@@ -377,6 +376,7 @@ bool Thread::Step() {
   // thread).
   FXL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
 
+  // TODO(dje): Handle stopped by suspension.
   zx_status_t status =
       zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {

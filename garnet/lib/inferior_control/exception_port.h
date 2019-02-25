@@ -68,7 +68,6 @@ class ExceptionPort final {
   // TODO(PT-105): Delete when resuming from exceptions no longer requires the
   // eport handle.
   friend class Server;
-  friend class Thread;
   zx_handle_t handle() const { return eport_.get(); }
 
   // The worker function.

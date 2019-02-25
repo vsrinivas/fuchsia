@@ -30,12 +30,12 @@ class TryNextThreadTest : public TestServer {
   bool got_unexpected_exception() const { return got_unexpected_exception_; }
 
   void OnArchitecturalException(
-      Process* process, Thread* thread, zx_excp_type_t type,
+      Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
       const zx_exception_context_t& context) {
     FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       got_sw_breakpoint_ = true;
-      thread->TryNext();
+      thread->TryNext(eport);
     } else {
       // We shouldn't get here, test has failed.
       // Record the fact for the test, and terminate the inferior, we don't
@@ -78,7 +78,7 @@ class SuspendResumeThreadTest : public TestServer {
   bool got_sw_breakpoint() const { return got_sw_breakpoint_; }
   bool got_unexpected_exception() const { return got_unexpected_exception_; }
 
-  void OnThreadStarting(Process* process, Thread* thread,
+  void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override {
     if (main_thread_id_ == ZX_KOID_INVALID) {
       // Must be the inferior's main thread.
@@ -91,11 +91,11 @@ class SuspendResumeThreadTest : public TestServer {
       FXL_LOG(INFO) << "Exception handling thread = "
                     << exception_handling_thread_id_;
     }
-    TestServer::OnThreadStarting(process, thread, context);
+    TestServer::OnThreadStarting(process, thread, eport, context);
   }
 
   void OnArchitecturalException(
-      Process* process, Thread* thread, zx_excp_type_t type,
+      Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
       const zx_exception_context_t& context) override {
     FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
     if (type == ZX_EXCP_SW_BREAKPOINT) {
@@ -145,7 +145,7 @@ class SuspendResumeThreadTest : public TestServer {
         FXL_CHECK(debugger_utils::GetThreadOsState(mthread->handle()) ==
                   ZX_THREAD_STATE_BLOCKED_EXCEPTION)
           << debugger_utils::GetThreadOsState(mthread->handle());
-        mthread->TryNext();
+        mthread->TryNext(process->server()->exception_port_handle());
       }
     }
   }
@@ -189,13 +189,13 @@ class ResumeAfterSwBreakThreadTest : public TestServer {
   }
 
   void OnArchitecturalException(
-      Process* process, Thread* thread, zx_excp_type_t type,
+      Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
       const zx_exception_context_t& context) {
     FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       got_sw_breakpoint_ = true;
       resume_after_break_succeeded_ =
-          thread->ResumeAfterSoftwareBreakpointInstruction();
+          thread->ResumeAfterSoftwareBreakpointInstruction(eport);
     } else {
       // We shouldn't get here, test has failed.
       // Record the fact for the test, and terminate the inferior, we don't

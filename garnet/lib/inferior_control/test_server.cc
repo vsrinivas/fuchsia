@@ -141,6 +141,7 @@ bool TestServer::TestFailureExit() {
 }
 
 void TestServer::OnThreadStarting(Process* process, Thread* thread,
+                                  zx_handle_t eport,
                                   const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -153,17 +154,18 @@ void TestServer::OnThreadStarting(Process* process, Thread* thread,
       FXL_DCHECK(false);
   }
 
-  thread->ResumeFromException();
+  thread->ResumeFromException(eport);
 }
 
 void TestServer::OnThreadExiting(Process* process, Thread* thread,
+                                 zx_handle_t eport,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
   // We still have to "resume" the thread so that the o/s will complete the
   // termination of the thread.
-  thread->ResumeForExit();
+  thread->ResumeForExit(eport);
 }
 
 void TestServer::OnProcessTermination(Process* process) {
@@ -177,7 +179,7 @@ void TestServer::OnProcessTermination(Process* process) {
 }
 
 void TestServer::OnArchitecturalException(
-    Process* process, Thread* thread, const zx_excp_type_t type,
+    Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
     const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -185,9 +187,9 @@ void TestServer::OnArchitecturalException(
   QuitMessageLoop(true);
 }
 
-void TestServer::OnSyntheticException(Process* process, Thread* thread,
-                                      zx_excp_type_t type,
-                                      const zx_exception_context_t& context) {
+void TestServer::OnSyntheticException(
+    Process* process, Thread* thread, zx_handle_t eport, zx_excp_type_t type,
+    const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 

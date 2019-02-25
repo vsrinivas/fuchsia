@@ -45,16 +45,16 @@ class TestServer : public Server, public ::testing::Test {
 
  protected:
   // Process::Delegate overrides.
-  void OnThreadStarting(Process* process, Thread* thread,
+  void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override;
-  void OnThreadExiting(Process* process, Thread* thread,
+  void OnThreadExiting(Process* process, Thread* thread, zx_handle_t eport,
                        const zx_exception_context_t& context) override;
   void OnProcessTermination(Process* process) override;
   void OnArchitecturalException(Process* process, Thread* thread,
-                                const zx_excp_type_t type,
+                                zx_handle_t eport, const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
   void OnSyntheticException(Process* process, Thread* thread,
-                            zx_excp_type_t type,
+                            zx_handle_t eport, zx_excp_type_t type,
                             const zx_exception_context_t& context) override;
 
  private:

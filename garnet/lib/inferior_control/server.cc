@@ -108,6 +108,7 @@ void Server::OnProcessException(const zx_port_packet_t& packet) {
   const zx_exception_context_t& context = report.context;
 
   Delegate* delegate = process->delegate();
+  zx_handle_t eport = exception_port_.handle();
 
   // First update our internal state for the thread.
   thread->OnException(type, context);
@@ -115,20 +116,20 @@ void Server::OnProcessException(const zx_port_packet_t& packet) {
   // |type| could either map to an architectural exception or Zircon-defined
   // synthetic exceptions.
   if (ZX_EXCP_IS_ARCH(type)) {
-    delegate->OnArchitecturalException(process, thread, type, context);
+    delegate->OnArchitecturalException(process, thread, eport, type, context);
     return;
   }
 
   // Must be a synthetic exception.
   switch (type) {
     case ZX_EXCP_THREAD_STARTING:
-      delegate->OnThreadStarting(process, thread, context);
+      delegate->OnThreadStarting(process, thread, eport, context);
       break;
     case ZX_EXCP_THREAD_EXITING:
-      delegate->OnThreadExiting(process, thread, context);
+      delegate->OnThreadExiting(process, thread, eport, context);
       break;
     case ZX_EXCP_POLICY_ERROR:
-      delegate->OnSyntheticException(process, thread, type, context);
+      delegate->OnSyntheticException(process, thread, eport, type, context);
       break;
     default:
       FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception for thread "

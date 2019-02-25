@@ -80,23 +80,26 @@ class Thread final {
   void OnSignal(zx_signals_t signal);
 
   // Pass the exception on to the next handler.
-  bool TryNext();
+  // TODO(PT-105): The passing of |eport| will change.
+  bool TryNext(zx_handle_t eport);
 
   // Resumes the thread from a "stopped in exception" state.
   // The thread state on successful return is kRunning.
-  bool ResumeFromException();
+  // TODO(PT-105): The passing of |eport| will change.
+  bool ResumeFromException(zx_handle_t eport);
 
   // Assuming the thread stopped at a s/w breakpoint instruction, advance the
   // pc to after the instruction and resume.
-  // Note that this is not for resuming after a tool-introduced s/w breakpoint.
-  // This is for resuming after a s/w breakpoint instruction that is part of
-  // the program itself.
-  bool ResumeAfterSoftwareBreakpointInstruction();
+  // Note that this is not for resuming afterware a tool-introduced
+  // s/w breakpoint. This is for resuming after a s/w breakpoint instruction
+  // that is part of the program itself.
+  bool ResumeAfterSoftwareBreakpointInstruction(zx_handle_t eport);
 
   // Resumes the thread from an ZX_EXCP_THREAD_EXITING exception.
   // The thread state on entry must one of kNew, kInException, kExiting.
   // The thread state on return is kGone.
-  void ResumeForExit();
+  // TODO(PT-105): The passing of |eport| will change.
+  void ResumeForExit(zx_handle_t eport);
 
   // Request the thread to suspend.
   // This doesn't wait for it to suspend, just requests it.

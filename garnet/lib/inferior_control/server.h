@@ -62,6 +62,10 @@ class Server : public Process::Delegate {
   // owned by this Server instance and should not be deleted.
   ExceptionPort& exception_port() { return exception_port_; }
 
+  // Accessor for the exception port's handle.
+  // TODO(PT-105): Delete when exceptions have handles themselves.
+  zx_handle_t exception_port_handle() const { return exception_port_.handle(); }
+
   // Call this to schedule termination of the server.
   // N.B. The Server will exit its main loop asynchronously so any
   // subsequently posted tasks will be dropped.

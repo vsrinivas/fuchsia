@@ -366,6 +366,7 @@ void RspServer::OnIOError() {
 
 void RspServer::OnThreadStarting(inferior_control::Process* process,
                                  inferior_control::Thread* thread,
+                                 zx_handle_t eport,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
 
@@ -396,6 +397,7 @@ void RspServer::OnThreadStarting(inferior_control::Process* process,
 
 void RspServer::OnThreadExiting(inferior_control::Process* process,
                                 inferior_control::Thread* thread,
+                                zx_handle_t eport,
                                 const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
@@ -410,7 +412,7 @@ void RspServer::OnThreadExiting(inferior_control::Process* process,
   // state when exiting, like it does when starting. The thread needs to be
   // "resumed" so that the o/s will finish terminating the thread. This also
   // takes care of marking the thread as kGone.
-  thread->ResumeForExit();
+  thread->ResumeForExit(eport);
 }
 
 void RspServer::OnProcessTermination(inferior_control::Process* process) {
@@ -426,13 +428,14 @@ void RspServer::OnProcessTermination(inferior_control::Process* process) {
 
 void RspServer::OnArchitecturalException(
     inferior_control::Process* process, inferior_control::Thread* thread,
-    const zx_excp_type_t type, const zx_exception_context_t& context) {
+    zx_handle_t eport, const zx_excp_type_t type,
+    const zx_exception_context_t& context) {
   ExceptionHelper(process, thread, type, context);
 }
 
 void RspServer::OnSyntheticException(inferior_control::Process* process,
                                      inferior_control::Thread* thread,
-                                     zx_excp_type_t type,
+                                     zx_handle_t eport, zx_excp_type_t type,
                                      const zx_exception_context_t& context) {
   // These are basically equivalent to architectural exceptions
   // for our purposes. Handle them the same way.

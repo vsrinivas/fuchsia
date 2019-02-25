@@ -193,6 +193,7 @@ bool IptServer::Run() {
 
 void IptServer::OnThreadStarting(inferior_control::Process* process,
                                  inferior_control::Thread* thread,
+                                 zx_handle_t eport,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -215,11 +216,12 @@ void IptServer::OnThreadStarting(inferior_control::Process* process,
   }
 
 Fail:
-  thread->ResumeFromException();
+  thread->ResumeFromException(eport);
 }
 
 void IptServer::OnThreadExiting(inferior_control::Process* process,
                                 inferior_control::Thread* thread,
+                                zx_handle_t eport,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
@@ -235,7 +237,7 @@ void IptServer::OnThreadExiting(inferior_control::Process* process,
 
   // We still have to "resume" the thread so that the o/s will complete the
   // termination of the thread.
-  thread->ResumeForExit();
+  thread->ResumeForExit(eport);
 }
 
 void IptServer::OnProcessTermination(inferior_control::Process* process) {
@@ -251,7 +253,8 @@ void IptServer::OnProcessTermination(inferior_control::Process* process) {
 
 void IptServer::OnArchitecturalException(
     inferior_control::Process* process, inferior_control::Thread* thread,
-    const zx_excp_type_t type, const zx_exception_context_t& context) {
+    zx_handle_t eport, const zx_excp_type_t type,
+    const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
@@ -263,7 +266,7 @@ void IptServer::OnArchitecturalException(
 
 void IptServer::OnSyntheticException(inferior_control::Process* process,
                                      inferior_control::Thread* thread,
-                                     zx_excp_type_t type,
+                                     zx_handle_t eport, zx_excp_type_t type,
                                      const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);

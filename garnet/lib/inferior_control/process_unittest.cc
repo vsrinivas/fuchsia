@@ -42,7 +42,7 @@ class AttachTest : public TestServer {
  public:
   AttachTest() = default;
 
-  void OnThreadStarting(Process* process, Thread* thread,
+  void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override {
     if (!main_thread_started_) {
       // Must be the inferior's main thread.
@@ -56,7 +56,7 @@ class AttachTest : public TestServer {
       // will for us when the eport is unbound.
     } else {
       // The inferior doesn't have any other threads, but don't assume that.
-      TestServer::OnThreadStarting(process, thread, context);
+      TestServer::OnThreadStarting(process, thread, eport, context);
     }
   }
 
@@ -118,14 +118,14 @@ class FindThreadByIdTest : public TestServer {
  public:
   FindThreadByIdTest() = default;
 
-  void OnThreadStarting(Process* process, Thread* thread,
+  void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override {
     thread_koid_ = thread->id();
     Thread* lookup_thread = process->FindThreadById(thread_koid_);
     if (lookup_thread) {
       found_thread_by_id_ = true;
     }
-    TestServer::OnThreadStarting(process, thread, context);
+    TestServer::OnThreadStarting(process, thread, eport, context);
   }
 
   zx_koid_t thread_koid() const { return thread_koid_; }
@@ -161,8 +161,8 @@ class LdsoBreakpointTest : public TestServer {
   bool exec_present() const { return exec_present_; }
 
   void OnArchitecturalException(
-      Process* process, Thread* thread, const zx_excp_type_t type,
-      const zx_exception_context_t& context) {
+      Process* process, Thread* thread, zx_handle_t eport,
+      const zx_excp_type_t type, const zx_exception_context_t& context) {
     FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       // The shared libraries should have been loaded by now.
@@ -229,10 +229,10 @@ class KillTest : public TestServer {
  public:
   KillTest() = default;
 
-  void OnThreadStarting(Process* process, Thread* thread,
+  void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override {
     kill_requested_ = process->Kill();
-    TestServer::OnThreadStarting(process, thread, context);
+    TestServer::OnThreadStarting(process, thread, eport, context);
   }
 
   bool kill_requested() const { return kill_requested_; }

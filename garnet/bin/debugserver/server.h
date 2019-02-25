@@ -127,19 +127,19 @@ class RspServer final : public inferior_control::ServerWithIO {
 
   // Process::Delegate overrides.
   void OnThreadStarting(inferior_control::Process* process,
-                        inferior_control::Thread* thread,
+                        inferior_control::Thread* thread, zx_handle_t eport,
                         const zx_exception_context_t& context) override;
   void OnThreadExiting(inferior_control::Process* process,
-                       inferior_control::Thread* thread,
+                       inferior_control::Thread* thread, zx_handle_t eport,
                        const zx_exception_context_t& context) override;
   void OnProcessTermination(inferior_control::Process* process) override;
   void OnArchitecturalException(inferior_control::Process* process,
                                 inferior_control::Thread* thread,
-                                const zx_excp_type_t type,
+                                zx_handle_t eport, const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;
   void OnSyntheticException(inferior_control::Process* process,
                             inferior_control::Thread* thread,
-                            zx_excp_type_t type,
+                            zx_handle_t eport, zx_excp_type_t type,
                             const zx_exception_context_t& context) override;
   void ExceptionHelper(inferior_control::Process* process,
                        inferior_control::Thread* thread, zx_excp_type_t type,
