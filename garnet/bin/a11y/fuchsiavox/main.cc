@@ -5,12 +5,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
-#include "garnet/bin/a11y/talkback/app.h"
+#include "garnet/bin/a11y/fuchsiavox/app.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
-  talkback::App app;
+  fuchsiavox::App app;
   loop.Run();
   return 0;
 }

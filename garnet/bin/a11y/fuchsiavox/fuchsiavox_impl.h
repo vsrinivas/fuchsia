@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_A11Y_TALKBACK_TALKBACK_IMPL_H_
-#define GARNET_BIN_A11Y_TALKBACK_TALKBACK_IMPL_H_
+#ifndef GARNET_BIN_A11Y_FUCHSIAVOX_FUCHSIAVOX_IMPL_H_
+#define GARNET_BIN_A11Y_FUCHSIAVOX_FUCHSIAVOX_IMPL_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/tts/cpp/fidl.h>
@@ -11,25 +11,25 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/sys/cpp/startup_context.h>
 
-#include "garnet/bin/a11y/talkback/gesture_listener.h"
+#include "garnet/bin/a11y/fuchsiavox/gesture_listener.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace talkback {
+namespace fuchsiavox {
 
-// Talkback action functions. The gesture recognizer calls these functions
+// Fuchsiavox action functions. The gesture recognizer calls these functions
 // once the right gestures are applied.
 // The functionality we try to expose here include:
 // - Single tap/touch explore on a UI element to read aloud element/set
 //   accessibility focus on it.
 // - Double tap to select the current element with accessibility focus.
 // Only the functionality that needs to be mediated by the accessibility
-// manager is performed here. Talkback also allows for using two fingers
+// manager is performed here. Fuchsiavox also allows for using two fingers
 // to simulate one finger, but that is handled only in the gesture recognizer.
-class TalkbackImpl : public GestureListener {
+class FuchsiavoxImpl : public GestureListener {
  public:
-  explicit TalkbackImpl(sys::StartupContext* startup_context);
-  ~TalkbackImpl() = default;
+  explicit FuchsiavoxImpl(sys::StartupContext* startup_context);
+  ~FuchsiavoxImpl() = default;
 
  private:
   // |GestureListener|
@@ -72,9 +72,9 @@ class TalkbackImpl : public GestureListener {
   // Local node id of the current a11y focused node.
   int32_t focused_node_id_ = -1;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TalkbackImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FuchsiavoxImpl);
 };
 
-}  // namespace talkback
+}  // namespace fuchsiavox
 
-#endif  // GARNET_BIN_A11Y_TALKBACK_TALKBACK_IMPL_H_
+#endif  // GARNET_BIN_A11Y_FUCHSIAVOX_FUCHSIAVOX_IMPL_H_

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/a11y/talkback/gesture_detector.h"
+#include "garnet/bin/a11y/fuchsiavox/gesture_detector.h"
 
-namespace talkback {
+namespace fuchsiavox {
 
 GestureDetector::GestureDetector(GestureListener* listener)
     : listener_(listener), tap_dispatcher_(async_get_default_dispatcher()) {}
@@ -209,4 +209,4 @@ void GestureDetector::SimulateCancel() {
   // touch_dispatcher_->SendSimulatedPointerEvent(std::move(clone_event));
 }
 
-}  // namespace talkback
+}  // namespace fuchsiavox

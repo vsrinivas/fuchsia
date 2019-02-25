@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_A11Y_TALKBACK_GESTURE_LISTENER_H_
-#define GARNET_BIN_A11Y_TALKBACK_GESTURE_LISTENER_H_
+#ifndef GARNET_BIN_A11Y_FUCHSIAVOX_GESTURE_LISTENER_H_
+#define GARNET_BIN_A11Y_FUCHSIAVOX_GESTURE_LISTENER_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
-namespace talkback {
+namespace fuchsiavox {
 
 // Base class for providing hooks for when the gesture detector detects
 // a specific gesture.
@@ -28,6 +28,6 @@ class GestureListener {
                          fuchsia::ui::input::PointerEvent event) = 0;
 };
 
-}  // namespace talkback
+}  // namespace fuchsiavox
 
-#endif  // GARNET_BIN_A11Y_TALKBACK_GESTURE_LISTENER_H_
+#endif  // GARNET_BIN_A11Y_FUCHSIAVOX_GESTURE_LISTENER_H_

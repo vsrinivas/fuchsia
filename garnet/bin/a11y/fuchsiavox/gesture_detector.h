@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_A11Y_TALKBACK_GESTURE_DETECTOR_H_
-#define GARNET_BIN_A11Y_TALKBACK_GESTURE_DETECTOR_H_
+#ifndef GARNET_BIN_A11Y_FUCHSIAVOX_GESTURE_DETECTOR_H_
+#define GARNET_BIN_A11Y_FUCHSIAVOX_GESTURE_DETECTOR_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -12,11 +12,11 @@
 #include <lib/async/default.h>
 #include <lib/sys/cpp/startup_context.h>
 
-#include "garnet/bin/a11y/talkback/gesture_listener.h"
+#include "garnet/bin/a11y/fuchsiavox/gesture_listener.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace talkback {
+namespace fuchsiavox {
 
 // Max duration between a touch up and a second touch down to register
 // a double tap. Time in milliseconds.
@@ -30,7 +30,7 @@ constexpr uint64_t kLongPressDelay = zx::msec(120).to_nsecs();
 // Time in nanoseconds.
 constexpr uint64_t kMoveCallDelay = zx::msec(17).to_nsecs();
 
-// Talkback gesture detector that takes in raw inputs to process.
+// Fuchsiavox gesture detector that takes in raw inputs to process.
 // The gestures it detects:
 // - Single tap - a11y focus set on element touched.
 // - One finger slide - a11y focus set to where currently touching.
@@ -184,6 +184,6 @@ class GestureDetector {
   async_dispatcher_t* const tap_dispatcher_ = nullptr;
 };
 
-}  // namespace talkback
+}  // namespace fuchsiavox
 
-#endif  // GARNET_BIN_A11Y_TALKBACK_GESTURE_DETECTOR_H_
+#endif  // GARNET_BIN_A11Y_FUCHSIAVOX_GESTURE_DETECTOR_H_

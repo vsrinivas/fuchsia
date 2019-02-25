@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("talkback") {
-  output_name = "talkback"
+executable("fuchsiavox") {
+  output_name = "fuchsiavox"
 
   sources = [
     "main.cc",
@@ -21,11 +21,11 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
+    "fuchsiavox_impl.cc",
+    "fuchsiavox_impl.h",
     "gesture_detector.cc",
     "gesture_detector.h",
     "gesture_listener.h",
-    "talkback_impl.cc",
-    "talkback_impl.h",
   ]
 
   public_deps = [
@@ -34,9 +34,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.tts",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.tts",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 }

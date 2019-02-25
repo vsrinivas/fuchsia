@@ -3,6 +3,6 @@
         "//garnet/bin/a11y:a11y_manager",
         "//garnet/bin/a11y:a11y_tests",
         "//garnet/bin/a11y:a11y_toggler",
-        "//garnet/bin/a11y:talkback"
+        "//garnet/bin/a11y:fuchsiavox"
     ]
 }

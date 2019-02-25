@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_A11Y_TALKBACK_APP_H_
-#define GARNET_BIN_A11Y_TALKBACK_APP_H_
+#ifndef GARNET_BIN_A11Y_FUCHSIAVOX_APP_H_
+#define GARNET_BIN_A11Y_FUCHSIAVOX_APP_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/startup_context.h>
 
-#include "garnet/bin/a11y/talkback/gesture_detector.h"
-#include "garnet/bin/a11y/talkback/talkback_impl.h"
+#include "garnet/bin/a11y/fuchsiavox/fuchsiavox_impl.h"
+#include "garnet/bin/a11y/fuchsiavox/gesture_detector.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
-namespace talkback {
+namespace fuchsiavox {
 
-// Talkback application entry point.
+// Fuchsiavox application entry point.
 class App {
  public:
   explicit App();
@@ -26,12 +26,12 @@ class App {
  private:
   std::unique_ptr<sys::StartupContext> startup_context_;
 
-  std::unique_ptr<TalkbackImpl> talkback_;
+  std::unique_ptr<FuchsiavoxImpl> fuchsiavox_;
   std::unique_ptr<GestureDetector> gesture_detector_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-}  // namespace talkback
+}  // namespace fuchsiavox
 
-#endif  // GARNET_BIN_A11Y_TALKBACK_APP_H_
+#endif  // GARNET_BIN_A11Y_FUCHSIAVOX_APP_H_

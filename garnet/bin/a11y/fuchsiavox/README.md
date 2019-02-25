@@ -1,6 +1,6 @@
-# Talkback
+# Fuchsiavox
 
-This is a basic implementation of the Android Talkback a11y service for Fuchsia. Its a work
+This is a basic implementation of the Fuchsiavox a11y service for Fuchsia. Its a work
 in progress with the current capabilities:
 - Single tap/slide one finger to read text under finger and set a11y focus.
 - Double tap to perform a tap action.
@@ -12,4 +12,4 @@ Currently inactive due to work for SCN-1124.
 
 ## Gesture Detection State Diagram
 
-![Gesture State Diagram](talkback_gesture_state_machine.png)
+![Gesture State Diagram](fuchsiavox_gesture_state_machine.png)

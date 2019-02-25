@@ -66,17 +66,17 @@ package("a11y_toggler") {
   ]
 }
 
-package("talkback") {
+package("fuchsiavox") {
   deps = [
-    "talkback",
+    "fuchsiavox",
   ]
 
-  binary = "talkback"
+  binary = "fuchsiavox"
 
   meta = [
     {
-      path = rebase_path("meta/talkback.cmx")
-      dest = "talkback.cmx"
+      path = rebase_path("meta/fuchsiavox.cmx")
+      dest = "fuchsiavox.cmx"
     },
   ]
 }
