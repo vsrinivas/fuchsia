@@ -20,6 +20,8 @@ rustc_library("wlan-common") {
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:num",
+    "//third_party/rust-crates/rustc_deps:num-derive",
+    "//third_party/rust-crates/rustc_deps:num-traits",
   ]
 }
 

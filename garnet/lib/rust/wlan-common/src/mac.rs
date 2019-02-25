@@ -7,6 +7,8 @@ use {
     bitfield::bitfield,
     byteorder::{BigEndian, ByteOrder, LittleEndian},
     num::{One, Unsigned},
+    num_derive::{FromPrimitive, ToPrimitive},
+    num_traits::{FromPrimitive, ToPrimitive},
     std::{marker::PhantomData, ops::Deref},
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
@@ -479,6 +481,8 @@ pub enum AuthAlgorithm {
 }
 
 /// IEEE Std 802.11-2016, 9.4.1.7
+#[allow(unused)] // Some ReasonCodes are not used yet.
+#[derive(Debug, PartialOrd, PartialEq, FromPrimitive, ToPrimitive)]
 #[repr(C)]
 pub enum ReasonCode {
     // 0 Reserved
@@ -755,6 +759,7 @@ impl<B: ByteSlice> DataSubtype<B> {
 
 /// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 #[allow(unused)] // Some StatusCodes are not used yet.
+#[derive(Debug, PartialOrd, PartialEq, FromPrimitive, ToPrimitive)]
 #[repr(C)]
 pub enum StatusCode {
     Success = 0,
