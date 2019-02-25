@@ -173,8 +173,6 @@ pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMu
             ))
         });
     }
-    // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
-    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, header_len);
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -218,9 +216,6 @@ pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
         Icmpv6DestUnreachableCode::PortUnreachable,
         original_packet,
     );
-
-    // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
-    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -271,13 +266,6 @@ pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
         Icmpv6DestUnreachableCode::NoRoute,
         original_packet,
     );
-
-    // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
-    // TODO(joshlf): When we finally get around to setting src_ip properly (see
-    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
-    // source IP rather than the original packet's destination IP (which won't
-    // necessarily be the same if we have forwarding enabled).
-    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
 /// Send an ICMP message in response to receiving a packet whose TTL has
@@ -353,13 +341,6 @@ pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddr, B: BufferMut>(
             ))
         });
     }
-
-    // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
-    // TODO(joshlf): When we finally get around to setting src_ip properly (see
-    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
-    // source IP rather than the original packet's destination IP (which won't
-    // necessarily be the same if we have forwarding enabled).
-    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
 fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
