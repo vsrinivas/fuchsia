@@ -12,8 +12,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/command_line.h"
@@ -22,7 +20,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/gtest/real_loop_fixture.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/service_directory.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
@@ -74,7 +73,7 @@ class DevTokenManagerAppTest
       fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(sys::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
@@ -82,22 +81,24 @@ class DevTokenManagerAppTest
  protected:
   // ::testing::Test:
   void SetUp() override {
-    component::Services services;
+    fidl::InterfaceHandle<fuchsia::io::Directory> services;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = GetParam().token_manager_url;
-    launch_info.directory_request = services.NewRequest();
+    launch_info.directory_request = services.NewRequest().TakeChannel();
     {
       std::ostringstream stream;
       stream << "--verbose=" << fxl::GetVlogVerbosity();
       launch_info.arguments.push_back(stream.str());
     }
-    startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                  controller_.NewRequest());
+    fuchsia::sys::LauncherPtr launcher;
+    startup_context_->svc()->Connect(launcher.NewRequest());
+    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
     controller_.set_error_handler([](zx_status_t status) {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
 
-    services.ConnectToService(token_mgr_factory_.NewRequest());
+    sys::ServiceDirectory service_directory(std::move(services));
+    service_directory.Connect(token_mgr_factory_.NewRequest());
 
     std::string auth_provider_type = GetParam().auth_provider_params.type;
     dev_app_config_ = MakeDevAppConfig(auth_provider_type);
@@ -133,7 +134,7 @@ class DevTokenManagerAppTest
   }
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::StartupContext> startup_context_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
  protected:
@@ -423,7 +424,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto context = component::StartupContext::CreateFromStartupInfo();
+    auto context = sys::StartupContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

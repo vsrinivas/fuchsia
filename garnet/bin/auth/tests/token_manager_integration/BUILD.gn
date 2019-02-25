@@ -55,7 +55,7 @@ executable("e2e_dev") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 
   deps = [

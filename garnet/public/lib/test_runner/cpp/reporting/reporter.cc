@@ -5,18 +5,17 @@
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/sys/cpp/startup_context.h>
 
 using fuchsia::testing::runner::TestRunnerSyncPtr;
 
 namespace test_runner {
 
-void ReportResult(std::string identity, component::StartupContext* context,
+void ReportResult(std::string identity, sys::StartupContext* context,
                   std::vector<TestResultPtr> results) {
   TestRunnerSyncPtr test_runner;
-  context->ConnectToEnvironmentService(test_runner.NewRequest());
+  context->svc()->Connect(test_runner.NewRequest());
 
   test_runner->Identify(identity);
   for (auto& result : results) {
