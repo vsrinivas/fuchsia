@@ -391,6 +391,32 @@ FUNCTION vcpu_vmcall_start
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_vmcall_end
 
+FUNCTION vcpu_extended_registers_start
+    // Enable SSE instructions.
+    mov %cr4, %rax
+    or $(X86_CR4_OSFXSR), %rax
+    mov %rax, %cr4
+
+    // Store data in xmm0.
+    movdqu xmm_data(%rip), %xmm0
+
+    movq $0, (EXIT_TEST_ADDR)
+
+    // Read data back from xmm0 into rax:rbx.
+    movq %xmm0, %rax
+    movhlps %xmm0, %xmm0
+    movq %xmm0, %rbx
+
+    movq $0, (EXIT_TEST_ADDR)
+
+.align 16
+xmm_data:
+    .4byte 0x01234567
+    .4byte 0x89abcdef
+    .4byte 0xfedcba98
+    .4byte 0x76543210
+FUNCTION vcpu_extended_registers_end
+
 // Test guest_set_trap using an IO-based trap.
 FUNCTION guest_set_trap_with_io_start
     out %al, $TRAP_PORT

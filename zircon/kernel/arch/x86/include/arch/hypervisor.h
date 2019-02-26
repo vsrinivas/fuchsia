@@ -10,7 +10,6 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/vmx_state.h>
 #include <fbl/ref_ptr.h>
-#include <ktl/unique_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
@@ -19,6 +18,8 @@
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
+#include <ktl/unique_ptr.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 struct VmxInfo;
@@ -107,5 +108,10 @@ private:
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
 
+    ktl::unique_ptr<uint8_t[]> guest_extended_registers_ = nullptr;
+
     Vcpu(Guest* guest, uint16_t vpid, const thread_t* thread);
+
+    void SaveGuestExtendedRegisters(uint64_t cr4);
+    void RestoreGuestExtendedRegisters(uint64_t cr4);
 };

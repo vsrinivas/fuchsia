@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <new>
 
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
@@ -654,39 +655,55 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
     fbl::AllocChecker ac;
     ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
-    if (!ac.check())
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
     timer_init(&vcpu->local_apic_state_.timer);
     status = vcpu->local_apic_state_.interrupt_tracker.Init();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     vcpu->pvclock_state_.is_stable =
         pvclock_is_present() ? pvclock_is_stable() : x86_feature_test(X86_FEATURE_INVAR_TSC);
 
     VmxInfo vmx_info;
     status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     status = vcpu->guest_msr_page_.Alloc(vmx_info, 0);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     status = vcpu->vmcs_page_.Alloc(vmx_info, 0);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
     auto_call.cancel();
+
+    // Initialize a 64-byte aligned XSAVE area. The guest may enable any non-supervisor state so we
+    // allocate the maximum possible size. It is then initialized with the minimum possible XSTATE
+    // bit vector, which corresponds to the guest's initial state.
+    vcpu->guest_extended_registers_.reset(new (std::align_val_t(64), &ac)
+                                              uint8_t[x86_extended_register_max_size()]);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    x86_extended_register_init_state_from_bv(vcpu->guest_extended_registers_.get(),
+                                             X86_XSAVE_STATE_BIT_X87);
 
     VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
     region->revision_id = vmx_info.revision_id;
     zx_paddr_t table = gpas->arch_aspace()->arch_table_phys();
     status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
                        table, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
-
+    }
     *out = ktl::move(vcpu);
     return ZX_OK;
 }
@@ -768,21 +785,78 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
     return ZX_OK;
 }
 
+static uint64_t get_hypervisor_xcr0(const GuestState& guest_state, uint64_t guest_cr4) {
+    // Configure XCR0 with all of the state we need to save and restore. Start with the guest XCR0
+    // and add any state that's not XSAVE-enabled. See Intel Volume 1, Section 13.5. We do not
+    // handle any supervisor state (PT and HDC) because that state is inaccessible to guest because
+    // both the MSRs and xsaves/xrstors are disabled for the guest.
+    uint64_t xcr0 = guest_state.xcr0;
+
+    // Save and restore SSE state if the guest enables SSE.
+    if (x86_feature_test(X86_FEATURE_SSE) && x86_feature_test(X86_FEATURE_FXSR) &&
+        (guest_cr4 & X86_CR4_OSFXSR)) {
+        xcr0 |= X86_XSAVE_STATE_BIT_SSE;
+    }
+
+    // Save and restore PKRU state if the guest enables protection keys.
+    if (guest_cr4 & X86_CR4_PKE) {
+        xcr0 |= X86_XSAVE_STATE_BIT_PKRU;
+    }
+
+    return xcr0;
+}
+
+void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    if (!x86_feature_test(X86_FEATURE_XSAVE)) {
+        // Save host and restore guest x87/SSE state with fxrstor/fxsave.
+        x86_extended_register_save_state(thread_->arch.extended_register_state);
+        x86_extended_register_restore_state(guest_extended_registers_.get());
+        return;
+    }
+
+    // Save host state.
+    vmx_state_.host_state.xcr0 = x86_xgetbv(0);
+    x86_extended_register_save_state(thread_->arch.extended_register_state);
+
+    // Restore guest state.
+    x86_xsetbv(0, get_hypervisor_xcr0(vmx_state_.guest_state, guest_cr4));
+    x86_extended_register_restore_state(guest_extended_registers_.get());
+    x86_xsetbv(0, vmx_state_.guest_state.xcr0);
+}
+
+void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    if (!x86_feature_test(X86_FEATURE_XSAVE)) {
+        // Save host and restore guest x87/SSE state with fxrstor/fxsave.
+        x86_extended_register_save_state(guest_extended_registers_.get());
+        x86_extended_register_restore_state(thread_->arch.extended_register_state);
+        return;
+    }
+
+    // Save guest state.
+    vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
+    x86_xsetbv(0, get_hypervisor_xcr0(vmx_state_.guest_state, guest_cr4));
+    x86_extended_register_save_state(guest_extended_registers_.get());
+
+    // Restore host state.
+    x86_xsetbv(0, vmx_state_.host_state.xcr0);
+    x86_extended_register_restore_state(thread_->arch.extended_register_state);
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_))
         return ZX_ERR_BAD_STATE;
     zx_status_t status;
+
     do {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
         if (status != ZX_OK) {
             return status;
         }
-        if (x86_feature_test(X86_FEATURE_XSAVE)) {
-            // Save the host XCR0, and load the guest XCR0.
-            vmx_state_.host_state.xcr0 = x86_xgetbv(0);
-            x86_xsetbv(0, vmx_state_.guest_state.xcr0);
-        }
+
+        RestoreGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
         // Updates guest system time if the guest subscribed to updates.
         pvclock_update_system_time(&pvclock_state_, guest_->AddressSpace());
@@ -791,11 +865,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         running_.store(true);
         status = vmx_enter(&vmx_state_);
         running_.store(false);
-        if (x86_feature_test(X86_FEATURE_XSAVE)) {
-            // Save the guest XCR0, and load the host XCR0.
-            vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
-            x86_xsetbv(0, vmx_state_.host_state.xcr0);
-        }
+
+        SaveGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
         if (status != ZX_OK) {
             ktrace_vcpu_exit(VCPU_FAILURE, vmcs.Read(VmcsFieldXX::GUEST_RIP));

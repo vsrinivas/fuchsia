@@ -18,4 +18,5 @@
 #if __x86_64__
 #define GUEST_ENTRY     0x2000
 #define X86_CR0_NE      0x00000020 /* enable x87 exception */
+#define X86_CR4_OSFXSR  0x00000200 /* os supports fxsave */
 #endif

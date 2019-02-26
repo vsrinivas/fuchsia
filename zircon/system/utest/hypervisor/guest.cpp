@@ -8,9 +8,9 @@
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/port.h>
@@ -62,6 +62,7 @@ DECLARE_TEST_FUNCTION(vcpu_syscall);
 DECLARE_TEST_FUNCTION(vcpu_sysenter);
 DECLARE_TEST_FUNCTION(vcpu_sysenter_compat);
 DECLARE_TEST_FUNCTION(vcpu_vmcall);
+DECLARE_TEST_FUNCTION(vcpu_extended_registers);
 DECLARE_TEST_FUNCTION(guest_set_trap_with_io);
 #endif
 #undef DECLARE_TEST_FUNCTION
@@ -830,6 +831,42 @@ static bool vcpu_vmcall() {
     END_TEST;
 }
 
+static bool vcpu_extended_registers() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_extended_registers_start, vcpu_extended_registers_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    // Guest sets xmm0.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    // Clear host xmm0.
+    __asm__("xorps %%xmm0, %%xmm0" ::: "xmm0");
+
+    // Guest reads xmm0 into rax:rbx.
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    // Check that the host xmm0 is restored to zero.
+    bool xmm0_is_zero;
+    __asm__("ptest %%xmm0, %%xmm0\n"
+            "sete %0"
+            : "=q"(xmm0_is_zero));
+    EXPECT_TRUE(xmm0_is_zero);
+
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    EXPECT_EQ(vcpu_state.rax, 0x89abcdef01234567);
+    EXPECT_EQ(vcpu_state.rbx, 0x76543210fedcba98);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
 static bool guest_set_trap_with_io() {
     BEGIN_TEST;
 
@@ -882,6 +919,7 @@ RUN_TEST(vcpu_syscall)
 RUN_TEST(vcpu_sysenter)
 RUN_TEST(vcpu_sysenter_compat)
 RUN_TEST(vcpu_vmcall)
+RUN_TEST(vcpu_extended_registers)
 RUN_TEST(guest_set_trap_with_io)
 #endif
 END_TEST_CASE(guest)

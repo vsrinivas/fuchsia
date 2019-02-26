@@ -340,10 +340,32 @@ size_t x86_extended_register_size(void) {
     return register_state_size;
 }
 
+size_t x86_extended_register_max_size(void) {
+    return xsave_max_area_size;
+}
+
 void x86_extended_register_init_state(void* register_state) {
     // Copy the initialization state; this overcopies on systems that fall back
     // to fxsave, but the buffer is required to be large enough.
     memcpy(register_state, extended_register_init_state, sizeof(extended_register_init_state));
+}
+
+void x86_extended_register_init_state_from_bv(void* register_state, uint64_t xstate_bv) {
+    x86_extended_register_init_state(register_state);
+
+    if (!xsave_supported) {
+        return;
+    }
+    xsave_area* area = reinterpret_cast<xsave_area*>(register_state);
+    area->xstate_bv = xstate_bv;
+
+    // Ensure that xcomp_bv matches xstate_bv and that the saved state is in compact form. If any
+    // bit in xcomp_bv is 0 and the corresponding bit in xstate_bv is 1, or if
+    // XSAVE_XCOMP_BV_COMPACT is not set, xrstors will GPF.
+    if (xsaves_supported) {
+        area->xcomp_bv = area->xstate_bv;
+        area->xcomp_bv |= XSAVE_XCOMP_BV_COMPACT;
+    }
 }
 
 void x86_extended_register_save_state(void* register_state) {
