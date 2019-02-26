@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
 
 #include <map>
 
@@ -12,7 +12,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/network_wrapper/network_wrapper.h>
 
-#include "peridot/lib/firebase_auth/testing/credentials.h"
+#include "src/ledger/lib/firebase_auth/testing/credentials.h"
 
 namespace service_account {
 
@@ -79,4 +79,4 @@ class ServiceAccountTokenMinter {
 
 };  // namespace service_account
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MINTER_H_

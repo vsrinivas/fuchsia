@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
 
 #include <functional>
 #include <memory>
@@ -18,8 +18,8 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 
-#include "peridot/lib/firebase_auth/firebase_auth.h"
 #include "peridot/lib/rng/random.h"
+#include "src/ledger/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {
 
@@ -97,4 +97,4 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_FIREBASE_AUTH_IMPL_H_

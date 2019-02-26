@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/testing/credentials.h"
+#include "src/ledger/lib/firebase_auth/testing/credentials.h"
 
 #include "gtest/gtest.h"
-#include "peridot/lib/firebase_auth/testing/service_account_test_constants.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_test_constants.h"
 
 namespace service_account {
 namespace {

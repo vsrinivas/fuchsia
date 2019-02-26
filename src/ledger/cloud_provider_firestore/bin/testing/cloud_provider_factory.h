@@ -13,11 +13,11 @@
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>
 
-#include "peridot/lib/firebase_auth/testing/credentials.h"
-#include "peridot/lib/firebase_auth/testing/service_account_token_manager.h"
 #include "peridot/lib/rng/random.h"
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/cloud_provider_firestore/bin/include/types.h"
+#include "src/ledger/lib/firebase_auth/testing/credentials.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_token_manager.h"
 
 namespace cloud_provider_firestore {
 

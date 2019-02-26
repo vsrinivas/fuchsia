@@ -12,8 +12,8 @@
 #include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
 
-#include "peridot/lib/firebase_auth/firebase_auth.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider.h"
+#include "src/ledger/lib/firebase_auth/firebase_auth.h"
 
 namespace cloud_provider_firestore {
 

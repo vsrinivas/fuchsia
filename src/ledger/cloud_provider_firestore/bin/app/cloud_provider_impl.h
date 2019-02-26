@@ -13,11 +13,11 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
-#include "peridot/lib/firebase_auth/firebase_auth_impl.h"
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/device_set_impl.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/page_cloud_impl.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service.h"
+#include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 
 namespace cloud_provider_firestore {
 

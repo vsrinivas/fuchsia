@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/firebase_auth_impl.h"
+#include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 
 #include <utility>
 
@@ -14,7 +14,7 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "peridot/lib/firebase_auth/testing/test_token_manager.h"
+#include "src/ledger/lib/firebase_auth/testing/test_token_manager.h"
 
 namespace firebase_auth {
 

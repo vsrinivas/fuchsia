@@ -13,8 +13,8 @@
 #include <openssl/sha.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/firebase_auth/testing/credentials.h"
-#include "peridot/lib/firebase_auth/testing/json_schema.h"
+#include "src/ledger/lib/firebase_auth/testing/credentials.h"
+#include "src/ledger/lib/firebase_auth/testing/json_schema.h"
 
 namespace {
 

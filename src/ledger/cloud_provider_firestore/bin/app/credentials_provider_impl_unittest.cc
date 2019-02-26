@@ -9,7 +9,7 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
+#include "src/ledger/lib/firebase_auth/testing/test_firebase_auth.h"
 
 namespace cloud_provider_firestore {
 

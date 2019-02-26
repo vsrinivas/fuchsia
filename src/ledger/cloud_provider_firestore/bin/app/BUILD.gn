@@ -42,7 +42,6 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/lib/firebase_auth",
     "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/fidl/fuchsia.modular.auth",
@@ -50,6 +49,7 @@ source_set("lib") {
     "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/firestore",
     "//src/ledger/cloud_provider_firestore/bin/include",
+    "//src/ledger/lib/firebase_auth",
     "//third_party/grpc:grpc++",
   ]
 
@@ -79,11 +79,11 @@ source_set("unittests") {
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/gtest",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/rng:testing",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/cloud_provider_firestore/bin/app/testing",
     "//src/ledger/cloud_provider_firestore/bin/firestore/testing",
+    "//src/ledger/lib/firebase_auth/testing",
     "//third_party/protobuf:protobuf_full",
   ]
 }

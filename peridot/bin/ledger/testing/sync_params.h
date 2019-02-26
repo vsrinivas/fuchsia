@@ -12,7 +12,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_view.h>
 
-#include "peridot/lib/firebase_auth/testing/credentials.h"
+#include "src/ledger/lib/firebase_auth/testing/credentials.h"
 
 namespace ledger {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_JSON_SCHEMA_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_JSON_SCHEMA_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_JSON_SCHEMA_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_JSON_SCHEMA_H_
 
 #include <memory>
 
@@ -22,4 +22,4 @@ bool ValidateSchema(const rapidjson::Value& value,
 
 };  // namespace json_schema
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_JSON_SCHEMA_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_JSON_SCHEMA_H_

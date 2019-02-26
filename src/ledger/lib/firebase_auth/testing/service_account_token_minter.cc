@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/testing/service_account_token_minter.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 
 #include <time.h>
 
@@ -25,7 +25,7 @@
 
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/firebase_auth/testing/json_schema.h"
+#include "src/ledger/lib/firebase_auth/testing/json_schema.h"
 
 namespace service_account {
 

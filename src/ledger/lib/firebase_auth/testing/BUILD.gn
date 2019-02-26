@@ -21,9 +21,9 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//peridot/lib/firebase_auth",
     "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.auth",
+    "//src/ledger/lib/firebase_auth",
   ]
 
   deps = [

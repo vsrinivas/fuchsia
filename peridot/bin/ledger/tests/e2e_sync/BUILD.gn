@@ -24,11 +24,11 @@ executable("e2e_sync") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/tests/integration/sync",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/rng:system",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/testing",
+    "//src/ledger/lib/firebase_auth/testing",
     "//third_party/googletest:gtest",
   ]
 

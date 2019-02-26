@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/testing/service_account_token_minter.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
@@ -15,8 +15,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "peridot/lib/firebase_auth/testing/service_account_test_constants.h"
-#include "peridot/lib/firebase_auth/testing/service_account_test_util.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_test_constants.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_test_util.h"
 
 namespace service_account {
 

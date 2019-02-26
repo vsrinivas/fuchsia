@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
 
 #include <map>
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/lib/firebase_auth/testing/service_account_token_minter.h"
+#include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 
 namespace service_account {
 
@@ -68,4 +68,4 @@ class ServiceAccountTokenManager : public fuchsia::auth::TokenManager {
 
 };  // namespace service_account
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TOKEN_MANAGER_H_

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/functional/closure.h>
 
-#include "peridot/lib/firebase_auth/firebase_auth.h"
+#include "src/ledger/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {
 
@@ -42,4 +42,4 @@ class TestFirebaseAuth : public FirebaseAuth {
 
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_TEST_FIREBASE_AUTH_H_

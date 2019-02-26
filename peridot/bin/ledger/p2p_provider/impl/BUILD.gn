@@ -33,8 +33,8 @@ source_set("impl") {
     "//garnet/public/lib/callback",
     "//peridot/bin/ledger/environment",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//src/ledger/lib/firebase_auth",
   ]
 }
 

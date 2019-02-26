@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/testing/test_token_manager.h"
+#include "src/ledger/lib/firebase_auth/testing/test_token_manager.h"
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/cpp/task.h>

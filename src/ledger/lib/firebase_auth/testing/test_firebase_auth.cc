@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
+#include "src/ledger/lib/firebase_auth/testing/test_firebase_auth.h"
 
 #include <utility>
 

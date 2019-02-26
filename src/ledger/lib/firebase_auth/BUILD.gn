@@ -44,6 +44,6 @@ source_set("unittests") {
     ":firebase_auth",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/firebase_auth/testing",
+    "//src/ledger/lib/firebase_auth/testing",
   ]
 }

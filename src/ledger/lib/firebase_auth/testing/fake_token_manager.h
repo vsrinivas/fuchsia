@@ -2,27 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_MANAGER_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_MANAGER_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_MANAGER_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_MANAGER_H_
 
-#include <string>
+#include <functional>
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
-#include <lib/fxl/functional/make_copyable.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/macros.h>
+
+#include "peridot/lib/rng/random.h"
+
+namespace firebase_auth {
 
 using fuchsia::auth::AppConfig;
 using fuchsia::auth::AuthenticationUIContext;
 
-namespace firebase_auth {
-
-class TestTokenManager : public fuchsia::auth::TokenManager {
+// FakeTokenManager is a dummy implementation of a TokenManager intended to be
+// used to connect to unauthenticated firebase instances.
+//
+// The local ID Firebase token are set to a random UUID fixed at the
+// construction time.
+//
+// Other token values are set to dummy const values.
+class FakeTokenManager : public fuchsia::auth::TokenManager {
  public:
-  explicit TestTokenManager(async_dispatcher_t* dispatcher);
+  FakeTokenManager(rng::Random* random);
+  ~FakeTokenManager() override {}
 
-  ~TestTokenManager() override;
-
+ private:
   // fuchsia::auth::TokenManager:
   void Authorize(AppConfig app_config,
                  fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
@@ -48,21 +55,13 @@ class TestTokenManager : public fuchsia::auth::TokenManager {
   void ListProfileIds(AppConfig app_config,
                       ListProfileIdsCallback callback) override;
 
-  // Sets the token to return with the provided parameters, and status to OK.
-  void Set(std::string id_token, std::string local_id, std::string email);
-
   // Sets the token to return to null, and status to |status|.
-  // |status| must not be OK.
-  void SetError(fuchsia::auth::Status status);
-
- private:
-  async_dispatcher_t* const dispatcher_;
-  fuchsia::auth::FirebaseTokenPtr token_to_return_;
-  fuchsia::auth::Status status_to_return_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenManager);
+  std::string firebase_id_token_;
+  std::string firebase_local_id_;
+  std::string email_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeTokenManager);
 };
 
 }  // namespace firebase_auth
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_TEST_TOKEN_MANAGER_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_FAKE_TOKEN_MANAGER_H_

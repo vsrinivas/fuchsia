@@ -23,8 +23,8 @@ source_set("sync") {
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/testing",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/lib/firebase_auth/testing",
   ]
 
   public_deps = [

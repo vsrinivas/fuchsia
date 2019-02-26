@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
-#define PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
+#ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
+#define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
 
 #include <lib/fxl/strings/string_view.h>
 
@@ -56,4 +56,4 @@ constexpr fxl::StringView kWrongKeyTestServiceAccountConfig =
 
 }  // namespace service_account
 
-#endif  // PERIDOT_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
+#endif  // SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_

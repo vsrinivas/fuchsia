@@ -18,8 +18,8 @@
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
 #include "peridot/lib/convert/convert.h"
-#include "peridot/lib/firebase_auth/testing/fake_token_manager.h"
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
+#include "src/ledger/lib/firebase_auth/testing/fake_token_manager.h"
 
 namespace ledger {
 namespace {

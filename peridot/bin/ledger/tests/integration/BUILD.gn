@@ -40,12 +40,12 @@ executable("integration") {
     "//peridot/bin/ledger/testing/netconnector",
     "//peridot/bin/ledger/tests/integration/sync",
     "//peridot/lib/convert",
-    "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/socket",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/cloud_provider_in_memory/lib",
+    "//src/ledger/lib/firebase_auth/testing",
     "//third_party/googletest:gtest_main",
   ]
 
