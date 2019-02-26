@@ -8,12 +8,14 @@ import("//products/terminal.gni")
 # and //topaz/packages/sdk/topaz packages but not in the terminal's.
 # TODO(DX-934): Move most of those into available or pre-install
 monolith += [
+  "garnet/packages/config/mediasession",
   "garnet/packages/prod/fonts",
   "garnet/packages/prod/iquery",
   "garnet/packages/prod/mdns-util",
   "garnet/packages/prod/media_audio",
   "garnet/packages/prod/media_codec",
   "garnet/packages/prod/mediaplayer",
+  "garnet/packages/prod/mediasession",
   "garnet/packages/prod/tiles",
   "garnet/packages/prod/sbase",
   "garnet/packages/prod/wlan",
