@@ -5,8 +5,8 @@
     ],
     "packages": [
         "//src/ledger/cloud_provider_in_memory/bin",
-        "//peridot/bin/ledger:ledger_tests",
-        "//peridot/bin/ledger:ledger_fuzzers",
-        "//peridot/bin/ledger/testing/ledger_test_instance_provider:ledger_test_instance_provider"
+        "//src/ledger/bin:ledger_tests",
+        "//src/ledger/bin:ledger_fuzzers",
+        "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider"
     ]
 }

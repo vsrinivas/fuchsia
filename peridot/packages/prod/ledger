@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//peridot/bin/ledger"
+        "//src/ledger/bin"
     ]
 }

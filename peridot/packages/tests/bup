@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//peridot/third_party/bup:bup_tests"
+        "//src/ledger/third_party/bup:bup_tests"
     ]
 }

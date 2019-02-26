@@ -88,13 +88,13 @@ Code:
    - [/bin/ledger/cloud_sync/impl] contains the implementation
  - [/bin/cloud_provider_firestore] implements integration with cloud services
 
-[/bin/ledger/storage]: /peridot/bin/ledger/storage/
-[/bin/ledger/storage/public]: /peridot/bin/ledger/storage/public/
-[/bin/ledger/storage/impl]: /peridot/bin/ledger/storage/impl/
-[/bin/ledger/storage/impl/btree]: /peridot/bin/ledger/storage/impl/btree/
-[/bin/ledger/app]: /peridot/bin/ledger/app/
-[/bin/ledger/app/merging]: /peridot/bin/ledger/app/merging/
-[/bin/ledger/cloud_sync]: /peridot/bin/ledger/cloud_sync/
-[/bin/ledger/cloud_sync/public]: /peridot/bin/ledger/cloud_sync/public/
-[/bin/ledger/cloud_sync/impl]: /peridot/bin/ledger/cloud_sync/impl/
-[/bin/cloud_provider_firestore]: /peridot/bin/ledger/cloud_provider_firestore/
+[/bin/ledger/storage]: /src/ledger/bin/storage/
+[/bin/ledger/storage/public]: /src/ledger/bin/storage/public/
+[/bin/ledger/storage/impl]: /src/ledger/bin/storage/impl/
+[/bin/ledger/storage/impl/btree]: /src/ledger/bin/storage/impl/btree/
+[/bin/ledger/app]: /src/ledger/bin/app/
+[/bin/ledger/app/merging]: /src/ledger/bin/app/merging/
+[/bin/ledger/cloud_sync]: /src/ledger/bin/cloud_sync/
+[/bin/ledger/cloud_sync/public]: /src/ledger/bin/cloud_sync/public/
+[/bin/ledger/cloud_sync/impl]: /src/ledger/bin/cloud_sync/impl/
+[/bin/cloud_provider_firestore]: /src/ledger/bin/cloud_provider_firestore/

@@ -86,7 +86,6 @@ source_set("public") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/fidl",
     "//peridot/bin/sessionmgr/entity_provider_runner",
     "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
@@ -94,5 +93,6 @@ source_set("public") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/fidl",
   ]
 }

@@ -1,0 +1,38 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/bin/*" ]
+
+executable("e2e_local") {
+  output_name = "ledger_e2e_local"
+
+  testonly = true
+
+  sources = [
+    "get_ledger_test.cc",
+    "ledger_e2e_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/scoped_tmpfs",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/app:serialization_version",
+    "//src/ledger/bin/fidl",
+    "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/testing:get_ledger",
+    "//src/ledger/bin/testing:lib",
+    "//src/ledger/cloud_provider_in_memory/lib",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  data_deps = [
+    "//src/ledger/bin/app",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}

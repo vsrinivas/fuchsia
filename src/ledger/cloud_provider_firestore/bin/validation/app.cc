@@ -12,9 +12,9 @@
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
 
-#include "peridot/bin/ledger/testing/sync_params.h"
-#include "peridot/bin/ledger/tests/cloud_provider/launcher/validation_tests_launcher.h"
 #include "peridot/lib/rng/system_random.h"
+#include "src/ledger/bin/testing/sync_params.h"
+#include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 #include "src/ledger/cloud_provider_firestore/bin/include/types.h"
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
 

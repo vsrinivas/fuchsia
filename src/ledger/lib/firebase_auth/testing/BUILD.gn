@@ -32,7 +32,7 @@ source_set("testing") {
     "//peridot/lib/convert",
   ]
 
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
+  configs += [ "//src/ledger/bin:ledger_config" ]
 }
 
 source_set("service_account_provider") {

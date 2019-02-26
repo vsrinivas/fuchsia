@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 visibility = [
-  "//peridot/bin/ledger/*",
+  "//src/ledger/bin/*",
   ":*",
 ]
 

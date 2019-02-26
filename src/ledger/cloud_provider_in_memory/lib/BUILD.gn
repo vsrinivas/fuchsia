@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 visibility = [
-  "//peridot/bin/ledger/*",
+  "//src/ledger/bin/*",
   "//src/ledger/*",
 ]
 
@@ -23,16 +23,16 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/fidl/include",
     "//peridot/lib/commit_pack",
+    "//src/ledger/bin/fidl/include",
   ]
 
   deps = [
-    "//peridot/bin/ledger/fidl_helpers",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.ledger.cloud",
+    "//src/ledger/bin/fidl_helpers",
     "//third_party/murmurhash",
   ]
 
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
+  configs += [ "//src/ledger/bin:ledger_config" ]
 }

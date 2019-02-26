@@ -1,0 +1,40 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/bin/*" ]
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "test_cloud_provider.cc",
+    "test_cloud_provider.h",
+    "test_commit.cc",
+    "test_commit.h",
+    "test_device_set.cc",
+    "test_device_set.h",
+    "test_page_cloud.cc",
+    "test_page_cloud.h",
+    "test_page_storage.cc",
+    "test_page_storage.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/commit_pack",
+    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//src/ledger/bin/cloud_sync/public",
+    "//src/ledger/bin/encryption/fake",
+    "//src/ledger/bin/fidl/include",
+    "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/storage/testing",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/trace",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}

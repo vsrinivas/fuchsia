@@ -13,7 +13,6 @@ source_set("message_queue") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/fidl",
     "//peridot/bin/sessionmgr/agent_runner:public",
     "//peridot/bin/sessionmgr/entity_provider_runner",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
@@ -25,5 +24,6 @@ source_set("message_queue") {
     "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
+    "//src/ledger/bin/fidl",
   ]
 }

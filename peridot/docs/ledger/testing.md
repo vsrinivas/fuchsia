@@ -169,13 +169,13 @@ You can refer to the full [fuzzing] instructions for details.
 
 [Google Test]: https://github.com/google/googletest
 [TestLoopFixture]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/gtest/test_loop_fixture.h
-[IntegrationTest]: /peridot/bin/ledger/tests/integration/integration_test.h
-[/bin/ledger/tests/integration]: /peridot/bin/ledger/tests/integration
-[Synchronization end-to-end tests]: /peridot/bin/ledger/tests/e2e_sync/README.md
-[/bin/ledger/tests/e2e_local]: /peridot/bin/ledger/tests/e2e_local
-[/bin/ledger/tests/e2e_sync]: /peridot/bin/ledger/tests/e2e_sync
+[IntegrationTest]: /src/ledger/bin/tests/integration/integration_test.h
+[/bin/ledger/tests/integration]: /src/ledger/bin/tests/integration
+[Synchronization end-to-end tests]: /src/ledger/bin/tests/e2e_sync/README.md
+[/bin/ledger/tests/e2e_local]: /src/ledger/bin/tests/e2e_local
+[/bin/ledger/tests/e2e_sync]: /src/ledger/bin/tests/e2e_sync
 [server configuration]: /src/ledger/cloud_provider_firestore/docs/configuration.md
-[testing abstractions]: /peridot/bin/ledger/testing/ledger_app_instance_factory.h
-[benchmarks]: /peridot/bin/ledger/tests/benchmark/README.md
+[testing abstractions]: /src/ledger/bin/testing/ledger_app_instance_factory.h
+[benchmarks]: /src/ledger/bin/tests/benchmark/README.md
 [Firestore cloud provider]: /src/ledger/cloud_provider_firestore/README.md#testing
 [fuzzing]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/libfuzzer.md

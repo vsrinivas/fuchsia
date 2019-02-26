@@ -319,7 +319,7 @@ From [//build/config/BUILDCONFIG.gn:11](https://fuchsia.googlesource.com/build/+
 
 **Current value (from the default):** `""`
 
-From [//peridot/bin/ledger/testing/sync_params.gni:6](https://fuchsia.googlesource.com/peridot/+/2c5f509749861d23597bf7d8bde2172179938765/bin/ledger/testing/sync_params.gni#6)
+From [//src/ledger/bin/testing/sync_params.gni:6](https://fuchsia.googlesource.com/peridot/+/2c5f509749861d23597bf7d8bde2172179938765/bin/ledger/testing/sync_params.gni#6)
 
 ### zircon_system_groups
 Groups to include from the Zircon /boot manifest into /system

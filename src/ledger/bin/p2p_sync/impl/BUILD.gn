@@ -1,0 +1,75 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [ "//src/ledger/bin/*" ]
+
+source_set("impl") {
+  sources = [
+    "commit_batch.cc",
+    "commit_batch.h",
+    "device_mesh.h",
+    "flatbuffer_message_factory.cc",
+    "flatbuffer_message_factory.h",
+    "ledger_communicator_impl.cc",
+    "ledger_communicator_impl.h",
+    "message_holder.h",
+    "page_communicator_impl.cc",
+    "page_communicator_impl.h",
+    "user_communicator_factory_impl.cc",
+    "user_communicator_factory_impl.h",
+    "user_communicator_impl.cc",
+    "user_communicator_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/convert",
+    "//sdk/fidl/fuchsia.modular.auth",
+    "//src/ledger/bin/environment",
+    "//src/ledger/bin/p2p_provider/impl",
+    "//src/ledger/bin/p2p_sync/public",
+    "//src/ledger/bin/storage/public",
+  ]
+
+  deps = [
+    ":message",
+    "//garnet/public/lib/callback",
+    "//peridot/lib/ledger_client:constants",
+  ]
+}
+
+flatbuffer("message") {
+  sources = [
+    "message.fbs",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "page_communicator_impl_unittest.cc",
+    "user_communicator_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/p2p_provider/impl",
+    "//src/ledger/bin/storage/fake:lib",
+    "//src/ledger/bin/storage/testing",
+    "//src/ledger/bin/testing:lib",
+    "//src/ledger/bin/testing/netconnector",
+
+    # gtest matchers are in gmock.
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}

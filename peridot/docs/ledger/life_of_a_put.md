@@ -71,6 +71,6 @@ TODO
 [ledger.fidl]: /peridot/public/fidl/fuchsia.ledger/ledger.fidl
 [VMO]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md
 [dynamic chunking]: https://github.com/YADL/yadl/wiki/Rabin-Karp-for-Variable-Chunking
-[splitting implementation]: /peridot/bin/ledger/storage/impl/split.cc
+[splitting implementation]: /src/ledger/bin/storage/impl/split.cc
 [LevelDB]: https://en.wikipedia.org/wiki/LevelDB
 [commit]: architecture.md#storage

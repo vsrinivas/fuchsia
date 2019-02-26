@@ -13,7 +13,7 @@ visibility = [
 # https://groups.google.com/a/chromium.org/d/msg/gn-dev/zoVnBgjLgnQ/9yzGr7r3BAAJ
 #
 # This source_set depends on including the generated ledger Cobalt
-# config as a resource. See peridot/bin/ledger/BUILD.gn for an example.
+# config as a resource. See src/ledger/bin/BUILD.gn for an example.
 source_set("firebase_auth") {
   sources = [
     "firebase_auth.h",

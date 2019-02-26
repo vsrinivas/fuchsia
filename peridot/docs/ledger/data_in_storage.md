@@ -141,8 +141,8 @@ For more information see also:
  - [Ledger Architecture - Storage](architecture.md#Storage)
 
 
-[commit.fbs]: /peridot/bin/ledger/storage/impl/commit.fbs
-[split.cc]: /peridot/bin/ledger/storage/impl/split.cc
-[split.h]: /peridot/bin/ledger/storage/impl/split.h
-[tree_node.fbs]: /peridot/bin/ledger/storage/impl/btree/tree_node.fbs
+[commit.fbs]: /src/ledger/bin/storage/impl/commit.fbs
+[split.cc]: /src/ledger/bin/storage/impl/split.cc
+[split.h]: /src/ledger/bin/storage/impl/split.h
+[tree_node.fbs]: /src/ledger/bin/storage/impl/btree/tree_node.fbs
 [journals]: life_of_a_put.md#Journals

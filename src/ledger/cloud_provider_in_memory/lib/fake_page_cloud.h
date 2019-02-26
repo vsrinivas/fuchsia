@@ -12,8 +12,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/commit_pack/commit_pack.h"
+#include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 
 namespace ledger {

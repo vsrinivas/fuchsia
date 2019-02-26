@@ -3,6 +3,6 @@
         "peridot/packages/prod/ledger"
     ],
     "packages": [
-        "//peridot/bin/ledger/tests/benchmark:ledger_benchmarks"
+        "//src/ledger/bin/tests/benchmark:ledger_benchmarks"
     ]
 }

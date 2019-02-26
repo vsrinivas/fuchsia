@@ -5,6 +5,7 @@
 visibility = [
   "//peridot/bin/*",
   "//peridot/lib/*",
+  "//src/ledger/*",
 ]
 
 source_set("scoped_tmpfs") {

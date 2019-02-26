@@ -40,7 +40,6 @@ source_set("story_runner") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
-    "//peridot/bin/ledger/fidl",
     "//peridot/bin/sessionmgr:component_context",
     "//peridot/bin/sessionmgr:focus",
     "//peridot/bin/sessionmgr:presentation_provider",
@@ -80,6 +79,7 @@ source_set("story_runner") {
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/fidl",
   ]
 
   deps = [

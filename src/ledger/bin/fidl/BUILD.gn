@@ -1,0 +1,42 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//garnet/public/build/fostr/fostr_fidl.gni")
+import("//src/ledger/bin/fidl/error_notifier/error_notifier.gni")
+
+fidl("fidl") {
+  name = "fuchsia.ledger.internal"
+
+  sources = [
+    "debug.fidl",
+    "internal.fidl",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger.cloud",
+  ]
+}
+
+error_notifier_fidl("error_notifier_internal") {
+  fidl_target = ":fidl"
+}
+
+error_notifier_fidl("error_notifier_public") {
+  fidl_target = "//sdk/fidl/fuchsia.ledger"
+}
+
+source_set("error_notifier") {
+  sources = [
+    "error_notifier.h",
+  ]
+
+  public_deps = [
+    ":error_notifier_internal",
+    ":error_notifier_public",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}

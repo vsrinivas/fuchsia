@@ -1,0 +1,226 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+import("//build/testing/secret_spec.gni")
+import("//src/ledger/bin/testing/sync_params.gni")
+
+visibility = [ "//src/ledger/*" ]
+
+package("bin") {
+  package_name = "ledger"
+
+  deps = [
+    "app",
+    "cobalt:ledger_metrics_registry",
+  ]
+
+  binary = "ledger"
+
+  meta = [
+    {
+      path = rebase_path("meta/ledger.cmx")
+      dest = "ledger.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info("cobalt:ledger_metrics_registry",
+                             "target_gen_dir") + "/ledger_metrics_registry.pb")
+      dest = "ledger_cobalt_config.pb"
+    },
+    {
+      path = rebase_path(
+              get_label_info("cobalt:ledger_metrics_registry",
+                             "target_gen_dir") + "/ledger_metrics_registry.pb")
+      dest = "firebase_auth_cobalt_config.pb"
+    },
+  ]
+}
+
+package("ledger_tests") {
+  testonly = true
+
+  deps = [
+    ":ledger_e2e_sync_credentials",
+    ":ledger_unittests",
+    "//src/ledger/bin/tests/cloud_provider",
+    "//src/ledger/bin/tests/e2e_local",
+    "//src/ledger/bin/tests/e2e_sync",
+    "//src/ledger/bin/tests/integration",
+    "//src/ledger/cloud_provider_firestore/bin:tests",
+    "//src/ledger/cloud_provider_in_memory/bin",
+    "//src/ledger/cloud_provider_in_memory/bin:tests",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("tests/ledger_unittests.cmx")
+      dest = "ledger_unittests.cmx"
+    },
+    {
+      path = rebase_path("tests/integration/ledger_integration_tests.cmx")
+      dest = "ledger_integration_tests.cmx"
+    },
+    {
+      path = rebase_path("tests/e2e_local/ledger_e2e_local.cmx")
+      dest = "ledger_e2e_local.cmx"
+    },
+    {
+      path = rebase_path("tests/e2e_sync/ledger_e2e_sync.cmx")
+      dest = "ledger_e2e_sync.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/ledger/cloud_provider_firestore/bin/cloud_provider_firestore_unittests.cmx")
+      dest = "cloud_provider_firestore_unittests.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/ledger/cloud_provider_firestore/bin/validation/validation_firestore.cmx")
+      dest = "validation_firestore.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/ledger/cloud_provider_in_memory/bin/validation/validation_in_memory.cmx")
+      dest = "validation_in_memory.cmx"
+    },
+    {
+      # This test must be started by validation_firestore or
+      # validation_in_memory and will fail if started on its own.
+      path = rebase_path(
+              "tests/cloud_provider/cloud_provider_validation_tests.cmx")
+      dest = "cloud_provider_validation_tests.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "ledger_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "ledger_integration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "ledger_e2e_local"
+      environments = basic_envs
+    },
+    {
+      name = "cloud_provider_firestore_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "launch_validation_tests_in_memory"
+      environments = basic_envs
+    },
+    {
+      name = "ledger_e2e_sync"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
+      disabled = true
+      environments = basic_envs
+    },
+    {
+      name = "launch_validation_tests_firestore"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
+      disabled = true
+      environments = basic_envs
+    },
+    {
+      name = "cloud_provider_validation_tests"
+
+      # This test must be started by validation_firestore and will fail if started on its own.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
+      disabled = true
+      environments = basic_envs
+    },
+  ]
+
+  resources = []
+  if (ledger_sync_credentials_file != "") {
+    resources += [
+      {
+        path = ledger_sync_credentials_file
+        dest = "sync_credentials.json"
+      },
+    ]
+  }
+}
+
+secret_spec("ledger_e2e_sync_credentials") {
+  key_name = "ledger-tests-remote"
+
+  ciphertext_file = "ledger_e2e_sync_credentials.ciphertext"
+}
+
+config("ledger_config") {
+  asmflags = []
+
+  cflags = [
+    # Remove when enabled globally by TO-99.
+    "-Wunused-lambda-capture",
+
+    # Remove when enabled globally by TO-100.
+    "-Wuser-defined-warnings",
+
+    # Warn about unreachable code.
+    "-Wunreachable-code",
+  ]
+
+  ldflags = [
+    # Use a 1M stack.
+    "-Wl,-z,stack-size=0x100000",
+  ]
+}
+
+executable("ledger_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//src/ledger/bin/app:unittests",
+    "//src/ledger/bin/cache:unittests",
+    "//src/ledger/bin/cloud_sync/impl:unittests",
+    "//src/ledger/bin/coroutine:unittests",
+    "//src/ledger/bin/coroutine/context:unittests",
+    "//src/ledger/bin/encryption/impl:unittests",
+    "//src/ledger/bin/encryption/primitives:unittests",
+    "//src/ledger/bin/environment:unittests",
+    "//src/ledger/bin/fidl/error_notifier:unittests",
+    "//src/ledger/bin/filesystem:unittests",
+    "//src/ledger/bin/lock:unittests",
+    "//src/ledger/bin/p2p_provider/impl:unittests",
+    "//src/ledger/bin/p2p_sync/impl:unittests",
+    "//src/ledger/bin/storage/impl:unittests",
+    "//src/ledger/bin/storage/impl/btree:unittests",
+    "//src/ledger/bin/storage/public:unittests",
+    "//src/ledger/bin/storage/testing:unittests",
+    "//src/ledger/bin/sync_helper:unittests",
+    "//src/ledger/bin/testing:unittests",
+    "//src/ledger/bin/testing/netconnector:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  configs += [ ":ledger_config" ]
+}
+
+fuzz_package("ledger_fuzzers") {
+  targets = [ "//src/ledger/bin/storage/impl/btree:encoding_fuzzer" ]
+  sanitizers = [
+    "asan",
+    "ubsan",
+  ]
+}

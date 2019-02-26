@@ -12,7 +12,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/bin/ledger/tests/cloud_provider/launcher/validation_tests_launcher.h"
+#include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 
 namespace {
 constexpr fxl::StringView kCloudProviderUrl =

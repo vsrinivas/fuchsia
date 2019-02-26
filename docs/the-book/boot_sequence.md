@@ -52,7 +52,7 @@ enumerate all existing users and login as an existing user or in incognito mode.
 
 Adding a new user is done using an Account Manager service that can talk to an
 identity provider to get an id token to access the user's
-[Ledger](https://fuchsia.googlesource.com/fuchsia/+/master/peridot/bin/ledger/).
+[Ledger](https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/bin/).
 
 Logging-in as an existing user starts an instance of `sessionmgr` with that
 user's id token and with a namespace that is mapped within and managed by

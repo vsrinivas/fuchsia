@@ -1,0 +1,117 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [ "//src/ledger/bin/*" ]
+
+group("btree") {
+  deps = [
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "builder.cc",
+    "builder.h",
+    "diff.cc",
+    "diff.h",
+    "encoding.cc",
+    "encoding.h",
+    "entry_change_iterator.h",
+    "iterator.cc",
+    "iterator.h",
+    "synchronous_storage.cc",
+    "synchronous_storage.h",
+    "tree_node.cc",
+    "tree_node.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/coroutine",
+  ]
+
+  deps = [
+    ":internal",
+    ":tree_node_storage",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/convert",
+    "//src/ledger/bin/encryption/primitives",
+    "//src/ledger/bin/storage/impl:object_identifier_lib",
+    "//src/ledger/bin/storage/public",
+    "//third_party/murmurhash",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}
+
+flatbuffer("tree_node_storage") {
+  sources = [
+    "tree_node.fbs",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/storage/impl:object_identifier",
+  ]
+
+  extra_configs = [ "//src/ledger/bin:ledger_config" ]
+}
+
+source_set("internal") {
+  sources = [
+    "internal_helper.cc",
+    "internal_helper.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/storage/public",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "btree_utils_unittest.cc",
+    "diff_unittest.cc",
+    "encoding_unittest.cc",
+    "tree_node_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    ":tree_node_storage",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/encryption/fake",
+    "//src/ledger/bin/encryption/primitives",
+    "//src/ledger/bin/storage/fake:lib",
+    "//src/ledger/bin/storage/impl:object_identifier_lib",
+    "//src/ledger/bin/storage/impl:test_utils",
+    "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/storage/testing",
+    "//src/ledger/bin/testing:lib",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}
+
+fuzz_target("encoding_fuzzer") {
+  sources = [
+    "encoding_fuzztest.cc",
+  ]
+  deps = [
+    ":lib",
+    "//src/ledger/bin/storage/public",
+  ]
+  corpora =
+      [ "848002de6109d94118c57d79b2a8c0cfbd16ba8691bb390e3eb7437089ad99cc" ]
+}

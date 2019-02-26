@@ -1,0 +1,52 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/bin/*" ]
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "commit_empty_impl.cc",
+    "commit_empty_impl.h",
+    "page_storage_empty_impl.cc",
+    "page_storage_empty_impl.h",
+    "storage_matcher.cc",
+    "storage_matcher.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/storage/public",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/socket",
+    "//src/ledger/bin/encryption/primitives",
+    "//src/ledger/bin/storage/impl/btree:lib",
+    "//src/ledger/bin/testing:lib",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "storage_matcher_unittest.cc",
+  ]
+
+  deps = [
+    ":testing",
+    "//src/ledger/bin/storage/public",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}

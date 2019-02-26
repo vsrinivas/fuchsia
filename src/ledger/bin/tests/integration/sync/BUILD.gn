@@ -1,0 +1,38 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/bin/*" ]
+
+source_set("sync") {
+  testonly = true
+
+  sources = [
+    "convergence.cc",
+    "long_history.cc",
+    "sync_tests.cc",
+    "test_sync_state_watcher.cc",
+    "test_sync_state_watcher.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/convert",
+    "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/fidl_helpers",
+    "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/firebase_auth/testing",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/testing:ledger_instance_factory",
+    "//src/ledger/bin/tests/integration:integration_lib",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  configs += [ "//src/ledger/bin:ledger_config" ]
+}
