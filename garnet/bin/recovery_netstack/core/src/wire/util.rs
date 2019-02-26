@@ -691,34 +691,40 @@ mod records {
 }
 
 mod options {
-    use std::marker::PhantomData;
-    use std::ops::Deref;
-
-    use zerocopy::ByteSlice;
+    use super::records::*;
+    use packet::BufferView;
 
     /// A parsed set of header options.
     ///
     /// `Options` represents a parsed set of options from a TCP or IPv4 header.
-    #[derive(Debug)]
-    pub struct Options<B, O> {
-        bytes: B,
-        _marker: PhantomData<O>,
+    /// `Options` uses `Records` below the surface.
+    pub type Options<B, O> = Records<B, O>;
+
+    impl<'a, O> RecordsImplErr for O
+    where
+        O: OptionImpl<'a>,
+    {
+        type Error = OptionParseErr<O::Error>;
     }
 
-    /// An iterator over header options.
-    ///
-    /// `OptionIter` is an iterator over packet header options stored in the
-    /// format used by IPv4 and TCP, where each option is either a single kind
-    /// byte or a kind byte, a length byte, and length - 2 data bytes.
-    ///
-    /// In both IPv4 and TCP, the only single-byte options are End of Options
-    /// List (EOL) and No Operation (NOP), both of which can be handled
-    /// internally by OptionIter. Thus, the caller only needs to be able to
-    /// parse multi-byte options.
-    pub struct OptionIter<'a, O> {
-        bytes: &'a [u8],
-        idx: usize,
-        _marker: PhantomData<O>,
+    impl<'a, O> RecordsImplLimit for O
+    where
+        O: OptionImpl<'a>,
+    {
+        type Limit = ();
+    }
+
+    impl<'a, O> RecordsImpl<'a> for O
+    where
+        O: OptionImpl<'a>,
+    {
+        type Output = O::Output;
+
+        fn parse<BV: BufferView<&'a [u8]>>(
+            data: &mut BV,
+        ) -> Result<Option<Self::Output>, Self::Error> {
+            next::<_, O>(data)
+        }
     }
 
     /// Errors returned from parsing options.
@@ -788,109 +794,38 @@ mod options {
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error>;
     }
 
-    impl<B, O> Options<B, O>
+    fn next<'a, BV, O>(bytes: &mut BV) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
     where
-        B: ByteSlice,
-        O: for<'a> OptionImpl<'a>,
-    {
-        /// Parse a set of options.
-        ///
-        /// `parse` parses `bytes` as a sequence of options. `parse` performs a
-        /// single pass over all of the options to verify that they are
-        /// well-formed. Once `parse` returns successfully, the resulting
-        /// `Options` can be used to construct infallible iterators.
-        pub fn parse(bytes: B) -> Result<Options<B, O>, OptionParseErr<O::Error>> {
-            // First, do a single pass over the bytes to detect any errors up
-            // front. Once this is done, since we have a reference to `bytes`,
-            // these bytes can't change out from under us, and so we can treat
-            // any iterator over these bytes as infallible. This makes a few
-            // assumptions, but none of them are that big of a deal. In all
-            // cases, breaking these assumptions would just result in a runtime
-            // panic.
-            // - B could return different bytes each time
-            // - O::parse could be non-deterministic
-            let mut idx = 0;
-            while next::<O>(bytes.deref(), &mut idx)?.is_some() {}
-            Ok(Options { bytes, _marker: PhantomData })
-        }
-    }
-
-    impl<B: Deref<Target = [u8]>, O> Deref for Options<B, O> {
-        type Target = [u8];
-
-        fn deref(&self) -> &[u8] {
-            &self.bytes
-        }
-    }
-
-    impl<B: Deref<Target = [u8]>, O> Options<B, O> {
-        /// Get the underlying bytes.
-        ///
-        /// `bytes` returns a reference to the byte slice backing this
-        /// `Options`.
-        pub fn bytes(&self) -> &[u8] {
-            &self.bytes
-        }
-    }
-
-    impl<'a, B, O> Options<B, O>
-    where
-        B: 'a + ByteSlice,
-        O: OptionImpl<'a>,
-    {
-        /// Create an iterator over options.
-        ///
-        /// `iter` constructs an iterator over the options. Since the options
-        /// were validated in `parse`, then so long as `from_kind` and
-        /// `from_data` are deterministic, the iterator is infallible.
-        pub fn iter(&'a self) -> OptionIter<'a, O> {
-            OptionIter { bytes: &self.bytes, idx: 0, _marker: PhantomData }
-        }
-    }
-
-    impl<'a, O> Iterator for OptionIter<'a, O>
-    where
-        O: OptionImpl<'a>,
-    {
-        type Item = O::Output;
-
-        fn next(&mut self) -> Option<O::Output> {
-            // use match rather than expect because expect requires that Err: Debug
-            #[cfg_attr(feature = "cargo-clippy", allow(match_wild_err_arm))]
-            match next::<O>(&self.bytes[..], &mut self.idx) {
-                Ok(o) => o,
-                Err(_) => panic!("already-validated options should not fail to parse"),
-            }
-        }
-    }
-
-    fn next<'a, O>(
-        bytes: &'a [u8],
-        idx: &mut usize,
-    ) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
-    where
+        BV: BufferView<&'a [u8]>,
         O: OptionImpl<'a>,
     {
         // For an explanation of this format, see the "Options" section of
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
         loop {
-            let bytes = &bytes[*idx..];
-            if bytes.is_empty() {
-                return Ok(None);
-            }
-            if Some(bytes[0]) == O::END_OF_OPTIONS {
-                return Ok(None);
-            }
-            if Some(bytes[0]) == O::NOP {
-                *idx += 1;
-                continue;
-            }
-            let len = bytes[1] as usize * O::OPTION_LEN_MULTIPLIER;
-            if len < 2 || len > bytes.len() {
+            let kind = match bytes.take_front(1).map(|x| x[0]) {
+                None => return Ok(None),
+                Some(k) => {
+                    // Can't do pattern matching with associated constants,
+                    // so do it the good-ol' way:
+                    if Some(k) == O::NOP {
+                        continue;
+                    } else if Some(k) == O::END_OF_OPTIONS {
+                        return Ok(None);
+                    }
+                    k
+                }
+            };
+            let len = match bytes.take_front(1).map(|x| x[0]) {
+                None => return Err(OptionParseErr::Internal),
+                Some(len) => (len as usize) * O::OPTION_LEN_MULTIPLIER,
+            };
+
+            if len < 2 || (len - 2) > bytes.len() {
                 return debug_err!(Err(OptionParseErr::Internal), "option length {} is either too short or longer than the total buffer length of {}", len, bytes.len());
             }
-            *idx += len;
-            match O::parse(bytes[0], &bytes[2..len]) {
+            // we can safely unwrap here since we verified the correct length above
+            let option_data = bytes.take_front(len - 2).unwrap();
+            match O::parse(kind, option_data) {
                 Ok(Some(o)) => return Ok(Some(o)),
                 Ok(None) => {}
                 Err(err) => return Err(OptionParseErr::External(err)),
@@ -1058,6 +993,24 @@ mod options {
                 Options::<_, AlwaysErrOptionImpl>::parse(&bytes[..]).unwrap_err(),
                 OptionParseErr::External(())
             );
+        }
+
+        #[test]
+        fn test_missing_length_bytes() {
+            // Construct a sequence with a valid record followed by an
+            // incomplete one, where `kind` is specified but `len` is missing.
+            // So we can assert that we'll fail cleanly in that case.
+            //
+            // Added as part of Change-Id
+            // Ibd46ac7384c7c5e0d74cb344b48c88876c351b1a
+            //
+            // Before the small refactor in the Change-Id above, there was a
+            // check during parsing that guaranteed that the length of the
+            // remaining buffer was >= 1, but it should've been a check for
+            // >= 2, and the case below would have caused it to panic while
+            // trying to access the length byte, which was a DoS vulnerability.
+            Options::<_, DummyOptionImpl>::parse(&[0x03, 0x03, 0x01, 0x03][..])
+                .expect_err("Can detect malformed length bytes");
         }
     }
 }
