@@ -13,6 +13,43 @@
 
 namespace {
 
+bool CheckConstEq(TestLibrary& library, const std::string& name, uint32_t expected_value) {
+    BEGIN_HELPER;
+
+    auto const_decl = library.LookupConstant(name);
+    ASSERT_NOT_NULL(const_decl);
+    ASSERT_EQ(fidl::flat::Constant::Kind::kLiteral, const_decl->value->kind);
+    ASSERT_EQ(fidl::flat::ConstantValue::Kind::kUint32, const_decl->value->Value().kind);
+    auto numeric_const_value = static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
+        const_decl->value->Value());
+    EXPECT_EQ(expected_value, static_cast<uint32_t>(numeric_const_value));
+
+    END_HELPER;
+}
+
+bool LiteralsTest() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+const uint32 C_SIMPLE   = 11259375;
+const uint32 C_HEX_S    = 0xABCDEF;
+const uint32 C_HEX_L    = 0XABCDEF;
+const uint32 C_BINARY_S = 0b101010111100110111101111;
+const uint32 C_BINARY_L = 0B101010111100110111101111;
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+
+    EXPECT_TRUE(CheckConstEq(library, "C_SIMPLE", 11259375));
+    EXPECT_TRUE(CheckConstEq(library, "C_HEX_S", 11259375));
+    EXPECT_TRUE(CheckConstEq(library, "C_HEX_L", 11259375));
+    EXPECT_TRUE(CheckConstEq(library, "C_BINARY_S", 11259375));
+    EXPECT_TRUE(CheckConstEq(library, "C_BINARY_L", 11259375));
+
+    END_TEST;
+}
+
 bool GoodConstTestBool() {
     BEGIN_TEST;
 
@@ -439,6 +476,8 @@ const handle<thread> c = -1;
 } // namespace
 
 BEGIN_TEST_CASE(consts_tests);
+
+RUN_TEST(LiteralsTest);
 
 RUN_TEST(GoodConstTestBool);
 RUN_TEST(BadConstTestBoolWithString);

@@ -102,6 +102,15 @@ public:
         return nullptr;
     }
 
+    const fidl::flat::Const* LookupConstant(const std::string& name) {
+        for (const auto& const_decl : library_->const_declarations_) {
+            if (const_decl->GetName() == name) {
+                return const_decl.get();
+            }
+        }
+        return nullptr;
+    }
+
     const fidl::flat::Struct* LookupStruct(const std::string& name) {
         for (const auto& struct_decl : library_->struct_declarations_) {
             if (struct_decl->GetName() == name) {
