@@ -9,7 +9,7 @@
 #include <crypto/hmac.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

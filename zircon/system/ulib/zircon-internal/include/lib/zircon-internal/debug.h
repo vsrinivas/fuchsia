@@ -9,9 +9,6 @@
 
 __BEGIN_CDECLS
 
-// BEGIN DEPRECATED ------------------------------------------------------------
-// Should be declared in another header somewhere.
-
 // per-file chatty debug macro
 #define xprintf(fmt, args...)                                                  \
     do {                                                                       \
@@ -19,7 +16,5 @@ __BEGIN_CDECLS
             printf("%s:%d: " fmt, __FILE__, __LINE__, ##args);                 \
         }                                                                      \
     } while (0)
-
-// END DEPRECATED --------------------------------------------------------------
 
 __END_CDECLS

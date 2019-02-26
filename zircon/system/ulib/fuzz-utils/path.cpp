@@ -14,7 +14,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fuzz-utils/path.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 

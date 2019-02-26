@@ -11,7 +11,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

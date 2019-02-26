@@ -26,7 +26,7 @@
 #include <fs/block-txn.h>
 #include <fs/ticker.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/zx/event.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>

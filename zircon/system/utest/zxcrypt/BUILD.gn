@@ -32,6 +32,7 @@ test("zxcrypt") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxcrypt",

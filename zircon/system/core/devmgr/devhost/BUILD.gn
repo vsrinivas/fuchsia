@@ -42,6 +42,7 @@ library("driver") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/trace-provider:static",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",

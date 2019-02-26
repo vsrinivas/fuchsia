@@ -7,7 +7,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <id_allocator/id_allocator.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

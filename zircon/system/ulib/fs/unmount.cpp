@@ -4,7 +4,7 @@
 
 #include <fs/vfs.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/vfs.h>
 
 #include <stdlib.h>

@@ -26,7 +26,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>

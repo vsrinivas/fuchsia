@@ -10,7 +10,7 @@
 #include <crypto/hkdf.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_call.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

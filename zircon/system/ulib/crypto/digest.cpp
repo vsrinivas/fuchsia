@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <crypto/digest.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 

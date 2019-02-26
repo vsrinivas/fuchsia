@@ -33,7 +33,7 @@
 #include <zircon/time.h>
 
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>

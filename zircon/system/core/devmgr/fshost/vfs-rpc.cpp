@@ -16,7 +16,7 @@
 #include <fs/vfs.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>

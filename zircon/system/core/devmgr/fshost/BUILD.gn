@@ -27,6 +27,7 @@ executable("fshost") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",

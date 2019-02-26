@@ -15,7 +15,7 @@
 #include <fs/trace.h>
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/handle.h>

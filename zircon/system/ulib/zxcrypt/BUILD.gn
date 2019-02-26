@@ -27,6 +27,7 @@ library("zxcrypt") {
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/ramdevice-client:static",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",

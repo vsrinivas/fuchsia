@@ -5,7 +5,6 @@
 library("fdio") {
   sdk = "shared"
   sdk_headers = [
-    "lib/fdio/debug.h",
     "lib/fdio/directory.h",
     "lib/fdio/fd.h",
     "lib/fdio/fdio.h",
@@ -50,6 +49,7 @@ library("fdio") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxio",

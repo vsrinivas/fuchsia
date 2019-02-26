@@ -25,7 +25,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fvm/format.h>
-#include <lib/fdio/debug.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/time.h>
