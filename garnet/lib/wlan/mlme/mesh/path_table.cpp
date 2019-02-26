@@ -12,6 +12,10 @@ const MeshPath* PathTable::GetPath(const common::MacAddr& mesh_target) const {
     return it->second.get();
 }
 
+void PathTable::RemovePath(const common::MacAddr& mesh_target) {
+    path_by_mesh_target_.erase(mesh_target.ToU64());
+}
+
 const MeshPath* PathTable::AddOrUpdatePath(const common::MacAddr& mesh_target,
                                            const MeshPath& path) {
     auto key = mesh_target.ToU64();

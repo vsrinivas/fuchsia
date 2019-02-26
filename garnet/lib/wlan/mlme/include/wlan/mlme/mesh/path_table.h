@@ -37,6 +37,7 @@ class PathTable {
 
     const MeshPath* GetPath(const common::MacAddr& mesh_target) const;
     const MeshPath* AddOrUpdatePath(const common::MacAddr& mesh_target, const MeshPath& path);
+    void RemovePath(const common::MacAddr& mesh_target);
 
     const MeshProxyInfo* GetProxyInfo(const common::MacAddr& target) const;
 

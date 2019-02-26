@@ -5,6 +5,7 @@
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/parse_element.h>
+#include <wlan/common/perr_destination_parser.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/mac_header_writer.h>
 #include <wlan/mlme/mesh/hwmp.h>
@@ -18,6 +19,12 @@ static constexpr size_t kDot11MeshHWMPactivePathTimeoutTu = 5000;
 static constexpr size_t kDot11MeshHWMPmaxPREQretries = 3;
 static constexpr size_t kDot11MeshHWMPpreqMinIntervalTu = 100;
 static constexpr bool kDot11MeshHWMPtargetOnly = true;
+static constexpr size_t kDot11MeshHWMPperrMinIntervalTu = 100;
+
+HwmpState::HwmpState(fbl::unique_ptr<Timer> timer)
+    : our_hwmp_seqno(0),
+      timer_mgr(std::move(timer)),
+      perr_rate_limiter(WLAN_TU(kDot11MeshHWMPperrMinIntervalTu), 1) {}
 
 // According to IEEE Std 802.11-2016, 14.10.8.3
 bool HwmpSeqnoLessThan(uint32_t a, uint32_t b) {
@@ -332,6 +339,135 @@ static void HandlePrep(const common::MacAddr& prep_transmitter_addr,
     // TODO: Also update precursors if we decide to store them one day (case (d))
 }
 
+// See IEEE Std 802.11-2016, 14.10.11.4.3
+static bool ShouldInvalidatePathByPerr(const common::MacAddr& perr_transmitter_addr,
+                                       const common::ParsedPerrDestination& perr_dest,
+                                       const PathTable* path_table, uint32_t* out_hwmp_seqno) {
+    using Rc = ::fuchsia::wlan::mlme::ReasonCode;
+
+    // PERR elements with an external address can only invalidate proxy information,
+    // not forwarding information. An element with reason code set to NO_FORWARDING_INFORMATION
+    // or DESTINATION_UNREACHABLE is not allowed to have an external address.
+    // See IEEE Std 802.11-2016, 14.10.11.3 for the list of valid PERR contents.
+    if (perr_dest.ext_addr != nullptr) { return false; }
+
+    auto path = path_table->GetPath(perr_dest.header->dest_addr);
+    if (path == nullptr) { return false; }
+    if (path->next_hop != perr_transmitter_addr) { return false; }
+
+    // Case (b)
+    // It is unfortunate that the spec suggests using 0 to indicate an unknown HWMP sequence value,
+    // instead of the "USN" flag like in PREQ. Zero is otherwise a perfectly normal value of the
+    // HWMP sequence number which could occur with the 32-bit counter rollover.
+    if (perr_dest.tail->reason_code ==
+            to_enum_type(Rc::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION) &&
+        perr_dest.header->hwmp_seqno == 0) {
+        if (path->hwmp_seqno.has_value()) {
+            *out_hwmp_seqno = *path->hwmp_seqno + 1;
+        } else {
+            *out_hwmp_seqno = 0;
+        }
+        return true;
+    }
+
+    // Case (c)
+    if (perr_dest.tail->reason_code == to_enum_type(Rc::MESH_PATH_ERROR_DESTINATION_UNREACHABLE) ||
+        perr_dest.tail->reason_code ==
+            to_enum_type(Rc::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)) {
+        if (!path->hwmp_seqno.has_value() ||
+            HwmpSeqnoLessThan(*path->hwmp_seqno, perr_dest.header->hwmp_seqno)) {
+            *out_hwmp_seqno = perr_dest.header->hwmp_seqno;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void WriteForwardedPerrDestination(const common::ParsedPerrDestination& incoming,
+                                          uint32_t new_hwmp_seqno, BufferWriter* writer) {
+    writer->WriteValue<PerrPerDestinationHeader>({
+        .flags = incoming.header->flags,
+        .dest_addr = incoming.header->dest_addr,
+        .hwmp_seqno = new_hwmp_seqno,
+    });
+    if (incoming.ext_addr != nullptr) { writer->WriteValue<common::MacAddr>(*incoming.ext_addr); }
+    writer->WriteValue<PerrPerDestinationTail>(*incoming.tail);
+}
+
+// See IEEE Std 802.11-2016, 14.10.11.3, Case D
+static fbl::unique_ptr<Packet> MakeForwardedPerr(const MacHeaderWriter& mac_header_writer,
+                                                 const common::ParsedPerr& incoming_perr,
+                                                 uint8_t num_destinations,
+                                                 Span<const uint8_t> destinations) {
+    auto packet = GetWlanPacket(kMaxHwmpFrameSize);
+    if (!packet) { return {}; }
+    BufferWriter w(*packet);
+    // Note that we deviate from the standard here, which suggests maintaining a list of precursors
+    // for each path and sending individually-addressed management frames to all precursors of
+    // the invalidated paths. This seems impractical and would only take more air time.
+    // See 14.10.7, "PERR element individually addressed [Case D]".
+    mac_header_writer.WriteMeshMgmtHeader(&w, kAction, common::kBcastMac);
+    w.Write<ActionFrame>()->category = action::kMesh;
+    w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
+    common::WritePerr(
+        &w,
+        {
+            .element_ttl = static_cast<uint8_t>(incoming_perr.header->element_ttl - 1),
+            .num_destinations = num_destinations,
+        },
+        destinations);
+    packet->set_len(w.WrittenBytes());
+    return packet;
+}
+
+static void HandlePerr(const common::MacAddr& perr_transmitter_addr, const common::ParsedPerr& perr,
+                       const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                       PathTable* path_table, PacketQueue* packets_to_tx) {
+    if (perr.header->num_destinations > kPerrMaxDestinations) { return; }
+
+    // Buffer for constructing the "destinations" part of the forwarded PERR
+    uint8_t to_forward_buf[kPerrMaxDestinations * kPerrMaxDestinationSize];
+    BufferWriter to_forward(to_forward_buf);
+    size_t num_dests_to_forward = 0;
+
+    // Paths to be removed from the table
+    common::MacAddr dests_to_invalidate[kPerrMaxDestinations];
+    size_t num_dests_to_invalidate = 0;
+
+    common::PerrDestinationParser parser(perr.destinations);
+    for (size_t i = 0; i < perr.header->num_destinations; ++i) {
+        auto dest = parser.Next();
+        if (!dest.has_value()) { return; }
+
+        uint32_t hwmp_seqno;
+        if (ShouldInvalidatePathByPerr(perr_transmitter_addr, *dest, path_table, &hwmp_seqno)) {
+            dests_to_invalidate[num_dests_to_invalidate++] = dest->header->dest_addr;
+            WriteForwardedPerrDestination(*dest, hwmp_seqno, &to_forward);
+            ++num_dests_to_forward;
+        }
+
+        // TODO(gbonik): invalidate proxy info. See IEEE Std 802.11-2016, 14.10.11.4.3, case (d)
+    }
+
+    // Drop the element without processing if it has extra garbage at the end
+    if (parser.ExtraBytesLeft()) { return; }
+
+    // Remove invalidated paths
+    for (size_t i = 0; i < num_dests_to_invalidate; ++i) {
+        path_table->RemovePath(dests_to_invalidate[i]);
+    }
+
+    // Forward the frame
+    if (num_dests_to_forward > 0 && perr.header->element_ttl > 1 &&
+        state->perr_rate_limiter.RecordEvent(state->timer_mgr.Now())) {
+        if (auto packet = MakeForwardedPerr(mac_header_writer, perr, num_dests_to_forward,
+                                            to_forward.WrittenData())) {
+            packets_to_tx->Enqueue(std::move(packet));
+        }
+    }
+}
+
 PacketQueue HandleHwmpAction(Span<const uint8_t> elements,
                              const common::MacAddr& action_transmitter_addr,
                              const common::MacAddr& self_addr, uint32_t last_hop_metric,
@@ -350,6 +486,12 @@ PacketQueue HandleHwmpAction(Span<const uint8_t> elements,
             if (auto prep = common::ParsePrep(raw_body)) {
                 HandlePrep(action_transmitter_addr, self_addr, *prep, last_hop_metric,
                            mac_header_writer, state, path_table, &ret);
+            }
+            break;
+        case element_id::kPerr:
+            if (auto perr = common::ParsePerr(raw_body)) {
+                HandlePerr(action_transmitter_addr, *perr, mac_header_writer, state, path_table,
+                           &ret);
             }
             break;
         default:

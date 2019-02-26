@@ -37,6 +37,13 @@ struct HwmpTest : public ::testing::Test {
 
     static common::MacAddr self_addr() { return common::MacAddr("aa:aa:aa:aa:aa:aa"); }
 
+    void AddPath(const char* dest, const char* next_hop, std::optional<uint32_t> hwmp_seqno) {
+        table.AddOrUpdatePath(common::MacAddr(dest), {
+                                                         .next_hop = common::MacAddr(next_hop),
+                                                         .hwmp_seqno = hwmp_seqno,
+                                                     });
+    }
+
     timekeeper::TestClock clock;
     HwmpState state;
     PathTable table;
@@ -460,10 +467,7 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
 
 TEST_F(HwmpTest, ForwardPrep) {
     // Assume we have a path to the originator
-    table.AddOrUpdatePath(common::MacAddr("33:33:33:33:33:33"),
-                          {
-                              .next_hop = common::MacAddr("22:22:22:22:22:22"),
-                          });
+    AddPath("33:33:33:33:33:33", "22:22:22:22:22:22", {});
 
     // clang-format off
     const uint8_t prep[] = {
@@ -512,10 +516,7 @@ TEST_F(HwmpTest, ForwardPrep) {
 
 TEST_F(HwmpTest, PrepTimeToDie) {
     // Assume we have a path to the originator
-    table.AddOrUpdatePath(common::MacAddr("33:33:33:33:33:33"),
-                          {
-                              .next_hop = common::MacAddr("22:22:22:22:22:22"),
-                          });
+    AddPath("33:33:33:33:33:33", "22:22:22:22:22:22", {});
 
     // clang-format off
     const uint8_t prep[] = {
@@ -535,6 +536,222 @@ TEST_F(HwmpTest, PrepTimeToDie) {
 
     // PREP should not be forwarded because TTL has dropped to zero
     ASSERT_EQ(packets_to_tx.size(), 0u);
+}
+
+TEST_F(HwmpTest, HandlePerrDestinationUnreachable) {
+    // We cover several different cases at once, one destination per case:
+    //   1. We have a seqno stored, and the frame has an equal one (drop)
+    //   2. We have a seqno stored, and the frame has a higher one (process)
+    //   3. We don't have a seqno stored (process)
+    //   4. Destination is known to us but its next hop is not matching the transmitter of PERR
+    //   5. Destination is unknown to us
+
+    AddPath("10:10:10:10:10:10", "f0:f0:f0:f0:f0:f0", {100});
+    AddPath("20:20:20:20:20:20", "f0:f0:f0:f0:f0:f0", {100});
+    AddPath("30:30:30:30:30:30", "f0:f0:f0:f0:f0:f0", {});
+    AddPath("40:40:40:40:40:40", "e2:e2:e2:e2:e2:e2", {});
+
+    // clang-format off
+    const uint8_t perr[] = {
+        132, 67,
+        0x20, 5, // ttl, num destinations
+        // Destination 1
+            0, // flags: no external address
+            0x10, 0x10, 0x10, 0x10, 0x10, 0x10, // destination address
+            100, 0, 0, 0, // hwmp seqno: equal to what we have stored
+            63, 00, // error code: destination unreachable
+        // Destination 2
+            0, // flags: no external address
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // destination address
+            101, 0, 0, 0, // hwmp seqno: greater than what we have stored
+            63, 00, // error code: destination unreachable
+        // Destination 3
+            0, // flags: no external address
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // destination address
+            10, 0, 0, 0, // hwmp seqno
+            63, 00, // error code: destination unreachable
+        // Destination 4
+            0, // flags: no external address
+            0x40, 0x40, 0x40, 0x40, 0x40, 0x40, // destination address
+            200, 0, 0, 0, // hwmp seqno
+            63, 00, // error code: destination unreachable
+        // Destination 5
+            0, // flags: no external address
+            0x50, 0x50, 0x50, 0x50, 0x50, 0x50, // destination address
+            200, 0, 0, 0, // hwmp seqno
+            63, 00, // error code: destination unreachable
+    };
+    // clang-format on
+
+    PacketQueue packets_to_tx =
+        HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(), 100,
+                         CreateMacHeaderWriter(), &state, &table);
+
+    // Some paths should stay and some should be dropped
+    EXPECT_NE(nullptr, table.GetPath(common::MacAddr("10:10:10:10:10:10")));
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("20:20:20:20:20:20")));
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("30:30:30:30:30:30")));
+    EXPECT_NE(nullptr, table.GetPath(common::MacAddr("40:40:40:40:40:40")));
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("50:50:50:50:50:50")));
+
+    // Expect the PERR frame to be forwarded, but only with the second and the third destinations
+    ASSERT_EQ(packets_to_tx.size(), 1u);
+    auto packet = packets_to_tx.Dequeue();
+    ASSERT_NE(packet, nullptr);
+
+    // clang-format off
+    const uint8_t expected_forwarded_frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1: broadcast
+        LIST_MAC_ADDR_BYTES(self_addr()), // addr2
+        LIST_MAC_ADDR_BYTES(self_addr()), // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Perr element
+        132, 28,
+        0x1f, 2, // ttl must be decreased by one; num destinations = 2
+        // Destination 1 (originally #2)
+        0, // flags: no external address
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // destination address
+        101, 0, 0, 0, // hwmp seqno should be preserved
+        63, 00, // error code: destination unreachable
+        // Destination 2 (originally #3)
+        0, // flags: no external address
+        0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // destination address
+        10, 0, 0, 0, // hwmp seqno should be preserved
+        63, 00, // error code: destination unreachable
+    };
+    // clang-format on
+    EXPECT_RANGES_EQ(expected_forwarded_frame, Span<const uint8_t>(*packet));
+}
+
+TEST_F(HwmpTest, HandlePerrNoForwardingInfo) {
+    // We cover several different cases at once, one destination per case:
+    //   1. We have a seqno stored, and the frame has seqno = 0 (process)
+    //   2. We have a seqno stored, and the frame has an equal one (drop)
+    //   3. We have a seqno stored, and the frame has a higher one (process)
+    //   4. We don't have a seqno stored, and the frame has seqno = 0 (process)
+    //   5. We don't have a seqno stored, and the frame has seqno != 0 (process)
+
+    AddPath("10:10:10:10:10:10", "f0:f0:f0:f0:f0:f0", {100});
+    AddPath("20:20:20:20:20:20", "f0:f0:f0:f0:f0:f0", {100});
+    AddPath("30:30:30:30:30:30", "f0:f0:f0:f0:f0:f0", {100});
+    AddPath("40:40:40:40:40:40", "f0:f0:f0:f0:f0:f0", {});
+    AddPath("50:50:50:50:50:50", "f0:f0:f0:f0:f0:f0", {});
+
+    // clang-format off
+    const uint8_t perr[] = {
+        132, 67,
+        0x20, 5, // ttl, num destinations
+        // Destination 1
+            0, // flags: no external address
+            0x10, 0x10, 0x10, 0x10, 0x10, 0x10, // destination address
+            0, 0, 0, 0, // hwmp seqno = 0 ("unknown")
+            62, 00, // error code: no forwarding info
+        // Destination 2
+            0, // flags: no external address
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // destination address
+            100, 0, 0, 0, // hwmp seqno (equal to ours)
+            62, 00, // error code: no forwarding info
+        // Destination 3
+            0, // flags: no external address
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // destination address
+            200, 0, 0, 0, // hwmp seqno (greater than ours)
+            62, 00, // error code: no forwarding info
+        // Destination 4
+            0, // flags: no external address
+            0x40, 0x40, 0x40, 0x40, 0x40, 0x40, // destination address
+            0, 0, 0, 0, // hwmp seqno = 0 ("unknown")
+            62, 00, // error code: no forwarding info
+        // Destination 5
+            0, // flags: no external address
+            0x50, 0x50, 0x50, 0x50, 0x50, 0x50, // destination address
+            130, 0, 0, 0, // hwmp seqno
+            62, 00, // error code: no forwarding info
+    };
+    // clang-format on
+
+    PacketQueue packets_to_tx =
+        HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(), 100,
+                         CreateMacHeaderWriter(), &state, &table);
+
+    // Some paths should stay and some should be dropped
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("10:10:10:10:10:10")));
+    EXPECT_NE(nullptr, table.GetPath(common::MacAddr("20:20:20:20:20:20")));
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("30:30:30:30:30:30")));
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("40:40:40:40:40:40")));
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("50:50:50:50:50:50")));
+
+    // Expect the PERR frame to be forwarded, but with the second destination dropped
+    ASSERT_EQ(packets_to_tx.size(), 1u);
+    auto packet = packets_to_tx.Dequeue();
+    ASSERT_NE(packet, nullptr);
+
+    // clang-format off
+    const uint8_t expected_forwarded_frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1: broadcast
+        LIST_MAC_ADDR_BYTES(self_addr()), // addr2
+        LIST_MAC_ADDR_BYTES(self_addr()), // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Perr element
+        132, 54,
+        0x1f, 4, // ttl must be decreased by one; num destinations = 4
+        // Destination 1
+            0, // flags: no external address
+            0x10, 0x10, 0x10, 0x10, 0x10, 0x10, // destination address
+            101, 0, 0, 0, // hwmp seqno: replaced with ours + 1
+            62, 00, // error code: no forwarding info
+        // Destination 2 (originally #3)
+            0, // flags: no external address
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // destination address
+            200, 0, 0, 0, // hwmp seqno
+            62, 00, // error code: no forwarding info
+        // Destination 3 (originally #4)
+            0, // flags: no external address
+            0x40, 0x40, 0x40, 0x40, 0x40, 0x40, // destination address
+            0, 0, 0, 0, // hwmp seqno = 0 ("unknown")
+            62, 00, // error code: no forwarding info
+        // Destination 4 (originaly #5)
+            0, // flags: no external address
+            0x50, 0x50, 0x50, 0x50, 0x50, 0x50, // destination address
+            130, 0, 0, 0, // hwmp seqno
+            62, 00, // error code: no forwarding info
+    };
+    // clang-format on
+    EXPECT_RANGES_EQ(expected_forwarded_frame, Span<const uint8_t>(*packet));
+}
+
+TEST_F(HwmpTest, PerrTimeToDie) {
+    AddPath("10:10:10:10:10:10", "f0:f0:f0:f0:f0:f0", {100});
+    EXPECT_NE(nullptr, table.GetPath(common::MacAddr("10:10:10:10:10:10")));
+
+    // clang-format off
+    const uint8_t perr[] = {
+        132, 15,
+        1, 1, // ttl, num destinations
+        // Destination 1
+            0, // flags: no external address
+            0x10, 0x10, 0x10, 0x10, 0x10, 0x10, // destination address
+            200, 0, 0, 0, // hwmp seqno
+            62, 00, // error code: no forwarding info
+    };
+    // clang-format on
+
+    PacketQueue packets_to_tx =
+        HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(), 100,
+                         CreateMacHeaderWriter(), &state, &table);
+
+    // Expect the path to be deleted but the frame not forwarded since its TTL has dropped to zero
+    EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("10:10:10:10:10:10")));
+    EXPECT_TRUE(packets_to_tx.is_empty());
 }
 
 }  // namespace wlan

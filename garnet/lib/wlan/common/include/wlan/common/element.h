@@ -151,7 +151,7 @@ struct MeshConfiguration {
     }
 
     static MeshConfiguration FromFidl(const ::fuchsia::wlan::mlme::MeshConfiguration& f) {
-        return MeshConfiguration {
+        return MeshConfiguration{
             .active_path_sel_proto_id = static_cast<PathSelProtoId>(f.active_path_sel_proto_id),
             .active_path_sel_metric_id = static_cast<PathSelMetricId>(f.active_path_sel_metric_id),
             .congest_ctrl_method_id = static_cast<CongestCtrlModeId>(f.congest_ctrl_method_id),
@@ -308,6 +308,12 @@ struct PerrPerDestinationHeader {
 struct PerrPerDestinationTail {
     uint16_t reason_code;
 } __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.115
+constexpr size_t kPerrMaxDestinations = 19;
+
+constexpr size_t kPerrMaxDestinationSize =
+    sizeof(PerrPerDestinationHeader) + sizeof(common::MacAddr) + sizeof(PerrPerDestinationTail);
 
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
@@ -1460,7 +1466,6 @@ struct VhtOperation {
         return fidl;
     }
 } __PACKED;
-
 
 // IEEE Std 802.11-2016, 9.4.2.102
 // The fixed part of the Mesh Peering Management header

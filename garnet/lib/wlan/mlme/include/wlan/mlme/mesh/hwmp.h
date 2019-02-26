@@ -9,6 +9,7 @@
 #include <wlan/mlme/mac_header_writer.h>
 #include <wlan/mlme/mesh/path_table.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/rate_limiter.h>
 #include <wlan/mlme/timer_manager.h>
 
 namespace wlan {
@@ -27,9 +28,9 @@ struct HwmpState {
     uint32_t next_path_discovery_id = 0;
     TimerManager<TimedEvent> timer_mgr;
     std::unordered_map<uint64_t, TargetState> state_by_target;
+    RateLimiter perr_rate_limiter;
 
-    explicit HwmpState(fbl::unique_ptr<Timer> timer)
-        : our_hwmp_seqno(0), timer_mgr(std::move(timer)) {}
+    explicit HwmpState(fbl::unique_ptr<Timer> timer);
 };
 
 PacketQueue HandleHwmpAction(Span<const uint8_t> elements,
