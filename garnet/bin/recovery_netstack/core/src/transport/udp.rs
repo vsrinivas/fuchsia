@@ -164,13 +164,29 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
             packet.body(),
         );
         Ok(())
-    } else {
+    } else if cfg!(feature = "udp-icmp-port-unreachable") {
+        // NOTE: We currently have no way of enabling this feature from our
+        // build system, so it is always disabled.
+        //
+        // TODO(joshlf): Support enabling this feature.
+
+        // Responding with an ICMP Port Unreachable error is a vector for
+        // reflected DoS attacks - the attacker can send a UDP packet to a
+        // closed port with the source address set to the address of the victim,
+        // and we will send the ICMP response there. Luckily, according to RFC
+        // 1122, "if a datagram arrives addressed to a UDP port for which there
+        // is no pending LISTEN call, UDP SHOULD send an ICMP Port Unreachable
+        // message." Since it is not mandatory, we choose to disable it by
+        // default.
+
         // Unfortunately, type inference isn't smart enough for us to just do
         // packet.parse_metadata().
         let meta = ParsablePacket::<_, crate::wire::udp::UdpParseArgs<A>>::parse_metadata(&packet);
         std::mem::drop(packet);
         buffer.undo_parse(meta);
         Err(buffer)
+    } else {
+        Ok(())
     }
 }
 

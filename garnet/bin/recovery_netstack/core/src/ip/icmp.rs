@@ -399,6 +399,7 @@ mod tests {
     use packet::{Buf, BufferSerializer, Serializer};
 
     use std::fmt::Debug;
+    #[cfg(feature = "udp-icmp-port-unreachable")]
     use std::num::NonZeroU16;
 
     use super::*;
@@ -408,6 +409,7 @@ mod tests {
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody,
     };
+    #[cfg(feature = "udp-icmp-port-unreachable")]
     use crate::wire::udp::UdpPacketBuilder;
 
     /// Test that receiving a particular IP packet results in a particular ICMP
@@ -516,7 +518,11 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "udp-icmp-port-unreachable")]
     fn test_port_unreachable() {
+        // TODO(joshlf): Use TCP in addition to UDP since UDP only works with
+        // the udp-icmp-port-unreachable feature enabled.
+
         // Receive an IP packet for an unreachable UDP port (1234). Check to
         // make sure that we respond with the appropriate ICMP message.
         //
