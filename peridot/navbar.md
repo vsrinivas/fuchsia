@@ -2,7 +2,7 @@
 
 * [Home][home]
 * [Modular](/peridot/docs/modular/getting_started.md)
-* [Ledger](/peridot/docs/ledger/README.md)
+* [Ledger](/src/ledger/docs/README.md)
 * [fuchsia::modular::Intent](/peridot/docs/modular/intent.md)
 * [fuchsia::modular::Entity](/peridot/docs/modular/entity.md)
 * [Examples](/peridot/examples)

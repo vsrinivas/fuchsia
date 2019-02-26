@@ -37,4 +37,4 @@ against a Firestore instance, you need the following:
 See [cloud sync set-up instructions] for instructions on how to use this
 information to run these tests.
 
-[cloud sync set-up instructions]: /peridot/docs/ledger/testing.md#cloud-sync
+[cloud sync set-up instructions]: /src/ledger/docs/testing.md#cloud-sync

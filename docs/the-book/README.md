@@ -101,7 +101,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [framework-story]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/story.md
 [framework-module]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/module.md
 [framework-agent]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/agent.md
-[ledger]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/ledger/README.md
+[ledger]: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
 [bluetooth]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/bluetooth/README.md
 [telephony]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/telephony/README.md
 [magma]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/magma/

@@ -4,4 +4,4 @@ This directory contains an "end-to-end" test suite for synchronization and needs
 
 To run this test suite, follow the instruction at [Synchronization tests]
 
-[Synchronization tests]: /peridot/docs/ledger/testing.md#synchronization-tests
+[Synchronization tests]: /src/ledger/docs/testing.md#synchronization-tests

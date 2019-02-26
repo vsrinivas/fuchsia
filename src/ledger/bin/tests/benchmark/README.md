@@ -165,6 +165,6 @@ section](README.md#benchmarks-using-sync).
       operations)
 
 [trace-based benchmarks]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/trace_based_benchmarking.md
-[cloud sync set-up instructions]: /peridot/docs/ledger/testing.md#cloud-sync
-[lazy value]: /peridot/docs/ledger/api_guide.md#lazy-values
-[PageWatcher notification]: /peridot/docs/ledger/api_guide.md#watch
+[cloud sync set-up instructions]: /src/ledger/docs/testing.md#cloud-sync
+[lazy value]: /src/ledger/docs/api_guide.md#lazy-values
+[PageWatcher notification]: /src/ledger/docs/api_guide.md#watch

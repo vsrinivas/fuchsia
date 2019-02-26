@@ -35,5 +35,5 @@ log` output to see if the tests passed.
  - [configuration](docs/configuration.md) of server instances
 
 [cloud provider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
-[cloud sync set-up instructions]: /peridot/docs/ledger/testing.md#cloud-sync
+[cloud sync set-up instructions]: /src/ledger/docs/testing.md#cloud-sync
 [validation tests]: /peridot/public/lib/cloud_provider/validation/README.md
