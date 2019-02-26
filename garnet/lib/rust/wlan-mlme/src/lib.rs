@@ -10,3 +10,4 @@ pub use wlan_common as common;
 pub mod auth;
 pub mod buffer;
 pub mod client;
+pub mod device;

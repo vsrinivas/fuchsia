@@ -131,6 +131,7 @@ class Station : public ClientInterface {
     zx_status_t NotifyAssocContext();
 
     DeviceInterface* device_;
+    mlme_device_ops_t rust_device_;
     TimerManager<> timer_mgr_;
     ChannelScheduler* chan_sched_;
     JoinContext* join_ctx_;

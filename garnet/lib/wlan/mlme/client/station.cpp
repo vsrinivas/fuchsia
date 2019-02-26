@@ -47,6 +47,12 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
       chan_sched_(chan_sched),
       join_ctx_(join_ctx),
       seq_mgr_(mlme_sequence_manager_new(), mlme_sequence_manager_delete) {
+    rust_device_ = {
+        .device = static_cast<void*>(device),
+        .deliver_ethernet = [](void* device, const uint8_t* data, size_t len) -> zx_status_t {
+            return static_cast<DeviceInterface*>(device)->DeliverEthernet({data, len});
+        },
+    };
     Reset();
 }
 
@@ -645,24 +651,11 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
         return ZX_OK;
     }
 
-    // Prepare a packet
-    const size_t eth_frame_len = EthernetII::max_len() + llc_payload_len;
-    auto packet = GetEthPacket(eth_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    BufferWriter w(*packet);
-    auto eth_hdr = w.Write<EthernetII>();
-    eth_hdr->dest = dest;
-    eth_hdr->src = src;
-    eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
-    w.Write(llc_frame.body_data().subspan(0, llc_payload_len));
-
-    packet->set_len(w.WrittenBytes());
-
-    auto status = device_->DeliverEthernet(*packet);
-    if (status != ZX_OK) {
-        errorf("could not deliver rx'ed ethernet data: %s\n", zx_status_get_string(status));
-    }
+    // TODO(WLAN-981): replace |llc_payload_len| with |llc_frame.body_data().len()|
+    auto status = mlme_deliver_eth_frame(&rust_device_, &rust_buffer_provider, &dest.byte,
+                                         &src.byte, htobe16(llc_frame.hdr()->protocol_id),
+                                         llc_frame.body_data().data(), llc_payload_len);
+    if (status != ZX_OK) { errorf("error handling llc frame: %s\n", zx_status_get_string(status)); }
     return status;
 }
 

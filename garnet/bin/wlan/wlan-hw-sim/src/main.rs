@@ -837,6 +837,7 @@ mod simulation_tests {
         assert_eq!(&actual[..], PAYLOAD);
         assert_eq!(header.dst, HW_MAC_ADDR);
         assert_eq!(header.src, BSSID);
+        assert_eq!(header.eth_type, eth_frames::EtherType::Ipv4 as u16);
         assert_eq!(&payload[..], PAYLOAD);
     }
 
@@ -881,7 +882,9 @@ mod simulation_tests {
                     && data_header.addr2 == HW_MAC_ADDR
                     && data_header.addr3 == BSSID
                 {
-                    mac_frames::LlcHeader::from_reader(&mut cursor).expect("skipping llc header");
+                    let llc_header = mac_frames::LlcHeader::from_reader(&mut cursor)
+                        .expect("skipping llc header");
+                    assert_eq!(llc_header.protocol_id, eth_frames::EtherType::Ipv4 as u16);
                     io::Read::read_to_end(&mut cursor, actual).expect("reading payload");
                     rx_wlan_data_frame(&HW_MAC_ADDR, &BSS_ETHNET, &BSSID, &PAYLOAD, phy)
                         .expect("sending wlan data frame");

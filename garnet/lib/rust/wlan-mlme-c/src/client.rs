@@ -9,6 +9,7 @@ use {
         buffer::{BufferProvider, InBuf, OutBuf},
         client,
         common::{frame_len, mac, sequence::SequenceManager},
+        device,
     },
 };
 
@@ -48,14 +49,14 @@ pub extern "C" fn mlme_write_keep_alive_resp_frame(
 }
 
 #[no_mangle]
-pub extern "C" fn mlme_write_eth_frame(
-    provider: BufferProvider,
+pub extern "C" fn mlme_deliver_eth_frame(
+    device: &device::Device,
+    provider: &BufferProvider,
     dst_addr: &[u8; 6],
     src_addr: &[u8; 6],
     protocol_id: u16,
     payload: *const u8,
     payload_len: usize,
-    out_buf: &mut OutBuf,
 ) -> i32 {
     let frame_len = frame_len!(mac::EthernetIIHdr) + payload_len;
     let buf_result = provider.get_buffer(frame_len);
@@ -64,7 +65,6 @@ pub extern "C" fn mlme_write_eth_frame(
     let payload_slice = unsafe { utils::as_slice(payload, payload_len) };
     let write_result =
         client::write_eth_frame(&mut buf[..], *dst_addr, *src_addr, protocol_id, payload_slice);
-    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL).written_bytes();
-    *out_buf = OutBuf::from(buf, written_bytes);
-    zx::ZX_OK
+    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_IO_OVERRUN).written_bytes();
+    device.deliver_ethernet(&buf.as_slice()[0..written_bytes])
 }

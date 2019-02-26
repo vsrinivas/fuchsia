@@ -187,6 +187,11 @@ typedef enum {
  */
 typedef struct mlme_sequence_manager_t mlme_sequence_manager_t;
 
+typedef struct {
+  void *device;
+  int32_t (*deliver_ethernet)(void *device, const uint8_t *data, uintptr_t len);
+} mlme_device_ops_t;
+
 /**
  * An input buffer will always be returned to its original owner when no longer
  * being used. An input buffer is used for every buffer handed from C++ to Rust.
@@ -235,6 +240,11 @@ typedef struct {
   uintptr_t written_bytes;
 } mlme_out_buf_t;
 
+extern "C" int32_t mlme_deliver_eth_frame(
+    const mlme_device_ops_t *device, const mlme_buffer_provider_ops_t *provider,
+    const uint8_t (*dst_addr)[6], const uint8_t (*src_addr)[6],
+    uint16_t protocol_id, const uint8_t *payload, uintptr_t payload_len);
+
 extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data,
                                                 uintptr_t len);
 
@@ -248,11 +258,6 @@ extern "C" uint32_t mlme_sequence_manager_next_sns1(
 extern "C" uint32_t mlme_sequence_manager_next_sns2(
     mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6], uint16_t tid);
 
-extern "C" int32_t mlme_write_eth_frame(
-    mlme_buffer_provider_ops_t provider, const uint8_t (*dst_addr)[6],
-    const uint8_t (*src_addr)[6], uint16_t protocol_id, const uint8_t *payload,
-    uintptr_t payload_len, mlme_out_buf_t *out_buf);
-
 extern "C" int32_t mlme_write_keep_alive_resp_frame(
     mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
     const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
@@ -263,4 +268,4 @@ extern "C" int32_t mlme_write_open_auth_frame(
     const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
     mlme_out_buf_t *out_buf);
 
-#endif /* GARNET_LIB_RUST_WLAN_MLME_ABI_H_ */
+#endif /* GARNET_LIB_RUST_WLAN_MLME_C_BINDINGS_H_ */
