@@ -5,8 +5,7 @@
 #include "intl_wisdom_client.h"
 
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"
@@ -44,17 +43,19 @@ std::string GetShortTimeZoneKey(const TimeZone& time_zone) {
 }  // namespace
 
 IntlWisdomClient::IntlWisdomClient(
-    std::unique_ptr<component::StartupContext> startup_context)
+    std::unique_ptr<sys::StartupContext> startup_context)
     : startup_context_(std::move(startup_context)) {}
 
 void IntlWisdomClient::Start(std::string server_url) {
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = server_url;
-  launch_info.directory_request = services_.NewRequest();
-  startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                controller_.NewRequest());
-  services_.ConnectToService(server_.NewRequest().TakeChannel(),
-                             IntlWisdomServer::Name_);
+  launch_info.directory_request = directory.NewRequest().TakeChannel();
+  fuchsia::sys::LauncherPtr launcher;
+  startup_context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+  sys::ServiceDirectory services(std::move(directory));
+  services.Connect(server_.NewRequest());
 }
 
 ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {

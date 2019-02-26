@@ -10,8 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "lib/fsl/socket/files.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"
@@ -76,8 +75,8 @@ class PostFileApp {
  public:
   PostFileApp(async::Loop* loop)
       : loop_(loop),
-        context_(component::StartupContext::CreateFromStartupInfo()) {
-    http_service_ = context_->ConnectToEnvironmentService<http::HttpService>();
+        context_(sys::StartupContext::CreateFromStartupInfo()) {
+    http_service_ = context_->svc()->Connect<http::HttpService>();
   }
 
   bool Start(const std::vector<std::string>& args) {
@@ -138,7 +137,7 @@ class PostFileApp {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
   http::HttpServicePtr http_service_;
   http::URLLoaderPtr url_loader_;
 };

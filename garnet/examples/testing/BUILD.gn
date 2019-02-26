@@ -10,7 +10,9 @@ executable("test_with_context_example_test_bin") {
   output_name = "test_with_context_example_test"
 
   sources = [
-    "test_with_context_example_test.cc",
+    # TODO(abarth): Re-enable this test once we migrate more clients to
+    # //sdk/lib/sys/cpp.
+    # "test_with_context_example_test.cc",
   ]
 
   deps = [

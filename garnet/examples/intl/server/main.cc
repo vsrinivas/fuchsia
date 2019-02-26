@@ -9,7 +9,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   intl_wisdom::IntlWisdomServerImpl server(
-      component::StartupContext::CreateFromStartupInfo());
+      sys::StartupContext::CreateFromStartupInfo());
   loop.Run();
   return 0;
 }

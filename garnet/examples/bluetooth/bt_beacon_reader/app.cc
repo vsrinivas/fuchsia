@@ -22,12 +22,12 @@ namespace bt_beacon_reader {
 
 App::App(async::Loop* loop, bool just_tilts)
     : loop_(loop),
-      context_(component::StartupContext::CreateFromStartupInfo()),
+      context_(sys::StartupContext::CreateFromStartupInfo()),
       central_delegate_(this),
       just_tilts_(just_tilts) {
   FXL_DCHECK(context_);
 
-  central_ = context_->ConnectToEnvironmentService<ble::Central>();
+  central_ = context_->svc()->Connect<ble::Central>();
   FXL_DCHECK(central_);
 
   central_.set_error_handler([this](zx_status_t status) {

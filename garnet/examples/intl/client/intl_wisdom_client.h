@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_INTL_CLIENT_INTL_WISDOM_CLIENT_H_
 
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
 namespace intl_wisdom {
@@ -17,7 +17,7 @@ namespace intl_wisdom {
 // ask the server for a wisdom string.
 class IntlWisdomClient {
  public:
-  IntlWisdomClient(std::unique_ptr<component::StartupContext> startup_context);
+  IntlWisdomClient(std::unique_ptr<sys::StartupContext> startup_context);
 
   const fuchsia::examples::intl::wisdom::IntlWisdomServerPtr& server() const {
     return server_;
@@ -42,8 +42,7 @@ class IntlWisdomClient {
   IntlWisdomClient(const IntlWisdomClient&) = delete;
   IntlWisdomClient& operator=(const IntlWisdomClient&) = delete;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
-  component::Services services_;
+  std::unique_ptr<sys::StartupContext> startup_context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::examples::intl::wisdom::IntlWisdomServerPtr server_;
 };

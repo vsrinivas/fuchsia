@@ -9,8 +9,7 @@
 #include <zircon/processargs.h>
 
 #include "echo_client_app.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/startup_context.h"
 
 int main(int argc, const char** argv) {
   std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";

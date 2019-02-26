@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
 
 #include <garnet/drivers/usb_video/usb-video-camera.h>
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace camera {
 
@@ -14,7 +14,7 @@ class Client {
  public:
   Client();
 
-  explicit Client(std::unique_ptr<component::StartupContext> context);
+  explicit Client(std::unique_ptr<sys::StartupContext> context);
 
   fuchsia::camera::ControlSyncPtr& camera();
 
@@ -38,7 +38,7 @@ class Client {
 
  private:
   fuchsia::camera::ControlSyncPtr camera_control_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
   fuchsia::camera::ManagerSyncPtr manager_;
 };
 

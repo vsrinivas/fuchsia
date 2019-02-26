@@ -14,15 +14,15 @@ namespace ble = fuchsia::bluetooth::le;
 namespace bt_le_heart_rate {
 
 App::App(std::unique_ptr<HeartModel> heart_model)
-    : context_(component::StartupContext::CreateFromStartupInfo()),
+    : context_(sys::StartupContext::CreateFromStartupInfo()),
       service_(std::move(heart_model)) {
   gatt_server_ =
-      context_->ConnectToEnvironmentService<fuchsia::bluetooth::gatt::Server>();
+      context_->svc()->Connect<fuchsia::bluetooth::gatt::Server>();
   FXL_DCHECK(gatt_server_);
 
   service_.PublishService(&gatt_server_);
 
-  peripheral_ = context_->ConnectToEnvironmentService<ble::Peripheral>();
+  peripheral_ = context_->svc()->Connect<ble::Peripheral>();
   FXL_DCHECK(peripheral_);
   peripheral_.events().OnCentralConnected =
       fit::bind_member(this, &App::OnCentralConnected);

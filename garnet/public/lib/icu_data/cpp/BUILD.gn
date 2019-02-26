@@ -8,6 +8,8 @@ source_set("cpp") {
     "icu_data.h",
   ]
 
+  public_configs = [ "//garnet/public:config" ]
+
   deps = [
     "//garnet/public/lib/fsl",
     "//third_party/icu",

@@ -4,25 +4,27 @@
 
 #include "echo_client_app.h"
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace echo {
 
 EchoClientApp::EchoClientApp()
-    : EchoClientApp(component::StartupContext::CreateFromStartupInfo()) {}
+    : EchoClientApp(sys::StartupContext::CreateFromStartupInfo()) {}
 
-EchoClientApp::EchoClientApp(std::unique_ptr<component::StartupContext> context)
+EchoClientApp::EchoClientApp(std::unique_ptr<sys::StartupContext> context)
     : context_(std::move(context)) {}
 
 void EchoClientApp::Start(std::string server_url) {
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = server_url;
-  launch_info.directory_request = echo_provider_.NewRequest();
-  context_->launcher()->CreateComponent(std::move(launch_info),
-                                        controller_.NewRequest());
+  launch_info.directory_request = directory.NewRequest().TakeChannel();
+  fuchsia::sys::LauncherPtr launcher;
+  context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
-  echo_provider_.ConnectToService(echo_.NewRequest().TakeChannel(),
-                                  fidl::examples::echo::Echo::Name_);
+  sys::ServiceDirectory echo_provider(std::move(directory));
+  echo_provider.Connect(echo_.NewRequest());
 }
 
 }  // namespace echo

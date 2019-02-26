@@ -14,9 +14,9 @@ namespace camera {
 
 using namespace fuchsia::camera;
 
-Client::Client() : Client(component::StartupContext::CreateFromStartupInfo()) {}
+Client::Client() : Client(sys::StartupContext::CreateFromStartupInfo()) {}
 
-Client::Client(std::unique_ptr<component::StartupContext> context)
+Client::Client(std::unique_ptr<sys::StartupContext> context)
     : context_(std::move(context)) {}
 
 ControlSyncPtr &Client::camera() { return camera_control_; }
@@ -70,7 +70,7 @@ static void dump_device_info(const DeviceInfo &device_info) {
 
 zx_status_t Client::StartManager() {
   // Connect to Camera Manager:
-  context_->ConnectToEnvironmentService(manager().NewRequest());
+  context_->svc()->Connect(manager().NewRequest());
 
   std::vector<DeviceInfo> devices;
   zx_status_t status = manager()->GetDevices(&devices);

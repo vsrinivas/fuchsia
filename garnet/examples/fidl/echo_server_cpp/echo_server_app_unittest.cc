@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "echo_server_app.h"
-#include "lib/component/cpp/testing/test_with_context.h"
+#include "lib/sys/cpp/testing/test_with_context.h"
 
 namespace echo {
 namespace testing {
@@ -13,11 +13,11 @@ using namespace fidl::examples::echo;
 class EchoServerAppForTest : public EchoServerApp {
  public:
   // Expose injecting constructor so we can pass an instrumented Context
-  EchoServerAppForTest(std::unique_ptr<component::StartupContext> context)
+  EchoServerAppForTest(std::unique_ptr<sys::StartupContext> context)
       : EchoServerApp(std::move(context), false) {}
 };
 
-class EchoServerAppTest : public component::testing::TestWithContext {
+class EchoServerAppTest : public sys::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();
@@ -32,7 +32,7 @@ class EchoServerAppTest : public component::testing::TestWithContext {
  protected:
   EchoPtr echo() {
     EchoPtr echo;
-    controller().outgoing_public_services().ConnectToService(echo.NewRequest());
+    controller().context().ConnectToPublicService(echo.NewRequest());
     return echo;
   }
 

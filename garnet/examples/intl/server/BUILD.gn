@@ -12,13 +12,10 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/examples/intl/fidl:wisdom",
-    "//garnet/public/lib/component/cpp",
-    "//third_party/icu:icu",
-  ]
-
-  deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/icu_data/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//third_party/icu",
   ]
 }
 

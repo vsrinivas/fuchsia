@@ -10,7 +10,7 @@
 #include <lib/fit/function.h>
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"

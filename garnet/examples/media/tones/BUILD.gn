@@ -14,7 +14,7 @@ executable("tones") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",

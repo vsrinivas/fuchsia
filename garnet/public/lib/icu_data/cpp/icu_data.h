@@ -5,14 +5,9 @@
 #ifndef LIB_ICU_DATA_CPP_ICU_DATA_H_
 #define LIB_ICU_DATA_CPP_ICU_DATA_H_
 
-namespace component {
-class StartupContext;
-}
-
 namespace icu_data {
 
-bool Initialize(component::StartupContext* context,
-                const char* optional_data_path = 0);
+bool Initialize(void* unused, const char* optional_data_path = 0);
 bool Release();
 
 }  // namespace icu_data

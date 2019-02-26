@@ -13,21 +13,22 @@
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/media/timeline/timeline_function.h>
+#include <lib/sys/cpp/startup_context.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <limits>
+#include <math.h>
+#include <poll.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <utility>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-#include <limits>
-#include <utility>
-
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/media/timeline/timeline_function.h"
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 
@@ -752,15 +753,15 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::StartupContext> startup_context =
+      sys::StartupContext::CreateFromStartupInfo();
 
   fuchsia::media::AudioPtr audio =
-      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
+      startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;
   startup_context
-      ->ConnectToEnvironmentService<fuchsia::scheduler::ProfileProvider>(
+      ->svc()->Connect<fuchsia::scheduler::ProfileProvider>(
           profile_provider.NewRequest());
 
   FxProcessor fx(std::move(input), [&loop]() {

@@ -8,7 +8,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "lib/icu_data/cpp/icu_data.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"
@@ -54,7 +54,7 @@ std::unique_ptr<Calendar> CalendarIdToCalendar(const CalendarId& calendar_id,
 }  // namespace
 
 IntlWisdomServerImpl::IntlWisdomServerImpl(
-    std::unique_ptr<component::StartupContext> startup_context)
+    std::unique_ptr<sys::StartupContext> startup_context)
     : startup_context_(std::move(startup_context)) {
   ZX_ASSERT(icu_data::Initialize(startup_context_.get(), nullptr));
   startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));

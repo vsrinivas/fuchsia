@@ -47,8 +47,7 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 // Then, initializes ICU with the data received.
 //
 // Return value indicates if initialization was successful.
-bool Initialize(component::StartupContext* context,
-                const char* optional_data_path) {
+bool Initialize(void* unused, const char* optional_data_path) {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
     return false;

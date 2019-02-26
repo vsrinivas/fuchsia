@@ -9,11 +9,12 @@
 #include <fcntl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
+#include <poll.h>
+#include <unistd.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
-#include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
@@ -29,10 +30,10 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
 
   player_ = startup_context
-                ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
+                ->svc()->Connect<fuchsia::mediaplayer::Player>();
   player_.events().OnStatusChanged =
       [this](fuchsia::mediaplayer::PlayerStatus status) {
         HandleStatusChanged(status);

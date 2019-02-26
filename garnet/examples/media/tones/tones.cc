@@ -4,14 +4,15 @@
 
 #include "garnet/examples/media/tones/tones.h"
 
+#include <cmath>
 #include <fuchsia/media/cpp/fidl.h>
+#include <iostream>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
-#include <cmath>
-#include <iostream>
 #include <limits>
+#include <poll.h>
 
 #include "garnet/examples/media/tones/midi_keyboard.h"
 #include "lib/fxl/logging.h"
@@ -67,10 +68,10 @@ static const std::map<int, float> notes_by_key_ = {
 Tones::Tones(bool interactive, fit::closure quit_callback)
     : interactive_(interactive), quit_callback_(std::move(quit_callback)) {
   // Connect to the audio service and get an AudioRenderer.
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
 
   fuchsia::media::AudioPtr audio =
-      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
+      startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 

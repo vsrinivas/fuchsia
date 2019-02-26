@@ -4,8 +4,10 @@
 
 #include "garnet/examples/media/simple_sine/simple_sine.h"
 
-#include "lib/async-loop/cpp/loop.h"
-#include "lib/fxl/logging.h"
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fxl/logging.h>
+#include <math.h>
 
 namespace {
 // Set the AudioRenderer stream type to: 48 kHz, mono, 32-bit float.
@@ -28,7 +30,7 @@ MediaApp::MediaApp(fit::closure quit_callback)
 }
 
 // Prepare for playback, submit initial data and start the presentation timeline
-void MediaApp::Run(component::StartupContext* app_context) {
+void MediaApp::Run(sys::StartupContext* app_context) {
   AcquireAudioRenderer(app_context);
   SetStreamType();
 
@@ -56,9 +58,9 @@ void MediaApp::Run(component::StartupContext* app_context) {
 
 // Use StartupContext to acquire AudioPtr, which we only need in order to get
 // an AudioRendererPtr. Set an error handler, in case of channel closure.
-void MediaApp::AcquireAudioRenderer(component::StartupContext* app_context) {
+void MediaApp::AcquireAudioRenderer(sys::StartupContext* app_context) {
   fuchsia::media::AudioPtr audio =
-      app_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
+      app_context->svc()->Connect<fuchsia::media::Audio>();
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
@@ -137,8 +139,7 @@ fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
 // b. if all expected packets have completed, begin closing down the system.
 void MediaApp::SendPacket(fuchsia::media::StreamPacket packet) {
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(packet,
-                              [this]() { OnSendPacketComplete(); });
+  audio_renderer_->SendPacket(packet, [this]() { OnSendPacketComplete(); });
 }
 
 void MediaApp::OnSendPacketComplete() {
@@ -162,7 +163,7 @@ void MediaApp::Shutdown() {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
 
   examples::MediaApp media_app([&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

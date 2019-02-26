@@ -11,7 +11,7 @@ executable("simple_sine_sync") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",

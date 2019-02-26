@@ -4,15 +4,15 @@
 
 #include "echo_server_app.h"
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace echo {
 
 EchoServerApp::EchoServerApp(bool quiet)
-    : EchoServerApp(component::StartupContext::CreateFromStartupInfo(), quiet) {
+    : EchoServerApp(sys::StartupContext::CreateFromStartupInfo(), quiet) {
 }
 
-EchoServerApp::EchoServerApp(std::unique_ptr<component::StartupContext> context,
+EchoServerApp::EchoServerApp(std::unique_ptr<sys::StartupContext> context,
                              bool quiet)
     : context_(std::move(context)), quiet_(quiet) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
