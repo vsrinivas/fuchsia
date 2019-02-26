@@ -23,6 +23,33 @@ using process::ProcessBuilder;
 static const char* kVdevRoot = "/vdev";
 static const char* kVDataRoot = "/vdata";
 
+// Helper function to respond with a failure termination reason
+// to component controller requests.
+void EmitComponentFailure(
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,
+    fuchsia::sys::TerminationReason reason) {
+  // Internal helper class to be able to use fidl::Binding to emit the event:
+  class ErrorComponentController : public fuchsia::sys::ComponentController {
+   public:
+    ErrorComponentController(
+        fidl::InterfaceRequest<fuchsia::sys::ComponentController> req,
+        fuchsia::sys::TerminationReason reason)
+        : binding_(this, std::move(req)) {
+      binding_.events().OnTerminated(-1, reason);
+    }
+
+    void Kill() override { /* Do nothing */
+    }
+    void Detach() override { /* Do nothing */
+    }
+
+   private:
+    fidl::Binding<fuchsia::sys::ComponentController> binding_;
+  };
+
+  ErrorComponentController err(std::move(req), reason);
+}
+
 static void CreateFlatNamespace(fuchsia::sys::LaunchInfo* linfo) {
   if (!linfo->flat_namespace) {
     linfo->flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
@@ -69,11 +96,15 @@ void ManagedLauncher::CreateComponent(
   // so we can inject virtual devices
   if (!package) {
     FXL_LOG(ERROR) << "Can't load package \"" << launch_info.url << "\"";
+    EmitComponentFailure(std::move(controller),
+                         fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
     return;
   }
 
   if (!package->directory.is_valid()) {
     FXL_LOG(ERROR) << "Package directory not provided";
+    EmitComponentFailure(std::move(controller),
+                         fuchsia::sys::TerminationReason::INTERNAL_ERROR);
     return;
   }
 
@@ -81,6 +112,8 @@ void ManagedLauncher::CreateComponent(
   component::FuchsiaPkgUrl fp;
   if (!fp.Parse(package->resolved_url)) {
     FXL_LOG(ERROR) << "Can't parse package url " << package->resolved_url;
+    EmitComponentFailure(std::move(controller),
+                         fuchsia::sys::TerminationReason::INTERNAL_ERROR);
     return;
   }
 
@@ -91,6 +124,8 @@ void ManagedLauncher::CreateComponent(
   json::JSONParser json_parser;
   if (!cmx.ParseFromFileAt(fd.get(), fp.resource_path(), &json_parser)) {
     FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
+    EmitComponentFailure(std::move(controller),
+                         fuchsia::sys::TerminationReason::INTERNAL_ERROR);
     return;
   }
 

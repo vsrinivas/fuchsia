@@ -655,5 +655,16 @@ TEST_F(SandboxTest, DisabledTestSucceeds) {
   RunSandboxSuccess();
 }
 
+TEST_F(SandboxTest, NonexistentPackageUrl) {
+  SetCmx(R"(
+{
+   "environment" : {
+      "test" : ["fuchsia-pkg://fuchsia.com/netemul_nonexistent_test#meta/something.cmx"]
+   }
+}
+)");
+  RunSandbox(false, TerminationReason::PACKAGE_NOT_FOUND);
+}
+
 }  // namespace testing
 }  // namespace netemul
