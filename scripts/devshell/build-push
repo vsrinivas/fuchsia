@@ -40,10 +40,10 @@ function main {
   fx-command-run build "${args[@]}"
 
   if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
-    echo
-    echo "WARNING: It looks like serve-updates is not running."
-    echo "WARNING: You probably need to start \"fx serve\""
-    echo
+    echo >&2
+    fx-warn "It looks like serve-updates is not running."
+    fx-warn "You probably need to start \"fx serve\""
+    echo >&2
   fi
 
   fx-command-run push-package "${targets[@]}"

@@ -32,7 +32,7 @@ jiri=$(which jiri || echo)
 if [[ -z ${jiri} ]]; then
   jiri="${FUCHSIA_DIR}/.jiri_root/bin/jiri"
   if [[ ! -f ${jiri} ]]; then
-    echo >&2 "error: Cannot find \"jiri\" in your PATH nor at ${jiri}."
+    fx-error "Cannot find \"jiri\" in your PATH nor at ${jiri}."
     exit 1
   fi
 fi

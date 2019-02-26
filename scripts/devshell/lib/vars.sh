@@ -19,6 +19,24 @@ if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
   set -x
 fi
 
+# fx-warn prints a line to stderr with a yellow WARNING: prefix.
+function fx-warn {
+  if [[ -t 2 ]]; then
+    echo -e >&2 "\033[1;33mWARNING:\033[0m $@"
+  else
+    echo -e >&2 "WARNING: $@"
+  fi
+}
+
+# fx-error prints a line to stderr with a red ERROR: prefix.
+function fx-error {
+  if [[ -t 2 ]]; then
+    echo -e >&2 "\033[1;31mERROR:\033[0m $@"
+  else
+    echo -e >&2 "ERROR: $@"
+  fi
+}
+
 function fx-symbolize {
   if [[ -z "$FUCHSIA_BUILD_DIR" ]]; then
     fx-config-read
@@ -69,15 +87,15 @@ function fx-config-read-if-present {
 
 function fx-config-read {
   if ! fx-config-read-if-present ; then
-    echo >& 2 "error: Cannot read config from ${FUCHSIA_CONFIG}. Did you run \"fx set\"?"
+    fx-error "Cannot read config from ${FUCHSIA_CONFIG}. Did you run \"fx set\"?"
     exit 1
   fi
 
   # The user may have done "rm -rf out".
   local -r args_gn_file="${FUCHSIA_BUILD_DIR}/args.gn"
   if [[ ! -f "$args_gn_file" ]]; then
-    echo >&2 "Build directory problem, args.gn is missing."
-    echo >&2 "Did you \"rm -rf out\" and not rerun \"fx set\"?"
+    fx-error "Build directory problem, args.gn is missing."
+    fx-error "Did you \"rm -rf out\" and not rerun \"fx set\"?"
     exit 1
   fi
 }
@@ -103,7 +121,7 @@ function fx-config-glean-arch {
         arch=aarch64
         ;;
       *)
-        echo >&2 "ERROR: Cannot default target_cpu to this host's cpu: $host_cpu"
+        fx-error "Cannot default target_cpu to this host's cpu: $host_cpu"
         return 1
         ;;
     esac
@@ -181,7 +199,7 @@ function fx-command-run {
   local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
 
   if [[ ! -f "${command_path}" ]]; then
-    echo >& 2 "error: Unknown command ${command_name}"
+    fx-error "Unknown command ${command_name}"
     exit 1
   fi
 
@@ -196,12 +214,12 @@ function fx-buildtool-run {
   local -r command_path="${FUCHSIA_DIR}/buildtools/${command_name}"
 
   if [[ ! "${buildtools_whitelist}" =~ .*[[:space:]]"${command_name}"[[:space:]].* ]]; then
-    echo >& 2 "error: command ${command_name} not allowed"
+    fx-error "command ${command_name} not allowed"
     exit 1
   fi
 
   if [[ ! -f "${command_path}" ]]; then
-    echo >& 2 "error: Unknown command ${command_name}"
+    fx-error "Unknown command ${command_name}"
     exit 1
   fi
 
@@ -214,7 +232,7 @@ function fx-command-exec {
   local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
 
   if [[ ! -f "${command_path}" ]]; then
-    echo >& 2 "error: Unknown command ${command_name}"
+    fx-error "Unknown command ${command_name}"
     exit 1
   fi
 

@@ -194,9 +194,9 @@ function guess_config_within_layer {
     fi
   done
 
-  echo "Could not guess a ${config_type} configuration matching \"${config_name}\""
-  echo "Please specify the full path from the root of the checkout such as"
-  echo "${config_type}/core.gni"
+  fx-error "Could not guess a ${config_type} configuration matching \"${config_name}\""
+  fx-error "Please specify the full path from the root of the checkout such as"
+  fx-error "${config_type}/core.gni"
   exit 1
 }
 
@@ -220,7 +220,7 @@ function main {
       ;;
     *)
       # TODO(alainv): Add support for extracting arch from board configs.
-      echo Unknown target \"$1\"
+      fx-error Unknown target \"$1\"
       fx-command-help
       return 1
       ;;
@@ -289,7 +289,7 @@ function main {
         shift
         ;;
       --boards)
-        echo >&2 "--boards is deprecated, --board is preferred"
+        fx-warn "--boards is deprecated, --board is preferred"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -299,7 +299,7 @@ function main {
         shift
         ;;
       --products)
-        echo >&2 "--products is deprecated, --product is preferred"
+        fx-warn "--products is deprecated, --product is preferred"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -309,7 +309,7 @@ function main {
         shift
         ;;
       --packages)
-        echo >&2 "--packages is deprecated, --monolith, --preinstall or --available are preferred"
+        fx-warn "--packages is deprecated, --monolith, --preinstall or --available are preferred"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -319,7 +319,7 @@ function main {
         shift
         ;;
       --zircon-arg)
-        echo >&2 "--zircon-arg is deprecated, common use case is no longer required"
+        fx-warn "--zircon-arg is deprecated, common use case is no longer required"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -346,7 +346,7 @@ function main {
         fi
         goma_dir=$2
         if [[ ! -d "${goma_dir}" ]]; then
-          echo -e "error: GOMA directory does not exist: "${goma_dir}""
+          fx-error "GOMA directory does not exist: "${goma_dir}""
           return 1
         fi
         shift
@@ -463,13 +463,13 @@ function main {
       # Absolute or relative path.  Canonicalize it to source-relative.
       local abs_build_dir
       abs_build_dir="$(cd "${build_dir%/*}" >/dev/null 2>&1; pwd)/${build_dir##*/}" || {
-        echo >&2 "ERROR: Missing parent directories for ${build_dir}"
+        fx-error "Missing parent directories for ${build_dir}"
         return 1
       }
       if [[ "$abs_build_dir" == "${FUCHSIA_DIR}"/out/* ]]; then
         config_build_dir="${abs_build_dir#${FUCHSIA_DIR}/}"
       else
-        echo >&2 "WARNING: ${abs_build_dir} is not a subdirectory of ${FUCHSIA_DIR}/out"
+        fx-warn "${abs_build_dir} is not a subdirectory of ${FUCHSIA_DIR}/out"
         config_build_dir="$abs_build_dir"
       fi
       ;;

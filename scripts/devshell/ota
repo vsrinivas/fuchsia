@@ -23,8 +23,8 @@ function main {
   set -- "${FX_ARGV[@]}"
 
   if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
-    echo "WARNING: It looks like serve-updates is not running."
-    echo "WARNING: You probably need to start \"fx serve\""
+    fx-error "It looks like serve-updates is not running."
+    fx-error "You probably need to start \"fx serve\""
     return -1
   fi
 

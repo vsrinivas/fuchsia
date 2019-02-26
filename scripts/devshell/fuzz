@@ -103,7 +103,7 @@ cipd_path=""
 
 # Utility functions
 fatal() {
-  echo "Fatal error: $@"
+  fx-error "$@"
   exit 1
 }
 

@@ -36,7 +36,7 @@ function main {
     exit 0
     ;;
   -*)
-    echo >&2 "error: first given argument \"$1\" looks like a flag, a package name must be supplied before all flags."
+    fx-error "first given argument \"$1\" looks like a flag, a package name must be supplied before all flags."
     exit 1
     ;;
   *)
@@ -45,8 +45,8 @@ function main {
   esac
 
   if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
-    echo "WARNING: It looks like amber-srv is not running."
-    echo "WARNING: You probably need to start \"fx serve-updates\""
+    fx-error "It looks like amber-srv is not running."
+    fx-error "You probably need to start \"fx serve-updates\""
     exit 1
   fi
 

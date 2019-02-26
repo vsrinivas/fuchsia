@@ -38,8 +38,8 @@ fi
 readonly validator="${FUCHSIA_BUILD_DIR}/host_x64/json_validator"
 
 if [[ ! -f ${validator} ]]; then
-  echo >&2 "error: Cannot find JSON validator at ${validator}."
-  echo >&2 "Try running 'fx build' first."
+  fx-error "Cannot find JSON validator at ${validator}."
+  fx-error "Try running 'fx build' first."
   exit 1
 fi
 

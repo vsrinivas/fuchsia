@@ -21,15 +21,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 case "$(uname -s)" in
   Linux*) OS=linux-x64;;
   Darwin*) OS=mac-x64;;
-  *) echo "Error: unrecognized OS"; exit 1;;
+  *) fx-error "unrecognized OS"; exit 1;;
 esac
 
 declare -x PATH=$FUCHSIA_DIR/buildtools/$OS/cmake/bin:$PATH
 
 if [[ "$OS" = "mac-x64" ]]; then
   if ! [[ -x "$(command -v brew)" ]]; then
-    echo >&2 "'brew' binary not found"
-    echo >&2 "A homebrew <https://brew.sh> installation of opensslis required in order to update"       echo >&2 "Rust third party crates on the Mac."
+    fx-error "'brew' binary not found"
+    fx-error "A homebrew <https://brew.sh> installation of opensslis required in order to update"
+    fx-error "Rust third party crates on the Mac."
     exit 1
   fi
 
