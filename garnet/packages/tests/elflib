@@ -1,5 +1,5 @@
 {
     "host_tests": [
-        "//garnet/lib/elflib:elflib_tests"
+        "//src/lib/elflib:elflib_tests"
     ]
 }

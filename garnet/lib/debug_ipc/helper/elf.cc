@@ -4,7 +4,7 @@
 
 #include "garnet/lib/debug_ipc/helper/elf.h"
 
-#include "garnet/lib/elflib/elflib.h"
+#include "src/lib/elflib/elflib.h"
 
 namespace debug_ipc {
 

@@ -7,7 +7,7 @@
 
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/elflib/elflib.h"
+#include "src/lib/elflib/elflib.h"
 
 namespace elflib {
 namespace {

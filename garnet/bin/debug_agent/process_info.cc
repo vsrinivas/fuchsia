@@ -6,7 +6,7 @@
 
 // link.h leaks Elf-related #defines all over the place, so this has to be
 // included early or we don't compile. C++ was a mistake.
-#include "garnet/lib/elflib/elflib.h"
+#include "src/lib/elflib/elflib.h"
 
 #include <inttypes.h>
 #include <lib/zx/thread.h>
