@@ -22,6 +22,7 @@ struct RemoveDeviceAction {
     uint64 action_id;
 };
 
+const uint32 MAX_PROPERTIES_LEN = 32;
 const uint32 MAX_NAME_LEN = 32;
 
 /// Request to add a new child device
@@ -39,6 +40,12 @@ struct AddDeviceAction {
     /// The name that should be given to the new device.  Used by devfs and
     /// debug messages.
     string:MAX_NAME_LEN name;
+
+    /// The properties to attach the newly created device
+    vector<uint64>:MAX_PROPERTIES_LEN properties;
+
+    /// The expected return status from device_add()
+    zx.status expect_status;
 };
 
 /// What a hook should do.

@@ -20,15 +20,18 @@ void ActionList::AppendAction(Action action) {
 
 void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher,
                                      const std::string& parent_path, std::string name,
+                                     std::vector<zx_device_prop_t> props, zx_status_t expect_status,
                                      std::unique_ptr<MockDevice>* new_device_out,
                                      fit::promise<void, std::string>* add_done_out) {
     fit::bridge<void, std::string> bridge;
-    AppendAddMockDevice(dispatcher, parent_path, name, std::move(bridge.completer), new_device_out);
+    AppendAddMockDevice(dispatcher, parent_path, std::move(name), std::move(props), expect_status,
+                        std::move(bridge.completer), new_device_out);
     *add_done_out = bridge.consumer.promise_or(::fit::error("add device abandoned")).box();
 }
 
 void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher,
                                      const std::string& parent_path, std::string name,
+                                     std::vector<zx_device_prop_t> props, zx_status_t expect_status,
                                      fit::completer<void, std::string> add_done,
                                      std::unique_ptr<MockDevice>* new_device_out) {
     fidl::InterfaceHandle<fuchsia::device::mock::MockDevice> client;
@@ -46,6 +49,13 @@ void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher,
     add_device.do_bind = false;
     add_device.controller = std::move(client);
     add_device.name = std::move(name);
+    add_device.expect_status = expect_status;
+
+    static_assert(sizeof(uint64_t) == sizeof(props[0]));
+    for (zx_device_prop_t prop : props) {
+        add_device.properties.push_back(*reinterpret_cast<uint64_t*>(&prop));
+    }
+
     add_device.action_id = next_action_id_++;
 
     local_action_map_[add_device.action_id] = std::move(add_done);

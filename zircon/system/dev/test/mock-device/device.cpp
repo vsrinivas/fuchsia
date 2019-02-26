@@ -430,12 +430,17 @@ zx_status_t ProcessActions(fbl::Array<const fuchsia_device_mock_Action> actions,
             }
             memcpy(name, action.add_device.name.data, action.add_device.name.size);
             name[action.add_device.name.size] = 0;
-            status = dev->DdkAdd(name, DEVICE_ADD_NON_BINDABLE);
-            if (status != ZX_OK) {
+
+            status = dev->DdkAdd(name, DEVICE_ADD_NON_BINDABLE,
+                                 static_cast<zx_device_prop_t*>(action.add_device.properties.data),
+                                 static_cast<uint32_t>(action.add_device.properties.count));
+            if (status == ZX_OK) {
+                // Devmgr now owns this
+                __UNUSED auto ptr = dev.release();
+            }
+            if (action.add_device.expect_status != status) {
                 return status;
             }
-            // Devmgr now owns this
-            __UNUSED auto ptr = dev.release();
 
             if (ctx->is_thread) {
                 status = SendAddDeviceDoneFromThread(*ctx->channel, action.add_device.action_id);

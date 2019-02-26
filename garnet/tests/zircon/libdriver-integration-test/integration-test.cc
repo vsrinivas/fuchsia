@@ -98,7 +98,8 @@ IntegrationTest::Promise<void> IntegrationTest::CreateFirstChild(
                                                Completer<void> completer) {
             ActionList actions;
             actions.AppendAddMockDevice(loop_.dispatcher(), (*root_mock_device)->path(),
-                                        "first_child", std::move(completer), child_device);
+                                        "first_child", std::vector<zx_device_prop_t>{}, ZX_OK,
+                                        std::move(completer), child_device);
             actions.AppendReturnStatus(ZX_OK);
             return actions;
         });

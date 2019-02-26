@@ -10,6 +10,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <fuchsia/device/mock/cpp/fidl.h>
+#include <zircon/driver/binding.h>
 
 namespace libdriver_integration_test {
 
@@ -38,10 +39,12 @@ public:
     void AppendAction(Action action);
     void AppendAddMockDevice(async_dispatcher_t* dispatcher,
                              const std::string& parent_path, std::string name,
+                             std::vector<zx_device_prop_t> props, zx_status_t expect_status,
                              std::unique_ptr<MockDevice>* new_device_out,
                              fit::promise<void, std::string>* add_done_out);
     void AppendAddMockDevice(async_dispatcher_t* dispatcher,
                              const std::string& parent_path, std::string name,
+                             std::vector<zx_device_prop_t> props, zx_status_t expect_status,
                              fit::completer<void, std::string> add_done,
                              std::unique_ptr<MockDevice>* new_device_out);
     void AppendRemoveDevice(fit::promise<void, std::string>* remove_done_out);
