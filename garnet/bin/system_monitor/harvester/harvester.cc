@@ -2,16 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/*
-    Hey, so there's not a whole lot here. That's because this is a work in
-    progress. Starting from something like a hello world program, this will
-    progress into a System Monitor for Fuchsia.
-
-    The code below is largely straight out of the grpc hello world example.
-
-    See also: ./README.md
-*/
-
 #include "harvester.h"
 
 #include <memory>
@@ -23,6 +13,20 @@
 #include "lib/fxl/logging.h"
 
 namespace harvester {
+
+namespace {
+
+// Utility function to label and append a cpu sample to the |list|. |cpu| is the
+// index returned from the kernel. |name| is the kind of sample, e.g.
+// "interrupt_count".
+void AddCpuValue(SampleList* list, size_t cpu, const std::string name,
+                 dockyard::SampleValue value) {
+  std::ostringstream label;
+  label << "cpu:" << cpu << ":" << name;
+  list->emplace_back(label.str(), value);
+}
+
+}  // namespace
 
 bool Harvester::Init() {
   dockyard_proto::InitRequest request;
@@ -157,16 +161,32 @@ void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester) {
   auto cpu_time = std::chrono::duration_cast<std::chrono::nanoseconds>(
                       now.time_since_epoch())
                       .count();
+  SampleList list;
   for (size_t i = 0; i < actual; ++i) {
-    {
-      // "cpu:0:busy_time"
-      std::ostringstream label;
-      label << "cpu:" << i << ":busy_time";
-      uint64_t busy_time =
-          cpu_time > stats[i].idle_time ? cpu_time - stats[i].idle_time : 0ull;
-      grpc::Status status = harvester->SendSample(label.str(), busy_time);
-    }
+    // Note: stats[i].flags are not currently recorded.
+
+    // Kernel scheduler counters.
+    AddCpuValue(&list, i, "reschedules", stats[i].reschedules);
+    AddCpuValue(&list, i, "context_switches", stats[i].context_switches);
+    AddCpuValue(&list, i, "irq_preempts", stats[i].irq_preempts);
+    AddCpuValue(&list, i, "preempts", stats[i].preempts);
+    AddCpuValue(&list, i, "yields", stats[i].yields);
+
+    // CPU level interrupts and exceptions.
+    uint64_t busy_time =
+        cpu_time > stats[i].idle_time ? cpu_time - stats[i].idle_time : 0ull;
+    AddCpuValue(&list, i, "busy_time", busy_time);
+    AddCpuValue(&list, i, "idle_time", stats[i].idle_time);
+    AddCpuValue(&list, i, "hardware_interrupts", stats[i].ints);
+    AddCpuValue(&list, i, "timer_interrupts", stats[i].timer_ints);
+    AddCpuValue(&list, i, "timer_callbacks", stats[i].timers);
+    AddCpuValue(&list, i, "syscalls", stats[i].syscalls);
+
+    // Inter-processor interrupts.
+    AddCpuValue(&list, i, "reschedule_ipis", stats[i].reschedule_ipis);
+    AddCpuValue(&list, i, "generic_ipis", stats[i].generic_ipis);
   }
+  grpc::Status status = harvester->SendSampleList(list);
 }
 
 void GatherMemorySamples(zx_handle_t root_resource, Harvester* harvester) {
