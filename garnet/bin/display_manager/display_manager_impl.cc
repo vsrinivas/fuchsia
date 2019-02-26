@@ -8,10 +8,10 @@
 namespace display {
 
 DisplayManagerImpl::DisplayManagerImpl()
-    : DisplayManagerImpl(component::StartupContext::CreateFromStartupInfo()) {}
+    : DisplayManagerImpl(sys::StartupContext::CreateFromStartupInfo()) {}
 
 DisplayManagerImpl::DisplayManagerImpl(
-    std::unique_ptr<component::StartupContext> context)
+    std::unique_ptr<sys::StartupContext> context)
     : context_(std::move(context)) {
   display_ = std::unique_ptr<Display>(Display::GetDisplay());
 
