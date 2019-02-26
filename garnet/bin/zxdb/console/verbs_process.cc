@@ -88,34 +88,32 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
 
 // Callback for "run", "attach", "detach" and "stop". The verb affects the
 // message printed to the screen.
-// Since now Verbs commands can take in a callback and Process commands call
-// this callback, we optionally pass that callback here to be called in a long
-// merry string of callbacks.
-void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
+//
+// The optional callback parameter will be issued with the error for calling
+// code to identify the error.
+void ProcessCommandCallback(fxl::WeakPtr<Target> target,
                             bool display_message_on_success, const Err& err,
                             CommandCallback callback = nullptr) {
-  if (!display_message_on_success && !err.has_error())
-    return;
+  if (display_message_on_success || err.has_error()) {
+    // Display messaging.
+    Console* console = Console::get();
 
-  Console* console = Console::get();
-
-  OutputBuffer out;
-  if (err.has_error()) {
-    if (target) {
-      out.Append(fxl::StringPrintf("Process %d %s failed.\n",
-                                   console->context().IdForTarget(target.get()),
-                                   verb));
+    OutputBuffer out;
+    if (err.has_error()) {
+      if (target) {
+        out.Append(fxl::StringPrintf("Process %d ",
+              console->context().IdForTarget(target.get())));
+      }
+      out.Append(err);
+    } else if (target) {
+      out.Append(DescribeTarget(&console->context(), target.get()));
     }
-    out.Append(err);
-  } else if (target) {
-    out.Append(DescribeTarget(&console->context(), target.get()));
+
+    console->Output(std::move(out));
   }
 
-  console->Output(std::move(out));
-
-  if (callback) {
+  if (callback)
     callback(err);
-  }
 }
 
 // run -------------------------------------------------------------------------
@@ -204,7 +202,9 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
 
     cmd.target()->Launch(
         [callback](fxl::WeakPtr<Target> target, const Err& err) {
-          ProcessCommandCallback("launch", target, true, err, callback);
+          // The ConsoleContext displays messages for new processes, so don't
+          // display messages when successfully starting.
+          ProcessCommandCallback(target, false, err, callback);
         });
   } else {
     LaunchComponent(cmd);
@@ -245,7 +245,7 @@ Err DoKill(ConsoleContext* context, const Command& cmd,
   cmd.target()->Detach([callback](fxl::WeakPtr<Target> target, const Err& err) {
     // The ConsoleContext displays messages for stopped processes, so don't
     // display messages when successfully killing.
-    ProcessCommandCallback("kill", target, false, err, callback);
+    ProcessCommandCallback(target, false, err, callback);
   });
   return Err();
 }
@@ -312,7 +312,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
 
     cmd.target()->Attach(
         koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {
-          ProcessCommandCallback("attach", target, true, err, callback);
+          ProcessCommandCallback(target, true, err, callback);
         });
   }
   return Err();
@@ -369,7 +369,7 @@ Err DoDetach(ConsoleContext* context, const Command& cmd,
         [callback](fxl::WeakPtr<Target> target, const Err& err) {
           // The ConsoleContext displays messages for stopped processes, so
           // don't display messages when successfully detaching.
-          ProcessCommandCallback("detach", target, false, err, callback);
+          ProcessCommandCallback(target, false, err, callback);
         });
   }
   return Err();

@@ -322,7 +322,7 @@ std::string DescribeJobContext(const ConsoleContext* context,
   }
 
   std::string result =
-      fxl::StringPrintf("Job %d %s %s", id, state.c_str(), koid_str.c_str());
+      fxl::StringPrintf("Job %d [%s] %s", id, state.c_str(), koid_str.c_str());
   result += DescribeJobContextName(job_context);
   return result;
 }
@@ -340,7 +340,7 @@ std::string DescribeTarget(const ConsoleContext* context,
         fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
   }
 
-  std::string result = fxl::StringPrintf("Process %d %s %s", id, state.c_str(),
+  std::string result = fxl::StringPrintf("Process %d [%s] %s", id, state.c_str(),
                                          koid_str.c_str());
   result += DescribeTargetName(target);
   return result;
@@ -373,7 +373,7 @@ std::string DescribeJobContextName(const JobContext* job_context) {
 std::string DescribeThread(const ConsoleContext* context,
                            const Thread* thread) {
   return fxl::StringPrintf(
-      "Thread %d %s koid=%" PRIu64 " %s", context->IdForThread(thread),
+      "Thread %d [%s] koid=%" PRIu64 " %s", context->IdForThread(thread),
       ThreadStateToString(thread->GetState(), thread->GetBlockedReason())
           .c_str(),
       thread->GetKoid(), thread->GetName().c_str());
