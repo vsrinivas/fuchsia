@@ -351,7 +351,7 @@ void RouterEndpoint::ConnectionStream::Stub::Fork(
                        connection_stream_->peer(),
                        fork.reliability_and_ordering, StreamId(fork.stream_id)};
   if (auto it = connection_stream_->endpoint_->services_.find(
-          *fork.introduction.service_name());
+          fork.introduction.service_name());
       it != connection_stream_->endpoint_->services_.end()) {
     it->second->AcceptStream(std::move(new_stream));
   } else {

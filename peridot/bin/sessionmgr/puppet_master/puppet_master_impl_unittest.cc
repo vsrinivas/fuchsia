@@ -266,7 +266,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
   done = false;
   storage_->GetStoryData("foo")->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -294,7 +294,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
   done = false;
   storage_->GetStoryData("foo")->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(data->story_options().kind_of_proto_story);
         done = true;
       });
 

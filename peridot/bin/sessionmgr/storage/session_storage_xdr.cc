@@ -112,7 +112,7 @@ void XdrStoryData_v1(XdrContext* const xdr,
     case XdrOp::TO_JSON: {
       std::string page_id;
       if (data->has_story_page_id()) {
-        page_id = PageIdToBase64(*data->story_page_id());
+        page_id = PageIdToBase64(data->story_page_id());
       }
       xdr->Field(kStoryPageId, &page_id);
       break;

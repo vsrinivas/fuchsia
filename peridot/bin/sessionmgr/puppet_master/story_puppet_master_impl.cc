@@ -34,7 +34,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
         ->WeakThen(GetWeakPtr(),
                    [this](fuchsia::modular::internal::StoryDataPtr data) {
                      if (data) {
-                       story_id_ = data->story_info()->id;
+                       story_id_ = data->story_info().id;
                        ExecuteCommands();
                        return;
                      }

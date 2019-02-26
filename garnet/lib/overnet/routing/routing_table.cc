@@ -21,11 +21,6 @@ void MoveInto(std::initializer_list<T> from, std::vector<T>* to) {
   }
 }
 
-TimeDelta UnpackTime(const uint64_t* delta) {
-  return delta == nullptr ? TimeDelta::PositiveInf()
-                          : TimeDelta::FromMicroseconds(*delta);
-};
-
 }  // namespace
 
 RoutingTable::RoutingTable(NodeId root_node, Timer* timer, bool allow_threading)
@@ -247,9 +242,13 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
       if (link->status.version ==
           fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE)
         continue;
-      TimeDelta rtt = src->best_rtt +
-                      UnpackTime(src->status.metrics.forwarding_time()) +
-                      UnpackTime(link->status.metrics.rtt());
+      TimeDelta rtt =
+          src->best_rtt + (src->status.metrics.has_forwarding_time()
+              ? TimeDelta::FromMicroseconds(
+                    src->status.metrics.forwarding_time())
+              : TimeDelta::PositiveInf()) + (link->status.metrics.has_rtt()
+                    ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
+                    : TimeDelta::PositiveInf());
       Node* dst = link->to_node;
       // For now we order by RTT.
       if (dst->last_path_finding_run != path_finding_run_ ||
@@ -259,8 +258,8 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
         dst->best_from = src;
         dst->best_link = link;
         dst->mss =
-            std::min(src->mss, link->status.metrics.mss()
-                                   ? *link->status.metrics.mss()
+            std::min(src->mss, link->status.metrics.has_mss()
+                                   ? link->status.metrics.mss()
                                    : std::numeric_limits<uint32_t>::max());
         enqueue(dst);
       }

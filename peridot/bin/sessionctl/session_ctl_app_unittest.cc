@@ -93,7 +93,7 @@ TEST_F(SessionCtlAppTest, AddMod) {
   // Assert the story and the mod were added with default story and mod names
   auto story_data = GetStoryData("mod_url");
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("mod_url", *story_data->story_name());
+  EXPECT_EQ("mod_url", story_data->story_name());
   EXPECT_EQ("mod_url",
             test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
@@ -113,7 +113,7 @@ TEST_F(SessionCtlAppTest, AddModWeb) {
   // Assert the story and the mod were added with default story and mod names
   auto story_data = GetStoryData("www.google.com");
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("www.google.com", *story_data->story_name());
+  EXPECT_EQ("www.google.com", story_data->story_name());
   EXPECT_EQ("www.google.com",
             test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("https://www.google.com",
@@ -134,7 +134,7 @@ TEST_F(SessionCtlAppTest, AddModExoticScheme) {
   // Assert the story and the mod were added with default story and mod names
   auto story_data = GetStoryData("mod_url");
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("mod_url", *story_data->story_name());
+  EXPECT_EQ("mod_url", story_data->story_name());
   EXPECT_EQ("mod_url",
             test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("foobar-pkg://mod_url?q=bad+wolf",
@@ -156,7 +156,7 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   auto story_name = "s";
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(story_name, *story_data->story_name());
+  EXPECT_EQ(story_name, story_data->story_name());
   EXPECT_EQ("m", test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
@@ -195,7 +195,7 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   // Assert session_storage still contains the story
   auto story_data = GetStoryData(mod);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(mod, *story_data->story_name());
+  EXPECT_EQ(mod, story_data->story_name());
   EXPECT_EQ(mod,
             test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
@@ -223,7 +223,7 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   auto story_name = "s";
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(story_name, *story_data->story_name());
+  EXPECT_EQ(story_name, story_data->story_name());
   EXPECT_EQ(mod_name,
             test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
