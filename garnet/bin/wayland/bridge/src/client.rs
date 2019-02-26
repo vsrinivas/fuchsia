@@ -148,7 +148,8 @@ impl Client {
     /// Looks up an object in the map and returns a downcasted mutable
     /// reference to the implementation.
     pub fn get_object_mut<T: Any>(
-        &mut self, id: wl::ObjectId,
+        &mut self,
+        id: wl::ObjectId,
     ) -> Result<&mut T, ObjectLookupError> {
         self.objects.get_mut(id)
     }
@@ -159,7 +160,9 @@ impl Client {
     ///
     /// Returns Err if there is already an object for |id| in this |ObjectMap|.
     pub fn add_object<I: wl::Interface + 'static, R: RequestReceiver<I> + 'static>(
-        &mut self, id: u32, receiver: R,
+        &mut self,
+        id: u32,
+        receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
         self.objects.add_object(id, receiver)
     }
@@ -168,7 +171,9 @@ impl Client {
     /// to use instead |add_object| if the wayland interface for the object is
     /// statically known.
     pub fn add_object_raw(
-        &mut self, id: wl::ObjectId, receiver: Box<MessageReceiver>,
+        &mut self,
+        id: wl::ObjectId,
+        receiver: Box<MessageReceiver>,
         request_spec: &'static wl::MessageGroupSpec,
     ) -> Result<(), Error> {
         self.objects.add_object_raw(id, receiver, request_spec)
@@ -230,8 +235,6 @@ impl TaskQueue {
     where
         F: FnMut(&mut Client) -> Result<(), Error> + 'static,
     {
-        self.0
-            .unbounded_send(Box::new(f))
-            .expect("failed to send task");
+        self.0.unbounded_send(Box::new(f)).expect("failed to send task");
     }
 }

@@ -77,9 +77,7 @@ mod test {
         let interface = interfaces.remove(0);
         assert_eq!(interface.name, "my_interface");
         assert_eq!(interface.version, 3);
-        let description = interface
-            .description
-            .expect("Missing interface description");
+        let description = interface.description.expect("Missing interface description");
         assert_eq!(description.summary, "interface summary");
         assert_eq!(description.description, "This describes my interface");
 
@@ -91,10 +89,7 @@ mod test {
         assert_eq!(request.request_type, None);
         let description = request.description.expect("Missing request description");
         assert_eq!(description.summary, "request_with_all_arg_types summary");
-        assert_eq!(
-            description.description,
-            "This describes request_with_all_arg_types"
-        );
+        assert_eq!(description.description, "This describes request_with_all_arg_types");
         let mut args = request.args;
         assert_eq!(8, args.len());
 
@@ -130,10 +125,7 @@ mod test {
         assert_eq!(event.since, 1024);
         let description = event.description.expect("Missing event description");
         assert_eq!(description.summary, "event_with_all_arg_types summary");
-        assert_eq!(
-            description.description,
-            "This describes event_with_all_arg_types"
-        );
+        assert_eq!(description.description, "This describes event_with_all_arg_types");
         let mut args = event.args;
         assert_eq!(8, args.len());
 

@@ -33,19 +33,16 @@ impl Seat {
                     | wl_seat::Capability::Touch,
             },
         )?;
-        client.post(
-            this,
-            WlSeatEvent::Name {
-                name: "unknown".to_string(),
-            },
-        )?;
+        client.post(this, WlSeatEvent::Name { name: "unknown".to_string() })?;
         Ok(())
     }
 }
 
 impl RequestReceiver<WlSeat> for Seat {
     fn receive(
-        this: ObjectRef<Self>, request: WlSeatRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlSeatRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlSeatRequest::Release => {
@@ -73,7 +70,9 @@ enum InputDevice {
 
 impl RequestReceiver<WlPointer> for InputDevice {
     fn receive(
-        this: ObjectRef<Self>, request: WlPointerRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlPointerRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlPointerRequest::Release => {
@@ -87,7 +86,9 @@ impl RequestReceiver<WlPointer> for InputDevice {
 
 impl RequestReceiver<WlKeyboard> for InputDevice {
     fn receive(
-        this: ObjectRef<Self>, request: WlKeyboardRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlKeyboardRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         let WlKeyboardRequest::Release = request;
         client.delete_id(this.id())?;
@@ -97,7 +98,9 @@ impl RequestReceiver<WlKeyboard> for InputDevice {
 
 impl RequestReceiver<WlTouch> for InputDevice {
     fn receive(
-        this: ObjectRef<Self>, request: WlTouchRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlTouchRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         let WlTouchRequest::Release = request;
         client.delete_id(this.id())?;

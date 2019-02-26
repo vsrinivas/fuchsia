@@ -148,17 +148,11 @@ fn compute_padding(size: u64) -> usize {
 impl Message {
     /// Initialize an empty Message.
     pub fn new() -> Self {
-        Message {
-            byte_buf: io::Cursor::new(Vec::new()),
-            handle_buf: Vec::new(),
-        }
+        Message { byte_buf: io::Cursor::new(Vec::new()), handle_buf: Vec::new() }
     }
 
     pub fn from_parts(bytes: Vec<u8>, handles: Vec<zx::Handle>) -> Self {
-        Message {
-            byte_buf: io::Cursor::new(bytes),
-            handle_buf: handles,
-        }
+        Message { byte_buf: io::Cursor::new(bytes), handle_buf: handles }
     }
 
     /// Returns |true| iff this buffer has no more data (bytes or handles).
@@ -208,7 +202,9 @@ impl Message {
         match arg {
             ArgKind::Int => self.byte_buf.read_i32::<NativeEndian>().map(Arg::Int),
             ArgKind::Uint => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Uint),
-            ArgKind::Fixed => self.byte_buf.read_i32::<NativeEndian>().map(|i| Arg::Fixed(i.into())),
+            ArgKind::Fixed => {
+                self.byte_buf.read_i32::<NativeEndian>().map(|i| Arg::Fixed(i.into()))
+            }
             ArgKind::Object => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Object),
             ArgKind::NewId => self.byte_buf.read_u32::<NativeEndian>().map(Arg::NewId),
             ArgKind::String => self
@@ -256,11 +252,7 @@ impl Message {
     pub fn read_header(&mut self) -> io::Result<MessageHeader> {
         let sender = self.byte_buf.read_u32::<NativeEndian>()?;
         let word = self.byte_buf.read_u32::<NativeEndian>()?;
-        Ok(MessageHeader {
-            sender,
-            length: (word >> 16) as u16,
-            opcode: word as u16,
-        })
+        Ok(MessageHeader { sender, length: (word >> 16) as u16, opcode: word as u16 })
     }
 
     pub fn write_header(&mut self, header: &MessageHeader) -> io::Result<()> {
@@ -569,11 +561,7 @@ mod tests {
     #[test]
     fn peek_header() -> Result<(), Error> {
         // Write just a message header.
-        let header = MessageHeader {
-            sender: 3,
-            opcode: 2,
-            length: 8,
-        };
+        let header = MessageHeader { sender: 3, opcode: 2, length: 8 };
         let mut message = Message::new();
         message.write_header(&header)?;
         message.rewind();

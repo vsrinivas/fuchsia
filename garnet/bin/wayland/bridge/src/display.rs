@@ -28,9 +28,7 @@ pub struct Display {
 
 impl Display {
     pub fn new(registry: Registry) -> Self {
-        Display {
-            registry: Arc::new(Mutex::new(registry)),
-        }
+        Display { registry: Arc::new(Mutex::new(registry)) }
     }
 
     pub fn spawn_new_client(&self, chan: fasync::Channel) {
@@ -39,9 +37,7 @@ impl Display {
 
         // Add the global wl_display object. We unwrap here since the object map
         // is empty so failure should not be possible.
-        client
-            .add_object(DISPLAY_SINGLETON_OBJECT_ID, DisplayReceiver)
-            .unwrap();
+        client.add_object(DISPLAY_SINGLETON_OBJECT_ID, DisplayReceiver).unwrap();
 
         // Start polling the channel for messages.
         client.start();
@@ -53,7 +49,9 @@ struct DisplayReceiver;
 
 impl RequestReceiver<WlDisplay> for DisplayReceiver {
     fn receive(
-        this: ObjectRef<Self>, request: WlDisplayRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlDisplayRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlDisplayRequest::GetRegistry { registry } => {
@@ -97,7 +95,9 @@ impl RegistryReceiver {
 
 impl RequestReceiver<WlRegistry> for RegistryReceiver {
     fn receive(
-        _this: ObjectRef<Self>, request: WlRegistryRequest, client: &mut Client,
+        _this: ObjectRef<Self>,
+        request: WlRegistryRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         let WlRegistryRequest::Bind { name, id, .. } = request;
         let registry = client.registry();
@@ -121,7 +121,9 @@ impl Callback {
     /// Posts the `done` event for this callback.
     #[allow(dead_code)]
     pub fn done(
-        this: ObjectRef<Self>, client: &mut Client, callback_data: u32,
+        this: ObjectRef<Self>,
+        client: &mut Client,
+        callback_data: u32,
     ) -> Result<(), Error> {
         client.post(this.id(), WlCallbackEvent::Done { callback_data })
     }
@@ -129,7 +131,9 @@ impl Callback {
 
 impl RequestReceiver<WlCallback> for Callback {
     fn receive(
-        _this: ObjectRef<Self>, request: WlCallbackRequest, _client: &mut Client,
+        _this: ObjectRef<Self>,
+        request: WlCallbackRequest,
+        _client: &mut Client,
     ) -> Result<(), Error> {
         match request {}
     }

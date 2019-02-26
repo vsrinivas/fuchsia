@@ -52,10 +52,8 @@ mod test {
 
     #[test]
     fn test_serialize_uint() {
-        let (bytes, handles) = TestInterfaceEvent::Uint { arg: UINT_VALUE }
-            .into_message(SENDER_ID)
-            .unwrap()
-            .take();
+        let (bytes, handles) =
+            TestInterfaceEvent::Uint { arg: UINT_VALUE }.into_message(SENDER_ID).unwrap().take();
         assert!(handles.is_empty());
         assert_eq!(bytes, message_bytes!(SENDER_ID, 0 /* opcode */, UINT_VALUE));
     }
@@ -72,10 +70,8 @@ mod test {
 
     #[test]
     fn test_serialize_int() {
-        let (bytes, handles) = TestInterfaceEvent::Int { arg: INT_VALUE }
-            .into_message(SENDER_ID)
-            .unwrap()
-            .take();
+        let (bytes, handles) =
+            TestInterfaceEvent::Int { arg: INT_VALUE }.into_message(SENDER_ID).unwrap().take();
         assert!(handles.is_empty());
         assert_eq!(bytes, message_bytes!(SENDER_ID, 1 /* opcode */, INT_VALUE));
     }
@@ -97,16 +93,16 @@ mod test {
             .unwrap()
             .take();
         assert!(handles.is_empty());
-        assert_eq!(
-            bytes,
-            message_bytes!(SENDER_ID, 2 /* opcode */, FIXED_VALUE)
-        );
+        assert_eq!(bytes, message_bytes!(SENDER_ID, 2 /* opcode */, FIXED_VALUE));
     }
 
     #[test]
     fn test_deserialize_fixed() {
-        let request =
-            TestInterfaceRequest::from_args(2 /* opcode */, vec![Arg::Fixed(Fixed::from_bits(FIXED_VALUE))]).unwrap();
+        let request = TestInterfaceRequest::from_args(
+            2, /* opcode */
+            vec![Arg::Fixed(Fixed::from_bits(FIXED_VALUE))],
+        )
+        .unwrap();
 
         assert_match!(request, TestInterfaceRequest::Fixed{arg} => assert_eq!(arg, Fixed::from_bits(FIXED_VALUE)));
     }
@@ -128,12 +124,10 @@ mod test {
 
     #[test]
     fn test_serialize_string() {
-        let (bytes, handles) = TestInterfaceEvent::String {
-            arg: STRING_VALUE.to_string(),
-        }
-        .into_message(SENDER_ID)
-        .unwrap()
-        .take();
+        let (bytes, handles) = TestInterfaceEvent::String { arg: STRING_VALUE.to_string() }
+            .into_message(SENDER_ID)
+            .unwrap()
+            .take();
         assert!(handles.is_empty());
         assert_eq!(bytes, STRING_MESSAGE_BYTES);
     }
@@ -158,10 +152,7 @@ mod test {
             .unwrap()
             .take();
         assert!(handles.is_empty());
-        assert_eq!(
-            bytes,
-            message_bytes!(SENDER_ID, 4 /* opcode */, OBJECT_VALUE)
-        );
+        assert_eq!(bytes, message_bytes!(SENDER_ID, 4 /* opcode */, OBJECT_VALUE));
     }
 
     #[test]
@@ -177,15 +168,10 @@ mod test {
 
     #[test]
     fn test_serialize_new_id() {
-        let (bytes, handles) = TestInterfaceEvent::NewId { arg: NEW_ID_VALUE }
-            .into_message(SENDER_ID)
-            .unwrap()
-            .take();
+        let (bytes, handles) =
+            TestInterfaceEvent::NewId { arg: NEW_ID_VALUE }.into_message(SENDER_ID).unwrap().take();
         assert!(handles.is_empty());
-        assert_eq!(
-            bytes,
-            message_bytes!(SENDER_ID, 5 /* opcode */, NEW_ID_VALUE)
-        );
+        assert_eq!(bytes, message_bytes!(SENDER_ID, 5 /* opcode */, NEW_ID_VALUE));
     }
 
     #[test]
@@ -261,12 +247,10 @@ mod test {
 
     #[test]
     fn test_serialize_array() {
-        let (bytes, handles) = TestInterfaceEvent::Array {
-            arg: ARRAY_VALUE.to_vec().into(),
-        }
-        .into_message(SENDER_ID)
-        .unwrap()
-        .take();
+        let (bytes, handles) = TestInterfaceEvent::Array { arg: ARRAY_VALUE.to_vec().into() }
+            .into_message(SENDER_ID)
+            .unwrap()
+            .take();
         assert!(handles.is_empty());
         assert_eq!(bytes, ARRAY_MESSAGE_BYTES);
     }
@@ -291,12 +275,10 @@ mod test {
     #[test]
     fn test_serialize_handle() {
         let (s1, _s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let (bytes, handles) = TestInterfaceEvent::Handle {
-            arg: s1.into_handle(),
-        }
-        .into_message(SENDER_ID)
-        .unwrap()
-        .take();
+        let (bytes, handles) = TestInterfaceEvent::Handle { arg: s1.into_handle() }
+            .into_message(SENDER_ID)
+            .unwrap()
+            .take();
         assert_eq!(bytes, HANDLE_MESSAGE_BYTES);
         assert_eq!(handles.len(), 1);
         assert!(!handles[0].is_invalid());
@@ -413,14 +395,8 @@ mod test {
         assert_eq!(1, test_interface::TestEnum::Entry2.bits());
         assert_eq!(2, test_interface::TestEnum::_0StartsWithNumber.bits());
 
-        assert_eq!(
-            Some(test_interface::TestEnum::Entry1),
-            test_interface::TestEnum::from_bits(0)
-        );
-        assert_eq!(
-            Some(test_interface::TestEnum::Entry2),
-            test_interface::TestEnum::from_bits(1)
-        );
+        assert_eq!(Some(test_interface::TestEnum::Entry1), test_interface::TestEnum::from_bits(0));
+        assert_eq!(Some(test_interface::TestEnum::Entry2), test_interface::TestEnum::from_bits(1));
         assert_eq!(
             Some(test_interface::TestEnum::_0StartsWithNumber),
             test_interface::TestEnum::from_bits(2)

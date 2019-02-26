@@ -37,7 +37,9 @@ impl Output {
     }
 
     fn post_display_info(
-        this: ObjectRef<Self>, client: &mut Client, display_info: &DisplayInfo,
+        this: ObjectRef<Self>,
+        client: &mut Client,
+        display_info: &DisplayInfo,
     ) -> Result<(), Error> {
         // Only post messages if the underlying output is still valid. This is
         // to guard against the case where the wl_output has been released
@@ -87,7 +89,9 @@ impl Output {
 
 impl RequestReceiver<WlOutput> for Output {
     fn receive(
-        this: ObjectRef<Self>, request: WlOutputRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlOutputRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         let WlOutputRequest::Release = request;
         client.delete_id(this.id())?;

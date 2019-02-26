@@ -4,7 +4,7 @@
 
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api)]
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 use std::sync::Arc;
 
@@ -60,9 +60,7 @@ impl WaylandDispatcher {
         {
             let scenic = scenic.clone();
             registry.add_global(WlCompositor, move |_, _| {
-                Ok(Box::new(RequestDispatcher::new(Compositor::new(
-                    scenic.clone(),
-                ))))
+                Ok(Box::new(RequestDispatcher::new(Compositor::new(scenic.clone()))))
             });
         }
         {
@@ -98,9 +96,7 @@ impl WaylandDispatcher {
                 Ok(Box::new(RequestDispatcher::new(DataDeviceManager::new())))
             });
         }
-        Ok(WaylandDispatcher {
-            display: Arc::new(Mutex::new(Display::new(registry.build()))),
-        })
+        Ok(WaylandDispatcher { display: Arc::new(Mutex::new(Display::new(registry.build()))) })
     }
 }
 
@@ -138,7 +134,6 @@ fn main() -> Result<(), Error> {
         .add_service(WaylandDispatcher::new()?)
         .start()
         .context("Error starting wayland bridge services server")?;
-    exec.run_singlethreaded(fut)
-        .context("Failed to execute wayland bridge future")?;
+    exec.run_singlethreaded(fut).context("Failed to execute wayland bridge future")?;
     Ok(())
 }

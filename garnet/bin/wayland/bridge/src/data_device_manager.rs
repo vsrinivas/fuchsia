@@ -20,7 +20,9 @@ impl DataDeviceManager {
 
 impl RequestReceiver<WlDataDeviceManager> for DataDeviceManager {
     fn receive(
-        _this: ObjectRef<Self>, request: WlDataDeviceManagerRequest, _client: &mut Client,
+        _this: ObjectRef<Self>,
+        request: WlDataDeviceManagerRequest,
+        _client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlDataDeviceManagerRequest::CreateDataSource { .. } => {}

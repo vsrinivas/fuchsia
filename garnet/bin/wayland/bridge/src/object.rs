@@ -70,9 +70,7 @@ pub enum ObjectLookupError {
 
 impl ObjectMap {
     pub fn new() -> Self {
-        ObjectMap {
-            objects: HashMap::new(),
-        }
+        ObjectMap { objects: HashMap::new() }
     }
 
     /// Looks up an object in the map and returns a downcasted reference to
@@ -101,12 +99,10 @@ impl ObjectMap {
 
     /// Looks up the receiver function and the message structure from the map.
     pub(crate) fn lookup_internal(
-        &self, header: &wl::MessageHeader,
+        &self,
+        header: &wl::MessageHeader,
     ) -> Result<(MessageReceiverFn, &'static wl::MessageSpec), Error> {
-        let ObjectMapEntry {
-            request_spec,
-            receiver,
-        } = self
+        let ObjectMapEntry { request_spec, receiver } = self
             .objects
             .get(&header.sender)
             .ok_or(ObjectMapError::InvalidObjectId(header.sender))?;
@@ -124,7 +120,9 @@ impl ObjectMap {
     ///
     /// Returns Err if there is already an object for |id| in this |ObjectMap|.
     pub fn add_object<I: wl::Interface + 'static, R: RequestReceiver<I> + 'static>(
-        &mut self, id: u32, receiver: R,
+        &mut self,
+        id: u32,
+        receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
         self.add_object_raw(id, Box::new(RequestDispatcher::new(receiver)), &I::REQUESTS)?;
         Ok(ObjectRef::from_id(id))
@@ -134,14 +132,13 @@ impl ObjectMap {
     /// to use instead |add_object| if the wayland interface for the object is
     /// statically known.
     pub fn add_object_raw(
-        &mut self, id: wl::ObjectId, receiver: Box<MessageReceiver>,
+        &mut self,
+        id: wl::ObjectId,
+        receiver: Box<MessageReceiver>,
         request_spec: &'static wl::MessageGroupSpec,
     ) -> Result<(), Error> {
         if let Entry::Vacant(entry) = self.objects.entry(id) {
-            entry.insert(ObjectMapEntry {
-                receiver,
-                request_spec,
-            });
+            entry.insert(ObjectMapEntry { receiver, request_spec });
             Ok(())
         } else {
             Err(format_err!("Can't add duplicate object with id {}. ", id))
@@ -220,13 +217,17 @@ impl<T> ObjectRef<T> {
 
 pub trait NewObjectExt<I: wl::Interface> {
     fn implement<R: RequestReceiver<I>>(
-        self, client: &mut Client, receiver: R,
+        self,
+        client: &mut Client,
+        receiver: R,
     ) -> Result<ObjectRef<R>, Error>;
 }
 
 impl<I: wl::Interface> NewObjectExt<I> for wl::NewObject<I> {
     fn implement<R: RequestReceiver<I>>(
-        self, client: &mut Client, receiver: R,
+        self,
+        client: &mut Client,
+        receiver: R,
     ) -> Result<ObjectRef<R>, Error> {
         client.add_object(self.id(), receiver)
     }
@@ -237,9 +238,12 @@ impl<I: wl::Interface> NewObjectExt<I> for wl::NewObject<I> {
 ///
 /// The server will dispatch |Message|s to the appropriate |MessageReceiver|
 /// by reading the sender field in the message header.
-type MessageReceiverFn =
-    fn(this: wl::ObjectId, opcode: u16, args: Vec<wl::Arg>, client: &mut Client)
-        -> Result<(), Error>;
+type MessageReceiverFn = fn(
+    this: wl::ObjectId,
+    opcode: u16,
+    args: Vec<wl::Arg>,
+    client: &mut Client,
+) -> Result<(), Error>;
 pub trait MessageReceiver {
     /// Returns a function pointer that will be called to handle requests
     /// targeting this object.
@@ -271,7 +275,9 @@ pub trait RequestReceiver<I: wl::Interface>: Any + Sized {
     ///       }
     ///   }
     fn receive(
-        this: ObjectRef<Self>, request: I::Request, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: I::Request,
+        client: &mut Client,
     ) -> Result<(), Error>;
 }
 
@@ -290,15 +296,15 @@ pub struct RequestDispatcher<I: wl::Interface, R: RequestReceiver<I>> {
 
 impl<I: wl::Interface, R: RequestReceiver<I>> RequestDispatcher<I, R> {
     pub fn new(receiver: R) -> Self {
-        RequestDispatcher {
-            receiver,
-            _marker: PhantomData,
-        }
+        RequestDispatcher { receiver, _marker: PhantomData }
     }
 }
 
 fn receive_message<I: wl::Interface, R: RequestReceiver<I>>(
-    this: wl::ObjectId, opcode: u16, args: Vec<wl::Arg>, client: &mut Client,
+    this: wl::ObjectId,
+    opcode: u16,
+    args: Vec<wl::Arg>,
+    client: &mut Client,
 ) -> Result<(), Error> {
     let request = I::Request::from_args(opcode, args)?;
     if client.protocol_logging() {
@@ -369,9 +375,7 @@ mod tests {
         // Send a message to an empty map.
         let mut client = create_client()?;
 
-        assert!(client
-            .receive_message(TestMessage::Message1.into_message(0)?)
-            .is_err());
+        assert!(client.receive_message(TestMessage::Message1.into_message(0)?).is_err());
         Ok(())
     }
 }

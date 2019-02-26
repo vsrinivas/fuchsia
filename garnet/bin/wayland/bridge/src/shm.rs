@@ -48,7 +48,9 @@ impl Shm {
 
 impl RequestReceiver<WlShm> for Shm {
     fn receive(
-        this: ObjectRef<Self>, request: WlShmRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlShmRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         let WlShmRequest::CreatePool { id, fd, size } = request;
         let scenic = this.get(client)?.scenic.clone();
@@ -58,13 +60,7 @@ impl RequestReceiver<WlShm> for Shm {
             size as u64,
             images::MemoryType::HostMemory,
         );
-        id.implement(
-            client,
-            ShmPool {
-                memory: Rc::new(memory),
-                _size: size,
-            },
-        )?;
+        id.implement(client, ShmPool { memory: Rc::new(memory), _size: size })?;
         Ok(())
     }
 }
@@ -85,8 +81,13 @@ impl ShmPool {
     /// buffer must hold a strong reference to any resources it depends on
     /// post-creation.
     pub fn create_buffer(
-        this: ObjectRef<Self>, client: &mut Client, offset: u32, width: i32, height: i32,
-        stride: i32, format: wl_shm::Format,
+        this: ObjectRef<Self>,
+        client: &mut Client,
+        offset: u32,
+        width: i32,
+        height: i32,
+        stride: i32,
+        format: wl_shm::Format,
     ) -> Result<Buffer, Error> {
         // TODO(tjdetwiler): Support sending the protocol-modeled errors,
         // ex: wl_shm::Error::InvalidFormat.
@@ -104,35 +105,23 @@ impl ShmPool {
             alpha_format: images::AlphaFormat::Opaque,
         };
         let this = this.get(client)?;
-        Ok(Buffer {
-            memory: this.memory.clone(),
-            offset,
-            image_info,
-        })
+        Ok(Buffer { memory: this.memory.clone(), offset, image_info })
     }
 }
 
 impl RequestReceiver<WlShmPool> for ShmPool {
     fn receive(
-        this: ObjectRef<Self>, request: WlShmPoolRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlShmPoolRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlShmPoolRequest::Destroy => {
                 client.delete_id(this.id())?;
             }
-            WlShmPoolRequest::CreateBuffer {
-                id,
-                offset,
-                width,
-                height,
-                stride,
-                format,
-            } => {
+            WlShmPoolRequest::CreateBuffer { id, offset, width, height, stride, format } => {
                 if offset < 0 {
-                    return Err(format_err!(
-                        "Negative buffer offset not supported: {}",
-                        offset
-                    ));
+                    return Err(format_err!("Negative buffer offset not supported: {}", offset));
                 }
                 let offset = offset as u32;
 
@@ -192,7 +181,9 @@ impl Buffer {
 
 impl RequestReceiver<WlBuffer> for Buffer {
     fn receive(
-        this: ObjectRef<Self>, request: WlBufferRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlBufferRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         let WlBufferRequest::Destroy = request;
         client.delete_id(this.id())?;

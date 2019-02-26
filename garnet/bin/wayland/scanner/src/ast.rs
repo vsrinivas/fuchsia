@@ -84,12 +84,7 @@ fn build_protocol(node: parser::ParseNode) -> AstResult<Protocol> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(Protocol {
-            name: name,
-            copyright,
-            description,
-            interfaces,
-        })
+        Ok(Protocol { name: name, copyright, description, interfaces })
     } else {
         Err("Unexpected Element; expected Protocol".to_owned())
     }
@@ -105,10 +100,7 @@ fn build_copyright(node: parser::ParseNode) -> AstResult<String> {
 
 fn build_description(node: parser::ParseNode) -> AstResult<Description> {
     if let parser::ParseElement::Description { summary } = node.element {
-        Ok(Description {
-            summary,
-            description: node.body.unwrap_or("".to_owned()),
-        })
+        Ok(Description { summary, description: node.body.unwrap_or("".to_owned()) })
     } else {
         Err("Invalid node".to_owned())
     }
@@ -131,26 +123,14 @@ fn build_interface(node: parser::ParseNode) -> AstResult<Interface> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(Interface {
-            name,
-            version,
-            description,
-            requests,
-            events,
-            enums,
-        })
+        Ok(Interface { name, version, description, requests, events, enums })
     } else {
         Err("Invalid node".to_owned())
     }
 }
 
 fn build_request(node: parser::ParseNode) -> AstResult<Message> {
-    if let parser::ParseElement::Request {
-        name,
-        since,
-        request_type,
-    } = node.element
-    {
+    if let parser::ParseElement::Request { name, since, request_type } = node.element {
         let mut description: Option<Description> = None;
         let mut args: Vec<Arg> = Vec::new();
         for child in node.children {
@@ -162,13 +142,7 @@ fn build_request(node: parser::ParseNode) -> AstResult<Message> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(Message {
-            name,
-            since,
-            request_type,
-            description,
-            args,
-        })
+        Ok(Message { name, since, request_type, description, args })
     } else {
         Err("Invalid node".to_owned())
     }
@@ -187,27 +161,15 @@ fn build_event(node: parser::ParseNode) -> AstResult<Message> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(Message {
-            name,
-            since,
-            description,
-            args,
-            request_type: None,
-        })
+        Ok(Message { name, since, description, args, request_type: None })
     } else {
         Err("Invalid node".to_owned())
     }
 }
 
 fn build_arg(node: parser::ParseNode) -> AstResult<Vec<Arg>> {
-    if let parser::ParseElement::Arg {
-        name,
-        kind,
-        summary,
-        interface,
-        nullable,
-        enum_type,
-    } = node.element
+    if let parser::ParseElement::Arg { name, kind, summary, interface, nullable, enum_type } =
+        node.element
     {
         let mut description: Option<Description> = None;
         for child in node.children {
@@ -218,15 +180,7 @@ fn build_arg(node: parser::ParseNode) -> AstResult<Vec<Arg>> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        let arg = Arg {
-            name,
-            kind,
-            summary,
-            interface,
-            nullable,
-            enum_type,
-            description,
-        };
+        let arg = Arg { name, kind, summary, interface, nullable, enum_type, description };
         // wayland has a slightly different serialization of untyped new_id
         // arguments. Instead of just sending the object id, the interface name
         // and version are sent first. This primarily impacts the
@@ -262,12 +216,7 @@ fn build_arg(node: parser::ParseNode) -> AstResult<Vec<Arg>> {
 }
 
 fn build_enum(node: parser::ParseNode) -> AstResult<Enum> {
-    if let parser::ParseElement::Enum {
-        name,
-        since,
-        bitfield,
-    } = node.element
-    {
+    if let parser::ParseElement::Enum { name, since, bitfield } = node.element {
         let mut description: Option<Description> = None;
         let mut entries: Vec<EnumEntry> = Vec::new();
         for child in node.children {
@@ -279,26 +228,14 @@ fn build_enum(node: parser::ParseNode) -> AstResult<Enum> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(Enum {
-            name,
-            since,
-            bitfield,
-            description,
-            entries,
-        })
+        Ok(Enum { name, since, bitfield, description, entries })
     } else {
         Err("Invalid node".to_owned())
     }
 }
 
 fn build_enum_entry(node: parser::ParseNode) -> AstResult<EnumEntry> {
-    if let parser::ParseElement::EnumEntry {
-        name,
-        value,
-        summary,
-        since,
-    } = node.element
-    {
+    if let parser::ParseElement::EnumEntry { name, value, summary, since } = node.element {
         let mut description: Option<Description> = None;
         for child in node.children {
             match &child.element {
@@ -308,13 +245,7 @@ fn build_enum_entry(node: parser::ParseNode) -> AstResult<EnumEntry> {
                 _ => return Err("Unsupported".to_owned()),
             }
         }
-        Ok(EnumEntry {
-            name,
-            value,
-            summary,
-            since,
-            description,
-        })
+        Ok(EnumEntry { name, value, summary, since, description })
     } else {
         Err("Invalid node".to_owned())
     }

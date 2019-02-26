@@ -20,7 +20,9 @@ impl Subcompositor {
 
 impl RequestReceiver<WlSubcompositor> for Subcompositor {
     fn receive(
-        this: ObjectRef<Self>, request: WlSubcompositorRequest, client: &mut Client,
+        this: ObjectRef<Self>,
+        request: WlSubcompositorRequest,
+        client: &mut Client,
     ) -> Result<(), Error> {
         match request {
             WlSubcompositorRequest::Destroy => {

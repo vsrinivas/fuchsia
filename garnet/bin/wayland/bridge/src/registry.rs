@@ -27,9 +27,7 @@ pub struct RegistryBuilder {
 
 impl RegistryBuilder {
     pub fn new() -> Self {
-        RegistryBuilder {
-            globals: Vec::new(),
-        }
+        RegistryBuilder { globals: Vec::new() }
     }
 
     /// Adds a new global interface to the registry.
@@ -43,7 +41,9 @@ impl RegistryBuilder {
         I: wl::Interface + 'static,
         F: FnMut(wl::ObjectId, &mut Client) -> Result<Box<MessageReceiver>, Error> + Send + 'static,
     >(
-        &mut self, _: I, bind: F,
+        &mut self,
+        _: I,
+        bind: F,
     ) -> &mut Self {
         self.globals.push(Global {
             name: I::NAME,
@@ -55,9 +55,7 @@ impl RegistryBuilder {
     }
 
     pub fn build(&mut self) -> Registry {
-        Registry {
-            globals: mem::replace(&mut self.globals, vec![]),
-        }
+        Registry { globals: mem::replace(&mut self.globals, vec![]) }
     }
 }
 
@@ -99,7 +97,9 @@ impl Global {
     /// |MessageReceiver| will be used to handle all requests for the new
     /// object.
     pub fn bind(
-        &mut self, id: wl::ObjectId, client: &mut Client,
+        &mut self,
+        id: wl::ObjectId,
+        client: &mut Client,
     ) -> Result<Box<MessageReceiver>, Error> {
         (*self.bind_fn)(id, client)
     }
@@ -160,12 +160,8 @@ mod tests {
         let _executor = fasync::Executor::new();
         let mut client = Client::new(fasync::Channel::from_channel(c1)?, registry.clone());
 
-        let receivers: Vec<Box<MessageReceiver>> = registry
-            .lock()
-            .globals
-            .iter_mut()
-            .map(|g| g.bind(0, &mut client).unwrap())
-            .collect();
+        let receivers: Vec<Box<MessageReceiver>> =
+            registry.lock().globals.iter_mut().map(|g| g.bind(0, &mut client).unwrap()).collect();
         for (id, r) in receivers.into_iter().enumerate() {
             client.add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;
         }

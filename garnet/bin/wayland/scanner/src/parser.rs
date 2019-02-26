@@ -133,8 +133,7 @@ fn parse_int<T: FromStr + num::Num>(s: &str) -> ParseResult<T> {
         T::from_str_radix(&s[2..], 16)
             .map_err(|_| ParseError::new(format!("Failed to parse int {}", s)))
     } else {
-        s.parse::<T>()
-            .map_err(|_| ParseError::new(format!("Failed to parse int {}", s)))
+        s.parse::<T>().map_err(|_| ParseError::new(format!("Failed to parse int {}", s)))
     }
 }
 
@@ -230,9 +229,7 @@ impl<R: Read> Parser<R> {
 
     fn read_node(&mut self) -> ParseResult<ParseNode> {
         match self.xml.next() {
-            Ok(XmlEvent::StartElement {
-                name, attributes, ..
-            }) => {
+            Ok(XmlEvent::StartElement { name, attributes, .. }) => {
                 let element = self.element_from_xml(name.local_name.as_ref(), attributes)?;
                 self.populate_node(element, name.local_name.as_ref())
             }
@@ -247,17 +244,11 @@ impl<R: Read> Parser<R> {
             match self.xml.next() {
                 Ok(XmlEvent::EndElement { name }) => {
                     if name.local_name == xml_name {
-                        return Ok(ParseNode {
-                            element,
-                            children,
-                            body,
-                        });
+                        return Ok(ParseNode { element, children, body });
                     }
                     return Err(ParseError::new("Unexpected EndElement".to_owned()));
                 }
-                Ok(XmlEvent::StartElement {
-                    name, attributes, ..
-                }) => {
+                Ok(XmlEvent::StartElement { name, attributes, .. }) => {
                     let element = self.element_from_xml(name.local_name.as_ref(), attributes)?;
                     let node = self.populate_node(element, name.local_name.as_ref())?;
                     children.push(node);
@@ -274,16 +265,18 @@ impl<R: Read> Parser<R> {
     }
 
     fn element_from_xml(
-        &self, element_name: &str, attributes: Vec<xml::attribute::OwnedAttribute>,
+        &self,
+        element_name: &str,
+        attributes: Vec<xml::attribute::OwnedAttribute>,
     ) -> ParseResult<ParseElement> {
         match element_name {
             "protocol" => map_xml_attrs!(attributes,
-                                          ("name" => name: Option<String>) => {
-                    Ok(ParseElement::Protocol {
-                        name: name
-                            .ok_or_else(|| ParseError::new("Missing 'name' attribute".to_owned()))?,
-                    })
-                }),
+                                      ("name" => name: Option<String>) => {
+                Ok(ParseElement::Protocol {
+                    name: name
+                        .ok_or_else(|| ParseError::new("Missing 'name' attribute".to_owned()))?,
+                })
+            }),
             "copyright" => Ok(ParseElement::Copyright),
             "interface" => map_xml_attrs!(attributes,
                                            ("name" => name: Option<String>,
@@ -377,16 +370,12 @@ impl<R: Read> Parser<R> {
 
 impl<R: Read> Parser<R> {
     pub fn new(source: R) -> Parser<R> {
-        Parser {
-            xml: EventReader::new(source),
-        }
+        Parser { xml: EventReader::new(source) }
     }
 }
 
 impl<'a> Parser<&'a [u8]> {
     pub fn from_str(protocol: &str) -> Parser<&[u8]> {
-        Parser {
-            xml: EventReader::from_str(protocol),
-        }
+        Parser { xml: EventReader::from_str(protocol) }
     }
 }

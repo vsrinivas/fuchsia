@@ -81,12 +81,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
             self.codegen_enum_types(&interface)?;
             writeln!(self.w, "}} // mod {}", interface.name)?;
             writeln!(self.w, "")?;
-            writeln!(
-                self.w,
-                "pub use crate::{}::{};",
-                interface.name,
-                interface.rust_name()
-            )?;
+            writeln!(self.w, "pub use crate::{}::{};", interface.name, interface.rust_name())?;
             writeln!(
                 self.w,
                 "pub use crate::{}::Request as {}Request;",
@@ -112,7 +107,10 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
     ///    Request2 { name: String},
     ///  }
     fn codegen_message_enum<F: Fn(&ast::Arg) -> Cow<str>>(
-        &mut self, name: &str, interface: &ast::Interface, messages: &Vec<ast::Message>,
+        &mut self,
+        name: &str,
+        interface: &ast::Interface,
+        messages: &Vec<ast::Message>,
         arg_formatter: F,
     ) -> Result {
         writeln!(self.w, "#[derive(Debug)]")?;
@@ -207,12 +205,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
                     }
                 }
             }
-            writeln!(
-                self.w,
-                "{})\", {})",
-                message_args.join(", "),
-                format_args.join(", ")
-            )?;
+            writeln!(self.w, "{})\", {})", message_args.join(", "), format_args.join(", "))?;
             writeln!(self.w, "            }}")?;
         }
         writeln!(self.w, "        }}")?;
@@ -270,11 +263,7 @@ impl IntoMessage for Event {{
                 message_name = to_camel_case(&event.name)
             )?;
             for arg in event.args.iter() {
-                write!(
-                    self.w,
-                    "            {arg_name},\n",
-                    arg_name = arg.rust_name()
-                )?;
+                write!(self.w, "            {arg_name},\n", arg_name = arg.rust_name())?;
             }
             write!(self.w, "        }} => {{\n")?;
             for arg in event.args.iter() {
@@ -373,11 +362,7 @@ impl FromArgs for Request {{
         writeln!(self.w, "pub struct {};", camel_name)?;
         writeln!(self.w, "")?;
         writeln!(self.w, "impl Interface for {} {{", camel_name)?;
-        writeln!(
-            self.w,
-            "    const NAME: &'static str = \"{}\";",
-            interface.name
-        )?;
+        writeln!(self.w, "    const NAME: &'static str = \"{}\";", interface.name)?;
         writeln!(self.w, "    const VERSION: u32 = {};", interface.version)?;
         write!(self.w, "    const REQUESTS: MessageGroupSpec = ")?;
         self.codegen_message_group_spec(&interface.requests)?;
@@ -477,12 +462,7 @@ impl FromArgs for Request {{
                     writeln!(self.w, "        /// {},", l.trim())?;
                 }
             }
-            writeln!(
-                self.w,
-                "        const {} = {};",
-                entry.rust_name(),
-                entry.value
-            )?;
+            writeln!(self.w, "        const {} = {};", entry.rust_name(), entry.value)?;
         }
         writeln!(self.w, "    }}")?;
         writeln!(self.w, "}}")?;
@@ -503,10 +483,7 @@ impl FromArgs for Request {{
 }
 
 fn to_camel_case(s: &str) -> String {
-    s.split('_')
-        .filter(|s| s.len() > 0)
-        .map(|s| s[..1].to_uppercase() + &s[1..])
-        .collect()
+    s.split('_').filter(|s| s.len() > 0).map(|s| s[..1].to_uppercase() + &s[1..]).collect()
 }
 
 /// Enums can be referenced outside of the interface that defines them. When
