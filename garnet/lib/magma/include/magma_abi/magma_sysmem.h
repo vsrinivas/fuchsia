@@ -36,6 +36,10 @@ void magma_buffer_format_description_release(magma_buffer_format_description_t d
 magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_description_t description,
                                                   magma_image_plane_t* image_planes_out);
 
+magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_t description,
+                                                magma_bool_t* has_format_modifier_out,
+                                                uint64_t* format_modifier_out);
+
 // Import a magma buffer collection from BufferCollectionToken handle.
 magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
                                               magma_buffer_collection_t* collection_out);

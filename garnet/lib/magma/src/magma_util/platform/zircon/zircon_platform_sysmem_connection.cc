@@ -1,14 +1,14 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.ee
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "platform_sysmem_connection.h"
 
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/fdio/io.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 
 #include <limits>
@@ -94,6 +94,34 @@ private:
     fuchsia::sysmem::BufferCollectionConstraints constraints_ = {};
 };
 
+static Status
+InitializeDescriptionFromSettings(const fuchsia::sysmem::SingleBufferSettings& settings,
+                                  PlatformBufferDescription* description_out)
+{
+    description_out->has_format_modifier =
+        settings.image_format_constraints.pixel_format.has_format_modifier;
+    description_out->format_modifier =
+        settings.image_format_constraints.pixel_format.format_modifier.value;
+    description_out->planes[0].bytes_per_row =
+        round_up(settings.image_format_constraints.min_bytes_per_row,
+                 settings.image_format_constraints.bytes_per_row_divisor);
+    description_out->planes[0].byte_offset = 0;
+    if (settings.image_format_constraints.pixel_format.type ==
+        fuchsia::sysmem::PixelFormatType::NV12) {
+        // Planes are assumed to be tightly-packed for now.
+        description_out->planes[1].bytes_per_row = description_out->planes[0].bytes_per_row;
+        description_out->planes[1].byte_offset = description_out->planes[0].bytes_per_row *
+                                                 settings.image_format_constraints.min_coded_height;
+    } else if (settings.image_format_constraints.pixel_format.type !=
+                   fuchsia::sysmem::PixelFormatType::BGRA32 &&
+               settings.image_format_constraints.pixel_format.type !=
+                   fuchsia::sysmem::PixelFormatType::R8G8B8A8) {
+        // Sysmem should have given a format that was listed as supported.
+        DASSERT(false);
+    }
+    return MAGMA_STATUS_OK;
+}
+
 class ZirconPlatformBufferCollection : public PlatformBufferCollection {
 public:
     ~ZirconPlatformBufferCollection() override
@@ -119,6 +147,35 @@ public:
         if (status != ZX_OK) {
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting constraints: %d", status);
         }
+        return MAGMA_STATUS_OK;
+    }
+
+    Status
+    GetBufferDescription(uint32_t index,
+                         std::unique_ptr<PlatformBufferDescription>* description_out) override
+    {
+        fuchsia::sysmem::BufferCollectionInfo_2 info;
+        zx_status_t status2;
+        zx_status_t status = collection_->WaitForBuffersAllocated(&status2, &info);
+
+        if (status != ZX_OK || status2 != ZX_OK) {
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d %d",
+                            status, status2);
+        }
+
+        if (info.buffer_count < index) {
+            return DRET(MAGMA_STATUS_INVALID_ARGS);
+        }
+
+        if (!info.settings.has_image_format_constraints) {
+            return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+        }
+        auto description = std::make_unique<PlatformBufferDescription>();
+        Status magma_status = InitializeDescriptionFromSettings(info.settings, description.get());
+        if (!magma_status.ok()) {
+            return DRET(magma_status.get());
+        }
+        *description_out = std::move(description);
         return MAGMA_STATUS_OK;
     }
 
@@ -187,7 +244,7 @@ public:
     magma_status_t
     AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
                     std::unique_ptr<PlatformBuffer>* buffer_out,
-                    std::unique_ptr<BufferDescription>* buffer_description_out) override
+                    std::unique_ptr<PlatformBufferDescription>* buffer_description_out) override
     {
 
         if (format != MAGMA_FORMAT_R8G8B8A8) {
@@ -256,10 +313,12 @@ public:
             if (!info.settings.has_image_format_constraints) {
                 return DRET(MAGMA_STATUS_INTERNAL_ERROR);
             }
-            *buffer_description_out = std::make_unique<BufferDescription>();
-            (*buffer_description_out)->planes[0].bytes_per_row =
-                info.settings.image_format_constraints.min_bytes_per_row;
-            (*buffer_description_out)->planes[0].byte_offset = 0;
+            *buffer_description_out = std::make_unique<PlatformBufferDescription>();
+            result = InitializeDescriptionFromSettings(info.settings, buffer_description_out->get())
+                         .get();
+            if (result != MAGMA_STATUS_OK) {
+                return DRET(result);
+            }
         }
 
         *buffer_out = PlatformBuffer::Import(info.buffers[0].vmo.release());
@@ -354,7 +413,7 @@ std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Create()
 // static
 magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
     const uint8_t* image_data, uint64_t image_data_size,
-    std::unique_ptr<BufferDescription>* buffer_description_out)
+    std::unique_ptr<PlatformBufferDescription>* buffer_description_out)
 {
     std::vector<uint8_t> copy_message(image_data, image_data + image_data_size);
     fidl::Message msg(fidl::BytePart(copy_message.data(), image_data_size, image_data_size),
@@ -373,25 +432,10 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer is not image");
     }
 
-    auto description = std::make_unique<magma::PlatformSysmemConnection::BufferDescription>();
-    description->planes[0].bytes_per_row =
-        round_up(buffer_settings.image_format_constraints.min_bytes_per_row,
-                 buffer_settings.image_format_constraints.bytes_per_row_divisor);
-    description->planes[0].byte_offset = 0;
-    DASSERT(buffer_settings.image_format_constraints.pixel_format.type ==
-                fuchsia::sysmem::PixelFormatType::NV12 ||
-            buffer_settings.image_format_constraints.pixel_format.type ==
-                fuchsia::sysmem::PixelFormatType::R8G8B8A8 ||
-            buffer_settings.image_format_constraints.pixel_format.type ==
-                fuchsia::sysmem::PixelFormatType::BGRA32);
-
-    if (buffer_settings.image_format_constraints.pixel_format.type ==
-        fuchsia::sysmem::PixelFormatType::NV12) {
-        // Planes are assumed to be tightly-packed for now.
-        description->planes[1].bytes_per_row = description->planes[0].bytes_per_row;
-        description->planes[1].byte_offset =
-            description->planes[0].bytes_per_row *
-            buffer_settings.image_format_constraints.min_coded_height;
+    auto description = std::make_unique<magma::PlatformBufferDescription>();
+    Status magma_status = InitializeDescriptionFromSettings(buffer_settings, description.get());
+    if (!magma_status.ok()) {
+        return DRET(magma_status.get());
     }
 
     *buffer_description_out = std::move(description);

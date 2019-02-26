@@ -487,7 +487,7 @@ magma_sysmem_allocate_texture(magma_sysmem_connection_t connection, uint32_t fla
     auto sysmem_connection = reinterpret_cast<magma::PlatformSysmemConnection*>(connection);
 
     *buffer_format_description_out = 0;
-    std::unique_ptr<magma::PlatformSysmemConnection::BufferDescription> description;
+    std::unique_ptr<magma::PlatformBufferDescription> description;
     magma_status_t result;
     result =
         sysmem_connection->AllocateTexture(flags, format, width, height, &buffer, &description);
@@ -506,7 +506,7 @@ magma_sysmem_allocate_texture(magma_sysmem_connection_t connection, uint32_t fla
 
 void magma_buffer_format_description_release(magma_buffer_format_description_t description)
 {
-    delete reinterpret_cast<magma::PlatformSysmemConnection::BufferDescription*>(description);
+    delete reinterpret_cast<magma::PlatformBufferDescription*>(description);
 }
 
 // |image_planes_out| must be an array with MAGMA_MAX_IMAGE_PLANES elements.
@@ -516,9 +516,21 @@ magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_descriptio
     if (!description) {
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
     }
-    auto buffer_description =
-        reinterpret_cast<magma::PlatformSysmemConnection::BufferDescription*>(description);
+    auto buffer_description = reinterpret_cast<magma::PlatformBufferDescription*>(description);
     memcpy(image_planes_out, buffer_description->planes, sizeof(buffer_description->planes));
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_t description,
+                                                magma_bool_t* has_format_modifier_out,
+                                                uint64_t* format_modifier_out)
+{
+    if (!description) {
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
+    }
+    auto buffer_description = reinterpret_cast<magma::PlatformBufferDescription*>(description);
+    *has_format_modifier_out = buffer_description->has_format_modifier;
+    *format_modifier_out = buffer_description->format_modifier;
     return MAGMA_STATUS_OK;
 }
 
@@ -585,11 +597,11 @@ magma_status_t
 magma_get_buffer_format_description(const void* image_data, uint64_t image_data_size,
                                     magma_buffer_format_description_t* description_out)
 {
-    std::unique_ptr<magma::PlatformSysmemConnection::BufferDescription> description;
+    std::unique_ptr<magma::PlatformBufferDescription> description;
     magma_status_t status = magma::PlatformSysmemConnection::DecodeBufferDescription(
         static_cast<const uint8_t*>(image_data), image_data_size, &description);
     if (status != MAGMA_STATUS_OK) {
-        return DRET_MSG(status, "DecodeBufferDescription failed: %d", status);
+        return DRET_MSG(status, "DecodePlatformBufferDescription failed: %d", status);
     }
     *description_out = reinterpret_cast<magma_buffer_format_description_t>(description.release());
     return MAGMA_STATUS_OK;

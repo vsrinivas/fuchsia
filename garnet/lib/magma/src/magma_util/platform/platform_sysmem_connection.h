@@ -13,6 +13,11 @@
 #include <memory>
 
 namespace magma {
+struct PlatformBufferDescription {
+    bool has_format_modifier = false;
+    uint64_t format_modifier = 0u;
+    magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
+};
 
 class PlatformBufferConstraints {
 public:
@@ -28,21 +33,20 @@ public:
     virtual ~PlatformBufferCollection() {}
 
     virtual Status SetConstraints(PlatformBufferConstraints* constraints) = 0;
+    virtual Status
+    GetBufferDescription(uint32_t index,
+                         std::unique_ptr<PlatformBufferDescription>* description_out) = 0;
 };
 
 class PlatformSysmemConnection {
 public:
-    struct BufferDescription {
-        magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
-    };
-
     virtual ~PlatformSysmemConnection() {}
 
     static std::unique_ptr<PlatformSysmemConnection> Create();
 
     static magma_status_t
     DecodeBufferDescription(const uint8_t* image_data, uint64_t image_data_size,
-                            std::unique_ptr<BufferDescription>* buffer_description_out);
+                            std::unique_ptr<PlatformBufferDescription>* buffer_description_out);
 
     virtual magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                           std::unique_ptr<PlatformBuffer>* buffer_out) = 0;
@@ -50,7 +54,7 @@ public:
     virtual magma_status_t
     AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
                     std::unique_ptr<PlatformBuffer>* buffer_out,
-                    std::unique_ptr<BufferDescription>* buffer_description_out) = 0;
+                    std::unique_ptr<PlatformBufferDescription>* buffer_description_out) = 0;
 
     virtual Status CreateBufferCollectionToken(uint32_t* handle_out) = 0;
     virtual Status
