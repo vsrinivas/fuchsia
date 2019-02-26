@@ -11,153 +11,153 @@ union u {};
 using fp = void();
 
 // is_pointer tests:
-static_assert(fbl::is_pointer<int*>::value, "");
-static_assert(fbl::is_pointer<float*>::value, "");
-static_assert(fbl::is_pointer<s*>::value, "");
-static_assert(fbl::is_pointer<u*>::value, "");
-static_assert(fbl::is_pointer<s*>::value, "");
-static_assert(fbl::is_pointer<fp*>::value, "");
+static_assert(fbl::is_pointer<int*>::value);
+static_assert(fbl::is_pointer<float*>::value);
+static_assert(fbl::is_pointer<s*>::value);
+static_assert(fbl::is_pointer<u*>::value);
+static_assert(fbl::is_pointer<s*>::value);
+static_assert(fbl::is_pointer<fp*>::value);
 
-static_assert(fbl::is_pointer<const int*>::value, "");
-static_assert(fbl::is_pointer<const float*>::value, "");
-static_assert(fbl::is_pointer<const s*>::value, "");
-static_assert(fbl::is_pointer<const u*>::value, "");
-static_assert(fbl::is_pointer<const s*>::value, "");
+static_assert(fbl::is_pointer<const int*>::value);
+static_assert(fbl::is_pointer<const float*>::value);
+static_assert(fbl::is_pointer<const s*>::value);
+static_assert(fbl::is_pointer<const u*>::value);
+static_assert(fbl::is_pointer<const s*>::value);
 
-static_assert(fbl::is_pointer<volatile int*>::value, "");
-static_assert(fbl::is_pointer<volatile float*>::value, "");
-static_assert(fbl::is_pointer<volatile s*>::value, "");
-static_assert(fbl::is_pointer<volatile u*>::value, "");
-static_assert(fbl::is_pointer<volatile s*>::value, "");
+static_assert(fbl::is_pointer<volatile int*>::value);
+static_assert(fbl::is_pointer<volatile float*>::value);
+static_assert(fbl::is_pointer<volatile s*>::value);
+static_assert(fbl::is_pointer<volatile u*>::value);
+static_assert(fbl::is_pointer<volatile s*>::value);
 
-static_assert(fbl::is_pointer<const volatile int*>::value, "");
-static_assert(fbl::is_pointer<const volatile float*>::value, "");
-static_assert(fbl::is_pointer<const volatile s*>::value, "");
-static_assert(fbl::is_pointer<const volatile u*>::value, "");
-static_assert(fbl::is_pointer<const volatile s*>::value, "");
+static_assert(fbl::is_pointer<const volatile int*>::value);
+static_assert(fbl::is_pointer<const volatile float*>::value);
+static_assert(fbl::is_pointer<const volatile s*>::value);
+static_assert(fbl::is_pointer<const volatile u*>::value);
+static_assert(fbl::is_pointer<const volatile s*>::value);
 
-static_assert(!fbl::is_pointer<int>::value, "");
-static_assert(!fbl::is_pointer<float>::value, "");
-static_assert(!fbl::is_pointer<s>::value, "");
-static_assert(!fbl::is_pointer<u>::value, "");
-static_assert(!fbl::is_pointer<s>::value, "");
-static_assert(!fbl::is_pointer<fp>::value, "");
+static_assert(!fbl::is_pointer<int>::value);
+static_assert(!fbl::is_pointer<float>::value);
+static_assert(!fbl::is_pointer<s>::value);
+static_assert(!fbl::is_pointer<u>::value);
+static_assert(!fbl::is_pointer<s>::value);
+static_assert(!fbl::is_pointer<fp>::value);
 
-static_assert(!fbl::is_pointer<const int>::value, "");
-static_assert(!fbl::is_pointer<const float>::value, "");
-static_assert(!fbl::is_pointer<const s>::value, "");
-static_assert(!fbl::is_pointer<const u>::value, "");
-static_assert(!fbl::is_pointer<const s>::value, "");
+static_assert(!fbl::is_pointer<const int>::value);
+static_assert(!fbl::is_pointer<const float>::value);
+static_assert(!fbl::is_pointer<const s>::value);
+static_assert(!fbl::is_pointer<const u>::value);
+static_assert(!fbl::is_pointer<const s>::value);
 
-static_assert(!fbl::is_pointer<volatile int>::value, "");
-static_assert(!fbl::is_pointer<volatile float>::value, "");
-static_assert(!fbl::is_pointer<volatile s>::value, "");
-static_assert(!fbl::is_pointer<volatile u>::value, "");
-static_assert(!fbl::is_pointer<volatile s>::value, "");
+static_assert(!fbl::is_pointer<volatile int>::value);
+static_assert(!fbl::is_pointer<volatile float>::value);
+static_assert(!fbl::is_pointer<volatile s>::value);
+static_assert(!fbl::is_pointer<volatile u>::value);
+static_assert(!fbl::is_pointer<volatile s>::value);
 
-static_assert(!fbl::is_pointer<const volatile int>::value, "");
-static_assert(!fbl::is_pointer<const volatile float>::value, "");
-static_assert(!fbl::is_pointer<const volatile s>::value, "");
-static_assert(!fbl::is_pointer<const volatile u>::value, "");
-static_assert(!fbl::is_pointer<const volatile s>::value, "");
+static_assert(!fbl::is_pointer<const volatile int>::value);
+static_assert(!fbl::is_pointer<const volatile float>::value);
+static_assert(!fbl::is_pointer<const volatile s>::value);
+static_assert(!fbl::is_pointer<const volatile u>::value);
+static_assert(!fbl::is_pointer<const volatile s>::value);
 
 // is_reference tests:
-static_assert(fbl::is_reference<int&>::value, "");
-static_assert(fbl::is_reference<int&&>::value, "");
-static_assert(fbl::is_reference<float&>::value, "");
-static_assert(fbl::is_reference<float&&>::value, "");
-static_assert(fbl::is_reference<s&>::value, "");
-static_assert(fbl::is_reference<s&&>::value, "");
-static_assert(fbl::is_reference<u&>::value, "");
-static_assert(fbl::is_reference<u&&>::value, "");
-static_assert(fbl::is_reference<s&>::value, "");
-static_assert(fbl::is_reference<s&&>::value, "");
-static_assert(fbl::is_reference<fp&>::value, "");
-static_assert(fbl::is_reference<fp&&>::value, "");
+static_assert(fbl::is_reference<int&>::value);
+static_assert(fbl::is_reference<int&&>::value);
+static_assert(fbl::is_reference<float&>::value);
+static_assert(fbl::is_reference<float&&>::value);
+static_assert(fbl::is_reference<s&>::value);
+static_assert(fbl::is_reference<s&&>::value);
+static_assert(fbl::is_reference<u&>::value);
+static_assert(fbl::is_reference<u&&>::value);
+static_assert(fbl::is_reference<s&>::value);
+static_assert(fbl::is_reference<s&&>::value);
+static_assert(fbl::is_reference<fp&>::value);
+static_assert(fbl::is_reference<fp&&>::value);
 
-static_assert(fbl::is_reference<const int&>::value, "");
-static_assert(fbl::is_reference<const int&&>::value, "");
-static_assert(fbl::is_reference<const float&>::value, "");
-static_assert(fbl::is_reference<const float&&>::value, "");
-static_assert(fbl::is_reference<const s&>::value, "");
-static_assert(fbl::is_reference<const s&&>::value, "");
-static_assert(fbl::is_reference<const u&>::value, "");
-static_assert(fbl::is_reference<const u&&>::value, "");
-static_assert(fbl::is_reference<const s&>::value, "");
-static_assert(fbl::is_reference<const s&&>::value, "");
+static_assert(fbl::is_reference<const int&>::value);
+static_assert(fbl::is_reference<const int&&>::value);
+static_assert(fbl::is_reference<const float&>::value);
+static_assert(fbl::is_reference<const float&&>::value);
+static_assert(fbl::is_reference<const s&>::value);
+static_assert(fbl::is_reference<const s&&>::value);
+static_assert(fbl::is_reference<const u&>::value);
+static_assert(fbl::is_reference<const u&&>::value);
+static_assert(fbl::is_reference<const s&>::value);
+static_assert(fbl::is_reference<const s&&>::value);
 
-static_assert(fbl::is_reference<volatile int&>::value, "");
-static_assert(fbl::is_reference<volatile int&&>::value, "");
-static_assert(fbl::is_reference<volatile float&>::value, "");
-static_assert(fbl::is_reference<volatile float&&>::value, "");
-static_assert(fbl::is_reference<volatile s&>::value, "");
-static_assert(fbl::is_reference<volatile s&&>::value, "");
-static_assert(fbl::is_reference<volatile u&>::value, "");
-static_assert(fbl::is_reference<volatile u&&>::value, "");
-static_assert(fbl::is_reference<volatile s&>::value, "");
-static_assert(fbl::is_reference<volatile s&&>::value, "");
+static_assert(fbl::is_reference<volatile int&>::value);
+static_assert(fbl::is_reference<volatile int&&>::value);
+static_assert(fbl::is_reference<volatile float&>::value);
+static_assert(fbl::is_reference<volatile float&&>::value);
+static_assert(fbl::is_reference<volatile s&>::value);
+static_assert(fbl::is_reference<volatile s&&>::value);
+static_assert(fbl::is_reference<volatile u&>::value);
+static_assert(fbl::is_reference<volatile u&&>::value);
+static_assert(fbl::is_reference<volatile s&>::value);
+static_assert(fbl::is_reference<volatile s&&>::value);
 
-static_assert(fbl::is_reference<const volatile int&>::value, "");
-static_assert(fbl::is_reference<const volatile int&&>::value, "");
-static_assert(fbl::is_reference<const volatile float&>::value, "");
-static_assert(fbl::is_reference<const volatile float&&>::value, "");
-static_assert(fbl::is_reference<const volatile s&>::value, "");
-static_assert(fbl::is_reference<const volatile s&&>::value, "");
-static_assert(fbl::is_reference<const volatile u&>::value, "");
-static_assert(fbl::is_reference<const volatile u&&>::value, "");
-static_assert(fbl::is_reference<const volatile s&>::value, "");
-static_assert(fbl::is_reference<const volatile s&&>::value, "");
+static_assert(fbl::is_reference<const volatile int&>::value);
+static_assert(fbl::is_reference<const volatile int&&>::value);
+static_assert(fbl::is_reference<const volatile float&>::value);
+static_assert(fbl::is_reference<const volatile float&&>::value);
+static_assert(fbl::is_reference<const volatile s&>::value);
+static_assert(fbl::is_reference<const volatile s&&>::value);
+static_assert(fbl::is_reference<const volatile u&>::value);
+static_assert(fbl::is_reference<const volatile u&&>::value);
+static_assert(fbl::is_reference<const volatile s&>::value);
+static_assert(fbl::is_reference<const volatile s&&>::value);
 
-static_assert(!fbl::is_reference<int>::value, "");
-static_assert(!fbl::is_reference<float>::value, "");
-static_assert(!fbl::is_reference<s>::value, "");
-static_assert(!fbl::is_reference<u>::value, "");
-static_assert(!fbl::is_reference<s>::value, "");
-static_assert(!fbl::is_reference<fp>::value, "");
+static_assert(!fbl::is_reference<int>::value);
+static_assert(!fbl::is_reference<float>::value);
+static_assert(!fbl::is_reference<s>::value);
+static_assert(!fbl::is_reference<u>::value);
+static_assert(!fbl::is_reference<s>::value);
+static_assert(!fbl::is_reference<fp>::value);
 
-static_assert(!fbl::is_reference<const int>::value, "");
-static_assert(!fbl::is_reference<const float>::value, "");
-static_assert(!fbl::is_reference<const s>::value, "");
-static_assert(!fbl::is_reference<const u>::value, "");
-static_assert(!fbl::is_reference<const s>::value, "");
+static_assert(!fbl::is_reference<const int>::value);
+static_assert(!fbl::is_reference<const float>::value);
+static_assert(!fbl::is_reference<const s>::value);
+static_assert(!fbl::is_reference<const u>::value);
+static_assert(!fbl::is_reference<const s>::value);
 
-static_assert(!fbl::is_reference<volatile int>::value, "");
-static_assert(!fbl::is_reference<volatile float>::value, "");
-static_assert(!fbl::is_reference<volatile s>::value, "");
-static_assert(!fbl::is_reference<volatile u>::value, "");
-static_assert(!fbl::is_reference<volatile s>::value, "");
+static_assert(!fbl::is_reference<volatile int>::value);
+static_assert(!fbl::is_reference<volatile float>::value);
+static_assert(!fbl::is_reference<volatile s>::value);
+static_assert(!fbl::is_reference<volatile u>::value);
+static_assert(!fbl::is_reference<volatile s>::value);
 
-static_assert(!fbl::is_reference<const volatile int>::value, "");
-static_assert(!fbl::is_reference<const volatile float>::value, "");
-static_assert(!fbl::is_reference<const volatile s>::value, "");
-static_assert(!fbl::is_reference<const volatile u>::value, "");
-static_assert(!fbl::is_reference<const volatile s>::value, "");
+static_assert(!fbl::is_reference<const volatile int>::value);
+static_assert(!fbl::is_reference<const volatile float>::value);
+static_assert(!fbl::is_reference<const volatile s>::value);
+static_assert(!fbl::is_reference<const volatile u>::value);
+static_assert(!fbl::is_reference<const volatile s>::value);
 
 // is_union tests:
-static_assert(fbl::is_union<u>::value, "");
+static_assert(fbl::is_union<u>::value);
 
-static_assert(!fbl::is_union<u*>::value, "");
-static_assert(!fbl::is_union<u&>::value, "");
-static_assert(!fbl::is_union<u&&>::value, "");
+static_assert(!fbl::is_union<u*>::value);
+static_assert(!fbl::is_union<u&>::value);
+static_assert(!fbl::is_union<u&&>::value);
 
-static_assert(!fbl::is_union<int>::value, "");
-static_assert(!fbl::is_union<float>::value, "");
-static_assert(!fbl::is_union<s>::value, "");
-static_assert(!fbl::is_union<s>::value, "");
-static_assert(!fbl::is_union<fp>::value, "");
+static_assert(!fbl::is_union<int>::value);
+static_assert(!fbl::is_union<float>::value);
+static_assert(!fbl::is_union<s>::value);
+static_assert(!fbl::is_union<s>::value);
+static_assert(!fbl::is_union<fp>::value);
 
 // is_const tests:
-static_assert(!fbl::is_const<int>::value, "");
-static_assert(fbl::is_const<const int>::value, "");
-static_assert(!fbl::is_const<s>::value, "");
-static_assert(fbl::is_const<const s>::value, "");
-static_assert(!fbl::is_const<u>::value, "");
-static_assert(fbl::is_const<const u>::value, "");
+static_assert(!fbl::is_const<int>::value);
+static_assert( fbl::is_const<const int>::value);
+static_assert(!fbl::is_const<s>::value);
+static_assert( fbl::is_const<const s>::value);
+static_assert(!fbl::is_const<u>::value);
+static_assert( fbl::is_const<const u>::value);
 
-static_assert(!fbl::is_const<int*>::value, "");
-static_assert(fbl::is_const<int* const>::value, "");
-static_assert(!fbl::is_const<const int*>::value, "");
-static_assert(fbl::is_const<const int* const>::value, "");
+static_assert(!fbl::is_const<int*>::value);
+static_assert( fbl::is_const<int* const>::value);
+static_assert(!fbl::is_const<const int*>::value);
+static_assert( fbl::is_const<const int* const>::value);
 
 // underlying_type:
 
@@ -182,22 +182,22 @@ static_assert(fbl::is_same<fbl::match_cv<char, const volatile void>::type, void>
 
 // is_class tests
 namespace is_class_tests {
-static_assert(!fbl::is_class<int>::value, "'int' should not pass the is_class<> test!");
+static_assert(!fbl::is_class<int>::value, "'int' should not pass the is_class_v<> test!");
 
 class A { };
-static_assert(fbl::is_class<A>::value, "'class' should pass the is_class<> test!");
+static_assert( fbl::is_class<A>::value, "'class' should pass the is_class_v<> test!");
 
 struct B { };
-static_assert(fbl::is_class<B>::value, "'struct' should pass the is_class<> test!");
+static_assert( fbl::is_class<B>::value, "'struct' should pass the is_class_v<> test!");
 
 union C { int a; float b; };
-static_assert(!fbl::is_class<C>::value, "'union' should not pass the is_class<> test!");
+static_assert(!fbl::is_class<C>::value, "'union' should not pass the is_class_v<> test!");
 
 enum D { D_ENUM_VALUE };
-static_assert(!fbl::is_class<D>::value, "'enum' should not pass the is_class<> test!");
+static_assert(!fbl::is_class<D>::value, "'enum' should not pass the is_class_v<> test!");
 
 enum class E { VALUE };
-static_assert(!fbl::is_class<E>::value, "'enum class' should not pass the is_class<> test!");
+static_assert(!fbl::is_class<E>::value, "'enum class' should not pass the is_class_v<> test!");
 }  // namespace is_class_tests
 
 // is_base_of tests
@@ -354,9 +354,9 @@ static_assert(!fbl::is_arithmetic<A*>::value, "A pointer is not arithmetic");
 
 namespace is_signed_tests {
 
-static_assert(fbl::is_signed<int>::value, "int is signed");
+static_assert( fbl::is_signed<int>::value, "int is signed");
 static_assert(!fbl::is_signed<unsigned int>::value, "unsigned int is not signed");
-static_assert(fbl::is_signed<float>::value, "float is signed");
+static_assert( fbl::is_signed<float>::value, "float is signed");
 
 static_assert(!fbl::is_signed<decltype(nullptr)>::value, "nullptr is not signed");
 
@@ -369,7 +369,7 @@ static_assert(!fbl::is_signed<A*>::value, "A pointer is not signed");
 namespace is_unsigned_tests {
 
 static_assert(!fbl::is_unsigned<int>::value, "int is not unsigned");
-static_assert(fbl::is_unsigned<unsigned int>::value, "unsigned int is unsigned");
+static_assert( fbl::is_unsigned<unsigned int>::value, "unsigned int is unsigned");
 static_assert(!fbl::is_unsigned<float>::value, "float is not unsigned");
 
 static_assert(!fbl::is_unsigned<decltype(nullptr)>::value, "nullptr is not unsigned");
@@ -412,7 +412,7 @@ namespace is_enum_tests {
 
 enum E {};
 struct S {};
-static_assert(fbl::is_enum<E>::value, "enum is an enum");
+static_assert( fbl::is_enum<E>::value, "enum is an enum");
 static_assert(!fbl::is_enum<S>::value, "struct is not an enum");
 static_assert(!fbl::is_enum<int>::value, "int is not an enum");
 static_assert(!fbl::is_enum<void>::value, "void is not an enum");
@@ -464,24 +464,24 @@ static_assert( fbl::is_pointer<const int*>::value,          "const int* is a poi
 static_assert( fbl::is_pointer<volatile int*>::value,       "volatile int* is a pointer!");
 static_assert( fbl::is_pointer<const volatile int*>::value, "const volatile int* is a pointer!");
 
-static_assert( fbl::is_pointer<int* const >::value,          "int* const is a pointer!");
-static_assert( fbl::is_pointer<int* volatile >::value,       "int* volatile is a pointer!");
-static_assert( fbl::is_pointer<int* const volatile >::value, "int* const volatile is a pointer!");
+static_assert( fbl::is_pointer<int* const>::value,          "int* const is a pointer!");
+static_assert( fbl::is_pointer<int* volatile>::value,       "int* volatile is a pointer!");
+static_assert( fbl::is_pointer<int* const volatile>::value, "int* const volatile is a pointer!");
 
-static_assert( fbl::is_pointer<const int* const >::value,    "const int* const is a pointer!");
-static_assert( fbl::is_pointer<const int* volatile >::value, "const int* volatile is a pointer!");
+static_assert( fbl::is_pointer<const int* const>::value,    "const int* const is a pointer!");
+static_assert( fbl::is_pointer<const int* volatile>::value, "const int* volatile is a pointer!");
 static_assert( fbl::is_pointer<const int* const volatile>::value,
         "const int* const volatile is a pointer!");
 
-static_assert( fbl::is_pointer<volatile int* const >::value, "volatile int* const is a pointer!");
-static_assert( fbl::is_pointer<volatile int* volatile >::value,
+static_assert( fbl::is_pointer<volatile int* const>::value, "volatile int* const is a pointer!");
+static_assert( fbl::is_pointer<volatile int* volatile>::value,
         "volatile int* volatile is a pointer!");
 static_assert( fbl::is_pointer<volatile int* const volatile>::value,
         "volatile int* const volatile is a pointer!");
 
-static_assert( fbl::is_pointer<const volatile int* const >::value,
+static_assert( fbl::is_pointer<const volatile int* const>::value,
         "const volatile int* const is a pointer!");
-static_assert( fbl::is_pointer<const volatile int* volatile >::value,
+static_assert( fbl::is_pointer<const volatile int* volatile>::value,
         "const volatile int* volatile is a pointer!");
 static_assert( fbl::is_pointer<const volatile int* const volatile>::value,
         "const volatile int* const volatile is a pointer!");
@@ -511,29 +511,29 @@ class B : public A { };
 class C { };
 
 template <typename From, typename To>
-using icp = fbl::is_convertible_pointer<From, To>;
+inline constexpr bool icp = std::is_convertible<From, To>::value;
 
-static_assert( icp<B*, A*>::value, "Should convert B* --> A*");
-static_assert(!icp<A*, B*>::value, "Should not convert A* --> B*");
-static_assert(!icp<A,  B*>::value, "Should not convert A --> B*");
-static_assert(!icp<A*, B>::value,  "Should not convert A* --> B");
-static_assert(!icp<A,  B>::value,  "Should not convert A --> B");
-static_assert(!icp<A*, C*>::value, "Should not convert A* --> C*");
+static_assert( icp<B*, A*>, "Should convert B* --> A*");
+static_assert(!icp<A*, B*>, "Should not convert A* --> B*");
+static_assert(!icp<A,  B*>, "Should not convert A --> B*");
+static_assert(!icp<A*, B>,  "Should not convert A* --> B");
+static_assert(!icp<A,  B>,  "Should not convert A --> B");
+static_assert(!icp<A*, C*>, "Should not convert A* --> C*");
 
-static_assert( icp<int*, void*>::value,         "Should convert int* --> void*");
-static_assert( icp<int*, const int*>::value,    "Should convert int* --> const int*");
-static_assert( icp<int*, volatile int*>::value, "Should convert int* --> volatile int*");
-static_assert(!icp<const int*, int*>::value,    "Should not convert const int* --> int*");
-static_assert(!icp<volatile int*, int*>::value, "Should not convert volatile int* --> int*");
-static_assert(!icp<unsigned int*, int*>::value, "Should not convert unsigned int* --> int*");
-static_assert(!icp<int*, unsigned int*>::value, "Should not convert int* --> unsigned int*");
-static_assert(!icp<float*, double*>::value,     "Should not convert float* --> double*");
+static_assert( icp<int*, void*>,         "Should convert int* --> void*");
+static_assert( icp<int*, const int*>,    "Should convert int* --> const int*");
+static_assert( icp<int*, volatile int*>, "Should convert int* --> volatile int*");
+static_assert(!icp<const int*, int*>,    "Should not convert const int* --> int*");
+static_assert(!icp<volatile int*, int*>, "Should not convert volatile int* --> int*");
+static_assert(!icp<unsigned int*, int*>, "Should not convert unsigned int* --> int*");
+static_assert(!icp<int*, unsigned int*>, "Should not convert int* --> unsigned int*");
+static_assert(!icp<float*, double*>,     "Should not convert float* --> double*");
 
 }  // namespace is_convertible_tests
 
 namespace conditional_tests {
 
-static_assert(fbl::is_same<fbl::conditional<true, int, bool>::type, int>::value, "wrong type");
+static_assert(fbl::is_same<fbl::conditional<true, int, bool>::type, int>::value,   "wrong type");
 static_assert(fbl::is_same<fbl::conditional<false, int, bool>::type, bool>::value, "wrong type");
 
 }  // namespace conditional_tests
@@ -562,46 +562,46 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_overloaded_void, overloaded, void (C::*
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_overloaded_int, overloaded, int (C::*)(int));
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_overloaded_int_const, overloaded, int (C::*)(int) const);
 
-static_assert(has_simple<A>::value, "");
-static_assert(has_simple<B>::value, "");
-static_assert(!has_simple<C>::value, "");
-static_assert(!has_simple<int>::value, "");
-static_assert(!has_simple<decltype(nullptr)>::value, "");
+static_assert( has_simple_v<A>);
+static_assert( has_simple_v<B>);
+static_assert(!has_simple_v<C>);
+static_assert(!has_simple_v<int>);
+static_assert(!has_simple_v<decltype(nullptr)>);
 
-static_assert(!has_overloaded<A>::value, "fails due to ambiguity");
-static_assert(has_overloaded<B>::value, "unambiguous");
-static_assert(!has_overloaded<C>::value, "");
-static_assert(!has_overloaded<int>::value, "");
-static_assert(!has_overloaded<decltype(nullptr)>::value, "");
+static_assert(!has_overloaded_v<A>, "fails due to ambiguity");
+static_assert( has_overloaded_v<B>, "unambiguous");
+static_assert(!has_overloaded_v<C>);
+static_assert(!has_overloaded_v<int>);
+static_assert(!has_overloaded_v<decltype(nullptr)>);
 
-static_assert(has_simple_void<A>::value, "");
-static_assert(!has_simple_void<B>::value, "");
-static_assert(!has_simple_void<C>::value, "");
-static_assert(!has_simple_void<int>::value, "");
-static_assert(!has_simple_void<decltype(nullptr)>::value, "");
+static_assert( has_simple_void_v<A>);
+static_assert(!has_simple_void_v<B>);
+static_assert(!has_simple_void_v<C>);
+static_assert(!has_simple_void_v<int>);
+static_assert(!has_simple_void_v<decltype(nullptr)>);
 
-static_assert(!has_simple_int<A>::value, "");
-static_assert(has_simple_int<B>::value, "");
-static_assert(!has_simple_int<C>::value, "");
-static_assert(!has_simple_int<int>::value, "");
-static_assert(!has_simple_int<decltype(nullptr)>::value, "");
+static_assert(!has_simple_int_v<A>);
+static_assert( has_simple_int_v<B>);
+static_assert(!has_simple_int_v<C>);
+static_assert(!has_simple_int_v<int>);
+static_assert(!has_simple_int_v<decltype(nullptr)>);
 
-static_assert(has_overloaded_void<A>::value, "");
-static_assert(!has_overloaded_void<B>::value, "");
-static_assert(!has_overloaded_void<C>::value, "");
-static_assert(!has_overloaded_void<int>::value, "");
-static_assert(!has_overloaded_void<decltype(nullptr)>::value, "");
+static_assert( has_overloaded_void_v<A>);
+static_assert(!has_overloaded_void_v<B>);
+static_assert(!has_overloaded_void_v<C>);
+static_assert(!has_overloaded_void_v<int>);
+static_assert(!has_overloaded_void_v<decltype(nullptr)>);
 
-static_assert(has_overloaded_int<A>::value, "");
-static_assert(!has_overloaded_int<B>::value, "");
-static_assert(!has_overloaded_int<C>::value, "");
-static_assert(!has_overloaded_int<int>::value, "");
-static_assert(!has_overloaded_int<decltype(nullptr)>::value, "");
+static_assert( has_overloaded_int_v<A>);
+static_assert(!has_overloaded_int_v<B>);
+static_assert(!has_overloaded_int_v<C>);
+static_assert(!has_overloaded_int_v<int>);
+static_assert(!has_overloaded_int_v<decltype(nullptr)>);
 
-static_assert(has_overloaded_int_const<A>::value, "");
-static_assert(has_overloaded_int_const<B>::value, "");
-static_assert(!has_overloaded_int_const<C>::value, "");
-static_assert(!has_overloaded_int_const<int>::value, "");
-static_assert(!has_overloaded_int_const<decltype(nullptr)>::value, "");
+static_assert( has_overloaded_int_const_v<A>);
+static_assert( has_overloaded_int_const_v<B>);
+static_assert(!has_overloaded_int_const_v<C>);
+static_assert(!has_overloaded_int_const_v<int>);
+static_assert(!has_overloaded_int_const_v<decltype(nullptr)>);
 
 } // namespace has_member_fn_tests

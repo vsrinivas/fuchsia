@@ -49,17 +49,17 @@ struct WrongLengthTypeBadString {
     int32_t length() const;
 };
 
-static_assert(fbl::is_string_like<fbl::String>::value, "ok - string");
-static_assert(fbl::is_string_like<fbl::StringPiece>::value, "ok - string piece");
-static_assert(fbl::is_string_like<SimpleFakeString>::value, "ok - simple");
-static_assert(fbl::is_string_like<OverloadedFakeString>::value, "ok - overloaded");
-static_assert(!fbl::is_string_like<decltype(nullptr)>::value, "bad - null");
-static_assert(!fbl::is_string_like<int>::value, "bad - int");
-static_assert(!fbl::is_string_like<EmptyStructBadString>::value, "bad - empty struct");
-static_assert(!fbl::is_string_like<DataOnlyBadString>::value, "bad - data only");
-static_assert(!fbl::is_string_like<LengthOnlyBadString>::value, "bad - length only");
-static_assert(!fbl::is_string_like<WrongDataTypeBadString>::value, "bad - wrong data type");
-static_assert(!fbl::is_string_like<WrongLengthTypeBadString>::value, "bad - wrong length type");
+static_assert(fbl::is_string_like_v<fbl::String>, "ok - string");
+static_assert(fbl::is_string_like_v<fbl::StringPiece>, "ok - string piece");
+static_assert(fbl::is_string_like_v<SimpleFakeString>, "ok - simple");
+static_assert(fbl::is_string_like_v<OverloadedFakeString>, "ok - overloaded");
+static_assert(!fbl::is_string_like_v<decltype(nullptr)>, "bad - null");
+static_assert(!fbl::is_string_like_v<int>, "bad - int");
+static_assert(!fbl::is_string_like_v<EmptyStructBadString>, "bad - empty struct");
+static_assert(!fbl::is_string_like_v<DataOnlyBadString>, "bad - data only");
+static_assert(!fbl::is_string_like_v<LengthOnlyBadString>, "bad - length only");
+static_assert(!fbl::is_string_like_v<WrongDataTypeBadString>, "bad - wrong data type");
+static_assert(!fbl::is_string_like_v<WrongLengthTypeBadString>, "bad - wrong length type");
 
 bool string_accessors_test() {
     BEGIN_TEST;

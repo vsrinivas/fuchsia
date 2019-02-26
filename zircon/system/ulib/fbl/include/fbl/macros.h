@@ -39,10 +39,10 @@
 // DECLARE_HAS_MEMBER_FN(has_bar, Bar);
 // template <typename T>
 // class Foo {
-//   static_assert(has_bar<T>::value, "Foo classes must implement Bar()!");
+//   static_assert(has_bar_v<T>, "Foo classes must implement Bar()!");
 //   // TODO: use 'if constexpr' to avoid this next static_assert once c++17
 //   lands.
-//   static_assert(is_same<decltype(&T::Bar), void (T::*)(int)>::value,
+//   static_assert(is_same_v<decltype(&T::Bar), void (T::*)(int)>,
 //                 "Bar must be a non-static member function with signature "
 //                 "'void Bar(int)', and must be visible to Foo (either "
 //                 "because it is public, or due to friendship).");
@@ -52,11 +52,13 @@
     struct trait_name {                                                 \
     private:                                                            \
     template <typename C> static std::true_type test( decltype(&C::fn_name) ); \
-    template <typename C> static std::false_type test(...);           \
+    template <typename C> static std::false_type test(...);             \
                                                                         \
     public:                                                             \
     static constexpr bool value = decltype(test<T>(nullptr))::value;    \
-    }
+    };                                                                  \
+    template <typename T>                                               \
+    static inline constexpr bool trait_name ## _v = trait_name<T>::value
 
 // Similar to DECLARE_HAS_MEMBER_FN but also checks the function signature.
 // This is especially useful when the desired function may be overloaded.
@@ -70,8 +72,10 @@ template <typename T>                                                           
 struct trait_name {                                                               \
 private:                                                                          \
     template <typename C> static std::true_type test( decltype(static_cast<sig>(&C::fn_name)) ); \
-    template <typename C> static std::false_type test(...);                     \
+    template <typename C> static std::false_type test(...);                       \
                                                                                   \
 public:                                                                           \
     static constexpr bool value = decltype(test<T>(nullptr))::value;              \
-}
+};                                                                                \
+template <typename T>                                                             \
+static inline constexpr bool trait_name ## _v = trait_name<T>::value

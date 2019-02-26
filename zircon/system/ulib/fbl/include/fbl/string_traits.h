@@ -31,13 +31,16 @@ constexpr size_t GetStringLength(const T& value) {
     return value.length();
 }
 
-// is_string_like<T>
+// is_string_like_v<T>
 //
-// Evaluates to true_type if GetStringData() and GetStringLength() are supported
+// Evaluates to true if GetStringData() and GetStringLength() are supported
 // instances of type T.
 template <typename T>
 using is_string_like = std::integral_constant<bool,
-                                              internal::has_data<T>::value &&
-                                              internal::has_length<T>::value>;
+                                              internal::has_data_v<T> &&
+                                              internal::has_length_v<T>>;
+
+template <typename T>
+inline constexpr bool is_string_like_v = is_string_like<T>::value;
 
 } // namespace fbl
