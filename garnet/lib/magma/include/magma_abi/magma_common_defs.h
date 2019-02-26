@@ -136,7 +136,7 @@ typedef struct magma_image_plane {
 typedef struct {
     uint32_t image_format;
     magma_bool_t has_format_modifier;
-    uint32_t format_modifier;
+    uint64_t format_modifier;
     uint32_t width;
     uint32_t height;
     uint32_t layers;
