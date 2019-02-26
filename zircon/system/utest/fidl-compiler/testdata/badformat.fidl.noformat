@@ -37,6 +37,10 @@ union MyUnion {  // super annoying!
       string? s;
 };
 
+        xunion MyUnion {  // super annoying!
+      string? s;
+ }    ;
+
 /// Doc comments
     /// of multiple
 /// lines
@@ -118,6 +122,10 @@ NoOrdinal(int64 i) -> (string s);
 
     -> End();
        -> End();
+
+                // and now, the error syntax
+MethodWithAnError()   -> (    int32    a ) error             uint32
+;
 
      }
 
