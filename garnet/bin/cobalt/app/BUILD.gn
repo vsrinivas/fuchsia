@@ -44,21 +44,21 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/cobalt/utils:fuchsia_http_client",
     "//garnet/lib/wlan/mlme:mlme",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network_wrapper",
+    "//sdk/lib/sys/cpp",
     "//third_party/cobalt/config:cobalt_registry_proto",
     "//third_party/cobalt/encoder",
-    "//third_party/cobalt/logger",
     "//third_party/cobalt/logger:event_aggregator",
+    "//third_party/cobalt/logger",
     "//third_party/cobalt/util:pem_util",
     "//third_party/cobalt/util:posix_file_system",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/fidl/fuchsia-cobalt",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -126,10 +126,10 @@ executable("cobalt_app_unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

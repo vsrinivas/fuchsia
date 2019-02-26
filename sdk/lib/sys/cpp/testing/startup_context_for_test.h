@@ -39,7 +39,7 @@ class StartupContextForTest final : public sys::StartupContext {
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToPublicService(
       const std::string& name = Interface::Name_,
-      async_dispatcher_t* dispatcher = nullptr) {
+      async_dispatcher_t* dispatcher = nullptr) const {
     fidl::InterfacePtr<Interface> ptr;
     ConnectToPublicService(ptr.NewRequest(dispatcher), name);
     return ptr;
@@ -49,7 +49,7 @@ class StartupContextForTest final : public sys::StartupContext {
   // code under test.
   template <typename Interface>
   void ConnectToPublicService(fidl::InterfaceRequest<Interface> request,
-                              const std::string& name = Interface::Name_) {
+                              const std::string& name = Interface::Name_) const {
     fdio_service_connect_at(public_directory_ptr_.channel().get(), name.c_str(),
                             request.TakeChannel().release());
   }
@@ -89,6 +89,9 @@ class StartupContextForTest final : public sys::StartupContext {
       return context_->service_directory_for_test()->AddService(
           std::move(handler), service_name);
     }
+
+    // The |StartupContextForTest| associated with this controller.
+    const StartupContextForTest& context() const { return *context_; }
 
    protected:
     Controller(StartupContextForTest* context) : context_(context){};

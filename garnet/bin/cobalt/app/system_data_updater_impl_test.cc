@@ -4,7 +4,8 @@
 
 #include "garnet/bin/cobalt/app/system_data_updater_impl.h"
 
-#include "lib/component/cpp/testing/test_with_context.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/sys/cpp/testing/test_with_context.h"
 
 namespace cobalt {
 
@@ -16,7 +17,7 @@ using fuchsia::cobalt::SystemDataUpdaterPtr;
 
 class CobaltAppForTest {
  public:
-  CobaltAppForTest(std::unique_ptr<component::StartupContext> context)
+  CobaltAppForTest(std::unique_ptr<sys::StartupContext> context)
       : system_data_("test", "test"), context_(std::move(context)) {
     system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
 
@@ -30,14 +31,14 @@ class CobaltAppForTest {
  private:
   SystemData system_data_;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>
       system_data_updater_bindings_;
 };
 
-class SystemDataUpdaterImplTests : public component::testing::TestWithContext {
+class SystemDataUpdaterImplTests : public sys::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();
@@ -52,7 +53,7 @@ class SystemDataUpdaterImplTests : public component::testing::TestWithContext {
  protected:
   SystemDataUpdaterPtr GetSystemDataUpdater() {
     SystemDataUpdaterPtr system_data_updater;
-    controller().outgoing_public_services().ConnectToService(
+    controller().context().ConnectToPublicService(
         system_data_updater.NewRequest());
     return system_data_updater;
   }

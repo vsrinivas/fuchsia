@@ -56,13 +56,13 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      const std::string& product_name,
                      const std::string& board_name)
     : system_data_(product_name, board_name),
-      context_(component::StartupContext::CreateFromStartupInfo()),
+      context_(sys::StartupContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       network_wrapper_(
           dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
           [this] {
-            return context_->ConnectToEnvironmentService<http::HttpService>();
+            return context_->svc()->Connect<http::HttpService>();
           }),
       // NOTE: Currently all observations are immediate observations and so it
       // makes sense to use MAX_BYTES_PER_EVENT as the value of

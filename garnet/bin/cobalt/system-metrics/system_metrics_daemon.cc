@@ -13,6 +13,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/resource.h>
@@ -29,7 +30,7 @@ using fuchsia_system_metrics::FuchsiaUpPingEventCode;
 using std::chrono::steady_clock;
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
-                                         component::StartupContext* context)
+                                         sys::StartupContext* context)
     : SystemMetricsDaemon(
           dispatcher, context, nullptr,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock())) {
@@ -37,7 +38,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
 }
 
 SystemMetricsDaemon::SystemMetricsDaemon(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::StartupContext* context,
     fuchsia::cobalt::Logger_Sync* logger,
     std::unique_ptr<cobalt::SteadyClock> clock)
     : dispatcher_(dispatcher),
@@ -203,7 +204,7 @@ void SystemMetricsDaemon::InitializeLogger() {
   // or FISHFOOD.
   static const char kProjectName[] = "fuchsia_system_metrics";
   // Connect to the cobalt fidl service provided by the environment.
-  context_->ConnectToEnvironmentService(factory_.NewRequest());
+  context_->svc()->Connect(factory_.NewRequest());
   if (!factory_) {
     FXL_LOG(ERROR)
         << "Cobalt SystemMetricsDaemon: Unable to get LoggerFactory.";

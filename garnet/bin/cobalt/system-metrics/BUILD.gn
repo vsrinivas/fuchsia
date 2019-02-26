@@ -22,8 +22,8 @@ source_set("system_metrics_daemon_lib") {
   public_deps = [
     ":metrics_registry_cc",
     "//garnet/bin/cobalt/utils:clock",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -38,7 +38,7 @@ executable("system-metrics") {
 
   deps = [
     ":system_metrics_daemon_lib",
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 }
 
@@ -69,7 +69,7 @@ executable("cobalt_system_metrics_unittests") {
     "//garnet/bin/cobalt/testing:fake_clock_lib",
     "//garnet/bin/cobalt/testing:fake_logger_lib",
     "//garnet/bin/cobalt/utils:clock",
-    "//garnet/public/lib/component/cpp/testing",
+    "//sdk/lib/sys/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

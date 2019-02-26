@@ -18,8 +18,9 @@
 #include "garnet/bin/cobalt/app/logger_factory_impl.h"
 #include "garnet/bin/cobalt/app/system_data_updater_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/config/project_configs.h"
 #include "third_party/cobalt/encoder/client_secret.h"
@@ -71,7 +72,7 @@ class CobaltApp {
 
   encoder::SystemData system_data_;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
 
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;

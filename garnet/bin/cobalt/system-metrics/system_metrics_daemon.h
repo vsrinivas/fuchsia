@@ -14,7 +14,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include "garnet/bin/cobalt/utils/clock.h"
 
@@ -23,8 +23,8 @@
 // Usage:
 //
 // async::Loop loop(&kAsyncLoopConfigAttachToThread);
-// std::unique_ptr<component::StartupContext> context(
-//     component::StartupContext::CreateFromStartupInfo());
+// std::unique_ptr<sys::StartupContext> context(
+//     sys::StartupContext::CreateFromStartupInfo());
 // SystemMetricsDaemon daemon(loop.dispatcher(), context.get());
 // daemon.Work();
 // loop.Run();
@@ -36,7 +36,7 @@ class SystemMetricsDaemon {
   //
   // |context|. The Cobalt LoggerFactory interface is fetched from this context.
   SystemMetricsDaemon(async_dispatcher_t* dispatcher,
-                      component::StartupContext* context);
+                      sys::StartupContext* context);
 
   // Performs one round of work, depending on the current time relative to when
   // this class was constructed, and then uses the |dispatcher| passed to the
@@ -50,7 +50,7 @@ class SystemMetricsDaemon {
   // be null because InitializeLogger() will not be invoked. Instead,
   // pass a non-null |logger| which may be a local mock that does not use FIDL.
   SystemMetricsDaemon(async_dispatcher_t* dispatcher,
-                      component::StartupContext* context,
+                      sys::StartupContext* context,
                       fuchsia::cobalt::Logger_Sync* logger,
                       std::unique_ptr<cobalt::SteadyClock> clock);
 
@@ -87,7 +87,7 @@ class SystemMetricsDaemon {
 
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;
-  component::StartupContext* context_;
+  sys::StartupContext* context_;
   fuchsia::cobalt::LoggerFactorySyncPtr factory_;
   fuchsia::cobalt::LoggerSyncPtr logger_fidl_proxy_;
   fuchsia::cobalt::Logger_Sync* logger_;
