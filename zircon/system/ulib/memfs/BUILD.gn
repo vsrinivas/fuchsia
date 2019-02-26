@@ -42,6 +42,9 @@ library("memfs") {
     "memfs-local.cpp",
   ]
   public_deps = [
+    # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.
+    "$zx/system/ulib/async:headers",
+
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
     "$zx/system/ulib/sync:headers",
   ]

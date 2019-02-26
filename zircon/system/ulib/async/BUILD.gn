@@ -63,4 +63,8 @@ library("async-default") {
     "default.c",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <lib/async/default.h> has #include <lib/async/dispatcher.h>.
+    ":async.headers",
+  ]
 }
