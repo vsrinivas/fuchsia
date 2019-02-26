@@ -51,6 +51,7 @@ source_set("router_test") {
     ":router",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
+    "//garnet/lib/overnet/testing:flags",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

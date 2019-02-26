@@ -66,6 +66,7 @@ class PacketProtocolFuzzer {
     Logging(Timer* timer) : tracer(timer) {}
     TraceCout tracer;
     ScopedRenderer set_tracer{&tracer};
+    ScopedSeverity set_severity{Severity::DEBUG};
   };
   std::unique_ptr<Logging> logging_;
   Sender sender1_;

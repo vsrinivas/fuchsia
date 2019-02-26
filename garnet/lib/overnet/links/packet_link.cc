@@ -260,8 +260,10 @@ void PacketLink::Process(TimeStamp received, Slice packet) {
       received, *seq_status.get(), std::move(packet),
       [this, received](auto packet_status) {
         if (packet_status.is_error()) {
-          OVERNET_TRACE(WARNING)
-              << "Packet header parse failure: " << packet_status.AsStatus();
+          if (packet_status.code() != StatusCode::CANCELLED) {
+            OVERNET_TRACE(WARNING)
+                << "Packet header parse failure: " << packet_status.AsStatus();
+          }
           return;
         }
         if (auto* msg = *packet_status) {

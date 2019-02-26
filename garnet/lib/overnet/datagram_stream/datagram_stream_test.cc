@@ -4,6 +4,7 @@
 
 #include "garnet/lib/overnet/datagram_stream/datagram_stream.h"
 #include <memory>
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gmock/gmock.h"
@@ -90,6 +91,8 @@ TEST(DatagramStream, UnreliableSend) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   auto router = MakeClosedPtr<Router>(&timer, NodeId(1), true);
   router->RegisterLink(link.MakeLink(NodeId(1), NodeId(2)));
@@ -126,6 +129,8 @@ TEST(DatagramStream, ReadThenRecv) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   MockLink link;
   StrictMock<MockPullCB> pull_cb;
@@ -173,6 +178,8 @@ TEST(DatagramStream, RecvThenRead) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   MockLink link;
   StrictMock<MockPullCB> pull_cb;

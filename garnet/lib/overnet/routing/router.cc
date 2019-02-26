@@ -27,7 +27,7 @@ Router::~Router() { shutting_down_ = true; }
 
 void Router::Close(Callback<void> quiesced) {
   ScopedModule<Router> scoped_module(this);
-  OVERNET_TRACE(INFO) << node_id_ << " Close";
+  OVERNET_TRACE(DEBUG) << node_id_ << " Close";
   shutting_down_ = true;
   poll_link_changes_timeout_.Reset();
   flush_old_nodes_timeout_.Reset();
@@ -36,8 +36,8 @@ void Router::Close(Callback<void> quiesced) {
 }
 
 void Router::CloseLinks(Callback<void> quiesced) {
-  OVERNET_TRACE(INFO) << node_id_
-                      << " CloseLinks remaining=" << owned_links_.size();
+  OVERNET_TRACE(DEBUG) << node_id_
+                       << " CloseLinks remaining=" << owned_links_.size();
   if (owned_links_.empty()) {
     CloseStreams(std::move(quiesced));
     return;
@@ -55,14 +55,14 @@ void Router::CloseLinks(Callback<void> quiesced) {
 
 void Router::CloseStreams(Callback<void> quiesced) {
   if (streams_.empty()) {
-    OVERNET_TRACE(INFO) << "Closed";
+    OVERNET_TRACE(DEBUG) << "Closed";
     return;
   }
   auto it = streams_.begin();
   auto id = it->first;
-  OVERNET_TRACE(INFO) << node_id_
-                      << " CloseStreams remaining=" << streams_.size()
-                      << " next=" << id.peer << "/" << id.stream_id;
+  OVERNET_TRACE(DEBUG) << node_id_
+                       << " CloseStreams remaining=" << streams_.size()
+                       << " next=" << id.peer << "/" << id.stream_id;
   it->second.Close(Callback<void>(
       ALLOCATED_CALLBACK, [this, id, quiesced = std::move(quiesced)]() mutable {
         ScopedModule<Router> scoped_module(this);
@@ -211,7 +211,7 @@ void Router::MaybeStartPollingLinkChanges() {
                 }
                 // Set routing information for other links.
                 for (const auto& sl : selected_links) {
-                  OVERNET_TRACE(INFO)
+                  OVERNET_TRACE(DEBUG)
                       << "Select: " << sl.first << " " << sl.second.link_id
                       << " (route_mss=" << sl.second.route_mss << ")";
                   auto it = owned_links_.find(sl.second.link_id);

@@ -64,7 +64,7 @@ TEST(AckFrame, TwoBlocks) {
 TEST(AckFrame, FuzzedExamples) {
   auto test = [](std::initializer_list<uint8_t> bytes) {
     auto input = Slice::FromContainer(bytes);
-    std::cerr << "Test: " << input << "\n";
+    std::cout << "Test: " << input << "\n";
     if (auto p = AckFrame::Parse(input); p.is_ok()) {
       {
         auto ns = p->nack_seqs();
@@ -74,13 +74,13 @@ TEST(AckFrame, FuzzedExamples) {
           [](auto) {}(*it);
         }
       }
-      std::cerr << "Parsed: " << *p << "\n";
+      std::cout << "Parsed: " << *p << "\n";
       auto written = Slice::FromWriters(AckFrame::Writer(p.get()));
       auto p2 = AckFrame::Parse(written);
       EXPECT_TRUE(p2.is_ok());
       EXPECT_EQ(*p, *p2);
     } else {
-      std::cerr << "Parse error: " << p.AsStatus() << "\n";
+      std::cout << "Parse error: " << p.AsStatus() << "\n";
     }
   };
   test({0x0a, 0x0a, 0x00, 0x00});

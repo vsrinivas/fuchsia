@@ -127,6 +127,7 @@ source_set("packet_protocol_test") {
     ":packet_protocol",
     ":packet_protocol_fuzzer_lib",
     "//garnet/lib/overnet/protocol:serialization_helpers",
+    "//garnet/lib/overnet/testing:flags",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
     "//garnet/lib/overnet/vocabulary:closed_ptr",

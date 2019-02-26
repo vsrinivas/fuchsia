@@ -4,6 +4,7 @@
 
 #include "garnet/lib/overnet/routing/router.h"
 #include <memory>
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gmock/gmock.h"
@@ -63,6 +64,8 @@ TEST(Router, NoOp) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 }
 
@@ -71,6 +74,8 @@ TEST(Router, ForwardToSelf) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockStreamHandler> mock_stream_handler;
@@ -99,6 +104,8 @@ TEST(Router, ForwardToSelfDelayed) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockStreamHandler> mock_stream_handler;
@@ -125,6 +132,8 @@ TEST(Router, ForwardToLink) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockLink> mock_link;
@@ -153,6 +162,8 @@ TEST(Router, ForwardToLinkDelayed) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockLink> mock_link;
@@ -180,6 +191,8 @@ TEST(Router, ForwardToSelfAndLink) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   Router router(&timer, NodeId(1), true);
 
   StrictMock<MockStreamHandler> mock_stream_handler;

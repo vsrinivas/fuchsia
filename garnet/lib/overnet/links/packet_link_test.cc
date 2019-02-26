@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/overnet/links/packet_link.h"
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gmock/gmock.h"
@@ -58,6 +59,8 @@ TEST(PacketLink, NoOp) {
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_renderer(&renderer);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   StrictMock<MockPacketLink> mock_link;
   Router router(&timer, NodeId(1), true);
   router.RegisterLink(mock_link.MakeLink(&router, NodeId(2), kTestMSS));
@@ -68,6 +71,8 @@ TEST(PacketLink, SendOne) {
   StrictMock<MockPacketLink> mock_link;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_renderer(&renderer);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   auto verify_all = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link));
@@ -99,6 +104,8 @@ TEST(PacketLink, RecvOne) {
   StrictMock<MockStreamHandler> mock_stream_handler;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_renderer(&renderer);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   Router router(&timer, NodeId(2), true);
   auto link_unique = mock_link.MakeLink(&router, NodeId(1), kTestMSS);

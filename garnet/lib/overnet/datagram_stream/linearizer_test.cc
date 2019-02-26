@@ -4,6 +4,7 @@
 
 #include "garnet/lib/overnet/datagram_stream/linearizer.h"
 #include "garnet/lib/overnet/datagram_stream/linearizer_fuzzer.h"
+#include "garnet/lib/overnet/testing/flags.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -309,14 +310,14 @@ TEST(Linearizer, Push012_Push1_Pull0) {
 //            (also, fix it)
 
 TEST(LinearizerFuzzed, _adc83b19e793491b1c6ea0fd8b46cd9f32e592fc) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {0x00, 0x00, 0x00, 0x00,
                                    0x00, 0x00, 0x00, 0x00};
   m.Push(0, 8, false, block0);
 }
 
 TEST(LinearizerFuzzed, _a3761115222a684a7e0ec40d2ddd601f3815dbb0) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {0x00, 0x00, 0x00, 0x00,
                                    0x00, 0x00, 0x00, 0x00};
   m.Push(0, 8, false, block0);
@@ -334,7 +335,7 @@ TEST(LinearizerFuzzed, _a3761115222a684a7e0ec40d2ddd601f3815dbb0) {
 }
 
 TEST(LinearizerFuzzed, _7513024e0ab94a294598985655ca34ca4113f1f7) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Close(0);
   static const uint8_t block0[] = {0x00};
   m.Push(226, 1, false, block0);
@@ -350,7 +351,7 @@ TEST(LinearizerFuzzed, _7513024e0ab94a294598985655ca34ca4113f1f7) {
 }
 
 TEST(LinearizerFuzzed, _399d8fb423eea52f471c33784d3f981a634355d5) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Close(0);
   static const uint8_t block0[] = {0x00};
   m.Push(226, 1, false, block0);
@@ -379,7 +380,7 @@ TEST(LinearizerFuzzed, _399d8fb423eea52f471c33784d3f981a634355d5) {
 }
 
 TEST(LinearizerFuzzed, _dd43cb933e2c52c84b6d6f7279f6b1f49b9ecede) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Pull();
   static const uint8_t block0[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
                                    0xff, 0xd2, 0xff, 0xff, 0xff, 0xff};
@@ -390,7 +391,7 @@ TEST(LinearizerFuzzed, _dd43cb933e2c52c84b6d6f7279f6b1f49b9ecede) {
 }
 
 TEST(LinearizerFuzzed, _946ff8cb484b160bf4e251212902c5e4b8b70f7b) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Pull();
   m.Pull();
   m.Pull();
@@ -399,7 +400,7 @@ TEST(LinearizerFuzzed, _946ff8cb484b160bf4e251212902c5e4b8b70f7b) {
 
 // Crashed fuzzer helpers
 TEST(LinearizerFuzzed, _025df41aed0b045a155f753a02991a564f5b7516) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {0x02, 0x02, 0x02, 0x02,
                                    0x02, 0x02, 0x02, 0x02};
   m.Push(2, 8, false, block0);
@@ -458,7 +459,7 @@ TEST(LinearizerFuzzed, _025df41aed0b045a155f753a02991a564f5b7516) {
 }
 
 TEST(LinearizerFuzzed, _a769cfc3afa79bf00b5dc4a4413dfe1690c9e41b) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {0x00, 0xff, 0xff, 0x20,
                                    0x10, 0x01, 0xfe, 0x20};
   m.Push(105, 8, false, block0);
@@ -545,7 +546,7 @@ TEST(LinearizerFuzzed, _a769cfc3afa79bf00b5dc4a4413dfe1690c9e41b) {
 
 // Caught off-by-one in ValidateInternals
 TEST(LinearizerFuzzed, _d7ecc6236a8732fb747f193116229534abdad5d4) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {0x00, 0xff, 0xff, 0x20,
                                    0x00, 0x01, 0xfe, 0xf9};
   m.Push(105, 8, false, block0);
@@ -657,7 +658,7 @@ TEST(LinearizerFuzzed, _d7ecc6236a8732fb747f193116229534abdad5d4) {
 
 // Exposed some growing pains in end-of-message handling.
 TEST(LinearizerFuzzed, _ec62acf518af13e50b6accce7768ce52619cb9dd) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {};
   m.Push(8970, 0, true, block0);
   static const uint8_t block1[] = {};
@@ -666,7 +667,7 @@ TEST(LinearizerFuzzed, _ec62acf518af13e50b6accce7768ce52619cb9dd) {
 
 // Exposed some growing pains in end-of-message handling.
 TEST(LinearizerFuzzed, _85e53271e14006f0265921d02d4d736cdc580b0b) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -683,14 +684,14 @@ TEST(LinearizerFuzzed, _85e53271e14006f0265921d02d4d736cdc580b0b) {
 }
 
 TEST(LinearizerFuzzed, _2215d90c8d9b57557cdd6c736ba44d5fd5b41869) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Pull();
   static const uint8_t block0[] = {};
   m.Push(0, 0, true, block0);
 }
 
 TEST(LinearizerFuzzed, _a830b81a5fd181534360433a63f58974d52c2d4b) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {};
   m.Push(0, 0, true, block0);
   static const uint8_t block1[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -700,7 +701,7 @@ TEST(LinearizerFuzzed, _a830b81a5fd181534360433a63f58974d52c2d4b) {
 }
 
 TEST(LinearizerFuzzed, _4c631f1b91d2df163096fc841f1dcc70cd4c6070) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Pull();
   static const uint8_t block0[] = {0x15, 0x02, 0x02, 0x02};
   m.Push(0, 4, true, block0);
@@ -723,7 +724,7 @@ TEST(LinearizerFuzzed, _4c631f1b91d2df163096fc841f1dcc70cd4c6070) {
 }
 
 TEST(LinearizerFuzzed, _f343b14aef72b93b6f83247b96a2ab7637327bad) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Pull();
   static const uint8_t block0[] = {
       0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x02, 0x02, 0x02, 0x02, 0x02,
@@ -743,7 +744,7 @@ TEST(LinearizerFuzzed, _f343b14aef72b93b6f83247b96a2ab7637327bad) {
 }
 
 TEST(LinearizerFuzzed, _46357bce24897bd14d816a821493486337da509b) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   m.Pull();
   m.Pull();
   m.Pull();
@@ -753,7 +754,7 @@ TEST(LinearizerFuzzed, _46357bce24897bd14d816a821493486337da509b) {
 }
 
 TEST(LinearizerFuzzed, _aa850f8180e69f68c4979a5abe56a18610a6f222) {
-  linearizer_fuzzer::LinearizerFuzzer m(true);
+  linearizer_fuzzer::LinearizerFuzzer m(FLAGS_verbose);
   static const uint8_t block0[] = {0x41};
   m.Push(0, 1, false, block0);
   static const uint8_t block1[] = {};

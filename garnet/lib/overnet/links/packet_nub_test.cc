@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/overnet/links/packet_nub.h"
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gmock/gmock.h"
@@ -41,6 +42,8 @@ TEST(PacketNub, NoOp) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
   StrictMock<MockPacketNub> nub(&timer, NodeId(1));
 }
 
@@ -73,6 +76,8 @@ TEST(PacketNub, InitiateSmallerNodeId) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketNub> nub(&timer, NodeId(2));
 
@@ -102,6 +107,8 @@ TEST(PacketNub, ProcessHandshakeFromAnnounce) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketNub> nub(&timer, NodeId(1));
 
@@ -139,6 +146,8 @@ TEST(PacketNub, ProcessHandshakeFromHello) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketNub> nub(&timer, NodeId(2));
 
@@ -164,6 +173,8 @@ TEST(PacketNub, ProcessHandshakeFromAnnounceAndVerifyLink) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketNub> nub(&timer, NodeId(1));
 
@@ -206,6 +217,8 @@ TEST(PacketNub, ProcessHandshakeFromHelloAndVerifyLink) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketNub> nub(&timer, NodeId(2));
 

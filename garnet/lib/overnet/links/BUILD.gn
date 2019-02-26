@@ -46,6 +46,7 @@ source_set("packet_link_test") {
   ]
   deps = [
     ":packet_link",
+    "//garnet/lib/overnet/testing:flags",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
     "//third_party/googletest:gmock",
@@ -90,6 +91,7 @@ source_set("packet_nub_test") {
   ]
   deps = [
     ":packet_nub",
+    "//garnet/lib/overnet/testing:flags",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
     "//third_party/googletest:gmock",

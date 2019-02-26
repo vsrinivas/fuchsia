@@ -48,6 +48,7 @@ source_set("datagram_stream_test") {
   ]
   deps = [
     ":datagram_stream",
+    "//garnet/lib/overnet/testing:flags",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
     "//sdk/fidl/fuchsia.overnet.protocol",
@@ -93,6 +94,7 @@ source_set("linearizer_test") {
   deps = [
     ":linearizer",
     ":linearizer_fuzzer_lib",
+    "//garnet/lib/overnet/testing:flags",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

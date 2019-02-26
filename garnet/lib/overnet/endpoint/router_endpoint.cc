@@ -65,10 +65,10 @@ void RouterEndpoint::Close(Callback<void> done) {
     return;
   }
   auto it = connection_streams_.begin();
-  OVERNET_TRACE(INFO) << "Closing peer " << it->first;
+  OVERNET_TRACE(DEBUG) << "Closing peer " << it->first;
   Callback<void> after_close(
       ALLOCATED_CALLBACK, [this, it, done = std::move(done)]() mutable {
-        OVERNET_TRACE(INFO) << "Closed peer " << it->first;
+        OVERNET_TRACE(DEBUG) << "Closed peer " << it->first;
         connection_streams_.erase(it);
         NewNodeDescriptionTableVersion();
         Close(std::move(done));
@@ -99,7 +99,7 @@ void RouterEndpoint::UpdatedDescription() {
   if (description_timer_.has_value() || closing_) {
     return;
   }
-  OVERNET_TRACE(INFO) << "Schedule send update";
+  OVERNET_TRACE(DEBUG) << "Schedule send update";
   description_timer_.Reset(
       timer(), timer()->Now() + TimeDelta::FromMilliseconds(200),
       [this](const Status& status) {
@@ -109,7 +109,7 @@ void RouterEndpoint::UpdatedDescription() {
         description_timer_.Reset();
         auto description = BuildDescription();
         for (auto& id_conn_pair : connection_streams_) {
-          OVERNET_TRACE(INFO)
+          OVERNET_TRACE(DEBUG)
               << node_id() << " send description to " << id_conn_pair.first
               << ": " << BuildDescription();
           id_conn_pair.second.proxy()->UpdateNodeDescription(
@@ -151,8 +151,8 @@ RouterEndpoint::ConnectionStream* RouterEndpoint::GetOrCreateConnectionStream(
   if (!description_timer_.has_value()) {
     // Send a description (if there's a description timer then it'll anyway be
     // sent soon, so skip)
-    OVERNET_TRACE(INFO) << node_id() << " send description to " << peer << ": "
-                        << BuildDescription();
+    OVERNET_TRACE(DEBUG) << node_id() << " send description to " << peer << ": "
+                         << BuildDescription();
     stream->proxy()->UpdateNodeDescription(BuildDescription());
   }
   NewNodeDescriptionTableVersion();

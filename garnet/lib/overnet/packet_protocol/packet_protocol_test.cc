@@ -7,6 +7,7 @@
 #include "garnet/lib/overnet/packet_protocol/aead_codec.h"
 #include "garnet/lib/overnet/packet_protocol/packet_protocol_fuzzer.h"
 #include "garnet/lib/overnet/protocol/serialization_helpers.h"
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "garnet/lib/overnet/vocabulary/closed_ptr.h"
@@ -94,17 +95,21 @@ TEST_P(PacketProtocolTest, NoOp) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketSender> ps;
   std::mt19937 rng{123};
-  MakeClosedPtr<PacketProtocol>(&timer, [&rng] { return rng(); }, &ps,
-                                GetParam(), kMSS);
+  MakeClosedPtr<PacketProtocol>(
+      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS);
 }
 
 TEST_P(PacketProtocolTest, SendOnePacket) {
   TestTimer timer;
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 
   StrictMock<MockPacketSender> ps;
   std::mt19937 rng{123};
@@ -152,7 +157,7 @@ TEST_P(PacketProtocolTest, SendOnePacket) {
 // Exposed some bugs in the fuzzer, and a bug whereby empty ack frames caused a
 // failure.
 TEST_P(PacketProtocolTest, _02ef5d596c101ce01181a7dcd0a294ed81c88dbd) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(1),
@@ -214,7 +219,7 @@ TEST_P(PacketProtocolTest, _02ef5d596c101ce01181a7dcd0a294ed81c88dbd) {
 
 // Exposed a bug in the fuzzer.
 TEST_P(PacketProtocolTest, _d9c8d575a34f511dfae936725f8a6752b910e258) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(1),
@@ -285,7 +290,7 @@ TEST_P(PacketProtocolTest, _d9c8d575a34f511dfae936725f8a6752b910e258) {
 
 // Found a bug with ack ordering on writes.
 TEST_P(PacketProtocolTest, _da3f40d81b8c5d0609dc83e2edeb576054c106b8) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(1),
@@ -326,7 +331,7 @@ TEST_P(PacketProtocolTest, _da3f40d81b8c5d0609dc83e2edeb576054c106b8) {
 
 // Found a wraparound bug in tiemr code.
 TEST_P(PacketProtocolTest, _87b138d6497b8f037691af618f319455c6f5a3b0) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01, 0x01, 0x01, 0x01, 0x01};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                5, Border::Prefix(1),
@@ -797,7 +802,7 @@ TEST_P(PacketProtocolTest, _87b138d6497b8f037691af618f319455c6f5a3b0) {
 
 // Exposed a bug with too many outstanding sends.
 TEST_P(PacketProtocolTest, _ffaebbd1370c62dee2d0c6f85553d47a88e6c320) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(1),
@@ -3873,7 +3878,7 @@ TEST_P(PacketProtocolTest, _ffaebbd1370c62dee2d0c6f85553d47a88e6c320) {
 
 // Found a bug in the fuzzer around nack handling.
 TEST_P(PacketProtocolTest, _9bfa77589cb379397dafc6661fee887af34c03de) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(1),
@@ -3901,7 +3906,7 @@ TEST_P(PacketProtocolTest, _9bfa77589cb379397dafc6661fee887af34c03de) {
 }
 
 TEST_P(PacketProtocolTest, _cd8ef3987ba3f1dd092946a8e7047ad4552d0fac) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x01, 0xe9};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                2, Border::Prefix(0),
@@ -3914,7 +3919,7 @@ TEST_P(PacketProtocolTest, _cd8ef3987ba3f1dd092946a8e7047ad4552d0fac) {
 }
 
 TEST_P(PacketProtocolTest, _0c1d445350ec75aadc7a14929adc41e65ebba2f6) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x00};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(4),
@@ -3936,7 +3941,7 @@ TEST_P(PacketProtocolTest, _0c1d445350ec75aadc7a14929adc41e65ebba2f6) {
 }
 
 TEST_P(PacketProtocolTest, _868e9a3a3d4cea4addc390fff43898840efd7507) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {0x0b};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                1, Border::Prefix(0),
@@ -3967,7 +3972,7 @@ TEST_P(PacketProtocolTest, _868e9a3a3d4cea4addc390fff43898840efd7507) {
 }
 
 TEST_P(PacketProtocolTest, _85d2d9a48ade0bf3055dd43b6b5ecbb468346c07) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(0),
@@ -3998,7 +4003,7 @@ TEST_P(PacketProtocolTest, _85d2d9a48ade0bf3055dd43b6b5ecbb468346c07) {
 }
 
 TEST_P(PacketProtocolTest, _12fa5c35c19ac2ff4b0f31b24c18d62458579194) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(1, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(42),
@@ -4058,7 +4063,7 @@ TEST_P(PacketProtocolTest, _12fa5c35c19ac2ff4b0f31b24c18d62458579194) {
 }
 
 TEST_P(PacketProtocolTest, _193597a52cff3e80bc937c4e9635ca5724d2ba17) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4095,7 +4100,7 @@ TEST_P(PacketProtocolTest, _193597a52cff3e80bc937c4e9635ca5724d2ba17) {
 }
 
 TEST_P(PacketProtocolTest, _3a406a2356275258a2c479209b9aa2af30d4f6ac) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4135,7 +4140,7 @@ TEST_P(PacketProtocolTest, _3a406a2356275258a2c479209b9aa2af30d4f6ac) {
 }
 
 TEST_P(PacketProtocolTest, _58c60d38ea46f0dc5f7eb88d1a0c81264bafd6f6) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4169,7 +4174,7 @@ TEST_P(PacketProtocolTest, _58c60d38ea46f0dc5f7eb88d1a0c81264bafd6f6) {
 }
 
 TEST_P(PacketProtocolTest, _5263d304763e36809560f5f03fb2b64ce3290d23) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4206,7 +4211,7 @@ TEST_P(PacketProtocolTest, _5263d304763e36809560f5f03fb2b64ce3290d23) {
 }
 
 TEST_P(PacketProtocolTest, _9dd4fd20942043cf94a266a540cad36aad4bd189) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4240,7 +4245,7 @@ TEST_P(PacketProtocolTest, _9dd4fd20942043cf94a266a540cad36aad4bd189) {
 }
 
 TEST_P(PacketProtocolTest, _1840c624d144d5ae1888b38d0d124981da9bfc3b) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4325,7 +4330,7 @@ TEST_P(PacketProtocolTest, _1840c624d144d5ae1888b38d0d124981da9bfc3b) {
 }
 
 TEST_P(PacketProtocolTest, _29fbbe04441869d515efa7eb1fc5131055d27c1e) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4410,7 +4415,7 @@ TEST_P(PacketProtocolTest, _29fbbe04441869d515efa7eb1fc5131055d27c1e) {
 }
 
 TEST_P(PacketProtocolTest, _493f492251d242ff611a272b088ce943f5b4b061) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4495,7 +4500,7 @@ TEST_P(PacketProtocolTest, _493f492251d242ff611a272b088ce943f5b4b061) {
 }
 
 TEST_P(PacketProtocolTest, _46855031ec6fd0b8ca2e6d7a291a510e8c4a0d23) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4577,7 +4582,7 @@ TEST_P(PacketProtocolTest, _46855031ec6fd0b8ca2e6d7a291a510e8c4a0d23) {
 }
 
 TEST_P(PacketProtocolTest, _5266b27f820a72a53d7f46cb40653677bb9c7987) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4662,7 +4667,7 @@ TEST_P(PacketProtocolTest, _5266b27f820a72a53d7f46cb40653677bb9c7987) {
 }
 
 TEST_P(PacketProtocolTest, _5758e2bf55e70a6f49d3d8b4b603acd897866283) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4747,7 +4752,7 @@ TEST_P(PacketProtocolTest, _5758e2bf55e70a6f49d3d8b4b603acd897866283) {
 }
 
 TEST_P(PacketProtocolTest, _6d6a08cd1d3617f7fa8a43f00b3f465566430461) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4835,7 +4840,7 @@ TEST_P(PacketProtocolTest, _6d6a08cd1d3617f7fa8a43f00b3f465566430461) {
 }
 
 TEST_P(PacketProtocolTest, _6fccc5426a7b80d3a8cd3919680cb98175367857) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -4917,7 +4922,7 @@ TEST_P(PacketProtocolTest, _6fccc5426a7b80d3a8cd3919680cb98175367857) {
 }
 
 TEST_P(PacketProtocolTest, _65daa8c3754fcbb66567d583378341f142d3fa84) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -5002,7 +5007,7 @@ TEST_P(PacketProtocolTest, _65daa8c3754fcbb66567d583378341f142d3fa84) {
 }
 
 TEST_P(PacketProtocolTest, _616e48475addb69c08c6a3b570fbbd3ffb890c68) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -5087,7 +5092,7 @@ TEST_P(PacketProtocolTest, _616e48475addb69c08c6a3b570fbbd3ffb890c68) {
 }
 
 TEST_P(PacketProtocolTest, _7e09301e2b1644abb1cbc0d7433aa8a8452288e2) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
@@ -5178,7 +5183,7 @@ TEST_P(PacketProtocolTest, _7e09301e2b1644abb1cbc0d7433aa8a8452288e2) {
 }
 
 TEST_P(PacketProtocolTest, _9a9d0c4f2766121be0657c11a5fa3d354b7cf63e) {
-  PacketProtocolFuzzer fuzzer(GetParam(), true);
+  PacketProtocolFuzzer fuzzer(GetParam(), FLAGS_verbose);
   static const uint8_t block0[] = {};
   if (!fuzzer.BeginSend(2, Slice::WithInitializerAndBorders(
                                0, Border::Prefix(1),
