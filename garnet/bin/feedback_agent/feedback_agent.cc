@@ -19,11 +19,12 @@ FeedbackAgent::FeedbackAgent(::sys::StartupContext* startup_context)
   ConnectToScenic();
 }
 
-void FeedbackAgent::GetPngScreenshot(GetPngScreenshotCallback callback) {
+void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
+                                  GetScreenshotCallback callback) {
   // We add the provided callback to the vector of pending callbacks we maintain
   // and save a reference to pass to the Scenic callback.
   auto& saved_callback = get_png_screenshot_callbacks_.emplace_back(
-      std::make_unique<GetPngScreenshotCallback>(std::move(callback)));
+      std::make_unique<GetScreenshotCallback>(std::move(callback)));
 
   // If we previously lost the connection to Scenic, we re-attempt to establish
   // it.
@@ -36,16 +37,16 @@ void FeedbackAgent::GetPngScreenshot(GetPngScreenshotCallback callback) {
           fuchsia::ui::scenic::ScreenshotData raw_screenshot, bool success) {
         if (!success) {
           FX_LOGS(ERROR) << "Scenic failed to take screenshot";
-          (*callback)(Status::ERROR, /*screenshot=*/nullptr);
+          (*callback)(/*screenshot=*/nullptr);
           return;
         }
 
-        std::unique_ptr<PngImage> screenshot = std::make_unique<PngImage>();
-        screenshot->data = std::move(raw_screenshot.data);
-        screenshot->dimensions.height_in_px = raw_screenshot.info.height;
-        screenshot->dimensions.width_in_px = raw_screenshot.info.width;
+        std::unique_ptr<Screenshot> screenshot = std::make_unique<Screenshot>();
+        screenshot->image = std::move(raw_screenshot.data);
+        screenshot->dimensions_in_px.height = raw_screenshot.info.height;
+        screenshot->dimensions_in_px.width = raw_screenshot.info.width;
         // TODO(DX-997): convert the raw image to PNG before sending it back.
-        (*callback)(Status::OK, std::move(screenshot));
+        (*callback)(std::move(screenshot));
       });
 }
 
@@ -54,14 +55,14 @@ void FeedbackAgent::ConnectToScenic() {
   scenic_.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "Lost connection to Scenic service";
     is_connected_to_scenic_ = false;
-    this->TerminateAllGetPngScreenshotCallbacks();
+    this->TerminateAllGetScreenshotCallbacks();
   });
   is_connected_to_scenic_ = true;
 }
 
-void FeedbackAgent::TerminateAllGetPngScreenshotCallbacks() {
+void FeedbackAgent::TerminateAllGetScreenshotCallbacks() {
   for (const auto& callback : get_png_screenshot_callbacks_) {
-    (*callback)(Status::ERROR, /*screenshot=*/nullptr);
+    (*callback)(/*screenshot=*/nullptr);
   }
   get_png_screenshot_callbacks_.clear();
 }

@@ -21,25 +21,26 @@ class FeedbackAgent : public DataProvider {
  public:
   FeedbackAgent(::sys::StartupContext* startup_context);
 
-  // Returns a PNG image of the current view.
-  void GetPngScreenshot(GetPngScreenshotCallback callback) override;
+  // Returns an image of the current view encoded in the provided |encoding|.
+  void GetScreenshot(ImageEncoding encoding,
+                     GetScreenshotCallback callback) override;
 
  private:
   // Connects to Scenic and sets up the error handler in case we lose the
   // connection.
   void ConnectToScenic();
 
-  // Signals to all the pending GetPngScreenshot callbacks that an error
-  // occurred, most likely the loss of the connection with Scenic.
-  void TerminateAllGetPngScreenshotCallbacks();
+  // Signals to all the pending GetScreenshot callbacks that an error occurred,
+  // most likely the loss of the connection with Scenic.
+  void TerminateAllGetScreenshotCallbacks();
 
   ::sys::StartupContext* context_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   bool is_connected_to_scenic_;
-  // We keep track of the pending GetPngScreenshot callbacks so we can terminate
+  // We keep track of the pending GetScreenshot callbacks so we can terminate
   // all of them when we lose the connection with Scenic.
-  std::vector<std::unique_ptr<GetPngScreenshotCallback>>
+  std::vector<std::unique_ptr<GetScreenshotCallback>>
       get_png_screenshot_callbacks_;
 };
 

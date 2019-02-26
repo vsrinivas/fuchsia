@@ -36,7 +36,7 @@ executable("unittest") {
   deps = [
     "//garnet/bin/feedback_agent:src",
     "//garnet/public/lib/escher",
-    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
+    "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
@@ -60,7 +60,6 @@ executable("integration_test") {
   deps = [
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/escher/test:gtest_escher",
-    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/fidl/fuchsia.feedback",
     "//third_party/googletest:gtest",

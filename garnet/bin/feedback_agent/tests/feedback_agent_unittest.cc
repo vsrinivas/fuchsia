@@ -10,7 +10,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h>
+#include <garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <lib/escher/util/image_utils.h>
@@ -58,12 +58,12 @@ ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px) {
   return screenshot;
 }
 
-// Returns a PngImage with the right dimensions, no data.
-std::unique_ptr<PngImage> MakeUniquePngImage(const size_t image_dim_in_px) {
-  std::unique_ptr<PngImage> image = std::make_unique<PngImage>();
-  image->dimensions.height_in_px = image_dim_in_px;
-  image->dimensions.width_in_px = image_dim_in_px;
-  return image;
+// Returns a Screenshot with the right dimensions, no image.
+std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
+  std::unique_ptr<Screenshot> screenshot = std::make_unique<Screenshot>();
+  screenshot->dimensions_in_px.height = image_dim_in_px;
+  screenshot->dimensions_in_px.width = image_dim_in_px;
+  return screenshot;
 }
 
 // Represents arguments for Scenic::TakeScreenshot().
@@ -75,23 +75,16 @@ struct TakeScreenshotResponse {
       : screenshot(std::move(data)), success(success){};
 };
 
-// Represents arguments for DataProvider::GetPngScreenshotCallback.
-struct GetPngScreenshotResponse {
-  Status status = Status::UNKNOWN;
-  std::unique_ptr<PngImage> screenshot;
+// Represents arguments for DataProvider::GetScreenshotCallback.
+struct GetScreenshotResponse {
+  std::unique_ptr<Screenshot> screenshot;
 };
 
-// Compares two GetPngScreenshotResponse.
+// Compares two GetScreenshotResponse.
 template <typename ResultListenerT>
-bool DoGetPngScreenshotResponseMatch(const GetPngScreenshotResponse& actual,
-                                     const GetPngScreenshotResponse& expected,
-                                     ResultListenerT* result_listener) {
-  if (actual.status != expected.status) {
-    *result_listener << "Expected status " << expected.status << ", got "
-                     << actual.status;
-    return false;
-  }
-
+bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
+                                  const GetScreenshotResponse& expected,
+                                  ResultListenerT* result_listener) {
   if (actual.screenshot == nullptr && expected.screenshot == nullptr) {
     return true;
   }
@@ -105,10 +98,11 @@ bool DoGetPngScreenshotResponseMatch(const GetPngScreenshotResponse& actual,
   }
   // actual.screenshot and expected.screenshot are now valid.
 
-  if (actual.screenshot->dimensions != expected.screenshot->dimensions) {
+  if (actual.screenshot->dimensions_in_px !=
+      expected.screenshot->dimensions_in_px) {
     *result_listener << "Expected screenshot dimensions "
-                     << expected.screenshot->dimensions << ", got "
-                     << actual.screenshot->dimensions;
+                     << expected.screenshot->dimensions_in_px << ", got "
+                     << actual.screenshot->dimensions_in_px;
     return false;
   }
 
@@ -117,9 +111,9 @@ bool DoGetPngScreenshotResponseMatch(const GetPngScreenshotResponse& actual,
   return true;
 }
 
-// gMock matcher for comparing two GetPngScreenshotResponse.
-MATCHER_P(MatchesGetPngScreenshotResponse, expected, "") {
-  return DoGetPngScreenshotResponseMatch(arg, expected, result_listener);
+// gMock matcher for comparing two GetScreenshotResponse.
+MATCHER_P(MatchesGetScreenshotResponse, expected, "") {
+  return DoGetScreenshotResponseMatch(arg, expected, result_listener);
 }
 
 // Stub Scenic service to return canned responses to Scenic::TakeScreenshot().
@@ -147,11 +141,10 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   void TakeScreenshot(TakeScreenshotCallback callback) override {
     FXL_CHECK(!take_screenshot_responses_.empty())
         << "You need to set up Scenic::TakeScreenshot() responses before "
-           "testing GetPngScreenshot() using "
-           "set_scenic_responses()";
-    TakeScreenshotResponse args = std::move(take_screenshot_responses_[0]);
+           "testing GetScreenshot() using set_scenic_responses()";
+    TakeScreenshotResponse response = std::move(take_screenshot_responses_[0]);
     take_screenshot_responses_.erase(take_screenshot_responses_.begin());
-    callback(std::move(args.screenshot), args.success);
+    callback(std::move(response.screenshot), response.success);
   }
 
   // Stub injection and verification methods.
@@ -198,51 +191,51 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
   std::unique_ptr<::sys::testing::StartupContextForTest> context_;
 };
 
-TEST_F(FeedbackAgentTest, GetPngScreenshot_SucceedOnScenicReturningSuccess) {
+TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   const size_t image_dim_in_px = 10;
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
                                 kSuccess);
   set_scenic_responses(std::move(scenic_responses));
 
-  GetPngScreenshotResponse out;
-  agent_->GetPngScreenshot(
-      [&out](Status status, std::unique_ptr<PngImage> screenshot) {
-        out.status = status;
-        out.screenshot = std::move(screenshot);
+  GetScreenshotResponse feedback_response;
+  agent_->GetScreenshot(
+      ImageEncoding::PNG,
+      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
+        feedback_response.screenshot = std::move(screenshot);
       });
   RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
-  EXPECT_EQ(out.status, Status::OK);
-  ASSERT_NE(out.screenshot, nullptr);
-  EXPECT_EQ(out.screenshot->dimensions.height_in_px, image_dim_in_px);
-  EXPECT_EQ(out.screenshot->dimensions.width_in_px, image_dim_in_px);
-  EXPECT_TRUE(out.screenshot->data.vmo.is_valid());
+  ASSERT_NE(feedback_response.screenshot, nullptr);
+  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.height,
+            image_dim_in_px);
+  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.width,
+            image_dim_in_px);
+  EXPECT_TRUE(feedback_response.screenshot->image.vmo.is_valid());
 }
 
-TEST_F(FeedbackAgentTest, GetPngScreenshot_FailOnScenicReturningFailure) {
+TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   set_scenic_responses(std::move(scenic_responses));
 
-  GetPngScreenshotResponse out;
-  agent_->GetPngScreenshot(
-      [&out](Status status, std::unique_ptr<PngImage> screenshot) {
-        out.status = status;
-        out.screenshot = std::move(screenshot);
+  GetScreenshotResponse feedback_response;
+  agent_->GetScreenshot(
+      ImageEncoding::PNG,
+      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
+        feedback_response.screenshot = std::move(screenshot);
       });
   RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
-  EXPECT_EQ(out.status, Status::ERROR);
-  EXPECT_EQ(out.screenshot, nullptr);
+  EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(FeedbackAgentTest, GetPngScreenshot_ParallelRequests) {
-  // We simulate three calls to FeedbackAgent::GetPngScreenshot(): one for which
+TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
+  // We simulate three calls to FeedbackAgent::GetScreenshot(): one for which
   // the stub Scenic will return a checkerboard 10x10, one for a 20x20 and one
   // failure.
   const size_t num_calls = 3u;
@@ -257,51 +250,47 @@ TEST_F(FeedbackAgentTest, GetPngScreenshot_ParallelRequests) {
   ASSERT_EQ(scenic_responses.size(), num_calls);
   set_scenic_responses(std::move(scenic_responses));
 
-  std::vector<GetPngScreenshotResponse> out;
+  std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
-    agent_->GetPngScreenshot(
-        [&out](Status status, std::unique_ptr<PngImage> image) {
-          out.push_back({status, std::move(image)});
+    agent_->GetScreenshot(
+        ImageEncoding::PNG,
+        [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
+          feedback_responses.push_back({std::move(screenshot)});
         });
   }
   RunLoopUntilIdle();
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
-  // We cannot assume that the order of the FeedbackAgent::GetPngScreenshot()
+  // We cannot assume that the order of the FeedbackAgent::GetScreenshot()
   // calls match the order of the Scenic::TakeScreenshot() callbacks because of
   // the async message loop. Thus we need to match them as sets.
   //
   // We set the expectations in advance and then pass a reference to the gMock
   // matcher using testing::ByRef() because the underlying VMO is not copyable.
-  const GetPngScreenshotResponse expected_0 = {
-      Status::OK, MakeUniquePngImage(image_dim_in_px_0)};
-  const GetPngScreenshotResponse expected_1 = {
-      Status::OK, MakeUniquePngImage(image_dim_in_px_1)};
-  const GetPngScreenshotResponse expected_2 = {Status::ERROR, nullptr};
-  EXPECT_THAT(out,
+  const GetScreenshotResponse expected_0 = {
+      MakeUniqueScreenshot(image_dim_in_px_0)};
+  const GetScreenshotResponse expected_1 = {
+      MakeUniqueScreenshot(image_dim_in_px_1)};
+  const GetScreenshotResponse expected_2 = {nullptr};
+  EXPECT_THAT(feedback_responses,
               testing::UnorderedElementsAreArray({
-                  MatchesGetPngScreenshotResponse(testing::ByRef(expected_0)),
-                  MatchesGetPngScreenshotResponse(testing::ByRef(expected_1)),
-                  MatchesGetPngScreenshotResponse(testing::ByRef(expected_2)),
+                  MatchesGetScreenshotResponse(testing::ByRef(expected_0)),
+                  MatchesGetScreenshotResponse(testing::ByRef(expected_1)),
+                  MatchesGetScreenshotResponse(testing::ByRef(expected_2)),
               }));
 
-  // Additionally, we check that in the OK-status outputs, the VMO is valid.
-  for (const auto& args : out) {
-    if (args.status != Status::OK) {
+  // Additionally, we check that in the non-empty responses, the VMO is valid.
+  for (const auto& response : feedback_responses) {
+    if (response.screenshot == nullptr) {
       continue;
     }
-    ASSERT_NE(args.screenshot, nullptr);
-    EXPECT_TRUE(args.screenshot->data.vmo.is_valid());
-    EXPECT_GE(args.screenshot->data.size, 0u);
+    EXPECT_TRUE(response.screenshot->image.vmo.is_valid());
+    EXPECT_GE(response.screenshot->image.size, 0u);
   }
 }
 
 }  // namespace
-
-// Pretty-prints status in gTest matchers instead of the default byte string in
-// case of failed expectations.
-void PrintTo(const Status status, std::ostream* os) { *os << status; }
 
 }  // namespace feedback
 }  // namespace fuchsia

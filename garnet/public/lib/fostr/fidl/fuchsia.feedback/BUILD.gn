@@ -8,6 +8,7 @@ fostr_fidl("fuchsia.feedback") {
   fidl_target = "//sdk/fidl/fuchsia.feedback"
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
   ]
 }
