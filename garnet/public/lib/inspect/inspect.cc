@@ -46,7 +46,20 @@ void LazyMetric::Set(MetricCallback callback) {
   }
 }
 
-#define DEFINE_PROPERTY_METHODS(CLASS, TYPE)                        \
+#define DEFINE_PROPERTY_METHODS(CLASS, TYPE)                            \
+  CLASS::CLASS() {}                                                     \
+  CLASS::CLASS(internal::EntityWrapper<component::Property> entity) {   \
+    entity_.template emplace<kEntityWrapperVariant>(std::move(entity)); \
+  }                                                                     \
+  void CLASS::Set(TYPE value) {                                         \
+    if (entity_.index() == kEntityWrapperVariant) {                     \
+      auto& entity = entity_.template get<kEntityWrapperVariant>();     \
+      entity.ParentObject()->SetProperty(                               \
+          entity.name(), component::Property(std::move(value)));        \
+    }                                                                   \
+  }
+
+#define DEFINE_LAZY_PROPERTY_METHODS(CLASS, TYPE)                   \
   CLASS::CLASS() {}                                                 \
   CLASS::CLASS(internal::EntityWrapper<component::Property> entity) \
       : entity_(std::move(entity)) {}                               \
@@ -59,8 +72,8 @@ void LazyMetric::Set(MetricCallback callback) {
 
 DEFINE_PROPERTY_METHODS(StringProperty, std::string)
 DEFINE_PROPERTY_METHODS(ByteVectorProperty, VectorValue)
-DEFINE_PROPERTY_METHODS(LazyStringProperty, StringValueCallback)
-DEFINE_PROPERTY_METHODS(LazyByteVectorProperty, VectorValueCallback)
+DEFINE_LAZY_PROPERTY_METHODS(LazyStringProperty, StringValueCallback)
+DEFINE_LAZY_PROPERTY_METHODS(LazyByteVectorProperty, VectorValueCallback)
 
 ChildrenCallback::ChildrenCallback() {}
 
@@ -90,119 +103,139 @@ ChildrenCallback& ChildrenCallback::operator=(ChildrenCallback&& other) {
 }
 
 Object::Object(std::string name)
-    : object_(component::ExposedObject(std::move(name))) {}
+    : Object(component::ExposedObject(std::move(name))) {}
 
 Object::Object(ObjectDir object_dir)
-    : object_(
-          component::ExposedObject(std::move(object_dir))) {}
+    : Object(component::ExposedObject(std::move(object_dir))) {}
+
+Object::Object(component::ExposedObject object) {
+  object_.template emplace<kComponentVariant>(std::move(object));
+}
 
 fuchsia::inspect::Object Object::object() const {
-  return object_ ? object_->object()->ToFidl() : fuchsia::inspect::Object();
+  if (object_.index() == kComponentVariant) {
+    return object_.template get<kComponentVariant>().object()->ToFidl();
+  }
+  return fuchsia::inspect::Object();
 }
 
 component::ObjectDir Object::object_dir() const {
-  return object_ ? component::ObjectDir(object_->object()) : ObjectDir();
+  if (object_.index() == kComponentVariant) {
+    return component::ObjectDir(
+        object_.template get<kComponentVariant>().object());
+  }
+  return component::ObjectDir();
 }
 
 component::Object::StringOutputVector Object::children() const {
-  return object_ ? object_->object()->GetChildren()
-                 : component::Object::StringOutputVector();
+  if (object_.index() == kComponentVariant) {
+    return object_.template get<kComponentVariant>().object()->GetChildren();
+  }
+  return component::Object::StringOutputVector();
 }
 
 Object Object::CreateChild(std::string name) {
-  if (!object_) {
-    return Object();
+  if (object_.index() == kComponentVariant) {
+    component::ExposedObject child(std::move(name));
+    object_.template get<kComponentVariant>().add_child(&child);
+    return Object(std::move(child));
   }
-  component::ExposedObject child(std::move(name));
-  object_->add_child(&child);
-  return Object(std::move(child));
+  return Object();
 }
 
 IntMetric Object::CreateIntMetric(std::string name, int64_t value) {
-  if (!object_) {
-    return IntMetric();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetMetric(name, component::IntMetric(value));
+    return IntMetric(
+        internal::EntityWrapper<component::Metric>(std::move(name), object));
   }
-  object_->object()->SetMetric(name, component::IntMetric(value));
-  return IntMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_->object()));
+  return IntMetric();
 }
 
 UIntMetric Object::CreateUIntMetric(std::string name, uint64_t value) {
-  if (!object_) {
-    return UIntMetric();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetMetric(name, component::UIntMetric(value));
+    return UIntMetric(
+        internal::EntityWrapper<component::Metric>(std::move(name), object));
   }
-  object_->object()->SetMetric(name, component::UIntMetric(value));
-  return UIntMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_->object()));
+  return UIntMetric();
 }
 
 DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
-  if (!object_) {
-    return DoubleMetric();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetMetric(name, component::DoubleMetric(value));
+    return DoubleMetric(
+        internal::EntityWrapper<component::Metric>(std::move(name), object));
   }
-  object_->object()->SetMetric(name, component::DoubleMetric(value));
-  return DoubleMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_->object()));
+  return DoubleMetric();
 }
 
 LazyMetric Object::CreateLazyMetric(std::string name,
                                     component::Metric::ValueCallback callback) {
-  if (!object_) {
-    return LazyMetric();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetMetric(name, component::CallbackMetric(std::move(callback)));
+    return LazyMetric(
+        internal::EntityWrapper<component::Metric>(std::move(name), object));
   }
-  object_->object()->SetMetric(name,
-                               component::CallbackMetric(std::move(callback)));
-  return LazyMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_->object()));
+  return LazyMetric();
 }
 
 StringProperty Object::CreateStringProperty(std::string name,
                                             std::string value) {
-  if (!object_) {
-    return StringProperty();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetProperty(name, component::Property(std::move(value)));
+    return StringProperty(
+        internal::EntityWrapper<component::Property>(std::move(name), object));
   }
-  object_->object()->SetProperty(name, component::Property(std::move(value)));
-  return StringProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_->object()));
+  return StringProperty();
 }
 
 ByteVectorProperty Object::CreateByteVectorProperty(std::string name,
                                                     VectorValue value) {
-  if (!object_) {
-    return ByteVectorProperty();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetProperty(name, component::Property(std::move(value)));
+    return ByteVectorProperty(
+        internal::EntityWrapper<component::Property>(std::move(name), object));
   }
-  object_->object()->SetProperty(name, component::Property(std::move(value)));
-  return ByteVectorProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_->object()));
+  return ByteVectorProperty();
 }
 
 LazyStringProperty Object::CreateLazyStringProperty(std::string name,
                                                     StringValueCallback value) {
-  if (!object_) {
-    return LazyStringProperty();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetProperty(name, component::Property(std::move(value)));
+    return LazyStringProperty(
+        internal::EntityWrapper<component::Property>(std::move(name), object));
   }
-  object_->object()->SetProperty(name, component::Property(std::move(value)));
-  return LazyStringProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_->object()));
+  return LazyStringProperty();
 }
 
 LazyByteVectorProperty Object::CreateLazyByteVectorProperty(
     std::string name, VectorValueCallback value) {
-  if (!object_) {
-    return LazyByteVectorProperty();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetProperty(name, component::Property(std::move(value)));
+    return LazyByteVectorProperty(
+        internal::EntityWrapper<component::Property>(std::move(name), object));
   }
-  object_->object()->SetProperty(name, component::Property(std::move(value)));
-  return LazyByteVectorProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_->object()));
+  return LazyByteVectorProperty();
 }
 
 ChildrenCallback Object::CreateChildrenCallback(
     ChildrenCallbackFunction callback) {
-  if (!object_) {
-    return ChildrenCallback();
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetChildrenCallback(std::move(callback));
+    return ChildrenCallback(object);
   }
-  object_->object()->SetChildrenCallback(std::move(callback));
-  return ChildrenCallback(object_->object());
+  return ChildrenCallback();
 }
 
 std::string UniqueName(const std::string& prefix) {

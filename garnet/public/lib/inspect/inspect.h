@@ -6,7 +6,7 @@
 #define LIB_INSPECT_INSPECT_H_
 
 #include <lib/component/cpp/exposed_object.h>
-#include <lib/fit/optional.h>
+#include <lib/fit/variant.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -67,9 +67,9 @@ class EntityWrapper final {
   }
 
   // Allow moving, disallow copying.
-  EntityWrapper(EntityWrapper& other) = delete;
-  EntityWrapper& operator=(EntityWrapper& other) = delete;
+  EntityWrapper(const EntityWrapper& other) = delete;
   EntityWrapper(EntityWrapper&& other) = default;
+  EntityWrapper& operator=(const EntityWrapper& other) = delete;
   EntityWrapper& operator=(EntityWrapper&& other) {
     // Remove the entity from its parent before moving values over.
     if (parent_obj_) {
@@ -94,7 +94,7 @@ class EntityWrapper final {
 
 }  // namespace internal
 
-// Template for metrics that are concretely stored in memeory (as opposed to
+// Template for metrics that are concretely stored in memory (as opposed to
 // LazyMetrics, which are dynamically created when needed). StaticMetrics
 // can be set, added to, and subtracted from.
 template <typename T>
@@ -106,33 +106,43 @@ class StaticMetric final {
 
   // Set the value of this numeric metric to the given value.
   void Set(T value) {
-    if (entity_) {
-      entity_.ParentObject()->SetMetric(entity_.name(),
-                                        internal::MakeMetric<T>(value));
+    if (entity_.index() == kEntityWrapperVariant) {
+      auto& entity = entity_.template get<kEntityWrapperVariant>();
+      entity.ParentObject()->SetMetric(entity.name(),
+                                       internal::MakeMetric<T>(value));
     }
   }
 
   // Add the given value to the value of this numeric metric.
   void Add(T value) {
-    if (entity_) {
-      entity_.ParentObject()->AddMetric(entity_.name(), value);
+    if (entity_.index() == kEntityWrapperVariant) {
+      auto& entity = entity_.template get<kEntityWrapperVariant>();
+      entity.ParentObject()->AddMetric(entity.name(), value);
     }
   }
 
   // Subtract the given value from the value of this numeric metric.
   void Subtract(T value) {
-    if (entity_) {
-      entity_.ParentObject()->SubMetric(entity_.name(), value);
+    if (entity_.index() == kEntityWrapperVariant) {
+      auto& entity = entity_.template get<kEntityWrapperVariant>();
+      entity.ParentObject()->SubMetric(entity.name(), value);
     }
   }
 
  private:
   friend class ::inspect::Object;
-  // Internal constructor setting an actual value on an Object.
-  explicit StaticMetric(internal::EntityWrapper<component::Metric> entity)
-      : entity_(std::move(entity)) {}
 
-  internal::EntityWrapper<component::Metric> entity_;
+  // Index of the entity wrapper variant of the metric.
+  static const int kEntityWrapperVariant = 1;
+
+  // Internal constructor setting an actual value on an Object.
+  explicit StaticMetric(internal::EntityWrapper<component::Metric> entity) {
+    entity_.template emplace<kEntityWrapperVariant>(std::move(entity));
+  }
+
+  fit::internal::variant<fit::internal::monostate,
+                         internal::EntityWrapper<component::Metric>>
+      entity_;
 };
 
 // Metric wrapping a signed integer.
@@ -179,10 +189,16 @@ class StringProperty final {
 
  private:
   friend class ::inspect::Object;
+
+  // Index of the entity wrapper variant of the property.
+  static const int kEntityWrapperVariant = 1;
+
   // Internal constructor setting an actual value on an Object.
   explicit StringProperty(internal::EntityWrapper<component::Property> entity);
 
-  internal::EntityWrapper<component::Property> entity_;
+  fit::internal::variant<fit::internal::monostate,
+                         internal::EntityWrapper<component::Property>>
+      entity_;
 };
 
 // Property with value given by an array of bytes.
@@ -197,11 +213,17 @@ class ByteVectorProperty final {
 
  private:
   friend class ::inspect::Object;
+
+  // Index of the entity wrapper variant of the property.
+  static const int kEntityWrapperVariant = 1;
+
   // Internal constructor setting an actual value on an Object.
   explicit ByteVectorProperty(
       internal::EntityWrapper<component::Property> entity);
 
-  internal::EntityWrapper<component::Property> entity_;
+  fit::internal::variant<fit::internal::monostate,
+                         internal::EntityWrapper<component::Property>>
+      entity_;
 };
 
 // Callback type for string values.
@@ -219,6 +241,7 @@ class LazyStringProperty final {
 
  private:
   friend class ::inspect::Object;
+
   // Internal constructor setting an actual value on an Object.
   explicit LazyStringProperty(
       internal::EntityWrapper<component::Property> entity);
@@ -241,6 +264,7 @@ class LazyByteVectorProperty final {
 
  private:
   friend class ::inspect::Object;
+
   // Internal constructor setting an actual value on an Object.
   explicit LazyByteVectorProperty(
       internal::EntityWrapper<component::Property> entity);
@@ -273,6 +297,7 @@ class ChildrenCallback final {
 
  private:
   friend class ::inspect::Object;
+
   // Internal constructor setting an actual children callback on an object.
   ChildrenCallback(std::shared_ptr<::component::Object> object);
 
@@ -354,12 +379,14 @@ class Object final {
       ChildrenCallbackFunction callback);
 
  private:
+  static const int kComponentVariant = 1;
+
   // Internal constructor for creating an Object facade in front of an
   // ExposedObject.
-  explicit Object(component::ExposedObject object)
-      : object_(component::ExposedObject(std::move(object))) {}
+  explicit Object(component::ExposedObject object);
 
-  fit::optional<component::ExposedObject> object_;
+  fit::internal::variant<fit::internal::monostate, component::ExposedObject>
+      object_;
 };
 
 // Generate a unique name with the given prefix.
