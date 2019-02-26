@@ -108,7 +108,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n, z
             return ZX_OK;
         });
     }
-    root->SystemfsSetReadonly(getenv("zircon.system.writable") == nullptr);
+    root->SystemfsSetReadonly(true);
     return ZX_OK;
 }
 

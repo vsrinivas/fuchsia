@@ -365,11 +365,6 @@ with `ZX_USER_SIGNAL_0`.  Then `/pkgfs/system` will be mounted as `/system`.
 
 Used with [`zircon.system.pkgfs.cmd`](#zircon.system.pkgfs.cmd), above.
 
-## zircon.system.writable=\<bool>
-
-This option requests that if a minfs partition with the system type GUID is
-found, it is to be mounted read-write rather than read-only.
-
 ## zircon.system.volume=\<arg>
 
 This option specifies where to find the "/system" volume.

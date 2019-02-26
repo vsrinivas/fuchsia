@@ -440,7 +440,8 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
  * location.
  * Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
  * is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
- * GUID of the device does not match a known valid one. Returns ZX_OK if an
+ * GUID of the device does not match a known valid one. Returns
+ * ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
  * attempt to mount is made, without checking mount success.
  */
 zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t* options) {
@@ -455,41 +456,7 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
     }
 
     if (gpt_is_sys_guid(type_guid, read_sz)) {
-        if (watcher->IsSystemMounted()) {
-            return ZX_ERR_ALREADY_BOUND;
-        }
-        if (getenv("zircon.system.blob-init") != nullptr) {
-            printf("fshost: minfs system partition ignored due to zircon.system.blob-init\n");
-            return ZX_ERR_ALREADY_BOUND;
-        }
-        const char* volume = getenv("zircon.system.volume");
-        if (volume != nullptr && !strcmp(volume, "any")) {
-            // Fall-through; we'll take anything.
-        } else if (volume != nullptr && !strcmp(volume, "local")) {
-            // Fall-through only if we can guarantee the partition
-            // is not removable.
-            block_info_t info;
-            if ((ioctl_block_get_info(fd.get(), &info) < 0) ||
-                (info.flags & BLOCK_FLAG_REMOVABLE)) {
-                return ZX_ERR_BAD_STATE;
-            }
-        } else {
-            return ZX_ERR_BAD_STATE;
-        }
-
-        // TODO(ZX-1008): replace getenv with cmdline_bool("zircon.system.writable", false);
-        options->readonly = getenv("zircon.system.writable") == nullptr;
-        options->wait_until_ready = true;
-
-        zx_status_t st =
-            mount(fd.release(), "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
-        if (st != ZX_OK) {
-            printf("fshost: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
-        } else {
-            watcher->FuchsiaStart();
-        }
-
-        return st;
+        return ZX_ERR_NOT_SUPPORTED;
     } else if (gpt_is_data_guid(type_guid, read_sz)) {
         return watcher->MountData(std::move(fd), options);
     } else if (gpt_is_install_guid(type_guid, read_sz)) {
