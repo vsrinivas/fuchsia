@@ -183,8 +183,8 @@ Set the build argument that points to where you installed the toolchains:
 
 ```gn
 # in args.gn or passed to --args
-clang_tool_dir = ../clang-install/bin/
-gcc_tool_dir = ../gcc-install/bin/
+clang_tool_dir = "<absolute path to>/clang-install/bin/"
+gcc_tool_dir = "<absolute path to>/gcc-install/bin/"
 ```
 
 Note that `*_tool_dir` should have a trailing slash. If the `clang` or
