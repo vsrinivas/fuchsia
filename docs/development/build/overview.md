@@ -24,6 +24,12 @@ The contents of products are packages, which may aggregate or reference other
 packages and GN labels that are to be built. See [packages](packages.md)
 for more information.
 
+## Bundles
+
+A bundle is a grouping of related packages within a part of the source tree,
+such as all tools or all tests. A set of top-level bundles are defined in
+[`//bundles`](../../../bundles/README.md).
+
 ## Build targets
 
 Build targets are defined in `BUILD.gn` files scattered all over the source

@@ -52,6 +52,10 @@ pattern:
     * This directory should contain docs for people working in this area
     * Docs for end-developers (or people working in other areas of Fuchsia)
       should be in the top-level docs or sdk repository
+* `bundles/`
+    * This directory contains bundles of package targets in this area. Each area
+      should contain at least a `tests` bundle with unit tests for the area, but
+      may include other bundles.
  * `bin/` (optional)
  * `lib/` (optional)
  * `drivers/` (optional)
@@ -117,6 +121,7 @@ separate repositories that are mapped into the directory structure using `jiri`
  * `.gn`
  * `BUILD.gn`
  * `build/`
+ * `bundles/`
  * `configs/`
  * `integration/`
  * `products/`
