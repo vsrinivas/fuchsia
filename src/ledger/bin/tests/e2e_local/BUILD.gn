@@ -34,5 +34,5 @@ executable("e2e_local") {
     "//src/ledger/bin/app",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

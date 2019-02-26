@@ -69,7 +69,7 @@ source_set("lib") {
     "//third_party/boringssl",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("ledger_instance_factory") {
@@ -104,7 +104,7 @@ source_set("ledger_instance_factory") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 # TODO(https://fuchsia.atlassian.net/projects/LE/issues/LE-607): Consider moving to benchmarks/.
@@ -134,7 +134,7 @@ source_set("get_ledger") {
     "//src/ledger/bin/fidl",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -153,5 +153,5 @@ source_set("unittests") {
     "//zircon/public/lib/async-loop-cpp",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

@@ -31,7 +31,7 @@ source_set("testing") {
     "//src/ledger/bin/testing:lib",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -48,5 +48,5 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

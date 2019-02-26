@@ -18,5 +18,5 @@ source_set("fidl_helpers") {
     "//sdk/lib/fidl/cpp",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

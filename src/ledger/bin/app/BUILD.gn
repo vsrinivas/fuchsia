@@ -37,7 +37,7 @@ executable("app") {
     "//zircon/public/lib/trace-provider",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("lib") {
@@ -139,7 +139,7 @@ source_set("lib") {
     "//garnet/public/lib/component/cpp",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("serialization_version") {
@@ -147,7 +147,7 @@ source_set("serialization_version") {
     "serialization_version.h",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -199,5 +199,5 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

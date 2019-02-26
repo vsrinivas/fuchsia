@@ -33,5 +33,5 @@ executable("ledger_benchmark_put") {
     "put.cc",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

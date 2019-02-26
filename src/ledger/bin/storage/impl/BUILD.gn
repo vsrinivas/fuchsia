@@ -18,7 +18,7 @@ flatbuffer("object_identifier") {
     "object_identifier.fbs",
   ]
 
-  extra_configs = [ "//src/ledger/bin:ledger_config" ]
+  extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("commit_storage") {
@@ -30,7 +30,7 @@ flatbuffer("commit_storage") {
     ":object_identifier",
   ]
 
-  extra_configs = [ "//src/ledger/bin:ledger_config" ]
+  extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("file_index") {
@@ -38,7 +38,7 @@ flatbuffer("file_index") {
     "file_index.fbs",
   ]
 
-  extra_configs = [ "//src/ledger/bin:ledger_config" ]
+  extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 source_set("object_identifier_lib") {
@@ -60,7 +60,7 @@ source_set("object_identifier_lib") {
     "//src/ledger/bin/storage/public",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("lib") {
@@ -123,7 +123,7 @@ source_set("lib") {
     "//third_party/leveldb",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("test_utils") {
@@ -150,7 +150,7 @@ source_set("test_utils") {
     "//src/ledger/bin/testing:lib",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -194,5 +194,5 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

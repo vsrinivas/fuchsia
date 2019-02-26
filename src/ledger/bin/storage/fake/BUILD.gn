@@ -46,5 +46,5 @@ source_set("lib") {
     "//src/ledger/bin/encryption/primitives",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

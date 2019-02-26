@@ -34,5 +34,5 @@ executable("ledger_benchmark_get_entry") {
     "get_entry.cc",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

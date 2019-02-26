@@ -28,5 +28,5 @@ source_set("cobalt") {
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

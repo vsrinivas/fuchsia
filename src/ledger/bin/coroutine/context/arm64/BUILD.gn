@@ -10,5 +10,5 @@ source_set("arm64") {
     "context.h",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

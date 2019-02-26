@@ -46,7 +46,7 @@ source_set("lib") {
     "//third_party/murmurhash",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("tree_node_storage") {
@@ -58,7 +58,7 @@ flatbuffer("tree_node_storage") {
     "//src/ledger/bin/storage/impl:object_identifier",
   ]
 
-  extra_configs = [ "//src/ledger/bin:ledger_config" ]
+  extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 source_set("internal") {
@@ -71,7 +71,7 @@ source_set("internal") {
     "//src/ledger/bin/storage/public",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -101,7 +101,7 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 fuzz_target("encoding_fuzzer") {

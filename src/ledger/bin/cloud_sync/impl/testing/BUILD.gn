@@ -36,5 +36,5 @@ source_set("testing") {
     "//zircon/public/lib/trace",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

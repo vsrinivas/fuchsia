@@ -32,5 +32,5 @@ executable("ledger_benchmark_get_page") {
     "get_page.cc",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

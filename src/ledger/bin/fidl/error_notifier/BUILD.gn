@@ -17,7 +17,7 @@ source_set("error_notifier") {
     "//zircon/public/lib/fit",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 error_notifier_fidl("error_notifier_fidl_test") {
@@ -42,5 +42,5 @@ source_set("unittests") {
     "//zircon/public/lib/async-testutils",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

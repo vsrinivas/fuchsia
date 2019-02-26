@@ -27,7 +27,7 @@ source_set("impl") {
     "//src/ledger/bin/encryption/public",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("encrypted_commit") {
@@ -35,7 +35,7 @@ flatbuffer("encrypted_commit") {
     "encrypted_commit.fbs",
   ]
 
-  extra_configs = [ "//src/ledger/bin:ledger_config" ]
+  extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -54,5 +54,5 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

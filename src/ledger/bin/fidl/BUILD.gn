@@ -38,5 +38,5 @@ source_set("error_notifier") {
     ":error_notifier_public",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

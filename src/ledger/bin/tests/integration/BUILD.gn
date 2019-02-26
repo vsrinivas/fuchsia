@@ -49,7 +49,7 @@ executable("integration") {
     "//third_party/googletest:gtest_main",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("integration_lib") {
@@ -79,5 +79,5 @@ source_set("integration_lib") {
     "//zircon/public/lib/trace-provider",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

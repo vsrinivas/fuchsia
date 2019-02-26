@@ -19,5 +19,5 @@ source_set("fake") {
     "//src/ledger/bin/encryption/public",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

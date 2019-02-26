@@ -26,7 +26,7 @@ source_set("environment") {
     "//zircon/public/lib/async-cpp",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -44,5 +44,5 @@ source_set("unittests") {
     "//peridot/lib/rng:testing",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

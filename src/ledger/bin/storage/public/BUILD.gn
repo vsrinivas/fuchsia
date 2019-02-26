@@ -43,7 +43,7 @@ source_set("public") {
     "//zircon/public/lib/zx",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
@@ -61,5 +61,5 @@ source_set("unittests") {
     "//src/ledger/bin/testing:lib",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }

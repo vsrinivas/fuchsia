@@ -17,7 +17,7 @@ executable("ledger_test_instance_provider_bin") {
     "//src/ledger/bin/fidl",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 
   public_deps = [
     "//peridot/lib/convert",

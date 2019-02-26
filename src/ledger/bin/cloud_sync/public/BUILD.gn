@@ -26,5 +26,5 @@ source_set("public") {
     "//sdk/fidl/fuchsia.ledger.cloud",
   ]
 
-  configs += [ "//src/ledger/bin:ledger_config" ]
+  configs += [ "//src/ledger:ledger_config" ]
 }
