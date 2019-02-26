@@ -14,8 +14,8 @@
 #include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -62,8 +62,10 @@ void TargetImpl::CreateProcessForTesting(uint64_t koid,
 }
 
 void TargetImpl::ImplicitlyDetach() {
-  if (GetProcess())
-    OnKillOrDetachReply(Err(), 0, [](fxl::WeakPtr<Target>, const Err&) {});
+  if (GetProcess()) {
+    OnKillOrDetachReply(TargetObserver::DestroyReason::kDetach, Err(), 0,
+                        [](fxl::WeakPtr<Target>, const Err&) {});
+  }
 }
 
 Target::State TargetImpl::GetState() const { return state_; }
@@ -112,7 +114,7 @@ void TargetImpl::Kill(Callback callback) {
   if (!process_.get()) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-          callback(std::move(weak_ptr), Err("Error detaching: No process."));
+          callback(std::move(weak_ptr), Err("Error killing: No process."));
         });
     return;
   }
@@ -123,7 +125,8 @@ void TargetImpl::Kill(Callback callback) {
       request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::KillReply reply) {
         if (weak_target) {
-          weak_target->OnKillOrDetachReply(err, reply.status,
+          weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kKill,
+                                           err, reply.status,
                                            std::move(callback));
         } else {
           // The reply that the process was launched came after the local
@@ -172,8 +175,9 @@ void TargetImpl::Detach(Callback callback) {
       request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::DetachReply reply) {
         if (weak_target) {
-          weak_target->OnKillOrDetachReply(err, reply.status,
-                                           std::move(callback));
+          weak_target->OnKillOrDetachReply(
+              TargetObserver::DestroyReason::kDetach, err, reply.status,
+              std::move(callback));
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed. We're still OK to dispatch either way.
@@ -199,7 +203,8 @@ void TargetImpl::OnProcessExiting(int return_code) {
 // static
 void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
                                             Callback callback, const Err& err,
-                                            uint64_t koid, uint32_t status,
+                                            uint64_t koid,
+                                            debug_ipc::zx_status_t status,
                                             const std::string& process_name) {
   if (target) {
     target->OnLaunchOrAttachReply(std::move(callback), err, koid, status,
@@ -238,9 +243,8 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
       issue_err = Err("Error launching: Binary not found [%s]",
                       debug_ipc::ZxStatusToString(status));
     } else {
-      issue_err =
-          Err(fxl::StringPrintf("Error launching, status = %s.",
-                                debug_ipc::ZxStatusToString(status)));
+      issue_err = Err(fxl::StringPrintf("Error launching, status = %s.",
+                                        debug_ipc::ZxStatusToString(status)));
     }
   } else {
     Process::StartType start_type = state_ == State::kAttaching
@@ -261,7 +265,8 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
   }
 }
 
-void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
+void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason,
+                                     const Err& err, int32_t status,
                                      Callback callback) {
   FXL_DCHECK(process_.get());  // Should have a process.
 
@@ -274,7 +279,10 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
     // Error from detaching.
     // TODO(davemoore): Not sure what state the target should be if we error
     // upon detach.
-    issue_err = Err(fxl::StringPrintf("Error detaching, status = %d.", status));
+    issue_err =
+        Err(fxl::StringPrintf("Error %sing, status = %s.",
+                              TargetObserver::DestroyReasonToString(reason),
+                              debug_ipc::ZxStatusToString(status)));
   } else {
     // Successfully detached.
     state_ = State::kNone;
@@ -283,10 +291,8 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status,
     // Keep the process alive for the observer call, but remove it from the
     // target as per the observer specification.
     std::unique_ptr<ProcessImpl> doomed_process = std::move(process_);
-    for (auto& observer : observers()) {
-      observer.WillDestroyProcess(this, doomed_process.get(),
-                                  TargetObserver::DestroyReason::kDetach, 0);
-    }
+    for (auto& observer : observers())
+      observer.WillDestroyProcess(this, doomed_process.get(), reason, 0);
   }
 
   callback(GetWeakPtr(), issue_err);

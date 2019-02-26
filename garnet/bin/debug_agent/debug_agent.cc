@@ -111,6 +111,7 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
     return;
   }
   debug_process->OnKill(request, reply);
+  RemoveDebuggedProcess(request.process_koid);
 }
 
 void DebugAgent::OnAttach(std::vector<char> serialized) {

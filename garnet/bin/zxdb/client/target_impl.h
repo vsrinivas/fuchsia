@@ -6,6 +6,7 @@
 #define GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
 
 #include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/client/target_observer.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
@@ -60,13 +61,15 @@ class TargetImpl : public Target {
  private:
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
                                          Callback callback, const Err& err,
-                                         uint64_t koid, uint32_t status,
+                                         uint64_t koid,
+                                         debug_ipc::zx_status_t status,
                                          const std::string& process_name);
   void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
                              debug_ipc::zx_status_t status,
                              const std::string& process_name);
 
-  void OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback);
+  void OnKillOrDetachReply(TargetObserver::DestroyReason reason, const Err& err,
+                           debug_ipc::zx_status_t status, Callback callback);
 
   SystemImpl* system_;  // Owns |this|.
 

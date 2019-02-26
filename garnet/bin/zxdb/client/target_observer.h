@@ -13,6 +13,8 @@ class TargetObserver {
   // Reason for destroying a process object.
   enum class DestroyReason { kExit, kDetach, kKill };
 
+  static const char* DestroyReasonToString(DestroyReason);
+
   // The process could have been newly launched or attached to an existing
   // process.
   //

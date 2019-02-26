@@ -242,7 +242,7 @@ Err DoKill(ConsoleContext* context, const Command& cmd,
   if (!cmd.args().empty())
     return Err("The 'kill' command doesn't take any parameters.");
 
-  cmd.target()->Detach([callback](fxl::WeakPtr<Target> target, const Err& err) {
+  cmd.target()->Kill([callback](fxl::WeakPtr<Target> target, const Err& err) {
     // The ConsoleContext displays messages for stopped processes, so don't
     // display messages when successfully killing.
     ProcessCommandCallback(target, false, err, callback);
