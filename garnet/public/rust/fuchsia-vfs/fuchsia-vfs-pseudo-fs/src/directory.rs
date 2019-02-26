@@ -758,21 +758,38 @@ mod tests {
     }
 
     /// A helper to build the "expected" output for a read_dirents call.
-    fn dirents_add_entry(expected: &mut Write, inode: u64, type_: u8, name: &[u8]) {
-        assert!(
-            name.len() < MAX_FILENAME as usize,
-            "Expected entry name should not exceed MAX_FILENAME ({}) bytes.\n\
-             Got: {:?}\n\
-             Length: {} bytes",
-            MAX_FILENAME,
-            name,
-            name.len()
-        );
+    struct DirentsSameInodeBuilder {
+        expected: Vec<u8>,
+        inode: u64,
+    }
 
-        expected.write_u64::<LittleEndian>(inode).unwrap();
-        expected.write_u8(name.len() as u8).unwrap();
-        expected.write_u8(type_).unwrap();
-        expected.write(name).unwrap();
+    impl DirentsSameInodeBuilder {
+        fn new(inode: u64) -> Self {
+            DirentsSameInodeBuilder { expected: vec![], inode }
+        }
+
+        fn add(&mut self, type_: u8, name: &[u8]) -> &mut Self {
+            assert!(
+                name.len() < MAX_FILENAME as usize,
+                "Expected entry name should not exceed MAX_FILENAME ({}) bytes.\n\
+                 Got: {:?}\n\
+                 Length: {} bytes",
+                MAX_FILENAME,
+                name,
+                name.len()
+            );
+
+            self.expected.write_u64::<LittleEndian>(self.inode).unwrap();
+            self.expected.write_u8(name.len() as u8).unwrap();
+            self.expected.write_u8(type_).unwrap();
+            self.expected.write(name).unwrap();
+
+            self
+        }
+
+        fn into_vec(self) -> Vec<u8> {
+            self.expected
+        }
     }
 
     #[test]
@@ -1295,30 +1312,31 @@ mod tests {
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
-            let mut expected = Vec::new();
             {
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"etc");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"files");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"more");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"uname");
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_FILE, b"files")
+                    .add(DIRENT_TYPE_FILE, b"more")
+                    .add(DIRENT_TYPE_FILE, b"uname");
 
-                assert_read_dirents!(root, 1000, expected);
+                assert_read_dirents!(root, 1000, expected.into_vec());
             }
 
             {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
-                expected.clear();
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"fstab")
+                    .add(DIRENT_TYPE_FILE, b"passwd")
+                    .add(DIRENT_TYPE_FILE, b"shells")
+                    .add(DIRENT_TYPE_DIRECTORY, b"ssh");
 
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"fstab");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"passwd");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"shells");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"ssh");
-
-                assert_read_dirents!(etc_dir, 1000, expected);
+                assert_read_dirents!(etc_dir, 1000, expected.into_vec());
                 assert_close!(etc_dir);
             }
 
@@ -1326,12 +1344,10 @@ mod tests {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                expected.clear();
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
 
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-                dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"sshd_config");
-
-                assert_read_dirents!(ssh_dir, 1000, expected);
+                assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
                 assert_close!(ssh_dir);
             }
 
@@ -1349,29 +1365,31 @@ mod tests {
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
-            let mut expected = Vec::new();
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Entry header is 10 bytes + length of the name in bytes.
+                // (10 + 1) = 11
+                expected.add(DIRENT_TYPE_DIRECTORY, b".");
+                assert_read_dirents!(root, 11, expected.into_vec());
+            }
 
-            // Entry header is 10 bytes + length of the name in bytes.
-            // (10 + 1) = 11
-            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-            assert_read_dirents!(root, 11, expected);
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    // (10 + 3) = 13
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    // 13 + (10 + 5) = 28
+                    .add(DIRENT_TYPE_FILE, b"files");
+                assert_read_dirents!(root, 28, expected.into_vec());
+            }
 
-            expected.clear();
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_FILE, b"more").add(DIRENT_TYPE_FILE, b"uname");
+                assert_read_dirents!(root, 100, expected.into_vec());
+            }
 
-            // (10 + 3) = 13
-            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"etc");
-            // 13 + (10 + 5) = 28
-            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"files");
-            assert_read_dirents!(root, 28, expected);
-
-            expected.clear();
-
-            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"more");
-            dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"uname");
-            assert_read_dirents!(root, 100, expected);
-
-            expected.clear();
-            assert_read_dirents!(root, 100, expected);
+            assert_read_dirents!(root, 100, vec![]);
         });
     }
 
@@ -1461,26 +1479,27 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_FLAG_NODE_REFERENCE,
             root,
             async move |root| {
-                let mut expected = Vec::new();
                 {
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"etc");
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"files");
+                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                    expected
+                        .add(DIRENT_TYPE_DIRECTORY, b".")
+                        .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                        .add(DIRENT_TYPE_FILE, b"files");
 
-                    assert_read_dirents!(root, 1000, expected);
+                    assert_read_dirents!(root, 1000, expected.into_vec());
                 }
 
                 {
                     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                     let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
-                    expected.clear();
+                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                    expected
+                        .add(DIRENT_TYPE_DIRECTORY, b".")
+                        .add(DIRENT_TYPE_FILE, b"fstab")
+                        .add(DIRENT_TYPE_DIRECTORY, b"ssh");
 
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"fstab");
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"ssh");
-
-                    assert_read_dirents!(etc_dir, 1000, expected);
+                    assert_read_dirents!(etc_dir, 1000, expected.into_vec());
                     assert_close!(etc_dir);
                 }
 
@@ -1488,12 +1507,10 @@ mod tests {
                     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                     let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                    expected.clear();
+                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                    expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
 
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
-                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"sshd_config");
-
-                    assert_read_dirents!(ssh_dir, 1000, expected);
+                    assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
                     assert_close!(ssh_dir);
                 }
 
