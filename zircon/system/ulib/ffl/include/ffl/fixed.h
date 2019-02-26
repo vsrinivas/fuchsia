@@ -90,17 +90,33 @@ public:
     // Returns the closest integer value greater-than or equal-to this fixed-
     // point value.
     constexpr Integer Ceiling() const {
-        const auto value = typename Format::Intermediate{value_};
-        return Format::Saturate(value + Format::FractionalMask) / Format::Power;
+        using Intermediate = typename Format::Intermediate;
+        const Intermediate value = value_;
+        const Intermediate power = Format::Power;
+        const Intermediate saturated_value = Format::Saturate(value + Format::FractionalMask);
+        return static_cast<Integer>(saturated_value / power);
     }
 
     // Returns the closest integer value less-than or equal-to this fixed-point
     // value.
-    constexpr Integer Floor() const { return value_ / Format::Power; }
+    constexpr Integer Floor() const {
+        using Intermediate = typename Format::Intermediate;
+        const Intermediate power = Format::Power;
+        const Intermediate value = value_ & Format::IntegralMask;
+        return static_cast<Integer>(value / power);
+    }
 
     // Returns the rounded value of this fixed-point value as an integer.
     constexpr Integer Round() const {
-        return Format::Saturate(Format::Round(value_) / Format::Power);
+        using Intermediate = typename Format::Intermediate;
+        const Intermediate power = Format::Power;
+        const Intermediate rounded_value = Format::Round(value_);
+        return Format::Saturate(static_cast<Intermediate>(rounded_value / power));
+    }
+
+    // Returns the fractional component of this fixed-point value.
+    constexpr Fixed Fraction() const {
+        return *this - Fixed{Floor()};
     }
 
     // Relational operators for same-typed values.

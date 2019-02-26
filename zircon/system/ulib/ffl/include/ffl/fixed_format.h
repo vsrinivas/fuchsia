@@ -60,14 +60,15 @@ struct FixedFormat {
 
     static constexpr Integer Min = std::numeric_limits<Integer>::min();
     static constexpr Integer Max = std::numeric_limits<Integer>::max();
-    static constexpr Integer IntegralMin = Min / static_cast<Integer>(Power);
-    static constexpr Integer IntegralMax = Max / static_cast<Integer>(Power);
+    static constexpr Integer IntegralMin = static_cast<Integer>(Min / Power);
+    static constexpr Integer IntegralMax = static_cast<Integer>(Max / Power);
 
     // Assert that the template arguments are valid.
     static_assert(std::is_integral_v<Integer>,
                   "The Integer template parameter must be an integral type!");
-    static_assert(FractionalBits < Bits,
-                  "The number of fractional bits must fit in the base integral type!");
+    static_assert((std::is_signed_v<Integer> && FractionalBits < Bits) ||
+                  (!std::is_signed_v<Integer> && FractionalBits <= Bits),
+                  "The number of fractional bits must fit within the positive bits!");
 
     // Trivially converts from Integer to Intermediate type.
     static constexpr Intermediate ToIntermediate(Intermediate value) {

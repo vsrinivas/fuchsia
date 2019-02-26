@@ -228,16 +228,18 @@ private:
         // smaller, unless the type is already maximally wide. It is up to the
         // user to ensure that multiplication does not exceed the maximum
         // supported precision.
-        using Intermediate = std::conditional_t<LeftFormat::Bits >= RightFormat::Bits,
+        using Integer = std::conditional_t<LeftFormat::Bits >= RightFormat::Bits,
                                                 typename LeftFormat::Intermediate,
                                                 typename RightFormat::Intermediate>;
         const size_t FractionalBits = LeftFormat::FractionalBits + RightFormat::FractionalBits;
-        using IntermediateFormat = FixedFormat<Intermediate, FractionalBits>;
+        using IntermediateFormat = FixedFormat<Integer, FractionalBits>;
+        using Intermediate = typename IntermediateFormat::Intermediate;
 
-        const Intermediate left_value = left.value;
-        const Intermediate right_value = right.value;
+        const Integer left_value = left.value;
+        const Integer right_value = right.value;
+        const auto value = static_cast<Intermediate>(left_value * right_value);
 
-        return Value<IntermediateFormat>{left_value * right_value};
+        return Value<IntermediateFormat>{value};
     }
 };
 
@@ -262,14 +264,16 @@ struct Expression<Operation::Division,
 private:
     template <typename TargetFormat, typename LeftFormat, typename RightFormat>
     static constexpr auto Perform(TargetFormat, Value<LeftFormat> left, Value<RightFormat> right) {
-        // Select the intermediate precision based on the argument format with
-        // the largest precision. The intermediate format precision is
-        // guaranteed to be sufficient for division with itself or smaller,
-        // unless the type is already maximally wide. It is up to the user to
-        // ensure that division does not exceed the maximum supported precision.
-        using Intermediate = std::conditional_t<LeftFormat::Bits >= RightFormat::Bits,
-                                                typename LeftFormat::Intermediate,
-                                                typename RightFormat::Intermediate>;
+        // Select the intermediate precision based on the format with the
+        // largest precision. The intermediate format precision is guaranteed
+        // to be sufficient for division with itself or smaller, unless the type
+        // is already maximally wide. It is up to the user to ensure that
+        // division does not exceed the maximum supported precision.
+        using LeftOrRightFormat = std::conditional_t<LeftFormat::Bits >= RightFormat::Bits,
+                                                     LeftFormat, RightFormat>;
+        using Intermediate = std::conditional_t<LeftOrRightFormat::Bits >= TargetFormat::Bits,
+                                                typename LeftOrRightFormat::Intermediate,
+                                                typename TargetFormat::Intermediate>;
         const size_t FractionalBits = TargetFormat::FractionalBits + RightFormat::FractionalBits;
         using IntermediateFormat = FixedFormat<Intermediate, FractionalBits>;
         using QuotientFormat = FixedFormat<Intermediate, TargetFormat::FractionalBits>;
