@@ -64,7 +64,7 @@ mod tests {
         let example_json = r#"{ "program": { "binary": "bin/app"
 }, "sandbox": {
 "dev": [
-"class/camera" ], "features": [ "deprecated-all-services",
+"class/camera" ], "features": [
  "persistent-storage", "vulkan"] } }"#;
         let tmp_dir = TempDir::new().unwrap();
 
@@ -87,7 +87,7 @@ mod tests {
 
         let mut buffer = String::new();
         File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
-        assert_eq!(14, count_num_newlines(&buffer));
+        assert_eq!(13, count_num_newlines(&buffer));
     }
 
     #[test]

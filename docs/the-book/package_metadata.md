@@ -218,10 +218,6 @@ The set of currently known features are as follows:
   graphics interface. This adds layer configuration data in the `/config/vulkan`
   directory in the package's namespace.
 
-- `deprecated-all-services`, which grants the component access to all services
-  in its environment, instead of the whitelist in `services`. This feature is
-  deprecated and should not be used for new components.
-
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 

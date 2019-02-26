@@ -79,8 +79,7 @@
               "shell-commands",
               "root-ssl-certificates",
               "system-temp",
-              "vulkan",
-              "deprecated-all-services"
+              "vulkan"
             ]
           }
         },

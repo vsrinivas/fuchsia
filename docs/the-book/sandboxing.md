@@ -50,12 +50,6 @@ components.
 Processes that are not components may or may not have `/svc`. These processes
 receive whatever `/svc` their creator decided to provide to them.
 
-*NOTE:* In the past, there existed no mechanism for service sandboxing and a
-component received all services in its environment. Pre-existing components
-have been grandfathered to receive all services with the
-`deprecated-all-services` feature, which will eventually be removed. Please do
-not use `deprecated-all-services` for new components.
-
 ## Configuring additional namespaces
 
 If a process requires access to additional resources (e.g., device drivers),
