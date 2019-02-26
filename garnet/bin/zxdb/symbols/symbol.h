@@ -29,8 +29,36 @@ class Value;
 class Variable;
 
 // Represents the type of a variable. This is a deserialized version of the
-// various DWARF DIE entries that define types. It is normally generated from
-// a LazySymbol from a DIE reference.
+// various DWARF DIEs ("Debug Information Entry" -- a record in the DWARF file)
+// that define types.
+//
+// SYMBOL MEMORY MODEL
+// -------------------
+// Symbols are reference counted and have references to other Symbols via a
+// LazySymbol object which allows lazy decoding of the DWARF data. These are
+// not cached or re-used so we can get many duplicate Symbol objects for the
+// same DIE. Therefore, Symbol object identity is not a way to compare two
+// symbols. Even if these were unified, DWARF will often encode the same thing
+// in each compilation unit it is needed in, so object identity can never work
+// in DWARF context.
+//
+// This non-caching behavior is important to prevent reference cycles that
+// would cause memory leaks. Not only does each symbol reference its parent,
+// there are complex and almost-arbitrary links between DIEs that don't work
+// well with the reference-counting used by symbols.
+//
+// A downside to this design is that we might decode the same symbol multiple
+// times and end up with many copies of the same data, both of which are
+// inefficient.
+//
+// The main alternative would be to remove reference counting and instead
+// maintain a per-module mapping of DIE address to decoded symbols. Then links
+// between Symbol objects can either be DIE addresses that are looked up in the
+// module every time they're needed (lets the module free things that haven't
+// been used in a while) or object pointers (avoids the intermediate lookup but
+// means objects can never be freed without unloading the whole module). This
+// scheme would mean that symbols will be freed when the module is removed,
+// which will require weak pointers from the expression system.
 class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
  public:
   // Not a DWARF tag, this is used to indicate "not present."
