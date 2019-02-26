@@ -70,7 +70,7 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.IntVar(&cmd.mdnsPort, "port", 5353, "The port your mDNS servers operate on.")
 	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
-	f.IntVar(&cmd.deviceLimit, "device_limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
+	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 }
 
 // Extracts the IP from its argument, returning an error if the type is unsupported.

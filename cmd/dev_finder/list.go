@@ -43,7 +43,7 @@ func (*listCmd) Synopsis() string {
 
 func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 	cmd.SetCommonFlags(f)
-	f.StringVar(&cmd.domainFilter, "domain_filter", "", "When using the \"list\" command, returns only devices that match this domain name.")
+	f.StringVar(&cmd.domainFilter, "domain-filter", "", "When using the \"list\" command, returns only devices that match this domain name.")
 	f.BoolVar(&cmd.fullInfo, "full", false, "Print device address and domain")
 }
 
