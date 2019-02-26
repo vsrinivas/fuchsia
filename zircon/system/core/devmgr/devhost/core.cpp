@@ -25,6 +25,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 namespace devmgr {
@@ -346,24 +347,23 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const char* proxy_args, zx::channel client_remote) REQ_DM_LOCK {
-    auto fail = [&dev](zx_status_t status) {
+    auto mark_dead = fbl::MakeAutoCall([&dev]() {
         if (dev) {
             dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
         }
-        return status;
-    };
+    });
 
     zx_status_t status;
     if ((status = device_validate(dev)) < 0) {
-        return fail(status);
+        return status;
     }
     if (parent == nullptr) {
         printf("device_add: cannot add %p(%s) to nullptr parent\n", dev.get(), dev->name);
-        return fail(ZX_ERR_NOT_SUPPORTED);
+        return ZX_ERR_NOT_SUPPORTED;
     }
     if (parent->flags & DEV_FLAG_DEAD) {
         printf("device add: %p: is dead, cannot add child %p\n", parent.get(), dev.get());
-        return fail(ZX_ERR_BAD_STATE);
+        return ZX_ERR_BAD_STATE;
     }
 
     BindContext* bind_ctx = nullptr;
@@ -394,7 +394,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     if (!dev->event.is_valid() &&
         ((status = zx::eventpair::create(0, &dev->event, &dev->local_event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n", dev.get(), dev->name, status);
-        return fail(status);
+        return status;
     }
 
     dev->flags |= DEV_FLAG_BUSY;
@@ -409,6 +409,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
         dev->flags &= (~DEV_FLAG_BUSY);
         dev->rpc = zx::unowned_channel(creation_ctx->rpc);
         creation_ctx->child = dev;
+        mark_dead.cancel();
         return ZX_OK;
     }
 
@@ -439,6 +440,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     if (bind_ctx && (bind_ctx->child == nullptr)) {
         bind_ctx->child = dev;
     }
+    mark_dead.cancel();
     return ZX_OK;
 }
 
