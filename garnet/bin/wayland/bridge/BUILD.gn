@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-trace",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
     "//sdk/fidl/fuchsia.guest:fuchsia.guest-rustc",

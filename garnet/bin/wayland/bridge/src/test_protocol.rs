@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
+use fuchsia_trace as ftrace;
 use fuchsia_wayland_core as wl;
 
 use crate::client::Client;
@@ -56,6 +57,13 @@ impl wl::IntoMessage for TestMessage {
 impl wl::MessageType for TestMessage {
     fn log(&self, this: wl::ObjectId) -> String {
         format!("TestMessage@{}", this)
+    }
+
+    fn message_name(&self) -> &'static std::ffi::CStr {
+        match self {
+            TestMessage::Message1 => ftrace::cstr!("test_message::message1"),
+            TestMessage::Message2 => ftrace::cstr!("test_message::message2"),
+        }
     }
 }
 

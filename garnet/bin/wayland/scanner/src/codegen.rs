@@ -37,6 +37,7 @@ impl<W: io::Write> Codegen<W> {
 #![allow(warnings)]
 use bitflags::*;
 use failure;
+use fuchsia_trace;
 use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
                             NewId, NewObject, ObjectId, EncodeError, DecodeError,
@@ -210,6 +211,22 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
         }
         writeln!(self.w, "        }}")?;
         writeln!(self.w, "    }}")?;
+
+        writeln!(self.w, "    fn message_name(&self) -> &'static std::ffi::CStr{{")?;
+        writeln!(self.w, "        match *self {{")?;
+        for message in messages.iter() {
+            writeln!(
+                self.w,
+                "            {}::{} {{ .. }} => fuchsia_trace::cstr!(\"{}::{}\"),",
+                name,
+                message.rust_name(),
+                interface.name,
+                message.name
+            )?;
+        }
+        writeln!(self.w, "        }}")?;
+        writeln!(self.w, "    }}")?;
+
         writeln!(self.w, "}}")?;
         Ok(())
     }

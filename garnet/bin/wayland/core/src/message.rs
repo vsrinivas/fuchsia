@@ -7,6 +7,7 @@ use std::io::{self, Read, Write};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use failure::Fail;
 
+use fuchsia_trace as ftrace;
 use fuchsia_zircon as zx;
 
 use crate::{Fixed, NewId, ObjectId};
@@ -182,6 +183,7 @@ impl Message {
     /// Converts the value in |arg| into the appropriate wire format
     /// serialization.
     pub fn write_arg(&mut self, arg: Arg) -> io::Result<()> {
+        let _scope = ftrace::duration!("wayland", "Message::write_arg").end_on_drop();
         match arg {
             Arg::Int(i) => self.byte_buf.write_i32::<NativeEndian>(i),
             Arg::Uint(i) => self.byte_buf.write_u32::<NativeEndian>(i),
@@ -199,6 +201,7 @@ impl Message {
 
     /// Reads an Arg out of this Message and return the value.
     pub fn read_arg(&mut self, arg: ArgKind) -> io::Result<Arg> {
+        let _scope = ftrace::duration!("wayland", "Message::read_arg").end_on_drop();
         match arg {
             ArgKind::Int => self.byte_buf.read_i32::<NativeEndian>().map(Arg::Int),
             ArgKind::Uint => self.byte_buf.read_u32::<NativeEndian>().map(Arg::Uint),
@@ -231,11 +234,16 @@ impl Message {
 
     /// Reads the set of arguments specified by the given &[ArgKind].
     pub fn read_args(&mut self, args: &[ArgKind]) -> io::Result<Vec<Arg>> {
+        let _scope = ftrace::duration!("wayland", "Message::read_args", "len" => args.len() as u64)
+            .end_on_drop();
         args.iter().map(|arg| self.read_arg(*arg)).collect()
     }
 
     /// Reads the set of arguments specified by the given &[ArgKind].
     pub fn write_args(&mut self, args: Vec<Arg>) -> io::Result<()> {
+        let _scope =
+            ftrace::duration!("wayland", "Message::write_args", "len" => args.len() as u64)
+                .end_on_drop();
         args.into_iter().try_for_each(|arg| self.write_arg(arg))?;
         Ok(())
     }

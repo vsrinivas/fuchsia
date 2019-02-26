@@ -21,6 +21,12 @@ pub type NewId = u32;
 pub trait MessageType {
     /// Generates a string suitable for protocol logging this message.
     fn log(&self, this: ObjectId) -> String;
+
+    /// Returns a static CStr reference that describes the interface/method of
+    /// this message.
+    ///
+    /// Ex: 'wl_interface::method_name'
+    fn message_name(&self) -> &'static std::ffi::CStr;
 }
 
 /// Trait to be implemented by any type used as an interface 'event'.

@@ -12,6 +12,7 @@ rustc_library("core") {
   with_unit_tests = true
   deps = [
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-trace",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
