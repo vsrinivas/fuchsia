@@ -567,20 +567,4 @@ multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_IO   = 2;
 ]);
 
-#[cfg(target_arch = "x86_64")]
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct zx_vcpu_create_args_t {
-    pub ip: zx_vaddr_t,
-    pub cr3: zx_vaddr_t,
-    pub apic_vmo: zx_handle_t,
-}
-
-#[cfg(not(target_arch = "x86_64"))]
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct zx_vcpu_create_args_t {
-    pub ip: zx_vaddr_t,
-}
-
 include!("definitions.rs");

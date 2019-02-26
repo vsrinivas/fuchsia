@@ -851,43 +851,43 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_guest_set_trap(
-        guest: zx_handle_t,
+        handle: zx_handle_t,
         kind: zx_guest_trap_t,
         addr: zx_vaddr_t,
-        len: usize,
-        port: zx_handle_t,
+        size: usize,
+        port_handle: zx_handle_t,
         key: u64
         ) -> zx_status_t;
 
     pub fn zx_vcpu_create(
         guest: zx_handle_t,
         options: u32,
-        args: *const zx_vcpu_create_args_t,
+        entry: zx_vaddr_t,
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_vcpu_resume(
-        vcpu: zx_handle_t,
+        handle: zx_handle_t,
         packet: *mut zx_port_packet_t
         ) -> zx_status_t;
 
     pub fn zx_vcpu_interrupt(
-        vcpu: zx_handle_t,
+        handle: zx_handle_t,
         vector: u32
         ) -> zx_status_t;
 
     pub fn zx_vcpu_read_state(
-        vcpu: zx_handle_t,
+        handle: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        buffer_size: usize,
+        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_vcpu_write_state(
-        vcpu: zx_handle_t,
+        handle: zx_handle_t,
         kind: u32,
         buffer: *const u8,
-        buffer_size: usize,
+        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_system_mexec(
