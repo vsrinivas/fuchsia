@@ -17,7 +17,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/future.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/log_settings_command_line.h>

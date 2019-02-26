@@ -7,7 +7,9 @@
 #include <fcntl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>

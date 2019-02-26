@@ -14,7 +14,9 @@
 #include "gmock/gmock.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fdio/util.h"
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/strings/string_printf.h"

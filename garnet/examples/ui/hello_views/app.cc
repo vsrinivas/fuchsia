@@ -8,7 +8,9 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>

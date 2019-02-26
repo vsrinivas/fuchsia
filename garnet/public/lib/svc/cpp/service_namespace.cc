@@ -7,7 +7,9 @@
 #include <fcntl.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>

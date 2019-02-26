@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <test/sysmgr/cpp/fidl.h>
 #include "garnet/bin/appmgr/appmgr.h"

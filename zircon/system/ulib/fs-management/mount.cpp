@@ -17,7 +17,9 @@
 #include <fs/client.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>

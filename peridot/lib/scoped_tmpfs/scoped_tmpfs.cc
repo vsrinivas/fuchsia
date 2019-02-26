@@ -4,7 +4,9 @@
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/sync/completion.h>

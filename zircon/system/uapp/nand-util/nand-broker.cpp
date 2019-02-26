@@ -11,7 +11,9 @@
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>

@@ -6,7 +6,9 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/gpu/clock/c/fidl.h>
 #include <inttypes.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <stdio.h>
 #include <string.h>

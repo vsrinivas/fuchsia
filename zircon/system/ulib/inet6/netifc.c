@@ -27,7 +27,9 @@
 #include <inet6/netifc.h>
 
 #include <lib/fdio/io.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 
 #define ALIGN(n, a) (((n) + ((a) - 1)) & ~((a) - 1))

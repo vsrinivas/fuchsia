@@ -5,7 +5,9 @@
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <zircon/status.h>
 
 #include "lib/fxl/logging.h"

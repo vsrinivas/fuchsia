@@ -4,7 +4,9 @@
 
 // A helper library for connecting to the trace manager via fdio.
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <trace-provider/fdio_connect.h>
 

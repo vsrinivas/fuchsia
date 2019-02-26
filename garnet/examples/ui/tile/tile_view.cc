@@ -6,7 +6,9 @@
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/split_string.h>

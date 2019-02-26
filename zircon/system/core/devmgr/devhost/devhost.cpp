@@ -33,7 +33,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
@@ -41,11 +41,11 @@
 #include <lib/zxio/null.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
-#include "main.h"
-#include "tracing.h"
 #include "../shared/env.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
+#include "main.h"
+#include "tracing.h"
 
 zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
     *out_driver = fbl::AdoptRef(new zx_driver());

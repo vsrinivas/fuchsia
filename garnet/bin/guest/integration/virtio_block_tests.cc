@@ -5,7 +5,9 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <gmock/gmock.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>

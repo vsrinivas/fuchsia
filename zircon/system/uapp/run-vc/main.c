@@ -6,7 +6,9 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <limits.h>
 #include <stdbool.h>

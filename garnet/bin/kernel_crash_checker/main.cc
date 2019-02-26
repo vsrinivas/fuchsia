@@ -13,7 +13,9 @@
 #include <fuchsia/net/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/strings.h>

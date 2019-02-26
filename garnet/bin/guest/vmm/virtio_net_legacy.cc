@@ -10,7 +10,9 @@
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fxl/logging.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>

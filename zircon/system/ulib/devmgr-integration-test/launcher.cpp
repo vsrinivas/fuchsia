@@ -9,7 +9,9 @@
 
 #include <fbl/algorithm.h>
 #include <lib/devmgr-launcher/launch.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>

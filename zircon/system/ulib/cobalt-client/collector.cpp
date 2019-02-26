@@ -12,7 +12,9 @@
 #include <cobalt-client/cpp/collector-internal.h>
 
 #include <fuchsia/cobalt/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/zx/channel.h>
 #endif

@@ -656,7 +656,7 @@ The complete program is as follows:
 #include <ctype.h>
 
 #include <zircon/syscalls.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fdio.h>
 
 // (1) include the generated definition file
 #include <zircon/sample/number/c/fidl.h>

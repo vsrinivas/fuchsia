@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <fs/synchronous-vfs.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>

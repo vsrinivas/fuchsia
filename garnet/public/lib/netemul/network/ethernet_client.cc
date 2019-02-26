@@ -8,7 +8,9 @@
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
 #include <zircon/status.h>

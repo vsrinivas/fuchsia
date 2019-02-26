@@ -8,7 +8,9 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"

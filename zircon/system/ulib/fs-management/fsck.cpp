@@ -12,7 +12,9 @@
 
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>

@@ -9,7 +9,9 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 
 #include "lib/fsl/socket/socket_drainer.h"

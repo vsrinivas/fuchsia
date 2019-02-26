@@ -14,7 +14,9 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>

@@ -19,7 +19,9 @@
 #include <zircon/device/ktrace.h>
 #include <zircon/syscalls.h>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>

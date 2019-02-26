@@ -14,7 +14,9 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/resource.h>
 

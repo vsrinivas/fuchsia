@@ -6,6 +6,9 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/util.h>
 #include <string.h>
 #include <zircon/device/vfs.h>

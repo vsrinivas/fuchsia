@@ -7,7 +7,9 @@
 #include <fbl/algorithm.h>
 #include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/logger/provider.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/profile/profile.h>

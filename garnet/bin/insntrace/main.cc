@@ -13,7 +13,9 @@
 
 #include <iostream>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"

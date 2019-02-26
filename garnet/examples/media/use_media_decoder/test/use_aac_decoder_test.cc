@@ -19,7 +19,9 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"

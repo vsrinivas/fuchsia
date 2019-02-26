@@ -17,7 +17,7 @@
 
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/directory.h>
 #include <pretty/hexdump.h>
 #include <zircon/syscalls.h>
 

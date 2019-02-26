@@ -9,7 +9,9 @@
 #include <string.h>
 #include <threads.h>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>

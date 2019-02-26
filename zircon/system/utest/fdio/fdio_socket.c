@@ -6,7 +6,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <unittest/unittest.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

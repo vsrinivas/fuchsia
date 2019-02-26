@@ -12,7 +12,9 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/component/cpp/expose.h>
 #include <lib/component/cpp/object_dir.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>

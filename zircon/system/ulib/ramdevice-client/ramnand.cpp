@@ -14,7 +14,9 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/types.h>
 

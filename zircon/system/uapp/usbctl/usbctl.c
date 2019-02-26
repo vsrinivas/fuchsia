@@ -5,13 +5,17 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <ddk/protocol/usb/modeswitch.h>
 #include <fuchsia/usb/virtualbus/c/fidl.h>
 

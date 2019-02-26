@@ -17,7 +17,9 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>

@@ -6,7 +6,9 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <virtio/block.h>
 
 #include "garnet/bin/guest/vmm/device/block.h"

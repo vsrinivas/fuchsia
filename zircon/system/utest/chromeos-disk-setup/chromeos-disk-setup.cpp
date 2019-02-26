@@ -11,7 +11,9 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>

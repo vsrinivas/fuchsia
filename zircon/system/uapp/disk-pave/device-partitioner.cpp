@@ -16,7 +16,9 @@
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <gpt/cros.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/status.h>

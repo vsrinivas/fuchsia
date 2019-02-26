@@ -7,7 +7,9 @@
 #include <stack>
 
 #include <fuchsia/io/cpp/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/files/path.h>

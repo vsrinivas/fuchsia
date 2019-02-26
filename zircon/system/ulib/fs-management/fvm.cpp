@@ -17,7 +17,9 @@
 #include <fs-management/fvm.h>
 #include <fvm/format.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>

@@ -4,7 +4,9 @@
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <inet6/inet6.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/process.h>

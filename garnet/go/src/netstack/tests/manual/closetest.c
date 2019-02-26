@@ -4,7 +4,9 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>

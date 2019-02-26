@@ -8,7 +8,9 @@
 
 #include <lib/async_promise/executor.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/bridge.h>
 #include <zircon/status.h>
 

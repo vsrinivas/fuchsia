@@ -10,7 +10,9 @@
 
 #include <string>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include "fuchsia/developer/tiles/cpp/fidl.h"
 #include "lib/fsl/io/fd.h"

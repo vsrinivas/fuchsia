@@ -9,7 +9,9 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/power/c/fidl.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

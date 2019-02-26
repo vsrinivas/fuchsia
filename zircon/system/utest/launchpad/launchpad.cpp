@@ -20,7 +20,9 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 

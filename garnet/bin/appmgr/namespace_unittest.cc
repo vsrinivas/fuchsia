@@ -13,7 +13,9 @@
 #include <fs/pseudo-dir.h>
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/errors.h>

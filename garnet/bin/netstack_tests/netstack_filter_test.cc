@@ -8,7 +8,9 @@
 #include <fuchsia/net/filter/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <garnet/lib/inet/ip_address.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/file_descriptor.h>

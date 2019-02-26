@@ -9,7 +9,9 @@
 #include <fbl/unique_fd.h>
 #include <lib/bootfs/parser.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/channel.h>

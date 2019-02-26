@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/rtc/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include <ctype.h>
 #include <dirent.h>

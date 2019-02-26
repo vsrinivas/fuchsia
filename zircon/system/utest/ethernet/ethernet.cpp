@@ -9,7 +9,9 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/fifo.h>

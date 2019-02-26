@@ -5,7 +5,9 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include "gmock/gmock.h"
 #include "lib/component/cpp/environment_services_helper.h"

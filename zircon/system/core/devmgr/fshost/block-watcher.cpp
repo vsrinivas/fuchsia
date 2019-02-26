@@ -15,7 +15,9 @@
 #include <fuchsia/device/c/fidl.h>
 #include <gpt/gpt.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>

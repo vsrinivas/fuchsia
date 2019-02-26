@@ -4,7 +4,9 @@
 
 #include "lib/svc/cpp/services.h"
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include "lib/fxl/logging.h"
 

@@ -9,7 +9,9 @@
 #include <fs/remote-dir.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 #include <trace/event.h>
 #include <cinttypes>

@@ -19,7 +19,7 @@
 #include <fs/handler.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/memfs/cpp/vnode.h>
 

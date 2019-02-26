@@ -14,7 +14,9 @@
 #include <unistd.h>
 
 #include <fs-management/mount.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

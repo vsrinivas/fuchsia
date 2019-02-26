@@ -8,7 +8,9 @@
 #include <lib/async/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/process.h>
 #include <trace/event.h>
 #include <unistd.h>

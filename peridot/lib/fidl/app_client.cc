@@ -8,7 +8,9 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/unique_fd.h>

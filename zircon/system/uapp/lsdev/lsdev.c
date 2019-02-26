@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <zircon/syscalls.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

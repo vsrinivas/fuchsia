@@ -14,7 +14,9 @@
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
 #include "garnet/bin/network_time/time_util.h"
-#include "lib/fdio/util.h"
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include "lib/syslog/cpp/logger.h"
 #include "zircon/system/ulib/zx/include/lib/zx/channel.h"
 

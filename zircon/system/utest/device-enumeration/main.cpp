@@ -11,7 +11,9 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <unittest/unittest.h>
 #include <zircon/status.h>
 

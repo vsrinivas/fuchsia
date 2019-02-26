@@ -4,7 +4,9 @@
 
 #include "lib/component/cpp/environment_services_helper.h"
 
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include "lib/component/cpp/startup_context.h"
 

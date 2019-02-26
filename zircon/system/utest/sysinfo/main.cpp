@@ -6,7 +6,9 @@
 #include <unistd.h>
 
 #include <fuchsia/sysinfo/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
 #include <zircon/syscalls.h>

@@ -11,7 +11,7 @@
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/bootsvc-protocol/processargs.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fdio.h>
 #include <lib/zx/debuglog.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/dlfcn.h>

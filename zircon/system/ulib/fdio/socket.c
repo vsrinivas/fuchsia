@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/io.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxs/protocol.h>
 #include <poll.h>
