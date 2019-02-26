@@ -41,9 +41,7 @@ void ktrace_report_syscalls(ktrace_syscall_info* call) {
     }
 }
 
-static fbl::Mutex probe_list_lock;
-
-static StringRef* ktrace_find_probe(const char* name) TA_REQ(probe_list_lock) {
+static StringRef* ktrace_find_probe(const char* name) {
     for (StringRef* ref = StringRef::head(); ref != nullptr; ref = ref->next) {
         if (!strcmp(name, ref->string)) {
             return ref;
@@ -52,13 +50,12 @@ static StringRef* ktrace_find_probe(const char* name) TA_REQ(probe_list_lock) {
     return nullptr;
 }
 
-static void ktrace_add_probe(StringRef* string_ref) TA_REQ(probe_list_lock) {
+static void ktrace_add_probe(StringRef* string_ref) {
     // Register and emit the string ref.
     string_ref->GetId();
 }
 
 static void ktrace_report_probes(void) {
-    fbl::AutoLock lock(&probe_list_lock);
     for (StringRef* ref = StringRef::head(); ref != nullptr; ref = ref->next) {
         ktrace_name_etc(TAG_PROBE_NAME, ref->id, 0, ref->string, true);
     }
@@ -153,7 +150,6 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     case KTRACE_ACTION_NEW_PROBE: {
         const char* const string_in = static_cast<const char*>(ptr);
 
-        fbl::AutoLock lock(&probe_list_lock);
         StringRef* ref = ktrace_find_probe(string_in);
         if (ref != nullptr) {
             return ref->id;
