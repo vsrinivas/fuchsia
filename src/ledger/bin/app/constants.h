@@ -25,6 +25,8 @@ inline constexpr fxl::StringView kServerIdFilename = "server_id";
 inline constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
 
 inline constexpr char kRepositoriesInspectPathComponent[] = "repositories";
+// TODO(nathaniel): "requests" was introduced as a demonstration; it should be
+// either given real meaning or cleaned up.
 inline constexpr char kRequestsInspectPathComponent[] = "requests";
 inline constexpr char kLedgersInspectPathComponent[] = "ledgers";
 

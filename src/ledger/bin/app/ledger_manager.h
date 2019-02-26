@@ -192,7 +192,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   // during a given operation. When |PageIsClosedAndSatisfiesPredicate()| is
   // called, an entry is added in this map, with the given page_id as key, while
   // a unique operation id is added in the corresponding value. That entry will
-  // be deleted either when that opertion is done, or when the page is opened
+  // be deleted either when that operation is done, or when the page is opened
   // because of an external request. This guarantees that if before calling the
   // callback of |PageIsClosedAndSatisfiesPredicate|, the entry is still present
   // in the map, the page was not opened during that operation. Otherwise, it

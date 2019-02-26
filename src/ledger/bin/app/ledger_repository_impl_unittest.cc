@@ -14,6 +14,9 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/hierarchy.h>
+#include <lib/inspect/inspect.h>
+#include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
 
 #include "gtest/gtest.h"
@@ -29,7 +32,12 @@
 namespace ledger {
 namespace {
 
+constexpr char kInspectPathComponent[] = "test_repository";
+constexpr char kObjectsName[] = "test objects";
+
+using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::MetricList;
+using ::inspect::testing::ObjectMatches;
 using ::inspect::testing::UIntMetricIs;
 using ::testing::Contains;
 
@@ -39,11 +47,13 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     auto fake_page_eviction_manager =
         std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
+    inspect_object_ = inspect::Object(kObjectsName);
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         DetachedPath(tmpfs_.root_fd()), &environment_,
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher()), nullptr,
-        nullptr, std::move(fake_page_eviction_manager), disk_cleanup_manager_);
+        nullptr, std::move(fake_page_eviction_manager), disk_cleanup_manager_,
+        inspect_object_.CreateChild(kInspectPathComponent));
   }
 
   ~LedgerRepositoryImplTest() override {}
@@ -51,6 +61,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
+  inspect::Object inspect_object_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
 
  private:
@@ -90,55 +101,28 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
 TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // When nothing has bound to the repository, check that the "requests" metric
   // is present and is zero.
-  bool zeroth_callback_called = false;
-  fuchsia::inspect::Object zeroth_read_object;
-  component::Object::ObjectVector zeroth_out;
-
-  repository_->Inspect("zeroth", &zeroth_out);
-
-  ASSERT_EQ(1UL, zeroth_out.size());
-  zeroth_out.at(0).get()->ReadData(callback::Capture(
-      callback::SetWhenCalled(&zeroth_callback_called), &zeroth_read_object));
-  EXPECT_TRUE(zeroth_callback_called);
-  EXPECT_THAT(
-      zeroth_read_object,
-      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 0UL))));
+  auto zeroth_hierarchy = inspect::ReadFromObject(inspect_object_);
+  EXPECT_THAT(zeroth_hierarchy,
+              ChildrenMatch(Contains(ObjectMatches(MetricList(Contains(
+                  UIntMetricIs(kRequestsInspectPathComponent, 0UL)))))));
 
   // When one binding has been made to the repository, check that the "requests"
   // metric is present and is one.
   ledger_internal::LedgerRepositoryPtr first_ledger_repository_ptr;
-  bool first_callback_called = false;
-  fuchsia::inspect::Object first_read_object;
-  component::Object::ObjectVector first_out;
   repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
-
-  repository_->Inspect("first", &first_out);
-
-  ASSERT_EQ(1UL, first_out.size());
-  first_out.at(0).get()->ReadData(callback::Capture(
-      callback::SetWhenCalled(&first_callback_called), &first_read_object));
-  EXPECT_TRUE(first_callback_called);
-  EXPECT_THAT(
-      first_read_object,
-      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
+  auto first_hierarchy = inspect::ReadFromObject(inspect_object_);
+  EXPECT_THAT(first_hierarchy,
+              ChildrenMatch(Contains(ObjectMatches(MetricList(Contains(
+                  UIntMetricIs(kRequestsInspectPathComponent, 1UL)))))));
 
   // When two bindings have been made to the repository, check that the
   // "requests" metric is present and is two.
   ledger_internal::LedgerRepositoryPtr second_ledger_repository_ptr;
-  bool second_callback_called = false;
-  fuchsia::inspect::Object second_read_object;
-  component::Object::ObjectVector second_out;
   repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
-
-  repository_->Inspect("second", &second_out);
-
-  ASSERT_EQ(1UL, second_out.size());
-  second_out.at(0).get()->ReadData(callback::Capture(
-      callback::SetWhenCalled(&second_callback_called), &second_read_object));
-  EXPECT_TRUE(second_callback_called);
-  EXPECT_THAT(
-      second_read_object,
-      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 2UL))));
+  auto second_hierarchy = inspect::ReadFromObject(inspect_object_);
+  EXPECT_THAT(second_hierarchy,
+              ChildrenMatch(Contains(ObjectMatches(MetricList(Contains(
+                  UIntMetricIs(kRequestsInspectPathComponent, 2UL)))))));
 }
 
 }  // namespace

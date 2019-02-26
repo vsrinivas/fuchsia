@@ -17,6 +17,7 @@
 #include <lib/callback/managed_container.h>
 #include <lib/component/cpp/expose.h>
 #include <lib/fxl/macros.h>
+#include <lib/inspect/inspect.h>
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"
@@ -38,12 +39,8 @@ class LedgerRepositoryFactoryImpl
       Environment* environment,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory>
           user_communicator_factory,
-      component::ObjectDir inspect_object_dir);
+      inspect::Object inspect_object);
   ~LedgerRepositoryFactoryImpl() override;
-
-  // Populates |out| with children to be traversed (or not) during an
-  // inspection.
-  void GetChildren(component::Object::ObjectVector* out);
 
   // LedgerRepositoryFactoryErrorNotifierDelegate:
   void GetRepository(
@@ -85,7 +82,7 @@ class LedgerRepositoryFactoryImpl
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
       repositories_;
 
-  component::ObjectDir inspect_object_dir_;
+  inspect::Object inspect_object_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

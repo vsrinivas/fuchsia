@@ -17,6 +17,7 @@
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <lib/inspect/inspect.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
@@ -38,6 +39,11 @@ constexpr fxl::StringView kFirebaseApiKeyFlag = "firebase_api_key";
 struct AppParams {
   bool disable_statistics = false;
   std::string firebase_api_key = "";
+};
+
+struct InspectObjects {
+  inspect::Object top_level_object;
+  inspect::StringProperty statistic_gathering;
 };
 
 fit::deferred_action<fit::closure> SetupCobalt(
@@ -75,6 +81,13 @@ class App : public ledger_internal::LedgerController {
   bool Start() {
     io_loop_.StartThread("io thread");
 
+    inspect_objects_.top_level_object =
+        inspect::Object(*startup_context_->outgoing().object_dir());
+    inspect_objects_.statistic_gathering =
+        inspect_objects_.top_level_object.CreateStringProperty(
+            "statistic_gathering",
+            app_params_.disable_statistics ? "off" : "on");
+
     EnvironmentBuilder builder;
 
     if (!app_params_.firebase_api_key.empty()) {
@@ -93,7 +106,8 @@ class App : public ledger_internal::LedgerController {
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory),
-        *startup_context_->outgoing().object_dir());
+        inspect_objects_.top_level_object.CreateChild(
+            kRepositoriesInspectPathComponent));
 
     startup_context_->outgoing()
         .AddPublicService<ledger_internal::LedgerRepositoryFactory>(
@@ -108,19 +122,7 @@ class App : public ledger_internal::LedgerController {
           controller_bindings_.AddBinding(this, std::move(request));
         });
 
-    startup_context_->outgoing().object_dir()->set_prop(
-        "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
-
-    startup_context_->outgoing().object_dir()->set_children_callback(
-        {kRepositoriesInspectPathComponent},
-        [this](component::Object::ObjectVector* out) {
-          factory_impl_->GetChildren(out);
-        });
-
     loop_.Run();
-
-    startup_context_->outgoing().object_dir()->set_children_callback(
-        {kRepositoriesInspectPathComponent}, nullptr);
 
     return true;
   }
@@ -130,6 +132,7 @@ class App : public ledger_internal::LedgerController {
   void Terminate() override { loop_.Quit(); }
 
   const AppParams app_params_;
+  InspectObjects inspect_objects_;
   async::Loop loop_;
   async::Loop io_loop_;
   trace::TraceProvider trace_provider_;

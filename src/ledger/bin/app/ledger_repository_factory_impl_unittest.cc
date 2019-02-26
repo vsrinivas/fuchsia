@@ -9,6 +9,7 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/inspect/inspect.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
 
@@ -41,20 +42,14 @@ constexpr char kUserID[] = "test user ID";
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    object_dir_ = component::ObjectDir::Make({kObjectsName});
+    top_level_inspect_object_ = inspect::Object(kObjectsName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        &environment_, nullptr, object_dir_);
-    object_dir_.set_children_callback(
-        {kRepositoriesInspectPathComponent},
-        [this](component::Object::ObjectVector* out) {
-          repository_factory_->GetChildren(out);
-        });
+        &environment_, nullptr,
+        top_level_inspect_object_.CreateChild(
+            kRepositoriesInspectPathComponent));
   }
 
-  ~LedgerRepositoryFactoryImplTest() override {
-    object_dir_.set_children_callback({kRepositoriesInspectPathComponent},
-                                      nullptr);
-  }
+  ~LedgerRepositoryFactoryImplTest() override {}
 
  protected:
   ::testing::AssertionResult CreateDirectory(std::string name);
@@ -63,7 +58,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
       ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  component::ObjectDir object_dir_;
+  inspect::Object top_level_inspect_object_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> repository_factory_;
 
  private:
@@ -108,7 +103,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
-  auto hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  auto hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
   EXPECT_THAT(hierarchy,
               AllOf(ObjectMatches(AllOf(NameMatches(kObjectsName),
                                         MetricList(IsEmpty()),
@@ -140,11 +135,11 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   ASSERT_TRUE(CreateDirectory(first_directory));
   ASSERT_TRUE(CreateDirectory(second_directory));
 
-  // Request one repository, then query the object_dir_ (and its children) to
-  // verify that that repository is listed (and to learn the name under which
-  // it is listed) and that it was requested once.
+  // Request one repository, then query the top_level_inspect_object_ (and its
+  // children) to verify that that repository is listed (and to learn the name
+  // under which it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
-  auto top_hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
   auto lone_repository_match = ObjectMatches(
       MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
   auto first_inspection_repositories_match =
@@ -163,7 +158,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // repositories were each requested once.
   ASSERT_TRUE(
       CallGetRepository(second_directory, &second_ledger_repository_ptr));
-  top_hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
       ObjectMatches(AllOf(NameMatches(first_repository_name),
                           MetricList(Contains(UIntMetricIs(
@@ -194,7 +189,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // respectively.
   ASSERT_TRUE(
       CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
-  top_hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  top_hierarchy = inspect::ReadFromObject(top_level_inspect_object_);
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
       ObjectMatches(AllOf(NameMatches(first_repository_name),
                           MetricList(Contains(UIntMetricIs(

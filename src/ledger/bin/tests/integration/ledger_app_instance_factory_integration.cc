@@ -106,7 +106,7 @@ class LedgerAppInstanceImpl final
           environment_(BuildEnvironment(loop, dispatcher, io_dispatcher,
                                         startup_context_.get(), random)),
           factory_impl_(&environment_, std::move(user_communicator_factory),
-                        component::ObjectDir()),
+                        inspect::Object("unused_in_test_inspect_object")),
           binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}
 

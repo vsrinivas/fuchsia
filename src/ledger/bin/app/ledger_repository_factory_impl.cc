@@ -19,6 +19,7 @@
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/inspect/inspect.h>
 #include <trace/event.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -142,15 +143,6 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     on_empty_callback_ = std::move(on_empty_callback);
   };
 
-  // Forwards to the Inspect method of the wrapped LedgerRepositoryImpl, if the
-  // wrapped LedgerRepositoryImpl is present. Otherwise does nothing.
-  void Inspect(std::string display_name,
-               component::Object::ObjectVector* out) const {
-    if (ledger_repository_) {
-      ledger_repository_->Inspect(std::move(display_name), out);
-    }
-  }
-
   // Keeps track of |request| and |callback|. Binds |request| and fires
   // |callback| when the repository is available or an error occurs.
   void BindRepository(
@@ -261,19 +253,12 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     Environment* environment,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory>
         user_communicator_factory,
-    component::ObjectDir inspect_object_dir)
+    inspect::Object inspect_object)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)),
-      inspect_object_dir_(std::move(inspect_object_dir)) {}
+      inspect_object_(std::move(inspect_object)) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
-
-void LedgerRepositoryFactoryImpl::GetChildren(
-    component::Object::ObjectVector* out) {
-  for (const auto& [name, container] : repositories_) {
-    container.Inspect(convert::ToHex(name), out);
-  }
-}
 
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,
@@ -348,7 +333,8 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.ledgers_path, environment_, std::move(db_factory),
       std::move(watchers), std::move(user_sync),
-      std::move(disk_cleanup_manager), disk_cleanup_manager_ptr);
+      std::move(disk_cleanup_manager), disk_cleanup_manager_ptr,
+      inspect_object_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }

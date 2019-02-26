@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
+#include <lib/inspect/inspect.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
@@ -42,13 +43,9 @@ class LedgerRepositoryImpl
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-                       PageUsageListener* page_usage_listener);
+                       PageUsageListener* page_usage_listener,
+                       inspect::Object inspect_object);
   ~LedgerRepositoryImpl() override;
-
-  // Satisfies an inspection by adding to |out| an object with properties,
-  // metrics, and (callbacks affording access to) children of its own.
-  void Inspect(std::string display_name,
-               component::Object::ObjectVector* out) const;
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
@@ -110,6 +107,10 @@ class LedgerRepositoryImpl
   fit::closure on_empty_callback_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
+
+  inspect::Object inspect_object_;
+  inspect::UIntMetric requests_metric_;
+  inspect::Object ledgers_inspect_object_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };
