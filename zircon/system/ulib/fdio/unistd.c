@@ -597,9 +597,6 @@ void __libc_extensions_init(uint32_t handle_count,
         unsigned arg_fd = arg & (~FDIO_FLAG_USE_FOR_STDIO);
 
         switch (PA_HND_TYPE(handle_info[n])) {
-        case PA_FDIO_REMOTE:
-        case PA_FDIO_SOCKET:
-        case PA_FDIO_LOGGER:
         case PA_FD: {
             fdio_t* io = NULL;
             zx_status_t status = fdio_create(h, &io);
@@ -632,8 +629,8 @@ void __libc_extensions_init(uint32_t handle_count,
         handle[n] = 0;
         handle_info[n] = 0;
 
-        // If we reach here then the handle is a PA_FDIO_* or PA_FD type
-        // (an fd), so check for a bit flag indicating that it should be duped
+        // If we reach here then the handle is a PA_FD type (a file descriptor),
+        // so check for a bit flag indicating that it should be duped
         // into 0/1/2 to become all of stdin/out/err
         if ((arg & FDIO_FLAG_USE_FOR_STDIO) && (arg_fd < FDIO_MAX_FD)) {
           stdio_fd = arg_fd;

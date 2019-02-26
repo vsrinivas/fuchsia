@@ -73,7 +73,7 @@ struct zx_proc_args {
 // Handle to the initial thread of our own process.
 #define PA_THREAD_SELF           0x02u
 
-// Handle to a job object which can be used to make child processes. 
+// Handle to a job object which can be used to make child processes.
 //
 // The job can be the same as the one used to create this process or it can
 // be different.
@@ -142,9 +142,6 @@ struct zx_proc_args {
 
 // A handle which will be used as a file descriptor.
 #define PA_FD                    0x30u
-#define PA_FDIO_REMOTE           0x32u
-#define PA_FDIO_LOGGER           0x35u
-#define PA_FDIO_SOCKET           0x36u
 
 // Server endpoint for handling connection to appmgr services.
 #define PA_DIRECTORY_REQUEST     0x3Bu
