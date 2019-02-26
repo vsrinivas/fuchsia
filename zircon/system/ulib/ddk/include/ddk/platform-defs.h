@@ -60,7 +60,7 @@ __BEGIN_CDECLS;
 #define PDEV_PID_GAUSS              1
 #define PDEV_PID_MACHINA            2
 #define PDEV_PID_ASTRO              3
-#define PDEV_PID_MADRONE            4
+// 4 unused
 #define PDEV_PID_SHERLOCK           5
 #define PDEV_PID_CLEO               6
 #define PDEV_PID_EAGLE              7
@@ -124,8 +124,7 @@ __BEGIN_CDECLS;
 
 // NXP
 #define PDEV_VID_NXP                9
-#define PDEV_PID_IMX8MEVK           1
-#define PDEV_PID_IMX8MMEVK          2
+#define PDEV_PID_IMX8MMEVK          1
 
 #define PDEV_DID_IMX_GPIO           1
 #define PDEV_DID_IMX_DISPLAY        2

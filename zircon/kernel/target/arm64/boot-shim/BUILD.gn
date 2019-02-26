@@ -150,9 +150,6 @@ template("boot_shim") {
 boot_shim("hikey960") {
 }
 
-boot_shim("imx8mevk") {
-}
-
 boot_shim("imx8mmevk") {
 }
 
