@@ -12,34 +12,6 @@
 #include <threads.h>
 #include <zircon/compiler.h>
 
-#ifndef __BYTE_ORDER__
-#error Compiler does not provide __BYTE_ORDER__
-#endif
-static inline uint32_t SWAP_32(uint32_t x) {
-    return __builtin_bswap32(x);
-}
-
-static inline uint16_t SWAP_16(uint16_t x) {
-    return __builtin_bswap16(x);
-}
-
-// standard swap macros
-#if BYTE_ORDER == BIG_ENDIAN
-#define LE64(val) SWAP_64(val)
-#define LE32(val) SWAP_32(val)
-#define LE16(val) SWAP_16(val)
-#define BE64(val) (val)
-#define BE32(val) (val)
-#define BE16(val) (val)
-#else
-#define LE64(val) (val)
-#define LE32(val) (val)
-#define LE16(val) (val)
-#define BE64(val) SWAP_64(val)
-#define BE32(val) SWAP_32(val)
-#define BE16(val) SWAP_16(val)
-#endif
-
 #define UFS_BIT(x) (1L << (x))
 #define LOWER_32_BITS(x) ((uint32_t)((x)&0xFFFFFFFFUL))
 #define UPPER_32_BITS(x) ((uint32_t)((x) >> 32))

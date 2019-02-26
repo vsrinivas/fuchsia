@@ -167,7 +167,7 @@ static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
     }
 
     utrd->ct_flags = (uint8_t)(data_dirn | UTP_UFS_STORAGE_CMD);
-    utrd->resp_upiu_len = LE16((uint16_t)(sizeof(ufs_utp_resp_upiu_t) >> 2));
+    utrd->resp_upiu_len = htole16((uint16_t)(sizeof(ufs_utp_resp_upiu_t) >> 2));
     utrd->ocs = 0x0f;
     utrd->crypt_en = (uint8_t)0x0;
 
@@ -181,7 +181,7 @@ static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
     cmd_upiu->tot_ehs_len = 0x0;
     cmd_upiu->res2 = 0x0;
     cmd_upiu->data_seg_len = 0x0;
-    cmd_upiu->exp_data_xfer_len = BE32(size);
+    cmd_upiu->exp_data_xfer_len = htobe32(size);
     ufs_get_cmd(opcode, 0, size, cmd_upiu->cdb);
 
     utrd->prd_table_len = (uint16_t)((size & (PRDT_BUF_SIZE - 1)) ?
@@ -213,7 +213,7 @@ static void ufs_create_nop_out_upiu(ufs_hba_t* hba, uint8_t free_slot) {
 
     utrd = hba->lrb_buf[free_slot].utrd;
     utrd->ct_flags = (uint8_t)(UTP_NO_DATA_TFR | UTP_UFS_STORAGE_CMD);
-    utrd->resp_upiu_len = LE16((uint16_t)(sizeof(ufs_nop_resp_upiu_t) >> 2));
+    utrd->resp_upiu_len = htole16((uint16_t)(sizeof(ufs_nop_resp_upiu_t) >> 2));
     utrd->prd_table_len = 0;
     utrd->ocs = 0xf;
 
@@ -246,7 +246,7 @@ static void ufs_create_query_upiu(ufs_hba_t* hba, uint8_t opcode,
 
     utrd = hba->lrb_buf[free_slot].utrd;
     utrd->ct_flags = (uint8_t)(UTP_NO_DATA_TFR | UTP_UFS_STORAGE_CMD);
-    utrd->resp_upiu_len = LE16((uint16_t)(sizeof(ufs_query_req_upiu_t) >> 2));
+    utrd->resp_upiu_len = htole16((uint16_t)(sizeof(ufs_query_req_upiu_t) >> 2));
     utrd->prd_table_len = 0;
 
     query_upiu = (ufs_query_req_upiu_t*)(hba->lrb_buf[free_slot].cmd_upiu);
@@ -476,15 +476,15 @@ static void ufshc_memory_configure(ufshc_dev_t* dev) {
     for (i = 0; i < hba->nutrs; i++) {
         // Configure UTRD with command descriptor base address
         ucmd_desc_element_addr = (ucmd_desc_addr + (ucmd_desc_size * i));
-        utrdl_desc[i].ucdba = LE32(LOWER_32_BITS(ucmd_desc_element_addr));
-        utrdl_desc[i].ucdbau = LE32(UPPER_32_BITS(ucmd_desc_element_addr));
+        utrdl_desc[i].ucdba = htole32(LOWER_32_BITS(ucmd_desc_element_addr));
+        utrdl_desc[i].ucdbau = htole32(UPPER_32_BITS(ucmd_desc_element_addr));
 
         // Response upiu and prdt offset should be in double words
-        utrdl_desc[i].resp_upiu_off = LE16((uint16_t)(resp_upiu_offset >> 2));
-        utrdl_desc[i].resp_upiu_len = LE16((uint16_t)(resp_upiu_len >> 2));
+        utrdl_desc[i].resp_upiu_off = htole16((uint16_t)(resp_upiu_offset >> 2));
+        utrdl_desc[i].resp_upiu_len = htole16((uint16_t)(resp_upiu_len >> 2));
 
-        utrdl_desc[i].prd_table_off = LE16((uint16_t)(prdt_offset >> 2));
-        utrdl_desc[i].prd_table_len = LE16(0);
+        utrdl_desc[i].prd_table_off = htole16((uint16_t)(prdt_offset >> 2));
+        utrdl_desc[i].prd_table_len = 0;
         hba->lrb_buf[i].utrd = (utrdl_desc + i);
         hba->lrb_buf[i].cmd_upiu = (ufs_utp_cmd_upiu_t*)(ucmd_desc + i);
         hba->lrb_buf[i].resp_upiu = (ufs_utp_resp_upiu_t*)ucmd_desc[i].resp_upiu;
