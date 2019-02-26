@@ -26,7 +26,7 @@ def run_command(*args, **kwargs):
 
 def get_device_addresses(dev_finder):
     # Find a target device.
-    stdout = run_command(dev_finder, 'list', '-device_limit', '1', '-full')
+    stdout = run_command(dev_finder, 'list', '-device-limit', '1', '-full')
     match = re.match('^([^\s]+)\s+([^\s]+)$', stdout.strip())
     if not match:
         raise Exception('Could not parse target parameters in %s' % stdout)
