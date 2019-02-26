@@ -72,16 +72,21 @@ static char test_disk_path[PATH_MAX];
 static uint64_t test_block_size;
 static uint64_t test_block_count;
 
-int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size, char* disk_path_out,
-                 char* fvm_driver_out) {
+int StartFVMTest(uint64_t blk_size, uint64_t initial_blk_count, uint64_t max_blk_count,
+                 uint64_t slice_size, char* disk_path_out, char* fvm_driver_out) {
     zx::channel fvm_channel;
     zx_status_t status, call_status;
+    auto cleanup = fbl::MakeAutoCall([disk_path_out]() {
+        if (!use_real_disk && disk_path_out[0]) {
+            ramdisk_destroy(test_ramdisk);
+        }
+    });
     fbl::unique_fd fd;
     disk_path_out[0] = 0;
     if (!use_real_disk) {
-        if (ramdisk_create(blk_size, blk_count, &test_ramdisk)) {
+        if (ramdisk_create(blk_size, initial_blk_count, &test_ramdisk)) {
             fprintf(stderr, "fvm: Could not create ramdisk\n");
-            goto fail;
+            return -1;
         }
         strlcpy(disk_path_out, ramdisk_get_path(test_ramdisk), PATH_MAX);
     } else {
@@ -91,17 +96,18 @@ int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size, cha
     fd.reset(open(disk_path_out, O_RDWR));
     if (!fd) {
         fprintf(stderr, "fvm: Could not open ramdisk\n");
-        goto fail;
+        return -1;
     }
 
-    if (fvm_init(fd.get(), slice_size) != ZX_OK) {
+    if (fvm_init_preallocated(fd.get(), initial_blk_count * blk_size, max_blk_count * blk_size,
+                              slice_size) != ZX_OK) {
         fprintf(stderr, "fvm: Could not initialize fvm\n");
-        goto fail;
+        return -1;
     }
 
     if (fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()) != ZX_OK) {
         fprintf(stderr, "fvm: Could not convert fd to channel\n");
-        exit(-1);
+        return -1;
     }
     status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
                                            STRLEN(FVM_DRIVER_LIB), &call_status);
@@ -110,7 +116,7 @@ int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size, cha
     }
     if (status != ZX_OK) {
         fprintf(stderr, "fvm: Error binding to fvm driver\n");
-        goto fail;
+        return -1;
     }
     fvm_channel.reset();
 
@@ -118,19 +124,18 @@ int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size, cha
     snprintf(path, sizeof(path), "%s/fvm", disk_path_out);
     if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
         fprintf(stderr, "fvm: Error waiting for fvm driver to bind\n");
-        goto fail;
+        return -1;
     }
 
     // TODO(security): SEC-70.  This may overflow |fvm_driver_out|.
     strcpy(fvm_driver_out, path);
-
+    cleanup.cancel();
     return 0;
+}
 
-fail:
-    if (!use_real_disk && disk_path_out[0]) {
-        ramdisk_destroy(test_ramdisk);
-    }
-    return -1;
+int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size, char* disk_path_out,
+                 char* fvm_driver_out) {
+    return StartFVMTest(blk_size, blk_count, blk_count, slice_size, disk_path_out, fvm_driver_out);
 }
 
 typedef struct {
@@ -3080,15 +3085,10 @@ bool TestValidAfterBlockDeviceGrowth() {
     ASSERT_EQ(fvm_query(driver.get(), &before_grow_info), ZX_OK, "Failed to query fvm\n");
     ASSERT_EQ(kSliceSize, before_grow_info.slice_size, "Unexpected slice size\n");
 
-    // Write 10 Kb of data and 10 Kb of 0s then verify.
     fbl::Vector<uint8_t> data;
     data.reserve(kDataSizeInBytes);
     for (size_t curr_byte = 0; curr_byte < kDataSizeInBytes; ++curr_byte) {
-        if (curr_byte < 10 << 10) {
-            data.push_back(static_cast<uint8_t>(curr_byte % 256));
-        } else {
-            data.push_back(0);
-        }
+        data.push_back(static_cast<uint8_t>(curr_byte % 256));
     }
     ASSERT_EQ(lseek(vp_fd.get(), 0, SEEK_SET), 0);
     ASSERT_EQ(write(vp_fd.get(), data.get(), data.size()), kDataSizeInBytes);
@@ -3125,6 +3125,110 @@ bool TestValidAfterBlockDeviceGrowth() {
     ASSERT_EQ(read(vp_fd.get(), read_data.get(), read_data.size()), kDataSizeInBytes,
               "Failed to read the entire written data.");
 
+    ASSERT_BYTES_EQ(data.get(), read_data.get(), read_data.size(),
+                    "Read data and written data do not match after growth.");
+
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0);
+    END_TEST;
+}
+
+bool TestValidAfterBlockDeviceGrowthAndFVMGrowth() {
+    BEGIN_TEST;
+    constexpr uint64_t kBlkSize = 512;
+    constexpr uint32_t kDataSizeInBlocks = 10;
+    constexpr uint64_t kInitialBlkCount = 50 * (1 << 20) / kBlkSize;
+    constexpr uint64_t kSliceSize = (1 << 20);
+    constexpr uint64_t kMaxBlkCount = 4 * (1llu << 30) / kBlkSize;
+    constexpr uint64_t kDataSizeInBytes = kDataSizeInBlocks * kBlkSize;
+    fvm::FormatInfo initial_format_info = fvm::FormatInfo::FromPreallocatedSize(
+        kInitialBlkCount * kBlkSize, kMaxBlkCount * kBlkSize, kSliceSize);
+
+    fvm::FormatInfo final_format_info =
+        fvm::FormatInfo::FromDiskSize(kMaxBlkCount * kBlkSize, kSliceSize);
+
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+
+    ASSERT_EQ(StartFVMTest(kBlkSize, kInitialBlkCount, kMaxBlkCount, kSliceSize, ramdisk_path,
+                           fvm_driver),
+              0);
+
+    // Allocate a partition and write to it.
+    fbl::unique_fd driver(open(fvm_driver, O_RDWR));
+    ASSERT_GT(driver.get(), 0);
+    alloc_req_t request;
+    memset(&request, 0, sizeof(request));
+    request.slice_count = 1;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    fbl::unique_fd vp_fd(fvm_allocate_partition(driver.get(), &request));
+    ASSERT_GT(vp_fd.get(), 0);
+
+    // Get FVM info.
+    volume_info_t before_grow_info;
+
+    ASSERT_EQ(fvm_query(driver.get(), &before_grow_info), ZX_OK, "Failed to query fvm\n");
+    ASSERT_EQ(kSliceSize, before_grow_info.slice_size, "Unexpected slice size\n");
+    ASSERT_EQ(initial_format_info.slice_count(), before_grow_info.pslice_total_count);
+
+    fbl::Vector<uint8_t> data;
+    data.reserve(kDataSizeInBytes);
+    for (size_t curr_byte = 0; curr_byte < kDataSizeInBytes; ++curr_byte) {
+        data.push_back(static_cast<uint8_t>(curr_byte % 256));
+    }
+    ASSERT_EQ(lseek(vp_fd.get(), 0, SEEK_SET), 0);
+    ASSERT_EQ(write(vp_fd.get(), data.get(), data.size()), kDataSizeInBytes);
+
+    // Grow Ramdisk
+    ASSERT_EQ(ramdisk_grow(test_ramdisk, kMaxBlkCount * kBlkSize), ZX_OK);
+
+    // Rebind
+    const partition_entry_t entries[] = {
+        {kTestPartName1, 1},
+    };
+    vp_fd.reset();
+    driver.reset(FVMRebind(driver.release(), ramdisk_path, entries, 1));
+    ASSERT_TRUE(driver);
+
+    // Get the new fvm info.
+    volume_info_t after_grow_info;
+    ASSERT_EQ(fvm_query(driver.get(), &after_grow_info), ZX_OK, "Failed to query fvm\n");
+    ASSERT_EQ(kSliceSize, after_grow_info.slice_size, "Unexpected slice size\n");
+
+    // Get the virtual partition fd.
+    char buffer[PATH_MAX];
+    vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, buffer));
+    ASSERT_TRUE(vp_fd);
+
+    // Check info is the same.
+    ASSERT_EQ(before_grow_info.slice_size, after_grow_info.slice_size);
+    // Same allocated slices.
+    ASSERT_EQ(before_grow_info.pslice_allocated_count, after_grow_info.pslice_allocated_count);
+    // New slices become available.
+    ASSERT_EQ(final_format_info.slice_count(), after_grow_info.pslice_total_count);
+
+    // Read data from vp.
+    fbl::Array<uint8_t> read_data(new uint8_t[kDataSizeInBytes], kDataSizeInBytes);
+    ASSERT_EQ(read(vp_fd.get(), read_data.get(), read_data.size()), kDataSizeInBytes,
+              "Failed to read the entire written data.");
+
+    ASSERT_BYTES_EQ(data.get(), read_data.get(), read_data.size(),
+                    "Read data and written data do not match after growth.");
+
+    // Allocate all slices.
+    extend_request_t erequest;
+    erequest.offset = 1;
+    erequest.length = final_format_info.slice_count() - 1;
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), ZX_OK);
+
+    // Write to the last slice, and read the data back.
+    int64_t last_slice_offset = kSliceSize * (final_format_info.slice_count() - 1);
+    ASSERT_EQ(lseek(vp_fd.get(), last_slice_offset, SEEK_SET), last_slice_offset);
+    ASSERT_EQ(write(vp_fd.get(), data.get(), data.size()), kDataSizeInBytes);
+    ASSERT_EQ(lseek(vp_fd.get(), last_slice_offset, SEEK_SET), last_slice_offset);
+    ASSERT_EQ(read(vp_fd.get(), read_data.get(), read_data.size()), kDataSizeInBytes,
+              "Failed to read the entire written data.");
     ASSERT_BYTES_EQ(data.get(), read_data.get(), read_data.size(),
                     "Read data and written data do not match after growth.");
 
@@ -3173,6 +3277,7 @@ RUN_TEST_LARGE((TestRandomOpMultithreaded<25, /* persistent= */ true>))
 RUN_TEST_MEDIUM(TestCorruptMount)
 RUN_TEST_MEDIUM(TestAbortDriverLoadSmallDevice)
 RUN_TEST_MEDIUM(TestValidAfterBlockDeviceGrowth)
+RUN_TEST_MEDIUM(TestValidAfterBlockDeviceGrowthAndFVMGrowth)
 END_TEST_CASE(fvm_tests)
 
 BEGIN_TEST_CASE(fvm_check_tests)

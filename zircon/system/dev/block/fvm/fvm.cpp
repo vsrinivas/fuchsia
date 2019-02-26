@@ -226,7 +226,7 @@ zx_status_t VPartitionManager::Load() {
         return ZX_ERR_BAD_STATE;
     } else if (sb.allocation_table_size < AllocTableLength(sb.fvm_partition_size, SliceSize())) {
         fprintf(stderr, "fvm: Bad allocation table size %zu (expected at least %zu)\n",
-                sb.allocation_table_size, AllocTableLength(DiskSize(), SliceSize()));
+                sb.allocation_table_size, AllocTableLength(sb.fvm_partition_size, SliceSize()));
         return ZX_ERR_BAD_STATE;
     } else if (sb.fvm_partition_size > DiskSize()) {
         fprintf(stderr,
@@ -236,17 +236,24 @@ zx_status_t VPartitionManager::Load() {
         return ZX_ERR_BAD_STATE;
     }
 
+    // Whether the metadata should grow or not.
+    bool metadata_should_grow =
+        sb.fvm_partition_size < DiskSize() &&
+        AllocTableLength(sb.fvm_partition_size, sb.slice_size) < sb.allocation_table_size;
+    size_t metadata_vmo_size = metadata_should_grow ? format_info_.metadata_allocated_size()
+                                                    : format_info_.metadata_size();
+
     // Now that the slice size is known, read the rest of the metadata
     auto make_metadata_vmo = [&](size_t offset, fzl::OwnedVmoMapper* out_mapping) {
         fzl::OwnedVmoMapper mapper;
-        zx_status_t status = mapper.CreateAndMap(format_info_.metadata_size(), "fvm-metadata");
+        zx_status_t status = mapper.CreateAndMap(metadata_vmo_size, "fvm-metadata");
         if (status != ZX_OK) {
             return status;
         }
 
         // Read both copies of metadata, ensure at least one is valid
-        if ((status = DoIoLocked(mapper.vmo().get(), offset, format_info_.metadata_size(),
-                                 BLOCK_OP_READ)) != ZX_OK) {
+        if ((status = DoIoLocked(mapper.vmo().get(), offset, metadata_vmo_size, BLOCK_OP_READ)) !=
+            ZX_OK) {
             return status;
         }
 
@@ -267,6 +274,7 @@ zx_status_t VPartitionManager::Load() {
         return status;
     }
 
+    // Validate metadata headers before growing.
     const void* metadata;
     if ((status = fvm_validate_header(mapper.start(), mapper_backup.start(),
                                       format_info_.metadata_size(), &metadata)) != ZX_OK) {
@@ -280,6 +288,15 @@ zx_status_t VPartitionManager::Load() {
     } else {
         first_metadata_is_primary_ = false;
         metadata_ = std::move(mapper_backup);
+    }
+
+    if (metadata_should_grow) {
+        // Now grow the fvm_partition to disk_size.
+        format_info_ = FormatInfo::FromDiskSize(DiskSize(), format_info_.slice_size());
+        GetFvmLocked()->fvm_partition_size = DiskSize();
+        GetFvmLocked()->pslice_count = format_info_.slice_count();
+        // Persist the growth.
+        WriteFvmLocked();
     }
 
     // Begin initializing the underlying partitions

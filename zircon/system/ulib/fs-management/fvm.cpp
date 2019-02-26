@@ -64,16 +64,21 @@ constexpr char kBlockDevPath[] = "/dev/class/block/";
 
 } // namespace
 
-zx_status_t fvm_init_with_size(int fd, uint64_t volume_size, size_t slice_size) {
+zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t max_volume_size,
+                                  size_t slice_size) {
     if (slice_size % FVM_BLOCK_SIZE != 0) {
         // Alignment
         return ZX_ERR_INVALID_ARGS;
     } else if ((slice_size * VSLICE_MAX) / VSLICE_MAX != slice_size) {
         // Overflow
         return ZX_ERR_INVALID_ARGS;
+    } else if (initial_volume_size > max_volume_size || initial_volume_size == 0 ||
+               max_volume_size == 0) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(volume_size, slice_size);
+    fvm::FormatInfo format_info =
+        fvm::FormatInfo::FromPreallocatedSize(initial_volume_size, max_volume_size, slice_size);
 
     fbl::unique_ptr<uint8_t[]> mvmo(new uint8_t[format_info.metadata_allocated_size() * 2]);
     // Clear entire primary copy of metadata
@@ -85,9 +90,9 @@ zx_status_t fvm_init_with_size(int fd, uint64_t volume_size, size_t slice_size) 
     sb->version = FVM_VERSION;
     sb->pslice_count = format_info.slice_count();
     sb->slice_size = slice_size;
-    sb->fvm_partition_size = volume_size;
+    sb->fvm_partition_size = initial_volume_size;
     sb->vpartition_table_size = fvm::kVPartTableLength;
-    sb->allocation_table_size = fvm::AllocTableLength(volume_size, slice_size);
+    sb->allocation_table_size = fvm::AllocTableLength(max_volume_size, slice_size);
     sb->generation = 0;
 
     if (sb->pslice_count == 0) {
@@ -121,6 +126,10 @@ zx_status_t fvm_init_with_size(int fd, uint64_t volume_size, size_t slice_size) 
     }
 
     return ZX_OK;
+}
+
+zx_status_t fvm_init_with_size(int fd, uint64_t volume_size, size_t slice_size) {
+    return fvm_init_preallocated(fd, volume_size, volume_size, slice_size);
 }
 
 zx_status_t fvm_init(int fd, size_t slice_size) {
