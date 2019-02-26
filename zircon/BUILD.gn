@@ -9,6 +9,14 @@ import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
 
+declare_args() {
+  # Whether to include all the Zircon tests in the main standalone ZBI.
+  # TODO(mcgrathr): This will be replaced by a more sophisticated plan for
+  # what images to build rather than a single "everything" image that needs
+  # to be pared down.
+  tests_in_image = true
+}
+
 # Build the native host tools intended for developer use.
 _tools_targets = [ "tools" ]
 foreach(host, standard_build_hosts) {
@@ -302,8 +310,10 @@ foreach(cpu, standard_fuchsia_cpus) {
     cpu = cpu
     deps = [
       ":legacy-deps-$cpu",
-      "$zx/system/utest",
     ]
+    if (tests_in_image) {
+      deps += [ "$zx/system/utest" ]
+    }
   }
 }
 
