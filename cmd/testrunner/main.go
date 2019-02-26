@@ -116,7 +116,7 @@ func main() {
 
 	// Load tests.
 	testsPath := flag.Arg(0)
-	tests, err := testrunner.LoadTests(testsPath)
+	tests, err := testsharder.LoadTests(testsPath)
 	if err != nil {
 		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
 	}
