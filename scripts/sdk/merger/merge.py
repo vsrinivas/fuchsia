@@ -209,14 +209,18 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     manifest_one = _get_manifest(source_dir_one)
     manifest_two = _get_manifest(source_dir_two)
 
-    # Host architecture.
+    # Base attributes.
     if manifest_one['arch']['host'] != manifest_two['arch']['host']:
         print('Error: mismatching host architecture')
+        return False
+    if manifest_one['id'] != manifest_two['id']:
+        print('Error: mismatching id')
         return False
     manifest = {
         'arch': {
             'host': manifest_one['arch']['host'],
-        }
+        },
+        'id': manifest_one['id'],
     }
 
     # Target architectures.
