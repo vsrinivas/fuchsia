@@ -111,6 +111,7 @@ bool Session::ScheduleUpdate(
                  "session_debug_name", debug_name_, "requested time",
                  requested_presentation_time);
 
+  // Logic verifying client requests presents in-order.
   uint64_t last_scheduled_presentation_time =
       last_applied_update_presentation_time_;
   if (!scheduled_updates_.empty()) {
@@ -129,36 +130,8 @@ bool Session::ScheduleUpdate(
     return false;
   }
 
-  // If we're not running headless, warn if the requested presesentation time
-  // is not reasonable.
-  if (session_context_.frame_scheduler &&
-      session_context_.display_manager->default_display()) {
-    std::pair<zx_time_t, zx_time_t> target_times =
-        session_context_.frame_scheduler
-            ->ComputeTargetPresentationAndWakeupTimes(
-                requested_presentation_time);
-    uint64_t target_presentation_time = target_times.first;
-    zx_time_t vsync_interval =
-        session_context_.display_manager->default_display()->GetVsyncInterval();
-    // TODO(SCN-723): Re-enable warning when requested_presentation_time == 0
-    // after Flutter engine is fixed.
-    if (requested_presentation_time != 0 &&
-        target_presentation_time - vsync_interval >
-            requested_presentation_time) {
-      // Present called with too early of a presentation time.
-      TRACE_INSTANT("gfx", "Session requested too early presentation time",
-                    TRACE_SCOPE_PROCESS, "session_id", id(),
-                    "requested presentation time", requested_presentation_time,
-                    "target presentation time", target_presentation_time);
-    }
-  }
-
   auto acquire_fence_set =
       std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
-  // TODO(SCN-1201): Consider calling ScheduleUpdateForSession immediately if
-  // acquire_fence_set is already ready (which is the case if there are
-  // zero acquire fences).
-
   acquire_fence_set->WaitReadyAsync(
       [weak = GetWeakPtr(), requested_presentation_time] {
         if (weak) {

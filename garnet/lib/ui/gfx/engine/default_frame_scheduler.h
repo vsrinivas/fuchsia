@@ -26,14 +26,6 @@ class DefaultFrameScheduler : public FrameScheduler {
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
-  //
-  // Helper method for ScheduleFrame().  Returns the target presentation time
-  // for the requested presentation time, and a wake-up time that is early
-  // enough to start rendering in order to hit the target presentation time.
-  std::pair<zx_time_t, zx_time_t> ComputeTargetPresentationAndWakeupTimes(
-      zx_time_t requested_presentation_time) const override;
-
-  // |FrameScheduler|
   void SetDelegate(FrameSchedulerDelegate delegate) override {
     delegate_ = delegate;
   };
@@ -77,7 +69,8 @@ class DefaultFrameScheduler : public FrameScheduler {
   // back-pressure if we can't hit our target frame rate.  Or, after this frame
   // was scheduled, another frame was scheduled to be rendered at an earlier
   // time, and not enough time has elapsed to render this frame.  Etc.
-  void MaybeRenderFrame(zx_time_t presentation_time, zx_time_t wakeup_time);
+  void MaybeRenderFrame(zx_time_t presentation_time, zx_time_t wakeup_time,
+                        uint64_t flow_id);
 
   // Schedule a frame for the earliest of |requested_presentation_times_|.  The
   // scheduled time will be the earliest achievable time, such that rendering
@@ -99,6 +92,9 @@ class DefaultFrameScheduler : public FrameScheduler {
   // for the next frame, and a wake-up time that is early enough to start
   // rendering in order to hit the target presentation time.
   std::pair<zx_time_t, zx_time_t> ComputeNextPresentationAndWakeupTimes() const;
+  // Computes the target presentation time for the requested presentation time.
+  std::pair<zx_time_t, zx_time_t> ComputeTargetPresentationAndWakeupTimes(
+      zx_time_t requested_presentation_time) const;
 
   // Return the predicted amount of time required to render a frame.
   zx_time_t PredictRequiredFrameRenderTime() const;

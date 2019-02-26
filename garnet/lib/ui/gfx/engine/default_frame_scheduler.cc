@@ -17,6 +17,16 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace {
+
+// Generates a unique ID, used for flow trace events.
+static uint64_t NextFlowId() {
+  static std::atomic<uint64_t> counter(0);
+  return ++counter;
+}
+
+}  // anonymous namespace
+
 DefaultFrameScheduler::DefaultFrameScheduler(Display* display)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
@@ -147,17 +157,31 @@ void DefaultFrameScheduler::ScheduleFrame() {
   zx_time_t presentation_time = times.first;
   zx_time_t wakeup_time = times.second;
 
+  TRACE_DURATION("gfx", "FrameScheduler::ScheduleFrame",
+                 "next requested present time",
+                 requested_presentation_times_.top(), "presentation time",
+                 presentation_time, "wakeup_time", wakeup_time);
+
+  uint64_t flow_id = NextFlowId();
+  TRACE_FLOW_BEGIN("gfx", "FrameScheduler_Request", flow_id);
+
   async::PostTaskForTime(
       dispatcher_,
-      [weak = weak_factory_.GetWeakPtr(), presentation_time, wakeup_time] {
+      [weak = weak_factory_.GetWeakPtr(), presentation_time, wakeup_time,
+       flow_id] {
         if (weak)
-          weak->MaybeRenderFrame(presentation_time, wakeup_time);
+          weak->MaybeRenderFrame(presentation_time, wakeup_time, flow_id);
       },
       zx::time(0) + zx::nsec(wakeup_time));
 }
 
 void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
-                                             zx_time_t wakeup_time) {
+                                             zx_time_t wakeup_time,
+                                             uint64_t flow_id) {
+  TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "presentation_time",
+                 presentation_time);
+  TRACE_FLOW_END("gfx", "FrameScheduler_Request", flow_id);
+
   if (requested_presentation_times_.empty()) {
     // No frame was requested, so none needs to be rendered.  More precisely, a
     // frame must have been requested (otherwise ScheduleFrame() would not
@@ -214,11 +238,6 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
                                               display_->GetVsyncInterval())) {
       outstanding_frames_.push_back(frame_timings);
     }
-  }
-
-  // If necessary, schedule another frame.
-  if (!requested_presentation_times_.empty()) {
-    ScheduleFrame();
   }
 }
 

@@ -75,13 +75,6 @@ class FrameScheduler {
  public:
   virtual ~FrameScheduler() = default;
 
-  // Helper method for ScheduleFrame().  Returns the target presentation time
-  // for the requested presentation time, and a wake-up time that is early
-  // enough to start rendering in order to hit the target presentation time.
-  virtual std::pair<zx_time_t, zx_time_t>
-  ComputeTargetPresentationAndWakeupTimes(
-      zx_time_t requested_presentation_time) const = 0;
-
   virtual void SetDelegate(FrameSchedulerDelegate delegate) = 0;
 
   // If |render_continuously|, we keep scheduling new frames immediately after
