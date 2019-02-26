@@ -190,13 +190,10 @@ case--the `static`, `shared`, and `headers` sub-targets are aliased into
 
 ### `public_deps` for header dependencies
 
-In addition to `deps` and `data_deps`, GN also has `public_deps`.  The effect
-of this can be subtle and surprising.  It should not be used lightly outside
-of a few set patterns.  _*Every single use* of `public_deps` merits a comment
-explaining why it's the correct thing to use._
-
-The one common, bona fide case for `public_deps` is when a library's public
-header files `#include` the header files of another library.
+In addition to `deps` and `data_deps`, GN also has `public_deps`. This is used
+when a target exposes a dependency in its public header files and needs to
+forward that dependency's settings up the dependency chain. Every use of
+`public_deps` should have a comment explaining why it's needed:
 
 For example, `library("async-loop")` contains this:
 
@@ -207,15 +204,29 @@ For example, `library("async-loop")` contains this:
   ]
 ```
 
-## `source_set()`
+## `source_set()` and `static_library()`
 
-Some kernel code that doesn't have an include directory can just use the
-native GN `source_set()`.  This can be just for logical grouping of code
-either at directory granularity (`source_set("name_of_this_dir")`) or smaller,
-and is also a way to isolate some code and use different compilation switches
-for just those files.  It's also the best way to indicate the dependencies
-narrowly if e.g. a few source files are generated or rely on generated
-headers.  See `gn help source_set` for more information.
+Some code that doesn't have an include directory can just use the
+native GN `source_set()` or `static_library()` targets.
+
+A source set (see `gn help source_set`) is a way to create a logical grouping
+of files or to scope compilation switches narrowly. The object files will be
+linked directly into final binaries without going through any intermediate
+libraries. In contrast, the files in a static library are only pulled in
+as-needed to resolve symbols.
+
+  * Code in the kernel itself should always use `source_set`. Static libraries
+    currently interact poorly with inline assembly (Googlers see bug
+    124318741).
+
+  * A `source_set` *must* be used when creating groups of tests since the
+    test harness depends on static initializers while the static library
+    linking rules will strip the tests. All kernel code 
+
+  * A `static_library` should be used for higher-level things that looks like
+    libraries or a part of one. The dead code stripping is more efficient which can
+    produce faster links and smaller binaries in cases where some code isn't
+    needed.
 
 ```gn
 source_set("some_code") {
@@ -228,21 +239,13 @@ source_set("some_code") {
 
 ## `loadable_module()`
 
-This is not really used in the Zircon build so far, but could be.  A loadable
-module is a shared object that's not a library.  It's more like an executable
-that gets loaded via `dlopen()` or the like rather than executed by itself.
-This is used for "plug-in" sorts of things.
+This is not really used in the Zircon build so far, but could be. A loadable
+module is a shared object that's not linked directly but rather loaded
+dynamically via `dlopen()` or the like.
 
 `loadable_module()` takes the `install_path` parameter like `executable()`
 does.  But it has no default path, so it's like `install_path = false` unless
 you supply a path explicitly.
-
-Since it's not linked into an executable or shared library, these targets
-should not appear in the `deps` list of the program or library that loads
-them.  Instead, they should appear in the `data_deps` list.  This ensures that
-they get built and packed into the system image, but does not make them actual
-inputs to the dependent target.  In that way, they're like
-[#resource](`resource()`) targets (see below).
 
 Zircon device drivers are loadable modules, but they have their own special
 templates that should be used instead of `loadable_module()`.
