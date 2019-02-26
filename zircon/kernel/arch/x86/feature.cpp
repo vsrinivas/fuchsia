@@ -32,6 +32,7 @@ const x86_microarch_config_t* x86_microarch_config;
 static struct x86_model_info model_info;
 
 bool g_x86_feature_fsgsbase;
+bool g_x86_feature_pcid_good;
 
 enum x86_hypervisor_list x86_hypervisor;
 
@@ -127,6 +128,8 @@ void x86_feature_init(void) {
     x86_microarch_config = select_microarch_config(x86_microarch);
 
     g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
+    g_x86_feature_pcid_good = x86_feature_test(X86_FEATURE_PCID) &&
+        x86_feature_test(X86_FEATURE_INVPCID);
 
     x86_hypervisor = get_hypervisor();
 }

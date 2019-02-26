@@ -54,6 +54,13 @@ volatile pt_entry_t linear_map_pdp[(64ULL * GB) / (2 * MB)] __ALIGNED(PAGE_SIZE)
 /* which of the above variables is the top level page table */
 #define KERNEL_PT pml4
 
+// Width of the PCID identifier
+#define X86_PCID_BITS (12)
+// When this bit is set in the source operand of a MOV CR3, TLB entries and paging structure
+// caches for the active PCID may be preserved. If the bit is clear, entries will be cleared.
+// See Intel Volume 3A, 4.10.4.1
+#define X86_PCID_CR3_SAVE_ENTRIES (63)
+
 // Static relocated base to prepare for KASLR. Used at early boot and by gdb
 // script to know the target relocated address.
 // TODO(thgarnie): Move to a dynamicly generated base address
@@ -217,6 +224,17 @@ static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvali
 
     mp_sync_exec(target, target_mask, TlbInvalidatePage_task, &task_context);
     pending->clear();
+}
+
+bool x86_enable_pcid() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    if (!g_x86_feature_pcid_good) {
+        return false;
+    }
+
+    ulong cr4 = x86_get_cr4();
+    x86_set_cr4(cr4 | X86_CR4_PCIDE);
+    return true;
 }
 
 bool X86PageTableMmu::check_paddr(paddr_t paddr) {
