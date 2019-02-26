@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/ls_root_pkg"
+    },
+    "use": [
+        { "directory": "/pkg", "as": "/root_pkg" },
+    ]
+}

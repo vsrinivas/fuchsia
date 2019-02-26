@@ -6,8 +6,24 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("hello_world_bin") {
+  source_root = "src/hello_world.rs"
   name = "hello_world"
   edition = "2018"
+}
+
+rustc_binary("ls_root_pkg_bin") {
+  source_root = "src/ls_root_pkg.rs"
+  name = "ls_root_pkg"
+  edition = "2018"
+}
+
+fuchsia_component("ls_root_pkg_component") {
+  manifest = rebase_path("meta/ls_root_pkg.cml")
+  deps = [
+    ":ls_root_pkg_bin",
+  ]
+
+  binary = "ls_root_pkg"
 }
 
 fuchsia_component("hello_world_component") {
@@ -20,5 +36,8 @@ fuchsia_component("hello_world_component") {
 }
 
 package("hello_world_hippo") {
-  components = [ ":hello_world_component" ]
+  components = [
+    ":hello_world_component",
+    ":ls_root_pkg_component",
+  ]
 }

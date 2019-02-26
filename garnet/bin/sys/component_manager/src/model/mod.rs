@@ -136,13 +136,47 @@ impl TryFrom<fsys::Component> for Execution {
     }
 }
 
+type UseDeclsOpt = std::option::Option<std::vec::Vec<fidl_fuchsia_sys2::UseDecl>>;
+
 impl Execution {
-    fn make_namespace(&self) -> Result<fsys::ComponentNamespace, Error> {
+    async fn make_namespace<'a>(
+        &'a self,
+        uses: &'a UseDeclsOpt,
+    ) -> Result<fsys::ComponentNamespace, ModelError> {
         // TODO: Populate namespace from the component declaration.
         let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
+
+        // Populate the namespace from uses, using the component manager's namespace.
+        if let Some(uses) = uses {
+            for use_ in uses {
+                match use_.type_ {
+                    Some(fsys::CapabilityType::Directory) => {
+                        let source_path = &use_.source_path.as_ref().unwrap();
+                        let dir_proxy = io_util::open_directory_in_namespace(&source_path)
+                            .map_err(|e| ModelError::namespace_creation_failed(e))?;
+                        let dir =
+                            ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel());
+                        ns.paths.push(use_.target_path.as_ref().unwrap().to_string());
+                        ns.directories.push(dir);
+                    }
+                    Some(fsys::CapabilityType::Service) => {
+                        // TODO(CF-583): support services
+                    }
+                    None => {
+                        return Err(ModelError::namespace_parsing_failed(
+                            "UseDecl missing CapabilityType".to_string(),
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Populate the /pkg namespace.
         if let Some(package_dir) = self.package_dir.as_ref() {
+            let clone_dir_proxy = io_util::clone_directory(package_dir)
+                .map_err(|e| ModelError::namespace_creation_failed(e))?;
             let cloned_dir = ClientEnd::new(
-                io_util::clone_directory(package_dir)?
+                clone_dir_proxy
                     .into_channel()
                     .expect("could not convert directory to channel")
                     .into_zx_channel(),
@@ -198,9 +232,9 @@ impl Model {
                     )?);
                 }
                 let execution = Execution::try_from(component)?;
-                let ns = execution
-                    .make_namespace()
-                    .map_err(|e| ModelError::namespace_creation_failed(e))?;
+
+                let ns = await!(execution.make_namespace(&execution.decl.uses))?;
+
                 let start_info = fsys::ComponentStartInfo {
                     resolved_uri: Some(execution.resolved_uri.clone()),
                     program: data::clone_option_dictionary(&execution.decl.program),
@@ -254,6 +288,8 @@ pub enum ModelError {
         #[fail(cause)]
         err: Error,
     },
+    #[fail(display = "namespace parsing failed: {}", s)]
+    NamespaceParsingFailed { s: String },
     #[fail(display = "resolver error")]
     ResolverError {
         #[fail(cause)]
@@ -274,6 +310,10 @@ impl ModelError {
     fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {
         ModelError::NamespaceCreationFailed { err: err.into() }
     }
+
+    fn namespace_parsing_failed(s: String) -> ModelError {
+        ModelError::NamespaceParsingFailed { s: s }
+    }
 }
 
 impl From<ResolverError> for ModelError {
@@ -291,14 +331,19 @@ impl From<RunnerError> for ModelError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_sys2::{CapabilityType, ComponentNamespace, UseDecl};
     use futures::future::{self, FutureObj};
     use lazy_static::lazy_static;
     use regex::Regex;
     use std::cell::RefCell;
     use std::collections::HashSet;
+    use std::path::PathBuf;
 
     struct MockResolver {
+        // Map of parent component instance to its children component instances.
         children: Rc<RefCell<HashMap<String, Vec<String>>>>,
+        // Map of component instance to vec of UseDecls of the component instance.
+        uses: Rc<RefCell<HashMap<String, UseDeclsOpt>>>,
     }
 
     lazy_static! {
@@ -325,6 +370,11 @@ mod tests {
                         .collect(),
                 );
             }
+            let mut uses = self.uses.borrow_mut();
+            if let Some(uses) = uses.remove(name) {
+                decl.uses = uses;
+            }
+
             FutureObj::new(Box::new(future::ok(fsys::Component {
                 resolved_uri: Some(format!("test:///{}_resolved", name)),
                 decl: Some(decl),
@@ -335,6 +385,7 @@ mod tests {
 
     struct MockRunner {
         uris_run: Rc<RefCell<Vec<String>>>,
+        namespaces: Rc<RefCell<HashMap<String, ComponentNamespace>>>,
     }
 
     impl Runner for MockRunner {
@@ -342,7 +393,9 @@ mod tests {
             &self,
             start_info: fsys::ComponentStartInfo,
         ) -> FutureObj<Result<(), RunnerError>> {
-            self.uris_run.borrow_mut().push(start_info.resolved_uri.unwrap().clone());
+            let resolved_uri = start_info.resolved_uri.unwrap();
+            self.uris_run.borrow_mut().push(resolved_uri.clone());
+            self.namespaces.borrow_mut().insert(resolved_uri.clone(), start_info.ns.unwrap());
             FutureObj::new(Box::new(future::ok(())))
         }
     }
@@ -358,14 +411,18 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_root() {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
-        let runner = MockRunner { uris_run: uris_run.clone() };
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
         let children = Rc::new(RefCell::new(HashMap::new()));
-        resolver
-            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
         let model = Model::new(ModelParams {
             root_component_uri: "test:///root".to_string(),
             root_resolver_registry: resolver,
@@ -383,14 +440,18 @@ mod tests {
         assert!(actual_children.is_empty());
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_root_non_existent() {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
-        let runner = MockRunner { uris_run: uris_run.clone() };
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
         let children = Rc::new(RefCell::new(HashMap::new()));
-        resolver
-            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
         let model = Model::new(ModelParams {
             root_component_uri: "test:///root".to_string(),
             root_resolver_registry: resolver,
@@ -408,17 +469,21 @@ mod tests {
         assert_eq!(actual_uris, &expected_uris);
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_child() {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
-        let runner = MockRunner { uris_run: uris_run.clone() };
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children
             .borrow_mut()
             .insert("root".to_string(), vec!["system".to_string(), "echo".to_string()]);
-        resolver
-            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
         let model = Model::new(ModelParams {
             root_component_uri: "test:///root".to_string(),
             root_resolver_registry: resolver,
@@ -473,15 +538,19 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_child_non_existent() {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
-        let runner = MockRunner { uris_run: uris_run.clone() };
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
-        resolver
-            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
         let model = Model::new(ModelParams {
             root_component_uri: "test:///root".to_string(),
             root_resolver_registry: resolver,
@@ -515,18 +584,22 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_recursive_child() {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
-        let runner = MockRunner { uris_run: uris_run.clone() };
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
         children
             .borrow_mut()
             .insert("system".to_string(), vec!["logger".to_string(), "netstack".to_string()]);
-        resolver
-            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
         let model = Model::new(ModelParams {
             root_component_uri: "test:///root".to_string(),
             root_resolver_registry: resolver,
@@ -602,6 +675,69 @@ mod tests {
             let netstack_realm = get_child_realm(&system_realm.borrow(), "netstack");
             let actual_children = get_children(&netstack_realm.borrow());
             assert!(actual_children.is_empty());
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn check_namespace_from_using() {
+        let mut resolver = ResolverRegistry::new();
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+
+        // The system component will request namespaces of "/pkg" to its "/root_pkg" and "/foo/bar"
+        uses.borrow_mut().insert(
+            "system".to_string(),
+            Some(vec![
+                UseDecl {
+                    type_: Some(CapabilityType::Directory),
+                    source_path: Some("/pkg".to_string()),
+                    target_path: Some("/root_pkg".to_string()),
+                },
+                UseDecl {
+                    type_: Some(CapabilityType::Directory),
+                    source_path: Some("/pkg".to_string()),
+                    target_path: Some("/foo/bar".to_string()),
+                },
+            ]),
+        );
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
+        let model = Model::new(ModelParams {
+            root_component_uri: "test:///root".to_string(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+        });
+
+        // bind to system
+        let res = await!(model
+            .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("system".to_string()),])));
+        let expected_res: Result<(), ModelError> = Ok(());
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+
+        // Verify system has the expected namespaces.
+        let mut actual_namespaces = namespaces.borrow_mut();
+        assert!(actual_namespaces.contains_key("test:///system_resolved"));
+        let ns = actual_namespaces.get_mut("test:///system_resolved").unwrap();
+
+        // "/pkg" is missing because we don't supply package in MockResolver.
+        assert_eq!(ns.paths, ["/root_pkg", "/foo/bar"]);
+        assert_eq!(ns.directories.len(), 2);
+
+        // /root_pkg and /foo/bar are both pointed to the test component's /pkg.
+        // Verify that we can read the dummy component manifest.
+        for _i in 0..ns.directories.len() {
+            let dir = ns.directories.pop().unwrap();
+            let dir_proxy = dir.into_proxy().unwrap();
+            let path = PathBuf::from("meta/component_manager_tests_hello_world.cm");
+            let file_proxy =
+                io_util::open_file(&dir_proxy, &path).expect("could not open cm");
+            await!(io_util::read_file(&file_proxy)).expect("could not read cm");
         }
     }
 
