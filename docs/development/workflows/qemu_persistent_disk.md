@@ -27,7 +27,8 @@ $ mkfile -n 1g blk.bin
 
 ## Start zircon
 You don't need a full Fuchsia UI to set up the disk image so start just zircon
-but tell it to mount ```
+but tell it to mount
+```
 $ mrun -d
 [00000.000] 00000.00000> multiboot: info @ 0xffffff8000009500
 [00000.000] 00000.00000> multiboot: cmdline @ 0xffffff8000253059
@@ -61,7 +62,8 @@ GPT changes complete.
 ## Create the partitions
 
 Now that there's a blank partition table, create a 500m data and 500m blob
-partition: ```
+partition:
+```
 $ gpt repartition /dev/class/block/001 data data 500m blob blobfs 500m
 blocksize=0x200 blocks=2097152
 data: 524288000 bytes, 1024000 blocks, 48-1024063
