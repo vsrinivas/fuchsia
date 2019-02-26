@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/protobuf/proto_library.gni")
 
@@ -14,9 +14,7 @@ executable("cobalt_encoder_unittests") {
   ]
 }
 
-package("cobalt_tests") {
-  testonly = true
-
+test_package("cobalt_tests") {
   deps = [
     ":cobalt_encoder_unittests",
     "app:app",

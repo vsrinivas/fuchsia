@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/cobalt_system_metrics_unittests"
+    }
+}

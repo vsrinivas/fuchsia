@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/cobalt_testapp",
+        "args": [ "--skip_environment_test" ]
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.net.oldhttp",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

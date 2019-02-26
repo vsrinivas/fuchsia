@@ -1,0 +1,20 @@
+{
+    "program": {
+        "binary": "bin/cobalt_testapp",
+        "args": [ "--no_network_for_testing" ]
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx"
+            }
+        }
+    }
+}

@@ -38,10 +38,10 @@ namespace testapp {
 // This app is not launched through appmgr as part of a package so we need the
 // full path
 constexpr char kLegacyConfigBinProtoPath[] =
-    "/pkgfs/packages/cobalt_tests/0/data/legacy_cobalt_metrics.pb";
+    "/pkg/data/legacy_cobalt_metrics.pb";
 
 constexpr char kConfigBinProtoPath[] =
-    "/pkgfs/packages/cobalt_tests/0/data/cobalt_metrics.pb";
+    "/pkg/data/cobalt_metrics.pb";
 
 fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig(
     CobaltConfigType type) {
@@ -185,11 +185,13 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
-  context_->svc()->Connect(logger_factory.NewRequest());
+  zx_status_t zs = context_->svc()->Connect(logger_factory.NewRequest());
+  FXL_CHECK(zs == ZX_OK);
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  logger_factory->CreateLogger(LoadCobaltConfig(kLegacyCobaltConfig),
+  zs = logger_factory->CreateLogger(LoadCobaltConfig(kLegacyCobaltConfig),
                                logger_.logger_.NewRequest(), &status);
+  FXL_CHECK(zs == ZX_OK);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 
