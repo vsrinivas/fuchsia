@@ -46,9 +46,7 @@ while [[ "$1" =~ ^- ]]; do
       port="$1"
       ;;
     --verbose-agent|-va)
-      shift
       agent_out=""
-      break
       ;;
     --)
       shift
