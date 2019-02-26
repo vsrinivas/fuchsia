@@ -47,10 +47,10 @@ void Image::OnFenceReady(FenceReference* fence) {
 void Image::StartPresent() {
     ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
     ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
-
-    presenting_ = true;
     TRACE_DURATION("gfx", "Image::StartPresent", "id", id);
     TRACE_FLOW_BEGIN("gfx", "present_image", id);
+
+    presenting_ = true;
 }
 
 void Image::EarlyRetire() {

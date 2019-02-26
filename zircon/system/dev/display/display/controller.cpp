@@ -64,7 +64,7 @@ void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
     // Go through all the display mode timings and record whether or not
     // a basic layer configuration is acceptable.
     layer_t test_layer = {};
-    layer_t* test_layers[] = { &test_layer }; test_layer.cfg.primary.image.pixel_format = info->pixel_formats_[0]; 
+    layer_t* test_layers[] = { &test_layer }; test_layer.cfg.primary.image.pixel_format = info->pixel_formats_[0];
     display_config_t test_config;
     const display_config_t* test_configs[] = { &test_config };
     test_config.display_id = info->id;
@@ -502,6 +502,9 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
             if (!z_already_matched) {
                 list_delete(&cur->link);
                 cur->self->OnRetire();
+                // Older images may not be presented. Ending their flows here
+                // ensures the sanity of traces.
+                TRACE_FLOW_END("gfx", "present_image", cur->self->id);
                 cur->self.reset();
             }
         }
@@ -516,6 +519,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         list_for_every_entry(&info->images, cur, image_node_t, link) {
             for (unsigned i = 0; i < handle_count; i++) {
                 if (handles[i] == cur->self->info().handle) {
+                    // End of the flow for the image going to be presented.
                     TRACE_FLOW_END("gfx", "present_image", cur->self->id);
                     images[i] = cur->self->id;
                     break;
