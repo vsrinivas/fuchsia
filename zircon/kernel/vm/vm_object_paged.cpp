@@ -1455,7 +1455,7 @@ void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, con
     RangeChangeUpdateLocked(offset_new, len_new);
 }
 
-fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() {
+fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {
     auto vm_object = this;
     while (vm_object->parent_) {
         vm_object = VmObjectPaged::AsVmObjectPaged(vm_object->parent_);

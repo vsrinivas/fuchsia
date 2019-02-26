@@ -268,6 +268,11 @@ typedef struct zx_info_maps {
 // the VMO.
 #define ZX_INFO_VMO_VIA_MAPPING             (1u<<4)
 
+// The VMO is a pager owned VMO created by zx_pager_create_vmo or is
+// a clone of a VMO with this flag set. Will only be set on VMOs with
+// the ZX_INFO_VMO_TYPE_PAGED flag set.
+#define ZX_INFO_VMO_PAGER_BACKED            (1u<<5)
+
 // Describes a VMO. For mapping information, see |zx_info_maps_t|.
 typedef struct zx_info_vmo {
     // The koid of this VMO.

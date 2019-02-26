@@ -76,6 +76,10 @@ public:
     bool is_paged() const override { return true; }
     bool is_contiguous() const override { return (options_ & kContiguous); }
     bool is_resizable() const override { return (options_ & kResizable); }
+    bool is_pager_backed() const override {
+        Guard<fbl::Mutex> guard{&lock_};
+        return GetRootPageSourceLocked() != nullptr;
+    }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
@@ -159,7 +163,7 @@ private:
     zx_status_t PinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
     void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
-    fbl::RefPtr<PageSource> GetRootPageSourceLocked()
+    fbl::RefPtr<PageSource> GetRootPageSourceLocked() const
         // Walks the clone chain to get the root page source, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 

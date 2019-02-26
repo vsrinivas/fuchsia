@@ -613,6 +613,31 @@ bool suspend_read_test(bool check_vmar) {
     END_TEST;
 }
 
+// Tests the ZX_INFO_VMO_PAGER_BACKED flag
+bool vmo_info_pager_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(ZX_PAGE_SIZE, &vmo));
+
+    // Check that the flag is set on a pager created vmo.
+    zx_info_vmo_t info;
+    ASSERT_EQ(ZX_OK, vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr), "");
+    ASSERT_EQ(ZX_INFO_VMO_PAGER_BACKED, info.flags & ZX_INFO_VMO_PAGER_BACKED, "");
+
+    // Check that the flag isn't set on a regular vmo.
+    zx::vmo plain_vmo;
+    ASSERT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0, &plain_vmo), "");
+    ASSERT_EQ(ZX_OK, plain_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr), "");
+    ASSERT_EQ(0, info.flags & ZX_INFO_VMO_PAGER_BACKED, "");
+
+    END_TEST;
+}
+
 // Tests that detaching results in a complete request.
 bool detach_page_complete_test() {
     BEGIN_TEST;
@@ -1855,6 +1880,7 @@ DEFINE_VMO_VMAR_TEST(thread_kill_test);
 DEFINE_VMO_VMAR_TEST(thread_kill_overlap_test);
 
 BEGIN_TEST_CASE(lifecycle_tests)
+RUN_TEST(vmo_info_pager_test);
 RUN_TEST(detach_page_complete_test);
 RUN_TEST(close_page_complete_test);
 RUN_VMO_VMAR_TEST(read_detach_interrupt_late_test);

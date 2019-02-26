@@ -56,6 +56,8 @@ public:
     virtual bool is_contiguous() const { return false; }
     // Returns true if the object size can be changed.
     virtual bool is_resizable() const { return false; }
+    // Returns true if the VMO was created vma CreatePagerVmo().
+    virtual bool is_pager_backed() const { return false; }
 
     // Returns the number of physical pages currently allocated to the
     // object where (offset <= page_offset < offset+len).

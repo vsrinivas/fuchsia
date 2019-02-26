@@ -120,7 +120,8 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo,
     entry.share_count = vmo->share_count();
     entry.flags =
         (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
-        (vmo->is_cow_clone() ? ZX_INFO_VMO_IS_COW_CLONE : 0);
+        (vmo->is_cow_clone() ? ZX_INFO_VMO_IS_COW_CLONE : 0) |
+        (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0);
     entry.committed_bytes = vmo->AllocatedPages() * PAGE_SIZE;
     entry.cache_policy = vmo->GetMappingCachePolicy();
     if (is_handle) {

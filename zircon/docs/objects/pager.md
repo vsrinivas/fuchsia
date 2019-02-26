@@ -25,8 +25,10 @@ for multiple independent pager objects to exist simultaniously.
 Creating a pager is not a privileged operation. However, the default behavior of syscalls which
 operate on VMOs is to fail if the operation would require blocking on IPC back to a userspace
 process, so applications generally need to be aware of when they are operating on pager owned
-VMOs. This means that that services which provide pager owned VMOs to clients should be explicit
-about doing so as part of their API.
+VMOs. This means that services which provide pager owned VMOs to clients should be explicit about
+doing so as part of their API. Whether or not accesses into a VMO may result in a pager request
+can be determined by checking for the **ZX_INFO_VMO_PAGER_BACKED** flag returned by
+[`zx_object_get_info()`] in `zx_info_vmo_t`.
 
 TODO(stevensd): Writeback is not currently implemented. Update the documentation when it is.
 
