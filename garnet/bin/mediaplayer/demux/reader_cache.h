@@ -51,22 +51,34 @@ class ReaderCache : public Reader,
   void SetCacheOptions(size_t capacity, size_t max_backtrack);
 
  private:
+  struct ReadAtRequest {
+    ReadAtCallback callback;
+    size_t original_position;
+    size_t total_bytes;
+    size_t position;
+    uint8_t* buffer;
+    size_t bytes_to_read;
+  };
+
+  void ServeReadAtRequest(ReadAtRequest request);
+
   // Starts a load from the upstream |Reader| into our buffer over the given
   // range. 1) Cleans up memory outside the desired range to pay for the new
   // allocations. 2) Makes async calls for the upstream |Reader| to fill all the
   // holes in the desired cache range. 3) Invokes |load_callback| on completion
   // of the load.
-  void StartLoadForPosition(size_t position, fit::closure load_callback);
+  void StartLoadForPosition(size_t position,
+                            fit::function<void(Result)> load_callback);
 
-  // Calculates the range of bytes we should load ahead of the current requested
-  // position based on our capacity and current estimations of the input and
-  // output byte rates.
+  // Estimates load range based on observations of the input (upstream source)
+  // and output (demux requests) byte rates. Returns std::nullopt if there is
+  // no need to load for the given position.
   std::optional<std::pair<size_t, size_t>> CalculateLoadRange(size_t position);
 
   // Makes async calls to the upstream Reader to fill the given holes in our
   // underlying buffer. Calls callback on completion.
   void FillHoles(std::vector<SlidingBuffer::Block> holes,
-                 fit::closure callback);
+                 fit::function<void(Result)> callback);
 
   // Calculates the desired cache range according to our cache options around
   // the requested read position.

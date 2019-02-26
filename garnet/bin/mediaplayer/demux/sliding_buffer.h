@@ -65,8 +65,8 @@ class SlidingBuffer {
   struct Range {
     size_t start = 0;
     size_t length = 0;
-    size_t end() { return start + length; }
-    bool contains(size_t pos) { return pos >= start && pos < end(); }
+    size_t end() const { return start + length; }
+    bool contains(size_t pos) const { return pos >= start && pos < end(); }
   };
 
   static std::vector<Range> ClipRange(const Range& base, const Range& clip);

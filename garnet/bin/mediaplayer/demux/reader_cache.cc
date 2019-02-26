@@ -56,8 +56,6 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
   describe_is_complete_.When([this, position, buffer, bytes_to_read,
                               callback = std::move(callback)]() mutable {
-    FXL_DCHECK(position < upstream_size_);
-
     if (demux_sampler_) {
       demux_byte_rate_.AddSample(
           ByteRateEstimator::ByteRateSampler::FinishSample(
@@ -67,20 +65,13 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
     if (!buffer_) {
       buffer_ = SlidingBuffer(capacity_);
     }
-    size_t bytes_read = buffer_->Read(position, buffer, bytes_to_read);
 
-    size_t remaining_bytes = upstream_size_ - position;
-    if ((bytes_read == bytes_to_read) || (bytes_read == remaining_bytes)) {
-      demux_sampler_ =
-          ByteRateEstimator::ByteRateSampler::StartSample(bytes_read);
-      callback(Result::kOk, bytes_read);
-      return;
-    }
-
-    StartLoadForPosition(position, [this, position, buffer, bytes_to_read,
-                                    callback = std::move(callback)]() mutable {
-      ReadAt(position, buffer, bytes_to_read, std::move(callback));
-    });
+    ServeReadAtRequest({.callback = std::move(callback),
+                        .original_position = position,
+                        .total_bytes = bytes_to_read,
+                        .position = position,
+                        .bytes_to_read = bytes_to_read,
+                        .buffer = buffer});
   });
 }
 
@@ -94,22 +85,65 @@ void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack) {
   max_backtrack_ = max_backtrack;
 }
 
-void ReaderCache::StartLoadForPosition(size_t position,
-                                       fit::closure load_callback) {
+void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
+  FXL_DCHECK(buffer_);
+  FXL_DCHECK(request.buffer);
+  FXL_DCHECK(request.callback);
+  FXL_DCHECK(request.position < upstream_size_);
+
+  size_t bytes_read =
+      buffer_->Read(request.position, request.buffer, request.bytes_to_read);
+
+  size_t remaining_bytes = upstream_size_ - request.position;
+  if ((bytes_read == request.bytes_to_read) ||
+      (bytes_read == remaining_bytes)) {
+    demux_sampler_ =
+        ByteRateEstimator::ByteRateSampler::StartSample(bytes_read);
+    const size_t bytes_we_will_not_read = request.bytes_to_read - bytes_read;
+    request.callback(Result::kOk, request.total_bytes - bytes_we_will_not_read);
+    return;
+  }
+
+  StartLoadForPosition(
+      request.position + bytes_read,
+      [this, bytes_read, request = std::move(request)](Result result) mutable {
+        if (result != Result::kOk) {
+          request.callback(result, request.position + bytes_read -
+                                       request.original_position);
+          return;
+        }
+
+        ServeReadAtRequest({
+            .callback = std::move(request.callback),
+            .original_position = request.original_position,
+            .total_bytes = request.total_bytes,
+            .position = request.position + bytes_read,
+            .bytes_to_read = request.bytes_to_read - bytes_read,
+            .buffer = request.buffer + bytes_read,
+        });
+      });
+}
+
+void ReaderCache::StartLoadForPosition(
+    size_t position, fit::function<void(Result)> load_callback) {
   FXL_DCHECK(buffer_);
   FXL_DCHECK(!load_in_progress_);
   load_in_progress_ = true;
 
   auto load_range = CalculateLoadRange(position);
-  FXL_DCHECK(load_range);
+  FXL_DCHECK(load_range)
+      << "The media is fully cached for the read, but a load was requested.";
 
   auto [load_start, load_size] = *load_range;
   auto holes = buffer_->Slide(load_start,
-                              std::min(load_size, upstream_size_ - load_start));
+                              std::min({load_size, upstream_size_ - load_start,
+                                        buffer_->capacity() - max_backtrack_}));
 
-  FillHoles(holes, [load_callback = std::move(load_callback)]() mutable {
+  FillHoles(holes, [this, load_callback =
+                              std::move(load_callback)](Result result) mutable {
+    load_in_progress_ = false;
     if (load_callback) {
-      load_callback();
+      load_callback(result);
     }
   });
 }
@@ -125,11 +159,15 @@ std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
   }
   size_t bytes_until_demux_misses = next_missing_byte - position;
 
+  const std::pair<size_t, size_t> defaultRange = {position, kDefaultChunkSize};
+
   std::optional<float> demux_byte_rate_estimate = demux_byte_rate_.Estimate();
   std::optional<float> upstream_reader_byte_rate_estimate =
       upstream_reader_byte_rate_.Estimate();
   if (!demux_byte_rate_estimate || !upstream_reader_byte_rate_estimate) {
-    return std::make_pair(position, kDefaultChunkSize);
+    // We don't have enough information to make an informed estimation so we
+    // defer to our configuration.
+    return defaultRange;
   }
 
   float time_until_demux_misses =
@@ -139,9 +177,9 @@ std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
       kConservativeFactor;
 
   if (bytes_we_can_read_before_demux_misses < 1) {
-    // Cache misses are inevitable. We will defer to our given configuration
-    // here to prevent adding in many short buffering periods.
-    return CalculateCacheRange(position);
+    // Cache misses are inevitable. We fall back to our configuration in this
+    // case to avoid many small waits.
+    return defaultRange;
   }
 
   return std::make_pair(position,
@@ -149,7 +187,7 @@ std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
 }
 
 void ReaderCache::FillHoles(std::vector<SlidingBuffer::Block> holes,
-                            fit::closure callback) {
+                            fit::function<void(Result)> callback) {
   upstream_reader_sampler_ =
       ByteRateEstimator::ByteRateSampler::StartSample(holes.back().size);
   upstream_reader_->ReadAt(
@@ -157,37 +195,21 @@ void ReaderCache::FillHoles(std::vector<SlidingBuffer::Block> holes,
       [this, holes, callback = std::move(callback)](Result result,
                                                     size_t bytes_read) mutable {
         last_result_ = result;
-        if (result != Result::kOk) {
-          FXL_LOG(ERROR) << "ReadAt failed!";
-        }
-        if (upstream_reader_sampler_) {
+        if (result == Result::kOk && upstream_reader_sampler_) {
           upstream_reader_byte_rate_.AddSample(
               ByteRateEstimator::ByteRateSampler::FinishSample(
                   std::move(*upstream_reader_sampler_)));
         }
+        upstream_reader_sampler_ = std::nullopt;
 
         holes.pop_back();
         if (holes.empty()) {
-          callback();
-          load_in_progress_ = false;
+          callback(result);
           return;
         }
 
         FillHoles(holes, std::move(callback));
       });
-}
-
-std::pair<size_t, size_t> ReaderCache::CalculateCacheRange(size_t position) {
-  if (upstream_size_ <= capacity_) {
-    return {0, upstream_size_};
-  }
-
-  size_t chunk_position = position - (position % kDefaultChunkSize);
-  size_t cache_start =
-      chunk_position > max_backtrack_ ? chunk_position - max_backtrack_ : 0;
-
-  return {cache_start,
-          std::min(capacity_ - max_backtrack_, upstream_size_ - cache_start)};
 }
 
 }  // namespace media_player
