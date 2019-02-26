@@ -560,12 +560,6 @@ struct Paint {
     error codes.  Positive values are reserved for application errors.  A status
     of ZX_OK indicates successful operation.
 
-*   **Protocol extension:** New methods can be added to existing protocols as
-    long as they do not collide with existing methods.
-*   **Protocol derivation:** New protocols can be derived from any number of
-    existing protocols as long as none of their methods use the same ordinals.
-    (This is purely a FIDL language feature, does not affect the wire format.)
-
 ##### Declaration
 
 ```fidl
@@ -619,3 +613,162 @@ struct Record {
     RealCalculator? r;
 };
 ```
+#### Protocol Composition
+
+A protocol can include methods from other protocols.
+This is called composition: you compose one protocol from other protocols.
+
+Composition is used in the following cases:
+1. you have multiple protocols that all share some common behavior(s)
+2. you have varying levels of functionality you want to expose to different audiences
+
+##### Common behavior
+
+In the first case, there might be behavior that's shared across multiple protocols.
+For example, in a graphics system, several different protocols might all share a
+common need to set a background and foreground color.
+Rather than have each protocol define their own color setting methods, a common
+protocol can be defined:
+
+```fidl
+struct Color {
+    int16 r;
+    int16 g;
+    int16 b;
+}
+
+protocol SceneryController {
+    SetBackground(Color color);
+    SetForeground(Color color);
+};
+```
+
+It can then be shared by other protocols:
+
+```fidl
+protocol Drawer {
+    compose SceneryController;
+    Circle(int x, int y, int radius);
+    Square(int x, int y, int diagonal);
+};
+
+protocol Writer {
+    compose SceneryController;
+    Text(int x, int y, string message);
+};
+```
+
+In the above, there are three protocols, `SceneryController`, `Drawer`, and `Writer`.
+`Drawer` is used to draw graphical objects, like circles and squares at given locations
+with given sizes.
+It composes the methods **SetBackground()** and **SetForeground()** from
+the `SceneryController` protocol because it includes the `SceneryController` protocol
+(by way of the `compose` keyword).
+
+The `Writer` protocol, used to write text on the display, includes the `SceneryController`
+protocol in the same way.
+
+Now both `Drawer` and `Writer` include **SetBackground()** and **SetForeground()**.
+
+This offers several advantages over having `Drawer` and `Writer` specify their own color
+setting methods:
+
+*   the way to set background and foreground colors is the same, whether it's used
+    to draw a circle, square, or put text on the display.
+*   new methods can be added to `Drawer` and `Writer` without having to change their
+    definitions, simply by adding them to the `SceneryController` protocol.
+
+The last point is particularly important, because it allows us to add functionality
+to existing protocols.
+For example, we might introduce an alpha-blending (or "transparency") feature to
+our graphics system.
+By extending the `SceneryController` protocol to deal with it, perhaps like so:
+
+```fidl
+protocol SceneryController {
+    SetBackground(Color color);
+    SetForeground(Color color);
+    SetAlphaChannel(int a);
+};
+```
+
+we've now extended both `Drawer` and `Writer` to be able to support alpha blending.
+
+##### Multiple compositions
+
+Composition is not a one-to-one relationship &mdash; we can include multiple compositions
+into a given protocol, and not all protocols need be composed of the same mix of
+included protocols.
+
+For example, we might have the ability to set font characteristics.
+Fonts don't make sense for our `Drawer` protocol, but they do make sense for our `Writer`
+protocol, and perhaps other protocols.
+
+So, we define our `FontController` protocol:
+
+```fidl
+protocol FontController {
+    SetPointSize(int points);
+    SetFontName(string fontname);
+    Italic(bool onoff);
+    Bold(bool onoff);
+    Underscore(bool onoff);
+    Strikethrough(bool onoff);
+};
+```
+
+and then invite `Writer` to include it, by using the `compose` keyword:
+
+```fidl
+protocol Writer {
+    compose SceneryController;
+    compose FontController;
+    Text(int x, int y, string message);
+};
+```
+
+Here, we've extended the `Writer` protocol with the `FontController` protocol's methods,
+without disturbing the `Drawer` protocol (which doesn't need to know anything about fonts).
+
+Protocol composition is similar to [mixin].
+More details are discussed in [FTP-023: Compositional Model][ftp-023].
+
+##### Layering
+
+At the beginning of this section, we mentioned a second use for composition, namely
+exposing various levels of functionality to different audiences.
+
+In this example, we have two protocols that are independently useful, a `Clock` protocol
+to get the current time and timezone:
+
+```fidl
+protocol Clock {
+    Now() -> (Time time);
+    CurrentTimeZone() -> (string timezone);
+}
+```
+
+And an `Horologist` protocol that sets the time and timezone:
+
+```fidl
+protocol Horologist {
+    SetTime(Time time);
+    SetCurrentTimeZone(string timezone);
+}
+```
+
+We may not necessarily wish to expose the more privileged `Horologist` protocol to just
+any client, but we do want to expose it to the system clock component.
+So, we create a protocol (`SystemClock`) which composes both:
+
+```fidl
+protocol SystemClock {
+    compose Clock;
+    compose Horologist;
+}
+```
+
+<!-- xref -->
+[mixin]: https://en.wikipedia.org/wiki/Mixin
+[ftp-023]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-023.md
+
