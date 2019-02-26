@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -50,45 +49,6 @@ var (
 	localWD string
 )
 
-// TestRunnerOutput manages the output of this test runner.
-type TestRunnerOutput struct {
-	Summary *SummaryOutput
-	TAP     *TAPOutput
-	Tar     *TarOutput
-}
-
-func (o *TestRunnerOutput) Record(result testrunner.TestResult) {
-	if o.Summary != nil {
-		o.Summary.Record(result)
-	}
-
-	if o.TAP != nil {
-		o.TAP.Record(result)
-	}
-
-	if o.Tar != nil {
-		o.Tar.Record(result)
-	}
-}
-
-// Complete finishes producing output for the test run.
-func (o *TestRunnerOutput) Complete() error {
-	if o.Tar == nil {
-		return nil
-	}
-
-	bytes, err := json.Marshal(o.Summary.Summary)
-	if err != nil {
-		return err
-	}
-
-	if err := o.Tar.TarFile(bytes, runtests.TestSummaryFilename); err != nil {
-		return err
-	}
-
-	return o.Tar.Close()
-}
-
 func usage() {
 	fmt.Println(`testrunner [flags] tests-file
 
@@ -122,17 +82,13 @@ func main() {
 	}
 
 	// Prepare test output drivers.
-	output := &TestRunnerOutput{
-		TAP:     NewTAPOutput(os.Stdout, len(tests)),
-		Summary: &SummaryOutput{},
-	}
+	output := new(Output)
 	defer output.Complete()
-
-	// Add an archive Output if specified.
+	output.SetupTAP(os.Stdout, len(tests))
+	output.SetupSummary()
 	if archive != "" {
-		output.Tar, err = NewTarOutput(archive)
-		if err != nil {
-			log.Fatalf("failed to initialize tar recorder: %v", err)
+		if err := output.SetupTar(archive); err != nil {
+			log.Fatalf("failed to initialize tar output: %v", err)
 		}
 	}
 
@@ -151,7 +107,7 @@ func main() {
 	}
 }
 
-func execute(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKey string) error {
+func execute(tests []testsharder.Test, output *Output, nodename, sshKey string) error {
 	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
@@ -215,7 +171,7 @@ func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKey string) error {
+func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKey string) error {
 	if len(tests) == 0 {
 		return nil
 	}
@@ -265,7 +221,7 @@ func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, nodenam
 	return runTests(tests, tester.Test, output)
 }
 
-func runTests(tests []testsharder.Test, tester Tester, output *TestRunnerOutput) error {
+func runTests(tests []testsharder.Test, tester Tester, output *Output) error {
 	for _, test := range tests {
 		result, err := runTest(context.Background(), test, tester)
 		if err != nil {
