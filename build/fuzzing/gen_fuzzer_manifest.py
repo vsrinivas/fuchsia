@@ -30,8 +30,10 @@ def main():
 
   if "features" not in cmx["sandbox"]:
     cmx["sandbox"]["features"] = []
-  if "persistent-storage" not in cmx["sandbox"]["features"]:
-    cmx["sandbox"]["features"].append("persistent-storage")
+  # TODO(SEC-200): Fuzz tests currently broken anyway due to now invalid
+  # assumptions about persistent storage. Commenting this out until fixed.
+  #if "persistent-storage" not in cmx["sandbox"]["features"]:
+  #  cmx["sandbox"]["features"].append("persistent-storage")
 
   with open(args.out, "w") as f:
     f.write(json.dumps(cmx, sort_keys=True, indent=4))

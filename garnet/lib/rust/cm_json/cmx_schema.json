@@ -75,7 +75,6 @@
               "build-info",
               "deprecated-global-persistent-storage",
               "isolated-persistent-storage",
-              "persistent-storage",
               "shell",
               "shell-commands",
               "root-ssl-certificates",

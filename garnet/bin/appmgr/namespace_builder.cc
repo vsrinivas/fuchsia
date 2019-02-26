@@ -126,8 +126,7 @@ void NamespaceBuilder::AddSandbox(
   // if both included.
   if (sandbox.HasFeature("isolated-persistent-storage")) {
     PushDirectoryFromPathAs(isolated_data_path_factory(), "/data");
-  } else if (sandbox.HasFeature("persistent-storage") ||
-             sandbox.HasFeature("deprecated-global-persistent-storage")) {
+  } else if (sandbox.HasFeature("deprecated-global-persistent-storage")) {
     // TODO(bryanhenry,CF-28): Remove this feature once users have migrated to
     // isolated storage.
     PushDirectoryFromPathAs(MigratedGlobalPersistentDataPath(), "/data");
