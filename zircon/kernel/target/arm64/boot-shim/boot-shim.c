@@ -16,7 +16,9 @@
 #include <zircon/boot/driver-config.h>
 
 // uncomment to dump device tree at boot
-// #define PRINT_DEVICE_TREE
+#ifndef PRINT_DEVICE_TREE
+#define PRINT_DEVICE_TREE 0
+#endif
 
 // Uncomment to list ZBI items.
 #ifndef PRINT_ZBI
@@ -67,7 +69,7 @@ typedef struct {
 } device_tree_context_t;
 
 static int node_callback(int depth, const char *name, void *cookie) {
-#ifdef PRINT_DEVICE_TREE
+#if PRINT_DEVICE_TREE
     uart_puts("node: ");
     uart_puts(name);
     uart_puts("\n");
@@ -92,7 +94,7 @@ static int node_callback(int depth, const char *name, void *cookie) {
 }
 
 static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *cookie) {
-#ifdef PRINT_DEVICE_TREE
+#if PRINT_DEVICE_TREE
     uart_puts("    prop: ");
     uart_puts(name);
     uart_puts(" size: ");
@@ -137,7 +139,7 @@ static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *c
             } else if (!strncmp((const char *)data, "arm,cortex-a15-gic", size)) {
                 ctx->gic_version = 2;
             }
-#ifdef PRINT_DEVICE_TREE
+#if PRINT_DEVICE_TREE
             uart_puts(" gic version ");
             uart_print_hex(ctx->gic_version);
 #endif
@@ -147,7 +149,7 @@ static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *c
         ;
     }
 
-#ifdef PRINT_DEVICE_TREE
+#if PRINT_DEVICE_TREE
     uart_puts("\n");
 #endif
 

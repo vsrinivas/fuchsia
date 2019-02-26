@@ -5,6 +5,7 @@
 #define HAS_DEVICE_TREE 1
 #define USE_DEVICE_TREE_CPU_COUNT 1
 #define USE_DEVICE_TREE_GIC_VERSION 1
+#define PRINT_DEVICE_TREE 0
 
 #define MAX_CPU_COUNT 16
 static size_t cpu_count = 0;
@@ -70,6 +71,11 @@ static void set_gic_version(int gic_version) {
 static void add_cpu_topology(zbi_header_t* zbi) {
     zbi_topology_node_t nodes[MAX_CPU_COUNT];
 
+    // clamp to the max cpu
+    if (cpu_count > MAX_CPU_COUNT) {
+        cpu_count = MAX_CPU_COUNT;
+    }
+
     for (size_t index = 0; index < cpu_count; index++) {
         nodes[index] = (zbi_topology_node_t){
             .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
@@ -82,7 +88,9 @@ static void add_cpu_topology(zbi_header_t* zbi) {
                     .architecture = ZBI_TOPOLOGY_ARCH_ARM,
                     .architecture_info = {
                         .arm = {
-                            .cpu_id = index,
+                            // qemu seems to put 16 cores per aff0 level, max 32 cores.
+                            .cluster_1_id = (index / 16),
+                            .cpu_id = (index % 16),
                             .gic_id = index,
                         }}}}};
     }
