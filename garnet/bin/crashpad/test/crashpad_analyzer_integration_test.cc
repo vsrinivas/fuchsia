@@ -5,7 +5,7 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/component/cpp/environment_services_helper.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
@@ -18,8 +18,8 @@ namespace {
 // interface, connecting through FIDL.
 TEST(CrashpadAnalyzerIntegrationTest, SmokeTest) {
   AnalyzerSyncPtr crash_analyzer;
-  auto environment_services = ::component::GetEnvironmentServices();
-  environment_services->ConnectToService(crash_analyzer.NewRequest());
+  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
+  environment_services->Connect(crash_analyzer.NewRequest());
 
   // We call ProcessKernelPanicCrashlog() to smoke test the service is up and
   // running because it is the easiest to call.
