@@ -893,7 +893,13 @@ extern {
     pub fn zx_system_mexec(
         resource: zx_handle_t,
         kernel_vmo: zx_handle_t,
-        bootimage_vmo: zx_handle_t,
+        bootimage_vmo: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_system_mexec_payload_get(
+        resource: zx_handle_t,
+        buffer: *mut u8,
+        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_pager_create(
