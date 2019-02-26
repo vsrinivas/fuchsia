@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <fbl/array.h>
 #include <fbl/string.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
@@ -63,7 +64,6 @@ struct Device {
     uint32_t retries = 4;
     mutable int32_t refcount_ = 0;
     uint32_t protocol_id = 0;
-    uint32_t prop_count = 0;
     Devnode* self = nullptr;
     Devnode* link = nullptr;
     Device* parent = nullptr;
@@ -103,8 +103,6 @@ struct Device {
     // Metadata entries associated to this device.
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata;
 
-    fbl::unique_ptr<zx_device_prop_t[]> props;
-
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const { ++refcount_; }
 
@@ -114,6 +112,16 @@ struct Device {
         --refcount_;
         return rc == 1;
     }
+
+    // Sets the properties of this device.  Returns an error if the properties
+    // array contains more than one property from the BIND_TOPO_* range.
+    zx_status_t SetProps(fbl::Array<const zx_device_prop_t> props);
+    const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
+    const zx_device_prop_t* topo_prop() const { return topo_prop_; }
+private:
+    fbl::Array<const zx_device_prop_t> props_;
+    // If the device has a topological property in |props|, this points to it.
+    const zx_device_prop_t* topo_prop_ = nullptr;
 };
 
 } // namespace devmgr

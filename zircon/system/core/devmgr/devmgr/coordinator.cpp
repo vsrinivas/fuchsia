@@ -444,16 +444,17 @@ void Coordinator::DumpDeviceProps(const Device* dev) const {
         DmPrintf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
                  isprint(c) ? c : '.', isprint(d) ? d : '.', dev->protocol_id, dev->protocol_id);
 
-        DmPrintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
-        for (uint32_t i = 0; i < dev->prop_count; ++i) {
-            const zx_device_prop_t* p = &dev->props[i];
+        const auto& props = dev->props();
+        DmPrintf("%u Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
+        for (uint32_t i = 0; i < props.size(); ++i) {
+            const zx_device_prop_t* p = &props[i];
             const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
-                DmPrintf("[%2u/%2u] : Value 0x%08x Id %s\n", i, dev->prop_count, p->value,
+                DmPrintf("[%2u/%2u] : Value 0x%08x Id %s\n", i, props.size(), p->value,
                          param_name);
             } else {
-                DmPrintf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n", i, dev->prop_count, p->value,
+                DmPrintf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n", i, props.size(), p->value,
                          p->id);
             }
         }
@@ -773,17 +774,20 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    dev->props = fbl::make_unique<zx_device_prop_t[]>(props_count);
-    if (!dev->props) {
+    fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[props_count], props_count);
+    if (!props) {
         return ZX_ERR_NO_MEMORY;
+    }
+
+    static_assert(sizeof(zx_device_prop_t) == sizeof(props_data[0]));
+    memcpy(props.get(), props_data, props_count * sizeof(zx_device_prop_t));
+    zx_status_t status = dev->SetProps(std::move(props));
+    if (status != ZX_OK) {
+        return status;
     }
 
     dev->hrpc = std::move(rpc);
     dev->protocol_id = protocol_id;
-
-    dev->prop_count = static_cast<uint32_t>(props_count);
-    static_assert(sizeof(zx_device_prop_t) == sizeof(props_data[0]));
-    memcpy(dev->props.get(), props_data, props_count * sizeof(zx_device_prop_t));
 
     // If we have bus device args we are, by definition, a bus device.
     if (args.size() > 0) {
@@ -807,16 +811,15 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
         dev->flags |= DEV_CTX_INVISIBLE;
     }
 
-    zx_status_t r;
-    if ((r = devfs_publish(parent, dev.get())) < 0) {
-        return r;
+    if ((status = devfs_publish(parent, dev.get())) < 0) {
+        return status;
     }
 
     dev->wait.set_object(dev->hrpc.get());
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(dispatcher())) != ZX_OK) {
+    if ((status = dev->wait.Begin(dispatcher())) != ZX_OK) {
         devfs_unpublish(dev.get());
-        return r;
+        return status;
     }
 
     if (dev->host) {
@@ -835,13 +838,13 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (child)\n", parent, parent->name.data(),
         parent->refcount_);
 
-    log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n", dev.get(),
-        dev->name.data(), dev->prop_count, dev->args.data(), dev->parent);
+    log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
+        dev->name.data(), dev->props().size(), dev->args.data(), dev->parent);
 
     if (!invisible) {
-        r = dev->publish_task.Post(dispatcher());
-        if (r != ZX_OK) {
-            return r;
+        status = dev->publish_task.Post(dispatcher());
+        if (status != ZX_OK) {
+            return status;
         }
     }
     // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
@@ -1013,8 +1016,7 @@ zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname) {
     // TODO: disallow if we're in the middle of enumeration, etc
     for (const auto& drv : drivers_) {
         if (autobind || !drvlibname.compare(drv.libname)) {
-            if (dc_is_bindable(&drv, dev->protocol_id, dev->props.get(), dev->prop_count,
-                               autobind)) {
+            if (dc_is_bindable(&drv, dev->protocol_id, dev->props(), autobind)) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(),
                     dev->name.data());
                 return AttemptBind(&drv, dev);
@@ -1760,7 +1762,7 @@ void Coordinator::HandleNewDevice(Device* dev) {
         }
     }
     for (auto& drv : drivers_) {
-        if (!dc_is_bindable(&drv, dev->protocol_id, dev->props.get(), dev->prop_count, true)) {
+        if (!dc_is_bindable(&drv, dev->protocol_id, dev->props(), true)) {
             continue;
         }
         log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(), dev->name.data());
@@ -1982,7 +1984,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
         if (dev.flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
             // If device is already bound or being destroyed or invisible, skip it.
             continue;
-        } else if (!dc_is_bindable(drv, dev.protocol_id, dev.props.get(), dev.prop_count, true)) {
+        } else if (!dc_is_bindable(drv, dev.protocol_id, dev.props(), true)) {
             // If the driver is not bindable to the device, skip it.
             continue;
         }

@@ -13,8 +13,7 @@
 namespace {
 
 struct BindProgramContext {
-    const zx_device_prop_t* props;
-    const zx_device_prop_t* end;
+    const fbl::Array<const zx_device_prop_t>* props;
     uint32_t protocol_id;
     uint32_t binding_size;
     const zx_bind_inst_t* binding;
@@ -23,14 +22,10 @@ struct BindProgramContext {
 };
 
 uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
-    const zx_device_prop_t* props = ctx->props;
-    const zx_device_prop_t* end = ctx->end;
-
-    while (props < end) {
-        if (props->id == id) {
-            return props->value;
+    for (const auto prop : *ctx->props) {
+        if (prop.id == id) {
+            return prop.value;
         }
-        props++;
     }
 
     // fallback for devices without properties
@@ -131,14 +126,13 @@ bool is_bindable(BindProgramContext* ctx) {
 
 namespace devmgr {
 
-bool dc_is_bindable(const Driver* drv, uint32_t protocol_id, zx_device_prop_t* props,
-                    size_t prop_count, bool autobind) {
+bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
+                    const fbl::Array<const zx_device_prop_t>& props, bool autobind) {
     if (drv->binding_size == 0) {
         return false;
     }
     BindProgramContext ctx;
-    ctx.props = props;
-    ctx.end = props + prop_count;
+    ctx.props = &props;
     ctx.protocol_id = protocol_id;
     ctx.binding = drv->binding.get();
     ctx.binding_size = drv->binding_size;

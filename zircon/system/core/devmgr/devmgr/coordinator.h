@@ -389,8 +389,8 @@ private:
     void DriverAddedSys(Driver* drv, const char* version);
 };
 
-bool dc_is_bindable(const Driver* drv, uint32_t protocol_id, zx_device_prop_t* props,
-                    size_t prop_count, bool autobind);
+bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
+                    const fbl::Array<const zx_device_prop_t>& props, bool autobind);
 
 // Methods for composing FIDL RPCs to the devhosts
 zx_status_t dh_send_remove_device(const Device* dev);

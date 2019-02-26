@@ -81,7 +81,8 @@ typedef struct device_add_args {
     // Pointer to device's device protocol operations
     const zx_protocol_device_t* ops;
 
-    // Optional list of device properties
+    // Optional list of device properties.  This list cannot contain more than
+    // one property with an id in the range [BIND_TOPO_START, BIND_TOPO_END].
     zx_device_prop_t* props;
 
     // Number of device properties
