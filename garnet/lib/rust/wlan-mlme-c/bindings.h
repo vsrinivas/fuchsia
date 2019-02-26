@@ -233,6 +233,11 @@ typedef struct {
 extern "C" int32_t rust_mlme_is_valid_open_auth_resp(const uint8_t *data,
                                                      uintptr_t len);
 
+extern "C" int32_t rust_mlme_write_eth_frame(
+    rust_mlme_buffer_provider_ops_t provider, const uint8_t (*dst_addr)[6],
+    const uint8_t (*src_addr)[6], uint16_t protocol_id, const uint8_t *payload,
+    uintptr_t payload_len, rust_mlme_out_buf_t *out_buf);
+
 extern "C" int32_t rust_mlme_write_keep_alive_resp_frame(
     rust_mlme_buffer_provider_ops_t provider, const uint8_t (*bssid)[6],
     const uint8_t (*client_addr)[6], uint16_t seq_ctrl,
