@@ -1,7 +1,7 @@
 # Fuchsia Device Interface Rubric
 
 The Fuchsia device interfaces are expressed as FIDL interfaces.  These FIDL
-definitions should conform to the [FIDL Readability Rubric].
+definitions should conform to the [FIDL Readability Rubric][fidl-readability-rubric].
 
 ## Identifiers
 
@@ -37,22 +37,36 @@ integer types when a field has a constrained set of non-arithmetic values.
 
 ## Bitfields
 
-If your interface has a bitfield, represent its values using `const` values.
-They should be grouped together in the FIDL file and have a common prefix.  For
-example:
+If your interface has a bitfield, represent its values using `bits` values
+(for details, see [`FTP-025`: "Bit Flags."][ftp-025])
+
+For example:
 
 ```fidl
 // Bit definitions for Info.features field
 
-// If present, this device represents WLAN hardware.
-const uint32 INFO_FEATURE_WLAN = 0x00000001;
-// If present, this device is synthetic (i.e. not backed by hardware).
-const uint32 INFO_FEATURE_SYNTH = 0x00000002;
-// If present, this device will receive all messages it sends.
-const uint32 INFO_FEATURE_LOOPBACK = 0x00000004;
+bits InfoFeatures : uint32 {
+    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
+    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
+};
 ```
 
-If FIDL gains bitfield support, this guidance will be updated.
+This indicates that the `InfoFeatures` bit field is backed by an unsigned 32-bit
+integer, and then goes on to define the three bits that are used.
+
+You can also express the values in binary (as opposed to hex) using the `0b`
+notation:
+
+```fidl
+bits InfoFeatures : uint32 {
+    WLAN =     0b00000001;  // If present, this device represents WLAN hardware
+    SYNTH =    0b00000010;  // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0b00000100;  // If present, this device receives all messages it sends
+};
+```
+
+This is the same as the previous example.
 
 ## Non-channel based protocols
 
@@ -63,4 +77,6 @@ any shared data structures with `struct` definitions and provide detailed
 documentation about participation in the protocol.  Packed structures are not
 currently supported.
 
-[FIDL Readability Rubric]: fidl.md
+[fidl-readability-rubric]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md
+[ftp-025]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-025.md
+

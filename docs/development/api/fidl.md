@@ -271,6 +271,23 @@ For example, members of `PixelFormat` enum should be named `ARGB` rather than
 of the enclosing type.  In all target languages, enum member names are scoped by
 their enclosing type.
 
+### Bitfields
+
+Bitfields must be named in `UpperCamelCase` and must be noun phrases.
+For example, `InfoFeatures` is a bitfield that indicates which features
+are present on an Ethernet interface.
+
+### Bitfield members
+
+Bitfield members must be named in `ALL_CAPS_SNAKE_CASE`.
+
+Bitfield members must not repeat names from the enclosing type (or library).
+For example, members of `InfoFeatures` bitfield should be named `WLAN`
+rather than `INFO_FEATURES_WLAN` because the name `INFO_FEATURES` already
+appears in the name of the enclosing type.
+In all target languages, bitfield member names are scoped by their
+enclosing type.
+
 ## Organization
 
 ### Syntax
