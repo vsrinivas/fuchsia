@@ -67,6 +67,7 @@ toolchain {
 
   compiler_flag: "-Wall"
   compiler_flag: "-Werror"
+  compiler_flag: "-Wextra-semi"
 }
 
 % endfor
