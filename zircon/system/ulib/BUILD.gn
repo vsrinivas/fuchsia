@@ -38,6 +38,7 @@ if (current_toolchain == default_toolchain) {
       variant = "asan"
       deps = [
         ":ulib",
+        "$zx/system/core/devmgr:driver_deps.asan",
       ]
     }
   }
