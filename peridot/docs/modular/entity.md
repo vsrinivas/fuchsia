@@ -68,3 +68,7 @@ Each `Entity` request has an associated `EntityController` which the entity
 runner owns. The `EntityController` owns the `AgentController` if the entity
 provider was an agent, and is responsible for forwarding the entity interface
 methods to the entity provider.
+
+### Read More
+
+* [API Guide](guide/entity_provider.md)
