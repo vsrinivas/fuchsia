@@ -190,5 +190,6 @@ __BEGIN_CDECLS;
 // Qualcomm
 #define PDEV_VID_QUALCOMM           19
 #define PDEV_PID_QUALCOMM_MSM8X53    1
+#define PDEV_DID_QUALCOMM_GPIO       1
 
 __END_CDECLS;
