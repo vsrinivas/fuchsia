@@ -53,9 +53,14 @@ static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
 int main(int argc, char* argv[]) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
-
   if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
+
+  // Print this early so that we can see that the program ran.
+  // This is very useful when debugging failures in CQ: If there was a
+  // problem launching us outside of our control there's nothing in the logs
+  // to show we got at least this far.
+  FXL_LOG(INFO) << argv[0] << " started";
 
   if (cl.HasOption("help", nullptr)) {
     PrintUsageString();
@@ -109,12 +114,12 @@ int main(int argc, char* argv[]) {
   }
 
   if (command == "run") {
-    FXL_VLOG(1) << "Running subprogram for test " << spec_file_path << ":\""
-                << test_name << "\"";
+    FXL_LOG(INFO) << "Running subprogram for test " << spec_file_path << ":\""
+                  << test_name << "\"";
     return RunTest(spec, test->run);
   } else {
-    FXL_VLOG(1) << "Verifying test " << spec_file_path << ":\"" << test_name
-                << "\"";
+    FXL_LOG(INFO) << "Verifying test " << spec_file_path << ":\"" << test_name
+                  << "\"";
     const std::string& trace_output_file = args[2];
     return VerifyTest(spec, test->verify, trace_output_file);
   }

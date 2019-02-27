@@ -1,6 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.//
+// found in the LICENSE file.
 
 // This shared library contains a self-contained trace-provider.
 // That is libtrace-engine.so is contained within our library using

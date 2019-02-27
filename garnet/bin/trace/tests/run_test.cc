@@ -207,7 +207,7 @@ static bool LaunchApp(component::StartupContext* context,
     FXL_VLOG(1) << "Launching: " << launch_info.url << " "
                 << fxl::JoinStrings(args, " ");
   } else {
-    FXL_LOG(INFO) << "Launching: " << launch_info.url << std::endl;
+    FXL_LOG(INFO) << "Launching: " << launch_info.url;
   }
 
   fuchsia::sys::ComponentControllerPtr component_controller;
