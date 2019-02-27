@@ -4,10 +4,12 @@
 
 #include "src/ledger/bin/storage/impl/split.h"
 
-#include <string.h>
+#include <map>
 
 #include <lib/fit/function.h>
+#include <string.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
@@ -19,6 +21,12 @@
 
 namespace storage {
 namespace {
+
+using ::testing::Contains;
+using ::testing::IsEmpty;
+using ::testing::Key;
+using ::testing::Not;
+using ::testing::UnorderedElementsAreArray;
 
 constexpr size_t kMinChunkSize = 4 * 1024;
 constexpr size_t kMaxChunkSize = std::numeric_limits<uint16_t>::max();
@@ -75,6 +83,7 @@ struct Call {
 
 struct SplitResult {
   std::vector<Call> calls;
+  std::map<ObjectDigest, std::vector<ObjectIdentifier>> children;
   std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>> data;
 };
 
@@ -88,11 +97,20 @@ void DoSplit(DataSource* source, ObjectType object_type,
       },
       [result = std::move(result), callback = std::move(callback)](
           IterationStatus status, ObjectIdentifier identifier,
+          const std::vector<ObjectIdentifier>& children,
           std::unique_ptr<DataSource::DataChunk> data) mutable {
         EXPECT_TRUE(result);
-        auto digest = identifier.object_digest();
+        const auto& digest = identifier.object_digest();
         if (status != IterationStatus::ERROR) {
           EXPECT_LE(data->Get().size(), kMaxChunkSize);
+          // Accumulate returned children and data in result, checking that they
+          // match if we have already seen this digest.
+          if (result->children.count(digest) != 0) {
+            EXPECT_THAT(result->children[digest],
+                        UnorderedElementsAreArray(children));
+          } else {
+            result->children[digest] = std::move(children);
+          }
           if (result->data.count(digest) != 0) {
             EXPECT_EQ(result->data[digest]->Get(), data->Get());
           } else {
@@ -190,6 +208,18 @@ TEST_P(SplitBigValueTest, BigValues) {
 
   fxl::StringView current = content;
   for (const auto& call : split_result.calls) {
+    // Check that chunks have no children and indexes have at least one, with
+    // associated data.
+    if (call.status != IterationStatus::ERROR) {
+      if (GetObjectDigestInfo(call.digest).is_chunk()) {
+        EXPECT_THAT(split_result.children[call.digest], IsEmpty());
+      } else {
+        EXPECT_THAT(split_result.children[call.digest], Not(IsEmpty()));
+        for (const auto& child : split_result.children[call.digest]) {
+          EXPECT_THAT(split_result.data, Contains(Key(child.object_digest())));
+        }
+      }
+    }
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
       EXPECT_EQ(current.substr(0, split_result.data[call.digest]->Get().size()),
@@ -248,7 +278,6 @@ TEST(SplitTest, PathologicalCase) {
                 split_result.data[call.digest]->Get());
     }
   }
-
   EXPECT_EQ(kDataSize, total_size);
 }
 

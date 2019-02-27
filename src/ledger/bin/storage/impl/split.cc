@@ -63,6 +63,7 @@ class SplitContext {
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
       fit::function<void(IterationStatus, ObjectIdentifier,
+                         const std::vector<ObjectIdentifier>& children,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback,
       ObjectType object_type)
@@ -76,7 +77,7 @@ class SplitContext {
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk,
                 DataSource::Status status) {
     if (status == DataSource::Status::ERROR) {
-      callback_(IterationStatus::ERROR, ObjectIdentifier(), nullptr);
+      callback_(IterationStatus::ERROR, ObjectIdentifier(), {}, nullptr);
       return;
     }
 
@@ -117,7 +118,7 @@ class SplitContext {
         // necessarily the final value that we are going to send, but we check
         // that we last called |SendInProgress| on it for consistency.
         FXL_DCHECK(current_identifiers_per_level_[i][0].identifier ==
-                   latest_identifier_);
+                   latest_piece_.identifier);
         SendDone();
         return;
       }
@@ -128,15 +129,27 @@ class SplitContext {
   }
 
  private:
+  // Information about a piece of data (chunk or index) to be sent.
+  struct PendingPiece {
+    ObjectIdentifier identifier;
+    std::vector<ObjectIdentifier> children;
+    std::unique_ptr<DataSource::DataChunk> data;
+
+    bool ready() { return data != nullptr; }
+  };
+
   // Returns the object identifier for |data| of the given |type|, and invokes
   // |callback_| with IN_PROGRESS status. Actually defers sending the object
   // until the next call of this method, because the last object needs to be
-  // treated differently in |SendDone|.
+  // treated differently in |SendDone|. |children| must contain the identifiers
+  // of the children pieces if |type| is INDEX, and be empty otherwise.
   ObjectIdentifier SendInProgress(PieceType type,
+                                  std::vector<ObjectIdentifier> children,
                                   std::unique_ptr<DataSource::DataChunk> data) {
-    if (latest_piece_) {
-      callback_(IterationStatus::IN_PROGRESS, latest_identifier_,
-                std::move(latest_piece_));
+    if (latest_piece_.ready()) {
+      callback_(IterationStatus::IN_PROGRESS,
+                std::move(latest_piece_.identifier), latest_piece_.children,
+                std::move(latest_piece_.data));
     }
     auto data_view = data->Get();
     // object_type for inner (IN_PROGRESS) pieces is always BLOB, regardless of
@@ -147,24 +160,27 @@ class SplitContext {
     // at all if we are at the root piece.
     ObjectDigest object_digest =
         ComputeObjectDigest(type, ObjectType::BLOB, data_view);
-    auto identifier = make_object_identifier_(object_digest);
-    latest_identifier_ = identifier;
-    latest_piece_ = std::move(data);
-    return identifier;
+    latest_piece_.identifier =
+        make_object_identifier_(std::move(object_digest));
+    latest_piece_.children = std::move(children);
+    latest_piece_.data = std::move(data);
+    return latest_piece_.identifier;
   }
 
   // Recomputes the object identifier for the last object to send: since it is
   // the root of the piece hierarchy, it needs to have the |tree_node| bit set
   // if we are splitting a TreeNode. Then sends this object identifier as DONE.
   void SendDone() {
-    FXL_DCHECK(latest_piece_);
-    auto data_view = latest_piece_->Get();
+    FXL_DCHECK(latest_piece_.ready());
+    auto data_view = latest_piece_.data->Get();
     ObjectDigest object_digest = ComputeObjectDigest(
-        GetObjectDigestInfo(latest_identifier_.object_digest()).piece_type,
+        GetObjectDigestInfo(latest_piece_.identifier.object_digest())
+            .piece_type,
         object_type_, data_view);
-    latest_identifier_ = make_object_identifier_(object_digest);
-    callback_(IterationStatus::DONE, latest_identifier_,
-              std::move(latest_piece_));
+    latest_piece_.identifier =
+        make_object_identifier_(std::move(object_digest));
+    callback_(IterationStatus::DONE, std::move(latest_piece_.identifier),
+              latest_piece_.children, std::move(latest_piece_.data));
   }
 
   std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(
@@ -204,7 +220,7 @@ class SplitContext {
   void BuildAndSendNextChunk(size_t split_index) {
     auto data = BuildNextChunk(split_index);
     auto size = data->Get().size();
-    auto identifier = SendInProgress(PieceType::CHUNK, std::move(data));
+    auto identifier = SendInProgress(PieceType::CHUNK, {}, std::move(data));
     AddIdentifierAtLevel(0, {std::move(identifier), size});
   }
 
@@ -253,7 +269,15 @@ class SplitContext {
     FXL_DCHECK(chunk->Get().size() <= kMaxChunkSize)
         << "Expected maximum of: " << kMaxChunkSize
         << ", but got: " << chunk->Get().size();
-    auto identifier = SendInProgress(PieceType::INDEX, std::move(chunk));
+
+    std::vector<ObjectIdentifier> children;
+    children.reserve(identifiers_and_sizes.size());
+    for (auto& child : identifiers_and_sizes) {
+      children.push_back(std::move(child.identifier));
+    }
+
+    auto identifier =
+        SendInProgress(PieceType::INDEX, std::move(children), std::move(chunk));
     return {std::move(identifier), total_size};
   }
 
@@ -308,6 +332,7 @@ class SplitContext {
 
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
   fit::function<void(IterationStatus, ObjectIdentifier,
+                     const std::vector<ObjectIdentifier>& children,
                      std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   // The object encoded by DataSource.
@@ -322,11 +347,9 @@ class SplitContext {
   // List of unsent indices per level.
   std::vector<std::vector<ObjectIdentifierAndSize>>
       current_identifiers_per_level_;
-  // The most recent piece of data (chunk or index) that is entirely consumed
-  // but not yet sent to |callback_|.
-  std::unique_ptr<DataSource::DataChunk> latest_piece_;
-  // The identifier of |latest_piece_|.
-  ObjectIdentifier latest_identifier_;
+  // The most recent piece that is entirely consumed but not yet sent to
+  // |callback_|.
+  PendingPiece latest_piece_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SplitContext);
 };
@@ -391,6 +414,7 @@ void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
     fit::function<void(IterationStatus, ObjectIdentifier,
+                       const std::vector<ObjectIdentifier>&,
                        std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(make_object_identifier), std::move(callback),

@@ -53,6 +53,7 @@ ObjectIdentifier GetObjectIdentifier(std::string value,
             std::move(object_digest));
       },
       [&result](IterationStatus status, ObjectIdentifier object_identifier,
+                const std::vector<ObjectIdentifier>& children,
                 std::unique_ptr<DataSource::DataChunk> chunk) {
         if (status == IterationStatus::DONE) {
           result = object_identifier.object_digest();
