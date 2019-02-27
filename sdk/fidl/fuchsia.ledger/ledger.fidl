@@ -53,22 +53,23 @@ protocol ErrorNotifier {
 
 [Discoverable]
 protocol Ledger {
-    /// Retrieves the page with the given identifier, creating it if needed. A
-    /// |null| identifier can be passed to create a new page with a random unique
-    /// identifier. It is allowed to connect to the same page concurrently
-    /// multiple times.
+    compose ErrorNotifier;
+
+    /// Retrieves the page with the given identifier, creating it if needed, and binds
+    /// |page_request| to it. A |null| identifier can be passed to create a new page with a random
+    /// unique identifier. It is allowed to connect to the same page concurrently multiple times.
 
     /// Parameters:
     /// |id| the identifier of the page, or |null| to create a new page with a random identifier.
-    ///
-    /// Returns OK and binds |page_request| to the page on success.
     GetPage(PageId? id, request<Page> page_request) -> (Status status);
+    GetPageNew(PageId? id, request<Page> page_request);
 
     /// Gets the page with identifier
     /// [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
     /// This is a convenience method equivalent to:
     /// GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
     GetRootPage(request<Page> page_request) -> (Status status);
+    GetRootPageNew(request<Page> page_request);
 
     /// Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
     /// If this method has never been called, a last-one-wins policy will be used
@@ -81,6 +82,7 @@ protocol Ledger {
     /// resolved until this method is called again.
     SetConflictResolverFactory(ConflictResolverFactory factory)
         -> (Status status);
+    SetConflictResolverFactoryNew(ConflictResolverFactory factory);
 };
 
 /// A reference to a value.

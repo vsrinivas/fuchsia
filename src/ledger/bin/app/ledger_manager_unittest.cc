@@ -234,6 +234,10 @@ class LedgerManagerTest : public TestWithEnvironment {
         &environment_, "test_ledger",
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
         std::move(storage), std::move(sync), disk_cleanup_manager_.get());
+    ResetLedgerPtr();
+  }
+
+  void ResetLedgerPtr() {
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
@@ -290,23 +294,28 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
+  EXPECT_FALSE(ledger_);
   page.Unbind();
   storage_ptr->ClearCalls();
 
+  ResetLedgerPtr();
   storage_ptr->should_get_page_fail = true;
   ledger_->GetRootPage(page.NewRequest(), [this](Status) { QuitLoop(); });
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
+  EXPECT_FALSE(ledger_);
   page.Unbind();
   storage_ptr->ClearCalls();
 
+  ResetLedgerPtr();
   PageId id = RandomId();
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
                    [this](Status) { QuitLoop(); });
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
+  EXPECT_FALSE(ledger_);
   EXPECT_EQ(convert::ToString(id.id), storage_ptr->get_page_calls[0]);
   page.Unbind();
   storage_ptr->ClearCalls();
@@ -689,41 +698,49 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
 // Cloud should never be queried.
 TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->should_get_page_fail = true;
-  Status status;
+  zx_status_t status;
 
   PagePtr page;
   PageId id = RandomId();
   bool called;
   // Get the root page.
   storage_ptr->ClearCalls();
-  ledger_->GetRootPage(
-      page.NewRequest(),
+  ledger_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_->GetRootPageNew(page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(static_cast<int32_t>(Status::INTERNAL_ERROR),
+            static_cast<int32_t>(status));
+  EXPECT_FALSE(ledger_);
   EXPECT_FALSE(sync_ptr->called);
 
   // Get a new page with a random id.
   storage_ptr->ClearCalls();
   page.Unbind();
-  ledger_->GetPage(
-      fidl::MakeOptional(id), page.NewRequest(),
+  ResetLedgerPtr();
+  ledger_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(static_cast<int32_t>(Status::INTERNAL_ERROR),
+            static_cast<int32_t>(status));
+  EXPECT_FALSE(ledger_);
   EXPECT_FALSE(sync_ptr->called);
 
   // Create a new page.
   storage_ptr->ClearCalls();
   page.Unbind();
-  ledger_->GetPage(
-      nullptr, page.NewRequest(),
+  ResetLedgerPtr();
+  ledger_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_->GetPageNew(nullptr, page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(static_cast<int32_t>(Status::INTERNAL_ERROR),
+            static_cast<int32_t>(status));
+  EXPECT_FALSE(ledger_);
   EXPECT_FALSE(sync_ptr->called);
 }
 

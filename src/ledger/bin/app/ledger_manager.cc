@@ -418,7 +418,7 @@ LedgerManager::LedgerManager(
       merge_manager_(environment_),
       page_usage_listener_(page_usage_listener),
       weak_factory_(this) {
-  bindings_.set_empty_set_handler([this] { CheckEmpty(); });
+  bindings_.set_on_empty([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
@@ -427,7 +427,7 @@ LedgerManager::LedgerManager(
 LedgerManager::~LedgerManager() {}
 
 void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
-  bindings_.AddBinding(&ledger_impl_, std::move(ledger_request));
+  bindings_.emplace(&ledger_impl_, std::move(ledger_request));
 }
 
 void LedgerManager::PageIsClosedAndSynced(
