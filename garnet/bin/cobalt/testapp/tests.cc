@@ -58,7 +58,7 @@ bool TestLogEventCount(CobaltTestAppLogger* logger) {
 
   FXL_LOG(INFO) << "legacy::TestLogEventCount : "
                 << (success ? "PASS" : "FAIL");
-  return true;
+  return success;
 }
 
 bool TestLogElapsedTime(CobaltTestAppLogger* logger) {
@@ -69,9 +69,9 @@ bool TestLogElapsedTime(CobaltTestAppLogger* logger) {
       kElapsedTimeMetricId, kElapsedTimeEventIndex, kElapsedTimeComponent,
       kElapsedTime, use_request_send_soon);
   success = success &&
-            logger->LogElapsedTimeAndSend(
-                kModTimerMetricId, 0, "", kModEndTimestamp - kModStartTimestamp,
-                use_request_send_soon);
+            logger->LogElapsedTimeAndSend(kModTimerMetricId, 0, "",
+                                          kModEndTimestamp - kModStartTimestamp,
+                                          use_request_send_soon);
   FXL_LOG(INFO) << "legacy::TestLogElapsedTime : "
                 << (success ? "PASS" : "FAIL");
   return success;
@@ -81,10 +81,9 @@ bool TestLogFrameRate(CobaltTestAppLogger* logger) {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "legacy::TestLogFrameRate";
   bool use_request_send_soon = true;
-  bool success =
-      logger->LogFrameRateAndSend(kFrameRateMetricId, kFrameRateEventIndex,
-                                  kFrameRateComponent, kFrameRate,
-                                  use_request_send_soon);
+  bool success = logger->LogFrameRateAndSend(
+      kFrameRateMetricId, kFrameRateEventIndex, kFrameRateComponent, kFrameRate,
+      use_request_send_soon);
 
   FXL_LOG(INFO) << "legacy::TestLogFrameRate : " << (success ? "PASS" : "FAIL");
   return success;
@@ -95,10 +94,11 @@ bool TestLogMemoryUsage(CobaltTestAppLogger* logger) {
   FXL_LOG(INFO) << "legacy::TestLogMemoryUsage";
   bool use_request_send_soon = true;
   bool success =
-      logger->LogMemoryUsageAndSend(kMemoryUsageMetricId, kMemoryUsageIndex,
-                                    "", kMemoryUsage, use_request_send_soon);
+      logger->LogMemoryUsageAndSend(kMemoryUsageMetricId, kMemoryUsageIndex, "",
+                                    kMemoryUsage, use_request_send_soon);
 
-  FXL_LOG(INFO) << "legacy::TestLogMemoryUsage : " << (success ? "PASS" : "FAIL");
+  FXL_LOG(INFO) << "legacy::TestLogMemoryUsage : "
+                << (success ? "PASS" : "FAIL");
   return success;
 }
 
@@ -106,8 +106,8 @@ bool TestLogString(CobaltTestAppLogger* logger) {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "legacy::TestLogString";
   bool use_request_send_soon = true;
-  bool success = logger->LogStringAndSend(kRareEventStringMetricId,
-                                          kRareEvent1, use_request_send_soon);
+  bool success = logger->LogStringAndSend(kRareEventStringMetricId, kRareEvent1,
+                                          use_request_send_soon);
   FXL_LOG(INFO) << "legacy::TestLogString : " << (success ? "PASS" : "FAIL");
   return success;
 }
@@ -116,8 +116,8 @@ bool TestLogStringUsingBlockUntilEmpty(CobaltTestAppLogger* logger) {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "legacy::TestLogStringUsingBlockUntilEmpty";
   bool use_request_send_soon = false;
-  bool success = logger->LogStringAndSend(kRareEventStringMetricId,
-                                          kRareEvent1, use_request_send_soon);
+  bool success = logger->LogStringAndSend(kRareEventStringMetricId, kRareEvent1,
+                                          use_request_send_soon);
   FXL_LOG(INFO) << "legacy::TestLogStringUsingBlockUntilEmpty : "
                 << (success ? "PASS" : "FAIL");
   return success;
@@ -160,25 +160,37 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
 
 }  // namespace legacy
 
+namespace {
+bool SendAndCheckSuccess(const std::string& test_name,
+                         bool use_request_send_soon,
+                         CobaltTestAppLogger* logger) {
+  if (!logger->CheckForSuccessfulSend(use_request_send_soon)) {
+    FXL_LOG(INFO) << "CheckForSuccessfulSend() returned false";
+    FXL_LOG(INFO) << test_name << ": FAIL";
+    return false;
+  }
+  FXL_LOG(INFO) << test_name << ": PASS";
+  return true;
+}
+}  // namespace
+
 bool TestLogEvent(CobaltTestAppLogger* logger) {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "TestLogEvent";
   bool use_request_send_soon = true;
   for (uint32_t index : kErrorOccurredIndicesToUse) {
-    if (!logger->LogEventAndSend(metrics::kErrorOccurredMetricId, index,
-                                 use_request_send_soon)) {
+    if (!logger->LogEvent(metrics::kErrorOccurredMetricId, index)) {
       FXL_LOG(INFO) << "TestLogEvent: FAIL";
       return false;
     }
   }
-  if (logger->LogEventAndSend(metrics::kErrorOccurredMetricId,
-                              kErrorOccurredInvalidIndex,
-                              use_request_send_soon)) {
+  if (logger->LogEvent(metrics::kErrorOccurredMetricId,
+                       kErrorOccurredInvalidIndex)) {
     FXL_LOG(INFO) << "TestLogEvent: FAIL";
     return false;
   }
-  FXL_LOG(INFO) << "TestLogEvent: PASS";
-  return true;
+
+  return SendAndCheckSuccess("TestLogEvent", use_request_send_soon, logger);
 }
 
 // file_system_cache_misses using EVENT_COUNT metric.
@@ -191,21 +203,21 @@ bool TestLogEventCount(CobaltTestAppLogger* logger) {
   bool use_request_send_soon = true;
   for (uint32_t index : kFileSystemCacheMissesIndices) {
     for (std::string name : kFileSystemCacheMissesComponentNames) {
-      if (!logger->LogEventCountAndSend(
-          metrics::kFileSystemCacheMissesMetricId, index, name,
-          kFileSystemCacheMissesCountMax-index, use_request_send_soon)) {
+      if (!logger->LogEventCount(metrics::kFileSystemCacheMissesMetricId, index,
+                                 name,
+                                 kFileSystemCacheMissesCountMax - index)) {
         FXL_LOG(INFO) << "LogEventCount("
-                      << metrics::kFileSystemCacheMissesMetricId
-                      << ", " << index << ", " << name << ", "
-                      << kFileSystemCacheMissesCountMax-index << ")";
+                      << metrics::kFileSystemCacheMissesMetricId << ", "
+                      << index << ", " << name << ", "
+                      << kFileSystemCacheMissesCountMax - index << ")";
         FXL_LOG(INFO) << "TestLogEventCount: FAIL";
         return false;
       }
     }
   }
 
-  FXL_LOG(INFO) << "legacy::TestLogEventCount : PASS";
-  return true;
+  return SendAndCheckSuccess("TestLogEventCount", use_request_send_soon,
+                             logger);
 }
 
 // update_duration using ELAPSED_TIME metric.
@@ -219,9 +231,8 @@ bool TestLogElapsedTime(CobaltTestAppLogger* logger) {
   for (uint32_t index : kUpdateDurationIndices) {
     for (std::string name : kUpdateDurationComponentNames) {
       for (int64_t value : kUpdateDurationValues) {
-        if (!logger->LogElapsedTimeAndSend(
-            metrics::kUpdateDurationMetricId, index, name, value,
-            use_request_send_soon)) {
+        if (!logger->LogElapsedTime(metrics::kUpdateDurationMetricId, index,
+                                    name, value)) {
           FXL_LOG(INFO) << "LogElapsedTime(" << metrics::kUpdateDurationMetricId
                         << ", " << index << ", " << name << ", " << value
                         << ")";
@@ -232,8 +243,8 @@ bool TestLogElapsedTime(CobaltTestAppLogger* logger) {
     }
   }
 
-  FXL_LOG(INFO) << "TestLogElapsedTime : PASS";
-  return true;
+  return SendAndCheckSuccess("TestLogElapsedTime", use_request_send_soon,
+                             logger);
 }
 
 // game_frame_rate using FRAME_RATE metric.
@@ -247,9 +258,8 @@ bool TestLogFrameRate(CobaltTestAppLogger* logger) {
   for (uint32_t index : kGameFrameRateIndices) {
     for (std::string name : kGameFrameRateComponentNames) {
       for (float value : kGameFrameRateValues) {
-        if (!logger->LogFrameRateAndSend(
-            metrics::kGameFrameRateMetricId, index, name, value,
-            use_request_send_soon)) {
+        if (!logger->LogFrameRate(metrics::kGameFrameRateMetricId, index, name,
+                                  value)) {
           FXL_LOG(INFO) << "LogFrameRate(" << metrics::kGameFrameRateMetricId
                         << ", " << index << ", " << name << ", " << value
                         << ")";
@@ -260,8 +270,7 @@ bool TestLogFrameRate(CobaltTestAppLogger* logger) {
     }
   }
 
-  FXL_LOG(INFO) << "TestLogFrameRate : PASS";
-  return true;
+  return SendAndCheckSuccess("TestLogFrameRate", use_request_send_soon, logger);
 }
 
 // application_memory
@@ -275,12 +284,11 @@ bool TestLogMemoryUsage(CobaltTestAppLogger* logger) {
   for (uint32_t index : kApplicationMemoryIndices) {
     for (std::string name : kApplicationComponentNames) {
       for (int64_t value : kApplicationMemoryValues) {
-        if (!logger->LogMemoryUsageAndSend(metrics::kApplicationMemoryMetricId,
-                                           index, name, value,
-                                           use_request_send_soon)) {
+        if (!logger->LogMemoryUsage(metrics::kApplicationMemoryMetricId, index,
+                                    name, value)) {
           FXL_LOG(INFO) << "LogMemoryUsage("
-                        << metrics::kApplicationMemoryMetricId << ", "
-                        << index << ", " << name << ", " << value << ")";
+                        << metrics::kApplicationMemoryMetricId << ", " << index
+                        << ", " << name << ", " << value << ")";
           FXL_LOG(INFO) << "TestLogMemoryUsage: FAIL";
           return false;
         }
@@ -288,8 +296,8 @@ bool TestLogMemoryUsage(CobaltTestAppLogger* logger) {
     }
   }
 
-  FXL_LOG(INFO) << "TestLogMemoryUsage : PASS";
-  return true;
+  return SendAndCheckSuccess("TestLogMemoryUsage", use_request_send_soon,
+                             logger);
 }
 
 // power_usage and bandwidth_usage
@@ -308,9 +316,8 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
   }
   for (uint32_t index : kPowerUsageIndices) {
     for (std::string name : kApplicationComponentNames) {
-      if (!logger->LogIntHistogramAndSend(metrics::kPowerUsageMetricId, index,
-                                          name, histogram,
-                                          use_request_send_soon)) {
+      if (!logger->LogIntHistogram(metrics::kPowerUsageMetricId, index, name,
+                                   histogram)) {
         FXL_LOG(INFO) << "TestLogIntHistogram : FAIL";
         return false;
       }
@@ -325,17 +332,16 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
   }
   for (uint32_t index : kBandwidthUsageIndices) {
     for (std::string name : kApplicationComponentNames) {
-      if (!logger->LogIntHistogramAndSend(metrics::kBandwidthUsageMetricId,
-                                          index, name, histogram,
-                                          use_request_send_soon)) {
+      if (!logger->LogIntHistogram(metrics::kBandwidthUsageMetricId, index,
+                                   name, histogram)) {
         FXL_LOG(INFO) << "TestLogIntHistogram : FAIL";
         return false;
       }
     }
   }
 
-  FXL_LOG(INFO) << "TestLogIntHistogram : PASS";
-  return true;
+  return SendAndCheckSuccess("TestLogIntHistogram", use_request_send_soon,
+                             logger);
 }
 
 bool TestLogCustomEvent(CobaltTestAppLogger* logger) {

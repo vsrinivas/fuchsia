@@ -14,19 +14,39 @@ namespace testapp {
 
 using fuchsia::cobalt::Status;
 
+bool CobaltTestAppLogger::LogEvent(uint32_t metric_id, uint32_t index) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogEvent(metric_id, index, &status);
+  FXL_VLOG(1) << "LogEvent(" << index << ") => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogEvent() => " << StatusToString(status);
+    return false;
+  }
+  return true;
+}
+
 bool CobaltTestAppLogger::LogEventAndSend(uint32_t metric_id, uint32_t index,
                                           bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->LogEvent(metric_id, index, &status);
-    FXL_VLOG(1) << "LogEvent(" << index << ") => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogEvent() => " << StatusToString(status);
+    if (!LogEvent(metric_id, index)) {
       return false;
     }
   }
 
   return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogEventCount(uint32_t metric_id, uint32_t index,
+                                        const std::string& component,
+                                        int64_t count) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogEventCount(metric_id, index, component, 0, count, &status);
+  FXL_VLOG(1) << "LogEventCount(" << index << ") => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogEventCount() => " << StatusToString(status);
+    return false;
+  }
+  return true;
 }
 
 bool CobaltTestAppLogger::LogEventCountAndSend(uint32_t metric_id,
@@ -35,17 +55,25 @@ bool CobaltTestAppLogger::LogEventCountAndSend(uint32_t metric_id,
                                                int64_t count,
                                                bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->LogEventCount(metric_id, index, component, 0, count, &status);
-    FXL_VLOG(1) << "LogEventCount(" << index << ") => "
-                << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogEventCount() => " << StatusToString(status);
+    if (!LogEventCount(metric_id, index, component, count)) {
       return false;
     }
   }
 
   return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogElapsedTime(uint32_t metric_id, uint32_t index,
+                                         const std::string& component,
+                                         int64_t elapsed_micros) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogElapsedTime(metric_id, index, component, elapsed_micros, &status);
+  FXL_VLOG(1) << "LogElapsedTime() => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogElapsedTime() => " << StatusToString(status);
+    return false;
+  }
+  return true;
 }
 
 bool CobaltTestAppLogger::LogElapsedTimeAndSend(uint32_t metric_id,
@@ -54,17 +82,25 @@ bool CobaltTestAppLogger::LogElapsedTimeAndSend(uint32_t metric_id,
                                                 int64_t elapsed_micros,
                                                 bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->LogElapsedTime(metric_id, index, component, elapsed_micros,
-                            &status);
-    FXL_VLOG(1) << "LogElapsedTime() => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogElapsedTime() => " << StatusToString(status);
+    if (!LogElapsedTime(metric_id, index, component, elapsed_micros)) {
       return false;
     }
   }
 
   return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogFrameRate(uint32_t metric_id, uint32_t index,
+                                       const std::string& component,
+                                       float fps) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogFrameRate(metric_id, index, component, fps, &status);
+  FXL_VLOG(1) << "LogFrameRate() => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogFrameRate() => " << StatusToString(status);
+    return false;
+  }
+  return true;
 }
 
 bool CobaltTestAppLogger::LogFrameRateAndSend(uint32_t metric_id,
@@ -73,16 +109,25 @@ bool CobaltTestAppLogger::LogFrameRateAndSend(uint32_t metric_id,
                                               float fps,
                                               bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->LogFrameRate(metric_id, index, component, fps, &status);
-    FXL_VLOG(1) << "LogFrameRate() => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogFrameRate() => " << StatusToString(status);
+    if (!LogFrameRate(metric_id, index, component, fps)) {
       return false;
     }
   }
 
   return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogMemoryUsage(uint32_t metric_id, uint32_t index,
+                                         const std::string& component,
+                                         int64_t bytes) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogMemoryUsage(metric_id, index, component, bytes, &status);
+  FXL_VLOG(1) << "LogMemoryUsage() => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
+    return false;
+  }
+  return true;
 }
 
 bool CobaltTestAppLogger::LogMemoryUsageAndSend(uint32_t metric_id,
@@ -91,11 +136,7 @@ bool CobaltTestAppLogger::LogMemoryUsageAndSend(uint32_t metric_id,
                                                 int64_t bytes,
                                                 bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->LogMemoryUsage(metric_id, index, component, bytes, &status);
-    FXL_VLOG(1) << "LogMemoryUsage() => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
+    if (!LogMemoryUsage(metric_id, index, component, bytes)) {
       return false;
     }
   }
@@ -103,20 +144,49 @@ bool CobaltTestAppLogger::LogMemoryUsageAndSend(uint32_t metric_id,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestAppLogger::LogString(uint32_t metric_id,
+                                    const std::string& val) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->LogString(metric_id, val, &status);
+  FXL_VLOG(1) << "LogString(" << val << ") => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogString() => " << StatusToString(status);
+    return false;
+  }
+
+  return true;
+}
+
 bool CobaltTestAppLogger::LogStringAndSend(uint32_t metric_id,
                                            const std::string& val,
                                            bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->LogString(metric_id, val, &status);
-    FXL_VLOG(1) << "LogString(" << val << ") => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogString() => " << StatusToString(status);
+    if (!LogString(metric_id, val)) {
       return false;
     }
   }
 
   return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogTimer(uint32_t metric_id, uint32_t start_time,
+                                   uint32_t end_time,
+                                   const std::string& timer_id,
+                                   uint32_t timeout_s) {
+  Status status = Status::INTERNAL_ERROR;
+  logger_->StartTimer(metric_id, 0, "", timer_id, start_time, timeout_s,
+                      &status);
+  logger_->EndTimer(timer_id, end_time, timeout_s, &status);
+
+  FXL_VLOG(1) << "LogTimer("
+              << "timer_id:" << timer_id << ", start_time:" << start_time
+              << ", end_time:" << end_time << ") => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogTimer() => " << StatusToString(status);
+    return false;
+  }
+
+  return true;
 }
 
 bool CobaltTestAppLogger::LogTimerAndSend(uint32_t metric_id,
@@ -126,17 +196,7 @@ bool CobaltTestAppLogger::LogTimerAndSend(uint32_t metric_id,
                                           uint32_t timeout_s,
                                           bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    logger_->StartTimer(metric_id, 0, "", timer_id, start_time, timeout_s,
-                        &status);
-    logger_->EndTimer(timer_id, end_time, timeout_s, &status);
-
-    FXL_VLOG(1) << "LogTimer("
-                << "timer_id:" << timer_id << ", start_time:" << start_time
-                << ", end_time:" << end_time << ") => "
-                << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogTimer() => " << StatusToString(status);
+    if (!LogTimer(metric_id, start_time, end_time, timer_id, timeout_s)) {
       return false;
     }
   }
@@ -144,29 +204,62 @@ bool CobaltTestAppLogger::LogTimerAndSend(uint32_t metric_id,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestAppLogger::LogIntHistogram(
+    uint32_t metric_id, uint32_t index, const std::string& component,
+    const std::map<uint32_t, uint64_t>& histogram_map) {
+  Status status = Status::INTERNAL_ERROR;
+  std::vector<fuchsia::cobalt::HistogramBucket> histogram;
+  for (auto it = histogram_map.begin(); histogram_map.end() != it; it++) {
+    fuchsia::cobalt::HistogramBucket entry;
+    entry.index = it->first;
+    entry.count = it->second;
+    histogram.push_back(std::move(entry));
+  }
+
+  logger_->LogIntHistogram(metric_id, index, component, std::move(histogram),
+                           &status);
+  FXL_VLOG(1) << "LogIntHistogram() => " << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogIntHistogram() => " << StatusToString(status);
+    return false;
+  }
+
+  return true;
+}
+
 bool CobaltTestAppLogger::LogIntHistogramAndSend(
     uint32_t metric_id, uint32_t index, const std::string& component,
-    std::map<uint32_t, uint64_t> histogram_map, bool use_request_send_soon) {
+    const std::map<uint32_t, uint64_t>& histogram_map,
+    bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    std::vector<fuchsia::cobalt::HistogramBucket> histogram;
-    for (auto it = histogram_map.begin(); histogram_map.end() != it; it++) {
-      fuchsia::cobalt::HistogramBucket entry;
-      entry.index = it->first;
-      entry.count = it->second;
-      histogram.push_back(std::move(entry));
-    }
-
-    logger_->LogIntHistogram(metric_id, index, component, std::move(histogram),
-                             &status);
-    FXL_VLOG(1) << "LogIntHistogram() => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogIntHistogram() => " << StatusToString(status);
+    if (!LogIntHistogram(metric_id, index, component, histogram_map)) {
       return false;
     }
   }
 
   return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestAppLogger::LogStringPair(uint32_t metric_id,
+                                        const std::string& part0,
+                                        const std::string& val0,
+                                        const std::string& part1,
+                                        const std::string& val1) {
+  Status status = Status::INTERNAL_ERROR;
+  std::vector<fuchsia::cobalt::CustomEventValue> parts(2);
+  parts.at(0).dimension_name = part0;
+  parts.at(0).value.set_string_value(val0);
+  parts.at(1).dimension_name = part1;
+  parts.at(1).value.set_string_value(val1);
+  logger_->LogCustomEvent(metric_id, std::move(parts), &status);
+  FXL_VLOG(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
+              << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    return false;
+  }
+
+  return true;
 }
 
 bool CobaltTestAppLogger::LogStringPairAndSend(uint32_t metric_id,
@@ -176,17 +269,7 @@ bool CobaltTestAppLogger::LogStringPairAndSend(uint32_t metric_id,
                                                const std::string& val1,
                                                bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    std::vector<fuchsia::cobalt::CustomEventValue> parts(2);
-    parts.at(0).dimension_name = part0;
-    parts.at(0).value.set_string_value(val0);
-    parts.at(1).dimension_name = part1;
-    parts.at(1).value.set_string_value(val1);
-    logger_->LogCustomEvent(metric_id, std::move(parts), &status);
-    FXL_VLOG(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
-                << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    if (!LogStringPair(metric_id, part0, val0, part1, val1)) {
       return false;
     }
   }
@@ -194,24 +277,37 @@ bool CobaltTestAppLogger::LogStringPairAndSend(uint32_t metric_id,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestAppLogger::LogCustomMetricsTestProto(
+    uint32_t metric_id, const std::string& query_val,
+    const int64_t wait_time_val, const uint32_t response_code_val) {
+  Status status = Status::INTERNAL_ERROR;
+  std::vector<fuchsia::cobalt::CustomEventValue> parts(3);
+  parts.at(0).dimension_name = "query";
+  parts.at(0).value.set_string_value(query_val);
+  parts.at(1).dimension_name = "wait_time_ms";
+  parts.at(1).value.set_int_value(wait_time_val);
+  parts.at(2).dimension_name = "response_code";
+  parts.at(2).value.set_index_value(response_code_val);
+  logger_->LogCustomEvent(metric_id, std::move(parts), &status);
+  FXL_VLOG(1) << "LogCustomEvent(query=" << query_val
+              << ", wait_time_ms=" << wait_time_val
+              << ", response_code=" << response_code_val << ") => "
+              << StatusToString(status);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    return false;
+  }
+
+  return true;
+}
+
 bool CobaltTestAppLogger::LogCustomMetricsTestProtoAndSend(
-  uint32_t metric_id, const std::string& query_val, const int64_t wait_time_val,
-  const uint32_t response_code_val, bool use_request_send_soon) {
+    uint32_t metric_id, const std::string& query_val,
+    const int64_t wait_time_val, const uint32_t response_code_val,
+    bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
-    Status status = Status::INTERNAL_ERROR;
-    std::vector<fuchsia::cobalt::CustomEventValue> parts(3);
-    parts.at(0).dimension_name = "query";
-    parts.at(0).value.set_string_value(query_val);
-    parts.at(1).dimension_name = "wait_time_ms";
-    parts.at(1).value.set_int_value(wait_time_val);
-    parts.at(2).dimension_name = "response_code";
-    parts.at(2).value.set_index_value(response_code_val);
-    logger_->LogCustomEvent(metric_id, std::move(parts), &status);
-    FXL_VLOG(1) << "LogCustomEvent(query=" << query_val << ", wait_time_ms="
-                << wait_time_val << ", response_code=" << response_code_val
-                << ") => " << StatusToString(status);
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    if (!LogCustomMetricsTestProto(metric_id, query_val, wait_time_val,
+                                   response_code_val)) {
       return false;
     }
   }
