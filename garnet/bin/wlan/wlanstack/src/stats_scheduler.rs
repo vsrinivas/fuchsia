@@ -157,6 +157,8 @@ mod tests {
         }
     }
 
-    fn fake_counter(count: u64) -> Counter { Counter { count, name: "foo".to_string() } }
+    fn fake_counter(count: u64) -> Counter {
+        Counter { count, name: "foo".to_string() }
+    }
 
 }

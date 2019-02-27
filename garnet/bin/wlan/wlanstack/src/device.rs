@@ -88,7 +88,8 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
 }
 
 pub async fn serve_ifaces(
-    ifaces: Arc<IfaceMap>, cobalt_sender: CobaltSender,
+    ifaces: Arc<IfaceMap>,
+    cobalt_sender: CobaltSender,
 ) -> Result<Never, Error> {
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = FuturesUnordered::new();
@@ -108,7 +109,9 @@ pub async fn serve_ifaces(
 }
 
 async fn query_and_serve_iface(
-    new_iface: NewIfaceDevice, ifaces: &IfaceMap, cobalt_sender: CobaltSender,
+    new_iface: NewIfaceDevice,
+    ifaces: &IfaceMap,
+    cobalt_sender: CobaltSender,
 ) {
     let NewIfaceDevice { id, device, proxy } = new_iface;
     let event_stream = proxy.take_event_stream();
@@ -137,13 +140,8 @@ async fn query_and_serve_iface(
         device.path().to_string_lossy()
     );
     let mlme_query = MlmeQueryProxy::new(proxy);
-    ifaces.insert(id, IfaceDevice {
-        sme_server: sme,
-        stats_sched,
-        device,
-        mlme_query,
-        device_info,
-    });
+    ifaces
+        .insert(id, IfaceDevice { sme_server: sme, stats_sched, device, mlme_query, device_info });
 
     let r = await!(sme_fut);
     if let Err(e) = r {
@@ -154,8 +152,11 @@ async fn query_and_serve_iface(
 }
 
 fn create_sme<S>(
-    proxy: fidl_mlme::MlmeProxy, event_stream: fidl_mlme::MlmeEventStream,
-    device_info: &DeviceInfo, stats_requests: S, cobalt_sender: CobaltSender,
+    proxy: fidl_mlme::MlmeProxy,
+    event_stream: fidl_mlme::MlmeEventStream,
+    device_info: &DeviceInfo,
+    stats_requests: S,
+    cobalt_sender: CobaltSender,
 ) -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,

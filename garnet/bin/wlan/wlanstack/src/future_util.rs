@@ -10,7 +10,8 @@ use std::marker::Unpin;
 use std::pin::Pin;
 
 pub struct GroupAvailable<S, T, E>
-where S: Stream<Item = Result<T, E>>
+where
+    S: Stream<Item = Result<T, E>>,
 {
     stream: Fuse<S>,
     error: Option<E>,
@@ -19,7 +20,8 @@ where S: Stream<Item = Result<T, E>>
 impl<S, T, E> Unpin for GroupAvailable<S, T, E> where S: Unpin + Stream<Item = Result<T, E>> {}
 
 impl<S, T, E> GroupAvailable<S, T, E>
-where S: Unpin + Stream<Item = Result<T, E>>
+where
+    S: Unpin + Stream<Item = Result<T, E>>,
 {
     // Safety: projecting to `Fuse<S>` is safe because GroupAvailable is `!Unpin`
     // when `S` is `!Unpin`, and `GroupAvailable` doesn't move out of `stream`.
@@ -30,7 +32,8 @@ where S: Unpin + Stream<Item = Result<T, E>>
 }
 
 impl<S, T, E> Stream for GroupAvailable<S, T, E>
-where S: Unpin + Stream<Item = Result<T, E>>
+where
+    S: Unpin + Stream<Item = Result<T, E>>,
 {
     type Item = Result<Vec<T>, E>;
 

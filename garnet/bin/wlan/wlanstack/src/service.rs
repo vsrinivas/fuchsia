@@ -29,9 +29,11 @@ use crate::Never;
 const CONCURRENT_LIMIT: usize = 1000;
 
 pub async fn device_service<S>(
-    phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+    phys: Arc<PhyMap>,
+    ifaces: Arc<IfaceMap>,
     phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
-    iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>, new_clients: S,
+    iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
+    new_clients: S,
 ) -> Result<Never, failure::Error>
 where
     S: Stream<Item = fasync::Channel> + Unpin,
@@ -59,10 +61,11 @@ where
 }
 
 async fn serve_channel(
-    phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
-    watcher_service: WatcherService<PhyDevice, IfaceDevice>, channel: fasync::Channel,
-)
-{
+    phys: Arc<PhyMap>,
+    ifaces: Arc<IfaceMap>,
+    watcher_service: WatcherService<PhyDevice, IfaceDevice>,
+    channel: fasync::Channel,
+) {
     let r = await!(fidl_svc::DeviceServiceRequestStream::from_channel(channel)
         .try_for_each_concurrent(CONCURRENT_LIMIT, move |request| handle_fidl_request(
             request,
@@ -74,10 +77,11 @@ async fn serve_channel(
 }
 
 async fn handle_fidl_request(
-    request: fidl_svc::DeviceServiceRequest, phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
+    request: fidl_svc::DeviceServiceRequest,
+    phys: Arc<PhyMap>,
+    ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
-) -> Result<(), fidl::Error>
-{
+) -> Result<(), fidl::Error> {
     // Note that errors from responder.send() are propagated intentionally.
     // If we fail to send a response, the only way to recover is to stop serving the
     // client and close the channel. Otherwise, the client would be left hanging
@@ -200,7 +204,8 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
 }
 
 async fn create_iface(
-    phys: &PhyMap, req: fidl_svc::CreateIfaceRequest,
+    phys: &PhyMap,
+    req: fidl_svc::CreateIfaceRequest,
 ) -> Result<fidl_svc::CreateIfaceResponse, zx::Status> {
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
     let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role };
@@ -214,7 +219,9 @@ async fn create_iface(
 }
 
 fn get_client_sme(
-    ifaces: &IfaceMap, iface_id: u16, endpoint: station::client::Endpoint,
+    ifaces: &IfaceMap,
+    iface_id: u16,
+    endpoint: station::client::Endpoint,
 ) -> zx::Status {
     let iface = ifaces.get(&iface_id);
     let server = match iface {
@@ -275,7 +282,8 @@ async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16) -> Result<StatsRef, z
 }
 
 async fn list_minstrel_peers(
-    ifaces: &IfaceMap, iface_id: u16,
+    ifaces: &IfaceMap,
+    iface_id: u16,
 ) -> (zx::Status, fidl_fuchsia_wlan_minstrel::Peers) {
     let empty_peer_list = fidl_fuchsia_wlan_minstrel::Peers { peers: vec![] };
     let iface = match ifaces.get(&iface_id) {
@@ -289,7 +297,9 @@ async fn list_minstrel_peers(
 }
 
 async fn get_minstrel_stats(
-    ifaces: &IfaceMap, iface_id: u16, mac_addr: [u8; 6],
+    ifaces: &IfaceMap,
+    iface_id: u16,
+    mac_addr: [u8; 6],
 ) -> (zx::Status, Option<Box<fidl_fuchsia_wlan_minstrel::Peer>>) {
     let iface = match ifaces.get(&iface_id) {
         Some(iface) => iface,
@@ -337,10 +347,10 @@ mod tests {
         let mut list = super::list_phys(&phy_map).phys;
         list.sort_by_key(|p| p.phy_id);
         assert_eq!(
-            vec![PhyListItem { phy_id: 10u16, path: "/dev/null".to_string() }, PhyListItem {
-                phy_id: 20u16,
-                path: "/dev/zero".to_string()
-            },],
+            vec![
+                PhyListItem { phy_id: 10u16, path: "/dev/null".to_string() },
+                PhyListItem { phy_id: 20u16, path: "/dev/zero".to_string() },
+            ],
             list
         )
     }
@@ -405,10 +415,10 @@ mod tests {
         let mut list = super::list_ifaces(&iface_map).ifaces;
         list.sort_by_key(|p| p.iface_id);
         assert_eq!(
-            vec![IfaceListItem { iface_id: 10u16, path: "/dev/null".to_string() }, IfaceListItem {
-                iface_id: 20u16,
-                path: "/dev/zero".to_string()
-            },],
+            vec![
+                IfaceListItem { iface_id: 10u16, path: "/dev/null".to_string() },
+                IfaceListItem { iface_id: 20u16, path: "/dev/zero".to_string() },
+            ],
             list
         )
     }
@@ -450,10 +460,10 @@ mod tests {
 
         // Initiate a CreateIface request. The returned future should not be able
         // to produce a result immediately
-        let create_fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
-            phy_id: 10,
-            role: fidl_wlan_dev::MacRole::Client,
-        });
+        let create_fut = super::create_iface(
+            &phy_map,
+            fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
+        );
         pin_mut!(create_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut create_fut));
 
@@ -489,10 +499,10 @@ mod tests {
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
-        let fut = super::create_iface(&phy_map, fidl_svc::CreateIfaceRequest {
-            phy_id: 10,
-            role: fidl_wlan_dev::MacRole::Client,
-        });
+        let fut = super::create_iface(
+            &phy_map,
+            fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
+        );
         pin_mut!(fut);
         assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)), exec.run_until_stalled(&mut fut));
     }

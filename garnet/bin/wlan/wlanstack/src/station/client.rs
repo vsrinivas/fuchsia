@@ -39,8 +39,11 @@ struct ConnectionTimes {
 }
 
 pub async fn serve<S>(
-    proxy: MlmeProxy, device_info: DeviceInfo, event_stream: MlmeEventStream,
-    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>, stats_requests: S,
+    proxy: MlmeProxy,
+    device_info: DeviceInfo,
+    event_stream: MlmeEventStream,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    stats_requests: S,
     cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error>
 where
@@ -66,10 +69,11 @@ where
 }
 
 async fn serve_fidl(
-    sme: Arc<Mutex<Sme>>, new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-    info_stream: InfoStream, mut cobalt_sender: CobaltSender,
-) -> Result<Never, failure::Error>
-{
+    sme: Arc<Mutex<Sme>>,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    info_stream: InfoStream,
+    mut cobalt_sender: CobaltSender,
+) -> Result<Never, failure::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut info_stream = info_stream.fuse();
     let mut fidl_clients = FuturesUnordered::new();
@@ -115,7 +119,8 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
 }
 
 async fn handle_fidl_request(
-    sme: &Mutex<Sme>, request: fidl_sme::ClientSmeRequest,
+    sme: &Mutex<Sme>,
+    request: fidl_sme::ClientSmeRequest,
 ) -> Result<(), fidl::Error> {
     match request {
         ClientSmeRequest::Scan { req, txn, .. } => Ok(await!(scan(sme, txn, req.scan_type))
@@ -131,10 +136,10 @@ async fn handle_fidl_request(
 }
 
 async fn scan(
-    sme: &Mutex<Sme>, txn: ServerEnd<fidl_sme::ScanTransactionMarker>,
+    sme: &Mutex<Sme>,
+    txn: ServerEnd<fidl_sme::ScanTransactionMarker>,
     scan_type: fidl_common::ScanType,
-) -> Result<(), failure::Error>
-{
+) -> Result<(), failure::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_type);
     let result = await!(receiver).unwrap_or(Err(DiscoveryError::InternalError));
@@ -144,10 +149,10 @@ async fn scan(
 }
 
 async fn connect(
-    sme: &Mutex<Sme>, txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>,
+    sme: &Mutex<Sme>,
+    txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>,
     req: fidl_sme::ConnectRequest,
-) -> Result<(), failure::Error>
-{
+) -> Result<(), failure::Error> {
     let handle = match txn {
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle()),
@@ -166,7 +171,9 @@ pub fn filter_out_peer_closed(r: Result<(), fidl::Error>) -> Result<(), fidl::Er
     }
 }
 
-fn disconnect(sme: &Mutex<Sme>) { sme.lock().unwrap().on_disconnect_command(); }
+fn disconnect(sme: &Mutex<Sme>) {
+    sme.lock().unwrap().on_disconnect_command();
+}
 
 fn status(sme: &Mutex<Sme>) -> fidl_sme::ClientStatusResponse {
     let status = sme.lock().unwrap().status();
@@ -185,7 +192,9 @@ fn id_mismatch(this: u64, other: u64, id_type: &str) -> bool {
 }
 
 fn handle_info_event(
-    e: InfoEvent, cobalt_sender: &mut CobaltSender, connection_times: &mut ConnectionTimes,
+    e: InfoEvent,
+    cobalt_sender: &mut CobaltSender,
+    connection_times: &mut ConnectionTimes,
 ) {
     match e {
         InfoEvent::ConnectStarted => {
@@ -271,7 +280,8 @@ fn handle_info_event(
 }
 
 fn send_scan_results(
-    handle: fidl_sme::ScanTransactionControlHandle, result: EssDiscoveryResult,
+    handle: fidl_sme::ScanTransactionControlHandle,
+    result: EssDiscoveryResult,
 ) -> Result<(), fidl::Error> {
     match result {
         Ok(ess_list) => {
@@ -309,7 +319,8 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
 }
 
 fn send_connect_result(
-    handle: Option<fidl_sme::ConnectTransactionControlHandle>, result: ConnectResult,
+    handle: Option<fidl_sme::ConnectTransactionControlHandle>,
+    result: ConnectResult,
 ) -> Result<(), fidl::Error> {
     if let Some(handle) = handle {
         let code = match result {

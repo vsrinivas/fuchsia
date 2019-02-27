@@ -21,7 +21,8 @@ use crate::Never;
 // In reality, P and I are always PhyDevice and IfaceDevice, respectively.
 // They are generic solely for the purpose of mocking for tests.
 pub fn serve_watchers<P, I>(
-    phys: Arc<WatchableMap<u16, P>>, ifaces: Arc<WatchableMap<u16, I>>,
+    phys: Arc<WatchableMap<u16, P>>,
+    ifaces: Arc<WatchableMap<u16, I>>,
     phy_events: UnboundedReceiver<MapEvent<u16, P>>,
     iface_events: UnboundedReceiver<MapEvent<u16, I>>,
 ) -> (WatcherService<P, I>, impl Future<Output = Result<Never, failure::Error>>)
@@ -57,7 +58,8 @@ impl<P, I> Clone for WatcherService<P, I> {
 
 impl<P, I> WatcherService<P, I> {
     pub fn add_watcher(
-        &self, endpoint: ServerEnd<fidl_svc::DeviceWatcherMarker>,
+        &self,
+        endpoint: ServerEnd<fidl_svc::DeviceWatcherMarker>,
     ) -> Result<(), fidl::Error> {
         let stream = endpoint.into_stream()?;
         let handle = stream.control_handle();
@@ -69,11 +71,10 @@ impl<P, I> WatcherService<P, I> {
                 watcher_id: inner.next_watcher_id,
             })
             .expect("failed to submit a task to the watcher reaper: {}");
-        inner.watchers.insert(inner.next_watcher_id, Watcher {
-            handle,
-            sent_phy_snapshot: false,
-            sent_iface_snapshot: false,
-        });
+        inner.watchers.insert(
+            inner.next_watcher_id,
+            Watcher { handle, sent_phy_snapshot: false, sent_iface_snapshot: false },
+        );
         inner.phys.request_snapshot();
         inner.ifaces.request_snapshot();
         inner.next_watcher_id += 1;
@@ -111,7 +112,10 @@ impl<P, I> Inner<P, I> {
     }
 
     fn send_snapshot<F, G, T>(
-        &mut self, sent_snapshot: F, send_on_add: G, snapshot: Arc<HashMap<u16, T>>,
+        &mut self,
+        sent_snapshot: F,
+        send_on_add: G,
+        snapshot: Arc<HashMap<u16, T>>,
     ) where
         F: Fn(&mut Watcher) -> &mut bool,
         G: Fn(&DeviceWatcherControlHandle, u16) -> Result<(), fidl::Error>,
@@ -140,7 +144,8 @@ fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::E
 }
 
 async fn notify_phy_watchers<P, I>(
-    mut events: UnboundedReceiver<MapEvent<u16, P>>, inner: &Mutex<Inner<P, I>>,
+    mut events: UnboundedReceiver<MapEvent<u16, P>>,
+    inner: &Mutex<Inner<P, I>>,
 ) -> Result<Never, failure::Error> {
     while let Some(e) = await!(events.next()) {
         match e {
@@ -161,7 +166,8 @@ async fn notify_phy_watchers<P, I>(
 }
 
 async fn notify_iface_watchers<P, I>(
-    mut events: UnboundedReceiver<MapEvent<u16, I>>, inner: &Mutex<Inner<P, I>>,
+    mut events: UnboundedReceiver<MapEvent<u16, I>>,
+    inner: &Mutex<Inner<P, I>>,
 ) -> Result<Never, failure::Error> {
     while let Some(e) = await!(events.next()) {
         match e {
@@ -191,7 +197,8 @@ struct ReaperTask {
 /// sufficient: in the scenario where devices are not being added or removed,
 /// but new clients come and go, the watcher list could grow without bound.
 async fn reap_watchers<P, I>(
-    inner: &Mutex<Inner<P, I>>, watchers: UnboundedReceiver<ReaperTask>,
+    inner: &Mutex<Inner<P, I>>,
+    watchers: UnboundedReceiver<ReaperTask>,
 ) -> Result<Never, failure::Error> {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
     await!(watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
@@ -443,7 +450,8 @@ mod tests {
     }
 
     fn fetch_events(
-        exec: &mut fasync::Executor, stream: fidl_svc::DeviceWatcherEventStream,
+        exec: &mut fasync::Executor,
+        stream: fidl_svc::DeviceWatcherEventStream,
     ) -> Vec<DeviceWatcherEvent> {
         let events = Arc::new(Mutex::new(Some(Vec::new())));
         let events_two = events.clone();

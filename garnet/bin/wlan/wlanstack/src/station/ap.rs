@@ -23,8 +23,11 @@ pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme;
 
 pub async fn serve<S>(
-    proxy: MlmeProxy, device_info: DeviceInfo, event_stream: MlmeEventStream,
-    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>, stats_requests: S,
+    proxy: MlmeProxy,
+    device_info: DeviceInfo,
+    event_stream: MlmeEventStream,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    stats_requests: S,
 ) -> Result<(), failure::Error>
 where
     S: Stream<Item = StatsRequest> + Send + Unpin,
@@ -50,7 +53,8 @@ where
 }
 
 async fn serve_fidl(
-    sme: &Mutex<Sme>, new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    sme: &Mutex<Sme>,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
 ) -> Result<Never, failure::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut fidl_clients = FuturesUnordered::new();
@@ -83,7 +87,8 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
 }
 
 async fn handle_fidl_request(
-    sme: &Mutex<Sme>, request: fidl_sme::ApSmeRequest,
+    sme: &Mutex<Sme>,
+    request: fidl_sme::ApSmeRequest,
 ) -> Result<(), ::fidl::Error> {
     match request {
         fidl_sme::ApSmeRequest::Start { config, responder } => {

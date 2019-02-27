@@ -28,8 +28,11 @@ pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
 type Sme = mesh_sme::MeshSme;
 
 pub async fn serve<S>(
-    proxy: MlmeProxy, device_info: DeviceInfo, event_stream: MlmeEventStream,
-    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>, stats_requests: S,
+    proxy: MlmeProxy,
+    device_info: DeviceInfo,
+    event_stream: MlmeEventStream,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    stats_requests: S,
 ) -> Result<(), failure::Error>
 where
     S: Stream<Item = StatsRequest> + Send + Unpin,
@@ -56,7 +59,9 @@ where
 }
 
 async fn serve_fidl<'a>(
-    sme: &'a Mutex<Sme>, new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>, proxy: &'a MlmeProxy,
+    sme: &'a Mutex<Sme>,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    proxy: &'a MlmeProxy,
 ) -> Result<Never, failure::Error> {
     let mut fidl_clients = FuturesUnordered::new();
     let mut new_fidl_clients = new_fidl_clients.fuse();
@@ -90,7 +95,9 @@ async fn serve_fidl_endpoint<'a>(proxy: &'a MlmeProxy, sme: &'a Mutex<Sme>, endp
 }
 
 async fn handle_fidl_request<'a>(
-    proxy: &'a MlmeProxy, sme: &'a Mutex<Sme>, request: fidl_sme::MeshSmeRequest,
+    proxy: &'a MlmeProxy,
+    sme: &'a Mutex<Sme>,
+    request: fidl_sme::MeshSmeRequest,
 ) -> Result<(), ::fidl::Error> {
     match request {
         fidl_sme::MeshSmeRequest::Join { config, responder } => {
@@ -109,7 +116,8 @@ async fn handle_fidl_request<'a>(
 }
 
 async fn get_mesh_path_table<'a>(
-    proxy: &'a MlmeProxy, _sme: &'a Mutex<Sme>,
+    proxy: &'a MlmeProxy,
+    _sme: &'a Mutex<Sme>,
 ) -> (fidl_sme::GetMeshPathTableResultCode, fidl_mesh::MeshPathTable) {
     let mut dummy = fidl_mlme::GetMeshPathTableRequest { dummy: 0 };
     let table = await!(proxy.get_mesh_path_table_req(&mut dummy));
@@ -117,9 +125,10 @@ async fn get_mesh_path_table<'a>(
         Ok(tbl) => (fidl_sme::GetMeshPathTableResultCode::Success, tbl),
         Err(err) => {
             error!("Error received in getting mesh path table from MLME: {}", err);
-            (fidl_sme::GetMeshPathTableResultCode::InternalError, fidl_mesh::MeshPathTable {
-                paths: Vec::new(),
-            })
+            (
+                fidl_sme::GetMeshPathTableResultCode::InternalError,
+                fidl_mesh::MeshPathTable { paths: Vec::new() },
+            )
         }
     }
 }

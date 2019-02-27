@@ -19,7 +19,9 @@ fn short_log_level(level: &log::Level) -> &'static str {
 }
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool { metadata.level() <= LOG_LEVEL }
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= LOG_LEVEL
+    }
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
