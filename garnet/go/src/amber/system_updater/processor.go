@@ -150,7 +150,7 @@ func WriteImgs(imgs []string, imgsPath string) error {
 	for _, img := range imgs {
 		imgPath := filepath.Join(imgsPath, img)
 		if fi, err := os.Stat(imgPath); err != nil || fi.Size() == 0 {
-			logger.Errorf("img_writer: %q image not found or zero length, skipping", img)
+			logger.Warnf("img_writer: %q image not found or zero length, skipping", img)
 			continue
 		}
 
