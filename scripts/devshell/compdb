@@ -31,6 +31,7 @@ main () {
 
     #concatenate the two files together by making a tmp file and then removing it when done
 
+    rm -f "${FUCHSIA_DIR}/compile_commands.json"
     ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${ZIRCON_BUILD_DIR}/compile_commands.json \
     ${FUCHSIA_BUILD_DIR}/compile_commands.json > ${FUCHSIA_DIR}/compile_commands.json
 }
