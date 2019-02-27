@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//src/ledger/bin/*" ]
+import("//build/testing/secret_spec.gni")
+
+visibility = [ "//src/ledger/*" ]
 
 executable("e2e_sync") {
   output_name = "ledger_e2e_sync"
@@ -15,6 +17,7 @@ executable("e2e_sync") {
   ]
 
   deps = [
+    ":ledger_e2e_sync_credentials",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
@@ -33,4 +36,10 @@ executable("e2e_sync") {
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
+}
+
+secret_spec("ledger_e2e_sync_credentials") {
+  key_name = "ledger-tests-remote"
+
+  ciphertext_file = "ledger_e2e_sync_credentials.ciphertext"
 }

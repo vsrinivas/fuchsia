@@ -4,7 +4,7 @@
 
 import("//third_party/cobalt_config/metrics_registry.gni")
 
-visibility = [ "//src/ledger/bin/*" ]
+visibility = [ "//src/ledger/*" ]
 
 metrics_registry("ledger_metrics_registry") {
   project_id = 100

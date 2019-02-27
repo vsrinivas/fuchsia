@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//src/ledger/bin/*",
-  "//src/ledger/cloud_provider_firestore/bin/validation",
+  "//src/ledger/*",
 ]
 
 source_set("lib") {

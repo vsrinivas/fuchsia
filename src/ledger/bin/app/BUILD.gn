@@ -3,10 +3,8 @@
 # found in the LICENSE file.
 
 visibility = [
-  # needed to access the serialization version constant
   # TODO(ppi): extract the serialization version constant to a separate library
-  "//src/ledger/cloud_provider_firestore/bin/*",
-  "//src/ledger/bin/*",
+  "//src/ledger/*",
 ]
 
 executable("app") {

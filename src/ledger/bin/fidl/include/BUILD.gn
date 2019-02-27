@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 visibility = [
-  "//src/ledger/bin/*",
   "//src/ledger/*",
 ]
 

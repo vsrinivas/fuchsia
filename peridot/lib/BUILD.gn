@@ -19,8 +19,6 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
-    "//src/ledger/lib/firebase_auth:unittests",
-    "//src/ledger/lib/firebase_auth/testing:unittests",
     "//third_party/googletest:gtest_main",
   ]
 }

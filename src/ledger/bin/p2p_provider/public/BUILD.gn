@@ -4,7 +4,7 @@
 
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-visibility = [ "//src/ledger/bin/*" ]
+visibility = [ "//src/ledger/*" ]
 
 source_set("public") {
   sources = [

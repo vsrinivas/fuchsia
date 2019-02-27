@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//src/ledger/bin/testing/sync_params.gni")
 
-visibility = [ "//src/ledger/bin/*" ]
+visibility = [ "//src/ledger/*" ]
 
 package("ledger_benchmarks") {
   deprecated_global_persistent_storage = "//build"

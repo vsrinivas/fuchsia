@@ -5,7 +5,7 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-visibility = [ "//src/ledger/bin/*" ]
+visibility = [ "//src/ledger/*" ]
 
 group("btree") {
   deps = [

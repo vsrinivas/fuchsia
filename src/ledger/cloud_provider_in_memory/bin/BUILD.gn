@@ -4,10 +4,7 @@
 
 import("//build/package.gni")
 
-visibility = [
-  "//src/ledger/bin/*",
-  ":*",
-]
+visibility = [ "//src/ledger/*" ]
 
 executable("app") {
   output_name = "cloud_provider_in_memory"
