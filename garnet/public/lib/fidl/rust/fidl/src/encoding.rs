@@ -1734,7 +1734,7 @@ macro_rules! fidl_xunion {
                 encoder.recurse(|encoder| {
                     match self {
                         $(
-                            $name::$member_name ( val ) => encode_in_envelope(&mut Some(val), encoder),
+                            $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
                         )*
                         $name::__UnknownVariant { ordinal: _, bytes, handles } => {
                             // Throw the raw data from the unrecognized variant
