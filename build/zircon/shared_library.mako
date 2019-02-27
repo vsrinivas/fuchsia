@@ -1,5 +1,6 @@
 <%include file="header.mako" />
 
+import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/sdk_atom.gni")
 
 config("${data.name}_config") {
@@ -189,6 +190,16 @@ action("${data.name}_meta") {
   ]
 }
 
+verify_pragma_once("${data.name}_pragma") {
+  headers = [
+    % if data.with_sdk_headers:
+    % for _, source in sorted(data.includes.iteritems()):
+    "${source}",
+    % endfor
+    % endif
+  ]
+}
+
 sdk_atom("${data.name}_sdk") {
   id = "sdk://pkg/${data.name}"
   category = "partner"
@@ -231,5 +242,6 @@ sdk_atom("${data.name}_sdk") {
   non_sdk_deps = [
     ":${data.name}",
     ":${data.name}_meta",
+    ":${data.name}_pragma",
   ]
 }

@@ -1,5 +1,6 @@
 <%include file="header.mako" />
 
+import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/sdk_atom.gni")
 
 config("${data.name}_config") {
@@ -81,6 +82,14 @@ metadata = {
   banjo_deps = []
 }
 
+verify_pragma_once("${data.name}_pragma") {
+  headers = [
+    % for _, source in sorted(data.includes.iteritems()):
+    "${source}",
+    % endfor
+  ]
+}
+
 sdk_atom("${data.name}_sdk") {
   id = "sdk://pkg/${data.name}"
   category = "partner"
@@ -110,5 +119,9 @@ sdk_atom("${data.name}_sdk") {
     % for dep in sorted(data.sdk_deps):
     "../${dep}:${dep}_sdk",
     % endfor
+  ]
+
+  non_sdk_deps = [
+    ":${data.name}_pragma",
   ]
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
@@ -75,6 +76,7 @@ template("sdk_shared_library") {
   main_target_name = target_name
   metadata_target_name = "${target_name}_sdk_metadata"
   manifest_target_name = "${target_name}_sdk_manifest"
+  verify_pragma_target_name = "${target_name}_sdk_pragma"
   sdk_target_name = "${target_name}_sdk"
 
   shared_library(main_target_name) {
@@ -243,6 +245,10 @@ template("sdk_shared_library") {
     deps = sdk_deps + [ ":$main_target_name" ]
   }
 
+  verify_pragma_once(verify_pragma_target_name) {
+    headers = all_headers
+  }
+
   sdk_atom(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
@@ -271,6 +277,7 @@ template("sdk_shared_library") {
     non_sdk_deps = [
       ":$main_target_name",
       ":$metadata_target_name",
+      ":$verify_pragma_target_name",
     ]
 
     # Explicitly add non-public dependencies, in case some of the source files

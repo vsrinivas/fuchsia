@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Verifies that a set of header files do not contain a "#pragma once" directive.
+#
+# Parameters
+#
+#   headers
+#     List of header files to verify.
+
+template("verify_pragma_once") {
+  assert(defined(invoker.headers), "Header list must be provided")
+
+  stamp_file = "$target_gen_dir/$target_name.pragma.txt"
+
+  action(target_name) {
+    script = "//build/cpp/verify_pragma_once.py"
+
+    inputs = invoker.headers
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--stamp",
+      rebase_path(stamp_file),
+      "--headers",
+    ] + rebase_path(invoker.headers)
+  }
+}

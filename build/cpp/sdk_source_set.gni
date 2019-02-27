@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # A source set that can be exported to an SDK.
@@ -132,6 +133,12 @@ template("sdk_source_set") {
     ]
   }
 
+  verify_pragma_target_name = "${target_name}_sdk_pragma"
+
+  verify_pragma_once(verify_pragma_target_name) {
+    headers = all_headers
+  }
+
   metadata_target_name = "${target_name}_sdk_metadata"
   metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
 
@@ -190,6 +197,7 @@ template("sdk_source_set") {
     non_sdk_deps = [
       ":$main_target_name",
       ":$metadata_target_name",
+      ":$verify_pragma_target_name",
     ]
 
     # Explicitly add non-public dependencies, in case some of the source files
