@@ -238,11 +238,10 @@ class TestHierarchy : public TestReader {
 
 TEST_F(TestHierarchy, ObjectHierarchy) {
   fit::result<inspect::ObjectHierarchy> result;
-  SchedulePromise(
-      inspect::ObjectHierarchy::Make(inspect::ObjectReader(std::move(client_)))
-          .then([&](fit::result<inspect::ObjectHierarchy>& res) {
-            result = std::move(res);
-          }));
+  SchedulePromise(inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)))
+                      .then([&](fit::result<inspect::ObjectHierarchy>& res) {
+                        result = std::move(res);
+                      }));
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
@@ -253,11 +252,11 @@ TEST_F(TestHierarchy, ObjectHierarchy) {
 
 TEST_F(TestHierarchy, ObjectHierarchyLimitDepth) {
   fit::result<inspect::ObjectHierarchy> result;
-  SchedulePromise(inspect::ObjectHierarchy::Make(
-                      inspect::ObjectReader(std::move(client_)), /*depth=*/1)
-                      .then([&](fit::result<inspect::ObjectHierarchy>& res) {
-                        result = std::move(res);
-                      }));
+  SchedulePromise(
+      inspect::ReadFromFidl(inspect::ObjectReader(std::move(client_)), /*depth=*/1)
+          .then([&](fit::result<inspect::ObjectHierarchy>& res) {
+            result = std::move(res);
+          }));
 
   ASSERT_TRUE(RunLoopUntil([&] { return !!result; }));
 
@@ -273,13 +272,13 @@ TEST_F(TestHierarchy, ObjectHierarchyLimitDepth) {
 }
 
 TEST_F(TestHierarchy, ObjectHierarchyDirect) {
-  auto hierarchy = inspect::ObjectHierarchy::Make(root_object_);
+  auto hierarchy = inspect::ReadFromObject(root_object_);
 
   ExpectHierarchy(hierarchy);
 }
 
 TEST_F(TestHierarchy, ObjectHierarchyDirectLimitDepth) {
-  auto hierarchy = inspect::ObjectHierarchy::Make(root_object_, /*depth=*/1);
+  auto hierarchy = inspect::ReadFromObject(root_object_, /*depth=*/1);
 
   EXPECT_THAT(hierarchy, ChildrenMatch(UnorderedElementsAre(
                              ObjectMatches(AllOf(NameMatches("child a"))),

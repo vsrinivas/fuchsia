@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/vmo/reader.h>
+#include <lib/inspect/reader.h>
 
 #include <gtest/gtest.h>
 #include <lib/inspect-vmo/inspect.h>
@@ -17,7 +17,6 @@ using inspect::vmo::IntMetric;
 using inspect::vmo::Object;
 using inspect::vmo::Property;
 using inspect::vmo::UintMetric;
-using inspect::vmo::reader::ReadSnapshot;
 using testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
@@ -46,11 +45,16 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
   inspect::vmo::Snapshot snapshot;
   ASSERT_EQ(ZX_OK, inspect::vmo::Snapshot::Create(
                        inspector->GetReadOnlyVmoClone(), &snapshot));
-  auto root = ReadSnapshot(std::move(snapshot));
 
-  EXPECT_THAT(
-      *root,
-      AllOf(ObjectMatches(AllOf(
+  std::vector<fit::result<inspect::ObjectHierarchy>> hierarchies;
+  hierarchies.emplace_back(inspect::ReadFromSnapshot(std::move(snapshot)));
+  hierarchies.emplace_back(inspect::ReadFromVmo(inspector->GetReadOnlyVmoClone()));
+  for (auto& root : hierarchies) {
+    ASSERT_TRUE(root.is_ok());
+    EXPECT_THAT(
+        root.value(),
+        AllOf(
+            ObjectMatches(AllOf(
                 NameMatches("objects"),
                 PropertyList(UnorderedElementsAre(
                     StringPropertyIs("version", "1.0beta2"))),
@@ -62,6 +66,7 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
                     UnorderedElementsAre(StringPropertyIs("dump", dump))),
                 MetricList(UnorderedElementsAre(UIntMetricIs("network", 10),
                                                 UIntMetricIs("wifi", 5)))))))));
+  }
 }
 
 }  // namespace

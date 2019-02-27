@@ -229,7 +229,7 @@ fit::promise<ObjectSource> ObjectSource::Make(ObjectLocation location,
                 return fit::error();
               });
         }
-        return inspect::ObjectHierarchy::Make(reader.take_value(), depth);
+        return inspect::ReadFromFidl(reader.take_value(), depth);
       })
       .then([root_reader, location = std::move(location)](
                 fit::result<inspect::ObjectHierarchy>& result)

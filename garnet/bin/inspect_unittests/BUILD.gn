@@ -14,13 +14,11 @@ executable("bin") {
     "expose_unittest.cc",
     "inspect_unittest.cc",
     "reader_unittest.cc",
-    "vmo/reader_unittest.cc",
+    "vmo_reader_unittest.cc",
   ]
   deps = [
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/inspect",
-    "//garnet/public/lib/inspect/vmo",
     "//zircon/public/lib/inspect-vmo",
   ]
   public_deps = [

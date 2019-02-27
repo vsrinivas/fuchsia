@@ -6,7 +6,9 @@
 #define LIB_INSPECT_READER_H_
 
 #include <fuchsia/inspect/cpp/fidl.h>
+#include <lib/inspect-vmo/snapshot.h>
 #include <lib/fit/promise.h>
+#include "lib/inspect/hierarchy.h"
 #include "lib/inspect/inspect.h"
 
 namespace inspect {
@@ -73,56 +75,25 @@ class ObjectReader {
   std::shared_ptr<internal::ObjectReaderState> state_;
 };
 
-// Represents a hierarchy of objects rooted under one particular object.
-// This class includes constructors that handle reading the hierarchy from
-// various sources.
-class ObjectHierarchy {
- public:
-  ObjectHierarchy() = default;
+// Construct a new object hierarchy by asynchronously reading objects from the
+// given reader wrapping a FIDL interface.
+// Will only read |depth| levels past the immediate object, or all levels if
+// |depth| is -1.
+fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth = -1);
 
-  // Directly construct an object hierarchy consisting of an object and a list
-  // of children.
-  ObjectHierarchy(fuchsia::inspect::Object object,
-                  std::vector<ObjectHierarchy> children);
+// Construct a new object hierarchy by synchronously reading objects out of
+// the given VMO.
+fit::result<ObjectHierarchy> ReadFromVmo(zx::vmo vmo);
 
-  // Allow moving, disallow copying.
-  ObjectHierarchy(ObjectHierarchy&&) = default;
-  ObjectHierarchy(const ObjectHierarchy&) = delete;
-  ObjectHierarchy& operator=(ObjectHierarchy&&) = default;
-  ObjectHierarchy& operator=(const ObjectHierarchy&) = delete;
+// Construct a new object hierarchy by synchronously reading objects out of the
+// given VMO Snapshot.
+fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot);
 
-  // Construct a new object hierarchy by asynchronously reading objects from the
-  // given reader.
-  // Will only read |depth| levels past the immediate object, or all levels if
-  // |depth| is -1.
-  static fit::promise<ObjectHierarchy> Make(ObjectReader reader,
-                                            int depth = -1);
-
-  // Construct a new object hierarchy by directly reading objects from the
-  // given given inspect::Object.
-  // Will only read |depth| levels past the immediate object, or all levels if
-  // |depth| is -1.
-  static ObjectHierarchy Make(const Object& object_root, int depth = -1);
-
-  // Gets the FIDL representation of the Object.
-  const fuchsia::inspect::Object& object() const { return object_; };
-  fuchsia::inspect::Object& object() { return object_; };
-
-  // Gets the children of this object in the hierarchy.
-  const std::vector<ObjectHierarchy>& children() const { return children_; };
-  std::vector<ObjectHierarchy>& children() { return children_; };
-
-  // Gets a child in this ObjectHierarchy by path.
-  // Returns NULL if the requested child could not be found.
-  const ObjectHierarchy* GetByPath(std::vector<std::string> path) const;
-
- private:
-  static ObjectHierarchy Make(std::shared_ptr<component::Object> object_root,
-                              int depth);
-
-  fuchsia::inspect::Object object_;
-  std::vector<ObjectHierarchy> children_;
-};
+// Construct a new object hierarchy by directly reading objects from the
+// given given inspect::Object.
+// Will only read |depth| levels past the immediate object, or all levels if
+// |depth| is -1.
+ObjectHierarchy ReadFromObject(const Object& object_root, int depth = -1);
 
 }  // namespace inspect
 
