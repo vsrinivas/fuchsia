@@ -7,6 +7,8 @@ driver("arm-isp") {
     "arm-isp-impl.cpp",
     "arm-isp.cpp",
     "init_sequences.cc",
+    "modules/dma-format.cc",
+    "modules/dma-mgr.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-clock",
@@ -17,10 +19,13 @@ driver("arm-isp") {
     "$zx/system/banjo/ddk-protocol-mipicsi",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
