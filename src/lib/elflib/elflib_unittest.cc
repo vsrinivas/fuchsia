@@ -261,9 +261,9 @@ TEST(ElfLib, GetSymbolValue) {
 
   ASSERT_NE(elf.get(), nullptr);
 
-  auto data = elf->GetSymbolValue("zx_frob_handle");
+  auto data = elf->GetSymbol("zx_frob_handle");
   ASSERT_TRUE(data);
-  EXPECT_EQ(kSymbolPoison, *data);
+  EXPECT_EQ(kSymbolPoison, data->st_value);
 }
 
 TEST(ElfLib, GetAllSymbols) {

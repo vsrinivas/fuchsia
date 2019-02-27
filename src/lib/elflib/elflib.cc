@@ -480,14 +480,4 @@ std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllSymbols() {
   return out;
 }
 
-std::optional<uint64_t> ElfLib::GetSymbolValue(const std::string& name) {
-  const Elf64_Sym* sym = GetSymbol(name);
-
-  if (sym) {
-    return sym->st_value;
-  }
-
-  return std::nullopt;
-}
-
 }  // namespace elflib

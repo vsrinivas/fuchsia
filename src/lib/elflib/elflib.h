@@ -119,9 +119,9 @@ class ElfLib {
   std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
                                               uint64_t type);
 
-  // Get the stored value of a given symbol. Returns nullopt if the lookup
-  // failed.
-  std::optional<uint64_t> GetSymbolValue(const std::string& name);
+  // Get a symbol from the symbol table. Return nullptr if there is no such
+  // symbol. Pointer should live as long as the memory accessor.
+  const Elf64_Sym* GetSymbol(const std::string& name);
 
   // Get a map of all symbols and their string names. Returns nullopt if the
   // symbols could not be loaded.
@@ -155,10 +155,6 @@ class ElfLib {
   // Get a string from the .strtab section. Return nullptr if the index is
   // invalid.
   std::optional<std::string> GetString(size_t index);
-
-  // Get a symbol from the symbol table. Return nullptr if there is no such
-  // symbol.
-  const Elf64_Sym* GetSymbol(const std::string& name);
 
   // Load symbols from the dynamic segment of the target. We only do this when
   // the section data isn't available and we can't use the regular .symtab
