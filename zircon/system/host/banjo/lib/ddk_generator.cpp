@@ -998,7 +998,7 @@ void DdkGenerator::GeneratePrologues() {
     EmitIncludeHeader(&file_, "<zircon/types.h>");
 
     EmitBlank(&file_);
-    file_ << "__BEGIN_CDECLS;\n";
+    file_ << "__BEGIN_CDECLS\n";
 }
 
 void DdktlGenerator::GeneratePrologues() {
@@ -1055,7 +1055,7 @@ void DdktlGenerator::GeneratePrologues() {
 }
 
 void DdkGenerator::GenerateEpilogues() {
-    file_ << "__END_CDECLS;\n";
+    file_ << "__END_CDECLS\n";
 }
 
 void DdktlGenerator::GenerateEpilogues() {
