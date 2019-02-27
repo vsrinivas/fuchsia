@@ -23,15 +23,13 @@ class HelloTouchColorsView : public scenic::BaseView {
       fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::BaseView|.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
-
-  // |scenic::BaseView|.
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
   // |scenic::SessionListener|.
   void OnScenicError(std::string error) override {}
+
+  void UpdateBackground();
 
   async::Loop* const message_loop_;
 

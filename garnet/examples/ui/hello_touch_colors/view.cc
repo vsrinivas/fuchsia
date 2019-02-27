@@ -68,23 +68,7 @@ void HelloTouchColorsView::OnPropertiesChanged(
     view_holder_->SetViewProperties(view_properties());
   }
 
-  InvalidateScene();
-}
-
-void HelloTouchColorsView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size()) {
-    return;
-  }
-
-  const auto size = logical_size();
-  const float width = size.x;
-  const float height = size.y;
-
-  scenic::RoundedRectangle background_shape(session(), width, height, 20, 20,
-                                            80, 10);
-  background_.SetShape(background_shape);
-  background_.SetTranslationRH(width / 2.f, height / 2.f, -10.f);
+  UpdateBackground();
 }
 
 void HelloTouchColorsView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
@@ -103,8 +87,7 @@ void HelloTouchColorsView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       switch (pointer.phase) {
         case PointerEventPhase::DOWN: {
           if (focused_) {
-            background_.SetMaterial(NextColor(session()));
-            InvalidateScene();
+            UpdateBackground();
           }
           break;
         }
@@ -127,6 +110,23 @@ void HelloTouchColorsView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       break;
     }
   }
+}
+
+void HelloTouchColorsView::UpdateBackground() {
+  if (!has_logical_size()) {
+    return;
+  }
+
+  const auto size = logical_size();
+  const float width = size.x;
+  const float height = size.y;
+
+  scenic::RoundedRectangle background_shape(session(), width, height, 20, 20,
+                                            80, 10);
+  background_.SetMaterial(NextColor(session()));
+  background_.SetShape(background_shape);
+  background_.SetTranslationRH(width / 2.f, height / 2.f, -10.f);
+  PresentScene();
 }
 
 }  // namespace hello_touch_colors
