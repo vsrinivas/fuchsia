@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_MODEL_CONFIG_H_
 #define GARNET_BIN_NETEMUL_RUNNER_MODEL_CONFIG_H_
 
+#include <lib/zx/time.h>
 #include <vector>
 #include "environment.h"
 #include "lib/fxl/macros.h"
@@ -27,12 +28,14 @@ class Config {
   const Environment& environment() const;
   const std::string& default_url() const;
   bool disabled() const;
+  zx::duration timeout() const;
 
  private:
   std::vector<Network> networks_;
   Environment environment_;
   std::string default_url_;
   bool disabled_;
+  zx::duration timeout_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

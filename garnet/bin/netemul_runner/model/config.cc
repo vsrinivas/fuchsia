@@ -11,6 +11,7 @@ static const char* kNetworks = "networks";
 static const char* kEnvironment = "environment";
 static const char* kDefaultUrl = "default_url";
 static const char* kDisabled = "disabled";
+static const char* kTimeout = "timeout";
 
 const char Config::Facet[] = "fuchsia.netemul";
 
@@ -74,6 +75,18 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
     disabled_ = false;
   }
 
+  auto timeout = value.FindMember(kTimeout);
+  if (timeout != value.MemberEnd()) {
+    if (!timeout->value.IsUint64() || timeout->value.GetUint64() <= 0) {
+      json_parser->ReportError(
+          "\"timeout\" must be a positive integer Number value");
+      return false;
+    }
+    timeout_ = zx::sec(timeout->value.GetUint64());
+  } else {
+    timeout_ = zx::duration::infinite();
+  }
+
   return true;
 }
 
@@ -84,6 +97,8 @@ const Environment& Config::environment() const { return environment_; }
 const std::string& Config::default_url() const { return default_url_; }
 
 bool Config::disabled() const { return disabled_; }
+
+zx::duration Config::timeout() const { return timeout_; }
 
 }  // namespace config
 }  // namespace netemul

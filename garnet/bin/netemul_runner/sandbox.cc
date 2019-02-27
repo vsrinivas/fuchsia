@@ -23,7 +23,9 @@ namespace netemul {
 
 static const char* kEndpointMountPath = "class/ethernet/";
 // give setup processes a maximum of 10s before bailing
-static const int kSetupTimeoutSecs = 10;
+constexpr int kSetupTimeoutSecs = 10;
+constexpr int64_t kFailureTerminationCode = -1;
+constexpr int64_t kTimeoutTerminationCode = 1;
 
 #define STATIC_MSG_STRUCT(name, msgv) \
   struct name {                       \
@@ -96,7 +98,7 @@ void Sandbox::Terminate(int64_t exit_code, Sandbox::TerminationReason reason) {
 
 void Sandbox::PostTerminate(TerminationReason reason) {
   ASSERT_HELPER_DISPATCHER;
-  PostTerminate(-1, reason);
+  PostTerminate(kFailureTerminationCode, reason);
 }
 
 void Sandbox::PostTerminate(int64_t exit_code, TerminationReason reason) {
@@ -110,7 +112,7 @@ void Sandbox::PostTerminate(int64_t exit_code, TerminationReason reason) {
 
 void Sandbox::Terminate(Sandbox::TerminationReason reason) {
   ASSERT_MAIN_DISPATCHER;
-  Terminate(-1, reason);
+  Terminate(kFailureTerminationCode, reason);
 }
 
 void Sandbox::StartEnvironments() {
@@ -462,6 +464,18 @@ void Sandbox::EnableTestObservation() {
   if (tests_.empty()) {
     // all tests finished successfully
     PostTerminate(0, TerminationReason::EXITED);
+    return;
+  }
+
+  // if a timeout is specified, start counting it from now:
+  if (env_config_.timeout() != zx::duration::infinite()) {
+    async::PostDelayedTask(
+        helper_loop_->dispatcher(),
+        [this]() {
+          FXL_LOG(ERROR) << "Test timed out.";
+          PostTerminate(kTimeoutTerminationCode, TerminationReason::EXITED);
+        },
+        env_config_.timeout());
   }
 }
 

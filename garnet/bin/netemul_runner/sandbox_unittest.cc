@@ -666,5 +666,34 @@ TEST_F(SandboxTest, NonexistentPackageUrl) {
   RunSandbox(false, TerminationReason::PACKAGE_NOT_FOUND);
 }
 
+TEST_F(SandboxTest, TimeoutFires) {
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "timeout" : 1,
+   "environment" : {
+      "test" : [ { "arguments": ["-w", "10000"] } ]
+   }
+}
+)");
+  // expect that we'll fail due to the timeout of 1s < 10s of wait in the dummy
+  // proc:
+  RunSandbox(false, TerminationReason::EXITED);
+}
+
+TEST_F(SandboxTest, ProcessSucceedsBeforeTimeoutFires) {
+  SetCmx(R"(
+{
+   "timeout" : 5,
+   "environment" : {
+      "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+   }
+}
+)");
+  // if a test succeds, even though we have a timeout, we should succeed
+  // normally:
+  RunSandboxSuccess();
+}
+
 }  // namespace testing
 }  // namespace netemul

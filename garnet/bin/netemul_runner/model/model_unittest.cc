@@ -113,6 +113,7 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_EQ(config.default_url(),
             "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx");
   EXPECT_EQ(config.disabled(), false);
+  EXPECT_EQ(config.timeout(), zx::duration::infinite());
 
   // sanity check the objects:
   auto& root_env = config.environment();
@@ -274,6 +275,20 @@ TEST_F(ModelTest, LaunchAppGetOrDefault) {
   EXPECT_EQ(app1.GetUrlOrDefault(fallback),
             "fuchsia-pkg://fuchsia.com/some_url#meta/some_url.cmx");
   EXPECT_EQ(app2.GetUrlOrDefault(fallback), fallback);
+}
+
+TEST_F(ModelTest, TimeoutParsing) {
+  const char* jsonbad = R"({"timeout": -10})";
+  ExpectFailedParse(jsonbad, "negative timeout value accepted");
+
+  const char* jsongood = R"({"timeout": 10})";
+  json::JSONParser parser;
+  auto doc = parser.ParseFromString(jsongood, "Good timeout JSON");
+  config::Config config;
+  EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
+      << "Parse error: " << parser.error_str();
+  EXPECT_EQ(config.timeout(), zx::sec(10));
 }
 
 }  // namespace testing
