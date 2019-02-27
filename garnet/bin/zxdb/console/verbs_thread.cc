@@ -9,7 +9,6 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/step_over_thread_controller.h"
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -559,8 +558,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
                            options);
     helper->Append(OutputBuffer("\n"));
   }
-  helper->Complete(
-      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
+  helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });
   return Err();
 }
 
@@ -829,9 +827,8 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
           formatter->AppendValue(data_provider, value, options);
           // Bind the formatter to keep it in scope across this
           // async call.
-          formatter->Complete([formatter](OutputBuffer out) {
-            Console::get()->Output(std::move(out));
-          });
+          formatter->Complete(
+              [formatter](OutputBuffer out) { Console::get()->Output(out); });
         }
       });
 

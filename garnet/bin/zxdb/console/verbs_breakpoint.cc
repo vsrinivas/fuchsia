@@ -37,7 +37,7 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
   if (err.has_error()) {
     OutputBuffer out("Error setting breakpoint: ");
     out.Append(err);
-    console->Output(std::move(out));
+    console->Output(out);
     return;
   }
 
@@ -49,7 +49,7 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
     out.Append(DescribeBreakpoint(&console->context(), breakpoint.get()));
     out.Append(Syntax::kWarning, "\nPending");
     out.Append(": No matches for location, it will be pending library loads.");
-    console->Output(std::move(out));
+    console->Output(out);
     return;
   }
 
@@ -73,7 +73,7 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
       locs[0]->GetLocation(),
       breakpoint->session()->system().GetSymbols()->build_dir(),
       breakpoint->GetSettings().enabled, &out);
-  console->Output(std::move(out));
+  console->Output(out);
 }
 
 // Backend for setting attributes on a breakpoint from both creation and

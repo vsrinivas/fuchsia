@@ -81,7 +81,6 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-
 }  // namespace
 
 void AppendSharedVerbs(std::map<Verb, VerbRecord>* verbs) {

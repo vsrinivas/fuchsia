@@ -113,7 +113,7 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty()) {
     // Generic help, list topics and quick reference.
     out.FormatHelp(GetReference());
-    Console::get()->Output(std::move(out));
+    Console::get()->Output(out);
     return Err();
   }
   const std::string& on_what = cmd.args()[0];
@@ -137,15 +137,16 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
       help = verbs.find(found_string_verb->second)->second.help;
     } else {
       // Not a valid command.
-      out.Append(Err("\"" + on_what + "\" is not a valid command.\n"
-                                      "Try just \"help\" to get a list."));
-      Console::get()->Output(std::move(out));
+      out.Append(Err("\"" + on_what +
+                     "\" is not a valid command.\n"
+                     "Try just \"help\" to get a list."));
+      Console::get()->Output(out);
       return Err();
     }
   }
 
   out.FormatHelp(help);
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
   return Err();
 }
 
@@ -249,7 +250,7 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
                    "Normally you will \"run <program path>\" or \"attach "
                    "<process koid>\".");
       }
-      Console::get()->Output(std::move(msg));
+      Console::get()->Output(msg);
     }
 
     if (callback)
@@ -483,7 +484,7 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
   return Err();
 }
 
@@ -585,8 +586,8 @@ struct SetContext {
   Target* target = nullptr;
   Thread* thread = nullptr;
 
-  SettingSchemaItem schema_item;    // What kind of setting this is.
-  std::string setting_name;         // The setting that was set.
+  SettingSchemaItem schema_item;  // What kind of setting this is.
+  std::string setting_name;       // The setting that was set.
   // At what level the setting was applied.
   SettingSchema::Level level = SettingSchema::Level::kDefault;
   // What kind of operation this is.

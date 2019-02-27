@@ -28,8 +28,8 @@
 #include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
@@ -321,7 +321,7 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
   return Err();
 }
 
@@ -351,7 +351,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         "symbol to look up.");
   }
 
-  auto[err, identifier] = Identifier::FromString(cmd.args()[0]);
+  auto [err, identifier] = Identifier::FromString(cmd.args()[0]);
   if (err.has_error())
     return err;
 
@@ -374,7 +374,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
           } else {
             out.Append("TODO: support this command for non-Variables.");
           }
-          Console::get()->Output(std::move(out));
+          Console::get()->Output(out);
           return Err();
         });
     return Err();  // Will complete asynchronously.
@@ -488,7 +488,7 @@ void DumpBuildIdIndex(SystemSymbols* system_symbols, OutputBuffer* out) {
   if (build_id_to_file.empty()) {
     out->Append(Syntax::kError, "  No build IDs found.\n");
   } else {
-    for (const auto & [ id, file ] : build_id_to_file)
+    for (const auto& [id, file] : build_id_to_file)
       out->Append(fxl::StringPrintf("%s %s\n", id.c_str(), file.c_str()));
   }
   out->Append("\n");
@@ -516,7 +516,7 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
   }
 
   Console* console = Console::get();
-  console->Output(std::move(out));
+  console->Output(out);
 
   return Err();
 }
@@ -570,11 +570,11 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
 constexpr size_t kSymSearchListLimit = 200;
 
 constexpr int kSymSearchUnfold = 1;
-constexpr int kSymSearchListAll= 2;
+constexpr int kSymSearchListAll = 2;
 
 const char kSymSearchShortHelp[] = "sym-search: Search for symbols.";
 const char kSymSearchHelp[] =
-  R"(sym-search [--all] [--unfold] [<regexp>]
+    R"(sym-search [--all] [--unfold] [<regexp>]
 
   Searches for symbols loaded by a process.
 
@@ -671,7 +671,7 @@ std::string CreateSymbolName(const Command& cmd,
 struct DumpModuleContext {
   std::vector<std::string>* names = nullptr;
   std::vector<std::string>* output = nullptr;
-  debug_ipc::Regex* regex = nullptr;   // nullptr if no filter is defined.
+  debug_ipc::Regex* regex = nullptr;  // nullptr if no filter is defined.
 };
 
 // Returns true if the list was truncated.
@@ -759,9 +759,9 @@ Err DoSymSearch(ConsoleContext* context, const Command& cmd) {
 
   size_t current_index = 0;
   for (const auto& [module_info, limit] : module_symbol_indices) {
-    console->Output(OutputBuffer(
-        Syntax::kHeading,
-        fxl::StringPrintf("%s\n\n", module_info.name.c_str())));
+    console->Output(
+        OutputBuffer(Syntax::kHeading,
+                     fxl::StringPrintf("%s\n\n", module_info.name.c_str())));
 
     while (current_index < limit) {
       console->Output(dump[current_index]);

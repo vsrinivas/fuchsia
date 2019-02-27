@@ -281,7 +281,7 @@ void ConsoleContext::OutputThreadContext(
   } else {
     out.Append(" (no symbol info)\n");
   }
-  console->Output(std::move(out));
+  console->Output(out);
   Err err = OutputSourceContext(thread->GetProcess(), location,
                                 GetSourceAffinityForThread(thread));
   if (err.has_error())
@@ -445,7 +445,7 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
         "only set\n  pending breakpoints (symbols haven't been loaded yet) "
         "or \"continue\" (DX-912).");
   }
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 void ConsoleContext::WillDestroyProcess(Target* target, Process* process,

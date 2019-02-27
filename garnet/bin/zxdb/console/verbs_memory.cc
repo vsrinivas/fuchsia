@@ -190,7 +190,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
                             static_cast<int>(bytes_to_read / sizeof(uint64_t)),
                             next_addr));
     }
-    Console::get()->Output(std::move(output));
+    Console::get()->Output(output);
   });
   return Err();
 }
@@ -275,7 +275,7 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
                             static_cast<int>(bytes_to_read / sizeof(uint64_t)),
                             next_addr));
     }
-    Console::get()->Output(std::move(output));
+    Console::get()->Output(output);
   });
   return Err();
 }
@@ -295,7 +295,7 @@ void MemoryReadComplete(const Err& err, MemoryDump dump) {
     out.Append(FormatMemory(dump, dump.address(),
                             static_cast<uint32_t>(dump.size()), opts));
   }
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 const char kMemReadShortHelp[] =
@@ -384,7 +384,7 @@ void CompleteDisassemble(const Err& err, MemoryDump dump,
     return;
   }
 
-  console->Output(std::move(out));
+  console->Output(out);
 }
 
 const char kDisassembleShortHelp[] =
@@ -504,11 +504,12 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
 
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
-  process->ReadMemory(
-      location.address(), size, [ options, process = process->GetWeakPtr() ](
-                                    const Err& err, MemoryDump dump) {
-        CompleteDisassemble(err, std::move(dump), std::move(process), options);
-      });
+  process->ReadMemory(location.address(), size,
+                      [options, process = process->GetWeakPtr()](
+                          const Err& err, MemoryDump dump) {
+                        CompleteDisassemble(err, std::move(dump),
+                                            std::move(process), options);
+                      });
   return Err();
 }
 

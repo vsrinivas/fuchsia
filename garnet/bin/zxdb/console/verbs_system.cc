@@ -48,7 +48,7 @@ void OnListProcessesComplete(const Err& err,
     out.Append(err);
   else
     OutputProcessTreeRecord(reply.root, 0, &out);
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 const char kListProcessesShortHelp[] =

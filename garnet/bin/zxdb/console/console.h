@@ -36,7 +36,7 @@ class Console : public debug_ipc::FDWatcher {
   void Init();
 
   // Prints the buffer/string to the console.
-  void Output(OutputBuffer output);
+  void Output(const OutputBuffer& output);
   void Output(const std::string& s);
   void Output(const Err& err);
 

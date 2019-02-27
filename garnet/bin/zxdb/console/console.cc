@@ -104,7 +104,7 @@ bool Console::SaveHistoryFile() {
   return files::WriteFile(filepath, history_data.data(), history_data.size());
 }
 
-void Console::Output(OutputBuffer output) {
+void Console::Output(const OutputBuffer& output) {
   // Since most operations are asynchronous, we have to hide the input line
   // before printing anything or it will get appended to whatever the user is
   // typing on the screen.
@@ -132,13 +132,13 @@ void Console::Output(OutputBuffer output) {
 void Console::Output(const std::string& s) {
   OutputBuffer buffer;
   buffer.Append(s);
-  Output(std::move(buffer));
+  Output(buffer);
 }
 
 void Console::Output(const Err& err) {
   OutputBuffer buffer;
   buffer.Append(err);
-  Output(std::move(buffer));
+  Output(buffer);
 }
 
 void Console::Clear() {
@@ -183,7 +183,7 @@ Console::Result Console::DispatchInputLine(const std::string& line,
   if (err.has_error()) {
     OutputBuffer out;
     out.Append(err);
-    Output(std::move(out));
+    Output(out);
   }
   return Result::kContinue;
 }

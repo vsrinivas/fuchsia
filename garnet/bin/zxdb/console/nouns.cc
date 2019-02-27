@@ -194,7 +194,7 @@ void ListThreads(ConsoleContext* context, Process* process) {
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
       rows, &out);
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 // Updates the thread list from the debugged process and asynchronously prints
@@ -322,7 +322,7 @@ void ListJobs(ConsoleContext* context) {
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
       rows, &out);
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 // Returns true if processing should stop (either a thread command or an error),
@@ -427,7 +427,7 @@ void ListProcesses(ConsoleContext* context) {
        ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
        ColSpec(Align::kLeft, 0, "Name")},
       rows, &out);
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 // Returns true if processing should stop (either a thread command or an error),
@@ -531,7 +531,7 @@ void ListBreakpoints(ConsoleContext* context) {
        ColSpec(Align::kLeft, 0, "Enabled"), ColSpec(Align::kLeft, 0, "Type"),
        ColSpec(Align::kLeft, 0, "Location")},
       rows, &out);
-  Console::get()->Output(std::move(out));
+  Console::get()->Output(out);
 }
 
 // Returns true if breakpoint was specified (and therefore nothing else

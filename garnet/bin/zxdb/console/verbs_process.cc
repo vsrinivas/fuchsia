@@ -79,7 +79,7 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
     out.Append(DescribeJobContext(&console->context(), job_context.get()));
   }
 
-  console->Output(std::move(out));
+  console->Output(out);
 
   if (callback) {
     callback(err);
@@ -101,15 +101,15 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target,
     OutputBuffer out;
     if (err.has_error()) {
       if (target) {
-        out.Append(fxl::StringPrintf("Process %d ",
-              console->context().IdForTarget(target.get())));
+        out.Append(fxl::StringPrintf(
+            "Process %d ", console->context().IdForTarget(target.get())));
       }
       out.Append(err);
     } else if (target) {
       out.Append(DescribeTarget(&console->context(), target.get()));
     }
 
-    console->Output(std::move(out));
+    console->Output(out);
   }
 
   if (callback)
@@ -413,7 +413,7 @@ void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
   FormatTable({ColSpec(Align::kRight, 0, "Load address", 2),
                ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
-  console->Output(std::move(out));
+  console->Output(out);
 }
 
 Err DoLibs(ConsoleContext* context, const Command& cmd) {
@@ -505,7 +505,7 @@ void OnAspaceComplete(const Err& err,
                ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
 
-  console->Output(std::move(out));
+  console->Output(out);
 }
 
 Err DoAspace(ConsoleContext* context, const Command& cmd) {

@@ -77,8 +77,7 @@ void ListCompletedFrames(Thread* thread, bool include_params,
     }
   }
 
-  helper->Complete(
-      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
+  helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });
 }
 
 }  // namespace
@@ -151,8 +150,7 @@ void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread,
       std::make_unique<FormatValueProcessContextImpl>(target));
   FormatFrameLong(frame, force_types, helper.get(), FormatExprValueOptions(),
                   context->GetActiveFrameIdForThread(thread));
-  helper->Complete(
-      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
+  helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });
 }
 
 }  // namespace zxdb
