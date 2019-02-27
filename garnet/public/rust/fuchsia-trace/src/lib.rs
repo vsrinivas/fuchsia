@@ -178,6 +178,7 @@ pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args:
                 args.as_ptr() as *const sys::trace_arg_t,
                 args.len()
             );
+            sys::trace_release_context(context);
         }
     }
 }
@@ -236,6 +237,7 @@ pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, ar
                 args.as_ptr() as *const sys::trace_arg_t,
                 args.len()
             );
+            sys::trace_release_context(context);
         }
     }
 }
@@ -287,7 +289,7 @@ impl DurationScope {
             if context != ptr::null() {
                 let helper = EventHelper::new(context, name);
 
-                sys::trace_context_write_duration_begin_event_record(
+                sys::trace_context_write_duration_end_event_record(
                     context,
                     helper.ticks,
                     &helper.thread_ref,
@@ -296,6 +298,7 @@ impl DurationScope {
                     ptr::null(),
                     0
                 );
+                sys::trace_release_context(context);
             }
         }
     }
@@ -351,6 +354,7 @@ pub fn duration(category: &'static CStr, name: &'static CStr, args: &[Arg]) -> D
                 args.as_ptr() as *const sys::trace_arg_t,
                 args.len()
             );
+            sys::trace_release_context(context);
         }
     }
 
