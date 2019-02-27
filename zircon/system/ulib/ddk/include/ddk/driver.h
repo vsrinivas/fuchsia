@@ -9,7 +9,7 @@
 #include <zircon/compiler.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct zx_device zx_device_t;
 typedef struct zx_driver zx_driver_t;
@@ -170,4 +170,4 @@ enum {
 #include <ddk/protodefs.h>
 };
 
-__END_CDECLS;
+__END_CDECLS

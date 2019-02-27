@@ -9,7 +9,7 @@
 #include <zircon/types.h>
 #include <zircon/listnode.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct zx_device zx_device_t;
 typedef struct zx_driver zx_driver_t;
@@ -300,4 +300,4 @@ static inline void device_state_clr(zx_device_t* dev, zx_signals_t stateflag) {
     device_state_clr_set(dev, stateflag, 0);
 }
 
-__END_CDECLS;
+__END_CDECLS

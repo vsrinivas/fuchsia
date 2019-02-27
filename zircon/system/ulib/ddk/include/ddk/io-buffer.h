@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Sentinel value for io_buffer_t's |phys| field for when it is not valid.
 #define IO_BUFFER_INVALID_PHYS 0
@@ -112,7 +112,7 @@ static inline size_t io_buffer_size(const io_buffer_t* buffer, size_t offset) {
     return remaining;
 }
 
-__END_CDECLS;
+__END_CDECLS
 
 #ifdef __cplusplus
 

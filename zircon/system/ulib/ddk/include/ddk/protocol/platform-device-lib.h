@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // MMIO mapping helper.
 static inline zx_status_t pdev_map_mmio_buffer(const pdev_protocol_t* pdev,
@@ -25,4 +25,4 @@ static inline zx_status_t pdev_map_mmio_buffer(const pdev_protocol_t* pdev,
     return mmio_buffer_init(buffer, mmio.offset, mmio.size, mmio.vmo, cache_policy);
 }
 
-__END_CDECLS;
+__END_CDECLS

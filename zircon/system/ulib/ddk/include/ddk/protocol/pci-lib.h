@@ -7,7 +7,7 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/mmio-buffer.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 static inline zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t bar_id,
                                       uint32_t cache_policy, mmio_buffer_t* buffer) {
@@ -68,4 +68,4 @@ static inline uint8_t pci_get_first_capability(const pci_protocol_t* pci, uint8_
     return pci_get_next_capability(pci, PCI_CFG_CAPABILITIES_PTR - 1u, type);
 }
 
-__END_CDECLS;
+__END_CDECLS

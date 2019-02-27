@@ -6,7 +6,7 @@
 
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // An entry in a scatter gather list.
 typedef struct {
@@ -56,7 +56,7 @@ void phys_iter_init(phys_iter_t* iter, const phys_iter_buffer_t* buf, size_t max
 // Return value is length, or zero if iteration is done.
 size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr);
 
-__END_CDECLS;
+__END_CDECLS
 
 #ifdef __cplusplus
 
