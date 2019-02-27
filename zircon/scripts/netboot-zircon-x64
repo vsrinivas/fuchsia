@@ -15,4 +15,4 @@ if [ ! -d "${BUILD_DIR}" ]; then
     exit -1
 fi
 
-${BUILD_DIR}/tools/bootserver ${BUILD_DIR}/zircon.zbi "$@"
+${BUILD_DIR}/tools/bootserver ${BUILD_DIR}/x64.zbi "$@"

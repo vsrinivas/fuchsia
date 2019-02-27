@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+BUILD_DIR="$1"
+shift
+
+if [ ! -d "${BUILD_DIR}" ]; then
+    echo Build directory ${BUILD_DIR} not found
+    echo "Usage: netboot-zircon <path to build directory>"
+    exit -1
+fi
+
+${BUILD_DIR}/tools/bootserver ${BUILD_DIR}/arm64.zbi "$@"
