@@ -6,6 +6,8 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 
 #include <grpc++/grpc++.h>
+#include <zircon/types.h>
+
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 
@@ -48,6 +50,12 @@ class Harvester {
   grpc::Status GetStreamIdForName(dockyard::SampleStreamId* stream_id,
                                   const std::string& stream_name);
 };
+
+// Gather*Samples collect samples for a given subject. They are grouped to make
+// the code more manageable and for enabling/disabling categories in the future.
+void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester);
+void GatherMemorySamples(zx_handle_t root_resource, Harvester* harvester);
+void GatherThreadSamples(zx_handle_t root_resource, Harvester* harvester);
 
 }  // namespace harvester
 

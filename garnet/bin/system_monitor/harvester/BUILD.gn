@@ -9,6 +9,8 @@ executable("bin") {
 
   sources = [
     "harvester.cc",
+    "harvester.h",
+    "harvester_main.cc",
   ]
 
   deps = [
