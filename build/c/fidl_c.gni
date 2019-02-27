@@ -29,7 +29,7 @@ template("fidl_tables") {
       ":${main_target_name}_compile($fidl_toolchain)",
     ]
     public_deps = [
-      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fidl_base",
     ]
   }
 }

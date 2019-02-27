@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("fidl") {
+library("fidl_base") {
   sdk = "source"
   sdk_headers = [
+    "lib/fidl/coding.h",
     "lib/fidl/cpp/message.h",
     "lib/fidl/cpp/string_view.h",
     "lib/fidl/cpp/message_part.h",
@@ -12,14 +13,6 @@ library("fidl") {
     "lib/fidl/cpp/builder.h",
     "lib/fidl/cpp/message_buffer.h",
     "lib/fidl/cpp/vector_view.h",
-    "lib/fidl/coding.h",
-    "lib/fidl/llcpp/array_wrapper.h",
-    "lib/fidl/llcpp/encoded_message.h",
-    "lib/fidl/llcpp/coding.h",
-    "lib/fidl/llcpp/decoded_message.h",
-    "lib/fidl/llcpp/traits.h",
-    "lib/fidl/epitaph.h",
-    "lib/fidl/transport.h",
     "lib/fidl/internal_callable_traits.h",
     "lib/fidl/internal.h",
   ]
@@ -28,14 +21,11 @@ library("fidl") {
     "decoding.cpp",
     "encoding.cpp",
     "envelope_frames.h",
-    "epitaph.c",
     "formatting.cpp",
-    "handle_closing.cpp",
     "linearizing.cpp",
     "message.cpp",
     "message_buffer.cpp",
     "message_builder.cpp",
-    "transport.cpp",
     "validating.cpp",
     "visitor.h",
     "walker.cpp",
@@ -44,5 +34,35 @@ library("fidl") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/zircon",
+  ]
+}
+
+library("fidl") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/fidl/llcpp/array_wrapper.h",
+    "lib/fidl/llcpp/encoded_message.h",
+    "lib/fidl/llcpp/coding.h",
+    "lib/fidl/llcpp/decoded_message.h",
+    "lib/fidl/llcpp/traits.h",
+    "lib/fidl/epitaph.h",
+    "lib/fidl/transport.h",
+  ]
+  sources = [
+    "epitaph.c",
+    "envelope_frames.h",
+    "handle_closing.cpp",
+    "transport.cpp",
+    "visitor.h",
+    "walker.h",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <lib/fidl/llcpp/traits.h> has #include <lib/zx/object.h>.
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/zircon",
+    ":fidl_base",
   ]
 }

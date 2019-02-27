@@ -38,17 +38,6 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                               const char** out_error_msg);
 
-// Traverses a decoded FIDL message starting at |value|, closing all handles within it.
-// If the message is non-contiguous in memory, the function will follow pointers and close handles
-// in any scattered out-of-line objects.
-//
-// Handle values in |value| are replaced with ZX_HANDLE_INVALID.
-//
-// This function is a no-op on host side.
-zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg);
-zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
-                                   const char** out_error_msg);
-
 // Follow an object tree and copy the elements into the provided buffer, such that the
 // resulting buffer is ready for fidl_encode.
 //
@@ -76,6 +65,21 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
 // Note: This function does not write a trailing NUL.
 size_t fidl_format_type_name(const fidl_type_t* type,
                              char* buffer, size_t capacity);
+
+// The following functions are only available under Fuchsia.
+
+#ifdef __Fuchsia__
+
+// Traverses a decoded FIDL message starting at |value|, closing all handles within it.
+// If the message is non-contiguous in memory, the function will follow pointers and close handles
+// in any scattered out-of-line objects.
+//
+// Handle values in |value| are replaced with ZX_HANDLE_INVALID.
+zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg);
+zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+                                   const char** out_error_msg);
+
+#endif
 
 __END_CDECLS
 

@@ -114,7 +114,7 @@ sdk_source_set("cpp_base") {
   public_configs = [ "//sdk/config" ]
 
   public_deps = [
-    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/fit",
   ]
 

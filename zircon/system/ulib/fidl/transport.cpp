@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifdef __Fuchsia__
-
 #include <lib/fidl/transport.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -67,4 +65,3 @@ zx_status_t fidl_socket_call_control(zx_handle_t socket, const void* buffer,
     return fidl_socket_read_control(socket, out_buffer, out_capacity, out_actual);
 }
 
-#endif

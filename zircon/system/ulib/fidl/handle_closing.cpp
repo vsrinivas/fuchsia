@@ -3,18 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/internal.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <stdalign.h>
-
-#ifdef __Fuchsia__
-
-#include <lib/fidl/internal.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 
 #include "visitor.h"
 #include "walker.h"
@@ -108,10 +105,7 @@ private:
 
 } // namespace
 
-#endif  // __Fuchsia__
-
 zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg) {
-#if __Fuchsia__
     auto set_error = [&out_error_msg] (const char* msg) {
         if (out_error_msg) *out_error_msg = msg;
     };
@@ -130,9 +124,6 @@ zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char*
                StartingPoint { reinterpret_cast<uint8_t*>(value) });
 
     return handle_closer.status();
-#else
-    return ZX_OK;  // there can't be any handles on the host
-#endif
 }
 
 zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
