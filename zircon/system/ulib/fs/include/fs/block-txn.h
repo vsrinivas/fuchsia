@@ -37,7 +37,7 @@ class BlockTxn;
 // for an entity to issue transactions to the underlying device.
 class TransactionHandler {
 public:
-    virtual ~TransactionHandler() {};
+    virtual ~TransactionHandler() {}
 
     // Acquire the block size of the mounted filesystem.
     // It is assumed that all inputs to the TransactionHandler

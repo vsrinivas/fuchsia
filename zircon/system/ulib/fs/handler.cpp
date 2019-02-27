@@ -20,7 +20,7 @@ zx_status_t Reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
     header->txid = connection->Txid();
     return zx_channel_write(connection->Channel(), 0, msg->bytes, msg->num_bytes,
                             msg->handles, msg->num_handles);
-};
+}
 
 // Don't actually send anything on a channel when completing this operation.
 // This is useful for mocking out "close" requests.
