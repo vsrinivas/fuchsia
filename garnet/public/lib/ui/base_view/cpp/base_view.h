@@ -141,6 +141,11 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   virtual void OnScenicEvent(fuchsia::ui::scenic::Event) {}
 
  protected:
+  // An alternative way to update the scene. Provide a faster way to cause a
+  // present in comparison to InvalidateScene(). Caller should update the
+  // scene contents before calling this method.
+  void PresentScene();
+
   fuchsia::sys::ServiceProviderPtr& incoming_services() {
     return incoming_services_;
   }

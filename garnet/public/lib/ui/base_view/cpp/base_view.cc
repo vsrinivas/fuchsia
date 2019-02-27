@@ -60,6 +60,10 @@ void BaseView::InvalidateScene() {
     PresentScene(last_presentation_time_);
 }
 
+void BaseView::PresentScene() {
+  PresentScene(last_presentation_time_);
+}
+
 void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   TRACE_DURATION("view", "BaseView::OnScenicEvent");
   for (auto& event : events) {
