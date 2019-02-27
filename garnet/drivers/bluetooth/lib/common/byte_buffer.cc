@@ -7,8 +7,7 @@
 namespace btlib {
 namespace common {
 
-size_t ByteBuffer::Copy(MutableByteBuffer* out_buffer,
-                        size_t pos,
+size_t ByteBuffer::Copy(MutableByteBuffer* out_buffer, size_t pos,
                         size_t size) const {
   ZX_ASSERT(out_buffer);
   ZX_ASSERT_MSG(pos <= this->size(), "invalid offset (pos = %zu)", pos);
@@ -30,9 +29,7 @@ fxl::StringView ByteBuffer::AsString() const {
   return fxl::StringView(reinterpret_cast<const char*>(data()), size());
 }
 
-std::string ByteBuffer::ToString() const {
-  return AsString().ToString();
-}
+std::string ByteBuffer::ToString() const { return AsString().ToString(); }
 
 void MutableByteBuffer::Write(const uint8_t* data, size_t size, size_t pos) {
   if (!size)
@@ -83,6 +80,9 @@ DynamicByteBuffer::DynamicByteBuffer(const ByteBuffer& buffer)
   buffer.Copy(this);
 }
 
+DynamicByteBuffer::DynamicByteBuffer(const DynamicByteBuffer& buffer)
+    : DynamicByteBuffer(static_cast<const ByteBuffer&>(buffer)) {}
+
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size,
                                      std::unique_ptr<uint8_t[]> buffer)
     : buffer_size_(buffer_size), buffer_(std::move(buffer)) {
@@ -103,17 +103,11 @@ DynamicByteBuffer& DynamicByteBuffer::operator=(DynamicByteBuffer&& other) {
   return *this;
 }
 
-const uint8_t* DynamicByteBuffer::data() const {
-  return buffer_.get();
-}
+const uint8_t* DynamicByteBuffer::data() const { return buffer_.get(); }
 
-uint8_t* DynamicByteBuffer::mutable_data() {
-  return buffer_.get();
-}
+uint8_t* DynamicByteBuffer::mutable_data() { return buffer_.get(); }
 
-size_t DynamicByteBuffer::size() const {
-  return buffer_size_;
-}
+size_t DynamicByteBuffer::size() const { return buffer_size_; }
 
 void DynamicByteBuffer::Fill(uint8_t value) {
   memset(buffer_.get(), value, buffer_size_);
@@ -144,21 +138,13 @@ BufferView::BufferView(const void* bytes, size_t size)
 
 BufferView::BufferView() : size_(0u), bytes_(nullptr) {}
 
-const uint8_t* BufferView::data() const {
-  return bytes_;
-}
+const uint8_t* BufferView::data() const { return bytes_; }
 
-size_t BufferView::size() const {
-  return size_;
-}
+size_t BufferView::size() const { return size_; }
 
-ByteBuffer::const_iterator BufferView::cbegin() const {
-  return bytes_;
-}
+ByteBuffer::const_iterator BufferView::cbegin() const { return bytes_; }
 
-ByteBuffer::const_iterator BufferView::cend() const {
-  return bytes_ + size_;
-}
+ByteBuffer::const_iterator BufferView::cend() const { return bytes_ + size_; }
 
 MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
   ZX_ASSERT(buffer);
@@ -174,29 +160,19 @@ MutableBufferView::MutableBufferView(void* bytes, size_t size)
 
 MutableBufferView::MutableBufferView() : size_(0u), bytes_(nullptr) {}
 
-const uint8_t* MutableBufferView::data() const {
-  return bytes_;
-}
+const uint8_t* MutableBufferView::data() const { return bytes_; }
 
-size_t MutableBufferView::size() const {
-  return size_;
-}
+size_t MutableBufferView::size() const { return size_; }
 
-ByteBuffer::const_iterator MutableBufferView::cbegin() const {
-  return bytes_;
-}
+ByteBuffer::const_iterator MutableBufferView::cbegin() const { return bytes_; }
 
 ByteBuffer::const_iterator MutableBufferView::cend() const {
   return bytes_ + size_;
 }
 
-uint8_t* MutableBufferView::mutable_data() {
-  return bytes_;
-}
+uint8_t* MutableBufferView::mutable_data() { return bytes_; }
 
-void MutableBufferView::Fill(uint8_t value) {
-  memset(bytes_, value, size_);
-}
+void MutableBufferView::Fill(uint8_t value) { memset(bytes_, value, size_); }
 
 }  // namespace common
 }  // namespace btlib

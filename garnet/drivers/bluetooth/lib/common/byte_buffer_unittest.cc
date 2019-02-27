@@ -95,6 +95,15 @@ TEST(ByteBufferTest, DynamicByteBufferConstructFromBuffer) {
   EXPECT_TRUE(ContainersEqual(buffer, dyn_buffer));
 }
 
+TEST(ByteBufferTest, DynamicByteBufferExplicitCopy) {
+  DynamicByteBuffer src(1);
+  src[0] = 'a';
+
+  DynamicByteBuffer dst(src);
+  EXPECT_EQ(1u, dst.size());
+  EXPECT_TRUE(ContainersEqual(src, dst));
+}
+
 TEST(ByteBufferTest, DynamicByteBufferConstructFromBytes) {
   constexpr size_t kBufferSize = 3;
   std::array<uint8_t, kBufferSize> kExpected{{0, 1, 2}};

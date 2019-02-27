@@ -68,8 +68,7 @@ class ByteBuffer {
   // Copies |size| bytes of this buffer into |out_buffer| starting at offset
   // |pos| and returns the number of bytes that were copied. |out_buffer| must
   // be large enough to accommodate the result of this operation.
-  size_t Copy(MutableByteBuffer* out_buffer,
-              size_t pos = 0,
+  size_t Copy(MutableByteBuffer* out_buffer, size_t pos = 0,
               size_t size = std::numeric_limits<std::size_t>::max()) const;
 
   // Iterator functions.
@@ -156,8 +155,7 @@ class MutableByteBuffer : public ByteBuffer {
   // valid. Care should be taken to ensure that a BufferView does not outlive
   // its backing buffer.
   MutableBufferView mutable_view(
-      size_t pos = 0,
-      size_t size = std::numeric_limits<std::size_t>::max());
+      size_t pos = 0, size_t size = std::numeric_limits<std::size_t>::max());
 
   // Sets the contents of the buffer to 0s.
   void SetToZeros() { Fill(0); }
@@ -235,6 +233,7 @@ class DynamicByteBuffer : public MutableByteBuffer {
 
   // Copies the contents of |buffer|.
   explicit DynamicByteBuffer(const ByteBuffer& buffer);
+  explicit DynamicByteBuffer(const DynamicByteBuffer& buffer);
 
   // Takes ownership of |buffer| and avoids allocating a new buffer. Since this
   // constructor performs a simple assignment, the caller must make sure that
@@ -244,6 +243,9 @@ class DynamicByteBuffer : public MutableByteBuffer {
   // Move constructor and assignment operator
   DynamicByteBuffer(DynamicByteBuffer&& other);
   DynamicByteBuffer& operator=(DynamicByteBuffer&& other);
+
+  // Copy assignment is prohibited.
+  DynamicByteBuffer& operator=(const DynamicByteBuffer&) = delete;
 
   // ByteBuffer overrides:
   const uint8_t* data() const override;
@@ -259,8 +261,6 @@ class DynamicByteBuffer : public MutableByteBuffer {
   // Pointer to the underlying buffer, which is owned and managed by us.
   size_t buffer_size_;
   std::unique_ptr<uint8_t[]> buffer_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DynamicByteBuffer);
 };
 
 // A ByteBuffer that does not own the memory that it points to but rather
