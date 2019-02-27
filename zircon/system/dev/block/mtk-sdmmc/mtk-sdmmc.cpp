@@ -859,6 +859,12 @@ int MtkSdmmc::IrqThread() {
             }
 
             msdc_int.set_sdio_irq(0);
+            if (req_ == nullptr) {
+                // The controller sometimes sets transfer_complete after an SDIO interrupt, so clear
+                // it here to avoid log spam.
+                msdc_int.set_transfer_complete(0);
+            }
+
             if (msdc_int.reg_value() == 0) {
                 continue;
             }
