@@ -65,21 +65,35 @@ Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
 [google-guide]: https://google.github.io/styleguide/cppguide.html
 [totw-130]: https://abseil.io/tips/130
 
-#### `#include`s
+#### Includes
 
-`#include`s use either `<angle brackets>` or `"quotes"` depending on context.
+1. If the header being included is a system, global, or library header (see
+   [Naming C/C++ objects](naming.md) for precise definitions), use
+   `<angle brackets>` and the complete name of the header. These headers are
+   considered "C library headers" for the purposes of the Google C++ Style
+   Guide:
 
-1) Use `""` if the path is from the root of the source tree (e.g.
-   `"garnet/foo/bar/baz.h"`) or if the include is in the same directory as the
-   includer (e.g. `"baz.h"`).
-2) Use `<>` otherwise, which typically means the header is a "public" header of
-   some sort (e.g. `<lib/foo/bar.h>` or `<zircon/foo.h>`).
+```cpp
+#include <zircon/syscalls.h>           # System header
+#include <fuchsia/io/cpp/fidl.h>       # Global header
+#include <lib/fdio/fd.h>               # Library header
+```
 
-* Third-party headers may be included using the root-relative path (e.g.
-  `"third_party/skia/include/core/SkPaint.h"`) or a public include path (e.g.
-  `<gtest/gtest.h>`).
-* Public headers should use `<>` with their canonical path (e.g.
-  `<lib/foo/bar.h>`) even if included from the same directory.
-* Non-public headers should use root-relative paths (e.g.
-  `"garnet/foo/bar/baz.h"`) even if included from the same directory, except in
-  cases where this would be inconsistent with existing code (e.g. zircon).
+2. If the header being included is a implementation header, use `"quotes"` and
+   use the full path to the header from the root of the source tree. These
+   headers are considered "your project's headers" for the purposes of the
+   Google C++ Style Guide:
+
+```cpp
+#include "src/ledger/bin/filesystem/detached_path.h"
+```
+
+3. Third-party headers can be included using the root-relative path (e.g.
+  `#include "third_party/skia/include/core/SkPaint.h"`) or using their canonical header
+  names (e.g. `#include <gtest/gtest.h>`).
+
+4. *Exception:* In `//zircon`, headers in the same target can use relative
+   paths (e.g., `#include "private.h"`). This exception exists because Zircon's
+   previous build system did not distinguish between public and private headers.
+   We might revise this rule if we start distinguishing public and private
+   headers in Zircon in the future.
