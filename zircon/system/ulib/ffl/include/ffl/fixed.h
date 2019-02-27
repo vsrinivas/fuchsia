@@ -26,12 +26,12 @@ namespace ffl {
 // point types with different precision/resolution, and integer values.
 //
 // Arithmetic operations are not immediately computed. Instead, arithmetic
-// expressions involving fixed-point types are assembeld into intermediate
+// expressions involving fixed-point types are assembled into intermediate
 // expression trees (via the Expression template type) that capture operands and
 // order of operations. The value of the expression tree is evaluated when it is
 // assigned to a fixed-point variable. Using this approach the precision and
 // resolution of intermediate values are selected at compile time, based on the
-// final precision and resulution of the destination variable.
+// final precision and resolution of the destination variable.
 //
 // See README.md for a more detailed discussion of fixed-point arithmetic,
 // rounding, precision, and resolution in this library.

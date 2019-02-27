@@ -26,7 +26,7 @@ fixed-point value is defined by the difference between the number of bits of the
 underlying integer type and the number of bits reserved for the fractional part.
 
 `ffl::Fixed` behaves similarly to plain integers. The type supports most of the
-same atrithmetic operators: addition, subtraction, negation, multiplication, and
+same arithmetic operators: addition, subtraction, negation, multiplication, and
 division, as well as all of the comparison operators.
 
 ```C++
@@ -173,7 +173,7 @@ computing intermediate values (only division at the time of this writing). The
 target resolution may be influenced using the `ToResolution<FractionalBits>()`
 utility function. This utility functions by inserting a resolution node into the
 expression tree at the point of invocation; deeper nodes that consider target
-resulution will consider the resolution given by this node instead of the final
+resolution will consider the resolution given by this node instead of the final
 resolution.
 
 ```C++

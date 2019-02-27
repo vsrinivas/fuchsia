@@ -54,7 +54,7 @@ template <typename Integer, size_t FractionalBits>
 struct Expression<Operation::Value, FixedFormat<Integer, FractionalBits>> {
     using Format = FixedFormat<Integer, FractionalBits>;
 
-    // Constructs the expression node from a raw interger value already in the
+    // Constructs the expression node from a raw integer value already in the
     // fixed-point format specified by Format.
     explicit constexpr Expression(Integer raw_value)
         : value{raw_value} {}
@@ -279,7 +279,7 @@ private:
     }
 };
 
-// Traits type to determine whether some type T may be converted to an
+// Traits type to determine whether some type T may be converted to
 // an Expression and the specific type of Expression it converts to.
 template <typename T, typename Enabled = void>
 struct ExpressionTraits : std::false_type {};
@@ -396,7 +396,7 @@ struct ComparisonTraits<T, Fixed<Integer, FractionalBits>, std::enable_if_t<std:
     }
 };
 
-// TODO(eieio): Integer-Expression comparsions.
+// TODO(eieio): Integer-Expression comparisons.
 
 // Enable if Left and Right are comparable.
 template <typename Right, typename Left, typename Return = void>
