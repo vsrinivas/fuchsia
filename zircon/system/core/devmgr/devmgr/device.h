@@ -66,7 +66,6 @@ struct Device {
     uint32_t protocol_id = 0;
     Devnode* self = nullptr;
     Devnode* link = nullptr;
-    Device* parent = nullptr;
     Device* proxy = nullptr;
 
     // For attaching as an open connection to the proxy device,
@@ -118,7 +117,15 @@ struct Device {
     zx_status_t SetProps(fbl::Array<const zx_device_prop_t> props);
     const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
     const zx_device_prop_t* topo_prop() const { return topo_prop_; }
+
+    Device* parent() { return parent_; }
+    const Device* parent() const { return parent_; }
+    // TODO: Remove set_parent once this class is further encapsulated.  It
+    // should be unnecessary.
+    void set_parent(Device* parent) { parent_ = parent; }
 private:
+    Device* parent_ = nullptr;
+
     fbl::Array<const zx_device_prop_t> props_;
     // If the device has a topological property in |props|, this points to it.
     const zx_device_prop_t* topo_prop_ = nullptr;

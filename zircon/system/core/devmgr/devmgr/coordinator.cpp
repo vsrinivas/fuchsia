@@ -202,7 +202,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     }
 
     {
-        misc_device_.parent = &root_device_;
+        misc_device_.set_parent(&root_device_);
         misc_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
         misc_device_.protocol_id = ZX_PROTOCOL_MISC_PARENT;
         misc_device_.name = fbl::String("misc", &ac);
@@ -217,7 +217,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     }
 
     {
-        sys_device_.parent = &root_device_;
+        sys_device_.set_parent(&root_device_);
         sys_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
         sys_device_.name = fbl::String("sys", &ac);
         if (!ac.check()) {
@@ -235,7 +235,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     }
 
     {
-        test_device_.parent = &root_device_;
+        test_device_.set_parent(&root_device_);
         test_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
         test_device_.protocol_id = ZX_PROTOCOL_TEST_PARENT;
         test_device_.name = fbl::String("test", &ac);
@@ -519,11 +519,11 @@ zx_status_t Coordinator::GetTopologicalPath(const Device* dev, char* out, size_t
 
     while (dev != nullptr) {
         if (dev->flags & DEV_CTX_PROXY) {
-            dev = dev->parent;
+            dev = dev->parent();
         }
 
         const char* name;
-        if (dev->parent) {
+        if (dev->parent()) {
             name = dev->name.data();
         } else {
             name = "dev";
@@ -538,7 +538,7 @@ zx_status_t Coordinator::GetTopologicalPath(const Device* dev, char* out, size_t
         path -= len;
         *path = '/';
         total += len;
-        dev = dev->parent;
+        dev = dev->parent();
     }
 
     memcpy(out, path, total);
@@ -801,9 +801,9 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
     // of devicefs, we need to work with *its* parent
     // which is the device that it is proxying.
     if (parent->flags & DEV_CTX_PROXY) {
-        parent = parent->parent;
+        parent = parent->parent();
     }
-    dev->parent = parent;
+    dev->set_parent(parent);
 
     // We must mark the device as invisible before publishing so
     // that we don't send "device added" notifications.
@@ -839,7 +839,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
         parent->refcount_);
 
     log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
-        dev->name.data(), dev->props().size(), dev->args.data(), dev->parent);
+        dev->name.data(), dev->props().size(), dev->args.data(), dev->parent());
 
     if (!invisible) {
         status = dev->publish_task.Post(dispatcher());
@@ -892,7 +892,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
         return ZX_ERR_BAD_STATE;
     }
 
-    log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name.data(), dev->parent);
+    log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name.data(), dev->parent());
     dev->flags |= DEV_CTX_DEAD;
 
     // remove from devfs, preventing further OPEN attempts
@@ -939,9 +939,9 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
     }
 
     // if we have a parent, disconnect and downref it
-    Device* parent = dev->parent;
+    Device* parent = dev->parent();
     if (parent != nullptr) {
-        dev->parent = nullptr;
+        dev->set_parent(nullptr);
         if (dev->flags & DEV_CTX_PROXY) {
             parent->proxy = nullptr;
         } else {
@@ -1086,7 +1086,7 @@ zx_status_t Coordinator::GetMetadata(Device* dev, uint32_t type, void* buffer, s
                 return ZX_OK;
             }
         }
-        test = test->parent;
+        test = test->parent();
     }
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
@@ -1121,7 +1121,7 @@ zx_status_t Coordinator::GetMetadataSize(Device* dev, uint32_t type, size_t* siz
                 return ZX_OK;
             }
         }
-        test = test->parent;
+        test = test->parent();
     }
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
@@ -1175,7 +1175,7 @@ zx_status_t Coordinator::PublishMetadata(Device* dev, const char* path, uint32_t
                 // this device is in a child devhost
                 return ZX_ERR_ACCESS_DENIED;
             }
-            dev = dev->parent;
+            dev = dev->parent();
         }
         if (!dev) {
             return ZX_ERR_ACCESS_DENIED;
@@ -1630,7 +1630,7 @@ static zx_status_t dc_create_proxy(Coordinator* coordinator, Device* parent) {
 
     dev->flags = DEV_CTX_PROXY;
     dev->protocol_id = parent->protocol_id;
-    dev->parent = parent;
+    dev->set_parent(parent);
     dev->AddRef();
     parent->proxy = dev.get();
     parent->AddRef();

@@ -503,9 +503,9 @@ void devfs_remove(Devnode* dn) {
         if (dn->device->self == dn) {
             dn->device->self = nullptr;
 
-            if ((dn->device->parent != nullptr) && (dn->device->parent->self != nullptr) &&
+            if ((dn->device->parent() != nullptr) && (dn->device->parent()->self != nullptr) &&
                 !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-                devfs_notify(dn->device->parent->self, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
+                devfs_notify(dn->device->parent()->self, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
             }
         }
         if (dn->device->link == dn) {
@@ -573,8 +573,8 @@ void devfs_advertise(Device* dev) {
         Devnode* dir = proto_dir(dev->protocol_id);
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
-    if (dev->parent && dev->parent->self) {
-        devfs_notify(dev->parent->self, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
+    if (dev->parent() && dev->parent()->self) {
+        devfs_notify(dev->parent()->self, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
 }
 
@@ -585,9 +585,9 @@ void devfs_advertise_modified(Device* dev) {
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_REMOVED);
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
-    if (dev->parent && dev->parent->self) {
-        devfs_notify(dev->parent->self, dev->self->name, fuchsia_io_WATCH_EVENT_REMOVED);
-        devfs_notify(dev->parent->self, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
+    if (dev->parent() && dev->parent()->self) {
+        devfs_notify(dev->parent()->self, dev->self->name, fuchsia_io_WATCH_EVENT_REMOVED);
+        devfs_notify(dev->parent()->self, dev->self->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
 }
 
