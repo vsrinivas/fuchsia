@@ -41,7 +41,7 @@ NumericMetric<double> CreateMetric<double>(Object* root) {
 template <typename T>
 bool TestMetricLifecycle(perftest::RepeatState* state) {
   auto inspector = Inspector();
-  auto& root = inspector.GetRootObject();
+  auto root = inspector.CreateObject("objects");
   state->DeclareStep("Create");
   state->DeclareStep("Destroy");
   while (state->KeepRunning()) {
@@ -67,7 +67,7 @@ bool TestDoubleMetricLifecycle(perftest::RepeatState* state) {
 template <typename T>
 bool TestMetricModify(perftest::RepeatState* state) {
   auto inspector = Inspector();
-  auto& root = inspector.GetRootObject();
+  auto root = inspector.CreateObject("objects");
   auto item = CreateMetric<T>(&root);
 
   state->DeclareStep("Set");
@@ -98,8 +98,9 @@ bool TestDoubleMetricModify(perftest::RepeatState* state) {
 
 // Measure the time taken to set and modify Property.
 bool TestProperty(perftest::RepeatState* state, int size) {
-  auto inspector = Inspector(1024*1024 /*capacity*/, 1024*1024 /*max size*/);
-  auto& root = inspector.GetRootObject();
+  auto inspector =
+      Inspector(1024 * 1024 /*capacity*/, 1024 * 1024 /*max size*/);
+  auto root = inspector.CreateObject("objects");
   auto item = root.CreateProperty(kName, "");
   std::string string;
   string.resize(size, 'a');
@@ -123,13 +124,16 @@ bool TestProperty(perftest::RepeatState* state, int size) {
 void RegisterTests() {
   perftest::RegisterTest("Inspect/IntMetric/Lifecycle", TestIntMetricLifecycle);
   perftest::RegisterTest("Inspect/IntMetric/Modify", TestIntMetricModify);
-  perftest::RegisterTest("Inspect/UintMetric/Lifecycle", TestUintMetricLifecycle);
+  perftest::RegisterTest("Inspect/UintMetric/Lifecycle",
+                         TestUintMetricLifecycle);
   perftest::RegisterTest("Inspect/UintMetric/Modify", TestUintMetricModify);
-  perftest::RegisterTest("Inspect/DoubleMetric/Lifecycle", TestDoubleMetricLifecycle);
+  perftest::RegisterTest("Inspect/DoubleMetric/Lifecycle",
+                         TestDoubleMetricLifecycle);
   perftest::RegisterTest("Inspect/DoubleMetric/Modify", TestDoubleMetricModify);
-  for (auto size : {4, 8, 100, 2000, 2048, 10000} ) {
-    perftest::RegisterTest(fxl::StringPrintf("Inspect/Property/%d", size).c_str(), TestProperty,
-                           size);
+  for (auto size : {4, 8, 100, 2000, 2048, 10000}) {
+    perftest::RegisterTest(
+        fxl::StringPrintf("Inspect/Property/%d", size).c_str(), TestProperty,
+        size);
   }
 }
 PERFTEST_CTOR(RegisterTests);

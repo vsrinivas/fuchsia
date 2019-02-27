@@ -26,7 +26,7 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
   auto inspector = fbl::make_unique<inspect::vmo::Inspector>();
   ASSERT_TRUE(inspector);
 
-  Object& object = inspector->GetRootObject();
+  Object object = inspector->CreateObject("objects");
   auto req = object.CreateChild("requests");
   auto network = req.CreateUintMetric("network", 10);
   auto wifi = req.CreateUintMetric("wifi", 5);

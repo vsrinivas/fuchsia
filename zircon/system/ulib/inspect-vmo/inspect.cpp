@@ -11,7 +11,6 @@ namespace {
 constexpr size_t kDefaultCapacityBytes = 4 << 10;
 constexpr size_t kDefaultMaxSizeBytes = 1 << 20;
 constexpr char kVmoName[] = "inspect-vmo";
-constexpr char kRootObjectName[] = "objects";
 } // namespace
 
 using internal::Heap;
@@ -37,7 +36,10 @@ Inspector::Inspector(size_t capacity, size_t max_size) {
         return;
     }
 
-    root_object_ = state_->CreateObject(kRootObjectName, 0);
+}
+
+Object Inspector::CreateObject(const char* name) const{
+    return state_->CreateObject(name, /*parent=*/0);
 }
 
 } // namespace vmo

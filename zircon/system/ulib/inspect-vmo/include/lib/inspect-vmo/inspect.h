@@ -10,9 +10,9 @@
 namespace inspect {
 namespace vmo {
 
-// Entry point into the Inspection API.
+// Entry point into the Inspection VMO.
 //
-// The inspector owns a VMO into which inspection data is written for
+// This inspector owns a VMO into which inspection data is written for
 // later reading through a read-only copy of the VMO.
 class Inspector final {
 public:
@@ -32,20 +32,17 @@ public:
     // may be passed to other processes for inspection.
     zx::vmo GetReadOnlyVmoClone() const { return state_->GetReadOnlyVmoClone(); }
 
-    // Return a reference to the root object in this inspector. Operations
-    // on this object will be reflected in the VMO.
-    Object& GetRootObject() { return root_object_; }
+    // Creates a new object stored at the root of the given VMO.
+    // By convention, the object returned by the first call of this method is the root of the tree.
+    // Objects created by additional calls may be ignored depending on the reader.
+    Object CreateObject(const char* name) const;
 
 private:
     // Shared reference to the state, which owns the VMO.
     fbl::RefPtr<internal::State> state_;
-
-    // Root object stored in the state. All objects and values exist
-    // under this object.
-    Object root_object_;
 };
 
 } // namespace vmo
 } // namespace inspect
 
-#endif  // LIB_INSPECT_VMO_INSPECT_H_
+#endif // LIB_INSPECT_VMO_INSPECT_H_
