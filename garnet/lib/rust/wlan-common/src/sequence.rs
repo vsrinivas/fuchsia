@@ -15,20 +15,20 @@ type SequenceNum = u32;
 /// A specific Sequence Number Space such as SNS1, SNS2, etc.
 /// A STA owns multiple of such SNS maps, each of which holds
 /// sequence numbers for its peers.
-struct SnsMap {
-    inner: HashMap<SnsEntryHash, SequenceNum>,
+struct SnsMap<K> {
+    inner: HashMap<K, SequenceNum>,
     modulo_divisor: SequenceNum,
 }
 
-impl SnsMap {
+impl<K: std::hash::Hash + Eq + Clone> SnsMap<K> {
     pub fn new(modulo_divisor: SequenceNum) -> Self {
         Self { inner: HashMap::new(), modulo_divisor }
     }
 
-    pub fn next(&mut self, entry: &SnsEntryHash) -> SequenceNum {
-        match self.inner.get_mut(entry) {
+    pub fn next(&mut self, key: &K) -> SequenceNum {
+        match self.inner.get_mut(key) {
             None => {
-                self.inner.insert(*entry, SEQ_START_NUM);
+                self.inner.insert(key.clone(), SEQ_START_NUM);
                 SEQ_START_NUM
             }
             Some(seq) => {
@@ -39,48 +39,55 @@ impl SnsMap {
     }
 }
 
+#[derive(Hash, PartialEq, Eq, Clone)]
+struct Sns2Key {
+    sta_addr: MacAddr,
+    tid: u16,
+}
+
+#[derive(Hash, PartialEq, Eq, Clone)]
+struct Sns4Key {
+    sta_addr: MacAddr,
+    aci: u8,
+}
+
 /// Manages all SNS for a STA.
 pub struct SequenceManager {
-    sns_map1024: SnsMap,
-    sns_map4096: SnsMap,
+    sns1: SnsMap<MacAddr>,
+    sns2: SnsMap<Sns2Key>,
+    sns4: SnsMap<Sns4Key>,
+    sns5: u32,
 }
 
 impl SequenceManager {
     pub fn new() -> Self {
-        Self { sns_map1024: SnsMap::new(1024), sns_map4096: SnsMap::new(4096) }
+        Self {
+            sns1: SnsMap::new(4096),
+            sns2: SnsMap::new(4096),
+            sns4: SnsMap::new(1024),
+            sns5: SEQ_START_NUM,
+        }
     }
 
     pub fn next_sns1(&mut self, sta_addr: &MacAddr) -> SequenceNum {
-        self.sns_map4096.next(&hash_mac_addr(sta_addr))
+        self.sns1.next(sta_addr)
     }
 
     pub fn next_sns2(&mut self, sta_addr: &MacAddr, tid: u16) -> SequenceNum {
-        // IEEE Std 802.11-2016, 9.2.4.5.2
-        // TID is 4 bit long.
-        // Insert 0x10 to generate a unique hash.
-        let hash = hash_mac_addr(sta_addr) + ((0x10 | tid as SnsEntryHash) << MAC_ADDR_LEN);
-        self.sns_map4096.next(&hash)
+        self.sns2.next(&Sns2Key { sta_addr: sta_addr.clone(), tid })
     }
 
     // Sns3 optional
 
     pub fn next_sns4(&mut self, sta_addr: &MacAddr, aci: u8) -> SequenceNum {
-        // IEEE Std 802.11-2016, 9.2.4.4.2
-        // ACI subfield is 2 bit long.
-        // Insert 0x20 to generate a unique hash.
-        let hash = hash_mac_addr(sta_addr) + ((0x20 | aci as SnsEntryHash) << MAC_ADDR_LEN);
-        self.sns_map1024.next(&hash)
+        self.sns4.next(&Sns4Key { sta_addr: sta_addr.clone(), aci })
     }
 
     pub fn next_sns5(&mut self) -> SequenceNum {
         // Arbitrary value by spec. Increment to assist debugging.
-        const HASH: SnsEntryHash = 0x01 << (MAC_ADDR_LEN + 1);
-        self.sns_map4096.next(&HASH)
+        self.sns5 = (self.sns5 + 1) % 4096;
+        self.sns5
     }
-}
-
-fn hash_mac_addr(mac_addr: &MacAddr) -> SnsEntryHash {
-    return mac_addr.iter().fold(0, |acc, x| (acc << 8) | (*x as u64));
 }
 
 #[cfg(test)]
