@@ -228,6 +228,12 @@ void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
     }
 }
 
+void MeshMlme::SendMgmtFrames(PacketQueue packets) {
+    while (!packets.is_empty()) {
+        SendMgmtFrame(packets.Dequeue());
+    }
+}
+
 void MeshMlme::SendDataFrame(fbl::unique_ptr<Packet> packet) {
     // TODO(gbonik): select appropriate CBW and PHY per peer.
     // For ath10k, this probably doesn't matter since the driver/firmware should pick
@@ -373,9 +379,7 @@ void MeshMlme::HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r) {
         auto packets_to_tx =
             HandleHwmpAction(r->ReadRemaining(), mgmt.addr2, self_addr(), 100,
                              CreateMacHeaderWriter(), &state_->hwmp, &state_->path_table);
-        while (!packets_to_tx.is_empty()) {
-            SendMgmtFrame(packets_to_tx.Dequeue());
-        }
+        SendMgmtFrames(std::move(packets_to_tx));
         break;
     }
     default:
@@ -425,9 +429,7 @@ void MeshMlme::TriggerPathDiscovery(const common::MacAddr& target) {
         return;
     }
 
-    while (!packets_to_tx.is_empty()) {
-        SendMgmtFrame(packets_to_tx.Dequeue());
-    }
+    SendMgmtFrames(std::move(packets_to_tx));
 }
 
 // See IEEE Std 802.11-2016, 9.3.5 (Table 9-42)
@@ -537,13 +539,22 @@ void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header, Span<uint
 
 std::optional<common::MacAddr> MeshMlme::GetNextHopForForwarding(
     const common::ParsedMeshDataHeader& header) {
+    ZX_ASSERT(state_);
+
     if (header.mesh_ctrl->ttl <= 1) { return {}; }
 
     if (header.mac_header.addr4 != nullptr) {
         // Individually addressed frame: addr3 is the mesh destination
         if (header.mac_header.fixed->addr3 == self_addr()) { return {}; }
         auto path = QueryPathTable(header.mac_header.fixed->addr3);
-        if (path == nullptr) { return {}; }
+        if (path == nullptr) {
+            // Notify the transmitter about the missing path
+            auto packets_to_tx = OnMissingForwardingPath(header.mac_header.fixed->addr2,
+                                                         header.mac_header.fixed->addr3,
+                                                         CreateMacHeaderWriter(), &state_->hwmp);
+            SendMgmtFrames(std::move(packets_to_tx));
+            return {};
+        }
         return {path->next_hop};
     } else {
         // Group-addressed frame: check that addr1 is actually a group address
@@ -580,9 +591,7 @@ zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
             return status;
         }
 
-        while (!packets_to_tx.is_empty()) {
-            SendMgmtFrame(packets_to_tx.Dequeue());
-        }
+        SendMgmtFrames(std::move(packets_to_tx));
         break;
     }
     default:

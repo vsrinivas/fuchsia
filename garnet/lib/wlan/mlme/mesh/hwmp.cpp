@@ -612,4 +612,41 @@ zx_status_t HandleHwmpTimeout(const common::MacAddr& self_addr,
     });
 }
 
+// IEEE Std 802.11-2016, Case B
+PacketQueue OnMissingForwardingPath(const common::MacAddr& peer_to_notify,
+                                    const common::MacAddr& missing_destination,
+                                    const MacHeaderWriter& mac_header_writer, HwmpState* state) {
+    auto packet = GetWlanPacket(kMaxHwmpFrameSize);
+    if (!packet) { return {}; }
+
+    if (!state->perr_rate_limiter.RecordEvent(state->timer_mgr.Now())) { return {}; }
+
+    uint8_t destination_buf[kPerrMaxDestinationSize];
+    BufferWriter destination_writer(destination_buf);
+    destination_writer.WriteValue<PerrPerDestinationHeader>({
+        .flags = {},
+        .dest_addr = missing_destination,
+        .hwmp_seqno = 0,
+    });
+    destination_writer.WriteValue<PerrPerDestinationTail>(
+        {.reason_code = static_cast<uint16_t>(
+             fuchsia::wlan::mlme::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)});
+
+    BufferWriter w(*packet);
+    mac_header_writer.WriteMeshMgmtHeader(&w, kAction, peer_to_notify);
+    w.Write<ActionFrame>()->category = action::kMesh;
+    w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
+    common::WritePerr(&w,
+                      {
+                          .element_ttl = kInitialTtl,
+                          .num_destinations = 1,
+                      },
+                      destination_writer.WrittenData());
+    packet->set_len(w.WrittenBytes());
+
+    PacketQueue packets_to_tx;
+    packets_to_tx.Enqueue(std::move(packet));
+    return packets_to_tx;
+}
+
 }  // namespace wlan

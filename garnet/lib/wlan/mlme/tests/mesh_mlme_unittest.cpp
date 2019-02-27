@@ -576,4 +576,65 @@ TEST_F(MeshMlmeTest, OutgoingData) {
     EXPECT_RANGES_EQ(expected_data_frame(2, 'c'), Span<const uint8_t>(*packets[1].pkt));
 }
 
+TEST_F(MeshMlmeTest, GeneratePerrIfMissingForwardingPath) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+
+    // Receive a data frame originating from an external address 60:60:60:60:60:60
+    // (proxied by 40:40:40:40:40:40) and targeted at an external address 50:50:50:50:50:50
+    // (proxied by 30:30:30:30:30:30). The frame was sent to us by '20:20:20:20:20:20'.
+    zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+        // clang-format off
+        // Data header
+        0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+        0x00, 0x00, // duration
+        LIST_MAC_ADDR_BYTES(device.GetState()->address()), // addr1
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // addr2
+        0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // addr3 (mesh da)
+        0x00, 0x00, // seq ctl
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, // addr4 (mesh sa)
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x02, 0x20, // flags: addr56 extension, ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        0x50, 0x50, 0x50, 0x50, 0x50, 0x50, // addr5
+        0x60, 0x60, 0x60, 0x60, 0x60, 0x60, // addr6
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+        // Payload
+        0xde, 0xad, 0xbe, 0xef,
+        // clang-format on
+    }));
+    EXPECT_EQ(ZX_OK, status);
+
+    // The path to 30:30:30:30:30:30 is missing, so we expect a PERR to be generated
+
+    auto packets = device.GetWlanPackets();
+    ASSERT_EQ(1u, packets.size());
+
+    const uint8_t expected_perr_frame[] = {
+        // clang-format off
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // addr1: the previous hop of the data frame
+        LIST_MAC_ADDR_BYTES(device.GetState()->address()), // addr2
+        LIST_MAC_ADDR_BYTES(device.GetState()->address()), // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Perr element
+        132, 15,
+        0x20, 1, // TTL, number of destinations
+        // Perr destination 1
+        0x00, // flags: no address extension
+        0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // mesh destination to which the path is missing
+        0, 0, 0, 0, // hwmp seqno = 0 (unknown)
+        62, 0, // reason code = MESH-PATH-ERROR-NO-FORWARDING-INFORMATION
+        // clang-format on
+    };
+    EXPECT_RANGES_EQ(expected_perr_frame, Span<const uint8_t>(*packets[0].pkt));
+}
+
 }  // namespace wlan

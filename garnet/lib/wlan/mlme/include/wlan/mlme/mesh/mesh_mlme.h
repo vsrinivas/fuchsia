@@ -40,6 +40,7 @@ class MeshMlme : public Mlme {
 
     void SendDataFrame(fbl::unique_ptr<Packet> packet);
     void SendMgmtFrame(fbl::unique_ptr<Packet> packet);
+    void SendMgmtFrames(PacketQueue packets);
 
     void HandleEthTx(EthFrame&& frame);
 
