@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_UNSAFE_H_
+#define LIB_FDIO_UNSAFE_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -63,3 +64,5 @@ void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events,
 void fdio_unsafe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out);
 
 __END_CDECLS;
+
+#endif  // LIB_FDIO_UNSAFE_H_

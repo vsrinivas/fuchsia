@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_WATCHER_H_
+#define LIB_FDIO_WATCHER_H_
 
 #include <zircon/compiler.h>
 #include <lib/fdio/io.h>
@@ -41,3 +42,5 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
 
 
 __END_CDECLS
+
+#endif  // LIB_FDIO_WATCHER_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_NAMESPACE_H_
+#define LIB_FDIO_NAMESPACE_H_
 
 #include <stdint.h>
 
@@ -105,3 +106,5 @@ zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path,
 void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns);
 
 __END_CDECLS;
+
+#endif  // LIB_FDIO_NAMESPACE_H_

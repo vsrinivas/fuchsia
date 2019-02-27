@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_IO_H_
+#define LIB_FDIO_IO_H_
 
 #include <limits.h>
 #include <poll.h>
@@ -60,3 +61,5 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo);
 zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo);
 
 __END_CDECLS
+
+#endif  // LIB_FDIO_IO_H_

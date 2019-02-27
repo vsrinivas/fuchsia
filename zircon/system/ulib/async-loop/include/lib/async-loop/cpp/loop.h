@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_LOOP_CPP_LOOP_H_
+#define LIB_ASYNC_LOOP_CPP_LOOP_H_
 
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
@@ -119,3 +120,5 @@ private:
 };
 
 } // namespace async
+
+#endif  // LIB_ASYNC_LOOP_CPP_LOOP_H_

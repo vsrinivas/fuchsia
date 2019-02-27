@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_SPAWN_H_
+#define LIB_FDIO_SPAWN_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -230,3 +231,5 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
                            char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
 __END_CDECLS
+
+#endif  // LIB_FDIO_SPAWN_H_

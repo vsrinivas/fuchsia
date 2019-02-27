@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_DEBUG_H_
+#define LIB_FDIO_DEBUG_H_
 
 #include <stdio.h>
 #include <zircon/compiler.h>
@@ -18,3 +19,5 @@ __BEGIN_CDECLS
     } while (0)
 
 __END_CDECLS
+
+#endif  // LIB_FDIO_DEBUG_H_

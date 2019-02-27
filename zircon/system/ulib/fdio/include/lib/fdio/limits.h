@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_LIMITS_H_
+#define LIB_FDIO_LIMITS_H_
 
 #include <limits.h>
 
@@ -18,3 +19,5 @@
 
 // Maximum length of a filename.
 #define FDIO_MAX_FILENAME NAME_MAX
+
+#endif  // LIB_FDIO_LIMITS_H_

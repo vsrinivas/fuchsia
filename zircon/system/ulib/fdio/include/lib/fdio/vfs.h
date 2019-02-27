@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_VFS_H_
+#define LIB_FDIO_VFS_H_
 
 #include <zircon/types.h>
 #include <zircon/listnode.h>
@@ -80,3 +81,5 @@ typedef struct vdirent {
 } __PACKED vdirent_t;
 
 __END_CDECLS
+
+#endif  // LIB_FDIO_VFS_H_

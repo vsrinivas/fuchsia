@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FDIO_UTIL_H_
+#define LIB_FDIO_UTIL_H_
 
 #include <zircon/types.h>
 #include <zircon/compiler.h>
@@ -19,3 +20,5 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
 // END DEPRECATED --------------------------------------------------------------
 
 __END_CDECLS
+
+#endif  // LIB_FDIO_UTIL_H_
