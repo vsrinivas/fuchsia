@@ -339,7 +339,7 @@ LowEnergyConnectionRef::~LowEnergyConnectionRef() {
   if (active_) {
     Release();
   }
-};
+}
 
 void LowEnergyConnectionRef::Release() {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());

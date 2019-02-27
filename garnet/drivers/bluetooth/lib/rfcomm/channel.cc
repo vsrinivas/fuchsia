@@ -17,7 +17,7 @@ Channel::Channel(DLCI dlci, Session* session)
       negotiation_state_(ParameterNegotiationState::kNotNegotiated),
       local_credits_(0),
       remote_credits_(0),
-      wait_queue_{} {};
+      wait_queue_{} {}
 
 size_t Channel::tx_mtu() const { return session_->GetMaximumUserDataLength(); }
 

@@ -24,7 +24,7 @@ constexpr auto kInitTimeoutMs = zx::sec(10);
 }  // namespace
 
 VendorHci::VendorHci(zx::channel* ctrl)
-    : ctrl_(ctrl), acl_(nullptr), manufacturer_(false){};
+    : ctrl_(ctrl), acl_(nullptr), manufacturer_(false) {}
 
 ReadVersionReturnParams VendorHci::SendReadVersion() const {
   auto packet = CommandPacket::New(kReadVersion);

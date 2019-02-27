@@ -73,7 +73,7 @@ std::string IOCapabilityToString(IOCapability capability) {
       break;
   }
   return "(unknown)";
-};
+}
 
 std::string PairingMethodToString(PairingMethod method) {
   switch (method) {

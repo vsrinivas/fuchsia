@@ -82,7 +82,7 @@ class DataElement {
   template <typename T>
   explicit DataElement(T value) {
     Set<T>(std::move(value));
-  };
+  }
 
   // Make a deep copy of this element.
   DataElement Clone() const { return DataElement(*this); }

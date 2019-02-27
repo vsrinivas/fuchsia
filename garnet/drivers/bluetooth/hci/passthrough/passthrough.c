@@ -115,7 +115,7 @@ static zx_status_t bt_hci_passthrough_bind(void* ctx, zx_device_t* device) {
   printf("bt_hci_passthrough_bind failed: %s\n", zx_status_get_string(status));
   bt_hci_passthrough_release(passthrough);
   return status;
-};
+}
 
 static zx_driver_ops_t bt_hci_passthrough_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -167,7 +167,7 @@ bool CommandLengthValid(MuxCommandType type, size_t length) {
 
 MuxCommand::MuxCommand(MuxCommandType command_type,
                        CommandResponse command_response)
-    : command_type_(command_type), command_response_(command_response){};
+    : command_type_(command_type), command_response_(command_response) {}
 
 std::unique_ptr<MuxCommand> MuxCommand::Parse(
     const common::ByteBuffer& buffer) {
@@ -326,7 +326,7 @@ ModemStatusCommand::ModemStatusCommand(CommandResponse command_response,
     : MuxCommand(MuxCommandType::kModemStatusCommand, command_response),
       dlci_(dlci),
       signals_(signals),
-      break_value_(break_value){};
+      break_value_(break_value) {}
 
 std::unique_ptr<ModemStatusCommand> ModemStatusCommand::Parse(
     CommandResponse command_response, size_t length,

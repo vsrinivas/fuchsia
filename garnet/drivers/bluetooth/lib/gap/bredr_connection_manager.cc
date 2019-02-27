@@ -113,7 +113,7 @@ BrEdrConnectionManager::BrEdrConnectionManager(
       hci::kUserConfirmationRequestEventCode,
       fbl::BindMember(this,
                       &BrEdrConnectionManager::OnUserConfirmationRequest));
-};
+}
 
 BrEdrConnectionManager::~BrEdrConnectionManager() {
   // Disconnect any connections that we're holding.

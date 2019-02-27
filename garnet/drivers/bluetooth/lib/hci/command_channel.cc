@@ -28,7 +28,7 @@ bool IsAsync(EventCode code) {
   return code != kCommandCompleteEventCode && code != kCommandStatusEventCode;
 }
 
-};  //  namespace
+}  //  namespace
 
 CommandChannel::QueuedCommand::QueuedCommand(
     std::unique_ptr<CommandPacket> command_packet,

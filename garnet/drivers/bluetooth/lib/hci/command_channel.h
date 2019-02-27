@@ -195,7 +195,7 @@ class CommandChannel final {
     OpCode opcode() const { return opcode_; }
     TransactionId id() const { return id_; }
 
-    EventHandlerId handler_id() const { return handler_id_; };
+    EventHandlerId handler_id() const { return handler_id_; }
     void set_handler_id(EventHandlerId id) { handler_id_ = id; }
 
    private:
