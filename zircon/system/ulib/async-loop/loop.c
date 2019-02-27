@@ -90,6 +90,7 @@ typedef struct async_loop {
     list_node_t due_list; // due tasks, earliest deadline first
     list_node_t thread_list; // earliest created thread first
     list_node_t exception_list; // most recently added first
+    bool timer_armed; // true if timer has been set and has not fired yet
 } async_loop_t;
 
 static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline);
@@ -166,11 +167,6 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
     zx_status_t status = zx_port_create(0u, &loop->port);
     if (status == ZX_OK)
         status = zx_timer_create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &loop->timer);
-    if (status == ZX_OK) {
-        status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL,
-                                      ZX_TIMER_SIGNALED,
-                                      ZX_WAIT_ASYNC_REPEATING);
-    }
     if (status == ZX_OK) {
         *out_loop = loop;
         if (loop->config.make_default_for_current_thread) {
@@ -269,7 +265,7 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
             return ZX_OK;
 
         // Handle task timer expirations.
-        if (packet.type == ZX_PKT_TYPE_SIGNAL_REP &&
+        if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE &&
             packet.signal.observed & ZX_TIMER_SIGNALED) {
             return async_loop_dispatch_tasks(loop);
         }
@@ -384,6 +380,7 @@ static zx_status_t async_loop_dispatch_tasks(async_loop_t* loop) {
         }
 
         loop->dispatching_tasks = false;
+        loop->timer_armed = false;
         async_loop_restart_timer_locked(loop);
     }
     mtx_unlock(&loop->lock);
@@ -714,23 +711,51 @@ static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task
     list_add_after(node, task_to_node(task));
 }
 
-static void async_loop_restart_timer_locked(async_loop_t* loop) {
-    zx_time_t deadline;
+static zx_time_t async_loop_next_deadline_locked(async_loop_t* loop) {
     if (list_is_empty(&loop->due_list)) {
         list_node_t* head = list_peek_head(&loop->task_list);
         if (!head)
-            return;
+            return ZX_TIME_INFINITE;
         async_task_t* task = node_to_task(head);
-        deadline = task->deadline;
-        if (deadline == ZX_TIME_INFINITE)
-            return;
-    } else {
-        // Fire now.
-        deadline = 0ULL;
+        if (task->deadline == ZX_TIME_INFINITE)
+            return ZX_TIME_INFINITE;
+        else
+            return task->deadline;
+    }
+    // Fire now.
+    return 0ULL;
+}
+
+static void async_loop_restart_timer_locked(async_loop_t* loop) {
+
+    zx_status_t status;
+    zx_time_t deadline = async_loop_next_deadline_locked(loop);
+
+    if (deadline == ZX_TIME_INFINITE) {
+        // Nothing is left on the queue to fire.
+        if (loop->timer_armed) {
+            status = zx_timer_cancel(loop->timer);
+            ZX_ASSERT_MSG(status == ZX_OK, "zx_timer_cancel: status=%d", status);
+            status = zx_port_cancel(loop->port, loop->timer, KEY_CONTROL);
+            ZX_ASSERT_MSG(status == ZX_OK, "zx_port_cancel: status=%d", status);
+            loop->timer_armed = false;
+        }
+
+        return;
     }
 
-    zx_status_t status = zx_timer_set(loop->timer, deadline, 0);
+    status = zx_timer_set(loop->timer, deadline, 0);
     ZX_ASSERT_MSG(status == ZX_OK, "zx_timer_set: status=%d", status);
+
+    if (!loop->timer_armed) {
+        loop->timer_armed = true;
+        status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL,
+                                      ZX_TIMER_SIGNALED,
+                                      ZX_WAIT_ASYNC_ONCE);
+        ZX_ASSERT_MSG(status == ZX_OK,
+                      "zx_object_wait_async: status=%d",
+                      status);
+    }
 }
 
 static void async_loop_invoke_prologue(async_loop_t* loop) {

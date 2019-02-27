@@ -34,15 +34,6 @@ zx_status_t port_wait(port_t* port, port_handler_t* ph) {
                                 ph->waitfor, ZX_WAIT_ASYNC_ONCE);
 }
 
-zx_status_t port_wait_repeating(port_t* port, port_handler_t* ph) {
-    zprintf("port_wait_repeating(%p, %p) obj=%x port=%x\n",
-            port, ph, ph->handle, port->handle);
-    return zx_object_wait_async(ph->handle, port->handle,
-                                (uint64_t)(uintptr_t)ph,
-                                ph->waitfor, ZX_WAIT_ASYNC_REPEATING);
-}
-
-
 zx_status_t port_cancel(port_t* port, port_handler_t* ph) {
     zx_status_t r = zx_port_cancel(port->handle, ph->handle,
                                    (uint64_t)(uintptr_t)ph);

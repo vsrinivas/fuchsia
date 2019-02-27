@@ -200,38 +200,32 @@ static bool async_wait_close_order(const int order[3], uint32_t wait_option) {
 
 static bool async_wait_close_order_1() {
     int order[] = {0, 1, 2};
-    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE) &&
-           async_wait_close_order(order, ZX_WAIT_ASYNC_REPEATING);
+    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE);
 }
 
 static bool async_wait_close_order_2() {
     int order[] = {0, 2, 1};
-    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE) &&
-           async_wait_close_order(order, ZX_WAIT_ASYNC_REPEATING);
+    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE);
 }
 
 static bool async_wait_close_order_3() {
     int order[] = {1, 2, 0};
-    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE) &&
-           async_wait_close_order(order, ZX_WAIT_ASYNC_REPEATING);
+    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE);
 }
 
 static bool async_wait_close_order_4() {
     int order[] = {1, 0, 2};
-    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE) &&
-           async_wait_close_order(order, ZX_WAIT_ASYNC_REPEATING);
+    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE);
 }
 
 static bool async_wait_close_order_5() {
     int order[] = {2, 1, 0};
-    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE) &&
-           async_wait_close_order(order, ZX_WAIT_ASYNC_REPEATING);
+    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE);
 }
 
 static bool async_wait_close_order_6() {
     int order[] = {2, 0, 1};
-    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE) &&
-           async_wait_close_order(order, ZX_WAIT_ASYNC_REPEATING);
+    return async_wait_close_order(order, ZX_WAIT_ASYNC_ONCE);
 }
 
 static bool async_wait_event_test_single(void) {
@@ -294,20 +288,20 @@ static bool async_wait_event_test_repeat(void) {
 
     const uint64_t key0 = 1122ull;
 
-    status = zx_object_wait_async(ev, port, key0,
-        ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_2, ZX_WAIT_ASYNC_REPEATING);
-    EXPECT_EQ(status, ZX_OK);
-
     zx_port_packet_t out = {};
     uint64_t count[3] = {};
 
     for (int ix = 0; ix != 24; ++ix) {
+        status = zx_object_wait_async(ev, port, key0,
+            ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_2, ZX_WAIT_ASYNC_ONCE);
+        EXPECT_EQ(status, ZX_OK);
+
         uint32_t ub = (ix % 2) ? 0u : ZX_USER_SIGNAL_2;
         EXPECT_EQ(zx_object_signal(ev, 0u, ZX_EVENT_SIGNALED | ub), ZX_OK);
         EXPECT_EQ(zx_object_signal(ev, ZX_EVENT_SIGNALED | ub, 0u), ZX_OK);
 
         ASSERT_EQ(zx_port_wait(port, 0ull, &out), ZX_OK);
-        ASSERT_EQ(out.type, ZX_PKT_TYPE_SIGNAL_REP);
+        ASSERT_EQ(out.type, ZX_PKT_TYPE_SIGNAL_ONE);
         ASSERT_EQ(out.signal.count, 1u);
         count[0] += (out.signal.observed & ZX_EVENT_SIGNALED) ? 1 : 0;
         count[1] += (out.signal.observed & ZX_USER_SIGNAL_2) ? 1 : 0;
@@ -340,7 +334,7 @@ static bool async_wait_invalid_option() {
     zx_handle_t event;
     ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
     const uint64_t kKey = 0;
-    const uint32_t kInvalidOption = ZX_WAIT_ASYNC_REPEATING + 1;
+    const uint32_t kInvalidOption = ZX_WAIT_ASYNC_ONCE + 2;
     EXPECT_EQ(zx_object_wait_async(event, port, kKey, ZX_EVENT_SIGNALED,
                                    kInvalidOption), ZX_ERR_INVALID_ARGS);
     ASSERT_EQ(zx_handle_close(event), ZX_OK);
@@ -348,7 +342,7 @@ static bool async_wait_invalid_option() {
     END_TEST;
 }
 
-static bool pre_writes_channel_test(uint32_t mode) {
+static bool channel_pre_writes_test() {
     BEGIN_TEST;
     zx_status_t status;
 
@@ -370,7 +364,7 @@ static bool pre_writes_channel_test(uint32_t mode) {
     EXPECT_EQ(status, ZX_OK);
 
     status = zx_object_wait_async(ch[1], port, key0,
-        ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, mode);
+        ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
     EXPECT_EQ(status, ZX_OK);
 
     zx_port_packet_t out = {};
@@ -382,7 +376,7 @@ static bool pre_writes_channel_test(uint32_t mode) {
         if (status != ZX_OK)
             break;
         wait_count++;
-        if (out.signal.trigger != ZX_CHANNEL_PEER_CLOSED)
+        if (out.signal.observed != ZX_CHANNEL_PEER_CLOSED)
             read_count += out.signal.count;
         EXPECT_NE(out.signal.count, 0u);
     }
@@ -400,15 +394,7 @@ static bool pre_writes_channel_test(uint32_t mode) {
     END_TEST;
 }
 
-static bool channel_pre_writes_once() {
-    return pre_writes_channel_test(ZX_WAIT_ASYNC_ONCE);
-}
-
-static bool channel_pre_writes_repeat() {
-    return pre_writes_channel_test(ZX_WAIT_ASYNC_REPEATING);
-}
-
-static bool cancel_event(uint32_t wait_mode) {
+static bool cancel_event_key() {
     BEGIN_TEST;
     zx_status_t status;
 
@@ -423,7 +409,7 @@ static bool cancel_event(uint32_t wait_mode) {
 
     for (uint32_t ix = 0; ix != fbl::count_of(keys); ++ix) {
         EXPECT_EQ(zx_object_wait_async(
-            ev, port, keys[ix], ZX_EVENT_SIGNALED, wait_mode), ZX_OK);
+            ev, port, keys[ix], ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE), ZX_OK);
     }
 
     // We cancel before it is signaled so no packets from |13| are seen.
@@ -448,10 +434,8 @@ static bool cancel_event(uint32_t wait_mode) {
         EXPECT_EQ(out.signal.observed, ZX_EVENT_SIGNALED);
     }
 
-    if (wait_mode == ZX_WAIT_ASYNC_ONCE) {
-        // We cancel after the packet has been delivered.
-        EXPECT_EQ(zx_port_cancel(port, ev, 128u), ZX_ERR_NOT_FOUND);
-    }
+    // We cancel after the packet has been delivered.
+    EXPECT_EQ(zx_port_cancel(port, ev, 128u), ZX_ERR_NOT_FOUND);
 
     EXPECT_EQ(wait_count, 2);
     EXPECT_EQ(key_sum, keys[0] + keys[2]);
@@ -461,15 +445,7 @@ static bool cancel_event(uint32_t wait_mode) {
     END_TEST;
 }
 
-static bool cancel_event_key_once() {
-    return cancel_event(ZX_WAIT_ASYNC_ONCE);
-}
-
-static bool cancel_event_key_repeat() {
-    return cancel_event(ZX_WAIT_ASYNC_REPEATING);
-}
-
-static bool cancel_event_after(uint32_t wait_mode) {
+static bool cancel_event_key_after() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -484,7 +460,7 @@ static bool cancel_event_after(uint32_t wait_mode) {
 
         EXPECT_EQ(zx_event_create(0u, &ev[ix]), ZX_OK);
         EXPECT_EQ(zx_object_wait_async(
-            ev[ix], port, keys[ix], ZX_EVENT_SIGNALED, wait_mode), ZX_OK);
+            ev[ix], port, keys[ix], ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE), ZX_OK);
     }
 
     EXPECT_EQ(zx_object_signal(ev[0], 0u, ZX_EVENT_SIGNALED), ZX_OK);
@@ -520,13 +496,6 @@ static bool cancel_event_after(uint32_t wait_mode) {
     END_TEST;
 }
 
-static bool cancel_event_key_once_after() {
-    return cancel_event_after(ZX_WAIT_ASYNC_ONCE);
-}
-
-static bool cancel_event_key_repeat_after() {
-    return cancel_event_after(ZX_WAIT_ASYNC_REPEATING);
-}
 
 struct test_context {
     zx_handle_t port;
@@ -546,7 +515,7 @@ static int port_reader_thread(void* arg) {
     return 0;
 }
 
-static bool threads_event(uint32_t wait_mode) {
+static bool threads_event() {
     BEGIN_TEST;
 
     zx_handle_t port;
@@ -563,7 +532,7 @@ static bool threads_event(uint32_t wait_mode) {
         ctx[ix] = { port, 1u };
 
         EXPECT_EQ(zx_object_wait_async(
-                  ev, port, (500u + ix), ZX_EVENT_SIGNALED, wait_mode), ZX_OK);
+                  ev, port, (500u + ix), ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE), ZX_OK);
         EXPECT_EQ(thrd_create(&threads[ix], port_reader_thread, &ctx[ix]),
                   thrd_success);
     }
@@ -581,14 +550,6 @@ static bool threads_event(uint32_t wait_mode) {
     EXPECT_EQ(zx_handle_close(ev), ZX_OK);
 
     END_TEST;
-}
-
-static bool threads_event_once() {
-    return threads_event(ZX_WAIT_ASYNC_ONCE);
-}
-
-static bool threads_event_repeat() {
-    return threads_event(ZX_WAIT_ASYNC_REPEATING);
 }
 
 
@@ -691,13 +652,9 @@ RUN_TEST(async_wait_close_order_3)
 RUN_TEST(async_wait_close_order_4)
 RUN_TEST(async_wait_close_order_5)
 RUN_TEST(async_wait_close_order_6)
-RUN_TEST(channel_pre_writes_once)
-RUN_TEST(channel_pre_writes_repeat)
-RUN_TEST(cancel_event_key_once)
-RUN_TEST(cancel_event_key_repeat)
-RUN_TEST(cancel_event_key_once_after)
-RUN_TEST(cancel_event_key_repeat_after)
-RUN_TEST(threads_event_once)
-RUN_TEST(threads_event_repeat)
+RUN_TEST(channel_pre_writes_test)
+RUN_TEST(cancel_event_key)
+RUN_TEST(cancel_event_key_after)
+RUN_TEST(threads_event)
 RUN_TEST_LARGE(cancel_stress)
 END_TEST_CASE(port_tests)
