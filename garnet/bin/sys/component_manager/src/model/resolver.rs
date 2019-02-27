@@ -96,7 +96,7 @@ impl ResolverError {
     }
 
     pub fn manifest_not_available(uri: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestInvalid { uri: uri.into(), err: err.into() }
+        ResolverError::ManifestNotAvailable { uri: uri.into(), err: err.into() }
     }
 
     pub fn manifest_invalid(uri: impl Into<String>, err: impl Into<Error>) -> ResolverError {

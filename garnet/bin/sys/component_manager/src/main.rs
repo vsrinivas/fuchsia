@@ -19,6 +19,8 @@ mod ns_util;
 use {
     elf_runner::ElfRunner,
     failure::{self, Error, ResultExt},
+    fidl_fuchsia_pkg::{PackageResolverMarker},
+    fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
     fuchsia_boot_resolver::FuchsiaBootResolver,
     fuchsia_pkg_resolver::FuchsiaPkgResolver,
@@ -58,9 +60,11 @@ fn main() -> Result<(), Error> {
         fuchsia_boot_resolver::SCHEME.to_string(),
         Box::new(FuchsiaBootResolver::new()),
     );
+    let pkg_resolver = connect_to_service::<PackageResolverMarker>()
+        .context("error connecting to package resolver")?;
     resolver_registry.register(
         fuchsia_pkg_resolver::SCHEME.to_string(),
-        Box::new(FuchsiaPkgResolver::new()?),
+        Box::new(FuchsiaPkgResolver::new(pkg_resolver)),
     );
 
     let params = ModelParams {

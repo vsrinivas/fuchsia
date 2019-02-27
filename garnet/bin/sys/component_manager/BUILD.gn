@@ -73,6 +73,13 @@ test_package("component_manager_tests") {
     },
   ]
 
+  resources = [
+    {
+      path = rebase_path("meta/component_manager_tests_invalid.cm")
+      dest = "component_manager_tests_invalid.cm"
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("meta/component_manager_tests_hello_world.cml")

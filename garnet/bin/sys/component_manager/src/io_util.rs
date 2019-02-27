@@ -6,10 +6,10 @@ use {
     failure::{err_msg, format_err, Error},
     fdio,
     fidl::endpoints::create_proxy,
-    fidl::endpoints::Proxy,
+    fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+        DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -51,6 +51,33 @@ pub fn open_file<'a>(dir: &'a DirectoryProxy, path: &'a PathBuf) -> Result<FileP
 
 // TODO: this function will block on the FDIO calls. This should be rewritten/wrapped/whatever to
 // be asynchronous.
+
+/// Connect a directory server endpoint to a path in the namespace.
+pub fn connect_directory_in_namespace(
+    path: &str,
+    server_end: ServerEnd<DirectoryMarker>,
+) -> Result<(), zx::Status> {
+    let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
+    let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
+    if status != zx::sys::ZX_OK {
+        return Err(zx::Status::from_raw(status));
+    }
+
+    let cstr = CString::new(path)?;
+    let status = unsafe {
+        fdio::fdio_sys::fdio_ns_connect(
+            ns_ptr,
+            cstr.as_ptr(),
+            OPEN_RIGHT_READABLE,
+            server_end.into_raw(),
+        )
+    };
+    if status != zx::sys::ZX_OK {
+        return Err(zx::Status::from_raw(status));
+    }
+    Ok(())
+}
+
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
 pub fn open_node_in_namespace(path: &str) -> Result<NodeProxy, Error> {
