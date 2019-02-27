@@ -122,6 +122,9 @@ template("prebuilt_package") {
         package_set = "monolith"
       }
     }
+    if (!defined(package_set)) {
+      package_set = ""
+    }
 
     package_name = pkg.package_name
     package_version = pkg.package_version
