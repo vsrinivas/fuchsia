@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Returns true if the byte at the given address can be read or written.
 //
@@ -22,4 +22,4 @@ __BEGIN_CDECLS;
 bool probe_for_read(const void* addr);
 bool probe_for_write(void* addr);
 
-__END_CDECLS;
+__END_CDECLS
