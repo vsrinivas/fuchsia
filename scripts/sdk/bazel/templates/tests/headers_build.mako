@@ -6,8 +6,6 @@ cc_binary(
         "headers.cc",
     ],
     deps = [
-        % for dep in sorted(data['deps']):
-        "@fuchsia_sdk${dep}",
-        % endfor
+        "@fuchsia_sdk${data['dep']}",
     ],
 )

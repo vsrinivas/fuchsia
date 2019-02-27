@@ -79,16 +79,17 @@ def create_test_workspace(sdk, output, workspace_info):
                is_executable=True)
 
     if workspace_info.with_cc:
-        # Generate test to verify that headers compile fine.
-        headers = workspace_info.headers
-        header_base = os.path.join(output, 'headers')
-        write_file(make_dir(os.path.join(header_base, 'BUILD')),
-                   'headers_build', {
-            'deps': list(filter(lambda k: headers[k], headers.keys())),
-        })
-        write_file(make_dir(os.path.join(header_base, 'headers.cc')),
-                   'headers', {
-            'headers': headers,
-        })
+        # Generate tests to verify that headers compile fine.
+        for target, files in workspace_info.headers.iteritems():
+            if not files:
+                continue
+            dir = os.path.join(output, 'headers', target[2:])
+            write_file(make_dir(os.path.join(dir, 'BUILD')),
+                       'headers_build', {
+                'dep': target,
+                'headers': files,
+            })
+            write_file(make_dir(os.path.join(dir, 'headers.cc')),
+                       'headers', {'headers': files})
 
     return True
