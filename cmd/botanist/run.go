@@ -191,10 +191,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load images: %v", err)
 	}
 
-	var properties botanist.DeviceProperties
-	if err := botanist.LoadDeviceProperties(r.deviceFile, &properties); err != nil {
-		return fmt.Errorf("failed to open device properties file \"%v\": %v", r.deviceFile, err)
+	propertiesSlice, err := botanist.LoadDeviceProperties(r.deviceFile)
+	if err != nil {
+		return fmt.Errorf("failed to load device properties file %q", r.deviceFile)
+	} else if len(propertiesSlice) != 1 {
+		return fmt.Errorf("expected 1 entry in the device properties file; found %d", len(propertiesSlice))
 	}
+	properties := propertiesSlice[0]
 
 	// Merge config file and command-line keys.
 	privKeyPaths := properties.SSHKeys

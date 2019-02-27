@@ -208,32 +208,51 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodename string, cmdlineArgs []string, signers []ssh.Signer) error {
-	// Set up log listener and dump kernel output to stdout.
-	l, err := netboot.NewLogListener(nodename)
-	if err != nil {
-		return fmt.Errorf("cannot listen: %v", err)
-	}
-	go func() {
-		defer l.Close()
-		logger.Debugf(ctx, "starting log listener\n")
-		for {
-			data, err := l.Listen()
-			if err != nil {
-				continue
-			}
-			fmt.Print(data)
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-	}()
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodes []botanist.DeviceProperties, cmdlineArgs []string, signers []ssh.Signer) error {
+	var err error
 
-	addr, err := botanist.GetNodeAddress(ctx, nodename, false)
-	if err != nil {
-		return err
+	// Set up log listener and dump kernel output to stdout.
+	for _, node := range nodes {
+		l, err := netboot.NewLogListener(node.Nodename)
+		if err != nil {
+			return fmt.Errorf("cannot listen: %v\n", err)
+		}
+		go func(nodename string) {
+			defer l.Close()
+			logger.Debugf(ctx, "starting log listener for <<%s>>\n", nodename)
+			for {
+				data, err := l.Listen()
+				if err != nil {
+					continue
+				}
+				if len(nodes) == 1 {
+					fmt.Print(data)
+				} else {
+					// Print each line with nodename prepended when there are multiple nodes
+					lines := strings.Split(data, "\n")
+					for _, line := range lines {
+						if len(line) > 0 {
+							fmt.Printf("<<%s>> %s\n", nodename, line)
+						}
+					}
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+			}
+		}(node.Nodename)
+	}
+
+	var addrs []*net.UDPAddr
+	for _, node := range nodes {
+		addr, err := botanist.GetNodeAddress(ctx, node.Nodename, false)
+		if err != nil {
+			return err
+		}
+		addrs = append(addrs, addr)
 	}
 
 	// Boot fuchsia.
@@ -243,8 +262,10 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	} else {
 		bootMode = botanist.ModePave
 	}
-	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, signers); err != nil {
-		return err
+	for _, addr := range addrs {
+		if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, signers); err != nil {
+			return err
+		}
 	}
 
 	// Handle host commands
@@ -254,7 +275,11 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	}
 
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
+	if len(addrs) != 1 {
+		return fmt.Errorf("Non-host tests should have exactly 1 node defined in config, found %v", len(addrs))
+	}
 
+	addr := addrs[0]
 	// Poll for summary.json; this relies on runtest being executed using
 	// autorun and it eventually producing the summary.json file.
 	t := tftp.NewClient()
@@ -345,32 +370,41 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 }
 
 func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) error {
-	var properties botanist.DeviceProperties
-	if err := botanist.LoadDeviceProperties(cmd.propertiesFile, &properties); err != nil {
-		return fmt.Errorf("failed to open device properties file \"%v\"", cmd.propertiesFile)
+	propertiesSlice, err := botanist.LoadDeviceProperties(cmd.propertiesFile)
+
+	if err != nil {
+		return fmt.Errorf("failed to load device properties file %q", cmd.propertiesFile)
 	}
 
+	processedKeys := make(map[string]bool)
 	var signers []ssh.Signer
-	for _, keyPath := range properties.SSHKeys {
-		p, err := ioutil.ReadFile(keyPath)
-		if err != nil {
-			return err
+	for _, properties := range propertiesSlice {
+		for _, keyPath := range properties.SSHKeys {
+			if !processedKeys[keyPath] {
+				processedKeys[keyPath] = true
+				p, err := ioutil.ReadFile(keyPath)
+				if err != nil {
+					return err
+				}
+				s, err := ssh.ParsePrivateKey(p)
+				if err != nil {
+					return err
+				}
+				signers = append(signers, s)
+			}
 		}
-		s, err := ssh.ParsePrivateKey(p)
-		if err != nil {
-			return err
-		}
-		signers = append(signers, s)
 	}
 
-	if properties.PDU != nil {
-		defer func() {
-			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
+	for _, properties := range propertiesSlice {
+		if properties.PDU != nil {
+			defer func() {
+				logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
-			if err := botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
-				logger.Errorf(ctx, "failed to reboot the device: %v\n", err)
-			}
-		}()
+				if err := botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
+					logger.Errorf(ctx, "failed to reboot the device: %v", err)
+				}
+			}()
+		}
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -407,7 +441,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 				return
 			}
 		}
-		errs <- cmd.runTests(ctx, imgs, properties.Nodename, cmdlineArgs, signers)
+		errs <- cmd.runTests(ctx, imgs, propertiesSlice, cmdlineArgs, signers)
 	}()
 
 	select {

@@ -8,8 +8,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -63,12 +63,23 @@ type DeviceProperties struct {
 	SSHKeys []string `json:"keys,omitempty"`
 }
 
-// LoadDeviceProperties unmarshalls the DeviceProperties found in a given file.
-func LoadDeviceProperties(propertiesFile string, properties *DeviceProperties) error {
-	file, err := os.Open(propertiesFile)
+// LoadDeviceProperties unmarshalls a slice of DeviceProperties from a given file.
+// For backwards compatibility, it supports unmarshalling a single DeviceProperties object also
+// TODO(IN-1028): Update all botanist configs to use JSON list format
+func LoadDeviceProperties(path string) ([]DeviceProperties, error) {
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to read device properties file %q", path)
 	}
 
-	return json.NewDecoder(file).Decode(properties)
+	var propertiesSlice []DeviceProperties
+
+	if err := json.Unmarshal(data, &propertiesSlice); err != nil {
+		var properties DeviceProperties
+		if err := json.Unmarshal(data, &properties); err != nil {
+			return nil, err
+		}
+		propertiesSlice = append(propertiesSlice, properties)
+	}
+	return propertiesSlice, nil
 }
