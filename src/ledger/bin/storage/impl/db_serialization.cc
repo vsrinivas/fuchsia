@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
+
 #include "src/ledger/bin/storage/impl/db_serialization.h"
 
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
 #include <zircon/syscalls.h>
 
+#include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 
 namespace storage {
@@ -52,6 +55,61 @@ constexpr fxl::StringView ObjectRow::kPrefix;
 std::string ObjectRow::GetKeyFor(const ObjectDigest& object_digest) {
   return fxl::Concatenate({kPrefix, object_digest.Serialize()});
 }
+
+// ReferenceRow.
+
+constexpr fxl::StringView ReferenceRow::kPrefix;
+constexpr fxl::StringView ReferenceRow::kObjectPrefix;
+constexpr fxl::StringView ReferenceRow::kEagerPrefix;
+constexpr fxl::StringView ReferenceRow::kLazyPrefix;
+constexpr fxl::StringView ReferenceRow::kCommitPrefix;
+
+std::string ReferenceRow::GetKeyForObject(const ObjectDigest& source,
+                                          const ObjectDigest& destination,
+                                          KeyPriority priority) {
+  return fxl::Concatenate({priority == KeyPriority::EAGER
+                               ? GetEagerKeyPrefixFor(destination)
+                               : GetLazyKeyPrefixFor(destination),
+                           source.Serialize()});
+}
+
+std::string ReferenceRow::GetKeyForCommit(CommitIdView source,
+                                          const ObjectDigest& destination) {
+  return fxl::Concatenate({GetCommitKeyPrefixFor(destination), source});
+}
+
+std::string ReferenceRow::GetKeyPrefixFor(const ObjectDigest& destination) {
+  // Because |destination| can be of arbitrary length and content, we prefix it
+  // with a byte containing its length to avoid collisions. The content of
+  // destination can be arbitrary, but not longer that the size we can
+  // serialize.
+  FXL_DCHECK(destination.Serialize().size() <=
+             std::numeric_limits<uint8_t>::max());
+  return fxl::Concatenate({
+      kPrefix,                                                              //
+      SerializeData(static_cast<uint8_t>(destination.Serialize().size())),  //
+      destination.Serialize(),                                              //
+  });
+};
+
+std::string ReferenceRow::GetObjectKeyPrefixFor(
+    const ObjectDigest& destination) {
+  return fxl::Concatenate({GetKeyPrefixFor(destination), kObjectPrefix});
+};
+
+std::string ReferenceRow::GetEagerKeyPrefixFor(
+    const ObjectDigest& destination) {
+  return fxl::Concatenate({GetObjectKeyPrefixFor(destination), kEagerPrefix});
+};
+
+std::string ReferenceRow::GetLazyKeyPrefixFor(const ObjectDigest& destination) {
+  return fxl::Concatenate({GetObjectKeyPrefixFor(destination), kLazyPrefix});
+};
+
+std::string ReferenceRow::GetCommitKeyPrefixFor(
+    const ObjectDigest& destination) {
+  return fxl::Concatenate({GetKeyPrefixFor(destination), kCommitPrefix});
+};
 
 // UnsyncedCommitRow.
 

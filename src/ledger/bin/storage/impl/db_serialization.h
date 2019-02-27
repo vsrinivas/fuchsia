@@ -45,6 +45,35 @@ class ObjectRow {
   static std::string GetKeyFor(const ObjectDigest& object_digest);
 };
 
+class ReferenceRow {
+ public:
+  static constexpr fxl::StringView kPrefix = "refcounts/";
+  static constexpr fxl::StringView kObjectPrefix = "/object/";
+  static constexpr fxl::StringView kEagerPrefix = "eager/";
+  static constexpr fxl::StringView kLazyPrefix = "lazy/";
+  static constexpr fxl::StringView kCommitPrefix = "/commit/";
+
+  // Returns key for object-object links.
+  static std::string GetKeyForObject(const ObjectDigest& source,
+                                     const ObjectDigest& destination,
+                                     KeyPriority priority);
+
+  // Returns key for commit-object links.
+  static std::string GetKeyForCommit(CommitIdView source,
+                                     const ObjectDigest& destination);
+
+  // Returns key prefix for all links to |destination|.
+  static std::string GetKeyPrefixFor(const ObjectDigest& destination);
+  // Returns key prefix for object links to |destination|.
+  static std::string GetObjectKeyPrefixFor(const ObjectDigest& destination);
+  // Returns key prefix for eager object links to |destination|.
+  static std::string GetEagerKeyPrefixFor(const ObjectDigest& destination);
+  // Returns key prefix for lazy object links to |destination|.
+  static std::string GetLazyKeyPrefixFor(const ObjectDigest& destination);
+  // Returns key prefix for commit links to |destination|.
+  static std::string GetCommitKeyPrefixFor(const ObjectDigest& destination);
+};
+
 class UnsyncedCommitRow {
  public:
   static constexpr fxl::StringView kPrefix = "unsynced/commits/";
