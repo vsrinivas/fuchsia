@@ -4,18 +4,24 @@
 
 #include "garnet/bin/feedback_agent/feedback_agent.h"
 
+#include <stdint.h>
+
 #include <memory>
 #include <ostream>
 #include <vector>
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <lib/escher/util/image_utils.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fsl/vmo/file.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fsl/vmo/vector.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/startup_context_for_test.h>
@@ -41,20 +47,58 @@ ScreenshotData CreateEmptyScreenshot() {
   return screenshot;
 }
 
-// Returns a BGRA image of a checkerboard, where each white/black
-// region is a single pixel, |image_dim_in_px| x |image_dim_in_px|.
+struct RGBA {
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+  uint8_t a;
+};
+
+// Returns an 8-bit BGRA image of a |image_dim_in_px| x |image_dim_in_px|
+// checkerboard, where each white/black region is a 10x10 pixel square.
 ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px) {
-  size_t pixels_size;
-  std::unique_ptr<uint8_t[]> pixels =
-      escher::image_utils::NewCheckerboardPixels(image_dim_in_px,
-                                                 image_dim_in_px, &pixels_size);
+  const size_t height = image_dim_in_px;
+  const size_t width = image_dim_in_px;
+  const size_t block_size = 10;
+  const uint8_t black = 0;
+  const uint8_t white = 0xff;
+
+  const size_t size_in_bytes = image_dim_in_px * image_dim_in_px * sizeof(RGBA);
+  auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
+  RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
+
+  // We go pixel by pixel, row by row. |y| tracks the row and |x| the column.
+  //
+  // We compute in which |block_size| x |block_size| block the pixel is to
+  // determine the color (black or white). |block_y| tracks the "block" row and
+  // |block_x| the "block" column.
+  for (size_t y = 0; y < height; ++y) {
+    size_t block_y = y / block_size;
+    for (size_t x = 0; x < width; ++x) {
+      size_t block_x = x / block_size;
+      uint8_t block_color = (block_x + block_y) % 2 ? black : white;
+      size_t index = y * width + x;
+      auto& p = pixels[index];
+      p.r = p.g = p.b = block_color;
+      p.a = 255;
+    }
+  }
 
   ScreenshotData screenshot;
-  FXL_CHECK(zx::vmo::create(pixels_size, 0u, &screenshot.data.vmo) == ZX_OK);
-  FXL_CHECK(screenshot.data.vmo.write(pixels.get(), 0u, pixels_size) == ZX_OK);
-  screenshot.data.size = pixels_size;
+  FXL_CHECK(zx::vmo::create(size_in_bytes, 0u, &screenshot.data.vmo) == ZX_OK);
+  FXL_CHECK(screenshot.data.vmo.write(ptr.get(), 0u, size_in_bytes) == ZX_OK);
+  screenshot.data.size = size_in_bytes;
   screenshot.info.height = image_dim_in_px;
   screenshot.info.width = image_dim_in_px;
+  screenshot.info.stride = image_dim_in_px * 4u /*4 bytes per pixel*/;
+  screenshot.info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
+  return screenshot;
+}
+
+// Returns an empty screenshot with a pixel format different from BGRA-8.
+ScreenshotData CreateNonBGRA8Screenshot() {
+  ScreenshotData screenshot = CreateEmptyScreenshot();
+  screenshot.info.pixel_format = fuchsia::images::PixelFormat::YUY2;
   return screenshot;
 }
 
@@ -192,7 +236,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
-  const size_t image_dim_in_px = 10;
+  const size_t image_dim_in_px = 100;
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
                                 kSuccess);
@@ -214,11 +258,40 @@ TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.width,
             image_dim_in_px);
   EXPECT_TRUE(feedback_response.screenshot->image.vmo.is_valid());
+
+  fsl::SizedVmo expected_sized_vmo;
+  ASSERT_TRUE(fsl::VmoFromFilename("/pkg/data/checkerboard_100.png",
+                                   &expected_sized_vmo));
+  std::vector<uint8_t> expected_pixels;
+  ASSERT_TRUE(fsl::VectorFromVmo(expected_sized_vmo, &expected_pixels));
+  std::vector<uint8_t> actual_pixels;
+  ASSERT_TRUE(
+      fsl::VectorFromVmo(feedback_response.screenshot->image, &actual_pixels));
+  EXPECT_EQ(actual_pixels, expected_pixels);
 }
 
 TEST_F(FeedbackAgentTest, GetScreenshot_FailOnScenicReturningFailure) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
+  set_scenic_responses(std::move(scenic_responses));
+
+  GetScreenshotResponse feedback_response;
+  agent_->GetScreenshot(
+      ImageEncoding::PNG,
+      [&feedback_response](std::unique_ptr<Screenshot> screenshot) {
+        feedback_response.screenshot = std::move(screenshot);
+      });
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(get_scenic_responses().empty());
+
+  EXPECT_EQ(feedback_response.screenshot, nullptr);
+}
+
+TEST_F(FeedbackAgentTest,
+       GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
+  std::vector<TakeScreenshotResponse> scenic_responses;
+  scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
   set_scenic_responses(std::move(scenic_responses));
 
   GetScreenshotResponse feedback_response;

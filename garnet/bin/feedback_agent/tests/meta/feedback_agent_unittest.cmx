@@ -3,6 +3,9 @@
         "binary": "test/feedback_agent_unittest"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink"
         ]

@@ -18,6 +18,13 @@ test_package("feedback_agent_tests") {
     },
   ]
 
+  resources = [
+    {
+      path = "resources/checkerboard_100.png"
+      dest = "checkerboard_100.png"
+    },
+  ]
+
   deps = [
     ":integration_test",
     ":unittest",
@@ -35,12 +42,13 @@ executable("unittest") {
 
   deps = [
     "//garnet/bin/feedback_agent:src",
-    "//garnet/public/lib/escher",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.images",
     "//sdk/lib/sys/cpp/testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

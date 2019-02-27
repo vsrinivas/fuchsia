@@ -4,12 +4,12 @@
 
 #include "feedback_agent.h"
 
-#include <map>
-#include <string>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/status.h>
+
+#include "image_conversion.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -33,7 +33,7 @@ void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
   }
 
   scenic_->TakeScreenshot(
-      [callback = saved_callback.get()](
+      [encoding, callback = saved_callback.get()](
           fuchsia::ui::scenic::ScreenshotData raw_screenshot, bool success) {
         if (!success) {
           FX_LOGS(ERROR) << "Scenic failed to take screenshot";
@@ -42,10 +42,20 @@ void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
         }
 
         std::unique_ptr<Screenshot> screenshot = std::make_unique<Screenshot>();
-        screenshot->image = std::move(raw_screenshot.data);
         screenshot->dimensions_in_px.height = raw_screenshot.info.height;
         screenshot->dimensions_in_px.width = raw_screenshot.info.width;
-        // TODO(DX-997): convert the raw image to PNG before sending it back.
+        switch (encoding) {
+          case ImageEncoding::PNG:
+            if (!RawToPng(raw_screenshot.data, raw_screenshot.info.height,
+                          raw_screenshot.info.width, raw_screenshot.info.stride,
+                          raw_screenshot.info.pixel_format,
+                          &screenshot->image)) {
+              FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
+              (*callback)(/*screenshot=*/nullptr);
+              return;
+            }
+            break;
+        }
         (*callback)(std::move(screenshot));
       });
 }

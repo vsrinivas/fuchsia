@@ -40,15 +40,23 @@ source_set("src") {
   sources = [
     "feedback_agent.cc",
     "feedback_agent.h",
+    "image_conversion.cc",
+    "image_conversion.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.images",
     "//sdk/lib/sys/cpp",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.images",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//third_party/libpng",
+    "//zircon/public/lib/zx",
   ]
 }
