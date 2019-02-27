@@ -284,10 +284,11 @@ package("scenic") {
 # name/meta/name.cmx contains the component manifest
 # name is the name of a subdirectory that builds the output binary `name`
 component_shell_tools = [
-  "screencap",
-  "snapshot",
   "gltf_export",
+  "present_view",
+  "screencap",
   "set_root_view",
+  "snapshot",
 ]
 foreach(tool, component_shell_tools) {
   package(tool) {
@@ -336,7 +337,6 @@ package("set_renderer_params") {
 # have any CMX.
 non_component_tools = [
   "input",
-  "present_view",
   "print_input",
 ]
 
