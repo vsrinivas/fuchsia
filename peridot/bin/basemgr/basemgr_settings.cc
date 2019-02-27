@@ -26,10 +26,6 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       "session_shell",
       "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
       "ermine_session_shell.cmx");
-  account_provider.url = command_line.GetOptionValueWithDefault(
-      "account_provider",
-      "fuchsia-pkg://fuchsia.com/token_manager_factory#meta/"
-      "token_manager_factory.cmx");
 
   disable_statistics = command_line.HasOption("disable_statistics");
   no_minfs = command_line.HasOption("no_minfs");
@@ -75,7 +71,6 @@ std::string BasemgrSettings::GetUsage() {
       --session_shell_args=SHELL_ARGS
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
-      --account_provider=ACCOUNT_PROVIDER
       --disable_statistics
       --no_minfs
       --test
@@ -92,10 +87,7 @@ std::string BasemgrSettings::GetUsage() {
     STORY_SHELL: URL of the story shell to run.
                 Defaults to "mondrian".
                 For integration testing use "dev_story_shell".
-    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.
-    ACCOUNT_PROVIDER: URL of the account provider to use.
-                Defaults to "oauth_token_manager".
-                For integration tests use "dev_token_manager".)USAGE";
+    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
 }
 
 void BasemgrSettings::ParseShellArgs(const std::string& value,

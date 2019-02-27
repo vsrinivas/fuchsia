@@ -55,7 +55,8 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
             default_service_provider) = 0;
   };
 
-  // |account_provider| and |delegate| must outlive UserProviderImpl.
+  // |launcher|, |token_manager_factory| and |delegate| must outlive
+  // UserProviderImpl.
   UserProviderImpl(
       fuchsia::sys::Launcher* const launcher,
       const fuchsia::modular::AppConfig& sessionmgr,
@@ -130,8 +131,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 
-  std::map<UserContextImpl*, std::unique_ptr<UserContextImpl>>
-      user_contexts_;
+  std::map<UserContextImpl*, std::unique_ptr<UserContextImpl>> user_contexts_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };

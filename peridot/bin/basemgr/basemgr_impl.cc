@@ -53,6 +53,10 @@ constexpr char kPresentationService[] = "mozart.Presentation";
 // The key for factory reset toggles.
 constexpr char kFactoryResetKey[] = "FactoryReset";
 
+constexpr char kTokenManagerFactoryUrl[] =
+    "fuchsia-pkg://fuchsia.com/token_manager_factory#meta/"
+    "token_manager_factory.cmx";
+
 }  // namespace
 
 BasemgrImpl::BasemgrImpl(
@@ -230,7 +234,7 @@ void BasemgrImpl::Start() {
   // Start OAuth Token Manager App.
   token_manager_factory_app_.release();
   fuchsia::modular::AppConfig token_manager_config;
-  token_manager_config.url = settings_.account_provider.url;
+  token_manager_config.url = kTokenManagerFactoryUrl;
   token_manager_factory_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
           launcher_, CloneStruct(token_manager_config));

@@ -25,7 +25,6 @@ class BasemgrSettings {
   fuchsia::modular::AppConfig story_shell;
   fuchsia::modular::AppConfig sessionmgr;
   fuchsia::modular::AppConfig session_shell;
-  fuchsia::modular::AppConfig account_provider;
 
   std::string test_name;
   bool disable_statistics;

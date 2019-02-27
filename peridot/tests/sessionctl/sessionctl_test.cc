@@ -27,9 +27,6 @@ class SessionCtlTest : public component::testing::TestWithEnvironment {
     args.push_back("--test");
     args.push_back("--run_base_shell_with_test_runner=false");
     args.push_back(
-        "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/"
-        "dev_token_manager.cmx");
-    args.push_back(
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
         "dev_base_shell.cmx");
     args.push_back(
