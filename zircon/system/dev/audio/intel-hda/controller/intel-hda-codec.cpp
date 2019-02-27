@@ -41,6 +41,14 @@ IntelHDACodec::ProbeCommandListEntry IntelHDACodec::PROBE_COMMANDS[] = {
 };
 
 #define DEV (static_cast<IntelHDACodec*>(ctx))
+
+// Device FIDL thunks
+fuchsia_hardware_intel_hda_CodecDevice_ops_t IntelHDACodec::CODEC_FIDL_THUNKS = {
+    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
+                        return DEV->GetChannel(txn);
+                   },
+};
+
 zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
@@ -52,19 +60,14 @@ zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .read         = nullptr,
     .write        = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](void* ctx,
-                       uint32_t op,
-                       const void* in_buf,
-                       size_t in_len,
-                       void* out_buf,
-                       size_t out_len,
-                       size_t* out_actual) -> zx_status_t {
-                        return DEV->DeviceIoctl(op, out_buf, out_len, out_actual);
-                    },
+    .ioctl        = nullptr,
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
-    .message      = nullptr,
+    .message      = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+                        return fuchsia_hardware_intel_hda_CodecDevice_dispatch(
+                                ctx, txn, msg, &IntelHDACodec::CODEC_FIDL_THUNKS);
+                   },
 };
 
 ihda_codec_protocol_ops_t IntelHDACodec::CODEC_PROTO_THUNKS = {
@@ -276,21 +279,29 @@ zx_status_t IntelHDACodec::ParseRevisionId(const CodecResponse& resp) {
     return PublishDevice();
 }
 
-zx_status_t IntelHDACodec::DeviceIoctl(uint32_t op,
-                                       void*    out_buf,
-                                       size_t   out_len,
-                                       size_t*  out_actual) {
+zx_status_t IntelHDACodec::GetChannel(fidl_txn_t* txn) {
     dispatcher::Channel::ProcessHandler phandler(
     [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
         return codec->ProcessClientRequest(channel, false);
     });
 
-    return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
-                             default_domain_,
-                             std::move(phandler),
-                             nullptr);
+
+    zx::channel remote_endpoint_out;
+    zx_status_t res = CreateAndActivateChannel(default_domain_,
+                                               std::move(phandler),
+                                               nullptr,
+                                               nullptr,
+                                               &remote_endpoint_out);
+
+    if (res != ZX_OK) {
+        return res;
+    }
+
+    return fuchsia_hardware_intel_hda_CodecDeviceGetChannel_reply(
+            txn, remote_endpoint_out.release());
 }
+
 
 #define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
 case _ioctl:                                                                \

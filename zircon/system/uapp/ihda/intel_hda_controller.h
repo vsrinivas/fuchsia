@@ -30,7 +30,7 @@ private:
     friend class fbl::unique_ptr<IntelHDAController>;
 
     IntelHDAController(uint32_t id, const char* const dev_name)
-        : IntelHDADevice(dev_name),
+        : IntelHDADevice(dev_name, Type::Controller),
           id_(id) { }
 
     ~IntelHDAController() { }

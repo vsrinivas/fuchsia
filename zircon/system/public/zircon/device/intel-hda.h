@@ -5,10 +5,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/device/ioctl.h>
 #include <zircon/types.h>
-
-#define IHDA_IOCTL_GET_CHANNEL IOCTL(IOCTL_KIND_GET_HANDLE, 0xFF, 0x00)
 
 // When communicating with an IHDA driver using zx_channel_call, do not use the
 // IHDA_INVALID_TRANSACTION_ID as your message's transaction ID.

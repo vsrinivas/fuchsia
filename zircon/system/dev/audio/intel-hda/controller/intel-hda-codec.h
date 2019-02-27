@@ -18,6 +18,7 @@
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -84,6 +85,7 @@ private:
     static constexpr size_t PROP_VENDOR_STEP = 6;
     static constexpr size_t PROP_COUNT       = 7;
 
+    static fuchsia_hardware_intel_hda_CodecDevice_ops_t CODEC_FIDL_THUNKS;
     static zx_protocol_device_t CODEC_DEVICE_THUNKS;
     static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
 
@@ -104,7 +106,7 @@ private:
     zx_status_t CodecGetDispatcherChannel(zx_handle_t* channel_out);
 
     // Thunks for interacting with clients and codec drivers.
-    zx_status_t DeviceIoctl(uint32_t op, void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t GetChannel(fidl_txn_t* txn);
     zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool is_driver_channel);
     void ProcessClientDeactivate(const dispatcher::Channel* channel);
     zx_status_t ProcessGetIDs(dispatcher::Channel* channel, const ihda_proto::GetIDsReq& req);

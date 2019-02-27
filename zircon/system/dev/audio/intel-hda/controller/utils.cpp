@@ -74,37 +74,6 @@ void DriverVmars::Shutdown() {
     registers_.reset();
 }
 
-zx_status_t HandleDeviceIoctl(uint32_t op,
-                              void* out_buf,
-                              size_t out_len,
-                              size_t* out_actual,
-                              const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
-                              dispatcher::Channel::ProcessHandler phandler,
-                              dispatcher::Channel::ChannelClosedHandler chandler) {
-    if (op != IHDA_IOCTL_GET_CHANNEL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    if ((out_buf == nullptr) ||
-        (out_actual == nullptr) ||
-        (out_len != sizeof(zx_handle_t))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx::channel remote_endpoint_out;
-    zx_status_t res = CreateAndActivateChannel(domain,
-                                               std::move(phandler),
-                                               std::move(chandler),
-                                               nullptr,
-                                               &remote_endpoint_out);
-    if (res == ZX_OK) {
-        *(reinterpret_cast<zx_handle_t*>(out_buf)) = remote_endpoint_out.release();
-        *out_actual = sizeof(zx_handle_t);
-    }
-
-    return res;
-}
-
 zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
                                      dispatcher::Channel::ProcessHandler phandler,
                                      dispatcher::Channel::ChannelClosedHandler chandler,

@@ -21,7 +21,7 @@ public:
     uint8_t  step_id()   const { return step_id_; }
 
 protected:
-    explicit IntelHDADevice(const char* const dev_name) : ZirconDevice(dev_name) { }
+    IntelHDADevice(const char* const dev_name, Type type) : ZirconDevice(dev_name, type) {}
 
     uint16_t vid_       = 0u;
     uint16_t did_       = 0u;

@@ -12,10 +12,13 @@ executable("ihda") {
     "zircon_device.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-intel-hda:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
 }

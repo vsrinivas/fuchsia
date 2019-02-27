@@ -7,8 +7,11 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-#include <zircon/device/intel-hda.h>
+#include <fbl/unique_fd.h>
+#include <fuchsia/hardware/intel/hda/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fdio/io.h>
+#include <zircon/device/intel-hda.h>
 
 #include "zircon_device.h"
 
@@ -24,44 +27,47 @@ zx_status_t ZirconDevice::Connect() {
     if (!dev_name_)
         return ZX_ERR_NO_MEMORY;
 
-    int fd = ::open(dev_name_, O_RDONLY);
-    if (fd < 0)
-        return static_cast<zx_status_t>(fd);
+    fbl::unique_fd fd{::open(dev_name_, O_RDONLY)};
+    if (!fd.is_valid())
+        return ZX_ERR_NOT_FOUND;
 
-    ssize_t res = ::fdio_ioctl(fd, IHDA_IOCTL_GET_CHANNEL,
-                               nullptr, 0,
-                               &dev_channel_, sizeof(dev_channel_));
-    ::close(fd);
+    fzl::FdioCaller dev(std::move(fd));
+    zx_status_t(*thunk)(zx_handle_t, zx_handle_t*);
 
-    if (res < 0) {
-        printf("[%s] Failed to fetch device channel (%zd)\n", dev_name(), res);
-        return static_cast<zx_status_t>(res);
+    switch (type_) {
+    case Type::Controller:
+        thunk = fuchsia_hardware_intel_hda_ControllerDeviceGetChannel;
+        break;
+
+    case Type::Codec:
+        thunk = fuchsia_hardware_intel_hda_CodecDeviceGetChannel;
+        break;
+
+    default:
+        return ZX_ERR_INTERNAL;
     }
 
-    return ZX_OK;
+
+    zx_status_t res = thunk(dev.borrow_channel(), dev_channel_.reset_and_get_address());
+    if (res != ZX_OK) {
+        printf("[%s] Failed to fetch device channel (%d)\n", dev_name(), res);
+    }
+
+    return res;
 }
 
 void ZirconDevice::Disconnect() {
-    if (dev_channel_ != ZX_HANDLE_INVALID) {
-        ::zx_handle_close(dev_channel_);
-        dev_channel_ = ZX_HANDLE_INVALID;
-    }
+    dev_channel_.reset();
 }
 
-zx_status_t ZirconDevice::CallDevice(const zx_channel_call_args_t& args, uint64_t timeout_msec) {
+zx_status_t ZirconDevice::CallDevice(const zx_channel_call_args_t& args, zx::duration timeout) {
     uint32_t resp_size;
     uint32_t resp_handles;
-    zx_time_t deadline;
+    zx::time deadline = timeout == zx::duration::infinite()
+                      ? zx::time::infinite()
+                      : zx::deadline_after(timeout);
 
-    if (timeout_msec == ZX_TIME_INFINITE) {
-        deadline = ZX_TIME_INFINITE;
-    } else if (timeout_msec >= std::numeric_limits<zx_time_t>::max() / ZX_MSEC(1)) {
-        return ZX_ERR_INVALID_ARGS;
-    } else {
-        deadline = zx_deadline_after(ZX_MSEC(timeout_msec));
-    }
-
-    return zx_channel_call(dev_channel_, 0, deadline, &args, &resp_size, &resp_handles);
+    return dev_channel_.call(0, deadline, &args, &resp_size, &resp_handles);
 }
 
 zx_status_t ZirconDevice::Enumerate(

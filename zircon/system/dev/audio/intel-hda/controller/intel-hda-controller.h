@@ -12,6 +12,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/interrupt.h>
@@ -87,7 +88,7 @@ private:
     // Device interface implementation
     void        DeviceShutdown();
     void        DeviceRelease();
-    zx_status_t DeviceIoctl(uint32_t op, void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t GetChannel(fidl_txn_t* txn);
 
     // Root device interface implementation
     void RootDeviceRelease();
@@ -201,7 +202,8 @@ private:
     fbl::RefPtr<IntelHDADSP> dsp_;
 
     static std::atomic_uint32_t device_id_gen_;
-    static zx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
+    static fuchsia_hardware_intel_hda_ControllerDevice_ops_t CONTROLLER_FIDL_THUNKS;
+    static zx_protocol_device_t CONTROLLER_DEVICE_THUNKS;
 };
 
 }  // namespace intel_hda

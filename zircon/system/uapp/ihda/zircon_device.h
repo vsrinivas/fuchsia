@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/device/intel-hda.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 namespace audio {
 namespace intel_hda {
@@ -28,8 +29,13 @@ public:
                                  EnumerateCbk cbk);
 
 protected:
-    explicit ZirconDevice(const char* const dev_name)
-        : dev_name_(::strdup(dev_name)) { }
+    enum class Type {
+        Controller,
+        Codec
+    };
+
+    explicit ZirconDevice(const char* const dev_name, Type type)
+        : type_(type), dev_name_(::strdup(dev_name)) {}
 
     ~ZirconDevice() {
         Disconnect();
@@ -37,7 +43,8 @@ protected:
     }
 
     template <typename ReqType, typename RespType>
-    zx_status_t CallDevice(const ReqType& req, RespType* resp, uint64_t timeout_msec = 100) {
+    zx_status_t CallDevice(const ReqType& req, RespType* resp,
+                           zx::duration timeout = zx::msec(100)) {
         if (!resp)
             return ZX_ERR_INVALID_ARGS;
 
@@ -54,7 +61,7 @@ protected:
         args.rd_bytes     = resp;
         args.rd_num_bytes = sizeof(*resp);
 
-        return CallDevice(args, timeout_msec);
+        return CallDevice(args, timeout);
     }
 
     template <typename ReqType>
@@ -67,11 +74,12 @@ protected:
         req->hdr.cmd = cmd;
     }
 
+    const Type type_;
     char* dev_name_;
-    zx_handle_t dev_channel_ = ZX_HANDLE_INVALID;
+    zx::channel dev_channel_;
 
 private:
-    zx_status_t CallDevice(const zx_channel_call_args_t& args, uint64_t timeout_msec);
+    zx_status_t CallDevice(const zx_channel_call_args_t& args, zx::duration timeout);
     static uint32_t transaction_id_;
 };
 

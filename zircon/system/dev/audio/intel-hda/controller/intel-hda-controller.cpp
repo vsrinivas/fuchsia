@@ -29,11 +29,18 @@ namespace audio {
 namespace intel_hda {
 
 // static member variable declaration
-constexpr uint        IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
+constexpr uint IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
 std::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
-// Device interface thunks
 #define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
+// Device FIDL thunks
+fuchsia_hardware_intel_hda_ControllerDevice_ops_t IntelHDAController::CONTROLLER_FIDL_THUNKS {
+    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
+                        return DEV(ctx)->GetChannel(txn);
+                   },
+};
+
+// Device interface thunks
 zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
@@ -45,19 +52,14 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .read         = nullptr,
     .write        = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](void*        ctx,
-                       uint32_t     op,
-                       const void*  in_buf,
-                       size_t       in_len,
-                       void*        out_buf,
-                       size_t       out_len,
-                       size_t*      out_actual) -> zx_status_t {
-                        return DEV(ctx)->DeviceIoctl(op, out_buf, out_len, out_actual);
-                   },
+    .ioctl        = nullptr,
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
-    .message      = nullptr,
+    .message      = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+                        return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
+                                ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
+                   },
 };
 #undef DEV
 
@@ -217,20 +219,26 @@ void IntelHDAController::DeviceRelease() {
     thiz.reset();
 }
 
-zx_status_t IntelHDAController::DeviceIoctl(uint32_t op,
-                                            void*    out_buf,
-                                            size_t   out_len,
-                                            size_t*  out_actual) {
+zx_status_t IntelHDAController::GetChannel(fidl_txn_t* txn) {
     dispatcher::Channel::ProcessHandler phandler(
     [controller = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
         return controller->ProcessClientRequest(channel);
     });
 
-    return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
-                             default_domain_,
-                             std::move(phandler),
-                             nullptr);
+    zx::channel remote_endpoint_out;
+    zx_status_t res = CreateAndActivateChannel(default_domain_,
+                                               std::move(phandler),
+                                               nullptr,
+                                               nullptr,
+                                               &remote_endpoint_out);
+
+    if (res != ZX_OK) {
+        return res;
+    }
+
+    return fuchsia_hardware_intel_hda_ControllerDeviceGetChannel_reply(
+            txn, remote_endpoint_out.release());
 }
 
 void IntelHDAController::RootDeviceRelease() {

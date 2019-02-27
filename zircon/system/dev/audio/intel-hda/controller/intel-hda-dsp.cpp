@@ -35,16 +35,7 @@ zx_protocol_device_t IntelHDADSP::DSP_DEVICE_THUNKS = {
     .read         = nullptr,
     .write        = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](void* ctx,
-                       uint32_t op,
-                       const void* in_buf,
-                       size_t in_len,
-                       void* out_buf,
-                       size_t out_len,
-                       size_t* out_actual) -> zx_status_t
-                    {
-                        return DEV->DeviceIoctl(op, out_buf, out_len, out_actual);
-                    },
+    .ioctl        = nullptr,
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
@@ -195,22 +186,6 @@ zx_status_t IntelHDADSP::DeviceGetProtocol(uint32_t proto_id, void* protocol) {
         LOG(ERROR, "Unsupported protocol 0x%08x\n", proto_id);
         return ZX_ERR_NOT_SUPPORTED;
     }
-}
-
-zx_status_t IntelHDADSP::DeviceIoctl(uint32_t op,
-                                     void*    out_buf,
-                                     size_t   out_len,
-                                     size_t*  out_actual) {
-    dispatcher::Channel::ProcessHandler phandler(
-    [dsp = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, dsp->default_domain_);
-        return dsp->ProcessClientRequest(channel, false);
-    });
-
-    return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
-                             default_domain_,
-                             std::move(phandler),
-                             nullptr);
 }
 
 void IntelHDADSP::DeviceUnbind() {

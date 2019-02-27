@@ -57,7 +57,7 @@ private:
                                size_t cmd_count);
 
     IntelHDACodec(uint32_t codec_id, const char* const dev_name)
-        : IntelHDADevice(dev_name),
+        : IntelHDADevice(dev_name, Type::Codec),
           codec_id_(codec_id) { }
 
     ~IntelHDACodec() { }

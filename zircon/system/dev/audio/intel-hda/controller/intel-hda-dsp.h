@@ -58,7 +58,6 @@ private:
 
     // Device interface
     zx_status_t DeviceGetProtocol(uint32_t proto_id, void* protocol);
-    zx_status_t DeviceIoctl(uint32_t op, void* out_buf, size_t out_len, size_t* out_actual);
     void DeviceUnbind();
 
     // ZX_PROTOCOL_IHDA_DSP interface
