@@ -106,7 +106,7 @@ void ConflictResolverClient::GetOrCreateObjectIdentifier(
         storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
                                      storage::DataSource::Create(std::move(
                                          merged_value.new_value->bytes())),
-                                     std::move(callback));
+                                     {}, std::move(callback));
       } else {
         storage::ObjectIdentifier object_identifier;
         storage::Status status = manager_->ResolveReference(

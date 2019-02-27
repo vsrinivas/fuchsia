@@ -42,13 +42,12 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-
-using testing::ElementsAre;
-using testing::IsEmpty;
 
 namespace storage {
 
@@ -58,9 +57,11 @@ class PageStorageImplAccessorForTest {
                        ObjectIdentifier object_identifier, ChangeSource source,
                        IsObjectSynced is_object_synced,
                        std::unique_ptr<DataSource::DataChunk> chunk,
+                       ObjectReferencesAndPriority references,
                        fit::function<void(Status)> callback) {
     storage->AddPiece(std::move(object_identifier), source, is_object_synced,
-                      std::move(chunk), std::move(callback));
+                      std::move(chunk), std::move(references),
+                      std::move(callback));
   }
 
   static PageDb& GetDb(const std::unique_ptr<PageStorageImpl>& storage) {
@@ -70,7 +71,10 @@ class PageStorageImplAccessorForTest {
 
 namespace {
 
-using coroutine::CoroutineHandler;
+using ::coroutine::CoroutineHandler;
+using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
+using ::testing::IsEmpty;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
     const Commit& commit) {
@@ -426,7 +430,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     Status status;
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
-        ObjectType::BLOB, DataSource::Create(std::move(content)),
+        ObjectType::BLOB, DataSource::Create(std::move(content)), {},
         callback::Capture(callback::SetWhenCalled(&called), &status,
                           &object_identifier));
     RunLoopUntilIdle();
@@ -512,9 +516,11 @@ class PageStorageTest : public ledger::TestWithEnvironment {
 
   Status WriteObject(
       CoroutineHandler* handler, ObjectData* data,
-      PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
+      PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT,
+      const ObjectReferencesAndPriority& references = {}) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
-        handler, data->object_identifier, data->ToChunk(), object_status, {});
+        handler, data->object_identifier, data->ToChunk(), object_status,
+        references);
   }
 
   Status ReadObject(CoroutineHandler* handler,
@@ -522,6 +528,18 @@ class PageStorageTest : public ledger::TestWithEnvironment {
                     std::unique_ptr<const Object>* object) {
     return PageStorageImplAccessorForTest::GetDb(storage_).ReadObject(
         handler, object_identifier, object);
+  }
+
+  // Checks that |object_identifier| is referenced by |expected_references|.
+  void CheckInboundReferences(CoroutineHandler* handler,
+                              ObjectIdentifier object_identifier,
+                              ObjectReferencesAndPriority expected_references) {
+    ObjectReferencesAndPriority stored_references;
+    ASSERT_EQ(Status::OK,
+              PageStorageImplAccessorForTest::GetDb(storage_)
+                  .GetInboundObjectReferences(handler, object_identifier,
+                                              &stored_references));
+    EXPECT_THAT(stored_references, ElementsAreArray(expected_references));
   }
 
   ::testing::AssertionResult ObjectIsUntracked(
@@ -1128,7 +1146,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     Status status;
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
-        ObjectType::BLOB, data.ToDataSource(),
+        ObjectType::BLOB, data.ToDataSource(), {},
         callback::Capture(callback::SetWhenCalled(&called), &status,
                           &object_identifier));
     RunLoopUntilIdle();
@@ -1154,7 +1172,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
     Status status;
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
-        ObjectType::BLOB, data.ToDataSource(),
+        ObjectType::BLOB, data.ToDataSource(), {},
         callback::Capture(callback::SetWhenCalled(&called), &status,
                           &object_identifier));
     RunLoopUntilIdle();
@@ -1176,7 +1194,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      ObjectType::BLOB, data.ToDataSource(),
+      ObjectType::BLOB, data.ToDataSource(), {},
       [](Status returned_status, ObjectIdentifier object_identifier) {});
 
   // Checking that we do not crash when deleting the storage while an AddObject
@@ -1190,7 +1208,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   Status status;
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
-      ObjectType::BLOB, std::move(data_source),
+      ObjectType::BLOB, std::move(data_source), {},
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopUntilIdle();
@@ -1201,12 +1219,15 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
 TEST_F(PageStorageTest, AddLocalPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     ObjectData data("Some data", InlineBehavior::PREVENT);
+    const ObjectIdentifier reference =
+        RandomObjectIdentifier(environment_.random());
 
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.object_identifier, ChangeSource::LOCAL,
         IsObjectSynced::NO, data.ToChunk(),
+        {{reference.object_digest(), KeyPriority::LAZY}},
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1219,18 +1240,25 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     EXPECT_EQ(data.value, content);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
+
+    CheckInboundReferences(
+        handler, reference,
+        {{data.object_identifier.object_digest(), KeyPriority::LAZY}});
   });
 }
 
 TEST_F(PageStorageTest, AddSyncPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     ObjectData data("Some data", InlineBehavior::PREVENT);
+    const ObjectIdentifier reference =
+        RandomObjectIdentifier(environment_.random());
 
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.object_identifier, ChangeSource::CLOUD,
         IsObjectSynced::YES, data.ToChunk(),
+        {{reference.object_digest(), KeyPriority::EAGER}},
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1243,6 +1271,10 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     EXPECT_EQ(data.value, content);
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
+
+    CheckInboundReferences(
+        handler, reference,
+        {{data.object_identifier.object_digest(), KeyPriority::EAGER}});
   });
 }
 
@@ -1254,7 +1286,7 @@ TEST_F(PageStorageTest, AddP2PPiece) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.object_identifier, ChangeSource::P2P, IsObjectSynced::NO,
-        data.ToChunk(),
+        data.ToChunk(), {},
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1356,7 +1388,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   Status status;
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
-      ObjectType::TREE_NODE, data.ToDataSource(),
+      ObjectType::TREE_NODE, data.ToDataSource(), /*tree_references=*/{},
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopUntilIdle();
@@ -1521,6 +1553,9 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
 
   ObjectData data(std::move(data_str), ObjectType::TREE_NODE,
                   InlineBehavior::PREVENT);
+  // An identifier to another tree node pointed at by the current one.
+  const ObjectIdentifier tree_reference =
+      RandomObjectIdentifier(environment_.random());
   ASSERT_EQ(
       ObjectType::TREE_NODE,
       GetObjectDigestInfo(data.object_identifier.object_digest()).object_type);
@@ -1536,12 +1571,15 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
       ObjectType::TREE_NODE, data.ToDataSource(),
+      {{tree_reference.object_digest(), KeyPriority::LAZY}},
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
   EXPECT_EQ(Status::OK, status);
+  // This ensures that the object is encoded with an index, as we checked the
+  // piece type of |data.object_identifier| above.
   EXPECT_EQ(data.object_identifier, object_identifier);
 
   std::unique_ptr<const Object> object =
@@ -1552,12 +1590,29 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
   EXPECT_TRUE(IsPieceSynced(object_identifier, false));
 
-  // Check that the object is encoded with an index, and is different than the
-  // piece obtained at |object_identifier|.
+  // Check that the index piece obtained at |object_identifier| is different
+  // from the object itself, ie. that some splitting occurred.
   std::unique_ptr<const Object> piece = TryGetPiece(object_identifier);
   fxl::StringView piece_content;
   ASSERT_EQ(Status::OK, piece->GetData(&piece_content));
   EXPECT_NE(content, piece_content);
+
+  RunInCoroutine([this, piece_content = std::move(piece_content),
+                  tree_reference,
+                  object_identifier](CoroutineHandler* handler) {
+    // Check tree reference.
+    CheckInboundReferences(
+        handler, tree_reference,
+        {{object_identifier.object_digest(), KeyPriority::LAZY}});
+    // Check piece references.
+    ForEachPiece(piece_content, [this, handler, object_identifier](
+                                    ObjectIdentifier piece_identifier) {
+      CheckInboundReferences(
+          handler, piece_identifier,
+          {{object_identifier.object_digest(), KeyPriority::EAGER}});
+      return Status::OK;
+    });
+  });
 }
 
 TEST_F(PageStorageTest, UnsyncedPieces) {

@@ -102,7 +102,7 @@ void PageDelegate::PutWithPriority(std::vector<uint8_t> key,
       storage::Status::ILLEGAL_STATE);
   storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
                                storage::DataSource::Create(std::move(value)),
-                               promise->NewCallback());
+                               {}, promise->NewCallback());
 
   operation_serializer_.Serialize<storage::Status>(
       PageUtils::AdaptStatusCallback(std::move(callback)),
@@ -181,7 +181,7 @@ void PageDelegate::CreateReference(
     std::unique_ptr<storage::DataSource> data,
     fit::function<void(Status, CreateReferenceStatus, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
-      storage::ObjectType::BLOB, std::move(data),
+      storage::ObjectType::BLOB, std::move(data), {},
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback = std::move(callback)](

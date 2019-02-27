@@ -396,7 +396,12 @@ void PageStorageImpl::MarkSyncedToPeer(fit::function<void(Status)> callback) {
 
 void PageStorageImpl::AddObjectFromLocal(
     ObjectType object_type, std::unique_ptr<DataSource> data_source,
+    ObjectReferencesAndPriority tree_references,
     fit::function<void(Status, ObjectIdentifier)> callback) {
+  // |data_source| is not splitted yet: |tree_references| must contain only
+  // BTree-level references, not piece-level references, and only in the case
+  // where |data_source| actually represents a tree node.
+  FXL_DCHECK(object_type == ObjectType::TREE_NODE || tree_references.empty());
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
@@ -411,9 +416,10 @@ void PageStorageImpl::AddObjectFromLocal(
             std::move(object_digest));
       },
       [this, waiter, managed_data_source = std::move(managed_data_source),
+       tree_references = std::move(tree_references),
        callback = std::move(traced_callback)](
           IterationStatus status, ObjectIdentifier identifier,
-          ObjectReferencesAndPriority references,
+          ObjectReferencesAndPriority piece_references,
           std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, ObjectIdentifier());
@@ -422,9 +428,19 @@ void PageStorageImpl::AddObjectFromLocal(
 
         FXL_DCHECK(chunk != nullptr);
 
-        if (!GetObjectDigestInfo(identifier.object_digest()).is_inlined()) {
+        auto object_info = GetObjectDigestInfo(identifier.object_digest());
+        if (!object_info.is_inlined()) {
+          if (object_info.object_type == ObjectType::TREE_NODE) {
+            // There is at most one TREE_NODE, and it must be the last piece, so
+            // it is safe to add tree_references to piece_references there.
+            FXL_DCHECK(status == IterationStatus::DONE);
+            piece_references.insert(
+                std::make_move_iterator(tree_references.begin()),
+                std::make_move_iterator(tree_references.end()));
+          }
           AddPiece(identifier, ChangeSource::LOCAL, IsObjectSynced::NO,
-                   std::move(chunk), waiter->NewCallback());
+                   std::move(chunk), std::move(piece_references),
+                   waiter->NewCallback());
         }
         if (status == IterationStatus::IN_PROGRESS)
           return;
@@ -742,16 +758,17 @@ void PageStorageImpl::AddPiece(ObjectIdentifier object_identifier,
                                ChangeSource source,
                                IsObjectSynced is_object_synced,
                                std::unique_ptr<DataSource::DataChunk> data,
+                               ObjectReferencesAndPriority references,
                                fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier),
-       data = std::move(data), source,
+       data = std::move(data), source, references = std::move(references),
        is_object_synced](CoroutineHandler* handler,
                          fit::function<void(Status)> callback) mutable {
         callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                     source, is_object_synced,
-                                     std::move(data)));
+                                     source, is_object_synced, std::move(data),
+                                     std::move(references)));
       });
 }
 
@@ -978,10 +995,11 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
         }
 
         if (digest_info.is_chunk()) {
-          // Downloaded chunk objects are directly added to storage.
+          // Downloaded chunk objects are directly added to storage. They have
+          // no children at all, so references are empty.
           callback(SynchronousAddPiece(handler, std::move(object_identifier),
                                        source, is_object_synced,
-                                       std::move(chunk)));
+                                       std::move(chunk), {}));
           return;
         }
 
@@ -1062,9 +1080,10 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
           return;
         }
 
+        // TODO(kerneis): handle children.
         callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                     source, is_object_synced,
-                                     std::move(chunk)));
+                                     source, is_object_synced, std::move(chunk),
+                                     {}));
       });
 }
 
@@ -1458,7 +1477,8 @@ Status PageStorageImpl::SynchronousAddCommits(
 Status PageStorageImpl::SynchronousAddPiece(
     CoroutineHandler* handler, ObjectIdentifier object_identifier,
     ChangeSource source, IsObjectSynced is_object_synced,
-    std::unique_ptr<DataSource::DataChunk> data) {
+    std::unique_ptr<DataSource::DataChunk> data,
+    ObjectReferencesAndPriority references) {
   FXL_DCHECK(
       !GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
   FXL_DCHECK(
@@ -1481,9 +1501,8 @@ Status PageStorageImpl::SynchronousAddPiece(
         object_status = PageDbObjectStatus::SYNCED;
         break;
     }
-    // TODO(kerneis): pass children to WriteObject.
     return db_->WriteObject(handler, object_identifier, std::move(data),
-                            object_status, {});
+                            object_status, references);
   }
   return status;
 }

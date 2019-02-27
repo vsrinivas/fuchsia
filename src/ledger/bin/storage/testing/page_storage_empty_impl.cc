@@ -130,6 +130,7 @@ void PageStorageEmptyImpl::MarkSyncedToPeer(
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
     ObjectType /*object_type*/, std::unique_ptr<DataSource> /*data_source*/,
+    ObjectReferencesAndPriority references,
     fit::function<void(Status, ObjectIdentifier)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, {});

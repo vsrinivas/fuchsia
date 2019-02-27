@@ -19,6 +19,7 @@
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
 namespace btree {
@@ -64,17 +65,26 @@ void TreeNode::FromEntries(
     PageStorage* page_storage, uint8_t level, const std::vector<Entry>& entries,
     const std::map<size_t, ObjectIdentifier>& children,
     fit::function<void(Status, ObjectIdentifier)> callback) {
-  FXL_DCHECK(children.begin() == children.end() ||
-             children.cbegin()->first <= entries.size());
-#ifndef NDEBUG
-  for (const auto& identifier : children) {
-    FXL_DCHECK(storage::IsDigestValid(identifier.second.object_digest()));
+  FXL_DCHECK(children.empty() || children.rbegin()->first <= entries.size());
+  ObjectReferencesAndPriority tree_references;
+  for (const auto& [size, identifier] : children) {
+    const auto& digest = identifier.object_digest();
+    FXL_DCHECK(storage::IsDigestValid(digest));
+    if (!GetObjectDigestInfo(digest).is_inlined()) {
+      // Node-node references are always treated as eager.
+      tree_references.emplace(digest, KeyPriority::EAGER);
+    }
   }
-#endif
+  for (const auto& entry : entries) {
+    const auto& digest = entry.object_identifier.object_digest();
+    if (!GetObjectDigestInfo(digest).is_inlined()) {
+      tree_references.emplace(digest, entry.priority);
+    }
+  }
   std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
       ObjectType::TREE_NODE, storage::DataSource::Create(std::move(encoding)),
-      std::move(callback));
+      std::move(tree_references), std::move(callback));
 }
 
 int TreeNode::GetKeyCount() const { return entries_.size(); }

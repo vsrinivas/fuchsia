@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/fake/fake_journal.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 
 namespace storage {
@@ -211,11 +212,13 @@ void FakePageStorage::IsSynced(fit::function<void(Status, bool)> callback) {
 
 void FakePageStorage::AddObjectFromLocal(
     ObjectType /*object_type*/, std::unique_ptr<DataSource> data_source,
+    ObjectReferencesAndPriority tree_references,
     fit::function<void(Status, ObjectIdentifier)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
   data_source_ptr->Get([this, data_source = std::move(data_source),
                         value = std::move(value),
+                        tree_references = std::move(tree_references),
                         callback = std::move(callback)](
                            std::unique_ptr<DataSource::DataChunk> chunk,
                            DataSource::Status status) mutable {
@@ -229,6 +232,8 @@ void FakePageStorage::AddObjectFromLocal(
       ObjectIdentifier object_identifier =
           encryption_service_.MakeObjectIdentifier(FakeDigest(*value));
       objects_[object_identifier] = std::move(*value);
+      references_[object_identifier.object_digest()] =
+          std::move(tree_references);
       callback(Status::OK, std::move(object_identifier));
     }
   });
@@ -330,6 +335,11 @@ FakePageStorage::GetJournals() const {
 const std::map<ObjectIdentifier, std::string>& FakePageStorage::GetObjects()
     const {
   return objects_;
+}
+
+const std::map<ObjectDigest, ObjectReferencesAndPriority>&
+FakePageStorage::GetReferences() const {
+  return references_;
 }
 
 ObjectDigest FakePageStorage::FakeDigest(fxl::StringView value) const {

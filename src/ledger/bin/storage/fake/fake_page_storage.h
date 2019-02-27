@@ -18,6 +18,7 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 
 namespace storage {
@@ -56,6 +57,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   void IsSynced(fit::function<void(Status, bool)> callback) override;
   void AddObjectFromLocal(
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
+      ObjectReferencesAndPriority tree_references,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObjectPart(
       ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
@@ -81,6 +83,8 @@ class FakePageStorage : public PageStorageEmptyImpl {
   GetJournals() const;
 
   const std::map<ObjectIdentifier, std::string>& GetObjects() const;
+  const std::map<ObjectDigest, ObjectReferencesAndPriority>& GetReferences()
+      const;
 
   // Deletes this object from the fake local storage, but keeps it in its
   // "network" storage.
@@ -109,6 +113,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   ledger::Environment* const environment_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectIdentifier, std::string> objects_;
+  std::map<ObjectDigest, ObjectReferencesAndPriority> references_;
   std::map<CommitId, zx::time_utc> heads_;
   std::map<std::pair<CommitId, CommitId>, std::vector<CommitId>> merges_;
   std::set<CommitWatcher*> watchers_;

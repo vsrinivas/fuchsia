@@ -84,6 +84,7 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void AddObjectFromLocal(
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
+      ObjectReferencesAndPriority references,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
 
   void GetObjectPart(

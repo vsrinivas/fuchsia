@@ -98,6 +98,7 @@ class PageStorageImpl : public PageStorage {
   void MarkSyncedToPeer(fit::function<void(Status)> callback) override;
   void AddObjectFromLocal(
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
+      ObjectReferencesAndPriority tree_references,
       fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObjectPart(
       ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
@@ -145,10 +146,13 @@ class PageStorageImpl : public PageStorage {
   bool IsFirstCommit(CommitIdView id);
 
   // Adds the given synced object. |object_identifier| is expected to match the
-  // given |data|.
+  // given |data|. |references| must contain all references, both at the
+  // tree-level and at the piece-level (unlike |AddObjectFromLocal|'s tree-only
+  // references).
   void AddPiece(ObjectIdentifier object_identifier, ChangeSource source,
                 IsObjectSynced is_object_synced,
                 std::unique_ptr<DataSource::DataChunk> data,
+                ObjectReferencesAndPriority references,
                 fit::function<void(Status)> callback);
 
   // Reads the content of an object into a provided VMO. Takes into
@@ -236,7 +240,8 @@ class PageStorageImpl : public PageStorage {
   FXL_WARN_UNUSED_RESULT Status SynchronousAddPiece(
       coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
       ChangeSource source, IsObjectSynced is_object_synced,
-      std::unique_ptr<DataSource::DataChunk> data);
+      std::unique_ptr<DataSource::DataChunk> data,
+      ObjectReferencesAndPriority references);
 
   // Synchronous helper methods.
 

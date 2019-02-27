@@ -33,7 +33,7 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
         bool called;
         page_storage()->AddObjectFromLocal(
             storage::ObjectType::BLOB,
-            storage::DataSource::Create(std::move(value)),
+            storage::DataSource::Create(std::move(value)), {},
             callback::Capture(callback::SetWhenCalled(&called), &status,
                               &object_identifier));
         RunLoopUntilIdle();

@@ -30,8 +30,8 @@ class TreeNode {
       fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
   // Creates a |TreeNode| object with the given entries and children. |children|
-  // is a map from the index of the child to the identfiier of the child. It
-  // only contains non-empty children. It is expected that all child index are
+  // is a map from the index of the child to the identifier of the child. It
+  // only contains non-empty children. It is expected that all child indexes are
   // between |0| and |size(entries)| (included). The |callback| will be called
   // with the success or error status and the id of the new node.
   static void FromEntries(

@@ -149,8 +149,12 @@ class PageStorage : public PageSyncClient {
   virtual void MarkSyncedToPeer(fit::function<void(Status)> callback) = 0;
 
   // Adds the given local object and passes the new object's id to the callback.
+  // |tree_references| are the BTree-level references (eg. references from the
+  // node to its BTree children and values) if |object_type| is TREE_NODE, and
+  // must be empty otherwise.
   virtual void AddObjectFromLocal(
       ObjectType object_type, std::unique_ptr<DataSource> data_source,
+      ObjectReferencesAndPriority tree_references,
       fit::function<void(Status, ObjectIdentifier)> callback) = 0;
   // Finds the Object associated with the given |object_identifier|. The result
   // or an an error will be returned through the given |callback|. If |location|

@@ -175,7 +175,7 @@ StorageTest::~StorageTest() {}
   Status status;
   ObjectIdentifier object_identifier;
   GetStorage()->AddObjectFromLocal(
-      ObjectType::BLOB, DataSource::Create(value),
+      ObjectType::BLOB, DataSource::Create(value), {},
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         &object_identifier));
   RunLoopFor(kSufficientDelay);

@@ -25,7 +25,7 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/files/scoped_temp_dir.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
 namespace {
@@ -110,9 +110,11 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
   void AddObjectFromLocal(
       storage::ObjectType object_type,
       std::unique_ptr<storage::DataSource> data_source,
+      storage::ObjectReferencesAndPriority tree_references,
       fit::function<void(storage::Status, storage::ObjectIdentifier)> callback)
       override {
     storage_->AddObjectFromLocal(object_type, std::move(data_source),
+                                 std::move(tree_references),
                                  std::move(callback));
   }
 

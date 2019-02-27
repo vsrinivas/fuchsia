@@ -110,7 +110,7 @@ class PageImplTest : public TestWithEnvironment {
     storage::ObjectIdentifier object_identifier;
     fake_storage_->AddObjectFromLocal(
         storage::ObjectType::BLOB,
-        storage::DataSource::Create(std::move(value_string)),
+        storage::DataSource::Create(std::move(value_string)), {},
         callback::Capture(callback::SetWhenCalled(&called), &status,
                           &object_identifier));
     DrainLoop();

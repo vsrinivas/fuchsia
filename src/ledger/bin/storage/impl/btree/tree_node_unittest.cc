@@ -7,16 +7,23 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
 namespace btree {
 namespace {
+using ::testing::IsEmpty;
+using ::testing::IsSupersetOf;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 
 class FakePageStorageValidDigest : public fake::FakePageStorage {
  public:
@@ -173,6 +180,107 @@ TEST_F(TreeNodeTest, Serialization) {
   EXPECT_TRUE(DecodeNode(data, &level, &parsed_entries, &parsed_children));
   EXPECT_EQ(entries, parsed_entries);
   EXPECT_EQ(children, parsed_children);
+}
+
+TEST_F(TreeNodeTest, References) {
+  // Create a BTree with the following layout (XX is key "keyXX"):
+  //                 [03, 07]
+  //            /       |            \
+  // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
+  // Each key XX points to "objectYY" with either a lazy or eager link. YY is
+  // chosen so as to create a number of collisions to test various edge cases
+  // (see actual values below and comments in test expectation).
+
+  // References to inline objects are ignored so we ensure object00 and object01
+  // are big enough not to be inlined.
+  std::unique_ptr<const Object> object0, object1, object2;
+  ASSERT_TRUE(AddObject(ObjectData("object00", InlineBehavior::PREVENT).value,
+                        &object0));
+  ASSERT_TRUE(AddObject(ObjectData("object01", InlineBehavior::PREVENT).value,
+                        &object1));
+  // Inline object, the references to it should be skipped.
+  ASSERT_TRUE(AddObject("object02", &object2));
+  const ObjectIdentifier object0_id = object0->GetIdentifier();
+  const ObjectIdentifier object1_id = object1->GetIdentifier();
+  const ObjectIdentifier inlined_object_id = object2->GetIdentifier();
+
+  const std::vector<Entry> entries = {
+      // A single node pointing to the same value with both eager and lazy
+      // links.
+      Entry{"key00", object0_id, KeyPriority::LAZY},
+      Entry{"key01", object1_id, KeyPriority::EAGER},
+      Entry{"key02", object0_id, KeyPriority::EAGER},
+
+      Entry{"key03", object1_id, KeyPriority::LAZY},
+
+      // Two lazy references for the same object.
+      Entry{"key04", object0_id, KeyPriority::LAZY},
+      Entry{"key05", object1_id, KeyPriority::EAGER},
+      Entry{"key06", object0_id, KeyPriority::LAZY},
+
+      Entry{"key07", object1_id, KeyPriority::EAGER},
+
+      // Two eager references for the same object, and an inlined object.
+      Entry{"key08", object0_id, KeyPriority::EAGER},
+      Entry{"key09", object1_id, KeyPriority::LAZY},
+      Entry{"key10", object0_id, KeyPriority::EAGER},
+      Entry{"key11", inlined_object_id, KeyPriority::EAGER}};
+
+  std::unique_ptr<const TreeNode> root, child0, child1, child2;
+  ASSERT_TRUE(
+      CreateNodeFromEntries({entries[0], entries[1], entries[2]}, {}, &child0));
+  ASSERT_TRUE(
+      CreateNodeFromEntries({entries[4], entries[5], entries[6]}, {}, &child1));
+  ASSERT_TRUE(CreateNodeFromEntries(
+      {entries[8], entries[9], entries[10], entries[11]}, {}, &child2));
+  ASSERT_TRUE(CreateNodeFromEntries({entries[3], entries[7]},
+                                    {{0, child0->GetIdentifier()},
+                                     {1, child1->GetIdentifier()},
+                                     {2, child2->GetIdentifier()}},
+                                    &root));
+
+  const ObjectDigest digest0 = object0->GetIdentifier().object_digest();
+  const ObjectDigest digest1 = object1->GetIdentifier().object_digest();
+  EXPECT_THAT(
+      fake_storage_.GetReferences(),
+      // All the pieces are small enough not to get split so we know all objects
+      // and can exhaustively enumerate references.
+      UnorderedElementsAre(
+          // References from the root piece.
+          Pair(root->GetIdentifier().object_digest(),
+               UnorderedElementsAre(
+                   // Keys
+                   Pair(digest1, KeyPriority::LAZY),   // key03
+                   Pair(digest1, KeyPriority::EAGER),  // key07
+                   // Children
+                   Pair(child0->GetIdentifier().object_digest(),
+                        KeyPriority::EAGER),
+                   Pair(child1->GetIdentifier().object_digest(),
+                        KeyPriority::EAGER),
+                   Pair(child2->GetIdentifier().object_digest(),
+                        KeyPriority::EAGER))),
+          // References from each child, which don't have any children
+          // themselves, but reference values.
+          Pair(child0->GetIdentifier().object_digest(),
+               UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),   // key00
+                                    Pair(digest1, KeyPriority::EAGER),  // key01
+                                    Pair(digest0, KeyPriority::EAGER)   // key02
+                                    )),
+          Pair(child1->GetIdentifier().object_digest(),
+               UnorderedElementsAre(
+                   Pair(digest0, KeyPriority::LAZY),  // key04 and key06
+                   Pair(digest1, KeyPriority::EAGER)  // key05
+                   )),
+          Pair(child2->GetIdentifier().object_digest(),
+               UnorderedElementsAre(
+                   Pair(digest0, KeyPriority::EAGER),  // key08 and key10
+                   Pair(digest1, KeyPriority::LAZY)    // key09
+                   // No reference to key11 (points to inline object02)
+                   )),
+          // References from values, which don't have any children themselves.
+          Pair(object0->GetIdentifier().object_digest(), IsEmpty()),
+          Pair(object1->GetIdentifier().object_digest(), IsEmpty()),
+          Pair(object2->GetIdentifier().object_digest(), IsEmpty())));
 }
 
 }  // namespace
