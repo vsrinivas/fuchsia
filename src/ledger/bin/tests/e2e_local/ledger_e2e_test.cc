@@ -18,6 +18,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/lib/base64url/base64url.h"
+#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -33,6 +35,31 @@ namespace e2e_local {
 namespace {
 
 using ::testing::ElementsAre;
+
+// Recursively searches for a directory with name |target_dir| and returns
+// whether it was found. If found, |path_to_dir| is updated with the path from
+// the source path.
+bool FindPathToDir(const ledger::DetachedPath& root_path,
+                   fxl::StringView target_dir,
+                   ledger::DetachedPath* path_to_dir) {
+  bool dir_found = false;
+  auto on_next_directory_entry = [&](fxl::StringView entry) {
+    ledger::DetachedPath current_path = root_path.SubPath(entry);
+    if (files::IsDirectoryAt(current_path.root_fd(), current_path.path())) {
+      if (entry == target_dir) {
+        dir_found = true;
+        *path_to_dir = std::move(current_path);
+        return false;
+      }
+      dir_found = FindPathToDir(current_path, target_dir, path_to_dir);
+      // If the page path was found, stop the iteration by returning false.
+      return !dir_found;
+    }
+    return true;
+  };
+  ledger::GetDirectoryEntries(root_path, on_next_directory_entry);
+  return dir_found;
+}
 
 template <class A>
 bool Equals(const fidl::VectorPtr<uint8_t>& a1, const A& a2) {
@@ -141,6 +168,64 @@ TEST_F(LedgerEndToEndTest, Terminate) {
   controller_->Terminate();
   RunLoop();
   EXPECT_TRUE(called);
+}
+
+TEST_F(LedgerEndToEndTest, ClearPage) {
+  Init({});
+  ledger::Status status;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
+      ledger_repository;
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr, "",
+      ledger_repository.NewRequest());
+
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
+  ASSERT_EQ(ZX_OK, ledger_repository->Sync());
+
+  int page_count = 5;
+
+  std::vector<ledger::DetachedPath> page_paths;
+  page_paths.reserve(page_count);
+
+  // Create 5 pages, add contents and clear them.
+  for (int i = 0; i < page_count; ++i) {
+    fidl::SynchronousInterfacePtr<ledger::Page> page;
+    ledger_->GetPage(nullptr, page.NewRequest(), &status);
+    ASSERT_EQ(ledger::Status::OK, status);
+
+    // Check that the directory has been created.
+    ledger::PageId page_id;
+    page->GetId(&page_id);
+
+    // The following is assuming that the page's folder is using the name
+    // <base64(page_id)>.
+    std::string page_dir_name =
+        base64url::Base64UrlEncode(convert::ExtendedStringView(page_id.id));
+    ledger::DetachedPath page_path;
+    ASSERT_TRUE(FindPathToDir(ledger::DetachedPath(tmpfs.root_fd()),
+                              page_dir_name, &page_path))
+        << "Failed to find page's directory. Expected to find directory named "
+           "`base64(page_id)`: "
+        << page_dir_name;
+    page_paths.push_back(std::move(page_path));
+
+    // Insert an entry.
+    page->Put(TestArray(), TestArray(), &status);
+    EXPECT_EQ(ledger::Status::OK, status);
+
+    // Clear the page and close it.
+    page->Clear(&status);
+    EXPECT_EQ(ledger::Status::OK, status);
+    page.Unbind();
+  }
+
+  // Make sure all directories have been deleted.
+  for (const ledger::DetachedPath& path : page_paths) {
+    RunLoopUntil(
+        [&] { return !files::IsDirectoryAt(path.root_fd(), path.path()); });
+    EXPECT_FALSE(files::IsDirectoryAt(tmpfs.root_fd(), path.path()));
+  }
 }
 
 // Verifies the cloud erase recovery in case of a cloud that was erased before
