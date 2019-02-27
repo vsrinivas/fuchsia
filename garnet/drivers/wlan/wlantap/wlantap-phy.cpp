@@ -60,7 +60,7 @@ template <typename T, size_t N>::fidl::Array<T, N> ToFidlArray(const T (&c_array
     ::fidl::Array<T, N> ret;
     std::copy_n(&c_array[0], N, ret.begin());
     return ret;
-};
+}
 
 struct EventSender {
     explicit EventSender(const zx::channel& channel) : encoder_(0), channel_(channel.get()) {}

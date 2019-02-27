@@ -23,10 +23,10 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 
-MODULE_AUTHOR("Broadcom Corporation");
-MODULE_DESCRIPTION("Broadcom 802.11n wireless LAN driver utilities.");
-MODULE_SUPPORTED_DEVICE("Broadcom 802.11n WLAN cards");
-MODULE_LICENSE("Dual BSD/GPL");
+MODULE_AUTHOR("Broadcom Corporation")
+MODULE_DESCRIPTION("Broadcom 802.11n wireless LAN driver utilities.")
+MODULE_SUPPORTED_DEVICE("Broadcom 802.11n WLAN cards")
+MODULE_LICENSE("Dual BSD/GPL")
 
 struct brcmf_netbuf* brcmu_pkt_buf_get_netbuf(uint len) {
     struct brcmf_netbuf* netbuf;

@@ -34,9 +34,9 @@
 #include "linuxisms.h"
 #include "of.h"
 
-MODULE_AUTHOR("Broadcom Corporation");
-MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.");
-MODULE_LICENSE("Dual BSD/GPL");
+MODULE_AUTHOR("Broadcom Corporation")
+MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.")
+MODULE_LICENSE("Dual BSD/GPL")
 
 const uint8_t ALLFFMAC[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -47,30 +47,30 @@ const uint8_t ALLFFMAC[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 #define BRCMF_JOIN_PREF_RSSI_BOOST 8
 
 static int brcmf_p2p_enable;
-module_param_named(p2pon, brcmf_p2p_enable, int, 0);
-MODULE_PARM_DESC(p2pon, "Enable legacy p2p management functionality");
+module_param_named(p2pon, brcmf_p2p_enable, int, 0)
+MODULE_PARM_DESC(p2pon, "Enable legacy p2p management functionality")
 
 static int brcmf_feature_disable;
-module_param_named(feature_disable, brcmf_feature_disable, int, 0);
-MODULE_PARM_DESC(feature_disable, "Disable features");
+module_param_named(feature_disable, brcmf_feature_disable, int, 0)
+MODULE_PARM_DESC(feature_disable, "Disable features")
 
 static char brcmf_firmware_path[BRCMF_FW_ALTPATH_LEN] = "brcmfmac/";
-module_param_string(alternative_fw_path, brcmf_firmware_path, BRCMF_FW_ALTPATH_LEN, S_IRUSR);
-MODULE_PARM_DESC(alternative_fw_path, "Alternative firmware path");
+module_param_string(alternative_fw_path, brcmf_firmware_path, BRCMF_FW_ALTPATH_LEN, S_IRUSR)
+MODULE_PARM_DESC(alternative_fw_path, "Alternative firmware path")
 
 static int brcmf_fcmode;
-module_param_named(fcmode, brcmf_fcmode, int, 0);
-MODULE_PARM_DESC(fcmode, "Mode of firmware signalled flow control");
+module_param_named(fcmode, brcmf_fcmode, int, 0)
+MODULE_PARM_DESC(fcmode, "Mode of firmware signalled flow control")
 
 static int brcmf_roamoff;
-module_param_named(roamoff, brcmf_roamoff, int, S_IRUSR);
-MODULE_PARM_DESC(roamoff, "Do not use internal roaming engine");
+module_param_named(roamoff, brcmf_roamoff, int, S_IRUSR)
+MODULE_PARM_DESC(roamoff, "Do not use internal roaming engine")
 
 #ifdef DEBUG
 /* always succeed brcmf_bus_started() */
 static int brcmf_ignore_probe_fail;
-module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0);
-MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging");
+module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0)
+MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging")
 #endif
 
 struct brcmf_mp_global_t brcmf_mp_global;
@@ -522,5 +522,5 @@ static void brcmfmac_module_exit(void) {
     brcmf_debugfs_exit();
 }
 
-module_init(brcmfmac_module_init);
-module_exit(brcmfmac_module_exit);
+module_init(brcmfmac_module_init)
+module_exit(brcmfmac_module_exit)

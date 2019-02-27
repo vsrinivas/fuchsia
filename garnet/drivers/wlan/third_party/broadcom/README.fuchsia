@@ -6,3 +6,4 @@ Only the drivers/net/wireless/broadcom/brcm80211 directory was imported.
 
 Modifications:
  - added LICENSE and README.fuchsia
+ - Fix some trivial warnings (extra semicolons)
