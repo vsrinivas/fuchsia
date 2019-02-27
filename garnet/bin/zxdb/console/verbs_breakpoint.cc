@@ -25,7 +25,6 @@ namespace {
 constexpr int kStopSwitch = 1;
 constexpr int kEnableSwitch = 2;
 constexpr int kTypeSwitch = 3;
-constexpr int kElfSymbolSwitch = 4;
 
 // Callback for when updating a breakpoint is done.
 void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
@@ -154,15 +153,10 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
         settings.location = InputLocation(cmd.frame()->GetAddress());
     }
   } else if (cmd.args().size() == 1u) {
-    if (cmd.HasSwitch(kElfSymbolSwitch) &&
-        cmd.GetSwitchValue(kElfSymbolSwitch) == "true") {
-      settings.location = InputLocation(cmd.args()[0], true);
-    } else {
-      Err err =
-          ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
-      if (err.has_error())
-        return err;
-    }
+    Err err =
+      ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
+    if (err.has_error())
+      return err;
   } else {
     return Err(ErrType::kInput,
                "Expecting only one arg for the location.\n"
@@ -222,13 +216,6 @@ Location arguments
 )" LOCATION_ARG_HELP("break")
         R"(
 Options
-
-  --elf-symbol=[ true | false ]
-
-      Parses the location as a name to be looked up directly in the ELF symbol
-      tables. This will often yield different addresses than normal resolution.
-      For example it will yield locations in the PLT for symbols with PLT
-      linkage.
 
   --enable=[ true | false ]
   -e [ true | false ]
@@ -445,14 +432,12 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');
   SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
-  SwitchRecord elf_symbol_switch(kElfSymbolSwitch, true, "elf-symbol");
 
   VerbRecord break_record(&DoBreak, {"break", "b"}, kBreakShortHelp, kBreakHelp,
                           CommandGroup::kBreakpoint);
   break_record.switches.push_back(enable_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
-  break_record.switches.push_back(elf_symbol_switch);
   (*verbs)[Verb::kBreak] = break_record;
 
   // Note: if "edit" becomes more general than just for breakpoints, we'll

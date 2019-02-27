@@ -23,14 +23,13 @@ namespace zxdb {
 // The caller will need to have resolve file names with the symbol system
 // prior to setting.
 struct InputLocation {
-  enum class Type { kNone, kLine, kSymbol, kAddress, kElfSymbol };
+  enum class Type { kNone, kLine, kSymbol, kAddress };
 
   InputLocation() = default;
   explicit InputLocation(FileLine file_line)
       : type(Type::kLine), line(std::move(file_line)) {}
-  explicit InputLocation(std::string symbol, bool elf = false)
-      : type(elf ? Type::kElfSymbol : Type::kSymbol),
-        symbol(std::move(symbol)) {}
+  explicit InputLocation(std::string symbol)
+      : type(Type::kSymbol), symbol(std::move(symbol)) {}
   explicit InputLocation(uint64_t address)
       : type(Type::kAddress), address(address) {}
 
@@ -44,8 +43,6 @@ struct InputLocation {
         return "symbol";
       case Type::kAddress:
         return "address";
-      case Type::kElfSymbol:
-        return "ELF Linkage address";
       case Type::kNone:
       default:
         return "<no location type>";

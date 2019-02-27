@@ -25,24 +25,12 @@ fxl::WeakPtr<LoadedModuleSymbols> LoadedModuleSymbols::GetWeakPtr() {
 
 std::vector<Location> LoadedModuleSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
-  std::vector<Location> ret;
-
   if (module_) {
-    ret = module_symbols()->ResolveInputLocation(symbol_context(),
-                                                 input_location, options);
+    return module_symbols()->ResolveInputLocation(symbol_context(),
+                                                  input_location, options);
   }
 
-  if (input_location.type == InputLocation::Type::kElfSymbol ||
-      input_location.type == InputLocation::Type::kSymbol) {
-    for (const auto& sym : elf_symbols_) {
-      if (sym.name == input_location.symbol) {
-        ret.emplace_back(Location::State::kAddress, sym.value);
-        break;
-      }
-    }
-  }
-
-  return ret;
+  return std::vector<Location>();
 }
 
 }  // namespace zxdb

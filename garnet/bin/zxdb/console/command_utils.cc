@@ -402,7 +402,6 @@ std::string DescribeInputLocation(const InputLocation& location) {
     case InputLocation::Type::kLine:
       return DescribeFileLine(location.line);
     case InputLocation::Type::kSymbol:
-    case InputLocation::Type::kElfSymbol:
       return location.symbol;
     case InputLocation::Type::kAddress:
       return fxl::StringPrintf("0x%" PRIx64, location.address);

@@ -137,9 +137,6 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
   switch (input_location.type) {
-    case InputLocation::Type::kElfSymbol:
-      // This will be handled elsewhere.
-      // Fall through and return nothing.
     case InputLocation::Type::kNone:
       return std::vector<Location>();
     case InputLocation::Type::kLine:

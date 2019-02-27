@@ -245,26 +245,8 @@ void ProcessImpl::UpdateThreads(
 }
 
 void ProcessImpl::DidLoadModuleSymbols(LoadedModuleSymbols* module) {
-  debug_ipc::SymbolTablesRequest request;
-
-  request.process_koid = koid_;
-  request.base = module->load_address();
-  request.build_id = module->build_id();
-
-  session()->remote_api()->SymbolTables(
-      request, [weak_this = weak_factory_.GetWeakPtr(),
-                weak_module = module->GetWeakPtr()](
-                   const Err& err, debug_ipc::SymbolTablesReply reply) {
-        if (!weak_this || !weak_module)
-          return;
-
-        if (!err.has_error()) {
-          weak_module->SetElfSymbols(reply.symbols);
-        }
-
-        for (auto& observer : weak_this->observers())
-          observer.DidLoadModuleSymbols(weak_this.get(), weak_module.get());
-      });
+  for (auto& observer : observers())
+    observer.DidLoadModuleSymbols(this, module);
 }
 
 void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {

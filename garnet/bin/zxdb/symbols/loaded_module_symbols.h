@@ -44,19 +44,9 @@ class LoadedModuleSymbols {
   // Build ID for the module.
   const std::string& build_id() const { return build_id_; }
 
-  // ELF Symbols for the module.
-  const std::vector<debug_ipc::ElfSymbol>& elf_symbols() const {
-    return elf_symbols_;
-  }
-
   // Most functions in ModuleSymbols take a symbol context to convert between
   // absolute addresses in memory to ones relative to the module load address.
   const SymbolContext& symbol_context() const { return symbol_context_; }
-
-  // Set the elf symbols for the module.
-  void SetElfSymbols(std::vector<debug_ipc::ElfSymbol> symbols) {
-    elf_symbols_ = std::move(symbols);
-  }
 
   // Converts the given InputLocation into one or more locations. If the
   // location is an address, it will be be returned whether or not the address
@@ -103,7 +93,6 @@ class LoadedModuleSymbols {
 
   uint64_t load_address_;
   std::string build_id_;
-  std::vector<debug_ipc::ElfSymbol> elf_symbols_;
   SymbolContext symbol_context_;
 
   fxl::WeakPtrFactory<LoadedModuleSymbols> weak_factory_;
