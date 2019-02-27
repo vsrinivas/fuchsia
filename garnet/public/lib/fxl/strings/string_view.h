@@ -65,10 +65,10 @@ class FXL_EXPORT StringView {
   constexpr bool empty() const { return size_ == 0u; }
 
   // Element access methods.
-  constexpr char operator[](size_t pos) const { return data_[pos]; };
-  constexpr char at(size_t pos) const { return data_[pos]; };
-  constexpr char front() const { return data_[0]; };
-  constexpr char back() const { return data_[size_ - 1]; };
+  constexpr char operator[](size_t pos) const { return data_[pos]; }
+  constexpr char at(size_t pos) const { return data_[pos]; }
+  constexpr char front() const { return data_[0]; }
+  constexpr char back() const { return data_[size_ - 1]; }
   constexpr const char* data() const { return data_; }
 
   // Iterators.

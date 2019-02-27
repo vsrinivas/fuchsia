@@ -36,7 +36,7 @@ struct TypeConverter;
 template <typename T, typename U>
 inline T To(const U& obj) {
   return TypeConverter<T, U>::Convert(obj);
-};
+}
 
 }  // namespace fxl
 
