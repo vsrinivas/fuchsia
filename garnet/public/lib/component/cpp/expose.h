@@ -189,7 +189,7 @@ class Object : public fuchsia::inspect::Inspect {
     std::lock_guard<std::mutex> lock(ret->mutex_);
     ret->self_weak_ptr_ = ret;
     return ret;
-  };
+  }
 
   // Gets the name of this |Object|.
   std::string name() { return name_; }
