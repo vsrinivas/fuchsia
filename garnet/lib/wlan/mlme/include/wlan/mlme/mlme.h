@@ -33,12 +33,12 @@ class ObjectId : public common::BitField<uint64_t> {
     constexpr ObjectId() = default;
 
     // ObjectSubtype
-    WLAN_BIT_FIELD(subtype, 0, 4);
+    WLAN_BIT_FIELD(subtype, 0, 4)
     // ObjectTarget
-    WLAN_BIT_FIELD(target, 4, 4);
+    WLAN_BIT_FIELD(target, 4, 4)
 
     // For objects with a MAC address
-    WLAN_BIT_FIELD(mac, 8, 48);
+    WLAN_BIT_FIELD(mac, 8, 48)
 };
 
 class DeviceInterface;
@@ -55,10 +55,10 @@ class Mlme {
     virtual zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) = 0;
     virtual zx_status_t HandleTimeout(const ObjectId id) = 0;
     // Called when the hardware reports an indication such as Pre-TBTT.
-    virtual void HwIndication(uint32_t ind){};
-    virtual void HwScanComplete(uint8_t result_code){};
-    virtual ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const { return {}; };
-    virtual void ResetMlmeStats(){};
+    virtual void HwIndication(uint32_t ind) {}
+    virtual void HwScanComplete(uint8_t result_code) {}
+    virtual ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const { return {}; }
+    virtual void ResetMlmeStats() {}
 };
 
 }  // namespace wlan

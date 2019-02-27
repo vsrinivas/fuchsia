@@ -45,8 +45,8 @@ struct SupportedRate : public common::BitField<uint8_t> {
     static SupportedRate basic(uint8_t rate) { return SupportedRate(rate, true); }
     static SupportedRate raw(uint8_t rate) { return SupportedRate(rate); }
 
-    WLAN_BIT_FIELD(rate, 0, 7);
-    WLAN_BIT_FIELD(is_basic, 7, 1);
+    WLAN_BIT_FIELD(rate, 0, 7)
+    WLAN_BIT_FIELD(is_basic, 7, 1)
 
     operator uint8_t() const { return val(); }
     bool operator==(const SupportedRate& other) const { return rate() == other.rate(); }
@@ -75,8 +75,8 @@ class BitmapControl : public common::BitField<uint8_t> {
    public:
     BitmapControl() = default;
     explicit BitmapControl(uint8_t raw) : BitField(raw) {}
-    WLAN_BIT_FIELD(group_traffic_ind, 0, 1);
-    WLAN_BIT_FIELD(offset, 1, 7);
+    WLAN_BIT_FIELD(group_traffic_ind, 0, 1)
+    WLAN_BIT_FIELD(offset, 1, 7)
 };
 
 // IEEE Std 802.11-2016, 9.4.2.6
@@ -133,9 +133,9 @@ struct MeshConfiguration {
         MeshFormationInfo() = default;
         explicit MeshFormationInfo(uint8_t raw) : BitField(raw) {}
 
-        WLAN_BIT_FIELD(connected_to_mesh_gate, 0, 1);
-        WLAN_BIT_FIELD(num_peerings, 1, 6);
-        WLAN_BIT_FIELD(connected_to_as, 7, 1);
+        WLAN_BIT_FIELD(connected_to_mesh_gate, 0, 1)
+        WLAN_BIT_FIELD(num_peerings, 1, 6)
+        WLAN_BIT_FIELD(connected_to_as, 7, 1)
     } __PACKED;
 
     ::fuchsia::wlan::mlme::MeshConfiguration ToFidl() const {
@@ -166,13 +166,13 @@ struct MeshConfiguration {
         MeshCapability() = default;
         explicit MeshCapability(uint8_t raw) : BitField(raw) {}
 
-        WLAN_BIT_FIELD(accepting_additional_peerings, 0, 1);
-        WLAN_BIT_FIELD(mcca_supported, 1, 1);
-        WLAN_BIT_FIELD(mcca_enabled, 2, 1);
-        WLAN_BIT_FIELD(forwarding, 3, 1);
-        WLAN_BIT_FIELD(mbca_enabled, 4, 1);
-        WLAN_BIT_FIELD(tbtt_adjusting, 5, 1);
-        WLAN_BIT_FIELD(power_save_level, 6, 1);
+        WLAN_BIT_FIELD(accepting_additional_peerings, 0, 1)
+        WLAN_BIT_FIELD(mcca_supported, 1, 1)
+        WLAN_BIT_FIELD(mcca_enabled, 2, 1)
+        WLAN_BIT_FIELD(forwarding, 3, 1)
+        WLAN_BIT_FIELD(mbca_enabled, 4, 1)
+        WLAN_BIT_FIELD(tbtt_adjusting, 5, 1)
+        WLAN_BIT_FIELD(power_save_level, 6, 1)
         // bit 7 is reserved
     } __PACKED;
 
@@ -189,11 +189,11 @@ constexpr size_t kMaxMeshIdLen = 32;
 
 // IEEE Std 802.11-2016, 9.4.2.113, Figure 9-478
 struct PreqFlags : public common::BitField<uint8_t> {
-    WLAN_BIT_FIELD(gate_announcement, 0, 1);
-    WLAN_BIT_FIELD(addressing_mode, 1, 1);
-    WLAN_BIT_FIELD(proactive, 2, 1);
+    WLAN_BIT_FIELD(gate_announcement, 0, 1)
+    WLAN_BIT_FIELD(addressing_mode, 1, 1)
+    WLAN_BIT_FIELD(proactive, 2, 1)
     // bits 3-5 reserved
-    WLAN_BIT_FIELD(addr_ext, 6, 1);
+    WLAN_BIT_FIELD(addr_ext, 6, 1)
     // bit 7 reserved
 };
 
@@ -227,9 +227,9 @@ constexpr size_t kPreqMaxTargets = 20;
 
 // IEEE Std 802.11-2016, 9.4.2.113, Figure 9-479
 struct PreqPerTargetFlags : public common::BitField<uint8_t> {
-    WLAN_BIT_FIELD(target_only, 0, 1);
+    WLAN_BIT_FIELD(target_only, 0, 1)
     // bit 1 reserved
-    WLAN_BIT_FIELD(usn, 2, 1);
+    WLAN_BIT_FIELD(usn, 2, 1)
     // bits 3-7 reserved
 };
 
@@ -249,7 +249,7 @@ struct PrepFlags : public common::BitField<uint8_t> {
     explicit PrepFlags(uint8_t raw_value) : common::BitField<uint8_t>(raw_value) {}
 
     // bits 0-5 reserved
-    WLAN_BIT_FIELD(addr_ext, 6, 1);
+    WLAN_BIT_FIELD(addr_ext, 6, 1)
     // bit 7 reserved
 };
 
@@ -289,7 +289,7 @@ struct PerrHeader {
 // IEEE Std 802.11-2016, 9.4.2.115, Figure 9-483
 struct PerrPerDestinationFlags : public common::BitField<uint8_t> {
     // bits 0-5 reserved
-    WLAN_BIT_FIELD(addr_ext, 6, 1);
+    WLAN_BIT_FIELD(addr_ext, 6, 1)
     // bit 7 reserved
 };
 
@@ -316,20 +316,20 @@ class QosInfo : public common::BitField<uint8_t> {
     constexpr QosInfo() = default;
 
     // AP specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-82
-    WLAN_BIT_FIELD(edca_param_set_update_count, 0, 4);
-    WLAN_BIT_FIELD(qack, 4, 1);
-    WLAN_BIT_FIELD(queue_request, 5, 1);
-    WLAN_BIT_FIELD(txop_request, 6, 1);
+    WLAN_BIT_FIELD(edca_param_set_update_count, 0, 4)
+    WLAN_BIT_FIELD(qack, 4, 1)
+    WLAN_BIT_FIELD(queue_request, 5, 1)
+    WLAN_BIT_FIELD(txop_request, 6, 1)
     // 8th bit reserved
 
     // Non-AP STA specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-83
-    WLAN_BIT_FIELD(ac_vo_uapsd_flag, 0, 1);
-    WLAN_BIT_FIELD(ac_vi_uapsd_flag, 1, 1);
-    WLAN_BIT_FIELD(ac_bk_uapsd_flag, 2, 1);
-    WLAN_BIT_FIELD(ac_be_uapsd_flag, 3, 1);
+    WLAN_BIT_FIELD(ac_vo_uapsd_flag, 0, 1)
+    WLAN_BIT_FIELD(ac_vi_uapsd_flag, 1, 1)
+    WLAN_BIT_FIELD(ac_bk_uapsd_flag, 2, 1)
+    WLAN_BIT_FIELD(ac_be_uapsd_flag, 3, 1)
     // qack already defined in AP specific structure.
-    WLAN_BIT_FIELD(max_sp_len, 5, 1);
-    WLAN_BIT_FIELD(more_data_ack, 6, 1);
+    WLAN_BIT_FIELD(max_sp_len, 5, 1)
+    WLAN_BIT_FIELD(more_data_ack, 6, 1)
     // 8th bit reserved
 } __PACKED;
 
@@ -372,20 +372,20 @@ enum TsScheduleSetting : uint8_t {
 // IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
 class TsInfoPart1 : public common::BitField<uint16_t> {
    public:
-    WLAN_BIT_FIELD(traffic_type, 0, 1);
-    WLAN_BIT_FIELD(tsid, 1, 4);
-    WLAN_BIT_FIELD(direction, 5, 2);
-    WLAN_BIT_FIELD(access_policy, 7, 2);
-    WLAN_BIT_FIELD(aggregation, 9, 1);
-    WLAN_BIT_FIELD(apsd, 10, 1);
-    WLAN_BIT_FIELD(user_priority, 11, 3);
-    WLAN_BIT_FIELD(ack_policy, 14, 2);
+    WLAN_BIT_FIELD(traffic_type, 0, 1)
+    WLAN_BIT_FIELD(tsid, 1, 4)
+    WLAN_BIT_FIELD(direction, 5, 2)
+    WLAN_BIT_FIELD(access_policy, 7, 2)
+    WLAN_BIT_FIELD(aggregation, 9, 1)
+    WLAN_BIT_FIELD(apsd, 10, 1)
+    WLAN_BIT_FIELD(user_priority, 11, 3)
+    WLAN_BIT_FIELD(ack_policy, 14, 2)
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
 class TsInfoPart2 : public common::BitField<uint8_t> {
    public:
-    WLAN_BIT_FIELD(schedule, 0, 1);
+    WLAN_BIT_FIELD(schedule, 0, 1)
     // Bit 17-23 reserved.
 } __PACKED;
 
@@ -409,8 +409,8 @@ struct TsInfo {
 
 // IEEE Std 802.11-2016, 9.4.2.30, Figure 9-267
 struct NominalMsduSize : public common::BitField<uint16_t> {
-    WLAN_BIT_FIELD(size, 0, 15);
-    WLAN_BIT_FIELD(fixed, 15, 1);
+    WLAN_BIT_FIELD(size, 0, 15)
+    WLAN_BIT_FIELD(fixed, 15, 1)
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.30
@@ -448,21 +448,21 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
         : common::BitField<uint16_t>(ht_cap_info) {}
     constexpr HtCapabilityInfo() = default;
 
-    WLAN_BIT_FIELD(ldpc_coding_cap, 0, 1);
-    WLAN_BIT_FIELD(chan_width_set, 1, 1);  // In spec: Supported Channel Width Set
-    WLAN_BIT_FIELD(sm_power_save, 2, 2);   // Spatial Multiplexing Power Save
-    WLAN_BIT_FIELD(greenfield, 4, 1);      // HT-Greenfield.
-    WLAN_BIT_FIELD(short_gi_20, 5, 1);     // Short Guard Interval for 20 MHz
-    WLAN_BIT_FIELD(short_gi_40, 6, 1);     // Short Guard Interval for 40 MHz
-    WLAN_BIT_FIELD(tx_stbc, 7, 1);
+    WLAN_BIT_FIELD(ldpc_coding_cap, 0, 1)
+    WLAN_BIT_FIELD(chan_width_set, 1, 1)  // In spec: Supported Channel Width Set
+    WLAN_BIT_FIELD(sm_power_save, 2, 2)   // Spatial Multiplexing Power Save
+    WLAN_BIT_FIELD(greenfield, 4, 1)      // HT-Greenfield.
+    WLAN_BIT_FIELD(short_gi_20, 5, 1)     // Short Guard Interval for 20 MHz
+    WLAN_BIT_FIELD(short_gi_40, 6, 1)     // Short Guard Interval for 40 MHz
+    WLAN_BIT_FIELD(tx_stbc, 7, 1)
 
-    WLAN_BIT_FIELD(rx_stbc, 8, 2);             // maximum number of spatial streams. Up to 3.
-    WLAN_BIT_FIELD(delayed_block_ack, 10, 1);  // HT-delayed Block Ack
-    WLAN_BIT_FIELD(max_amsdu_len, 11, 1);
-    WLAN_BIT_FIELD(dsss_in_40, 12, 1);  // DSSS/CCK Mode in 40 MHz
-    WLAN_BIT_FIELD(reserved, 13, 1);
-    WLAN_BIT_FIELD(intolerant_40, 14, 1);  // 40 MHz Intolerant
-    WLAN_BIT_FIELD(lsig_txop_protect, 15, 1);
+    WLAN_BIT_FIELD(rx_stbc, 8, 2)             // maximum number of spatial streams. Up to 3.
+    WLAN_BIT_FIELD(delayed_block_ack, 10, 1)  // HT-delayed Block Ack
+    WLAN_BIT_FIELD(max_amsdu_len, 11, 1)
+    WLAN_BIT_FIELD(dsss_in_40, 12, 1)  // DSSS/CCK Mode in 40 MHz
+    WLAN_BIT_FIELD(reserved, 13, 1)
+    WLAN_BIT_FIELD(intolerant_40, 14, 1)  // 40 MHz Intolerant
+    WLAN_BIT_FIELD(lsig_txop_protect, 15, 1)
 
     enum ChanWidthSet {
         TWENTY_ONLY = 0,
@@ -528,9 +528,9 @@ class AmpduParams : public common::BitField<uint8_t> {
     constexpr explicit AmpduParams(uint8_t params) : common::BitField<uint8_t>(params) {}
     constexpr AmpduParams() = default;
 
-    WLAN_BIT_FIELD(exponent, 0, 2);           // Maximum A-MPDU Length Exponent.
-    WLAN_BIT_FIELD(min_start_spacing, 2, 3);  // Minimum MPDU Start Spacing.
-    WLAN_BIT_FIELD(reserved, 5, 3);
+    WLAN_BIT_FIELD(exponent, 0, 2)           // Maximum A-MPDU Length Exponent.
+    WLAN_BIT_FIELD(min_start_spacing, 2, 3)  // Minimum MPDU Start Spacing.
+    WLAN_BIT_FIELD(reserved, 5, 3)
 
     size_t max_ampdu_len() const { return (1 << (13 + exponent())) - 1; }
 
@@ -574,7 +574,7 @@ class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
 
     // HT-MCS table in IEEE Std 802.11-2016, Annex B.4.17.2
     // VHT-MCS tables in IEEE Std 802.11-2016, 21.5
-    WLAN_BIT_FIELD(bitmask, 0, 64);
+    WLAN_BIT_FIELD(bitmask, 0, 64)
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
@@ -583,10 +583,10 @@ class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
     constexpr explicit SupportedMcsRxMcsTail(uint32_t val) : common::BitField<uint32_t>(val) {}
     constexpr SupportedMcsRxMcsTail() = default;
 
-    WLAN_BIT_FIELD(bitmask, 0, 13);
-    WLAN_BIT_FIELD(reserved1, 13, 3);
-    WLAN_BIT_FIELD(highest_rate, 16, 10);  // Mbps. Rx Highest Supported Rate.
-    WLAN_BIT_FIELD(reserved2, 26, 6);
+    WLAN_BIT_FIELD(bitmask, 0, 13)
+    WLAN_BIT_FIELD(reserved1, 13, 3)
+    WLAN_BIT_FIELD(highest_rate, 16, 10)  // Mbps. Rx Highest Supported Rate.
+    WLAN_BIT_FIELD(reserved2, 26, 6)
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
@@ -595,11 +595,11 @@ class SupportedMcsTxMcs : public common::BitField<uint32_t> {
     constexpr explicit SupportedMcsTxMcs(uint32_t chunk) : common::BitField<uint32_t>(chunk) {}
     constexpr SupportedMcsTxMcs() = default;
 
-    WLAN_BIT_FIELD(set_defined, 0, 1);  // Add 96 for the original bit location
-    WLAN_BIT_FIELD(rx_diff, 1, 1);
-    WLAN_BIT_FIELD(max_ss, 2, 2);
-    WLAN_BIT_FIELD(ueqm, 4, 1);  // Transmit Unequal Modulation.
-    WLAN_BIT_FIELD(reserved, 5, 27);
+    WLAN_BIT_FIELD(set_defined, 0, 1)  // Add 96 for the original bit location
+    WLAN_BIT_FIELD(rx_diff, 1, 1)
+    WLAN_BIT_FIELD(max_ss, 2, 2)
+    WLAN_BIT_FIELD(ueqm, 4, 1)  // Transmit Unequal Modulation.
+    WLAN_BIT_FIELD(reserved, 5, 27)
 
     uint8_t max_ss_human() const { return max_ss() + 1; }
     void set_max_ss_human(uint8_t num) {
@@ -653,13 +653,13 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
         : common::BitField<uint16_t>(ht_ext_cap) {}
     constexpr HtExtCapabilities() = default;
 
-    WLAN_BIT_FIELD(pco, 0, 1);
-    WLAN_BIT_FIELD(pco_transition, 1, 2);
-    WLAN_BIT_FIELD(reserved1, 3, 5);
-    WLAN_BIT_FIELD(mcs_feedback, 8, 2);
-    WLAN_BIT_FIELD(htc_ht_support, 10, 1);
-    WLAN_BIT_FIELD(rd_responder, 11, 1);
-    WLAN_BIT_FIELD(reserved2, 12, 4);
+    WLAN_BIT_FIELD(pco, 0, 1)
+    WLAN_BIT_FIELD(pco_transition, 1, 2)
+    WLAN_BIT_FIELD(reserved1, 3, 5)
+    WLAN_BIT_FIELD(mcs_feedback, 8, 2)
+    WLAN_BIT_FIELD(htc_ht_support, 10, 1)
+    WLAN_BIT_FIELD(rd_responder, 11, 1)
+    WLAN_BIT_FIELD(reserved2, 12, 4)
 
     enum PcoTransitionTime {
         PCO_RESERVED = 0,  // Often translated as "No transition".
@@ -706,28 +706,28 @@ class TxBfCapability : public common::BitField<uint32_t> {
     constexpr explicit TxBfCapability(uint32_t txbf_cap) : common::BitField<uint32_t>(txbf_cap) {}
     constexpr TxBfCapability() = default;
 
-    WLAN_BIT_FIELD(implicit_rx, 0, 1);
-    WLAN_BIT_FIELD(rx_stag_sounding, 1, 1);
-    WLAN_BIT_FIELD(tx_stag_sounding, 2, 1);
-    WLAN_BIT_FIELD(rx_ndp, 3, 1);
-    WLAN_BIT_FIELD(tx_ndp, 4, 1);
-    WLAN_BIT_FIELD(implicit, 5, 1);
-    WLAN_BIT_FIELD(calibration, 6, 2);
-    WLAN_BIT_FIELD(csi, 8, 1);  // Explicit CSI Transmit Beamforming.
+    WLAN_BIT_FIELD(implicit_rx, 0, 1)
+    WLAN_BIT_FIELD(rx_stag_sounding, 1, 1)
+    WLAN_BIT_FIELD(tx_stag_sounding, 2, 1)
+    WLAN_BIT_FIELD(rx_ndp, 3, 1)
+    WLAN_BIT_FIELD(tx_ndp, 4, 1)
+    WLAN_BIT_FIELD(implicit, 5, 1)
+    WLAN_BIT_FIELD(calibration, 6, 2)
+    WLAN_BIT_FIELD(csi, 8, 1)  // Explicit CSI Transmit Beamforming.
 
-    WLAN_BIT_FIELD(noncomp_steering, 9, 1);  // Explicit Noncompressed Steering
-    WLAN_BIT_FIELD(comp_steering, 10, 1);    // Explicit Compressed Steering
-    WLAN_BIT_FIELD(csi_feedback, 11, 2);
-    WLAN_BIT_FIELD(noncomp_feedback, 13, 2);
-    WLAN_BIT_FIELD(comp_feedback, 15, 2);
-    WLAN_BIT_FIELD(min_grouping, 17, 2);
-    WLAN_BIT_FIELD(csi_antennas, 19, 2);
+    WLAN_BIT_FIELD(noncomp_steering, 9, 1)  // Explicit Noncompressed Steering
+    WLAN_BIT_FIELD(comp_steering, 10, 1)    // Explicit Compressed Steering
+    WLAN_BIT_FIELD(csi_feedback, 11, 2)
+    WLAN_BIT_FIELD(noncomp_feedback, 13, 2)
+    WLAN_BIT_FIELD(comp_feedback, 15, 2)
+    WLAN_BIT_FIELD(min_grouping, 17, 2)
+    WLAN_BIT_FIELD(csi_antennas, 19, 2)
 
-    WLAN_BIT_FIELD(noncomp_steering_ants, 21, 2);
-    WLAN_BIT_FIELD(comp_steering_ants, 23, 2);
-    WLAN_BIT_FIELD(csi_rows, 25, 2);
-    WLAN_BIT_FIELD(chan_estimation, 27, 2);
-    WLAN_BIT_FIELD(reserved, 29, 3);
+    WLAN_BIT_FIELD(noncomp_steering_ants, 21, 2)
+    WLAN_BIT_FIELD(comp_steering_ants, 23, 2)
+    WLAN_BIT_FIELD(csi_rows, 25, 2)
+    WLAN_BIT_FIELD(chan_estimation, 27, 2)
+    WLAN_BIT_FIELD(reserved, 29, 3)
 
     enum Calibration {
         CALIBRATION_NONE = 0,
@@ -758,7 +758,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         if (num < kLowerbound) num = kLowerbound;
         if (num > kUpperbound) num = kUpperbound;
         set_csi_antennas(num - 1);
-    };
+    }
 
     uint8_t noncomp_steering_ants_human() const { return noncomp_steering_ants() + 1; }
     void set_noncomp_steering_ants_human(uint8_t num) {
@@ -854,14 +854,14 @@ class AselCapability : public common::BitField<uint8_t> {
     constexpr explicit AselCapability(uint8_t asel_cap) : common::BitField<uint8_t>(asel_cap) {}
     constexpr AselCapability() = default;
 
-    WLAN_BIT_FIELD(asel, 0, 1);
-    WLAN_BIT_FIELD(csi_feedback_tx_asel, 1, 1);  // Explicit CSI Feedback based Transmit ASEL
-    WLAN_BIT_FIELD(ant_idx_feedback_tx_asel, 2, 1);
-    WLAN_BIT_FIELD(explicit_csi_feedback, 3, 1);
-    WLAN_BIT_FIELD(antenna_idx_feedback, 4, 1);
-    WLAN_BIT_FIELD(rx_asel, 5, 1);
-    WLAN_BIT_FIELD(tx_sounding_ppdu, 6, 1);
-    WLAN_BIT_FIELD(reserved, 7, 1);
+    WLAN_BIT_FIELD(asel, 0, 1)
+    WLAN_BIT_FIELD(csi_feedback_tx_asel, 1, 1)  // Explicit CSI Feedback based Transmit ASEL
+    WLAN_BIT_FIELD(ant_idx_feedback_tx_asel, 2, 1)
+    WLAN_BIT_FIELD(explicit_csi_feedback, 3, 1)
+    WLAN_BIT_FIELD(antenna_idx_feedback, 4, 1)
+    WLAN_BIT_FIELD(rx_asel, 5, 1)
+    WLAN_BIT_FIELD(tx_sounding_ppdu, 6, 1)
+    WLAN_BIT_FIELD(reserved, 7, 1)
 
     static AselCapability FromFidl(const ::fuchsia::wlan::mlme::AselCapability& fidl) {
         AselCapability dst;
@@ -957,24 +957,24 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
     constexpr explicit HtOpInfoHead(uint32_t op_info) : common::BitField<uint32_t>(op_info) {}
     constexpr HtOpInfoHead() = default;
 
-    WLAN_BIT_FIELD(secondary_chan_offset, 0, 2);
-    WLAN_BIT_FIELD(sta_chan_width, 2, 1);
-    WLAN_BIT_FIELD(rifs_mode, 3, 1);
-    WLAN_BIT_FIELD(reserved1, 4, 4);  // Note 802.11n D1.10 implementaions use these.
+    WLAN_BIT_FIELD(secondary_chan_offset, 0, 2)
+    WLAN_BIT_FIELD(sta_chan_width, 2, 1)
+    WLAN_BIT_FIELD(rifs_mode, 3, 1)
+    WLAN_BIT_FIELD(reserved1, 4, 4)  // Note 802.11n D1.10 implementaions use these.
 
-    WLAN_BIT_FIELD(ht_protect, 8, 2);
-    WLAN_BIT_FIELD(nongreenfield_present, 10, 1);  // Nongreenfield HT STAs present.
+    WLAN_BIT_FIELD(ht_protect, 8, 2)
+    WLAN_BIT_FIELD(nongreenfield_present, 10, 1)  // Nongreenfield HT STAs present.
 
-    WLAN_BIT_FIELD(reserved2, 11, 1);    // Note 802.11n D1.10 implementations use these.
-    WLAN_BIT_FIELD(obss_non_ht, 12, 1);  // OBSS Non-HT STAs present.
+    WLAN_BIT_FIELD(reserved2, 11, 1)    // Note 802.11n D1.10 implementations use these.
+    WLAN_BIT_FIELD(obss_non_ht, 12, 1)  // OBSS Non-HT STAs present.
     // IEEE 802.11-2016 Figure 9-339 has an incosistency so this is Fuchsia interpretation:
     // The channel number for the second segment in a 80+80 Mhz channel
-    WLAN_BIT_FIELD(center_freq_seg2, 13, 8);  // VHT
-    WLAN_BIT_FIELD(reserved3, 21, 3);
+    WLAN_BIT_FIELD(center_freq_seg2, 13, 8)  // VHT
+    WLAN_BIT_FIELD(reserved3, 21, 3)
 
-    WLAN_BIT_FIELD(reserved4, 24, 6);
-    WLAN_BIT_FIELD(dual_beacon, 30, 1);
-    WLAN_BIT_FIELD(dual_cts_protect, 31, 1);
+    WLAN_BIT_FIELD(reserved4, 24, 6)
+    WLAN_BIT_FIELD(dual_beacon, 30, 1)
+    WLAN_BIT_FIELD(dual_cts_protect, 31, 1)
 
     enum SecChanOffset {
         SECONDARY_NONE = 0,   // No secondary channel
@@ -1001,11 +1001,11 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
     constexpr explicit HtOpInfoTail(uint8_t val) : common::BitField<uint8_t>(val) {}
     constexpr HtOpInfoTail() = default;
 
-    WLAN_BIT_FIELD(stbc_beacon, 0, 1);  // Add 32 for the original bit location.
-    WLAN_BIT_FIELD(lsig_txop_protect, 1, 1);
-    WLAN_BIT_FIELD(pco_active, 2, 1);
-    WLAN_BIT_FIELD(pco_phase, 3, 1);
-    WLAN_BIT_FIELD(reserved5, 4, 4);
+    WLAN_BIT_FIELD(stbc_beacon, 0, 1)  // Add 32 for the original bit location.
+    WLAN_BIT_FIELD(lsig_txop_protect, 1, 1)
+    WLAN_BIT_FIELD(pco_active, 2, 1)
+    WLAN_BIT_FIELD(pco_phase, 3, 1)
+    WLAN_BIT_FIELD(reserved5, 4, 4)
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.57
@@ -1100,32 +1100,32 @@ struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
         : common::BitField<uint32_t>(vht_cap_info) {}
     constexpr VhtCapabilitiesInfo() = default;
 
-    WLAN_BIT_FIELD(max_mpdu_len, 0, 2);
+    WLAN_BIT_FIELD(max_mpdu_len, 0, 2)
 
     // Supported channel width set. See IEEE Std 802.11-2016, Table 9-250.
-    WLAN_BIT_FIELD(supported_cbw_set, 2, 2);
+    WLAN_BIT_FIELD(supported_cbw_set, 2, 2)
 
-    WLAN_BIT_FIELD(rx_ldpc, 4, 1);
-    WLAN_BIT_FIELD(sgi_cbw80, 5, 1);   // CBW80 only
-    WLAN_BIT_FIELD(sgi_cbw160, 6, 1);  // CBW160 and CBW80P80
-    WLAN_BIT_FIELD(tx_stbc, 7, 1);
-    WLAN_BIT_FIELD(rx_stbc, 8, 3);
-    WLAN_BIT_FIELD(su_bfer, 11, 1);       // Single user beamformer capable
-    WLAN_BIT_FIELD(su_bfee, 12, 1);       // Single user beamformee capable
-    WLAN_BIT_FIELD(bfee_sts, 13, 3);      // Beamformee Space-time spreading
-    WLAN_BIT_FIELD(num_sounding, 16, 3);  // number of sounding dimensions
-    WLAN_BIT_FIELD(mu_bfer, 19, 1);       // Multi user beamformer capable
-    WLAN_BIT_FIELD(mu_bfee, 20, 1);       // Multi user beamformee capable
-    WLAN_BIT_FIELD(txop_ps, 21, 1);       // Txop power save mode
-    WLAN_BIT_FIELD(htc_vht, 22, 1);
-    WLAN_BIT_FIELD(max_ampdu_exp, 23, 3);
-    WLAN_BIT_FIELD(link_adapt, 26, 2);  // VHT link adaptation capable
-    WLAN_BIT_FIELD(rx_ant_pattern, 28, 1);
-    WLAN_BIT_FIELD(tx_ant_pattern, 29, 1);
+    WLAN_BIT_FIELD(rx_ldpc, 4, 1)
+    WLAN_BIT_FIELD(sgi_cbw80, 5, 1)   // CBW80 only
+    WLAN_BIT_FIELD(sgi_cbw160, 6, 1)  // CBW160 and CBW80P80
+    WLAN_BIT_FIELD(tx_stbc, 7, 1)
+    WLAN_BIT_FIELD(rx_stbc, 8, 3)
+    WLAN_BIT_FIELD(su_bfer, 11, 1)       // Single user beamformer capable
+    WLAN_BIT_FIELD(su_bfee, 12, 1)       // Single user beamformee capable
+    WLAN_BIT_FIELD(bfee_sts, 13, 3)      // Beamformee Space-time spreading
+    WLAN_BIT_FIELD(num_sounding, 16, 3)  // number of sounding dimensions
+    WLAN_BIT_FIELD(mu_bfer, 19, 1)       // Multi user beamformer capable
+    WLAN_BIT_FIELD(mu_bfee, 20, 1)       // Multi user beamformee capable
+    WLAN_BIT_FIELD(txop_ps, 21, 1)       // Txop power save mode
+    WLAN_BIT_FIELD(htc_vht, 22, 1)
+    WLAN_BIT_FIELD(max_ampdu_exp, 23, 3)
+    WLAN_BIT_FIELD(link_adapt, 26, 2)  // VHT link adaptation capable
+    WLAN_BIT_FIELD(rx_ant_pattern, 28, 1)
+    WLAN_BIT_FIELD(tx_ant_pattern, 29, 1)
 
     // Extended number of spatial stream bandwidth supported
     // See IEEE Std 80.211-2016, Table 9-250.
-    WLAN_BIT_FIELD(ext_nss_bw, 30, 2);
+    WLAN_BIT_FIELD(ext_nss_bw, 30, 2)
 
     enum MaxMpduLen {
         OCTETS_3895 = 0,
@@ -1203,30 +1203,30 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr VhtMcsNss() = default;
 
     // Rx VHT-MCS Map
-    WLAN_BIT_FIELD(rx_max_mcs_ss1, 0, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss2, 2, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss3, 4, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss4, 6, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss5, 8, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss6, 10, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss7, 12, 2);
-    WLAN_BIT_FIELD(rx_max_mcs_ss8, 14, 2);
+    WLAN_BIT_FIELD(rx_max_mcs_ss1, 0, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss2, 2, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss3, 4, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss4, 6, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss5, 8, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss6, 10, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss7, 12, 2)
+    WLAN_BIT_FIELD(rx_max_mcs_ss8, 14, 2)
 
-    WLAN_BIT_FIELD(rx_max_data_rate, 16, 13);
-    WLAN_BIT_FIELD(max_nsts, 29, 3);
+    WLAN_BIT_FIELD(rx_max_data_rate, 16, 13)
+    WLAN_BIT_FIELD(max_nsts, 29, 3)
 
     // Tx VHT-MCS Map
-    WLAN_BIT_FIELD(tx_max_mcs_ss1, 32, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss2, 34, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss3, 36, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss4, 38, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss5, 40, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss6, 42, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss7, 44, 2);
-    WLAN_BIT_FIELD(tx_max_mcs_ss8, 46, 2);
-    WLAN_BIT_FIELD(tx_max_data_rate, 48, 13);
+    WLAN_BIT_FIELD(tx_max_mcs_ss1, 32, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss2, 34, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss3, 36, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss4, 38, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss5, 40, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss6, 42, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss7, 44, 2)
+    WLAN_BIT_FIELD(tx_max_mcs_ss8, 46, 2)
+    WLAN_BIT_FIELD(tx_max_data_rate, 48, 13)
 
-    WLAN_BIT_FIELD(ext_nss_bw, 61, 1);
+    WLAN_BIT_FIELD(ext_nss_bw, 61, 1)
     // bit 62, 63 reserved
 
     enum VhtMcsSet {
@@ -1349,14 +1349,14 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
     constexpr explicit BasicVhtMcsNss(uint16_t basic_mcs) : common::BitField<uint16_t>(basic_mcs) {}
     constexpr BasicVhtMcsNss() = default;
 
-    WLAN_BIT_FIELD(ss1, 0, 2);
-    WLAN_BIT_FIELD(ss2, 2, 2);
-    WLAN_BIT_FIELD(ss3, 4, 2);
-    WLAN_BIT_FIELD(ss4, 6, 2);
-    WLAN_BIT_FIELD(ss5, 8, 2);
-    WLAN_BIT_FIELD(ss6, 10, 2);
-    WLAN_BIT_FIELD(ss7, 12, 2);
-    WLAN_BIT_FIELD(ss8, 14, 2);
+    WLAN_BIT_FIELD(ss1, 0, 2)
+    WLAN_BIT_FIELD(ss2, 2, 2)
+    WLAN_BIT_FIELD(ss3, 4, 2)
+    WLAN_BIT_FIELD(ss4, 6, 2)
+    WLAN_BIT_FIELD(ss5, 8, 2)
+    WLAN_BIT_FIELD(ss6, 10, 2)
+    WLAN_BIT_FIELD(ss7, 12, 2)
+    WLAN_BIT_FIELD(ss8, 14, 2)
 
     enum VhtMcsEncoding {
         VHT_MCS_0_TO_7 = 0,

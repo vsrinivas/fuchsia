@@ -115,8 +115,8 @@ enum DataSubtype : uint8_t {
 // IEEE Std 802.11-2016, 9.2.4.4
 class SequenceControl : public common::BitField<uint16_t> {
    public:
-    WLAN_BIT_FIELD(frag, 0, 4);
-    WLAN_BIT_FIELD(seq, 4, 12);
+    WLAN_BIT_FIELD(frag, 0, 4)
+    WLAN_BIT_FIELD(seq, 4, 12)
 };
 
 constexpr uint16_t kMaxSequenceNumber = (1 << 12) - 1;
@@ -140,46 +140,46 @@ class QosControl : public common::BitField<uint16_t> {
     constexpr static uint8_t kMeshPowerSaveLevelBit = 1 << 1;
     constexpr static uint8_t kRspiBit = 1 << 2;
 
-    WLAN_BIT_FIELD(tid, 0, 4);
-    WLAN_BIT_FIELD(eosp, 4, 1);  // End of Service Period
-    WLAN_BIT_FIELD(ack_policy, 5, 2);
-    WLAN_BIT_FIELD(amsdu_present, 7, 1);
+    WLAN_BIT_FIELD(tid, 0, 4)
+    WLAN_BIT_FIELD(eosp, 4, 1)  // End of Service Period
+    WLAN_BIT_FIELD(ack_policy, 5, 2)
+    WLAN_BIT_FIELD(amsdu_present, 7, 1)
 
     // Interpretation varies
-    WLAN_BIT_FIELD(byte, 8, 8);
+    WLAN_BIT_FIELD(byte, 8, 8)
 };
 
 // IEEE Std 802.11-2016, 9.2.4.6
 class HtControl : public common::BitField<uint32_t> {
    public:
-    WLAN_BIT_FIELD(vht, 0, 1);
+    WLAN_BIT_FIELD(vht, 0, 1)
 
     // Structure of this middle section is defined in 9.2.4.6.2 for HT,
     // and 9.2.4.6.3 for VHT.
     // TODO(tkilbourn): define bitfield structures for each of these variants
-    WLAN_BIT_FIELD(middle, 1, 29);
-    WLAN_BIT_FIELD(ac_constraint, 30, 1);
-    WLAN_BIT_FIELD(rdg_more_ppdu, 31, 1);
+    WLAN_BIT_FIELD(middle, 1, 29)
+    WLAN_BIT_FIELD(ac_constraint, 30, 1)
+    WLAN_BIT_FIELD(rdg_more_ppdu, 31, 1)
 };
 
 // IEEE Std 802.11-2016, 9.4.1.4
 class CapabilityInfo : public common::BitField<uint16_t> {
    public:
-    WLAN_BIT_FIELD(ess, 0, 1);
-    WLAN_BIT_FIELD(ibss, 1, 1);
-    WLAN_BIT_FIELD(cf_pollable, 2, 1);
-    WLAN_BIT_FIELD(cf_poll_req, 3, 1);
-    WLAN_BIT_FIELD(privacy, 4, 1);
-    WLAN_BIT_FIELD(short_preamble, 5, 1);
+    WLAN_BIT_FIELD(ess, 0, 1)
+    WLAN_BIT_FIELD(ibss, 1, 1)
+    WLAN_BIT_FIELD(cf_pollable, 2, 1)
+    WLAN_BIT_FIELD(cf_poll_req, 3, 1)
+    WLAN_BIT_FIELD(privacy, 4, 1)
+    WLAN_BIT_FIELD(short_preamble, 5, 1)
     // bit 6-7 reserved
-    WLAN_BIT_FIELD(spectrum_mgmt, 8, 1);
-    WLAN_BIT_FIELD(qos, 9, 1);
-    WLAN_BIT_FIELD(short_slot_time, 10, 1);
-    WLAN_BIT_FIELD(apsd, 11, 1);
-    WLAN_BIT_FIELD(radio_msmt, 12, 1);
+    WLAN_BIT_FIELD(spectrum_mgmt, 8, 1)
+    WLAN_BIT_FIELD(qos, 9, 1)
+    WLAN_BIT_FIELD(short_slot_time, 10, 1)
+    WLAN_BIT_FIELD(apsd, 11, 1)
+    WLAN_BIT_FIELD(radio_msmt, 12, 1)
     // bit 13 reserved
-    WLAN_BIT_FIELD(delayed_block_ack, 14, 1);
-    WLAN_BIT_FIELD(immediate_block_ack, 15, 1);
+    WLAN_BIT_FIELD(delayed_block_ack, 14, 1)
+    WLAN_BIT_FIELD(immediate_block_ack, 15, 1)
 
     static CapabilityInfo FromDdk(uint32_t ddk_caps) {
         CapabilityInfo cap{};
@@ -228,20 +228,20 @@ class FrameControl : public common::BitField<uint16_t> {
     constexpr explicit FrameControl(uint16_t fc) : BitField<uint16_t>(fc) {}
     constexpr FrameControl() = default;
 
-    WLAN_BIT_FIELD(protocol_version, 0, 2);
-    WLAN_BIT_FIELD(type, 2, 2);
-    WLAN_BIT_FIELD(subtype, 4, 4);
-    WLAN_BIT_FIELD(to_ds, 8, 1);
-    WLAN_BIT_FIELD(from_ds, 9, 1);
-    WLAN_BIT_FIELD(more_frag, 10, 1);
-    WLAN_BIT_FIELD(retry, 11, 1);
-    WLAN_BIT_FIELD(pwr_mgmt, 12, 1);
-    WLAN_BIT_FIELD(more_data, 13, 1);
-    WLAN_BIT_FIELD(protected_frame, 14, 1);
-    WLAN_BIT_FIELD(htc_order, 15, 1);
+    WLAN_BIT_FIELD(protocol_version, 0, 2)
+    WLAN_BIT_FIELD(type, 2, 2)
+    WLAN_BIT_FIELD(subtype, 4, 4)
+    WLAN_BIT_FIELD(to_ds, 8, 1)
+    WLAN_BIT_FIELD(from_ds, 9, 1)
+    WLAN_BIT_FIELD(more_frag, 10, 1)
+    WLAN_BIT_FIELD(retry, 11, 1)
+    WLAN_BIT_FIELD(pwr_mgmt, 12, 1)
+    WLAN_BIT_FIELD(more_data, 13, 1)
+    WLAN_BIT_FIELD(protected_frame, 14, 1)
+    WLAN_BIT_FIELD(htc_order, 15, 1)
 
     // For type == Control and subtype == Control Frame Extension
-    WLAN_BIT_FIELD(cf_extension, 8, 4);
+    WLAN_BIT_FIELD(cf_extension, 8, 4)
 
     bool IsMgmt() const { return type() == FrameType::kManagement; }
     bool IsCtrl() const { return type() == FrameType::kControl; }
@@ -527,7 +527,7 @@ constexpr uint8_t kAddrExt56 = 2;
 // IEEE Std 802.11-2016, 9.2.4.7.3, Figure 9-17
 class MeshFlags : public common::BitField<uint8_t> {
    public:
-    WLAN_BIT_FIELD(addr_ext_mode, 0, 2);
+    WLAN_BIT_FIELD(addr_ext_mode, 0, 2)
     // bits 2-7 reserved
 } __PACKED;
 

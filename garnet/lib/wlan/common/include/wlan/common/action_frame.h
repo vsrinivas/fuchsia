@@ -18,10 +18,10 @@ namespace wlan {
 // IEEE Std 802.11-2016, 9.4.1.14
 class BlockAckParameters : public common::BitField<uint16_t> {
    public:
-    WLAN_BIT_FIELD(amsdu, 0, 1);
-    WLAN_BIT_FIELD(policy, 1, 1);
-    WLAN_BIT_FIELD(tid, 2, 4);
-    WLAN_BIT_FIELD(buffer_size, 6, 10);
+    WLAN_BIT_FIELD(amsdu, 0, 1)
+    WLAN_BIT_FIELD(policy, 1, 1)
+    WLAN_BIT_FIELD(tid, 2, 4)
+    WLAN_BIT_FIELD(buffer_size, 6, 10)
 
     enum BlockAckPolicy {
         kDelayed = 0,
@@ -34,8 +34,8 @@ class BlockAckParameters : public common::BitField<uint16_t> {
 // Also note some APs fill this with zero values.
 class BlockAckStartingSequenceControl : public common::BitField<uint16_t> {
    public:
-    WLAN_BIT_FIELD(fragment, 0, 4);
-    WLAN_BIT_FIELD(starting_seq, 4, 12);
+    WLAN_BIT_FIELD(fragment, 0, 4)
+    WLAN_BIT_FIELD(starting_seq, 4, 12)
 };
 
 // IEEE Std 802.11-2016, 9.4.1.11 Table 9-47
@@ -150,9 +150,9 @@ struct AddBaResponseFrame {
 // IEEE Std 802.11-2016, 9.4.1.16
 class BlockAckDelBaParameters : public common::BitField<uint16_t> {
    public:
-    // WLAN_BIT_FIELD(reserved, 0, 11);
-    WLAN_BIT_FIELD(initiator, 11, 1);
-    WLAN_BIT_FIELD(tid, 12, 4);
+    // WLAN_BIT_FIELD(reserved, 0, 11)
+    WLAN_BIT_FIELD(initiator, 11, 1)
+    WLAN_BIT_FIELD(tid, 12, 4)
 };
 
 // IEEE Std 802.11-2016, 9.6.5.4

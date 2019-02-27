@@ -38,7 +38,7 @@ struct Counter {
     ::fuchsia::wlan::stats::Counter ToFidl() const {
         return ::fuchsia::wlan::stats::Counter{.count = count.load(std::memory_order_relaxed),
                                                .name = name};
-    };
+    }
     void Reset() { count = 0; }
     uint64_t Inc(uint64_t i) { return count.fetch_add(i, std::memory_order_relaxed); }
 };
@@ -57,7 +57,7 @@ struct PacketCounter {
                                                      .in_bytes = in_bytes.ToFidl(),
                                                      .out_bytes = out_bytes.ToFidl(),
                                                      .drop_bytes = drop_bytes.ToFidl()};
-    };
+    }
     void Reset() {
         in.Reset();
         out.Reset();
@@ -79,7 +79,7 @@ struct DispatcherStats {
                                                        .mgmt_frame = mgmt_frame.ToFidl(),
                                                        .ctrl_frame = ctrl_frame.ToFidl(),
                                                        .data_frame = data_frame.ToFidl()};
-    };
+    }
     void Reset() {
         any_packet.Reset();
         mgmt_frame.Reset();
@@ -96,7 +96,7 @@ struct RssiStats {
         rssi_stats.hist =
             std::vector<uint64_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS);
         return rssi_stats;
-    };
+    }
     void Reset() {
         std::lock_guard<std::mutex> guard(lock);
         std::fill(std::begin(hist), std::end(hist), 0);
@@ -133,7 +133,7 @@ struct ClientMlmeStats {
                                                        .rx_frame = rx_frame.ToFidl(),
                                                        .assoc_data_rssi = assoc_data_rssi.ToFidl(),
                                                        .beacon_rssi = beacon_rssi.ToFidl()};
-    };
+    }
     void Reset() {
         svc_msg.Reset();
         data_frame.Reset();
@@ -149,7 +149,7 @@ struct ClientMlmeStats {
 template <typename T, typename U> class WlanStats {
    public:
     T stats;
-    U ToFidl() const { return stats.ToFidl(); };
+    U ToFidl() const { return stats.ToFidl(); }
     void Reset() { stats.Reset(); }
 };
 

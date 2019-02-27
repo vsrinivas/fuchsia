@@ -23,6 +23,6 @@ typedef struct wlantap_ioctl_create_wlanphy {
 #define IOCTL_WLANTAP_CREATE_WLANPHY IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_WLANTAP, 0)
 
 IOCTL_WRAPPER_IN(ioctl_wlantap_create_wlanphy, IOCTL_WLANTAP_CREATE_WLANPHY,
-                 wlantap_ioctl_create_wlanphy_t);
+                 wlantap_ioctl_create_wlanphy_t)
 
 #endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_WLANTAP_H_

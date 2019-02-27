@@ -9,7 +9,7 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // IEEE Std 802.11-2016, 9.4.2.2
 #define WLAN_MAX_SSID_LEN 32
@@ -285,6 +285,6 @@ typedef struct wlan_assoc_ctx {
     wlan_vht_op_t vht_op;
 } wlan_assoc_ctx_t;
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_INFO_H_

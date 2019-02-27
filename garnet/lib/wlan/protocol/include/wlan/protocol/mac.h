@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct wlanmac_info {
     // Interface capabilities information
@@ -320,6 +320,6 @@ typedef struct wlanmac_protocol {
     void* ctx;
 } wlanmac_protocol_t;
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_MAC_H_
