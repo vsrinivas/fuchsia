@@ -13,8 +13,6 @@
 #include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
-#include "src/ledger/bin/coroutine/coroutine_manager.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
@@ -25,6 +23,8 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest;

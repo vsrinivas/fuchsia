@@ -16,12 +16,12 @@
 #include <lib/fxl/macros.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/netconnector/netconnector_factory.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest {

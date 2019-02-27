@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 namespace lock {
 namespace {

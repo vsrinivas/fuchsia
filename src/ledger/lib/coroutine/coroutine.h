@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_COROUTINE_COROUTINE_H_
-#define SRC_LEDGER_BIN_COROUTINE_COROUTINE_H_
+#ifndef SRC_LEDGER_LIB_COROUTINE_COROUTINE_H_
+#define SRC_LEDGER_LIB_COROUTINE_COROUTINE_H_
 
 #include <functional>
 
@@ -165,4 +165,4 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
 
 }  // namespace coroutine
 
-#endif  // SRC_LEDGER_BIN_COROUTINE_COROUTINE_H_
+#endif  // SRC_LEDGER_LIB_COROUTINE_COROUTINE_H_

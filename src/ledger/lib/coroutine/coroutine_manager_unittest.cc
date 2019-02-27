@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 
 #include <memory>
 
 #include <lib/callback/set_when_called.h>
 
 #include "gtest/gtest.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 namespace coroutine {
 namespace {

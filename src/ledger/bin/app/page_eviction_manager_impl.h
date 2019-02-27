@@ -16,10 +16,10 @@
 
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/page_utils.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
-#include "src/ledger/bin/coroutine/coroutine_manager.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 
 namespace ledger {
 

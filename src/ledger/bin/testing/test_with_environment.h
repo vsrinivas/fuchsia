@@ -10,7 +10,6 @@
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/environment/environment.h"
 
 namespace ledger {

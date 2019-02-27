@@ -34,7 +34,6 @@
 #include <trace/event.h>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
-#include "src/ledger/bin/coroutine/coroutine_waiter.h"
 #include "src/ledger/bin/lock/lock.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
@@ -49,6 +48,7 @@
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "zx/time.h"
 
 namespace storage {

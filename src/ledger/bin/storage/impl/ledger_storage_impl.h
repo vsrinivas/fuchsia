@@ -9,13 +9,13 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace storage {
 

@@ -17,11 +17,11 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/types.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
-#include "src/ledger/bin/coroutine/coroutine_waiter.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_waiter.h"
 
 namespace ledger {
 namespace {

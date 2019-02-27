@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_COROUTINE_COROUTINE_WAITER_H_
-#define SRC_LEDGER_BIN_COROUTINE_COROUTINE_WAITER_H_
+#ifndef SRC_LEDGER_LIB_COROUTINE_COROUTINE_WAITER_H_
+#define SRC_LEDGER_LIB_COROUTINE_COROUTINE_WAITER_H_
 
 #include <utility>
 
 #include <lib/fxl/compiler_specific.h>
 
-#include "src/ledger/bin/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 // Utilities to interact with coroutines and callback::Waiter.
 
@@ -33,4 +33,4 @@ Wait(coroutine::CoroutineHandler* handler, A waiter, Args... parameters) {
 
 }  // namespace coroutine
 
-#endif  // SRC_LEDGER_BIN_COROUTINE_COROUTINE_WAITER_H_
+#endif  // SRC_LEDGER_LIB_COROUTINE_COROUTINE_WAITER_H_

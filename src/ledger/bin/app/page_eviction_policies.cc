@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/app/page_eviction_policies.h"
 
-#include "src/ledger/bin/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 
 namespace ledger {
 namespace {

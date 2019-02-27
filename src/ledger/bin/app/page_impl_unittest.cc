@@ -27,7 +27,6 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/app/page_manager.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/storage/fake/fake_journal.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"

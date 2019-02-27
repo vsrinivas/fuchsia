@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
-#include "src/ledger/bin/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/coroutine/coroutine_waiter.h"
 
 namespace storage {
 namespace btree {

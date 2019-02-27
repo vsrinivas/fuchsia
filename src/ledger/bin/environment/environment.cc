@@ -10,7 +10,7 @@
 
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/rng/system_random.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 namespace ledger {
 

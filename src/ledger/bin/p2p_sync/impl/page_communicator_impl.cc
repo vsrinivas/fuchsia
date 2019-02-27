@@ -10,9 +10,9 @@
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/coroutine/coroutine_waiter.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
+#include "src/ledger/lib/coroutine/coroutine_waiter.h"
 
 namespace p2p_sync {
 namespace {

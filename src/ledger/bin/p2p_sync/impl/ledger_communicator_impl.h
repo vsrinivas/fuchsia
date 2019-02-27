@@ -10,13 +10,13 @@
 #include <lib/fit/function.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/p2p_sync/impl/message_holder.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace p2p_sync {
 class PageCommunicatorImpl;

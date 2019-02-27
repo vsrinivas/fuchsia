@@ -17,7 +17,6 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/merging/test_utils.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
@@ -102,7 +101,6 @@ class CommonAncestorTest : public TestWithPageStorage {
     return ids;
   }
 
-  coroutine::CoroutineServiceImpl coroutine_service_;
   std::unique_ptr<storage::PageStorage> storage_;
 
  private:

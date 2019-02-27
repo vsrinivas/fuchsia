@@ -13,10 +13,10 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace ledger {
 class PageManager;

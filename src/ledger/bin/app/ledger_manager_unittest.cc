@@ -22,7 +22,6 @@
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"

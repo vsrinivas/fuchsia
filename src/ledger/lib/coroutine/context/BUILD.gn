@@ -4,22 +4,21 @@
 
 visibility = [ "//src/ledger/*" ]
 
-source_set("coroutine") {
+source_set("context") {
   sources = [
-    "coroutine.h",
-    "coroutine_impl.cc",
-    "coroutine_impl.h",
-    "coroutine_manager.h",
-    "coroutine_waiter.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/callback",
-    "//garnet/public/lib/fxl",
+    "context.cc",
+    "context.h",
+    "stack.cc",
+    "stack.h",
   ]
 
   deps = [
-    "//src/ledger/bin/coroutine/context",
+    "//garnet/public/lib/fxl",
+    "//src/ledger/lib/coroutine/context/$target_cpu",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -29,15 +28,14 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "coroutine_manager_unittest.cc",
-    "coroutine_unittest.cc",
-    "coroutine_waiter_unittest.cc",
+    "context_unittest.cc",
   ]
 
   deps = [
-    ":coroutine",
+    ":context",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

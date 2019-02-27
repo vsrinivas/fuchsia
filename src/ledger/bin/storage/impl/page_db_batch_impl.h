@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/db.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace storage {
 

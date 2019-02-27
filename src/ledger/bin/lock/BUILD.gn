@@ -13,7 +13,7 @@ source_set("lock") {
   public_deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
-    "//src/ledger/bin/coroutine",
+    "//src/ledger/lib/coroutine",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

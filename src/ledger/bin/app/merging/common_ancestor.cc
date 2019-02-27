@@ -11,8 +11,8 @@
 #include <lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/bin/app/page_utils.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
-#include "src/ledger/bin/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_waiter.h"
 
 namespace ledger {
 

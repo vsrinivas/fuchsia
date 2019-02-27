@@ -17,7 +17,7 @@ source_set("environment") {
     "//garnet/public/lib/timekeeper",
     "//garnet/public/lib/timekeeper:impl",
     "//peridot/lib/rng",
-    "//src/ledger/bin/coroutine",
+    "//src/ledger/lib/coroutine",
   ]
 
   deps = [

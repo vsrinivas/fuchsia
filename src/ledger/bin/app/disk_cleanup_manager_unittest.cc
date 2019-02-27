@@ -10,7 +10,6 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 
@@ -62,7 +61,6 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
 
  private:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
   storage::fake::FakeDbFactory db_factory_;
 
  protected:

@@ -4,7 +4,7 @@
 
 #include <zircon/tls.h>
 
-#include "src/ledger/bin/coroutine/context/arm64/context.h"
+#include "src/ledger/lib/coroutine/context/arm64/context.h"
 
 #define FUNCTION(x) .global x; .type x,%function; x:
 

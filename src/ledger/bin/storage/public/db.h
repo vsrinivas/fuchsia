@@ -5,10 +5,10 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_DB_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_DB_H_
 
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace storage {
 

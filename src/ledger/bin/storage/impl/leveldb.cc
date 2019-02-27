@@ -14,8 +14,8 @@
 #include <trace/event.h>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "util/env_fuchsia.h"
 
 namespace storage {

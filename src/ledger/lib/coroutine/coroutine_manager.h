@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_COROUTINE_COROUTINE_MANAGER_H_
-#define SRC_LEDGER_BIN_COROUTINE_COROUTINE_MANAGER_H_
+#ifndef SRC_LEDGER_LIB_COROUTINE_COROUTINE_MANAGER_H_
+#define SRC_LEDGER_LIB_COROUTINE_COROUTINE_MANAGER_H_
 
 #include <algorithm>
 #include <list>
 
 #include <lib/fit/function.h>
 
-#include "src/ledger/bin/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace coroutine {
 // CoroutineManager manages the lifetime of coroutines.
@@ -85,4 +85,4 @@ class CoroutineManager {
 
 }  // namespace coroutine
 
-#endif  // SRC_LEDGER_BIN_COROUTINE_COROUTINE_MANAGER_H_
+#endif  // SRC_LEDGER_LIB_COROUTINE_COROUTINE_MANAGER_H_

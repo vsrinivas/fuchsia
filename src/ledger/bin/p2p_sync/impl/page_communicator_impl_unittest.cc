@@ -20,11 +20,11 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include "gmock/gmock.h"
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 using testing::IsEmpty;
 

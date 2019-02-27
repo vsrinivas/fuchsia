@@ -18,7 +18,6 @@
 #include "src/ledger/bin/app/merging/custom_merge_strategy.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/app/merging/test_utils.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"

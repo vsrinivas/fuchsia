@@ -14,11 +14,11 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace ledger {
 

@@ -14,7 +14,6 @@
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/page_storage.h"

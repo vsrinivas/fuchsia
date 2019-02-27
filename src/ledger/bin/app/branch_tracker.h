@@ -12,10 +12,10 @@
 #include <lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/app/page_snapshot_impl.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace ledger {
 class PageManager;

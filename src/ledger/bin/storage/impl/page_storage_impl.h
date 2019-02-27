@@ -16,8 +16,6 @@
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
-#include "src/ledger/bin/coroutine/coroutine_manager.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/impl/live_commit_tracker.h"
@@ -25,6 +23,8 @@
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 
 namespace storage {
 

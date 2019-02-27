@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/coroutine/coroutine_waiter.h"
 
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 namespace coroutine {
 namespace {

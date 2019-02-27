@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_COROUTINE_CONTEXT_CONTEXT_H_
-#define SRC_LEDGER_BIN_COROUTINE_CONTEXT_CONTEXT_H_
+#ifndef SRC_LEDGER_LIB_COROUTINE_CONTEXT_CONTEXT_H_
+#define SRC_LEDGER_LIB_COROUTINE_CONTEXT_CONTEXT_H_
 
 #include <memory>
 
 #include <lib/fxl/build_config.h>
 
-#include "src/ledger/bin/coroutine/context/stack.h"
+#include "src/ledger/lib/coroutine/context/stack.h"
 
 #if defined(ARCH_CPU_X86_64)
-#include "src/ledger/bin/coroutine/context/x64/context.h"
+#include "src/ledger/lib/coroutine/context/x64/context.h"
 #elif defined(ARCH_CPU_ARM64)
-#include "src/ledger/bin/coroutine/context/arm64/context.h"
+#include "src/ledger/lib/coroutine/context/arm64/context.h"
 #else
 #error Please add support for your architecture.
 #endif
@@ -50,4 +50,4 @@ void SwapContext(Context* out_context, Context* in_context);
 
 }  // namespace context
 
-#endif  // SRC_LEDGER_BIN_COROUTINE_CONTEXT_CONTEXT_H_
+#endif  // SRC_LEDGER_LIB_COROUTINE_CONTEXT_CONTEXT_H_

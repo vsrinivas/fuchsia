@@ -14,7 +14,7 @@
 #include <lib/timekeeper/clock.h>
 
 #include "peridot/lib/rng/random.h"
-#include "src/ledger/bin/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace ledger {
 

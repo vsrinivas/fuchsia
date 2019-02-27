@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 #include <lib/fit/function.h>
 
@@ -11,8 +11,8 @@
 #endif
 
 #include <lib/fxl/logging.h>
-#include "src/ledger/bin/coroutine/context/context.h"
-#include "src/ledger/bin/coroutine/context/stack.h"
+#include "src/ledger/lib/coroutine/context/context.h"
+#include "src/ledger/lib/coroutine/context/stack.h"
 
 namespace coroutine {
 

@@ -22,7 +22,6 @@
 #include "src/ledger/bin/app/merging/last_one_wins_merge_strategy.h"
 #include "src/ledger/bin/app/merging/test_utils.h"
 #include "src/ledger/bin/app/page_utils.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/public/constants.h"

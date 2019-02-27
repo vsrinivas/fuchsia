@@ -26,7 +26,6 @@
 #include "gtest/gtest.h"
 #include "lib/timekeeper/test_clock.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
-#include "src/ledger/bin/coroutine/coroutine_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
