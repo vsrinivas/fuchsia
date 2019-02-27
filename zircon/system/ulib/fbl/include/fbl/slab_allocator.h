@@ -921,7 +921,7 @@ fbl::SlabAllocator<ALLOC_TRAITS>::allocator_(__VA_ARGS__)
 // slab allocator is to be used outside of a single translational unit.
 #define FWD_DECL_STATIC_SLAB_ALLOCATOR(ALLOC_TRAITS) \
 template<> ::fbl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType \
-fbl::SlabAllocator<ALLOC_TRAITS>::allocator_;
+fbl::SlabAllocator<ALLOC_TRAITS>::allocator_
 
 
 }  // namespace fbl

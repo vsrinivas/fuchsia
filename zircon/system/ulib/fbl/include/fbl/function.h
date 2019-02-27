@@ -233,7 +233,7 @@ public:
 
     explicit operator bool() const {
         return !holder_.target().is_null();
-    };
+    }
 
     Result operator()(Args... args) const {
         return holder_.target()(std::forward<Args>(args)...);

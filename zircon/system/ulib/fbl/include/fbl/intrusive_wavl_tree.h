@@ -466,7 +466,7 @@ public:
     }
 
     // size : return the current number of elements in the tree.
-    size_t size() const { return count_; };
+    size_t size() const { return count_; }
 
     // erase_if
     //
