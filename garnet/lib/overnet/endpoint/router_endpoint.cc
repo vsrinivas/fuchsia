@@ -257,15 +257,14 @@ StatusOr<RouterEndpoint::NewStream> RouterEndpoint::InitiateStream(
                                                  service_name);
 }
 
-StatusOr<RouterEndpoint::OutgoingFork> RouterEndpoint::Stream::Fork(
-    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
-    fuchsia::overnet::protocol::Introduction introduction) {
+StatusOr<RouterEndpoint::NewStream> RouterEndpoint::Stream::InitiateFork(
+    fuchsia::overnet::protocol::ReliabilityAndOrdering
+        reliability_and_ordering) {
   if (connection_stream_ == nullptr) {
-    return StatusOr<OutgoingFork>(StatusCode::FAILED_PRECONDITION,
-                                  "Closed stream");
+    return StatusOr<NewStream>(StatusCode::FAILED_PRECONDITION,
+                               "Closed stream");
   }
-  return connection_stream_->MakeFork(reliability_and_ordering,
-                                      std::move(introduction));
+  return connection_stream_->MakeFork(reliability_and_ordering);
 }
 
 void RouterEndpoint::ConnectionStream::Close(const Status& status,
@@ -291,10 +290,9 @@ void RouterEndpoint::ConnectionStream::Close(const Status& status,
   assert(quiesced.empty());
 }
 
-StatusOr<RouterEndpoint::OutgoingFork>
-RouterEndpoint::ConnectionStream::MakeFork(
-    fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
-    fuchsia::overnet::protocol::Introduction introduction) {
+StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::MakeFork(
+    fuchsia::overnet::protocol::ReliabilityAndOrdering
+        reliability_and_ordering) {
   if (closing_status_) {
     return *closing_status_;
   }
@@ -302,33 +300,37 @@ RouterEndpoint::ConnectionStream::MakeFork(
   StreamId id(next_stream_id_);
   next_stream_id_ += 2;
 
-  return OutgoingFork{
-      NewStream{endpoint_, peer(), reliability_and_ordering, id},
-      fuchsia::overnet::protocol::ForkFrame{
-          id.as_fidl(), reliability_and_ordering, std::move(introduction)}};
+  return MakeFork(id, reliability_and_ordering);
+}
+
+StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::MakeFork(
+    StreamId id, fuchsia::overnet::protocol::ReliabilityAndOrdering
+                     reliability_and_ordering) {
+  return NewStream{endpoint_, peer(), reliability_and_ordering, id};
 }
 
 StatusOr<RouterEndpoint::NewStream> RouterEndpoint::ConnectionStream::Fork(
     fuchsia::overnet::protocol::ReliabilityAndOrdering reliability_and_ordering,
-    const std::string& service_name) {
-  fuchsia::overnet::protocol::Introduction introduction;
-  introduction.set_service_name(service_name);
-  auto outgoing_fork =
-      MakeFork(reliability_and_ordering, std::move(introduction));
+    std::string service_name) {
+  auto outgoing_fork = MakeFork(reliability_and_ordering);
   if (outgoing_fork.is_error()) {
     return outgoing_fork.AsStatus();
   }
 
-  proxy_.Fork(std::move(outgoing_fork->fork_frame));
-  return std::move(outgoing_fork->new_stream);
+  proxy_.ConnectToService(std::move(service_name),
+                          outgoing_fork->stream_id().as_fidl());
+  return outgoing_fork;
 }
 
-StatusOr<RouterEndpoint::ReceivedIntroduction> RouterEndpoint::UnwrapForkFrame(
-    NodeId peer, fuchsia::overnet::protocol::ForkFrame fork_frame) {
-  return ReceivedIntroduction{
-      NewStream{this, peer, fork_frame.reliability_and_ordering,
-                StreamId(fork_frame.stream_id)},
-      std::move(fork_frame.introduction)};
+StatusOr<RouterEndpoint::NewStream> RouterEndpoint::Stream::ReceiveFork(
+    fuchsia::overnet::protocol::StreamId stream_id,
+    fuchsia::overnet::protocol::ReliabilityAndOrdering
+        reliability_and_ordering) {
+  if (connection_stream_ == nullptr) {
+    return StatusOr<NewStream>(StatusCode::FAILED_PRECONDITION,
+                               "Closed stream");
+  }
+  return connection_stream_->MakeFork(stream_id, reliability_and_ordering);
 }
 
 void RouterEndpoint::OnUnknownStream(NodeId node_id, StreamId stream_id) {
@@ -337,25 +339,21 @@ void RouterEndpoint::OnUnknownStream(NodeId node_id, StreamId stream_id) {
   }
 }
 
-void RouterEndpoint::ConnectionStream::Stub::Fork(
-    fuchsia::overnet::protocol::ForkFrame fork) {
-  if (!fork.introduction.has_service_name()) {
-    connection_stream_->Close(
-        Status(StatusCode::INVALID_ARGUMENT,
-               "Fork frame received on connection stream without a "
-               "service name"),
-        Callback<void>::Ignored());
+void RouterEndpoint::ConnectionStream::Stub::ConnectToService(
+    std::string service_name, fuchsia::overnet::protocol::StreamId stream_id) {
+  auto new_stream = connection_stream_->MakeFork(
+      stream_id,
+      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered);
+  if (new_stream.is_error()) {
+    OVERNET_TRACE(ERROR) << "Failed to process ConnectToService NewStream: "
+                         << new_stream.AsStatus();
     return;
   }
-  NewStream new_stream{connection_stream_->endpoint_,
-                       connection_stream_->peer(),
-                       fork.reliability_and_ordering, StreamId(fork.stream_id)};
-  if (auto it = connection_stream_->endpoint_->services_.find(
-          *fork.introduction.service_name());
+  if (auto it = connection_stream_->endpoint_->services_.find(service_name);
       it != connection_stream_->endpoint_->services_.end()) {
-    it->second->AcceptStream(std::move(new_stream));
+    it->second->AcceptStream(std::move(*new_stream));
   } else {
-    new_stream.Fail(
+    new_stream->Fail(
         Status(StatusCode::INVALID_ARGUMENT, "Service not supported"));
   }
 }

@@ -4,10 +4,28 @@
 
 library fuchsia.overnet.protocol;
 
+/// Identifies a single overnet stream between two processes on the Overnet mesh
 struct StreamId {
     uint64 id;
 };
 
+/// Address of a node on the overlay network.
 struct NodeId {
     uint64 id;
+};
+
+/// Reliability and ordering constraints for a stream.
+enum ReliabilityAndOrdering {
+    /// Datagrams are delivered reliably in an ordered fashion.
+    ReliableOrdered = 1;
+    /// Datagrams are delivered unreliably, yet order between messages is maintained.
+    UnreliableOrdered = 2;
+    /// Datagrams are delivered reliably, but may be delivered out of order.
+    ReliableUnordered = 3;
+    /// No guarantees on ordering or reliability. Note that messages will be delivered
+    /// at most once.
+    UnreliableUnordered = 4;
+    /// Messages are delivered in order. The most recently sent message is considered
+    /// reliable, while all other messages are considered unreliable.
+    TailReliable = 5;
 };

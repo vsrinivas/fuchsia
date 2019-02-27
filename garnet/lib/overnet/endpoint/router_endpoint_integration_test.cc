@@ -454,13 +454,6 @@ struct OneMessageArgs {
   Slice body;
 };
 
-std::unique_ptr<fuchsia::overnet::protocol::Introduction> AbcIntro() {
-  fuchsia::overnet::protocol::Introduction intro;
-  intro.set_service_name("abc");
-  return std::make_unique<fuchsia::overnet::protocol::Introduction>(
-      std::move(intro));
-}
-
 std::ostream& operator<<(std::ostream& out, OneMessageArgs args) {
   return out << "env=" << args.make_env->name() << " body=" << args.body;
 }
@@ -472,8 +465,10 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   std::cout << "Param: " << GetParam() << std::endl;
   auto env = GetParam().make_env->Make();
 
-  const TimeDelta kAllowedTime = env->AllowedTime(
-      Encode(AbcIntro().get())->length() + GetParam().body.length());
+  const std::string kService = "abc";
+
+  const TimeDelta kAllowedTime =
+      env->AllowedTime(kService.length() + GetParam().body.length());
   std::cout << "Allowed time for body: " << kAllowedTime << std::endl;
 
   env->AwaitConnected();
@@ -481,7 +476,7 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   auto got_pull_cb = std::make_shared<bool>(false);
 
   TestService service(
-      env->endpoint2(), "abc",
+      env->endpoint2(), kService,
       fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
       [got_pull_cb](RouterEndpoint::NewStream new_stream) {
         ASSERT_FALSE(*got_pull_cb);
@@ -511,7 +506,7 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   auto new_stream = env->endpoint1()->InitiateStream(
       env->endpoint2()->node_id(),
       fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered,
-      "abc");
+      kService);
   ASSERT_TRUE(new_stream.is_ok()) << new_stream.AsStatus();
   auto stream =
       MakeClosedPtr<RouterEndpoint::Stream>(std::move(*new_stream.get()));

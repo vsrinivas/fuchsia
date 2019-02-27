@@ -173,10 +173,13 @@ class Slice final {
 
   template <class IT>
   static Slice Join(IT begin, IT end, Border desired_border = Border::None()) {
-    if (begin == end)
+    if (begin == end) {
       return Slice();
-    if (std::next(begin) == end)
+    }
+
+    if (std::next(begin) == end) {
       return *begin;
+    }
 
     size_t total_length = 0;
     for (auto it = begin; it != end; ++it) {
@@ -185,6 +188,32 @@ class Slice final {
 
     return Slice::WithInitializerAndBorders(
         total_length, desired_border, [begin, end](uint8_t* out) {
+          size_t offset = 0;
+          for (auto it = begin; it != end; ++it) {
+            memcpy(out + offset, it->begin(), it->length());
+            offset += it->length();
+          }
+        });
+  }
+
+  template <class IT>
+  static Slice AlignedJoin(IT begin, IT end) {
+    if (begin == end) {
+      return Slice();
+    }
+
+    if (std::next(begin) == end && IsAligned(begin->begin())) {
+      return *begin;
+    }
+
+    size_t total_length = 0;
+    for (auto it = begin; it != end; ++it) {
+      total_length += it->length();
+    }
+
+    return Slice::WithInitializerAndBorders(
+        total_length, Border::None(), [begin, end](uint8_t* out) {
+          assert(IsAligned(out));
           size_t offset = 0;
           for (auto it = begin; it != end; ++it) {
             memcpy(out + offset, it->begin(), it->length());
@@ -328,6 +357,12 @@ class Slice final {
 
   const VTable* vtable_;
   Data data_;
+
+  static bool IsAligned(const uint8_t* ptr) {
+    auto uintptr = reinterpret_cast<uintptr_t>(ptr);
+    constexpr uintptr_t kAlignment = 8;
+    return uintptr % kAlignment == 0;
+  }
 
   static void NoOpRef(Data*) {}
 

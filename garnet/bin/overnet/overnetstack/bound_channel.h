@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/wait.h>
 #include <lib/fidl/cpp/message.h>
@@ -27,15 +28,24 @@ class BoundChannel {
                zx::channel channel);
 
  private:
-  class FidlMessageBuilder;
-
+  ~BoundChannel() = default;
   void Close(const overnet::Status& status);
   void StartNetRead();
-  void WriteToChannelAndStartNextRead(
-      std::unique_ptr<FidlMessageBuilder> builder);
+  void Ref() { ++refs_; }
+  void Unref() {
+    if (0 == --refs_) {
+      delete this;
+    }
+  }
 
-  overnet::StatusOr<overnet::Slice> ChannelMessageToOvernet(
-      fidl::Message message);
+  overnet::StatusOr<fuchsia::overnet::protocol::ZirconChannelMessage>
+  EncodeMessage(fidl::Message message);
+  // Calls `then` with a fidl::Message; the decoded fidl::Message may point into
+  // message.
+  overnet::Status DecodeMessageThen(
+      fuchsia::overnet::protocol::ZirconChannelMessage* message,
+      fit::function<overnet::Status(fidl::Message)> then);
+  void WriteToChannelAndStartNextRead(fidl::Message message);
 
   void StartChannelRead();
 
@@ -51,13 +61,40 @@ class BoundChannel {
                         zx_status_t status, const zx_packet_signal_t* signal);
   void OnRecvReady(zx_status_t status, const zx_packet_signal_t* signal);
 
+  class Proxy final : public fuchsia::overnet::protocol::ZirconChannel_Proxy {
+   public:
+    Proxy(BoundChannel* channel) : channel_(channel) {}
+
+    void Send_(fidl::Message message) override;
+
+   private:
+    BoundChannel* const channel_;
+  };
+
+  class Stub final : public fuchsia::overnet::protocol::ZirconChannel_Stub {
+   public:
+    Stub(BoundChannel* channel) : channel_(channel) {}
+
+    void Send_(fidl::Message message) override { abort(); }
+
+    void Message(
+        fuchsia::overnet::protocol::ZirconChannelMessage message) override;
+
+   private:
+    BoundChannel* const channel_;
+  };
+
   OvernetApp* const app_;
+  Proxy proxy_{this};
+  Stub stub_{this};
   async_dispatcher_t* const dispatcher_ = async_get_default_dispatcher();
   bool closed_ = false;
+  int refs_ = 1;
   overnet::RouterEndpoint::Stream overnet_stream_;
   zx::channel zx_channel_;
   overnet::Optional<overnet::RouterEndpoint::Stream::ReceiveOp> net_recv_;
-  std::unique_ptr<FidlMessageBuilder> waiting_to_write_;
+  std::vector<uint8_t> pending_chan_bytes_;
+  std::vector<zx::handle> pending_chan_handles_;
   BoundWait wait_send_{{{ASYNC_STATE_INIT},
                         &BoundChannel::SendReady,
                         zx_channel_.get(),

@@ -36,6 +36,8 @@ executable("bin") {
   sources = [
     "bound_channel.cc",
     "bound_channel.h",
+    "bound_socket.cc",
+    "bound_socket.h",
     "main.cc",
     "mdns.cc",
     "mdns.h",

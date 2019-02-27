@@ -7,7 +7,6 @@
 
 source_set("lib") {
   public_deps = [
-    ":message_builder",
     ":router_endpoint",
   ]
 }
@@ -20,18 +19,6 @@ source_set("tests") {
 }
 
 ###############################################################################
-
-# message_builder
-source_set("message_builder") {
-  sources = [
-    "message_builder.cc",
-    "message_builder.h",
-  ]
-  deps = [
-    ":router_endpoint",
-    "//garnet/lib/overnet/protocol:fidl",
-  ]
-}
 
 # router_endpoint
 source_set("router_endpoint") {

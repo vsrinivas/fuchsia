@@ -93,7 +93,9 @@ class OvernetApp final {
 
   // Bind together an overnet stream and a zx::channel and keep them
   // communicating until one side closes.
-  void BindStream(overnet::RouterEndpoint::NewStream ns, zx::channel channel);
+  void BindChannel(overnet::RouterEndpoint::NewStream ns, zx::channel channel);
+  // Similarly, for zx::socket
+  void BindSocket(overnet::RouterEndpoint::NewStream ns, zx::socket socket);
 
  private:
   static overnet::NodeId GenerateNodeId();

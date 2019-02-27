@@ -891,11 +891,21 @@ void PacketProtocol::OutstandingMessages::CheckRetransmit() {
   AckProcessor ack_processor(this, TimeDelta::Zero());
   for (size_t i = 0; i < outstanding_.size(); i++) {
     if (!outstanding_[i].bbr_sent_packet.has_value()) {
+      OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: seq "
+                           << (send_tip_ + i) << " not sent: STOP";
       break;
     }
     if (outstanding_[i].bbr_sent_packet->send_time > nack_before) {
+      OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: seq "
+                           << (send_tip_ + i) << " sent at "
+                           << outstanding_[i].bbr_sent_packet->send_time
+                           << ": STOP";
       break;
     }
+    OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: seq "
+                         << (send_tip_ + i) << " sent at "
+                         << outstanding_[i].bbr_sent_packet->send_time
+                         << ": NACK";
     ack_processor.Nack(send_tip_ + i, Status::Unavailable());
   }
   ScheduleRetransmit();

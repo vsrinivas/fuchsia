@@ -5,7 +5,7 @@
 #include "garnet/bin/overnet/overnetstack/overnet_app.h"
 #include <fuchsia/overnet/cpp/fidl.h>
 #include "garnet/bin/overnet/overnetstack/bound_channel.h"
-#include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
+#include "garnet/bin/overnet/overnetstack/bound_socket.h"
 #include "garnet/lib/overnet/protocol/fidl.h"
 
 namespace overnetstack {
@@ -33,8 +33,8 @@ overnet::Status OvernetApp::Start() {
   return overnet::Status::Ok();
 }
 
-void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,
-                            zx::channel channel) {
+void OvernetApp::BindChannel(overnet::RouterEndpoint::NewStream ns,
+                             zx::channel channel) {
   ZX_ASSERT(channel.is_valid());
   zx_info_handle_basic_t info;
   auto err = channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
@@ -43,6 +43,18 @@ void OvernetApp::BindStream(overnet::RouterEndpoint::NewStream ns,
   ZX_ASSERT(info.type == ZX_OBJ_TYPE_CHANNEL);
   new BoundChannel(this, std::move(ns), std::move(channel));
   ZX_ASSERT(!channel.is_valid());
+}
+
+void OvernetApp::BindSocket(overnet::RouterEndpoint::NewStream ns,
+                            zx::socket socket) {
+  ZX_ASSERT(socket.is_valid());
+  zx_info_handle_basic_t info;
+  auto err = socket.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
+                             nullptr);
+  ZX_ASSERT(err == ZX_OK);
+  ZX_ASSERT(info.type == ZX_OBJ_TYPE_SOCKET);
+  new BoundSocket(this, std::move(ns), std::move(socket));
+  ZX_ASSERT(!socket.is_valid());
 }
 
 void OvernetApp::ConnectToLocalService(const std::string& service_name,
@@ -63,7 +75,7 @@ void OvernetApp::ServiceProvider::AcceptStream(
     stream.Fail(overnet::Status::FromZx(err).WithContext("AcceptStream"));
     return;
   }
-  app_->BindStream(std::move(stream), zx::channel(a));
+  app_->BindChannel(std::move(stream), zx::channel(a));
   Connect(zx::channel(b));
 }
 

@@ -15,6 +15,63 @@ namespace overnet {
 template <class Address, uint32_t kMSS, class HashAddress = std::hash<Address>,
           class EqAddress = std::equal_to<Address>>
 class PacketNub {
+  enum class PacketOp : uint8_t {
+    Connected = 0,
+    CallMeMaybe = 1,
+    Hello = 2,
+    HelloAck = 3,
+  };
+
+  friend std::ostream& operator<<(std::ostream& out, PacketOp op) {
+    switch (op) {
+      case PacketOp::Connected: {
+        return out << "Connected";
+      }
+      case PacketOp::CallMeMaybe: {
+        return out << "CallMeMaybe";
+      }
+      case PacketOp::Hello: {
+        return out << "Hello";
+      }
+      case PacketOp::HelloAck: {
+        return out << "HelloAck";
+      }
+    }
+    return out << "UnknownPacketOp(" << static_cast<int>(op) << ")";
+  }
+
+  enum class LinkState : uint8_t {
+    Initial,
+    Announcing,
+    SayingHello,
+    AckingHello,
+    SemiConnected,
+    Connected,
+  };
+
+  friend std::ostream& operator<<(std::ostream& out, LinkState state) {
+    switch (state) {
+      case LinkState::Initial: {
+        return out << "Initial";
+      }
+      case LinkState::Announcing: {
+        return out << "Announcing";
+      }
+      case LinkState::SayingHello: {
+        return out << "SayingHello";
+      }
+      case LinkState::AckingHello: {
+        return out << "AckingHello";
+      }
+      case LinkState::SemiConnected: {
+        return out << "SemiConnected";
+      }
+      case LinkState::Connected: {
+        return out << "Connected";
+      }
+    }
+  }
+
  public:
   static constexpr inline auto kModule = Module::NUB;
 
@@ -37,6 +94,9 @@ class PacketNub {
     const uint8_t* p = begin;
     const uint8_t* const end = slice.end();
 
+    OVERNET_TRACE(DEBUG) << "INCOMING: from:" << src << " " << received << " "
+                         << slice;
+
     if (p == end) {
       OVERNET_TRACE(INFO) << "Short packet received (no op code)";
       return;
@@ -50,7 +110,7 @@ class PacketNub {
     while (true) {
       Link* link = link_for(src);
       uint64_t node_id;
-      OVERNET_TRACE(DEBUG) << " op=" << static_cast<int>(op);
+      OVERNET_TRACE(DEBUG) << " op=" << op << " state=" << link->state;
       switch (op_state(op, link->state)) {
         case op_state(PacketOp::Connected, LinkState::AckingHello):
           if (!link->SetState(LinkState::Connected)) {
@@ -179,22 +239,6 @@ class PacketNub {
     }
     return true;
   }
-
-  enum class PacketOp : uint8_t {
-    Connected = 0,
-    CallMeMaybe = 1,
-    Hello = 2,
-    HelloAck = 3,
-  };
-
-  enum class LinkState : uint8_t {
-    Initial,
-    Announcing,
-    SayingHello,
-    AckingHello,
-    SemiConnected,
-    Connected,
-  };
 
   struct Link {
     ~Link() { assert(link == nullptr); }

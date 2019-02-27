@@ -1,0 +1,63 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.protocol;
+
+using zx;
+
+/// A single message proxied from a Zircon channel over an Overnet stream.
+struct ZirconChannelMessage {
+    /// Bytes part of the payload.
+    vector<uint8>:zx.CHANNEL_MAX_MSG_BYTES bytes;
+    /// Handles part of the payload.
+    vector<ZirconHandle>:zx.CHANNEL_MAX_MSG_HANDLES handles;
+};
+
+/// A single handle to be proxied.
+/// Not all Zircon types are supported.
+xunion ZirconHandle {
+    /// A proxied channel.
+    ChannelHandle channel;
+    /// A proxied socket.
+    SocketHandle socket;
+};
+
+/// A proxied channel.
+struct ChannelHandle {
+    /// The Overnet proxy stream that was created to carry this channel.
+    /// The protocol over said stream will be a `ZirconChannel`.
+    StreamId stream_id;
+};
+
+/// A proxied socket.
+struct SocketHandle {
+    /// The Overnet proxy stream that was created to carry this socket.
+    /// The protocol over said stream will be a `ZirconSocket`.
+    StreamId stream_id;
+    /// Socket options, per `zx_socket_create`.
+    uint32 options;
+};
+
+
+/// Proxy protocol for channels.
+/// This protocol is published for each side of the Overnet stream.
+[Transport="OvernetStream"]
+protocol ZirconChannel {
+    /// Send a message to the stream's peer.
+    Message(ZirconChannelMessage message);
+};
+
+/// Proxy protocol for sockets.
+/// This protocol is published for each side of the Overnet stream.
+[Transport="OvernetStream"]
+protocol ZirconSocket {
+    /// Send some bytes to the stream's peer.
+    /// For datagram sockets, this is one datagram.
+    /// For stream sockets, this is the next bundle of bytes.
+    Message(vector<uint8> bytes);
+    /// Send a control message to the stream's peer.
+    Control(vector<uint8> bytes);
+    /// Share a handle to the stream's peer (to be collected via zx_socket_accept).
+    Share(SocketHandle socket);
+};

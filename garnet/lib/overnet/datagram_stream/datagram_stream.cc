@@ -126,8 +126,9 @@ DatagramStream::DatagramStream(
       reliability_and_ordering_(reliability_and_ordering),
       receive_mode_(reliability_and_ordering),
       // TODO(ctiller): What should mss be? Hardcoding to 2048 for now.
-      packet_protocol_(timer_, [router] { return (*router->rng())(); }, this,
-                       PacketProtocol::NullCodec(), 2048) {}
+      packet_protocol_(
+          timer_, [router] { return (*router->rng())(); }, this,
+          PacketProtocol::NullCodec(), 2048) {}
 
 void DatagramStream::Register() {
   ScopedModule<DatagramStream> scoped_module(this);
@@ -926,13 +927,13 @@ void DatagramStream::ReceiveOp::PullAll(
 }
 
 void DatagramStream::ReceiveOp::Close(const Status& status) {
+  if (closed_) {
+    return;
+  }
   ScopedModule<DatagramStream> in_dgs(stream_.get());
   ScopedModule<ReceiveOp> in_recv_op(this);
   OVERNET_TRACE(DEBUG) << "Close incoming_message=" << incoming_message_
                        << " status=" << status;
-  if (closed_) {
-    return;
-  }
   closed_ = true;
   if (incoming_message_ == nullptr) {
     assert(stream_->unclaimed_receives_.Contains(this));

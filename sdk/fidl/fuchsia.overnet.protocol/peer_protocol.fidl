@@ -1,0 +1,26 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.protocol;
+
+using zx;
+
+/// Peer-to-peer protocol between two Overnet nodes.
+/// Each end of the Overnet connection stream implements this protocol.
+[Transport="OvernetStream"]
+protocol Peer {
+    /// Create a new stream, labelled `stream_id`, to communicate with the
+    /// advertised service `service_name`.
+    ConnectToService(string service_name, StreamId stream_id);
+    /// Ping request/response. Return value is the amount of time the service
+    /// used to fulfill the response.
+    Ping() -> (zx.time response);
+    /// Update the description of a single node.
+    /// This message is broadcast from a node whenever the description changes.
+    UpdateNodeDescription(PeerDescription desc);
+    /// Gossip routing: update the status of a single node.
+    UpdateNodeStatus(NodeStatus node);
+    /// Gossip routing: update the status of a single link between nodes.
+    UpdateLinkStatus(LinkStatus link);
+};

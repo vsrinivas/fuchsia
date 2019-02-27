@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/overnet/overnetstack/bound_channel.h"
+#include <lib/zx/socket.h>
 #include <zircon/assert.h>
 #include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
 #include "garnet/bin/overnet/overnetstack/overnet_app.h"
-#include "garnet/lib/overnet/endpoint/message_builder.h"
 
 namespace overnetstack {
 
@@ -17,6 +17,7 @@ BoundChannel::BoundChannel(OvernetApp* app,
       overnet_stream_(std::move(ns)),
       zx_channel_(std::move(channel)) {
   assert(zx_channel_.is_valid());
+
   // Kick off the two read loops: one from the network and the other from the zx
   // channel. Each proceeds much the same: as data is read, it's written and
   // then the next read is begun.
@@ -24,84 +25,8 @@ BoundChannel::BoundChannel(OvernetApp* app,
   StartChannelRead();
 }
 
-// Overnet MessageReceiver that builds up a FIDL channel message
-class BoundChannel::FidlMessageBuilder final : public overnet::MessageReceiver {
- public:
-  FidlMessageBuilder(BoundChannel* stream)
-      : stream_(stream),
-        message_(fidl::BytePart(
-                     bytes_, ZX_CHANNEL_MAX_MSG_BYTES,
-                     // We start with enough space just for the FIDL header
-                     sizeof(fidl_message_header_t)),
-                 fidl::HandlePart(handles_, ZX_CHANNEL_MAX_MSG_HANDLES)) {
-    // Zero out header to start with
-    message_.header().txid = 0;
-    message_.header().reserved0 = 0;
-    message_.header().flags = 0;
-  }
-
-  FidlMessageBuilder(const FidlMessageBuilder&) = delete;
-  FidlMessageBuilder& operator=(const FidlMessageBuilder&) = delete;
-
-  ~FidlMessageBuilder() {}
-
-  const fidl::Message& message() const { return message_; }
-  fidl::Message& message() { return message_; }
-
-  overnet::Status SetTransactionId(uint32_t txid) override {
-    message_.set_txid(txid);
-    return overnet::Status::Ok();
-  }
-
-  overnet::Status SetOrdinal(uint32_t ordinal) override {
-    message_.header().ordinal = ordinal;
-    return overnet::Status::Ok();
-  }
-
-  overnet::Status SetBody(overnet::Slice body) override {
-    // For now we copy the body into the message.
-    // TODO(ctiller): consider other schemes to eliminate this copy?
-    const auto new_actual = sizeof(fidl_message_header_t) + body.length();
-    if (new_actual > message_.bytes().capacity()) {
-      return overnet::Status(overnet::StatusCode::FAILED_PRECONDITION,
-                             "Message too large");
-    }
-    message_.bytes().set_actual(new_actual);
-    memcpy(message_.bytes().begin(), body.begin(), body.length());
-    return overnet::Status::Ok();
-  }
-
-  overnet::Status AppendUnknownHandle() override { return AppendHandle(0); }
-
-  overnet::Status AppendChannelHandle(
-      overnet::RouterEndpoint::ReceivedIntroduction received_introduction)
-      override;
-
-  // Mark this message as sent, meaning that we no longer need to close
-  // contained handles.
-  void Sent() { message_.ClearHandlesUnsafe(); }
-
- private:
-  overnet::Status AppendHandle(zx_handle_t hdl) {
-    auto& handles = message_.handles();
-    if (handles.actual() == handles.capacity()) {
-      zx_handle_close(hdl);
-      return overnet::Status(overnet::StatusCode::FAILED_PRECONDITION,
-                             "Too many handles in message");
-    }
-    handles.data()[handles.actual()] = hdl;
-    handles.set_actual(handles.actual() + 1);
-    return overnet::Status::Ok();
-  }
-
-  BoundChannel* stream_;
-  uint8_t bytes_[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::Message message_;
-};
-
 void BoundChannel::Close(const overnet::Status& status) {
-  OVERNET_TRACE(DEBUG) << "CLOSE: " << status << " closed=" << closed_;
+  OVERNET_TRACE(TRACE) << "CLOSE: " << status << " closed=" << closed_;
   if (closed_) {
     return;
   }
@@ -110,27 +35,29 @@ void BoundChannel::Close(const overnet::Status& status) {
   if (net_recv_) {
     net_recv_->Close(status);
   }
-  overnet_stream_.Close(status, [this] { delete this; });
+  overnet_stream_.Close(status, [this] { Unref(); });
 }
 
-void BoundChannel::WriteToChannelAndStartNextRead(
-    std::unique_ptr<FidlMessageBuilder> builder) {
-  OVERNET_TRACE(DEBUG) << "WriteToChannelAndStartNextRead txid="
-                       << builder->message().txid()
-                       << " bytes_cnt=" << builder->message().bytes().actual()
-                       << " handles_cnt="
-                       << builder->message().handles().actual()
-                       << " hdl=" << zx_channel_.get();
-  auto err = builder->message().Write(zx_channel_.get(), 0);
+void BoundChannel::WriteToChannelAndStartNextRead(fidl::Message message) {
+  OVERNET_TRACE(TRACE) << "WriteToChannelAndStartNextRead hdl="
+                       << zx_channel_.get();
+  auto err = message.Write(zx_channel_.get(), 0);
   switch (err) {
     case ZX_OK:
-      builder->Sent();
+      pending_chan_bytes_.clear();
+      pending_chan_handles_.clear();
       StartNetRead();
       break;
     case ZX_ERR_SHOULD_WAIT:
       // Kernel push back: capture the slice, and ask to be informed when we
       // can write.
-      waiting_to_write_ = std::move(builder);
+      std::vector<uint8_t>(message.bytes().begin(), message.bytes().end())
+          .swap(pending_chan_bytes_);
+      std::vector<zx::handle>(message.handles().begin(),
+                              message.handles().end())
+          .swap(pending_chan_handles_);
+      message.ClearHandlesUnsafe();
+      Ref();
       err = async_begin_wait(dispatcher_, &wait_send_.wait);
       if (err != ZX_OK) {
         Close(overnet::Status::FromZx(err).WithContext(
@@ -144,37 +71,37 @@ void BoundChannel::WriteToChannelAndStartNextRead(
 }
 
 void BoundChannel::StartChannelRead() {
-  OVERNET_TRACE(DEBUG) << "StartChannelRead hdl=" << zx_channel_.get();
-  uint8_t message_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  OVERNET_TRACE(TRACE) << "StartChannelRead hdl=" << zx_channel_.get();
+  struct Buffer {
+    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  };
+  auto buffer = std::make_unique<Buffer>();
   fidl::Message message(
-      fidl::BytePart(message_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
-      fidl::HandlePart(handles, ZX_CHANNEL_MAX_MSG_HANDLES));
+      fidl::BytePart(buffer->bytes, ZX_CHANNEL_MAX_MSG_BYTES),
+      fidl::HandlePart(buffer->handles, ZX_CHANNEL_MAX_MSG_HANDLES));
   auto err = message.Read(zx_channel_.get(), 0);
   OVERNET_TRACE(DEBUG) << "StartChannelRead read result: "
                        << overnet::Status::FromZx(err);
   switch (err) {
     case ZX_OK: {
-      // Successful read: build the output message.
-      OVERNET_TRACE(DEBUG) << "Convert message to overnet";
-      auto send_slice = ChannelMessageToOvernet(std::move(message));
-      OVERNET_TRACE(DEBUG) << "Convert message to overnet got: " << send_slice;
-      if (send_slice.is_error()) {
-        Close(send_slice.AsStatus());
-        break;
+      auto encoded = EncodeMessage(std::move(message));
+      if (encoded.is_error()) {
+        Close(encoded.AsStatus());
+        return;
       }
-      overnet::RouterEndpoint::Stream::SendOp(&overnet_stream_,
-                                              send_slice->length())
-          .Push(std::move(*send_slice), [this] { StartChannelRead(); });
+      proxy_.Message(std::move(*encoded));
     } break;
     case ZX_ERR_SHOULD_WAIT:
       // Kernel push back: ask to be informed when we can try again.
+      Ref();
       err = async_begin_wait(dispatcher_, &wait_recv_.wait);
       OVERNET_TRACE(DEBUG) << "async_begin_wait result: "
                            << overnet::Status::FromZx(err);
       if (err != ZX_OK) {
         Close(overnet::Status::FromZx(err).WithContext(
             "Beginning wait for read"));
+        Unref();
         break;
       }
       break;
@@ -183,6 +110,18 @@ void BoundChannel::StartChannelRead() {
       Close(overnet::Status::FromZx(err).WithContext("Read"));
       break;
   }
+}
+
+void BoundChannel::Proxy::Send_(fidl::Message message) {
+  assert(message.handles().size() == 0);
+  auto send_slice = overnet::Slice::FromContainer(message.bytes());
+  channel_->Ref();
+  overnet::RouterEndpoint::Stream::SendOp(&channel_->overnet_stream_,
+                                          send_slice.length())
+      .Push(std::move(send_slice), [this] {
+        channel_->StartChannelRead();
+        channel_->Unref();
+      });
 }
 
 void BoundChannel::SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
@@ -197,9 +136,17 @@ void BoundChannel::SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
 
 void BoundChannel::OnSendReady(zx_status_t status,
                                const zx_packet_signal_t* signal) {
-  OVERNET_TRACE(DEBUG) << "OnSendReady: status="
+  OVERNET_TRACE(TRACE) << "OnSendReady: status="
                        << overnet::Status::FromZx(status);
-  WriteToChannelAndStartNextRead(std::move(waiting_to_write_));
+  std::vector<zx_handle_t> handles;
+  for (auto& h : pending_chan_handles_) {
+    handles.push_back(h.release());
+  }
+  WriteToChannelAndStartNextRead(fidl::Message(
+      fidl::BytePart(pending_chan_bytes_.data(), pending_chan_bytes_.size(),
+                     pending_chan_bytes_.size()),
+      fidl::HandlePart(handles.data(), handles.size(), handles.size())));
+  Unref();
 }
 
 void BoundChannel::RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
@@ -214,28 +161,32 @@ void BoundChannel::RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
 
 void BoundChannel::OnRecvReady(zx_status_t status,
                                const zx_packet_signal_t* signal) {
-  OVERNET_TRACE(DEBUG) << "OnRecvReady: status="
+  OVERNET_TRACE(TRACE) << "OnRecvReady: status="
                        << overnet::Status::FromZx(status)
                        << " observed=" << signal->observed;
 
   if (status != ZX_OK) {
     Close(overnet::Status::FromZx(status).WithContext("OnRecvReady"));
+    Unref();
     return;
   }
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     StartChannelRead();
+    Unref();
     return;
   }
 
   // Note: we flush all reads before propagating the close.
   ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
   Close(overnet::Status::Ok());
+  Unref();
 }
 
 void BoundChannel::StartNetRead() {
   OVERNET_TRACE(DEBUG) << "StartNetRead";
   net_recv_.Reset(&overnet_stream_);
+  Ref();
   net_recv_->PullAll(
       [this](overnet::StatusOr<overnet::Optional<std::vector<overnet::Slice>>>
                  status) {
@@ -243,42 +194,58 @@ void BoundChannel::StartNetRead() {
         if (status.is_error() || !status->has_value()) {
           // If a read failed, close the stream.
           Close(status.AsStatus());
+          Unref();
           return;
         }
 
         if (closed_) {
+          Unref();
           return;
         }
 
         // Write the message to the channel, then start reading again.
         // Importantly: don't start reading until we've written to ensure
         // that there's push back in the system.
-        auto builder = std::make_unique<FidlMessageBuilder>(this);
-        auto parse_status = overnet::ParseMessageInto(
-            overnet::Slice::Join((*status)->begin(), (*status)->end()),
-            overnet_stream_.peer(), app_->endpoint(), builder.get());
-        WriteToChannelAndStartNextRead(std::move(builder));
+        auto joined =
+            overnet::Slice::AlignedJoin((*status)->begin(), (*status)->end());
+        auto dispatch_status = overnet::Status::FromZx(stub_.Process_(
+            fidl::Message(fidl::BytePart(const_cast<uint8_t*>(joined.begin()),
+                                         joined.length(), joined.length()),
+                          fidl::HandlePart())));
+        if (dispatch_status.is_error()) {
+          Close(dispatch_status);
+        }
+        Unref();
       });
 }
 
-overnet::StatusOr<overnet::Slice> BoundChannel::ChannelMessageToOvernet(
-    fidl::Message message) {
-  overnet::MessageWireEncoder builder(&overnet_stream_);
+void BoundChannel::Stub::Message(
+    fuchsia::overnet::protocol::ZirconChannelMessage message) {
+  if (auto status = channel_->DecodeMessageThen(
+          &message,
+          [this](fidl::Message fidl_msg) {
+            channel_->WriteToChannelAndStartNextRead(std::move(fidl_msg));
+            return overnet::Status::Ok();
+          });
+      status.is_error()) {
+    channel_->Close(status);
+  }
+}
+
+overnet::StatusOr<fuchsia::overnet::protocol::ZirconChannelMessage>
+BoundChannel::EncodeMessage(fidl::Message message) {
   if (!message.has_header()) {
     return overnet::Status(overnet::StatusCode::FAILED_PRECONDITION,
                            "FIDL message without a header");
   }
   assert(message.flags() == 0);
-  auto status =
-      builder.SetTransactionId(message.txid())
-          .Then([&] { return builder.SetOrdinal(message.ordinal()); })
-          .Then([&] {
-            return builder.SetBody(overnet::Slice::ReferencingContainer(
-                message.bytes().begin(), message.bytes().end()));
-          });
+  fuchsia::overnet::protocol::ZirconChannelMessage msg;
+  std::vector<uint8_t>(message.bytes().begin(), message.bytes().end())
+      .swap(msg.bytes);
 
   // Keep track of failure.
   // We cannot leave the loop below early or we risk leaking handles.
+  overnet::Status status = overnet::Status::Ok();
   for (auto handle : message.handles()) {
     zx::handle hdl(handle);
     if (status.is_error()) {
@@ -291,47 +258,130 @@ overnet::StatusOr<overnet::Slice> BoundChannel::ChannelMessageToOvernet(
       status = overnet::Status::FromZx(err).WithContext("Getting handle type");
       continue;
     }
+    fuchsia::overnet::protocol::ZirconHandle zh;
     switch (info.type) {
       case ZX_OBJ_TYPE_CHANNEL: {
-        auto new_stream = builder.AppendChannelHandle(
-            fuchsia::overnet::protocol::Introduction());
+        auto fork_status = overnet_stream_.InitiateFork(
+            fuchsia::overnet::protocol::ReliabilityAndOrdering::
+                ReliableOrdered);
+        if (fork_status.is_error()) {
+          status = fork_status.AsStatus();
+          continue;
+        }
+        zh.set_channel(fuchsia::overnet::protocol::ChannelHandle{
+            fork_status->stream_id().as_fidl()});
         auto channel = zx::channel(hdl.release());
         assert(channel.is_valid());
         assert(!hdl.is_valid());
-        if (new_stream.is_error()) {
-          status = new_stream.AsStatus();
-        } else {
-          app_->BindStream(std::move(*new_stream), std::move(channel));
-          assert(!channel.is_valid());
+        app_->BindChannel(std::move(*fork_status), std::move(channel));
+        assert(!channel.is_valid());
+      } break;
+      case ZX_OBJ_TYPE_SOCKET: {
+        zx_info_socket_t socket_info;
+        err = hdl.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info),
+                           nullptr, nullptr);
+        if (err != ZX_OK) {
+          status =
+              overnet::Status::FromZx(err).WithContext("Getting socket info");
+          continue;
         }
+        auto fork_status = overnet_stream_.InitiateFork(
+            // TODO(ctiller): unreliable for udp!
+            fuchsia::overnet::protocol::ReliabilityAndOrdering::
+                ReliableOrdered);
+        if (fork_status.is_error()) {
+          status = fork_status.AsStatus();
+          continue;
+        }
+        zh.set_socket(fuchsia::overnet::protocol::SocketHandle{
+            fork_status->stream_id().as_fidl(), socket_info.options});
+        auto socket = zx::socket(hdl.release());
+        assert(socket.is_valid());
+        assert(!hdl.is_valid());
+        app_->BindSocket(std::move(*fork_status), std::move(socket));
+        assert(!socket.is_valid());
       } break;
       default:
-        auto append_status = builder.AppendUnknownHandle().WithContext(
-            "Appending unknown channel");
-        if (append_status.is_error()) {
-          status = append_status;
-        }
-        break;
+        status = overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
+                                 "Bad handle type");
+        continue;
     }
+    assert(status.is_ok());
+    msg.handles.emplace_back(std::move(zh));
   }
   message.ClearHandlesUnsafe();
   if (status.is_error()) {
     return status;
   }
-  return builder.Write(overnet::Border::None());
+  return msg;
 }
 
-overnet::Status BoundChannel::FidlMessageBuilder::AppendChannelHandle(
-    overnet::RouterEndpoint::ReceivedIntroduction received_introduction) {
-  // TODO(ctiller): interpret received_introduction.introduction?
-  zx_handle_t a, b;
-  zx_status_t err = zx_channel_create(0, &a, &b);
-  if (err != ZX_OK) {
-    return overnet::Status::FromZx(err).WithContext("Appending channel");
+overnet::Status BoundChannel::DecodeMessageThen(
+    fuchsia::overnet::protocol::ZirconChannelMessage* message,
+    fit::function<overnet::Status(fidl::Message)> then) {
+  std::vector<zx::handle> handle_objects;
+
+  for (const auto& h : message->handles) {
+    switch (h.Which()) {
+      case fuchsia::overnet::protocol::ZirconHandle::Tag::kChannel: {
+        zx::channel a, b;
+        if (auto err = zx::channel::create(0, &a, &b); err != ZX_OK) {
+          return overnet::Status::FromZx(err).WithContext("zx_channel_create");
+        }
+        auto fork_status = overnet_stream_.ReceiveFork(
+            h.channel().stream_id, fuchsia::overnet::protocol::
+                                       ReliabilityAndOrdering::ReliableOrdered);
+        if (fork_status.is_error()) {
+          return fork_status.AsStatus();
+        }
+        app_->BindChannel(std::move(*fork_status), std::move(a));
+        handle_objects.push_back(std::move(b));
+      } break;
+      case fuchsia::overnet::protocol::ZirconHandle::Tag::kSocket: {
+        zx::socket a, b;
+        if (auto err = zx::socket::create(h.socket().options, &a, &b);
+            err != ZX_OK) {
+          return overnet::Status::FromZx(err).WithContext("zx_socket_create");
+        }
+        auto fork_status = overnet_stream_.ReceiveFork(
+            h.channel().stream_id,
+            // TODO(ctiller): unreliable for udp
+            fuchsia::overnet::protocol::ReliabilityAndOrdering::
+                ReliableOrdered);
+        if (fork_status.is_error()) {
+          return fork_status.AsStatus();
+        }
+        app_->BindSocket(std::move(*fork_status), std::move(a));
+        handle_objects.push_back(std::move(b));
+      } break;
+      case fuchsia::overnet::protocol::ZirconHandle::Tag::Empty: {
+        return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
+                               "Bad handle type");
+      } break;
+    }
   }
-  stream_->app_->BindStream(std::move(received_introduction.new_stream),
-                            zx::channel(a));
-  return AppendHandle(b);
+
+  if (handle_objects.size() > ZX_CHANNEL_MAX_MSG_HANDLES) {
+    return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
+                           "Too many handles");
+  }
+
+  std::vector<zx_handle_t> handles;
+  for (auto& h : handle_objects) {
+    handles.push_back(h.release());
+  }
+
+  fidl::Message out(
+      fidl::BytePart(message->bytes.data(), message->bytes.size(),
+                     message->bytes.size()),
+      fidl::HandlePart(handles.data(), handles.size(), handles.size()));
+
+  if (!out.has_header()) {
+    return overnet::Status(overnet::StatusCode::INVALID_ARGUMENT,
+                           "Message has no header");
+  }
+
+  return then(std::move(out));
 }
 
 }  // namespace overnetstack

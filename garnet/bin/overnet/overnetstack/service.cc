@@ -77,7 +77,7 @@ void Service::ConnectToService(fuchsia::overnet::protocol::NodeId node,
     if (ns.is_error()) {
       OVERNET_TRACE(ERROR) << "ConnectToService failed: " << ns.AsStatus();
     } else {
-      app_->BindStream(std::move(*ns), std::move(channel));
+      app_->BindChannel(std::move(*ns), std::move(channel));
     }
   }
 }

@@ -4,34 +4,60 @@
 
 library fuchsia.overnet.protocol;
 
+/// If a LinkStatus or NodeStatus version is set to this value, that link or node
+/// is considered dead and should be expunged soon.
 const uint64 METRIC_VERSION_TOMBSTONE = 0xffffffffffffffff;
 
+/// Description of a single node.
 table PeerDescription {
+    /// The set of services published by this node.
     1: vector<string> services;
 };
 
+/// Metrics associated with a link.
+/// Note that a link is a uni-directional connection between two nodes.
 table LinkMetrics {
+    /// How much bandwidth is currently available across a link (in bits per second).
     1: uint64 bw_link;
+    /// How much bandwidth is currently in use across the link (in bits per second).
     2: uint64 bw_used;
+    /// Current round trip time for requests across this link.
     3: uint64 rtt;
+    /// Maximum send size for a datagram across this link.
     4: uint32 mss;
 };
 
+/// Status packet for a single link.
+/// Traffic on the link flows from `from` to `to`.
 struct LinkStatus {
+    /// Link originating node.
     NodeId from;
+    /// Link target node.
     NodeId to;
+    /// An identifier (chosen by node `from`) to label this link.
+    /// `from` must guarantee that the tuple (from, to, local_id) is unique
+    /// for each of it's held links.
     uint64 local_id;
+    /// A monotonically increasing version counter for this links status.
     uint64 version;
 
+    /// Metrics associated with this link.
     LinkMetrics metrics;
 };
 
+/// Metrics associated with a node.
 table NodeMetrics {
+    /// How long does this node take to forward a message between two links?
     1: uint64 forwarding_time;
 };
 
+/// Status packet for a node.
 struct NodeStatus {
+    /// The node to which we refer.
     NodeId id;
+    /// A monotonically increasing version counter for this nodes status.
     uint64 version;
+
+    /// Metrics associated with this node.
     NodeMetrics metrics;
 };

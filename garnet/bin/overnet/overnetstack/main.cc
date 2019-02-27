@@ -53,6 +53,7 @@ class FuchsiaTimer final : public overnet::Timer {
 
 class FuchsiaLog final : public overnet::TraceRenderer {
  public:
+  FuchsiaLog(overnet::Timer* timer) : timer_(timer) {}
   void Render(overnet::TraceOutput output) override {
     auto severity = [sev = output.severity] {
       switch (sev) {
@@ -68,10 +69,25 @@ class FuchsiaLog final : public overnet::TraceRenderer {
           return fxl::LOG_ERROR;
       }
     }();
-    fxl::LogMessage(severity, output.file, output.line, nullptr).stream()
-        << output.message;
+    fxl::LogMessage message(severity, output.file, output.line, nullptr);
+    message.stream() << timer_->Now() << " " << output.message;
+    bool annotated = false;
+    auto maybe_begin_annotation = [&] {
+      if (annotated) {
+        return;
+      }
+      annotated = true;
+      message.stream() << " //";
+    };
+    output.scopes.Visit([&](overnet::Module module, void* ptr) {
+      maybe_begin_annotation();
+      message.stream() << ' ' << module << ':' << ptr;
+    });
   }
   void NoteParentChild(overnet::Op, overnet::Op) override {}
+
+ private:
+  overnet::Timer* const timer_;
 };
 
 }  // namespace overnetstack
@@ -83,10 +99,10 @@ int main(int argc, const char** argv) {
     fxl::SetLogSettings(settings);
   }
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  overnetstack::FuchsiaLog fuchsia_log;
+  overnetstack::FuchsiaTimer fuchsia_timer;
+  overnetstack::FuchsiaLog fuchsia_log(&fuchsia_timer);
   overnet::ScopedRenderer scoped_renderer(&fuchsia_log);
   overnet::ScopedSeverity scoped_severity(overnet::Severity::INFO);
-  overnetstack::FuchsiaTimer fuchsia_timer;
   overnetstack::OvernetApp app(&fuchsia_timer);
   app.InstantiateActor<overnetstack::Service>();
   auto* udp_nub = app.InstantiateActor<overnetstack::UdpNub>();
