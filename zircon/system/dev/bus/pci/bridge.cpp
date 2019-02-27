@@ -174,11 +174,10 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
 void Bridge::Dump() const {
     pci::Device::Dump();
 
-    printf("Bridge Information:\n");
-    printf("    Managed Bus Id: %#02x\n", managed_bus_id());
-    printf("         Io Window: [%#04x-%#04x]\n", io_base(), io_limit());
-    printf("       MMIO Window: [%#08x-%#08x]\n", mem_base(), mem_limit());
-    printf("    PF-MMIO Window: [%#" PRIx64 "-%#" PRIx64 "]\n", pf_mem_base(), pf_mem_limit());
+    pci_infof("    managed bus id: %#02x\n", managed_bus_id());
+    pci_infof("         io window: [%#04x-%#04x]\n", io_base(), io_limit());
+    pci_infof("       mmio window: [%#08x-%#08x]\n", mem_base(), mem_limit());
+    pci_infof("    pf-mmio window: [%#" PRIx64 "-%#" PRIx64 "]\n", pf_mem_base(), pf_mem_limit());
 }
 
 void Bridge::Unplug() {
@@ -187,21 +186,22 @@ void Bridge::Unplug() {
     pci_infof("bridge [%s] unplugged\n", cfg_->addr());
 }
 
-zx_status_t Bridge::AllocateBars() {
+zx_status_t Bridge::ConfigureBars() {
+    zx_status_t status = ZX_OK;
     {
         fbl::AutoLock dev_lock(&dev_lock_);
-        zx_status_t status = AllocateBridgeWindowsLocked();
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        status = pci::Device::AllocateBarsLocked();
+        status = AllocateBridgeWindowsLocked();
         if (status != ZX_OK) {
             return status;
         }
     }
 
-    AllocateDownstreamBars();
+    status = pci::Device::ConfigureBars();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    ConfigureDownstreamBars();
     return ZX_OK;
 }
 
@@ -224,7 +224,6 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
     zx_status_t status;
     fbl::unique_ptr<PciAllocation> alloc;
 
-    Dump(); // TODO(cja): Remove after a userspace tool exists for inspection
     // Every window is configured the same butwith different allocators and registers.
     auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, auto base, auto limit,
                                 auto label) {

@@ -5,15 +5,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "device.h"
 #include "bus.h"
 #include "common.h"
-#include "device.h"
 #include "ref_counted.h"
 #include "upstream_node.h"
 #include <assert.h>
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
@@ -84,7 +85,7 @@ Device::~Device() {
     ZX_DEBUG_ASSERT(!plugged_in_);
 
     // Make certain that all bus access (MMIO, PIO, Bus mastering) has been
-    // disabled.  Also, explicitly disable legacy IRQs. 
+    // disabled.  Also, explicitly disable legacy IRQs.
     // TODO(cja/ZX-3147)): Only use the PCIe int disable if PCIe
     ModifyCmd(PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN, PCIE_CFG_COMMAND_INT_DISABLE);
 
@@ -116,8 +117,6 @@ zx_status_t Device::Init() {
 }
 
 zx_status_t Device::InitLocked() {
-    zx_status_t status;
-
     // Cache basic device info
     vendor_id_ = cfg_->Read(Config::kVendorId);
     device_id_ = cfg_->Read(Config::kDeviceId);
@@ -125,13 +124,6 @@ zx_status_t Device::InitLocked() {
     subclass_ = cfg_->Read(Config::kSubClass);
     prog_if_ = cfg_->Read(Config::kProgramInterface);
     rev_id_ = cfg_->Read(Config::kRevisionId);
-
-    // Determine the details of each of the BARs, but do not actually allocate
-    // space on the bus for them yet. Allocation will be handled when our upstream
-    // bridge or root bring us online.
-    if ((status = ProbeBarsLocked()) != ZX_OK) {
-        return status;
-    }
 
     // Parse and sanity check the capabilities and extended capabilities lists
     // if they exist
@@ -141,7 +133,7 @@ zx_status_t Device::InitLocked() {
     // bookkeeping
     // TODO(cja): IRQ initialization
 
-    return status;
+    return ZX_OK;
 }
 
 zx_status_t Device::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
@@ -169,127 +161,6 @@ void Device::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
         static_cast<uint16_t>((cfg_->Read(Config::kCommand) & ~clr_bits) | set_bits));
 }
 
-zx_status_t Device::ProbeBarLocked(uint bar_id) {
-    ZX_DEBUG_ASSERT(cfg_);
-    ZX_DEBUG_ASSERT(bar_id < bar_count_);
-    ZX_DEBUG_ASSERT(bar_id < fbl::count_of(bars_));
-
-    // Determine the type of BAR this is. Make sure that it is one of the types
-    // we understand.
-    BarInfo& bar_info = bars_[bar_id];
-    uint32_t bar_val = cfg_->Read(Config::kBar(bar_id));
-    bar_info.is_mmio = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
-    bar_info.is_64bit = bar_info.is_mmio &&
-                        ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
-    bar_info.is_prefetchable = bar_info.is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
-    bar_info.first_bar_reg = bar_id;
-
-    if (bar_info.is_64bit) {
-        if ((bar_id + 1) >= bar_count_) {
-            pci_errorf("Illegal 64-bit MMIO BAR position (%u/%u) while fetching BAR info "
-                       "for device config @%p\n",
-                       bar_id, bar_count_, &cfg_);
-            return ZX_ERR_BAD_STATE;
-        }
-    } else {
-        if (bar_info.is_mmio &&
-            ((bar_val & PCI_BAR_MMIO_TYPE_MASK) != PCI_BAR_MMIO_TYPE_32BIT)) {
-            pci_errorf("Unrecognized MMIO BAR type (BAR[%u] == 0x%08x) while fetching"
-                       "BAR info for device config @%p\n",
-                       bar_id, bar_val, &cfg_);
-            return ZX_ERR_BAD_STATE;
-        }
-    }
-
-    // Disable either MMIO or PIO (depending on the BAR type) access while we
-    // perform the probe.  We don't want the addresses written during probing to
-    // conflict with anything else on the bus.  Note:  No drivers should have
-    // access to this device's registers during the probe process as the device
-    // should not have been published yet.  That said, there could be other
-    // (special case) parts of the system accessing a devices registers at this
-    // point in time, like an early init debug console or serial port.  Don't
-    // make any attempt to print or log until the probe operation has been
-    // completed.  Hopefully these special systems are quiescent at this point
-    // in time, otherwise they might see some minor glitching while access is
-    // disabled.
-    uint16_t backup = cfg_->Read(Config::kCommand);
-    if (bar_info.is_mmio) {
-        cfg_->Write(Config::kCommand, static_cast<uint16_t>(backup & ~PCI_COMMAND_MEM_EN));
-    } else {
-        cfg_->Write(Config::kCommand, static_cast<uint16_t>(backup & ~PCI_COMMAND_IO_EN));
-    }
-
-    // Figure out the size of this BAR region by writing 1's to the address
-    // bits, then reading back to see which bits the device considers
-    // un-configurable.
-    uint32_t addr_mask = bar_info.is_mmio ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
-    uint32_t addr_lo = bar_val & addr_mask;
-    uint64_t size_mask;
-
-    cfg_->Write(Config::kBar(bar_id), bar_val | addr_mask);
-    size_mask = ~(cfg_->Read(Config::kBar(bar_id)) & addr_mask);
-    cfg_->Write(Config::kBar(bar_id), bar_val);
-
-    if (bar_info.is_mmio) {
-        if (bar_info.is_64bit) {
-
-            // 64bit MMIO? Probe the upper bits as well
-            bar_id++;
-            bar_val = cfg_->Read(Config::kBar(bar_id));
-            cfg_->Write(Config::kBar(bar_id), 0xFFFFFFFF);
-            size_mask |= ((uint64_t)~cfg_->Read(Config::kBar(bar_id))) << 32;
-            cfg_->Write(Config::kBar(bar_id), bar_val);
-            bar_info.size = size_mask + 1;
-            bar_info.bus_addr = (static_cast<uint64_t>(bar_val) << 32) | addr_lo;
-        } else {
-            bar_info.size = (uint32_t)(size_mask + 1);
-            bar_info.bus_addr = addr_lo;
-        }
-    } else {
-        // PIO Bar
-        bar_info.size = ((uint32_t)(size_mask + 1)) & PCI_PIO_ADDR_SPACE_MASK;
-        bar_info.bus_addr = addr_lo;
-    }
-
-    // Restore the command register to its previous value
-    cfg_->Write(Config::kCommand, backup);
-    return ZX_OK;
-}
-
-zx_status_t Device::ProbeBarsLocked() {
-    __UNUSED uint8_t header_type = cfg_->Read(Config::kHeaderType) & PCI_HEADER_TYPE_MASK;
-
-    ZX_DEBUG_ASSERT((header_type == PCI_HEADER_TYPE_STANDARD) ||
-                    (header_type == PCI_HEADER_TYPE_PCI_BRIDGE));
-    ZX_DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
-
-    for (uint i = 0; i < bar_count_; ++i) {
-        // If this is a re-scan of the bus, We should not be re-enumerating BARs.
-        ZX_DEBUG_ASSERT(bars_[i].size == 0);
-        ZX_DEBUG_ASSERT(bars_[i].allocation == nullptr);
-
-        zx_status_t probe_res = ProbeBarLocked(i);
-        if (probe_res != ZX_OK)
-            return probe_res;
-
-        if (bars_[i].size > 0) {
-            // If this was a 64 bit bar, it took two registers to store.  Make
-            // sure to skip the next register
-            if (bars_[i].is_64bit) {
-                i++;
-
-                if (i >= bar_count_) {
-                    pci_errorf("Device %s claims to have 64-bit BAR in position %u/%u!\n",
-                               cfg_->addr(), i, bar_count_);
-                    return ZX_ERR_BAD_STATE;
-                }
-            }
-        }
-    }
-
-    return ZX_OK;
-}
-
 void Device::Disable() {
     fbl::AutoLock dev_lock(&dev_lock_);
     DisableLocked();
@@ -313,29 +184,174 @@ void Device::DisableLocked() {
     }
 }
 
-zx_status_t Device::AllocateBars() {
-    fbl::AutoLock dev_lock(&dev_lock_);
-    return AllocateBarsLocked();
+zx_status_t Device::ProbeBar(uint32_t bar_id) {
+    if (bar_id >= bar_count_) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // If we hit an issue, or a BAR reads as all zeroes then we will bail out
+    // and set the size of it to 0. This will result in us not using it further
+    // during allocation.
+    BarInfo& bar_info = bars_[bar_id];
+    auto cleanup = fbl::MakeAutoCall([&bar_info] { bar_info.size = 0; });
+    uint32_t bar_val = cfg_->Read(Config::kBar(bar_id));
+
+    bar_info.bar_id = bar_id;
+    bar_info.is_mmio = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
+    bar_info.is_64bit = bar_info.is_mmio &&
+                        ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
+    bar_info.is_prefetchable = bar_info.is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
+
+    // Sanity check the read-only configuration of the BAR
+    if (bar_info.is_64bit && (bar_info.bar_id == bar_count_ - 1)) {
+        pci_errorf("%s has a 64bit bar in invalid position %u!\n", cfg_->addr(), bar_info.bar_id);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (bar_info.is_64bit && !bar_info.is_mmio) {
+        pci_errorf("%s bar %u is 64bit but not mmio!\n", cfg_->addr(), bar_info.bar_id);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (bar_info.is_64bit && !bar_info.is_prefetchable) {
+        pci_errorf("%s bar %u is misconfigured as 64bit but not prefetchable!\n", cfg_->addr(),
+                   bar_info.bar_id);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Disable MMIO & PIO access while we perform the probe. We don't want the
+    // addresses written during probing to conflict with anything else on the
+    // bus. Note: No drivers should have access to this device's registers
+    // during the probe process as the device should not have been published
+    // yet. That said, there could be other (special case) parts of the system
+    // accessing a devices registers at this point in time, like an early init
+    // debug console or serial port. Don't make any attempt to print or log
+    // until the probe operation has been completed. Hopefully these special
+    // systems are quiescent at this point in time, otherwise they might see
+    // some minor glitching while access is disabled.
+    uint16_t cmd_backup = cfg_->Read(Config::kCommand);
+    ModifyCmdLocked(PCI_COMMAND_MEM_EN | PCI_COMMAND_IO_EN, cmd_backup);
+    uint32_t addr_mask = (bar_info.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
+
+    // Write ones to figure out the size of the BAR
+    cfg_->Write(Config::kBar(bar_id), UINT32_MAX);
+    bar_val = cfg_->Read(Config::kBar(bar_id));
+    // BARs that are not wired up return all zeroes on read after writing 1s
+    if (bar_val == 0) {
+        return ZX_OK;
+    }
+
+    uint64_t size_mask = ~(bar_val & addr_mask);
+    if (bar_info.is_mmio && bar_info.is_64bit) {
+        // This next BAR should not be probed/allocated on its own, so set
+        // its size to zero and make it clear it's owned by the previous
+        // BAR. We already verified the bar_id is valid above.
+        bars_[bar_id + 1].size = 0;
+        bars_[bar_id + 1].bar_id = bar_id;
+        // Get the high 32 bits of size for the 64 bit BAR by repeating the
+        // steps of writing 1s and then reading the value of the next BAR.
+        cfg_->Write(Config::kBar(bar_id + 1), UINT32_MAX);
+        size_mask |= static_cast<uint64_t>(~cfg_->Read(Config::kBar(bar_id + 1))) << 32;
+    }
+
+    // No matter what configuration we've found, |size_mask| should contain a mask
+    // representing all the valid bits that can be set in the address.
+    bar_info.size = size_mask + 1;
+
+    // All done, re-enable IO/MMIO access that was disabled prior
+    AssignCmdLocked(cmd_backup);
+    cleanup.cancel();
+    return ZX_OK;
 }
 
-zx_status_t Device::AllocateBarsLocked() {
+zx_status_t Device::AllocateBar(uint32_t bar_id) {
+    ZX_DEBUG_ASSERT(upstream_);
+    ZX_DEBUG_ASSERT(bar_id < bar_count_);
+
+    PciAllocator* allocator;
+    BarInfo& bar = bars_[bar_id];
+    // TODO(cja): It's possible that we may have an unlikely configuration of a prefetchable
+    // window that starts below 4GB, ends above 4GB and then has a prefetchable 32bit BAR. If
+    // that BAR already had an address we would request it here and be fine, but if it didn't
+    // then the below code could potentially fail because it received an address that didn't fit
+    // in 32 bits.
+    if (bar.is_mmio) {
+        if (bar.is_64bit || bar.is_prefetchable) {
+            allocator = &upstream_->pf_mmio_regions();
+        } else {
+            allocator = &upstream_->mmio_regions();
+        }
+    } else {
+        allocator = &upstream_->pio_regions();
+    }
+
+    // Request a base address of zero to signal we'll take any location in the window.
+    zx_status_t status = allocator->GetRegion(0, bar.size, &bar.allocation);
+    if (status != ZX_OK) {
+        pci_errorf("%s couldn't allocate %#zx for bar %u: %d\n", cfg_->addr(), bar.size, bar.bar_id,
+                   status);
+        return status;
+    }
+
+    // Now write the allocated address space to the BAR.
+    uint16_t cmd_backup = cfg_->Read(Config::kCommand);
+    ModifyCmdLocked(PCI_COMMAND_MEM_EN | PCI_COMMAND_IO_EN, cmd_backup);
+    cfg_->Write(Config::kBar(bar_id), static_cast<uint32_t>(bar.allocation->base()));
+    if (bar.is_64bit) {
+        uint32_t addr_hi = static_cast<uint32_t>(bar.allocation->base() >> 32);
+        cfg_->Write(Config::kBar(bar_id + 1), addr_hi);
+    }
+    bar.address = bar.allocation->base();
+    AssignCmdLocked(cmd_backup);
+
+    return ZX_OK;
+}
+
+zx_status_t Device::ConfigureBars() {
+    fbl::AutoLock dev_lock(&dev_lock_);
     ZX_DEBUG_ASSERT(plugged_in_);
+    ZX_DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
 
     // Allocate BARs for the device
-    ZX_DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
-    for (size_t i = 0; i < bar_count_; ++i) {
-        if (bars_[i].size) {
-            zx_status_t ret = AllocateBarLocked(bars_[i]);
-            if (ret != ZX_OK)
-                return ret;
+    zx_status_t status;
+    // First pass, probe BARs to populate the table and grab backing allocations
+    // for any BARs that have been allocated by system firmware.
+    for (uint32_t bar_id = 0; bar_id < bar_count_; bar_id++) {
+        status = ProbeBar(bar_id);
+        if (status != ZX_OK) {
+            pci_errorf("%s error probing bar %u: %d. Skipping it.\n", cfg_->addr(), bar_id,
+                       status);
+            continue;
+        }
+
+        // Allocate the BAR if it was successfully probed.
+        if (bars_[bar_id].size) {
+            status = AllocateBar(bar_id);
+            if (status != ZX_OK) {
+                pci_errorf("%s failed to allocate bar %u: %d\n", cfg_->addr(), bar_id, status);
+            }
+        }
+
+        // If the BAR was 64bit then we need to skip the next bar holding its
+        // high address bits.
+        if (bars_[bar_id].is_64bit) {
+            bar_id++;
         }
     }
 
     return ZX_OK;
 }
 
-zx_status_t Device::AllocateBarLocked(BarInfo& info) {
-    pci_errorf("[%s] %s unimplemented!\n", cfg_->addr(), __PRETTY_FUNCTION__);
+zx_status_t Device::GetBarInfo(uint32_t bar_id, const BarInfo* out_info) const {
+    if (bar_id >= bar_count_ || out_info == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (disabled_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    out_info = &bars_[bar_id];
     return ZX_OK;
 }
 
@@ -356,8 +372,20 @@ void Device::Unplug() {
 }
 
 void Device::Dump() const {
-    printf("PCI: %s at %s vid:did %04x:%04x\n", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
-           vendor_id(), device_id());
+    pci_infof("%s at %s vid:did %04x:%04x\n", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
+              vendor_id(), device_id());
+    for (size_t i = 0; i < bar_count_; i++) {
+        auto& bar = bars_[i];
+        if (bar.size) {
+            pci_infof("    bar %zu: %s, %s, addr %#lx, size %#zx [raw: ", i,
+                      (bar.is_mmio) ? ((bar.is_64bit) ? "64bit mmio" : "32bit mmio") : "io",
+                      (bar.is_prefetchable) ? "pf" : "no-pf", bar.address, bar.size);
+            if (bar.is_64bit) {
+                printf("%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
+            }
+            printf("%08x ]\n", cfg_->Read(Config::kBar(bar.bar_id)));
+        }
+    }
 }
 
 } // namespace pci

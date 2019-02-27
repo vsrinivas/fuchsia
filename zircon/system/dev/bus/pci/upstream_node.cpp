@@ -16,9 +16,9 @@
 
 namespace pci {
 
-void UpstreamNode::AllocateDownstreamBars() {
+void UpstreamNode::ConfigureDownstreamBars() {
     for (auto& device : downstream_) {
-        device.AllocateBars();
+        device.ConfigureBars();
     }
 }
 

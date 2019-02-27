@@ -57,7 +57,7 @@ public:
     void Unplug() final TA_EXCL(dev_lock_);
 
 protected:
-    zx_status_t AllocateBars() final TA_EXCL(dev_lock_);
+    zx_status_t ConfigureBars() final TA_EXCL(dev_lock_);
     zx_status_t AllocateBridgeWindowsLocked() TA_REQ(dev_lock_);
     void Disable() final;
 

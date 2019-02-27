@@ -1,5 +1,4 @@
 // Copyright 2019 The Fuchsia Authors
-// Copyright (c) 2019, Google, Inc. All rights reserved
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -7,6 +6,7 @@
 
 #pragma once
 
+#include "allocation.h"
 #include "config.h"
 #include "ref_counted.h"
 #include <assert.h>
@@ -33,13 +33,14 @@ class BusLinkInterface;
 
 // struct used to fetch information about a configured base address register
 struct BarInfo {
-    uint64_t size = 0;
-    uint64_t bus_addr = 0;
+    size_t size = 0;
+    zx_paddr_t address = 0; // Allocated address for the bar
     bool is_mmio;
     bool is_64bit;
     bool is_prefetchable;
-    uint32_t first_bar_reg;
-    RegionAllocator::Region::UPtr allocation;
+    uint32_t bar_id; // The bar index in the config space. If the bar is 64 bit
+                     // then this corresponds to the first half of the register pair
+    fbl::unique_ptr<PciAllocation> allocation;
 };
 
 // A Device represents a given PCI(e) device on a bus. It can be used standalone
@@ -116,24 +117,16 @@ public:
     }
 
     // Return information about the requested base address register, if it has been
-    // allocated.  Otherwise, return NULL.
+    // allocated.
     //
-    // @param bar_ndx The index of the BAR register to fetch info for.
+    // @param bar_id The index of the BAR register to fetch info for
+    // @param out_info A pointer to a BarInfo buffer to store the bar info
     //
-    // @return A pointer to the BAR info, including where in the bus address space
-    // the BAR window has been mapped, or NULL if the BAR window does not exist or
-    // has not been allocated.
-    const BarInfo* GetBarInfo(uint32_t bar_ndx) const {
-        if (bar_ndx >= bar_count_) {
-            return nullptr;
-        }
+    // @return ZX_OK on success, ZX_INVALID_ARGS if bad a bar bar index or
+    // pointer is passed in, and ZX_BAD_STATE if the device is disabled.
+    zx_status_t GetBarInfo(uint32_t bar_id, const BarInfo* out_info) const;
 
-        ZX_DEBUG_ASSERT(bar_ndx < fbl::count_of(bars_));
-
-        const BarInfo* ret = &bars_[bar_ndx];
-        return (!disabled_ && (ret->allocation != nullptr)) ? ret : nullptr;
-    }
-
+    // Requests a device unplug itself from its UpstreamNode and the Bus list.
     virtual void Unplug() TA_EXCL(dev_lock_);
     void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
     const fbl::RefPtr<Config>& config() const { return cfg_; }
@@ -150,20 +143,9 @@ public:
     uint8_t prog_if() const { return prog_if_; }
     uint8_t rev_id() const { return rev_id_; }
 
-    uint8_t bus_id() const {
-        ZX_ASSERT(cfg_);
-        return cfg_->bdf().bus_id;
-    }
-
-    uint8_t dev_id() const {
-        ZX_ASSERT(cfg_);
-        return cfg_->bdf().device_id;
-    }
-
-    uint8_t func_id() const {
-        ZX_ASSERT(cfg_);
-        return cfg_->bdf().function_id;
-    }
+    uint8_t bus_id() const { return cfg_->bdf().bus_id; }
+    uint8_t dev_id() const { return cfg_->bdf().device_id; }
+    uint8_t func_id() const { return cfg_->bdf().function_id; }
     uint32_t bar_count() const { return bar_count_; }
 
     // Dump some information about the device
@@ -200,7 +182,7 @@ public:
     };
 
 protected:
-    // Allow our upstream to disable / Unplug us
+    // Allow our upstream to disable / Unplug us.
     friend class UpstreamNode;
     Device(fbl::RefPtr<Config>&& config,
            UpstreamNode* upstream,
@@ -216,20 +198,24 @@ protected:
         ModifyCmdLocked(0xFFFF, value);
     }
 
-    zx_status_t ProbeBarsLocked() TA_REQ(dev_lock_);
-    zx_status_t ProbeBarLocked(uint32_t bar_id) TA_REQ(dev_lock_);
     // TODO(cja): port zx_status_t ProbeCapabilitiesLocked();
     // TODO(cja): port zx_status_t ParseStdCapabilitiesLocked();
     // TODO(cja): port zx_status_t ParseExtCapabilitiesLocked();
 
-    // BAR allocation
-    virtual zx_status_t AllocateBars() TA_EXCL(dev_lock_);
-    zx_status_t AllocateBarsLocked() TA_REQ(dev_lock_);
-    zx_status_t AllocateBarLocked(BarInfo& info) TA_REQ(dev_lock_);
+    // Probes a BAR's configuration. If it is already allocated it will try to
+    // reserve the existing address window for it so that devices configured by system
+    // firmware can be maintained as much as possible.
+    zx_status_t ProbeBar(uint32_t bar_id) TA_REQ(dev_lock_);
+    // Allocates address space for a BAR if it does not already exist.
+    zx_status_t AllocateBar(uint32_t bar_id) TA_REQ(dev_lock_);
+    // Called by an UpstreamNode to configure the BARs of a device downsteream.
+    // Bridge implements it so it can allocate its bridge windows and own BARs before
+    // configuring downstream BARs.
+    virtual zx_status_t ConfigureBars() TA_EXCL(dev_lock_);
 
-    // Disable a device, and anything downstream of it.  The device will
+    // Disable a device, and anything downstream of it. The device will
     // continue to enumerate, but users will only be able to access config (and
-    // only in a read only fashion).  BAR windows, bus mastering, and interrupts
+    // only in a read only fashion). BAR windows, bus mastering, and interrupts
     // will all be disabled.
     virtual void Disable() TA_EXCL(dev_lock_);
     void DisableLocked() TA_REQ(dev_lock_);

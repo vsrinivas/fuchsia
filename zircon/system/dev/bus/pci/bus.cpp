@@ -86,10 +86,10 @@ zx_status_t Bus::Initialize() {
 
     // Begin our bus scan starting at our root
     ScanDownstream();
-    root_->AllocateDownstreamBars();
+    root_->ConfigureDownstreamBars();
     pci_infof("AllDevicesList:\n");
     for (auto& dev : device_list_) {
-        pci_infof("\t%s %s\n", dev.config()->addr(), dev.is_bridge() ? "(b)" : "");
+        dev.Dump();
     }
 
     pci_infof("%s init done.\n", info_.name);

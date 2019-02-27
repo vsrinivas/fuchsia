@@ -67,7 +67,18 @@ zx_status_t PciRegionAllocator::GetRegion(zx_paddr_t base,
                                           size_t size,
                                           fbl::unique_ptr<PciAllocation>* alloc) {
     RegionAllocator::Region::UPtr region_uptr;
-    zx_status_t status = allocator_.GetRegion({.base = base, .size = size}, region_uptr);
+    zx_status_t status;
+    // Only use base if it is non-zero
+    if (base) {
+        ralloc_region_t request = {
+            .base = base,
+            .size = size,
+        };
+        status = allocator_.GetRegion(request, region_uptr);
+    } else {
+        status = allocator_.GetRegion(size, region_uptr);
+    }
+
     if (status != ZX_OK) {
         return status;
     }
@@ -78,7 +89,8 @@ zx_status_t PciRegionAllocator::GetRegion(zx_paddr_t base,
         return status;
     }
 
-    pci_tracef("bridge: assigned [ %#lx-%#lx ] to downstream bridge\n", base, base + size);
+    pci_tracef("bridge: assigned [ %#lx-%#lx ] to downstream\n", region_uptr->base,
+               region_uptr->base + size);
     fbl::AllocChecker ac;
     *alloc = fbl::unique_ptr(new (&ac) PciRegionAllocation(std::move(out_resource),
                                                            std::move(region_uptr)));

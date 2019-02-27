@@ -8,7 +8,6 @@
 
 #include "allocation.h"
 #include "ref_counted.h"
-#include "upstream_node.h"
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>

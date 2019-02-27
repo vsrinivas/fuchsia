@@ -51,7 +51,7 @@ protected:
     UpstreamNode(Type type, uint32_t mbus_id) : type_(type), managed_bus_id_(mbus_id) {}
     virtual ~UpstreamNode() = default;
 
-    virtual void AllocateDownstreamBars();
+    virtual void ConfigureDownstreamBars();
     // Disable all devices directly connected to this bridge.
     virtual void DisableDownstream();
     // Unplug all devices directly connected to this bridge.
