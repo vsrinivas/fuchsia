@@ -1,6 +1,14 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator2": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
+                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
+            }
+        }
+    },
     "program": {
-        "binary": "bin/app"
+        "binary": "test/image-pipe-swapchain-tests"
     },
     "sandbox": {
         "features": [
