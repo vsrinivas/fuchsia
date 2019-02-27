@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // maximum number of endpoints per device
 #define USB_MAX_EPS                     32
@@ -255,4 +255,4 @@ typedef struct {
     uint16_t code_points[127];
 } __attribute__ ((packed)) usb_string_desc_t;
 
-__END_CDECLS;
+__END_CDECLS

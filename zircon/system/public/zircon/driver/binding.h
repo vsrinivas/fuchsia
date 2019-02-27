@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
 
@@ -275,4 +275,4 @@ const struct zircon_driver_note {\
 //      define it in END(), and have only one symbol to dlsym()
 //      when loading drivers
 
-__END_CDECLS;
+__END_CDECLS

@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #define containerof(ptr, type, member) ((type*)((uintptr_t)(ptr)-offsetof(type, member)))
 
@@ -301,4 +301,4 @@ static inline void list_move(list_node_t* old_list, list_node_t* new_list) {
     list_splice_after(old_list, new_list);
 }
 
-__END_CDECLS;
+__END_CDECLS
