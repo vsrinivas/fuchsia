@@ -134,7 +134,9 @@ For example, it is more appropriate for network protocols to be under
 Avoid library names with more than two dots (e.g., `fuchsia.foo.bar.baz`).
 There are some cases when a third dot is appropriate, but those cases are rare.
 If you use more than two dots, you should have a specific reason for that
-choice.
+choice.  For the case of the `fuchsia.hardware` namespace described above, this
+is relaxed to "three" and "four" dots, instead of "two" and "three", to
+accomodate the longer namespace.
 
 Prefer to introduce dependencies from libraries with more specific names to
 libraries with less specific names rather than the reverse.  For example,
