@@ -163,6 +163,8 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
 
     unw_word_t val;
     unw_get_reg(&cursor, UNW_REG_IP, &val);
+    if (val == 0)
+      break;  // Null code address means we're done.
     frame.ip = val;
 
     unw_get_reg(&cursor, UNW_REG_SP, &val);
