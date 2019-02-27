@@ -6,10 +6,10 @@
 
 Follow either the **CMake** (recommended) or **Compilation Database**
 instructions below to create the appropriate project description file in
-the `fuchsia` directory.
+the fuchsia root directory.
 
 Then in CLion choose *Import Project from Sources* and select the
-`fuchsia` directory.
+fuchsia root directory.
 
 ### Performance
 
@@ -36,7 +36,7 @@ Disable the default C/C++ extension if you have it installed.
 In settings, add:
 
 ```
-"clangd.path": "<absolute path to Fuchsia checkout>/buildtools/linux-x64/clang/bin/clangd",
+"clangd.path": "<absolute path to fuchsia root directory>/buildtools/linux-x64/clang/bin/clangd",
 ```
 
 *** note
@@ -44,7 +44,7 @@ Note that the path to clangd does need to be absolute.
 ***
 
 Finally, follow the **Compilation Database** instructions below to
-generate the `compile_commands.json` in the fuchsia directory. Then
+generate the `compile_commands.json` in the fuchsia root directory. Then
 reload vscode to enjoy the results.
 
 ### default vscode C++ extension
@@ -70,7 +70,7 @@ The [fuchsia.cmake](./fuchsia.cmake) file located in this directory can
 be used with IDEs that support CMake to include most of the fuchsia
 source files.
 
-To use, create a CMakeLists.txt file in the top-level fuchsia
+To use, create a CMakeLists.txt file in the fuchsia root
 directory with the following contents. Then use it normally with your
 IDE.
 
@@ -82,7 +82,7 @@ IDE.
 A [Compilation
 Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file
 can be generated using `fx compdb`. This will create/update the file
-`compile_commands.json` in the `fuchsia` directory.
+`compile_commands.json` in the fuchsia root directory.
 
 When you add, delete, or rename source files the command needs to be
 rerun to update the `compile_commands.json` file.
