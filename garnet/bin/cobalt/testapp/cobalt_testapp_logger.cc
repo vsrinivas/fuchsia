@@ -68,13 +68,12 @@ bool CobaltTestAppLogger::LogElapsedTimeAndSend(uint32_t metric_id,
 }
 
 bool CobaltTestAppLogger::LogFrameRateAndSend(uint32_t metric_id,
-                                              uint32_t index,
                                               const std::string& component,
                                               float fps,
                                               bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     Status status = Status::INTERNAL_ERROR;
-    logger_->LogFrameRate(metric_id, index, component, fps, &status);
+    logger_->LogFrameRate(metric_id, 0, component, fps, &status);
     FXL_VLOG(1) << "LogFrameRate() => " << StatusToString(status);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "LogFrameRate() => " << StatusToString(status);
@@ -86,14 +85,12 @@ bool CobaltTestAppLogger::LogFrameRateAndSend(uint32_t metric_id,
 }
 
 bool CobaltTestAppLogger::LogMemoryUsageAndSend(uint32_t metric_id,
-                                                uint32_t index,
-                                                const std::string& component,
-                                                int64_t bytes,
+                                                uint32_t index, int64_t bytes,
                                                 bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     Status status = Status::INTERNAL_ERROR;
-    logger_->LogMemoryUsage(metric_id, index, component, bytes, &status);
-    FXL_VLOG(1) << "LogMemoryUsage() => " << StatusToString(status);
+    logger_->LogMemoryUsage(metric_id, index, "", bytes, &status);
+    FXL_VLOG(1) << "LogMemoryUsage) => " << StatusToString(status);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
       return false;
@@ -145,8 +142,8 @@ bool CobaltTestAppLogger::LogTimerAndSend(uint32_t metric_id,
 }
 
 bool CobaltTestAppLogger::LogIntHistogramAndSend(
-    uint32_t metric_id, uint32_t index, const std::string& component,
-    std::map<uint32_t, uint64_t> histogram_map, bool use_request_send_soon) {
+    uint32_t metric_id, std::map<uint32_t, uint64_t> histogram_map,
+    bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     Status status = Status::INTERNAL_ERROR;
     std::vector<fuchsia::cobalt::HistogramBucket> histogram;
@@ -157,8 +154,7 @@ bool CobaltTestAppLogger::LogIntHistogramAndSend(
       histogram.push_back(std::move(entry));
     }
 
-    logger_->LogIntHistogram(metric_id, index, component, std::move(histogram),
-                             &status);
+    logger_->LogIntHistogram(metric_id, 0, "", std::move(histogram), &status);
     FXL_VLOG(1) << "LogIntHistogram() => " << StatusToString(status);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "LogIntHistogram() => " << StatusToString(status);

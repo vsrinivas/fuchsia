@@ -234,11 +234,6 @@ bool CobaltTestApp::LegacyRequestSendSoonTests() {
 bool CobaltTestApp::RequestSendSoonTests() {
   // TODO(zmbush): Create tests for all logger methods (as we have for legacy).
   TRY_TEST(TestLogEvent(&logger_));
-  TRY_TEST(TestLogEventCount(&logger_));
-  TRY_TEST(TestLogElapsedTime(&logger_));
-  TRY_TEST(TestLogFrameRate(&logger_));
-  TRY_TEST(TestLogMemoryUsage(&logger_));
-  TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   return true;
 }
