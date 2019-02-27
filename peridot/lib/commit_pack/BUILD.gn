@@ -35,6 +35,8 @@ source_set("unittests") {
 
   deps = [
     ":commit_pack",
+    ":commit_pack_flatbuffer",
+    "//peridot/lib/convert",
     "//third_party/googletest:gtest",
   ]
 }

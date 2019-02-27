@@ -51,11 +51,18 @@ bool DecodeCommitPack(const CommitPack& commit_pack,
 
   const SerializedCommits* serialized_commits =
       GetSerializedCommits(reinterpret_cast<const unsigned char*>(data.data()));
+  if (!serialized_commits->commits()) {
+    return false;
+  }
 
   std::vector<CommitPackEntry> result;
   result.reserve(serialized_commits->commits()->size());
 
   for (const auto* serialized_commit : *(serialized_commits->commits())) {
+    if (!serialized_commit->id() || !serialized_commit->data()) {
+      return false;
+    }
+
     result.push_back({convert::ToString(serialized_commit->id()),
                       convert::ToString(serialized_commit->data())});
   }
