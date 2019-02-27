@@ -13,7 +13,7 @@ struct FrequencyInfo {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     Measure(uint32 clk) -> (FrequencyInfo info);
     GetCount() -> (uint32 count);
 };
