@@ -49,7 +49,7 @@ type flutterInstance struct {
 }
 
 func getFlutterInstances(model benchmarking.Model) []flutterInstance {
-	flutterProcesses := getProcessesWithPrefix(model, "io.flutter.runner")
+	flutterProcesses := getProcessesWithPrefix(model, "io.flutter")
 
 	var instances []flutterInstance
 
