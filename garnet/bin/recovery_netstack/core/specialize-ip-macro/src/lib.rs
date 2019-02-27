@@ -16,7 +16,7 @@ use quote::ToTokens;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
     punctuated::Punctuated, ArgCaptured, AttrStyle, Attribute, Block, Error, Expr, FnArg, FnDecl,
-    GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt, TypeParamBound,
+    GenericParam, Ident, Item, ItemFn, Pat, Path, Stmt, TypeImplTrait, TypeParamBound,
 };
 
 #[proc_macro_attribute]
@@ -536,6 +536,8 @@ fn rewrite_types(
         }
         // For `cfg.type_ident` `I`, rewrite return types like `Foo<I>` to `Foo<Self>`
         rename.visit_return_type_mut(&mut decl.output);
+        // Make sure no uses of "impl trait" are present in the return type.
+        ReturnImplTraitVisit(errors).visit_return_type_mut(&mut decl.output);
 
         // Rewrite all types inside of the statements
         for stmts in stmts {
@@ -594,6 +596,18 @@ impl VisitMut for RenameVisit {
     fn visit_item_struct_mut(&mut self, _i: &mut syn::ItemStruct) {}
     fn visit_item_enum_mut(&mut self, _i: &mut syn::ItemEnum) {}
     fn visit_item_union_mut(&mut self, _i: &mut syn::ItemUnion) {}
+}
+
+// A VisitMut that searches for instances of "impl trait". These are unsupported
+// in function return values because they can't be used inside of traits, and we
+// convert the decorated function to a trait function.
+struct ReturnImplTraitVisit<'a>(&'a mut Vec<TokenStream2>);
+
+impl<'a> VisitMut for ReturnImplTraitVisit<'a> {
+    fn visit_type_impl_trait_mut(&mut self, i: &mut TypeImplTrait) {
+        push_error(self.0, &i, "impl trait return values are unsupported");
+        visit_mut::visit_type_impl_trait_mut(self, i);
+    }
 }
 
 // Consume a Punctuated, and return a new Punctuated which is equal to the old

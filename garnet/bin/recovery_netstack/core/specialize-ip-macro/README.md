@@ -107,6 +107,8 @@ fn foo<D: EventDispatcher>() {
 
 ## Limitations
 
+### Statements vs Expressions
+
 Due to the way the Rust parser works, only statements may be annotated with
 `#[ipv4]` or `#[ipv6]`; they cannot be used to annotate expressions. In other
 words, the following will fail to parse before the proc macro is ever run:
@@ -150,6 +152,12 @@ fn address_bits<I: Ip>() -> usize {
     }
 }
 ```
+
+### Impl Trait
+
+Under the hood, the macros are implemented by generating and implementing
+traits. Rust currently doesn't support the impl trait feature for trait
+functions and methods, so they are not supported by our macros either.
 
 ## Implementation
 
