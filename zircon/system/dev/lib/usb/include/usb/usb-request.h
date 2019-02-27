@@ -13,7 +13,7 @@
 
 #include <threads.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // cache maintenance ops
 #define USB_REQUEST_CACHE_INVALIDATE        ZX_VMO_OP_CACHE_INVALIDATE
@@ -127,4 +127,4 @@ zx_status_t usb_req_list_add_tail(list_node_t* list, usb_request_t* req, size_t 
 // request from the head of the list and returns the usb_request_t.
 usb_request_t* usb_req_list_remove_head(list_node_t* list, size_t parent_req_size);
 
-__END_CDECLS;
+__END_CDECLS

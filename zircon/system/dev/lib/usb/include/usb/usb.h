@@ -13,7 +13,7 @@
 #include <ddktl/protocol/usb.h>
 #endif
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
@@ -79,7 +79,7 @@ static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t r
                            NULL, 0);
 }
 
-__END_CDECLS;
+__END_CDECLS
 
 #ifdef __cplusplus
 namespace usb {
