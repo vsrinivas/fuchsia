@@ -55,7 +55,7 @@ public:
     CobaltLogger(CobaltLogger&&) = delete;
     CobaltLogger& operator=(const CobaltLogger&) = delete;
     CobaltLogger& operator=(CobaltLogger&&) = delete;
-    ~CobaltLogger() override{};
+    ~CobaltLogger() override {}
 
     // Returns true if the histogram was persisted.
     bool Log(const RemoteMetricInfo& metric_info, const HistogramBucket* buckets,

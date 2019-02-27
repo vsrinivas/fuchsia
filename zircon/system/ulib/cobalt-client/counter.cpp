@@ -61,7 +61,7 @@ Counter::Counter(const MetricOptions& options, internal::FlushInterface** flush_
     ZX_DEBUG_ASSERT_MSG(!options.IsLazy(),
                         "Cannot initialize counter with |kLazy| options.");
     *flush_interface = &remote_counter_;
-};
+}
 
 Counter::~Counter() {
     if (collector_ != nullptr) {

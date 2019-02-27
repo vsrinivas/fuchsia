@@ -80,7 +80,7 @@ Collector::~Collector() {
     if (logger_ != nullptr) {
         Flush();
     }
-};
+}
 
 void Collector::Flush() {
     // If we are already flushing we just return and do nothing.
