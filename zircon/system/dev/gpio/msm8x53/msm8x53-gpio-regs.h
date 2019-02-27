@@ -53,28 +53,106 @@ public:
     explicit GpioBitFieldView(mmio_buffer_t& mmio, zx_off_t offset, size_t size)
         : ddk::MmioView(mmio, offset, size) {}
 
-    uint32_t GetBit(size_t idx) const {
-        return ddk::MmioView::GetBit<uint32_t>(0, Idx2Offset(idx));
-    }
-
 protected:
     // Registers are separated by 0x1000 bytes.
     uint32_t Idx2Offset(size_t idx) const { return static_cast<uint32_t>(idx * 0x1000); }
 };
 
-class GpioInReg : public GpioBitFieldView {
+class GpioInOutReg : public GpioBitFieldView {
 public:
-    explicit GpioInReg(mmio_buffer_t& mmio)
-        : GpioBitFieldView(mmio, 4, 0x1000 * kMsm9x53GpioMax) {}
-    bool GetVal(size_t idx) const { return static_cast<bool>(GetBit(idx)); }
-};
-
-class GpioOutReg : public GpioBitFieldView {
-public:
-    explicit GpioOutReg(mmio_buffer_t& mmio)
-        : GpioBitFieldView(mmio, 8, 0x1000 * kMsm9x53GpioMax) {}
+    explicit GpioInOutReg(mmio_buffer_t& mmio)
+        : GpioBitFieldView(mmio, 4, 0x1000 * msm8x53::kGpioMax) {}
+    bool GetVal(size_t idx) const { return static_cast<bool>(
+        ddk::MmioView::GetBit<uint32_t>(0, Idx2Offset(idx))); }
     void SetVal(size_t idx, bool val) const {
         ModifyBit<uint32_t>(static_cast<uint32_t>(val), 1, Idx2Offset(idx));
+    }
+};
+
+enum class Mode {
+    EdgeLow,
+    EdgeHigh,
+    EdgeDual,
+    LevelLow,
+    LevelHigh
+};
+
+class GpioIntCfgReg : public GpioBitFieldView {
+public:
+    explicit GpioIntCfgReg(mmio_buffer_t& mmio)
+        : GpioBitFieldView(mmio, 8, 0x1000 * msm8x53::kGpioMax) {}
+
+    void EnableCombined(size_t idx, bool val) const {
+        uint32_t target_proc = 0x7; // NONE. Don't route to any processor subsystem.
+        if (val) {
+            target_proc = 0x4; // APPS. Route the GPIO[n] signal to APSS summary interrupt.
+        }
+        ModifyBit<uint32_t>(static_cast<uint32_t>(val), 4, Idx2Offset(idx)); // Raw status.
+        ModifyBits<uint32_t>(target_proc, 5, 3, Idx2Offset(idx));
+        ModifyBit<uint32_t>(static_cast<uint32_t>(val), 0, Idx2Offset(idx)); // Enable.
+    }
+    void EnableDirect(size_t idx, bool val) const {
+        ModifyBit<uint32_t>(static_cast<uint32_t>(val), 8, Idx2Offset(idx));
+    }
+    void SetMode(size_t idx, Mode mode) const {
+        uint32_t detect_reg = 0;
+        uint32_t polarity_reg = 0;
+        // clang-format off
+        switch (mode) {
+        case Mode::EdgeHigh:  detect_reg = 0x1; polarity_reg = 1; break;
+        case Mode::EdgeLow:   detect_reg = 0x2; polarity_reg = 1; break;
+        case Mode::EdgeDual:  detect_reg = 0x3; break; // polarity_reg is don't care.
+        case Mode::LevelHigh: detect_reg = 0x0; polarity_reg = 1; break;
+        case Mode::LevelLow:  detect_reg = 0x0; polarity_reg = 0; break;
+        }
+        // clang-format on
+        ModifyBits<uint32_t>(detect_reg, 2, 2, Idx2Offset(idx));
+        ModifyBit<uint32_t>(polarity_reg, 1, Idx2Offset(idx));
+    }
+    void SetPolarity(size_t idx, bool high) const {
+        uint32_t detect_reg = GetBits<uint32_t>(2, 2, Idx2Offset(idx));
+        uint32_t polarity_reg = GetBit<uint32_t>(1, Idx2Offset(idx));
+        Mode old_mode;
+        // clang-format off
+        switch (detect_reg) {
+        case 0x1: old_mode = Mode::EdgeHigh;                                  break;
+        case 0x2: old_mode = Mode::EdgeLow;                                   break;
+        case 0x3: old_mode = Mode::EdgeDual;                                  break;
+        case 0x0: old_mode = polarity_reg ? Mode::LevelHigh : Mode::LevelLow; break;
+        }
+        switch (old_mode) {
+        case Mode::EdgeHigh:  SetMode(idx, high ? Mode::EdgeHigh : Mode::EdgeLow);   break;
+        case Mode::EdgeLow:   SetMode(idx, high ? Mode::EdgeHigh : Mode::EdgeLow);   break;
+        case Mode::EdgeDual:                                                         break; // noop.
+        case Mode::LevelHigh: SetMode(idx, high ? Mode::LevelHigh : Mode::LevelLow); break;
+        case Mode::LevelLow:  SetMode(idx, high ? Mode::LevelHigh : Mode::LevelLow); break;
+        }
+        // clang-format on
+    }
+};
+
+class TlmmDirConnIntReg : public GpioBitFieldView {
+protected:
+    // Registers are separated by 4 bytes.
+    uint32_t Idx2Offset(size_t idx) const { return static_cast<uint32_t>(idx * 4); }
+
+public:
+    explicit TlmmDirConnIntReg(mmio_buffer_t& mmio)
+        : GpioBitFieldView(mmio, 0x102000, 4 * msm8x53::kGpioMax) {}
+    void Enable(size_t gpio_n, size_t dir_int_n) const {
+        ModifyBits<uint32_t>(static_cast<uint32_t>(gpio_n), 0, 8, Idx2Offset(dir_int_n));
+    }
+};
+
+class TlmmGpioIntrStatusReg : public GpioBitFieldView {
+public:
+    explicit TlmmGpioIntrStatusReg(mmio_buffer_t& mmio)
+        : GpioBitFieldView(mmio, 0xC, 0x1000 * msm8x53::kGpioMax) {}
+    bool Status(size_t gpio_n) const {
+        return static_cast<bool>(GetBit<uint32_t>(0, Idx2Offset(gpio_n)));
+    }
+    void Clear(size_t gpio_n) const {
+        ClearBit<uint32_t>(0, Idx2Offset(gpio_n));
     }
 };
 

@@ -13,13 +13,14 @@ driver("msm8x53") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/msm8x53",
+    "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
   ]
 }
-
 
 test("msm8x53-gpio") {
   sources = [
@@ -33,10 +34,12 @@ test("msm8x53-gpio") {
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/msm8x53",
+    "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
 }

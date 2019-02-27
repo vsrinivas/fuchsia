@@ -4,5 +4,9 @@
 
 #pragma once
 
-constexpr uint32_t kMsm9x53GpioBase = 0x01000000;
-constexpr uint32_t kMsm9x53GpioSize = 0x00300000;
+namespace msm8x53 {
+
+constexpr uint32_t kGpioBase = 0x01000000;
+constexpr uint32_t kGpioSize = 0x00300000;
+
+} // namespace msm8x53

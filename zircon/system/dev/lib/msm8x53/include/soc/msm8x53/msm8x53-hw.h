@@ -4,4 +4,20 @@
 
 #pragma once
 
-constexpr uint32_t kMsm9x53GpioMax = 142;
+namespace msm8x53 {
+
+constexpr uint32_t kGpioMax = 142;
+
+// IRQ Table.
+// kIrqCombined is called "summary" in the docs (as opposed to the 8 dedicted "direct" interrupts).
+constexpr uint32_t kIrqCombined = 240;
+constexpr uint32_t kIrqDirect7 = 241;
+constexpr uint32_t kIrqDirect6 = 242;
+constexpr uint32_t kIrqDirect5 = 243;
+constexpr uint32_t kIrqDirect4 = 244;
+constexpr uint32_t kIrqDirect3 = 245;
+constexpr uint32_t kIrqDirect2 = 246;
+constexpr uint32_t kIrqDirect1 = 247;
+constexpr uint32_t kIrqDirect0 = 248;
+
+} // namespace msm8x53

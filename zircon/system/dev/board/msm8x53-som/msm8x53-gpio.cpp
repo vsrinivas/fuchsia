@@ -7,6 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/msm8x53/msm8x53-gpio.h>
+#include <soc/msm8x53/msm8x53-hw.h>
 
 #include "msm8x53.h"
 
@@ -16,8 +17,15 @@ zx_status_t Msm8x53::GpioInit() {
 
     const pbus_mmio_t gpio_mmios[] = {
         {
-            .base = kMsm9x53GpioBase,
-            .length = kMsm9x53GpioSize,
+            .base = msm8x53::kGpioBase,
+            .length = msm8x53::kGpioSize,
+        },
+    };
+
+    const pbus_irq_t gpio_irqs[] = {
+        {
+            .irq = msm8x53::kIrqCombined,
+            .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
         },
     };
 
@@ -28,6 +36,8 @@ zx_status_t Msm8x53::GpioInit() {
     gpio_dev.did = PDEV_DID_QUALCOMM_GPIO;
     gpio_dev.mmio_list = gpio_mmios;
     gpio_dev.mmio_count = countof(gpio_mmios);
+    gpio_dev.irq_list = gpio_irqs;
+    gpio_dev.irq_count = countof(gpio_irqs);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {

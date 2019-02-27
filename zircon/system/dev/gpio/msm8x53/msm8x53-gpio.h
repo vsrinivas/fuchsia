@@ -4,13 +4,22 @@
 
 #pragma once
 
+#include <threads.h>
+
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/pdev.h>
 #include <ddktl/protocol/gpioimpl.h>
+#include <ddktl/protocol/platform/device.h>
+#include <fbl/array.h>
 #include <hwreg/bitfields.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/port.h>
 #include <zircon/types.h>
 
 #include "msm8x53-gpio-regs.h"
@@ -28,8 +37,11 @@ public:
     explicit Msm8x53GpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio)
         : DeviceType(parent),
           gpio_mmio_(gpio_mmio),
-          in_(gpio_mmio),
-          out_(gpio_mmio) {}
+          in_out_(gpio_mmio),
+          int_cfg_(gpio_mmio),
+          dir_conn_int_(gpio_mmio),
+          status_int_(gpio_mmio),
+          pdev_(parent) {}
 
     zx_status_t Bind();
     zx_status_t Init();
@@ -47,11 +59,24 @@ public:
     zx_status_t GpioImplReleaseInterrupt(uint32_t index);
     zx_status_t GpioImplSetPolarity(uint32_t index, uint32_t polarity);
 
+protected:
+    // Protected to be accessed by unit tests.
+    fbl::Array<zx::interrupt> interrupts_;
+
 private:
     void ShutDown();
+    int Thread();
 
     ddk::MmioBuffer gpio_mmio_;
-    const GpioInReg in_;
-    const GpioOutReg out_;
+    const GpioInOutReg in_out_;
+    const GpioIntCfgReg int_cfg_;
+    const TlmmDirConnIntReg dir_conn_int_;
+    const TlmmGpioIntrStatusReg status_int_;
+    zx::port port_;
+    thrd_t thread_;
+    ddk::PDev pdev_;
+    // Cache for faster traversal finding triggered interrupts.
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<msm8x53::kGpioMax>> enabled_ints_cache_;
+    zx::interrupt combined_int_;
 };
 } // namespace gpio
