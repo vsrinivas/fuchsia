@@ -6,11 +6,11 @@
 
 #include <fcntl.h>
 #include <lib/async/default.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/spawn.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <trace/event.h>
 #include <unistd.h>
@@ -452,8 +452,13 @@ void Realm::Resolve(fidl::StringPtr name,
     return;
   }
 
-  loader_->LoadUrl(canon_url, [this, callback = std::move(callback)](
+  auto trace_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id, "url",
+                    canon_url);
+  loader_->LoadUrl(canon_url, [this, trace_id, callback = std::move(callback)](
                                   fuchsia::sys::PackagePtr package) mutable {
+    TRACE_ASYNC_END("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id);
+
     zx::vmo binary;
     fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
     if (!package) {
@@ -525,11 +530,17 @@ void Realm::CreateComponent(
     // "package" type doesn't use a runner.
 
     // launch_info is moved before LoadUrl() gets at its first argument.
+    auto lu_trace_id = TRACE_NONCE();
+    TRACE_ASYNC_BEGIN("appmgr", "Realm::CreateComponent::LoadUrl", lu_trace_id,
+                      "url", canon_url);
     fidl::StringPtr url = launch_info.url;
-    loader_->LoadUrl(url, [this, launch_info = std::move(launch_info),
+    loader_->LoadUrl(url, [this, lu_trace_id,
+                           launch_info = std::move(launch_info),
                            component_request = std::move(component_request),
                            callback = std::move(callback)](
                               fuchsia::sys::PackagePtr package) mutable {
+      TRACE_ASYNC_END("appmgr", "Realm::CreateComponent::LoadUrl", lu_trace_id);
+
       if (package && package->directory) {
         CreateComponentFromPackage(std::move(package), std::move(launch_info),
                                    std::move(component_request),
@@ -683,11 +694,17 @@ void Realm::CreateComponentFromPackage(
   if (!cmx_path.empty() && files::IsFileAt(fd.get(), cmx_path)) {
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
     json::JSONParser json_parser;
-    if (!cmx.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
-      FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
-      component_request.SetReturnValues(kComponentCreationFailed,
-                                        TerminationReason::INTERNAL_ERROR);
-      return;
+    {
+      TRACE_DURATION("appmgr",
+                     "Realm::CreateComponentFromPackage:ParseFromFileAt",
+                     "cmx_path", cmx_path);
+      if (!cmx.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
+        FXL_LOG(ERROR) << "cmx file failed to parse: "
+                       << json_parser.error_str();
+        component_request.SetReturnValues(kComponentCreationFailed,
+                                          TerminationReason::INTERNAL_ERROR);
+        return;
+      }
     }
   } else {
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
@@ -768,14 +785,24 @@ void Realm::CreateComponentFromPackage(
     program_metadata->at(0) = pg;
   }
 
+  TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:IsFileAt",
+                       "file_path", kLegacyFlatExportedDirPath);
   ExportedDirType exported_dir_layout =
       files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
           ? ExportedDirType::kLegacyFlatLayout
           : ExportedDirType::kPublicDebugCtrlLayout;
+  TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
+
   // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
   // should be able to tear down the file descriptor in a way that gives us
   // the channel back.
+  TRACE_DURATION_BEGIN(
+      "appmgr",
+      "Realm::CreateComponentFromPackage:CloneChannelFromFileDescriptor");
   zx::channel pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
+  TRACE_DURATION_END(
+      "appmgr",
+      "Realm::CreateComponentFromPackage:CloneChannelFromFileDescriptor");
   zx::channel loader_service;
   if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK) {
     component_request.SetReturnValues(kComponentCreationFailed,

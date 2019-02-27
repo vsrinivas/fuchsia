@@ -7,9 +7,10 @@
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <trace/event.h>
 
 #include <utility>
 
@@ -130,7 +131,14 @@ zx_status_t Namespace::ServeServiceDirectory(zx::channel directory_request) {
 void Namespace::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
-  realm_->CreateComponent(std::move(launch_info), std::move(controller));
+  auto cc_trace_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("appmgr", "Namespace::CreateComponent", cc_trace_id,
+                    "launch_info.url", launch_info.url);
+  realm_->CreateComponent(
+      std::move(launch_info), std::move(controller),
+      [cc_trace_id](ComponentControllerImpl* component) {
+        TRACE_ASYNC_END("appmgr", "Namespace::CreateComponent", cc_trace_id);
+      });
 }
 
 zx::channel Namespace::OpenServicesAsDirectory() {
