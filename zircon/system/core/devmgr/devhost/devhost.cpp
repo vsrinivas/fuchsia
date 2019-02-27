@@ -259,36 +259,40 @@ static zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo,
         return new_driver->status();
     }
 
-    const zircon_driver_note_t* dn;
-    dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
+    auto dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
     if (dn == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_note__ symbol\n", c_libname);
         new_driver->set_status(ZX_ERR_IO);
         return new_driver->status();
     }
-    zx_driver_rec_t* dr;
-    dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
+    auto ops = static_cast<const zx_driver_ops_t**>(dlsym(dl, "__zircon_driver_ops__"));
+    auto dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
     if (dr == nullptr) {
         log(ERROR, "devhost: driver '%s' missing __zircon_driver_rec__ symbol\n", c_libname);
         new_driver->set_status(ZX_ERR_IO);
         return new_driver->status();
     }
-    if (!dr->ops) {
+    // TODO(kulakowski) Eventually just check __zircon_driver_ops__,
+    // when bind programs are standalone.
+    if (ops == nullptr) {
+        ops = &dr->ops;
+    }
+    if (!(*ops)) {
         log(ERROR, "devhost: driver '%s' has nullptr ops\n", c_libname);
         new_driver->set_status(ZX_ERR_INVALID_ARGS);
         return new_driver->status();
     }
-    if (dr->ops->version != DRIVER_OPS_VERSION) {
+    if ((*ops)->version != DRIVER_OPS_VERSION) {
         log(ERROR,
             "devhost: driver '%s' has bad driver ops version %" PRIx64 ", expecting %" PRIx64 "\n",
-            c_libname, dr->ops->version, DRIVER_OPS_VERSION);
+            c_libname, (*ops)->version, DRIVER_OPS_VERSION);
         new_driver->set_status(ZX_ERR_INVALID_ARGS);
         return new_driver->status();
     }
 
     new_driver->set_driver_rec(dr);
     new_driver->set_name(dn->payload.name);
-    new_driver->set_ops(dr->ops);
+    new_driver->set_ops(*ops);
     dr->driver = new_driver.get();
 
     // check for dprintf log level flags
