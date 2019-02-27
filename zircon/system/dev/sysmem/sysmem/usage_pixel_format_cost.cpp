@@ -27,6 +27,7 @@ namespace {
 // a more-generic Platform value.
 enum Platform {
     kPlatform_None,
+    kPlatform_Arm_Mali,
     kPlatform_Amlogic_Generic,
     kPlatform_Amlogic_S912,
     kPlatform_Amlogic_S905D2,
@@ -79,6 +80,112 @@ struct PlatformCostsEntry {
     const std::list<const UsagePixelFormatCostEntry> costs;
 };
 
+const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
+    // AFBC always preferred when supported.
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+};
+
+const PlatformCostsEntry kArm_Mali_Costs = {
+    .platform = kPlatform_Arm_Mali,
+    .next_platform = kPlatform_None,
+    .costs = kArm_Mali_Cost_Entries,
+};
+
 const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
     {
         // NV12 weakly preferred for videoUsageHwDecoder.
@@ -110,7 +217,7 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
 
 const PlatformCostsEntry kAmlogic_Generic_Costs = {
     .platform = kPlatform_Amlogic_Generic,
-    .next_platform = kPlatform_None,
+    .next_platform = kPlatform_Arm_Mali,
     .costs = kAmlogic_Generic_Cost_Entries,
 };
 
@@ -139,6 +246,8 @@ const PlatformCostsEntry kAmlogic_T931_Costs = {
 };
 
 const std::map<Platform, const PlatformCostsEntry*> kPlatformCosts = {
+    {kPlatform_Arm_Mali, &kArm_Mali_Costs},
+    {kPlatform_Amlogic_Generic, &kAmlogic_Generic_Costs},
     {kPlatform_Amlogic_S912, &kAmlogic_S912_Costs},
     {kPlatform_Amlogic_S905D2, &kAmlogic_S905D2_Costs},
     {kPlatform_Amlogic_T931, &kAmlogic_T931_Costs},
@@ -221,20 +330,13 @@ bool IsBetterMatch(
     const UsagePixelFormatCostEntry* b) {
     ZX_DEBUG_ASSERT(constraints);
     ZX_DEBUG_ASSERT(a);
+    ZX_DEBUG_ASSERT(image_format_constraints_index < constraints->image_format_constraints_count);
     // We intentionally allow b to be nullptr.
 
-    bool is_pixel_format_found = false;
-    for (uint32_t i = 0; i < constraints->image_format_constraints_count; ++i) {
-        if (ImageFormatIsPixelFormatEqual(
-                a->pixel_format,
-                constraints->image_format_constraints[i].pixel_format)) {
-            is_pixel_format_found = true;
-            break;
-        }
-    }
-    if (!is_pixel_format_found) {
+    if (!ImageFormatIsPixelFormatEqual(
+            a->pixel_format,
+            constraints->image_format_constraints[image_format_constraints_index].pixel_format))
         return false;
-    }
 
     const fuchsia_sysmem_BufferUsage& usage = constraints->usage;
     if (!HasAllRequiredUsageBits(usage, a->required_buffer_usage_bits)) {

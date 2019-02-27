@@ -980,7 +980,7 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
         uint32_t best_index = 0;
         for (uint32_t i = 1; i < constraints_->image_format_constraints_count;
              ++i) {
-            if (CompareImageFormatConstraintsByIndex(i, best_index) > 0) {
+            if (CompareImageFormatConstraintsByIndex(i, best_index) < 0) {
                 best_index = i;
             }
         }
