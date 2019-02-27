@@ -66,7 +66,7 @@ impl FuchsiaPkgResolver {
         let dir = ClientEnd::<DirectoryMarker>::new(package_dir_c)
             .into_proxy()
             .expect("failed to create directory proxy");
-        let file = await!(io_util::open_file(&dir, &cm_path))
+        let file = io_util::open_file(&dir, &cm_path)
             .map_err(|e| ResolverError::manifest_not_available(component_uri, e))?;
         let cm_str = await!(io_util::read_file(&file))
             .map_err(|e| ResolverError::manifest_not_available(component_uri, e))?;

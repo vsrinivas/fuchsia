@@ -177,13 +177,13 @@ mod tests {
             async {
                 // Get a handle to /bin
                 let bin_path = "/pkg/bin".to_string();
-                let bin_proxy = await!(io_util::open_directory_in_namespace("/pkg/bin")).unwrap();
+                let bin_proxy = io_util::open_directory_in_namespace("/pkg/bin").unwrap();
                 let bin_chan = bin_proxy.into_channel().unwrap();
                 let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
 
                 // Get a handle to /lib
                 let lib_path = "/pkg/lib".to_string();
-                let lib_proxy = await!(io_util::open_directory_in_namespace("/pkg/lib")).unwrap();
+                let lib_proxy = io_util::open_directory_in_namespace("/pkg/lib").unwrap();
                 let lib_chan = lib_proxy.into_channel().unwrap();
                 let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
 

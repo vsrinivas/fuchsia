@@ -79,7 +79,7 @@ pub async fn load_object(
     for (ns_prefix, current_dir) in ns_map.iter() {
         if object_path.starts_with(ns_prefix) {
             let sub_path = pathbuf_drop_prefix(&object_path, ns_prefix);
-            let file_proxy = await!(io_util::open_file(current_dir, &sub_path))?;
+            let file_proxy = io_util::open_file(current_dir, &sub_path)?;
             let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ | VMO_FLAG_EXEC))
                 .map_err(|e| format_err!("reading object at {:?} failed: {}", object_path, e))?;
             let status = zx::Status::from_raw(status);
