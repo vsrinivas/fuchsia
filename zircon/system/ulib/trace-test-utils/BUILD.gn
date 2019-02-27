@@ -19,6 +19,7 @@ library("trace-test-utils") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/trace-reader",
+    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
   ]
 }
