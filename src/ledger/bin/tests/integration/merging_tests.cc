@@ -113,7 +113,7 @@ class ConflictResolverImpl : public ConflictResolver {
                  fit::function<void(IterationStatus, std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetFullDiffNew(std::move(token),
+            result_provider->GetFullDiff(std::move(token),
                                             std::move(callback));
           },
           entries, min_queries);
@@ -126,7 +126,7 @@ class ConflictResolverImpl : public ConflictResolver {
                  fit::function<void(IterationStatus, std::vector<DiffEntry>,
                                     std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetConflictingDiffNew(std::move(token),
+            result_provider->GetConflictingDiff(std::move(token),
                                                    std::move(callback));
           },
           entries, min_queries);
@@ -169,12 +169,12 @@ class ConflictResolverImpl : public ConflictResolver {
         }
       }
 
-      result_provider->DoneNew();
+      result_provider->Done();
       return RunUntilDisconnected();
     }
 
     ::testing::AssertionResult MergeNonConflictingEntries() {
-      result_provider->MergeNonConflictingEntriesNew();
+      result_provider->MergeNonConflictingEntries();
       return Sync();
     }
 
@@ -247,7 +247,7 @@ class ConflictResolverImpl : public ConflictResolver {
 
     ::testing::AssertionResult PartialMerge(
         std::vector<MergedValue> partial_result) {
-      result_provider->MergeNew(std::move(partial_result));
+      result_provider->Merge(std::move(partial_result));
       return Sync();
     }
 

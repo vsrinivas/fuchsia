@@ -76,7 +76,7 @@ void GetDiffRecursive(
                      std::move(callback));
   };
 
-  result_provider->GetConflictingDiffNew(std::move(token), std::move(cont));
+  result_provider->GetConflictingDiff(std::move(token), std::move(cont));
 }
 
 void GetDiff(fuchsia::ledger::MergeResultProvider* const result_provider,
@@ -130,7 +130,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    result_provider_->MergeNonConflictingEntriesNew();
+    result_provider_->MergeNonConflictingEntries();
 
     GetDiff(result_provider_.get(), &conflicts_,
             [this, flow] { WithDiff(flow); });
@@ -199,11 +199,11 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
       }
 
       if (!merge_changes.empty()) {
-        result_provider_->MergeNew(std::move(merge_changes));
+        result_provider_->Merge(std::move(merge_changes));
       }
     }
 
-    result_provider_->DoneNew();
+    result_provider_->Done();
     result_provider_->Sync([this, flow] { impl_->NotifyWatchers(); });
   }
 

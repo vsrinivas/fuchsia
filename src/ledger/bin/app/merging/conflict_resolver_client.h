@@ -62,35 +62,21 @@ class ConflictResolverClient
           callback);
 
   // MergeResultProviderNotifierDelegate:
-  void GetFullDiff(std::unique_ptr<Token> token,
-                   fit::function<void(Status, Status, std::vector<DiffEntry>,
-                                      std::unique_ptr<Token>)>
-                       callback) override;
-  void GetFullDiffNew(
+  void GetFullDiff(
       std::unique_ptr<Token> token,
       fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
   void GetConflictingDiff(
       std::unique_ptr<Token> token,
-      fit::function<void(Status, Status, std::vector<DiffEntry>,
-                         std::unique_ptr<Token>)>
-          callback) override;
-  void GetConflictingDiffNew(
-      std::unique_ptr<Token> token,
       fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                          std::unique_ptr<Token>)>
           callback) override;
   void Merge(std::vector<MergedValue> merged_values,
-             fit::function<void(Status, Status)> callback) override;
-  void MergeNew(std::vector<MergedValue> merged_values,
-                fit::function<void(Status)> callback) override;
+             fit::function<void(Status)> callback) override;
   void MergeNonConflictingEntries(
-      fit::function<void(Status, Status)> callback) override;
-  void MergeNonConflictingEntriesNew(
       fit::function<void(Status)> callback) override;
-  void Done(fit::function<void(Status, Status)> callback) override;
-  void DoneNew(fit::function<void(Status)> callback) override;
+  void Done(fit::function<void(Status)> callback) override;
 
   // Checks whether this ConflictResolverClient is still valid (not deleted nor
   // cancelled) and the status is OK. Returns |true| in that case. Otherwise,

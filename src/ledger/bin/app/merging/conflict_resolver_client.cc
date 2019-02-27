@@ -136,7 +136,7 @@ void ConflictResolverClient::Finalize(Status status) {
   callback(status);
 }
 
-void ConflictResolverClient::GetFullDiffNew(
+void ConflictResolverClient::GetFullDiff(
     std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
@@ -144,55 +144,13 @@ void ConflictResolverClient::GetFullDiffNew(
   GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
-void ConflictResolverClient::GetFullDiff(
-    std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, std::vector<DiffEntry>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  GetFullDiffNew(
-      std::move(token),
-      [callback = std::move(callback)](
-          Status status, IterationStatus diff_status,
-          std::vector<DiffEntry> entries, std::unique_ptr<Token> token) {
-        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
-          callback(status, status, std::move(entries), std::move(token));
-          return;
-        }
-        callback(Status::OK,
-                 diff_status == IterationStatus::OK ? Status::OK
-                                                    : Status::PARTIAL_RESULT,
-                 std::move(entries), std::move(token));
-      });
-}
-
-void ConflictResolverClient::GetConflictingDiffNew(
+void ConflictResolverClient::GetConflictingDiff(
     std::unique_ptr<Token> token,
     fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
                        std::unique_ptr<Token>)>
         callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
           std::move(callback));
-}
-
-void ConflictResolverClient::GetConflictingDiff(
-    std::unique_ptr<Token> token,
-    fit::function<void(Status, Status, std::vector<DiffEntry>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  GetConflictingDiffNew(
-      std::move(token),
-      [callback = std::move(callback)](
-          Status status, IterationStatus diff_status,
-          std::vector<DiffEntry> entries, std::unique_ptr<Token> token) {
-        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
-          callback(status, status, std::move(entries), std::move(token));
-          return;
-        }
-        callback(Status::OK,
-                 diff_status == IterationStatus::OK ? Status::OK
-                                                    : Status::PARTIAL_RESULT,
-                 std::move(entries), std::move(token));
-      });
 }
 
 void ConflictResolverClient::GetDiff(
@@ -236,8 +194,8 @@ void ConflictResolverClient::GetDiff(
           }));
 }
 
-void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
-                                      fit::function<void(Status)> callback) {
+void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
+                                   fit::function<void(Status)> callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
       std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr(),
@@ -283,16 +241,7 @@ void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
       });
 }
 
-void ConflictResolverClient::Merge(
-    std::vector<MergedValue> merged_values,
-    fit::function<void(Status, Status)> callback) {
-  MergeNew(std::move(merged_values),
-           [callback = std::move(callback)](Status status) {
-             callback(status, status);
-           });
-}
-
-void ConflictResolverClient::MergeNonConflictingEntriesNew(
+void ConflictResolverClient::MergeNonConflictingEntries(
     fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr()](
@@ -339,15 +288,7 @@ void ConflictResolverClient::MergeNonConflictingEntriesNew(
       });
 }
 
-void ConflictResolverClient::MergeNonConflictingEntries(
-    fit::function<void(Status, Status)> callback) {
-  MergeNonConflictingEntriesNew(
-      [callback = std::move(callback)](Status status) {
-        callback(status, status);
-      });
-}
-
-void ConflictResolverClient::DoneNew(fit::function<void(Status)> callback) {
+void ConflictResolverClient::Done(fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr()](
                                fit::function<void(Status)> callback) mutable {
@@ -372,13 +313,6 @@ void ConflictResolverClient::DoneNew(fit::function<void(Status)> callback) {
                   Finalize(Status::OK);
                 }));
       });
-}
-
-void ConflictResolverClient::Done(
-    fit::function<void(Status, Status)> callback) {
-  DoneNew([callback = std::move(callback)](Status status) {
-    callback(status, status);
-  });
 }
 
 bool ConflictResolverClient::IsInValidStateAndNotify(

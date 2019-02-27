@@ -173,7 +173,7 @@ TEST_F(ConflictResolverClientTest, Error) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNew(
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
       std::move(merged_values));
   RunLoopUntilIdle();
 
@@ -205,8 +205,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   conflict_resolver_impl.requests[0]
-      ->result_provider_ptr->MergeNonConflictingEntriesNew();
-  conflict_resolver_impl.requests[0]->result_provider_ptr->DoneNew();
+      ->result_provider_ptr->MergeNonConflictingEntries();
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Done();
   RunLoopUntilIdle();
   ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
   EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
@@ -280,11 +280,11 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNew(
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
       std::move(merged_values));
   conflict_resolver_impl.requests[0]
-      ->result_provider_ptr->MergeNonConflictingEntriesNew();
-  conflict_resolver_impl.requests[0]->result_provider_ptr->DoneNew();
+      ->result_provider_ptr->MergeNonConflictingEntries();
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Done();
   RunLoopUntilIdle();
   ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
   EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
