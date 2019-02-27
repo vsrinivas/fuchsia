@@ -100,11 +100,11 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kAddress2, stack[1]->GetAddress());
   EXPECT_EQ(kStack2, stack[1]->GetStackPointer());
 
-  // Resuming the thread should be asynchronous so nothing should change.
+  // Resuming the thread should clear the frames.
   mock_remote_api().set_resume_quits_loop(true);
   thread->Continue();
-  EXPECT_EQ(2u, thread->GetStack().size());
-  EXPECT_TRUE(thread->GetStack().has_all_frames());
+  EXPECT_EQ(0u, thread->GetStack().size());
+  EXPECT_FALSE(thread->GetStack().has_all_frames());
   loop().Run();
 
   // After resuming we don't actually know what state the thread is in so

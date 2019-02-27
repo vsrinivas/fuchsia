@@ -317,7 +317,8 @@ TEST_F(StackTest, InlineExpansion) {
   bottom_func->set_code_ranges(
       AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
 
-  bottom_ambig_inline_func->set_containing_block(LazySymbol(bottom_inline_func));
+  bottom_ambig_inline_func->set_containing_block(
+      LazySymbol(bottom_inline_func));
   bottom_inline_func->set_containing_block(LazySymbol(bottom_func));
 
   // The location returned by the symbol function will have the file/line
@@ -419,6 +420,74 @@ TEST_F(StackTest, InlineHiding) {
   stack.SetHideAmbiguousInlineFrameCount(2);
   EXPECT_EQ(2u, stack.size());
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
+}
+
+// Appends stack items to an already existing stack via SetFrames(). The
+// existing frames and the inline hide count should be unchanged.
+TEST_F(StackTest, UpdateExisting) {
+  MockStackDelegate delegate;
+  Stack stack(&delegate);
+  delegate.set_stack(&stack);
+
+  // Make a stack with one physial frame and one inline frame above it.
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kTopSP);
+  Location top_location(Location::State::kSymbolized, phys_top_record.ip);
+  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
+                                              top_location);
+  auto inline_top = std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get(), true);
+  inline_top->set_is_ambiguous_inline(true);
+
+  // Save for verification later.
+  const Frame* frame0 = inline_top.get();
+  const Frame* frame1 = phys_top.get();
+
+  std::vector<std::unique_ptr<Frame>> input_frames;
+  input_frames.push_back(std::move(inline_top));
+  input_frames.push_back(std::move(phys_top));
+  stack.SetFramesForTest(std::move(input_frames), true);
+
+  // The ambiguous inline frame is hidden so we can check later this is
+  // preserved across updates.
+  ASSERT_EQ(2u, stack.size());
+  ASSERT_EQ(1u, stack.GetAmbiguousInlineFrameCount());
+  stack.SetHideAmbiguousInlineFrameCount(1);
+
+  // Synthesize a frame update. The first physical frame matches the first
+  // physical frame from above. This uses the non-test update flow which should
+  // preserve the frame objects that haven't changed.
+  std::vector<debug_ipc::StackFrame> raw_frames;
+  raw_frames.push_back(phys_top_record);
+  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP, kBottomSP);
+  raw_frames.push_back(phys_bottom_record);
+
+  stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, raw_frames);
+
+  // The update should have left the existing top physical frame and the inline
+  // frame expanded on top of it, and add the additional physical frame below
+  // it.
+  EXPECT_EQ(1u, stack.GetAmbiguousInlineFrameCount());
+  // Now that we checked it, reset the hidden frame count so we can see them.
+  stack.SetHideAmbiguousInlineFrameCount(0);
+  ASSERT_EQ(3u, stack.size());
+  EXPECT_EQ(frame0, stack[0]);
+  EXPECT_EQ(frame1, stack[1]);
+  EXPECT_EQ(phys_bottom_record.ip, stack[2]->GetAddress());
+
+  // Now supply a slightly different stack, it should be replaced and the
+  // hidden inline frame count reset.
+  stack.SetHideAmbiguousInlineFrameCount(0);  // So we can test for reset.
+  raw_frames[0].sp++;                         // Modify frame.
+  stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, raw_frames);
+
+  // The inline frame at the top should have gone away because we didn't
+  // provide any inline information for the Stack to expand it.
+  ASSERT_EQ(2u, stack.size());
+  EXPECT_EQ(0u, stack.GetAmbiguousInlineFrameCount());
+  EXPECT_EQ(raw_frames[0].ip, stack[0]->GetAddress());
+  EXPECT_EQ(raw_frames[0].sp, stack[0]->GetStackPointer());
+  EXPECT_EQ(raw_frames[1].ip, stack[1]->GetAddress());
+  EXPECT_EQ(raw_frames[1].sp, stack[1]->GetStackPointer());
 }
 
 }  // namespace zxdb

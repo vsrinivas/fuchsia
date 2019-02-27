@@ -249,11 +249,34 @@ void Stack::SyncFrames(std::function<void(const Err&)> callback) {
 }
 
 void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
-                      const std::vector<debug_ipc::StackFrame>& frames) {
-  hide_ambiguous_inline_frame_count_ = 0;
-  frames_.clear();
-  for (const debug_ipc::StackFrame& frame : frames)
-    AppendFrame(frame);
+                      const std::vector<debug_ipc::StackFrame>& new_frames) {
+  // See if the new frames are an extension of the existing frames or are a
+  // replacement.
+  size_t appending_from = 0;  // First index in new_frames to append.
+  for (size_t i = 0; i < frames_.size(); i++) {
+    // The input will not contain any inline frames so skip over those when
+    // doing the checking.
+    if (frames_[i]->IsInline())
+      continue;
+
+    if (appending_from >= new_frames.size() ||
+        frames_[i]->GetAddress() != new_frames[appending_from].ip ||
+        frames_[i]->GetStackPointer() != new_frames[appending_from].sp ||
+        frames_[i]->GetBasePointerRegister() != new_frames[appending_from].bp) {
+      // New frames are not a superset of our existing stack, replace
+      // everything.
+      hide_ambiguous_inline_frame_count_ = 0;
+      frames_.clear();
+      appending_from = 0;
+      break;
+    }
+
+    appending_from++;
+  }
+
+  for (size_t i = appending_from; i < new_frames.size(); i++)
+    AppendFrame(new_frames[i]);
+
   has_all_frames_ = amount == debug_ipc::ThreadRecord::StackAmount::kFull;
 }
 

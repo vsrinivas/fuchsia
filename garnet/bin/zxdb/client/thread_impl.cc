@@ -115,6 +115,7 @@ void ThreadImpl::Continue() {
     }
   }
 
+  ClearFrames();
   session()->remote_api()->Resume(
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }

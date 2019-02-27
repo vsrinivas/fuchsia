@@ -80,7 +80,9 @@ class Stack {
   // the top 1-2 (see class-level comment above).
   bool has_all_frames() const { return has_all_frames_; }
 
-  size_t size() const { return frames_.size() - hide_ambiguous_inline_frame_count_; }
+  size_t size() const {
+    return frames_.size() - hide_ambiguous_inline_frame_count_;
+  }
   bool empty() const { return frames_.empty(); }
 
   // Access into the individual frames. The topmost stack frame is index 0.
@@ -159,6 +161,17 @@ class Stack {
 
   // Provides a new set of frames computed by a backtrace in the debug_agent.
   // In normal operation this is called by the Thread.
+  //
+  // This can be called in two cases: (1) when a thread stops to provide a new
+  // stack, and (2) when updating a stack with more frames. If there are
+  // existing frames when SetFrames is called, it will assume state (2) if
+  // possible (the stack could have changed out from under us) and will attempt
+  // to preserve the ambiguous inline hide count, etc. consistent with updating
+  // an existing stack.
+  //
+  // If you don't want this behavior, call ClearFrames() first. ClearFrames()
+  // will be called whever a thread is resumed so fresh stops should get this
+  // behavior by default.
   void SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
                  const std::vector<debug_ipc::StackFrame>& frames);
 
@@ -168,6 +181,9 @@ class Stack {
 
   // Removes all frames. In normal operation this is called by the Thread when
   // things happen that invalidate all frames such as resuming the thread.
+  //
+  // Callers should generally do this via the thread. Code in ThreadImpl should
+  // use ThreadImpl::ClearFrames instead which will send observer notifications.
   //
   // Returns true if anything was modified (false means there were no frames to
   // clear).
