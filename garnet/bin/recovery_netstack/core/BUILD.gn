@@ -15,10 +15,10 @@ rustc_library("netstack-core") {
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
     "//garnet/public/rust/zerocopy/zerocopy-derive",
-    "//third_party/rust-crates/rustc_deps:byteorder",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:rand",
-    "//third_party/rust-crates/rustc_deps:rand_xorshift",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rand_xorshift",
   ]
 }

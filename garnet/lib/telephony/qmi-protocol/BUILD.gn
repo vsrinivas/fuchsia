@@ -31,8 +31,8 @@ rustc_library("qmi-protocol") {
   non_rust_deps = [ ":gen_qmi_protocol_source" ]
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:bytes",
-    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust_crates:bytes",
+    "//third_party/rust_crates:failure",
   ]
   source_root = "$target_gen_dir/qmi-protocol.rs"
 }
@@ -41,20 +41,20 @@ if (host_toolchain == current_toolchain) {
   rustc_binary("qmigen") {
     edition = "2018"
     deps = [
-      "//third_party/rust-crates/rustc_deps:failure",
-      "//third_party/rust-crates/rustc_deps:serde",
-      "//third_party/rust-crates/rustc_deps:serde_derive",
-      "//third_party/rust-crates/rustc_deps:serde_json",
+      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_derive",
+      "//third_party/rust_crates:serde_json",
     ]
   }
 
   rustc_library("qmigen_lib") {
     edition = "2018"
     deps = [
-      "//third_party/rust-crates/rustc_deps:failure",
-      "//third_party/rust-crates/rustc_deps:serde",
-      "//third_party/rust-crates/rustc_deps:serde_derive",
-      "//third_party/rust-crates/rustc_deps:serde_json",
+      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_derive",
+      "//third_party/rust_crates:serde_json",
     ]
   }
 
@@ -66,7 +66,7 @@ if (host_toolchain == current_toolchain) {
     deps = [
       ":qmigen",
       ":qmigen_lib($host_toolchain)",
-      "//third_party/rust-crates/rustc_deps:pretty_assertions",
+      "//third_party/rust_crates:pretty_assertions",
     ]
     source_root = "tests/codegen_tests.rs"
   }

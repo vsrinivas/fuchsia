@@ -22,7 +22,7 @@ import("//build/rust/rustc_artifact.gni")
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
 #     Third party crates can be included through paths like
-#     "//third_party/rust-crates/rustc_deps:<cratename>".
+#     "//third_party/rust_crates:<cratename>".
 #
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
@@ -40,8 +40,8 @@ import("//build/rust/rustc_artifact.gni")
 #   rustc_macro("foo") {
 #     deps = [
 #       "//garnet/public/rust/bar",
-#       "//third_party/rust-crates/rustc_deps:serde",
-#       "//third_party/rust-crates/rustc_deps:slab",
+#       "//third_party/rust_crates:serde",
+#       "//third_party/rust_crates:slab",
 #     ]
 #   }
 template("rustc_macro") {

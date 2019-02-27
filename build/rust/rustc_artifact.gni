@@ -123,8 +123,8 @@ template("rustc_artifact") {
     root_file = "src/lib.rs"
   }
 
-  third_party_build = "//third_party/rust-crates/rustc_deps:build-third-party"
-  third_party_deps_data = "${root_out_dir}/rust_third_party/deps_data.json"
+  third_party_build = "//third_party/rust_crates:build-third-party"
+  third_party_deps_data = "${root_out_dir}/rust_third_party_crates/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
   if (defined(invoker.output_file_override)) {
     output_filename = invoker.output_file_override

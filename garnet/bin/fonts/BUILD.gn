@@ -20,15 +20,15 @@ rustc_binary("font_server") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:getopts",
-    "//third_party/rust-crates/rustc_deps:libc",
-    "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:serde",
-    "//third_party/rust-crates/rustc_deps:serde_derive",
-    "//third_party/rust-crates/rustc_deps:serde_json",
-    "//third_party/rust-crates/rustc_deps:unicase",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:getopts",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:unicase",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 
@@ -86,8 +86,8 @@ rustc_library("font_provider_test") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
   ]
   source_root = "tests/font_provider_test.rs"
 }

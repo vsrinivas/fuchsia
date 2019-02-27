@@ -20,9 +20,9 @@ rustc_library("connectivity-testing") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:pin-utils",
   ]
 }
 

@@ -22,9 +22,9 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog-listener",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:chrono",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:tempfile",
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }

@@ -14,9 +14,9 @@ rustc_library("fidl_fuchsia_pkg_ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:hex",
-    "//third_party/rust-crates/rustc_deps:proptest",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:proptest",
   ]
 }
 

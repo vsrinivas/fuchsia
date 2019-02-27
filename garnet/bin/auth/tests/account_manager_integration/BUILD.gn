@@ -23,10 +23,10 @@ rustc_library("account_manager_integration") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
   ]
 }
 

@@ -17,7 +17,7 @@ rustc_library("fuchsia-scenic") {
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/shared-buffer",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:parking_lot",
   ]
 }

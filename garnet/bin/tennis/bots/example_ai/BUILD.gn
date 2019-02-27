@@ -31,8 +31,8 @@ rustc_binary("tennis_example_ai_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
   ]
 }

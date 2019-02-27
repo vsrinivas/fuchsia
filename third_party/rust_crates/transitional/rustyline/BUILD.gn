@@ -1,0 +1,26 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is currently a stopgap for building on Fuchsia
+# contact bwb@google.com if you are running into problems with
+# how it is mirrored
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("rustyline") {
+  name = "rustyline"
+  edition = "2015"
+  source_root = "../../../../third_party/rust-mirrors/rustyline/src/lib.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-device",
+    "//garnet/public/rust/fuchsia-zircon",
+
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:memchr",
+    "//third_party/rust_crates:unicode-segmentation",
+    "//third_party/rust_crates:unicode-width",
+    "//third_party/rust_crates:utf8parse",
+  ]
+}

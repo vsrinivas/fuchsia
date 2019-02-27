@@ -17,11 +17,11 @@ rustc_binary("bt-le-peripheral") {
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:base64",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:getopts",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
-    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:getopts",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:structopt",
   ]
 }

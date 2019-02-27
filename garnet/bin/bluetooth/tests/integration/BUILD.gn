@@ -21,10 +21,10 @@ rustc_binary("host_lifecycle") {
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
-    "//third_party/rust-crates/rustc_deps:rand",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:rand",
   ]
 
   source_root = "tests/host_lifecycle.rs"
@@ -44,11 +44,11 @@ rustc_binary("host_integration") {
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
-    "//third_party/rust-crates/rustc_deps:rand",
-    "//third_party/rust-crates/rustc_deps:slab",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:slab",
   ]
 
   source_root = "tests/host_integration.rs"

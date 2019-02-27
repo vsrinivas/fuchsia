@@ -11,7 +11,7 @@ rustc_library("fuchsia-hyper") {
   with_unit_tests = true
   deps = [
     "//garnet/public/rust/fuchsia-async",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:hyper",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:hyper",
   ]
 }

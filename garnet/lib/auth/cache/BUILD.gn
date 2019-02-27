@@ -11,6 +11,6 @@ rustc_library("cache") {
 
   deps = [
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust_crates:failure",
   ]
 }

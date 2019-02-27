@@ -6,7 +6,7 @@
 
 # A script to fetch missing LICENSE files when building a vendored repo
 
-# Should be run from top-level of third_party/rust-crates repository.
+# Should be run from top-level of third_party/rust_crates repository.
 
 import argparse
 import os

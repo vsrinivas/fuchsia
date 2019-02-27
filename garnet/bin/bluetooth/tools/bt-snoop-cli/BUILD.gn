@@ -14,11 +14,11 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
-    "//third_party/rust-crates/rustc_deps:byteorder",
-    "//third_party/rust-crates/rustc_deps:clap",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:structopt",
   ]
 }
 

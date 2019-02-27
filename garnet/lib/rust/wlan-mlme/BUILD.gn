@@ -14,7 +14,7 @@ rustc_library("wlan-mlme") {
 
   deps = [
     "//garnet/lib/rust/wlan-common",
-    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust_crates:failure",
   ]
 }
 

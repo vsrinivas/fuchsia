@@ -11,10 +11,10 @@ rustc_library("term-model") {
   with_unit_tests = true
 
   deps = [
-    "//third_party/rust-crates/rustc_deps:base64",
-    "//third_party/rust-crates/rustc_deps:bitflags",
-    "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:unicode-width",
-    "//third_party/rust-crates/rustc_deps:vte",
+    "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:unicode-width",
+    "//third_party/rust_crates:vte",
   ]
 }

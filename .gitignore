@@ -22,7 +22,9 @@
 *.sublime-project
 *.sublime-workspace
 Cargo.lock
+!/third_party/rust_crates/**/Cargo.lock
 Cargo.toml
+!/third_party/rust_crates/**/Cargo.toml
 CMakeLists.txt
 compile_commands.json
 cmake-build-debug/
@@ -35,6 +37,7 @@ Thumbs.db
 tools/cipd.gni
 topaz/
 vendor/
+!/third_party/rust_crates/vendor
 tmp/
 
 ### Specific files
@@ -54,8 +57,12 @@ tmp/
 /old/
 /out/
 /prebuilt/
-/third_party/
+/third_party/*
+!/third_party/rust_crates
 /tmp/
 /tools/
 /topaz/
 /vendor/
+# All files in vendor need to be delivered as is, as they use
+# checksumming to ensure secure package delivery.
+!/third_party/rust_crates/vendor/**

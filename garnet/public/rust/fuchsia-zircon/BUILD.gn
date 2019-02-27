@@ -10,7 +10,7 @@ rustc_library("fuchsia-zircon") {
   with_unit_tests = true
   deps = [
     "fuchsia-zircon-sys",
-    "//third_party/rust-crates/rustc_deps:bitflags",
-    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:failure",
   ]
 }

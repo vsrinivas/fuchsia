@@ -13,9 +13,9 @@ rustc_library("fuchsia_uri") {
   with_unit_tests = true
 
   deps = [
-    "//third_party/rust-crates/rustc_deps:lazy_static",
-    "//third_party/rust-crates/rustc_deps:regex",
-    "//third_party/rust-crates/rustc_deps:url",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:url",
   ]
 }
 

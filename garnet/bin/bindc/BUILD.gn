@@ -11,7 +11,7 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
     with_unit_tests = true
     deps = [
-      "//third_party/rust-crates/rustc_deps:bitfield",
+      "//third_party/rust_crates:bitfield",
     ]
   }
 }

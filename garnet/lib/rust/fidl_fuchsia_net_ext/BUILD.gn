@@ -10,7 +10,7 @@ rustc_library("fidl_fuchsia_net_ext") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust_crates:failure",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

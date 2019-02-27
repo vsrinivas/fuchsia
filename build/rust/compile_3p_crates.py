@@ -79,7 +79,7 @@ def main():
     parser.add_argument("--mmacosx-version-min",
                         help="Select macosx framework version",
                         required=False)
-    # TODO(cramertj) make these args required when the third_party/rust-crates change lands
+    # TODO(cramertj) make these args required when the third_party/rust_crates change lands
     parser.add_argument("--sysroot",
                         help="Path to the sysroot",
                         required=False)

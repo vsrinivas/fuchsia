@@ -14,8 +14,8 @@ rustc_library("escaped-cstring") {
   with_unit_tests = true
 
   deps = [
-    "//third_party/rust-crates/rustc_deps:memchr",
-    "//third_party/rust-crates/rustc_deps:smallvec",
+    "//third_party/rust_crates:memchr",
+    "//third_party/rust_crates:smallvec",
   ]
 }
 

@@ -11,9 +11,9 @@ rustc_library("fuchsia-syslog") {
   with_unit_tests = true
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:lazy_static",
-    "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tempfile",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }

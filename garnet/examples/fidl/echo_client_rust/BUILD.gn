@@ -15,8 +15,8 @@ rustc_binary("echo_client_rust_bin") {
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:structopt",
   ]
 }
 

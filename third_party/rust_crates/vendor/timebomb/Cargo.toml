@@ -1,0 +1,11 @@
+[package]
+name = "timebomb"
+version = "0.1.2"
+authors = ["Colin Sherratt <colin.sherratt@gmail.com>"]
+license = "Apache-2.0"
+homepage = "https://github.com/csherratt/timebomb"
+description = "A timeout mechnisem for unit tests"
+
+[dependencies]
+pulse = "*"
+time = "*"

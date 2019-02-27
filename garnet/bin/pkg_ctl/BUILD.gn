@@ -20,9 +20,9 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:structopt",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

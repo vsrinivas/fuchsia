@@ -1,0 +1,210 @@
+/// This is the state change table. It's indexed first by current state and then by the next
+/// character in the pty stream.
+
+use definitions::Action;
+
+pub static STATE_CHANGE: [[u8; 256]; 16] = vt_state_table! {
+    State::Anywhere => {
+        0x18        => (Action::Execute, State::Ground),
+        0x1a        => (Action::Execute, State::Ground),
+        0x1b        => State::Escape,
+    },
+
+    State::Ground => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x20...0x7f => Action::Print,
+        0x80...0x8f => Action::Execute,
+        0x91...0x9a => Action::Execute,
+        0x9c        => Action::Execute,
+        // Beginning of UTF-8 2 byte sequence
+        0xc2...0xdf => (State::Utf8, Action::BeginUtf8),
+        // Beginning of UTF-8 3 byte sequence
+        0xe0...0xef => (State::Utf8, Action::BeginUtf8),
+        // Beginning of UTF-8 4 byte sequence
+        0xf0...0xf4 => (State::Utf8, Action::BeginUtf8),
+    },
+
+    State::Escape => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x7f        => Action::Ignore,
+        0x20...0x2f => (Action::Collect, State::EscapeIntermediate),
+        0x30...0x4f => (Action::EscDispatch, State::Ground),
+        0x51...0x57 => (Action::EscDispatch, State::Ground),
+        0x59        => (Action::EscDispatch, State::Ground),
+        0x5a        => (Action::EscDispatch, State::Ground),
+        0x5c        => (Action::EscDispatch, State::Ground),
+        0x60...0x7e => (Action::EscDispatch, State::Ground),
+        0x5b        => State::CsiEntry,
+        0x5d        => State::OscString,
+        0x50        => State::DcsEntry,
+        0x58        => State::SosPmApcString,
+        0x5e        => State::SosPmApcString,
+        0x5f        => State::SosPmApcString,
+    },
+
+    State::EscapeIntermediate => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x20...0x2f => Action::Collect,
+        0x7f        => Action::Ignore,
+        0x30...0x7e => (Action::EscDispatch, State::Ground)
+    },
+
+    State::CsiEntry => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x7f        => Action::Ignore,
+        0x20...0x2f => (Action::Collect, State::CsiIntermediate),
+        0x3a        => State::CsiIgnore,
+        0x30...0x39 => (Action::Param, State::CsiParam),
+        0x3b        => (Action::Param, State::CsiParam),
+        0x3c...0x3f => (Action::Collect, State::CsiParam),
+        0x40...0x7e => (Action::CsiDispatch, State::Ground)
+    },
+
+    State::CsiIgnore => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x20...0x3f => Action::Ignore,
+        0x7f        => Action::Ignore,
+        0x40...0x7e => State::Ground,
+    },
+
+    State::CsiParam => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x30...0x39 => Action::Param,
+        0x3b        => Action::Param,
+        0x7f        => Action::Ignore,
+        0x3a        => State::CsiIgnore,
+        0x3c...0x3f => State::CsiIgnore,
+        0x20...0x2f => (Action::Collect, State::CsiIntermediate),
+        0x40...0x7e => (Action::CsiDispatch, State::Ground)
+    },
+
+    State::CsiIntermediate => {
+        0x00...0x17 => Action::Execute,
+        0x19        => Action::Execute,
+        0x1c...0x1f => Action::Execute,
+        0x20...0x2f => Action::Collect,
+        0x7f        => Action::Ignore,
+        0x30...0x3f => State::CsiIgnore,
+        0x40...0x7e => (Action::CsiDispatch, State::Ground),
+    },
+
+    State::DcsEntry => {
+        0x00...0x17 => Action::Ignore,
+        0x19        => Action::Ignore,
+        0x1c...0x1f => Action::Ignore,
+        0x7f        => Action::Ignore,
+        0x3a        => State::DcsIgnore,
+        0x20...0x2f => (Action::Collect, State::DcsIntermediate),
+        0x30...0x39 => (Action::Param, State::DcsParam),
+        0x3b        => (Action::Param, State::DcsParam),
+        0x3c...0x3f => (Action::Collect, State::DcsParam),
+        0x40...0x7e => State::DcsPassthrough
+    },
+
+    State::DcsIntermediate => {
+        0x00...0x17 => Action::Ignore,
+        0x19        => Action::Ignore,
+        0x1c...0x1f => Action::Ignore,
+        0x20...0x2f => Action::Collect,
+        0x7f        => Action::Ignore,
+        0x30...0x3f => State::DcsIgnore,
+        0x40...0x7e => State::DcsPassthrough
+    },
+
+    State::DcsIgnore => {
+        0x00...0x17 => Action::Ignore,
+        0x19        => Action::Ignore,
+        0x1c...0x1f => Action::Ignore,
+        0x20...0x7f => Action::Ignore,
+        0x9c        => State::Ground
+    },
+
+    State::DcsParam => {
+        0x00...0x17 => Action::Ignore,
+        0x19        => Action::Ignore,
+        0x1c...0x1f => Action::Ignore,
+        0x30...0x39 => Action::Param,
+        0x3b        => Action::Param,
+        0x7f        => Action::Ignore,
+        0x3a        => State::DcsIgnore,
+        0x3c...0x3f => State::DcsIgnore,
+        0x20...0x2f => (Action::Collect, State::DcsIntermediate),
+        0x40...0x7e => State::DcsPassthrough
+    },
+
+    State::DcsPassthrough => {
+        0x00...0x17 => Action::Put,
+        0x19        => Action::Put,
+        0x1c...0x1f => Action::Put,
+        0x20...0x7e => Action::Put,
+        0x7f        => Action::Ignore,
+        0x9c        => State::Ground,
+    },
+
+    State::SosPmApcString => {
+        0x00...0x17 => Action::Ignore,
+        0x19        => Action::Ignore,
+        0x1c...0x1f => Action::Ignore,
+        0x20...0x7f => Action::Ignore,
+        0x9c       => State::Ground
+    },
+
+    State::OscString => {
+        0x00...0x06 => Action::Ignore,
+        0x07        => State::Ground,
+        0x08...0x17 => Action::Ignore,
+        0x19        => Action::Ignore,
+        0x1c...0x1f => Action::Ignore,
+        0x20...0xff => Action::OscPut,
+    }
+};
+
+pub static ENTRY_ACTIONS: &'static [Action] = &[
+   Action::None,     // State::Anywhere
+   Action::Clear,    // State::CsiEntry
+   Action::None,     // State::CsiIgnore
+   Action::None,     // State::CsiIntermediate
+   Action::None,     // State::CsiParam
+   Action::Clear,    // State::DcsEntry
+   Action::None,     // State::DcsIgnore
+   Action::None,     // State::DcsIntermediate
+   Action::None,     // State::DcsParam
+   Action::Hook,     // State::DcsPassthrough
+   Action::Clear,    // State::Escape
+   Action::None,     // State::EscapeIntermediate
+   Action::None,     // State::Ground
+   Action::OscStart, // State::OscString
+   Action::None,     // State::SosPmApcString
+   Action::None,     // State::Utf8
+];
+
+pub static EXIT_ACTIONS: &'static [Action] = &[
+   Action::None,   // State::Anywhere
+   Action::None,   // State::CsiEntry
+   Action::None,   // State::CsiIgnore
+   Action::None,   // State::CsiIntermediate
+   Action::None,   // State::CsiParam
+   Action::None,   // State::DcsEntry
+   Action::None,   // State::DcsIgnore
+   Action::None,   // State::DcsIntermediate
+   Action::None,   // State::DcsParam
+   Action::Unhook, // State::DcsPassthrough
+   Action::None,   // State::Escape
+   Action::None,   // State::EscapeIntermediate
+   Action::None,   // State::Ground
+   Action::OscEnd, // State::OscString
+   Action::None,   // State::SosPmApcString
+   Action::None,   // State::Utf8
+];

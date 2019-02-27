@@ -7,10 +7,10 @@ import("//build/rust/rustc_library.gni")
 rustc_library("eapol") {
   edition = "2018"
   deps = [
-    "//third_party/rust-crates/rustc_deps:bitfield",
-    "//third_party/rust-crates/rustc_deps:byteorder",
-    "//third_party/rust-crates/rustc_deps:bytes",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:nom",
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:bytes",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:nom",
   ]
 }

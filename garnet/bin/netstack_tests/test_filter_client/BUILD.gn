@@ -9,7 +9,7 @@ rustc_binary("bin") {
   name = "test_filter_client"
   edition = "2018"
   deps = [
-    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust_crates:failure",
   ]
 }
 
