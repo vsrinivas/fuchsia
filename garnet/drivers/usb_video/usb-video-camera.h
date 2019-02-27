@@ -13,6 +13,6 @@
 #define CAMERA_IOCTL_GET_CHANNEL \
   IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_CAMERA, 0)
 IOCTL_WRAPPER_OUT(ioctl_camera_get_channel, CAMERA_IOCTL_GET_CHANNEL,
-                  zx_handle_t);
+                  zx_handle_t)
 
 #endif  // GARNET_DRIVERS_USB_VIDEO_USB_VIDEO_CAMERA_H_
