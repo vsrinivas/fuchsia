@@ -512,7 +512,7 @@ void devfs_remove(Devnode* dn) {
             dn->device->link = nullptr;
 
             if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
-                Devnode* dir = proto_dir(dn->device->protocol_id);
+                Devnode* dir = proto_dir(dn->device->protocol_id());
                 devfs_notify(dir, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
             }
         }
@@ -570,7 +570,7 @@ zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::c
 
 void devfs_advertise(Device* dev) {
     if (dev->link) {
-        Devnode* dir = proto_dir(dev->protocol_id);
+        Devnode* dir = proto_dir(dev->protocol_id());
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
     if (dev->parent() && dev->parent()->self) {
@@ -581,7 +581,7 @@ void devfs_advertise(Device* dev) {
 // TODO: generate a MODIFIED event rather than back to back REMOVED and ADDED
 void devfs_advertise_modified(Device* dev) {
     if (dev->link) {
-        Devnode* dir = proto_dir(dev->protocol_id);
+        Devnode* dir = proto_dir(dev->protocol_id());
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_REMOVED);
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
     }
@@ -601,8 +601,9 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((dev->protocol_id == ZX_PROTOCOL_TEST_PARENT) ||
-        (dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id == ZX_PROTOCOL_MISC)) {
+    if ((dev->protocol_id() == ZX_PROTOCOL_TEST_PARENT) ||
+        (dev->protocol_id() == ZX_PROTOCOL_MISC_PARENT) ||
+        (dev->protocol_id() == ZX_PROTOCOL_MISC)) {
         // misc devices are singletons, not a class
         // in the sense of other device classes.
         // They do not get aliases in /dev/class/misc/...
@@ -613,12 +614,12 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
 
     // Create link in /dev/class/... if this id has a published class
     Devnode* dir;
-    dir = proto_dir(dev->protocol_id);
+    dir = proto_dir(dev->protocol_id());
     if (dir != nullptr) {
         char tmp[32];
         const char* name = dev->name.data();
 
-        if (dev->protocol_id != ZX_PROTOCOL_CONSOLE) {
+        if (dev->protocol_id() != ZX_PROTOCOL_CONSOLE) {
             for (unsigned n = 0; n < 1000; n++) {
                 snprintf(tmp, sizeof(tmp), "%03u", (dir->seqcount++) % 1000);
                 if (devfs_lookup(dir, tmp) == nullptr) {

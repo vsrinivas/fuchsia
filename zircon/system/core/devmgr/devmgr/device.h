@@ -63,7 +63,6 @@ struct Device {
     // The number of retries left for the driver.
     uint32_t retries = 4;
     mutable int32_t refcount_ = 0;
-    uint32_t protocol_id = 0;
     Devnode* self = nullptr;
     Devnode* link = nullptr;
     Device* proxy = nullptr;
@@ -123,8 +122,14 @@ struct Device {
     // TODO: Remove set_parent once this class is further encapsulated.  It
     // should be unnecessary.
     void set_parent(Device* parent) { parent_ = parent; }
+
+    uint32_t protocol_id() const { return protocol_id_; }
+    // TODO: Remove set_protocol_id once this class is further encapsulated.  It
+    // should be unnecessary.
+    void set_protocol_id(uint32_t protocol_id) { protocol_id_ = protocol_id; }
 private:
     Device* parent_ = nullptr;
+    uint32_t protocol_id_ = 0;
 
     fbl::Array<const zx_device_prop_t> props_;
     // If the device has a topological property in |props|, this points to it.

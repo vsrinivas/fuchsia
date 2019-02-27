@@ -189,7 +189,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     fbl::AllocChecker ac;
     {
         root_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        root_device_.protocol_id = ZX_PROTOCOL_ROOT;
+        root_device_.set_protocol_id(ZX_PROTOCOL_ROOT);
         root_device_.name = fbl::String("root", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -204,7 +204,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     {
         misc_device_.set_parent(&root_device_);
         misc_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        misc_device_.protocol_id = ZX_PROTOCOL_MISC_PARENT;
+        misc_device_.set_protocol_id(ZX_PROTOCOL_MISC_PARENT);
         misc_device_.name = fbl::String("misc", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -237,7 +237,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     {
         test_device_.set_parent(&root_device_);
         test_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        test_device_.protocol_id = ZX_PROTOCOL_TEST_PARENT;
+        test_device_.set_protocol_id(ZX_PROTOCOL_TEST_PARENT);
         test_device_.name = fbl::String("test", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -437,12 +437,12 @@ void Coordinator::DumpDeviceProps(const Device* dev) const {
                  dev->flags & DEV_CTX_ZOMBIE ? " Zombie" : "",
                  dev->flags & DEV_CTX_PROXY ? " Proxy" : "");
 
-        char a = (char)((dev->protocol_id >> 24) & 0xFF);
-        char b = (char)((dev->protocol_id >> 16) & 0xFF);
-        char c = (char)((dev->protocol_id >> 8) & 0xFF);
-        char d = (char)(dev->protocol_id & 0xFF);
+        char a = (char)((dev->protocol_id() >> 24) & 0xFF);
+        char b = (char)((dev->protocol_id() >> 16) & 0xFF);
+        char c = (char)((dev->protocol_id() >> 8) & 0xFF);
+        char d = (char)(dev->protocol_id() & 0xFF);
         DmPrintf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
-                 isprint(c) ? c : '.', isprint(d) ? d : '.', dev->protocol_id, dev->protocol_id);
+                 isprint(c) ? c : '.', isprint(d) ? d : '.', dev->protocol_id(), dev->protocol_id());
 
         const auto& props = dev->props();
         DmPrintf("%u Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
@@ -787,7 +787,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
     }
 
     dev->hrpc = std::move(rpc);
-    dev->protocol_id = protocol_id;
+    dev->set_protocol_id(protocol_id);
 
     // If we have bus device args we are, by definition, a bus device.
     if (args.size() > 0) {
@@ -1016,7 +1016,7 @@ zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname) {
     // TODO: disallow if we're in the middle of enumeration, etc
     for (const auto& drv : drivers_) {
         if (autobind || !drvlibname.compare(drv.libname)) {
-            if (dc_is_bindable(&drv, dev->protocol_id, dev->props(), autobind)) {
+            if (dc_is_bindable(&drv, dev->protocol_id(), dev->props(), autobind)) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(),
                     dev->name.data());
                 return AttemptBind(&drv, dev);
@@ -1586,7 +1586,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh, const char* args,
             return r;
         }
     } else {
-        r = dh_send_create_device_stub(dh, std::move(hrpc_remote), dev->protocol_id);
+        r = dh_send_create_device_stub(dh, std::move(hrpc_remote), dev->protocol_id());
         if (r != ZX_OK) {
             return r;
         }
@@ -1629,7 +1629,7 @@ static zx_status_t dc_create_proxy(Coordinator* coordinator, Device* parent) {
     }
 
     dev->flags = DEV_CTX_PROXY;
-    dev->protocol_id = parent->protocol_id;
+    dev->set_protocol_id(parent->protocol_id());
     dev->set_parent(parent);
     dev->AddRef();
     parent->proxy = dev.get();
@@ -1762,7 +1762,7 @@ void Coordinator::HandleNewDevice(Device* dev) {
         }
     }
     for (auto& drv : drivers_) {
-        if (!dc_is_bindable(&drv, dev->protocol_id, dev->props(), true)) {
+        if (!dc_is_bindable(&drv, dev->protocol_id(), dev->props(), true)) {
             continue;
         }
         log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(), dev->name.data());
@@ -1984,7 +1984,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
         if (dev.flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
             // If device is already bound or being destroyed or invisible, skip it.
             continue;
-        } else if (!dc_is_bindable(drv, dev.protocol_id, dev.props(), true)) {
+        } else if (!dc_is_bindable(drv, dev.protocol_id(), dev.props(), true)) {
             // If the driver is not bindable to the device, skip it.
             continue;
         }
