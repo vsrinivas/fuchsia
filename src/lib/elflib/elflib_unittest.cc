@@ -59,13 +59,11 @@ inline std::string GetTestFilePath(const std::string& rel_path) {
 // The test files will be copied over to this specific location at build time.
 const char kRelativeTestDataPath[] = "test_data/elflib/";
 
-class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
+class FileExampleAccessor : public ElfLib::MemoryAccessorForFile {
  public:
-  StrippedExampleAccessor() {
+  FileExampleAccessor(const std::string& filename) {
     file_ =
-        fopen((GetTestFilePath(kRelativeTestDataPath) + "stripped_example.elf")
-                  .c_str(),
-              "r");
+        fopen((GetTestFilePath(kRelativeTestDataPath) + filename).c_str(), "r");
 
     if (!file_) {
       abort();
@@ -73,7 +71,11 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
   }
 
   const uint8_t* GetMemory(uint64_t offset, size_t size) override {
-    auto& ret = data_.emplace_back();
+    auto& ret = data_[std::make_pair(offset, size)];
+    if (ret.size() == size) {
+      return ret.data();
+    }
+
     ret.resize(size);
 
     fseek(file_, offset, SEEK_SET);
@@ -90,7 +92,7 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
     return GetMemory(offset, size);
   }
 
-  ~StrippedExampleAccessor() {
+  ~FileExampleAccessor() {
     if (file_) {
       fclose(file_);
     }
@@ -98,8 +100,11 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
 
  private:
   FILE* file_ = nullptr;
-  std::vector<std::vector<uint8_t>> data_;
+  std::map<std::pair<uint64_t, size_t>, std::vector<uint8_t>> data_;
 };
+
+constexpr char kStrippedExampleFile[] = "stripped_example.elf";
+constexpr char kUnstrippedExampleFile[] = "unstripped_example.elf";
 
 class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
  public:
@@ -318,8 +323,8 @@ TEST(ElfLib, GetIrregularNote) {
 }
 
 TEST(ElfLib, GetSymbolsFromStripped) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(std::make_unique<StrippedExampleAccessor>());
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(
+      std::make_unique<FileExampleAccessor>(kStrippedExampleFile));
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -345,6 +350,18 @@ TEST(ElfLib, GetSymbolsFromStripped) {
   EXPECT_NE(it, syms->end());
   it = syms->find("strlen");
   EXPECT_NE(it, syms->end());
+}
+
+TEST(ElfLib, GetPLTFromUnstripped) {
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(
+      std::make_unique<FileExampleAccessor>(kUnstrippedExampleFile));
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto plt = elf->GetPLTOffsets();
+
+  EXPECT_EQ(258U, plt.size());
+  EXPECT_EQ(0x1a5240U, plt["CaseOrSuiteEv"]);
 }
 
 }  // namespace elflib

@@ -17,18 +17,20 @@ static_library("elflib") {
 }
 
 # An example stripped binary. Originally copied from out/x64/cowsay
-copy("copy_stripped_example_elf") {
+copy("copy_example_elf") {
   sources = [
     "test_data/stripped_example.elf",
+    "test_data/unstripped_example.elf",
   ]
 
   outputs = [
-    "$root_out_dir/test_data/elflib/stripped_example.elf",
+    "$root_out_dir/test_data/elflib/{{source_file_part}}",
   ]
 
   metadata = {
     test_runtime_deps = [
       "$root_out_dir/test_data/elflib/stripped_example.elf",
+      "$root_out_dir/test_data/elflib/unstripped_example.elf",
     ]
   }
 }
@@ -36,9 +38,10 @@ copy("copy_stripped_example_elf") {
 # TODO(IN-819): Delete once zxdb_tests is no longer being run out of
 # $root_build_dir/host_tests/.
 if (current_toolchain == default_toolchain) {
-  copy("copy_stripped_example_elf_deprecated") {
+  copy("copy_example_elf_deprecated") {
     sources = [
       "test_data/stripped_example.elf",
+      "test_data/unstripped_example.elf",
     ]
 
     outputs = [
@@ -59,7 +62,7 @@ test("elflib_tests") {
   ]
 
   data_deps = [
-    ":copy_stripped_example_elf",
-    ":copy_stripped_example_elf_deprecated($default_toolchain)",
+    ":copy_example_elf",
+    ":copy_example_elf_deprecated($default_toolchain)",
   ]
 }

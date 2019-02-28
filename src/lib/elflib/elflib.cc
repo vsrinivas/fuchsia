@@ -236,23 +236,33 @@ ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {
                                     header->sh_size, header->sh_size);
 }
 
+bool ElfLib::LoadSectionNames() {
+  if (section_names_.size() != 0) {
+    return true;
+  }
+
+  auto section_name_data = GetSectionData(header_.e_shstrndx);
+
+  if (!section_name_data.ptr) {
+    return false;
+  }
+
+  size_t idx = 0;
+  // We know sections_ is populated from the GetSectionData above
+  for (const auto& section : sections_) {
+    auto name = GetNullTerminatedStringAt(
+        section_name_data.ptr, section_name_data.size, section.sh_name);
+    section_names_[name] = idx;
+
+    idx++;
+  }
+
+  return true;
+}
+
 ElfLib::MemoryRegion ElfLib::GetSectionData(const std::string& name) {
-  if (section_names_.size() == 0) {
-    auto section_name_data = GetSectionData(header_.e_shstrndx);
-
-    if (!section_name_data.ptr) {
-      return {};
-    }
-
-    size_t idx = 0;
-    // We know sections_ is populated from the GetSectionData above
-    for (const auto& section : sections_) {
-      auto name = GetNullTerminatedStringAt(
-          section_name_data.ptr, section_name_data.size, section.sh_name);
-      section_names_[name] = idx;
-
-      idx++;
-    }
+  if (!LoadSectionNames()) {
+    return {};
   }
 
   const auto& iter = section_names_.find(name);
@@ -374,6 +384,8 @@ bool ElfLib::LoadDynamicSymbols() {
             break;
           }
         }
+      } else if (dyn->d_tag == DT_PLTREL) {
+        dynamic_plt_use_rela_ = dyn->d_un.d_val == DT_RELA;
       }
     }
 
@@ -381,6 +393,124 @@ bool ElfLib::LoadDynamicSymbols() {
   }
 
   return false;
+}
+
+std::map<std::string, uint64_t> ElfLib::GetPLTOffsets() {
+  // We assume Fuchsia's defaults for each architecture. We could perhaps check
+  // ELF_OSABI to firm up those assumptions. Fuchsia sets it to NONE.
+  switch (header_.e_machine) {
+    case EM_X86_64:
+      return GetPLTOffsetsX64();
+    default:
+      FXL_LOG(WARNING) << "Architecture doesn't support GetPLTOffsets.";
+      return {};
+  }
+}
+
+std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
+  // A PLT entry consists of 3 x86 instructions: a jump using a 6-byte
+  // encoding, a push of one 32 bit value on to the stack, and another jump,
+  // this one using a 5-byte encoding.
+  //
+  // We don't care about either of the jumps, but we want the value that is
+  // pushed as it is the index into the relocation table which will tell us
+  // what symbol this entry is for.
+  struct PltEntry {
+    char first_jump[6];
+    char push_opcode;
+    uint32_t index;
+    char second_jump[5];
+  } __attribute__((packed, aligned(1)));
+
+  FXL_DCHECK(sizeof(PltEntry) == 16);
+
+  // We'd prefer if this works but we can get by without it, so we're not
+  // checking the return value.
+  LoadDynamicSymbols();
+
+  if (!LoadSectionNames()) {
+    return {};
+  }
+
+  if (!dynamic_plt_use_rela_) {
+    FXL_LOG(WARNING) << "Assuming Elf64_Rela PLT relocation format.";
+  } else if (!*dynamic_plt_use_rela_) {
+    FXL_LOG(WARNING) << "Elf64_Rel style PLT Relocations unsupported.";
+    return {};
+  }
+
+  auto plt_section = section_names_.find(".plt");
+
+  if (plt_section == section_names_.end()) {
+    return {};
+  }
+
+  auto plt_idx = plt_section->second;
+
+  auto plt_shdr = GetSectionHeader(plt_idx);
+  auto plt_memory = GetSectionData(plt_idx);
+
+  if (!plt_shdr || !plt_memory.ptr) {
+    return {};
+  }
+
+  auto plt_load_addr = plt_shdr->sh_addr;
+
+  auto plt = reinterpret_cast<const PltEntry*>(plt_memory.ptr);
+  auto plt_end = plt + plt_memory.size / sizeof(PltEntry);
+
+  auto reloc_memory = GetSectionData(".rela.plt");
+
+  if (!reloc_memory.ptr) {
+    return {};
+  }
+
+  auto reloc = reinterpret_cast<const Elf64_Rela*>(reloc_memory.ptr);
+  auto reloc_count = reloc_memory.size / sizeof(Elf64_Rela);
+
+  ElfLib::MemoryRegion dynsym_mem = GetSectionData(".dynsym");
+
+  if (!dynsym_mem.ptr) {
+    return {};
+  }
+
+  auto symtab = reinterpret_cast<const Elf64_Sym*>(dynsym_mem.ptr);
+  auto sym_count = dynsym_mem.size / sizeof(Elf64_Sym);
+
+  auto pos = plt + 1;  // First PLT entry is special. Ignore it.
+  uint64_t idx = 1;
+
+  std::map<std::string, uint64_t> ret;
+
+  for (; pos != plt_end; pos++, idx++) {
+    if (pos->push_opcode != 0x68) {
+      FXL_LOG(WARNING) << "Push OpCode not found where expected in PLT.";
+      continue;
+    }
+
+    if (pos->index >= reloc_count) {
+      FXL_LOG(WARNING) << "PLT referenced reloc outside reloc table.";
+      continue;
+    }
+
+    auto sym_idx = reloc[pos->index].getSymbol();
+
+    if (sym_idx >= sym_count) {
+      FXL_LOG(WARNING) << "PLT reloc referenced symbol outside symbol table.";
+      continue;
+    }
+
+    auto name = GetString(symtab[sym_idx].st_name);
+
+    if (!name) {
+      FXL_LOG(WARNING) << "PLT symbol name could not be retrieved.";
+      continue;
+    }
+
+    ret[*name] = idx * sizeof(PltEntry) + plt_load_addr;
+  }
+
+  return ret;
 }
 
 std::optional<std::string> ElfLib::GetString(size_t index) {

@@ -131,7 +131,19 @@ class ElfLib {
   static std::unique_ptr<ElfLib> Create(
       std::unique_ptr<MemoryAccessor>&& memory);
 
+  // Returns a map from symbol names to the locations of their PLT entries.
+  // Returns an empty map if the data is inaccessible.
+  //
+  // Getting this information is architecture-specific and involves reading and
+  // decoding the actual jump table instructions in the .plt section. Once
+  // we've done that decoding we can quickly get relocation indices and then
+  // symbol table mappings.
+  std::map<std::string, uint64_t> GetPLTOffsets();
+
  private:
+  // x64-specific implementation of GetPLTOffsets
+  std::map<std::string, uint64_t> GetPLTOffsetsX64();
+
   // Get the header for a section by its index. Return nullptr if the index is
   // invalid.
   const Elf64_Shdr* GetSectionHeader(size_t section);
@@ -139,6 +151,9 @@ class ElfLib {
   // Load the program header table into the cache in segments_. Return true
   // unless a read error occurred.
   bool LoadProgramHeaders();
+
+  // Load the section name-to-index mappings and cache them in section_names_.
+  bool LoadSectionNames();
 
   // Get the contents of a section by its index. Return nullptr if the index is
   // invalid.
@@ -167,6 +182,8 @@ class ElfLib {
   size_t dynamic_symtab_size_;
   std::optional<uint64_t> dynamic_strtab_offset_;
   std::optional<uint64_t> dynamic_symtab_offset_;
+  std::optional<bool> dynamic_plt_use_rela_;
+
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
   std::map<size_t, std::vector<uint8_t>> section_data_;
