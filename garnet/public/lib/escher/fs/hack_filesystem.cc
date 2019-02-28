@@ -4,9 +4,9 @@
 
 #include "lib/escher/fs/hack_filesystem.h"
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 #ifdef __Fuchsia__
 #include "lib/escher/fs/fuchsia_data_source.h"

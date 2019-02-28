@@ -11,7 +11,7 @@
 #include <ddk/protocol/bt/hci.h>
 #include <lib/zx/channel.h>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {

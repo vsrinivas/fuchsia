@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <garnet/drivers/usb_video/usb-video-camera.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/strings/string_printf.h>
 
 namespace camera {

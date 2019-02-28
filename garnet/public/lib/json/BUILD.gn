@@ -32,6 +32,7 @@ executable("tests") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//src/lib/files",
     "//third_party/rapidjson",
   ]
 }

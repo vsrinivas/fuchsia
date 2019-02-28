@@ -8,7 +8,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace component {
 namespace DynamicLibraryLoader {

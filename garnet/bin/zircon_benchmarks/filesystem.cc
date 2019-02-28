@@ -8,7 +8,7 @@
 
 #include <perftest/perftest.h>
 
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/logging.h>
 
 namespace {

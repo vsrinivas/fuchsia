@@ -12,7 +12,7 @@
 #include <memory>
 #include <string>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

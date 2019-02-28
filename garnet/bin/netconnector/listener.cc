@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 
 #include "garnet/lib/inet/ip_port.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {

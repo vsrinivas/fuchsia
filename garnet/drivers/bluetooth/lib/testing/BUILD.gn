@@ -44,6 +44,7 @@ source_set("fake_controller") {
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap:definitions",
     "//garnet/public/lib/fxl",
+    "//src/lib/files",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",

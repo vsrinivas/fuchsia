@@ -4,7 +4,7 @@
 
 #include "garnet/lib/debug_ipc/debug/file_line_function.h"
 
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/path.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {

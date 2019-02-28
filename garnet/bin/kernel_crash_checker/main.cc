@@ -19,8 +19,8 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/file.h"
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/vmo.h>

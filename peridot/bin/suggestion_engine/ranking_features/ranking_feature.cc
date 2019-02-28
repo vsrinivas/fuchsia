@@ -5,7 +5,7 @@
 #include "peridot/bin/suggestion_engine/ranking_features/ranking_feature.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 
 #include "rapidjson/document.h"

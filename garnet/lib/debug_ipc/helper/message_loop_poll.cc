@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "garnet/public/lib/fxl/build_config.h"
-#include "garnet/public/lib/fxl/files/eintr_wrapper.h"
+#include "src/lib/files/eintr_wrapper.h"
 
 namespace debug_ipc {
 

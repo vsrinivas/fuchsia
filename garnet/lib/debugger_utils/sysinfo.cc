@@ -15,7 +15,7 @@
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/syscalls.h>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
 namespace debugger_utils {

@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
 #define GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include <fuchsia/media/cpp/fidl.h>
 #include <memory>
 #include <optional>

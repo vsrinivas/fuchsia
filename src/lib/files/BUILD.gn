@@ -1,0 +1,30 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("files") {
+  sources = [
+    "directory.cc",
+    "directory.h",
+    "eintr_wrapper.h",
+    "file.cc",
+    "file.h",
+    "file_descriptor.cc",
+    "file_descriptor.h",
+    "glob.cc",
+    "glob.h",
+    "path.cc",
+    "path.h",
+    "scoped_temp_dir.cc",
+    "scoped_temp_dir.h",
+    "unique_fd.cc",
+    "unique_fd.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl:fxl_logging",
+    "//garnet/public/lib/fxl:memory",
+    "//garnet/public/lib/fxl:strings",
+    "//zircon/public/lib/fit",
+  ]
+}

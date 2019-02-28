@@ -8,8 +8,8 @@
 #include <string>
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>

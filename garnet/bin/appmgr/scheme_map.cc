@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"

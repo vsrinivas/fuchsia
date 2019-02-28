@@ -12,8 +12,8 @@
 
 #include <lib/fit/defer.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

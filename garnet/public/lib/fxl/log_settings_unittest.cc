@@ -8,8 +8,8 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 

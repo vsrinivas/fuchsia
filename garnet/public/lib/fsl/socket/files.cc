@@ -15,7 +15,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 
-#include "lib/fxl/files/file_descriptor.h"
+#include "src/lib/files/file_descriptor.h"
 
 namespace fsl {
 namespace {

@@ -7,9 +7,9 @@
 #include <queue>
 #include <string>
 
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 #include "src/ledger/bin/filesystem/directory_reader.h"
 

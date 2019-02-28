@@ -12,7 +12,7 @@
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/namespace.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/svc/cpp/services.h"

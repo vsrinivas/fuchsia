@@ -28,7 +28,7 @@
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 
 namespace component {

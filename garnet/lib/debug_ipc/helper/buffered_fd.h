@@ -7,7 +7,7 @@
 #include "garnet/lib/debug_ipc/helper/fd_watcher.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
-#include "garnet/public/lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace debug_ipc {
 

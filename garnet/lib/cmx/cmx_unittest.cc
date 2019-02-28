@@ -9,8 +9,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/json/json_parser.h"
 #include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "rapidjson/document.h"

@@ -13,7 +13,7 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"

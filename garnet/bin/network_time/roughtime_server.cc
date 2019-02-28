@@ -17,7 +17,7 @@
 #include <lib/fit/defer.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace time_server {

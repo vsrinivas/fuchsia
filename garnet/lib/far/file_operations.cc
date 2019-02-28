@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 #include "garnet/lib/far/alignment.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace archive {
 

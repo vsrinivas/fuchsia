@@ -11,7 +11,7 @@
 
 #include "garnet/bin/netconnector/message_transceiver.h"
 #include "garnet/lib/inet/socket_address.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace netconnector {
 

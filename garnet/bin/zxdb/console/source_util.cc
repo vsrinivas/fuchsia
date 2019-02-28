@@ -7,7 +7,7 @@
 #include <limits>
 
 #include "garnet/bin/zxdb/common/file_util.h"
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {

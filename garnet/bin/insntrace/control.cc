@@ -26,7 +26,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

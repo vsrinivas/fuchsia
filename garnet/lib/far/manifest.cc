@@ -8,7 +8,7 @@
 
 #include "garnet/lib/far/archive_entry.h"
 #include "garnet/lib/far/archive_writer.h"
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/strings/split_string.h"
 
 namespace archive {

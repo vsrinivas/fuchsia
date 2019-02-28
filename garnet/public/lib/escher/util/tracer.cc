@@ -7,7 +7,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 
 namespace escher {
 

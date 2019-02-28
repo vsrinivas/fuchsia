@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <zircon/syscalls.h>

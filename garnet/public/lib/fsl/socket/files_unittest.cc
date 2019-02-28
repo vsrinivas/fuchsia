@@ -11,8 +11,8 @@
 #include <sys/types.h>
 
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace fsl {

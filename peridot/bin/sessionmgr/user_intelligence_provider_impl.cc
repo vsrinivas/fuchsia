@@ -9,7 +9,7 @@
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"

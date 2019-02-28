@@ -14,7 +14,7 @@
 #include "lib/component/cpp/expose.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/files/glob.h"
+#include "src/lib/files/glob.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/svc/cpp/services.h"
 

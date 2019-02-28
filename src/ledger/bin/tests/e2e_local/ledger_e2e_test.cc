@@ -13,8 +13,8 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
 

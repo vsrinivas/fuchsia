@@ -13,7 +13,7 @@
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
+#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/macros.h>
 
 #include "gtest/gtest.h"

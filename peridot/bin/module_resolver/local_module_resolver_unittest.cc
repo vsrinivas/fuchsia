@@ -6,7 +6,7 @@
 
 #include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/fidl/clone.h"

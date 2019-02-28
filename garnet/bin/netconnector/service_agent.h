@@ -10,7 +10,7 @@
 #include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "garnet/bin/netconnector/message_transceiver.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace netconnector {
 

@@ -6,8 +6,8 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 

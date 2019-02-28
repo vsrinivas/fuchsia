@@ -7,10 +7,10 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/strings/substitute.h"
 
 namespace files {

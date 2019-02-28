@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fxl/logging.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/strings/string_printf.h>
 
 #include <rapidjson/document.h>

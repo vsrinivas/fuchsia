@@ -7,7 +7,7 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/gtest/test_loop_fixture.h>

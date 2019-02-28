@@ -15,9 +15,9 @@
 #include <unistd.h>
 
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace component {
 

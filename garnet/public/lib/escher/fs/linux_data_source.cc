@@ -7,8 +7,8 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 
 namespace escher {
 

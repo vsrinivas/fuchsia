@@ -7,7 +7,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/scpi/cpp/fidl.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include "lib/component/cpp/startup_context.h"
 
 namespace scpi {

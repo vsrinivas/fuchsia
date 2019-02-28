@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fxl/command_line.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>

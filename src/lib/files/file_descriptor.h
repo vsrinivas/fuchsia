@@ -8,12 +8,10 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "lib/fxl/fxl_export.h"
-
 namespace fxl {
 
-FXL_EXPORT bool WriteFileDescriptor(int fd, const char* data, ssize_t size);
-FXL_EXPORT ssize_t ReadFileDescriptor(int fd, char* data, ssize_t max_size);
+bool WriteFileDescriptor(int fd, const char* data, ssize_t size);
+ssize_t ReadFileDescriptor(int fd, char* data, ssize_t max_size);
 
 }  // namespace fxl
 

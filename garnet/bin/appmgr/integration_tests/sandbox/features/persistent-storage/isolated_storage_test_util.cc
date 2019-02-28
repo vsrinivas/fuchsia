@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/outgoing.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include <test/appmgr/sandbox/cpp/fidl.h>
 #include <string>
 

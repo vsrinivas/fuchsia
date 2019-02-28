@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <memory>
 
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
 #include "garnet/lib/perfmon/device_reader.h"

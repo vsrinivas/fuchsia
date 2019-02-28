@@ -10,7 +10,7 @@
 
 #include "garnet/lib/inet/socket_address.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {

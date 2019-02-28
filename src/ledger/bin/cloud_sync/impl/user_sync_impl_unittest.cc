@@ -8,7 +8,7 @@
 
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 

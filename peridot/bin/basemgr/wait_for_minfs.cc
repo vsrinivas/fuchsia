@@ -12,7 +12,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_printf.h>

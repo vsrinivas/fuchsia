@@ -19,7 +19,7 @@
 #include "garnet/bin/zxdb/console/source_util.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

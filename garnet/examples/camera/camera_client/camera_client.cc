@@ -7,7 +7,7 @@
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
 #include <fcntl.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace camera {

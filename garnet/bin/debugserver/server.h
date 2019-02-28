@@ -8,7 +8,7 @@
 #include <memory>
 #include <queue>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 

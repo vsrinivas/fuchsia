@@ -12,9 +12,9 @@
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/substitute.h"
 #include "rapidjson/document.h"

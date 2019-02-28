@@ -13,7 +13,7 @@
 #include <zircon/types.h>
 
 #include "lib/fsl/io/device_watcher.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace media::audio {
 

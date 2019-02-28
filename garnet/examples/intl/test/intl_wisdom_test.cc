@@ -16,8 +16,8 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/sys/cpp/file_descriptor.h>
 
 namespace intl_wisdom {

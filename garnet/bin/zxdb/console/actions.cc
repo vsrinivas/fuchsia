@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/console/actions.h"
 
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
 

@@ -16,8 +16,8 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>

@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/files/directory.h"
+#include "src/lib/files/directory.h"
 
 namespace escher {
 namespace {

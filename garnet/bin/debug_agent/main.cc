@@ -22,7 +22,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/sys/cpp/service_directory.h"
 
 using namespace debug_ipc;

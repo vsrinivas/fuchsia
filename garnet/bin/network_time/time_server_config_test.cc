@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/network_time/time_server_config.h"
-#include "garnet/public/lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 #include "gtest/gtest.h"
 

@@ -17,11 +17,11 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/eintr_wrapper.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/path.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/eintr_wrapper.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
 #include <trace/event.h>

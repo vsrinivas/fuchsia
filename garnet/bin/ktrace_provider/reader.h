@@ -7,7 +7,7 @@
 
 #include <lib/zircon-internal/ktrace.h>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
 namespace ktrace_provider {

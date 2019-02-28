@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fxl/command_line.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
+#include "src/lib/files/scoped_temp_dir.h"
 
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"

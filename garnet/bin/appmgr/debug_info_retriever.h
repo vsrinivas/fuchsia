@@ -9,7 +9,7 @@
 #include <fbl/string_printf.h>
 #include <inspector/inspector.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <zx/process.h>
 #include <zx/thread.h>
 

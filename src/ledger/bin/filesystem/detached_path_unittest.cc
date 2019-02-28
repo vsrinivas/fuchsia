@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/filesystem/detached_path.h"
 
-#include <lib/fxl/files/directory.h>
+#include "src/lib/files/directory.h"
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

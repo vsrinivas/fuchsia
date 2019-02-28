@@ -8,8 +8,8 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/strings/string_view.h>
 
 #include "gmock/gmock.h"

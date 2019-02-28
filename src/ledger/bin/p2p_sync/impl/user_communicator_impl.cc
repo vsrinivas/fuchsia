@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 
 #include "peridot/lib/ledger_client/constants.h"

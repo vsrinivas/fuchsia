@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace zxdb {
 

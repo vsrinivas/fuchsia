@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 #include "lib/fxl/build_config.h"
 
@@ -11,11 +11,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/eintr_wrapper.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/eintr_wrapper.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
 namespace files {

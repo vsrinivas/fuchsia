@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/files/file_descriptor.h"
+#include "src/lib/files/file_descriptor.h"
 
 namespace media_player {
 

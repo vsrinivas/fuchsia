@@ -11,7 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fsl/io/device_watcher.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 #include <deque>

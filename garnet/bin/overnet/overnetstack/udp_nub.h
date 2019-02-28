@@ -11,7 +11,7 @@
 #include "garnet/bin/overnet/overnetstack/overnet_app.h"
 #include "garnet/lib/overnet/links/packet_nub.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace overnetstack {
 

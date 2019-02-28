@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "lib/fxl/files/eintr_wrapper.h"
+#include "src/lib/files/eintr_wrapper.h"
 
 namespace ktrace_provider {
 namespace {

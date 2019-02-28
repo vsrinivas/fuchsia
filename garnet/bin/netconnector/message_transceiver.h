@@ -13,7 +13,7 @@
 #include <lib/zx/channel.h>
 
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/netconnector/cpp/message_relay.h"
 

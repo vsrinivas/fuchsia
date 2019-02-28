@@ -6,7 +6,7 @@
 #include <set>
 #include <string>
 
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/substitute.h>
 

@@ -19,7 +19,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "lib/fit/defer.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 #include "commands.h"
 

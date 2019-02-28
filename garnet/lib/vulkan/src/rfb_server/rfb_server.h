@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 // This is a basic RFB server with minimal error-checking and no support for
 // compression or input events.

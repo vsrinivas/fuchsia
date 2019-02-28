@@ -10,7 +10,7 @@
 #include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/timezone.h"
-#include "garnet/public/lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "gmock/gmock.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
@@ -18,7 +18,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/sys/cpp/file_descriptor.h"

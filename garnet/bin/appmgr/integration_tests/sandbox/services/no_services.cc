@@ -9,7 +9,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/directory.h"
+#include "src/lib/files/directory.h"
 
 TEST_F(NamespaceTest, NoServices) {
   // readdir should list services in sandbox.

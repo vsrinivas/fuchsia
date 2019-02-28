@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/files/directory.h>
+#include "src/lib/files/directory.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <zx/time.h>
 

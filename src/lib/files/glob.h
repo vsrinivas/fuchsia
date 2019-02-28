@@ -10,8 +10,6 @@
 #include <iterator>
 #include <string>
 
-#include <lib/fxl/fxl_export.h>
-
 namespace files {
 
 // |Glob| is a C++ wrapper around the library function glob(3). It provides an
@@ -55,11 +53,11 @@ class Glob {
   };
 
   // Construct a new glob for a given path.
-  FXL_EXPORT Glob(const std::string& path, const Options& options = {});
+  Glob(const std::string& path, const Options& options = {});
   // Construct a new glob over multiple paths at once.
-  FXL_EXPORT Glob(std::initializer_list<std::string> paths,
+  Glob(std::initializer_list<std::string> paths,
                   const Options& options = {});
-  FXL_EXPORT ~Glob();
+  ~Glob();
 
   iterator begin() { return iterator(this, 0); }
   iterator end() { return iterator(this, glob_buf_.gl_pathc); }

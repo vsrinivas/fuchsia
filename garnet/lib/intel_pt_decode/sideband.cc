@@ -16,8 +16,8 @@
 #include "garnet/lib/debugger_utils/ktrace_reader.h"
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "lib/fxl/files/path.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

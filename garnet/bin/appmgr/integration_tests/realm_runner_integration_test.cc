@@ -9,8 +9,8 @@
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/files/glob.h"
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/glob.h"
+#include "src/lib/files/path.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace component {

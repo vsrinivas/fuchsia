@@ -10,7 +10,7 @@
 #include <string>
 
 #include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/fxl_export.h"
 
 namespace fsl {

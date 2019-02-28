@@ -4,7 +4,7 @@
 
 #include "config.h"
 
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/syslog/cpp/logger.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>

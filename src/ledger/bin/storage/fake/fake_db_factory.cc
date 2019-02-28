@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 
-#include <lib/fxl/files/directory.h>
+#include "src/lib/files/directory.h"
 
 #include "src/ledger/bin/storage/fake/fake_db.h"
 

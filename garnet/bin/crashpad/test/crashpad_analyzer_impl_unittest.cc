@@ -15,9 +15,9 @@
 #include <gtest/gtest.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>

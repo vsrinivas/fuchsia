@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "lib/fxl/files/file_descriptor.h"
+#include "src/lib/files/file_descriptor.h"
 
 namespace archive {
 

@@ -51,34 +51,10 @@ source_set("stateful_sources") {
   ]
 }
 
-source_set("fxl_lib") {
-  visibility = [ ":*" ]
+source_set("memory") {
+  visibility = [ ":*", "//src/lib/files" ]
 
   sources = [
-    "command_line.cc",
-    "command_line.h",
-    "log_settings_command_line.cc",
-    "log_settings_command_line.h",
-
-    # TODO(abarth): Move files/* out to its own library.
-    "files/directory.cc",
-    "files/directory.h",
-    "files/eintr_wrapper.h",
-    "files/file.cc",
-    "files/file.h",
-    "files/file_descriptor.cc",
-    "files/file_descriptor.h",
-    "files/glob.cc",
-    "files/glob.h",
-    "files/path.cc",
-    "files/path.h",
-    "files/scoped_temp_dir.cc",
-    "files/scoped_temp_dir.h",
-    "files/unique_fd.cc",
-    "files/unique_fd.h",
-    "functional/apply.h",
-    "functional/cancelable_callback.h",
-    "functional/make_copyable.h",
     "memory/ref_counted.h",
     "memory/ref_counted_internal.h",
     "memory/ref_ptr.h",
@@ -87,9 +63,18 @@ source_set("fxl_lib") {
     "memory/weak_ptr.h",
     "memory/weak_ptr_internal.cc",
     "memory/weak_ptr_internal.h",
-    "observer_list.h",
-    "random/rand.cc",
-    "random/uuid.cc",
+  ]
+
+  public_deps = [
+    ":fxl_common",
+    ":fxl_logging",
+  ]
+}
+
+source_set("strings") {
+  visibility = [ ":*", "//src/lib/files" ]
+
+  sources = [
     "strings/ascii.cc",
     "strings/ascii.h",
     "strings/concatenate.cc",
@@ -109,12 +94,34 @@ source_set("fxl_lib") {
     "strings/trim.h",
     "strings/utf_codecs.cc",
     "strings/utf_codecs.h",
+    "third_party/icu/icu_utf.cc",
+    "third_party/icu/icu_utf.h",
+  ]
+
+  public_deps = [
+    ":fxl_common",
+    ":fxl_logging",
+  ]
+}
+
+source_set("fxl_lib") {
+  visibility = [ ":*", "//src/lib/files" ]
+
+  sources = [
+    "command_line.cc",
+    "command_line.h",
+    "log_settings_command_line.cc",
+    "log_settings_command_line.h",
+    "functional/apply.h",
+    "functional/cancelable_callback.h",
+    "functional/make_copyable.h",
+    "observer_list.h",
+    "random/rand.cc",
+    "random/uuid.cc",
     "synchronization/thread_annotations.h",
     "synchronization/thread_checker.h",
     "tasks/task_runner.cc",
     "tasks/task_runner.h",
-    "third_party/icu/icu_utf.cc",
-    "third_party/icu/icu_utf.h",
     "threading/thread.cc",
     "threading/thread.h",
     "time/stopwatch.cc",
@@ -127,6 +134,9 @@ source_set("fxl_lib") {
   public_deps = [
     ":fxl_common",
     ":fxl_logging",
+    ":memory",
+    ":strings",
+    "//src/lib/files",
     "//zircon/public/lib/fit",
   ]
   if (is_fuchsia) {
@@ -176,9 +186,19 @@ if (is_fuchsia) {
 }
 
 if (is_fuchsia) {
-  shared_library("fxl") {
+  shared_library("fxl_so") {
+    output_name = "fxl"
+
     public_deps = [
       ":fxl_lib",
+    ]
+  }
+
+  # TODO: Remove once clients express their dependency on //src/lib/files explicitly.
+  group("fxl") {
+    public_deps = [
+      ":fxl_so",
+      "//src/lib/files",
     ]
   }
 } else {
@@ -209,12 +229,13 @@ executable("fxl_unittests_bin") {
   sources = [
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
-    "files/directory_unittest.cc",
-    "files/file_descriptor_unittest.cc",
-    "files/file_unittest.cc",
-    "files/glob_unittest.cc",
-    "files/path_unittest.cc",
-    "files/scoped_temp_dir_unittest.cc",
+    # TODO: Move the files-related tests to a separate target.
+    "//src/lib/files/directory_unittest.cc",
+    "//src/lib/files/file_descriptor_unittest.cc",
+    "//src/lib/files/file_unittest.cc",
+    "//src/lib/files/glob_unittest.cc",
+    "//src/lib/files/path_unittest.cc",
+    "//src/lib/files/scoped_temp_dir_unittest.cc",
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
     "functional/make_copyable_unittest.cc",
@@ -250,6 +271,7 @@ executable("fxl_unittests_bin") {
     ":fxl_printers",
     "test",
     "test:gtest_main",
+    "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

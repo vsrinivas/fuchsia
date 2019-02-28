@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include "lib/fxl/fxl_export.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace files {
@@ -22,7 +21,7 @@ namespace files {
 // |root_fd| is AT_FDCWD, |parent_path| is relative to the current working
 // directory. If |parent_path| is not given, the temporary directory is directly
 // created in |root_fd|.
-class FXL_EXPORT ScopedTempDirAt {
+class ScopedTempDirAt {
  public:
   explicit ScopedTempDirAt(int root_fd);
   explicit ScopedTempDirAt(int root_fd, fxl::StringView parent_path);
@@ -45,7 +44,7 @@ class FXL_EXPORT ScopedTempDirAt {
 // As |ScopedTempDirAt|, but instead of creating the temporary directory
 // relative to a file descriptor, it is created either in |parent_path|, or in
 // the global temporary directory.
-class FXL_EXPORT ScopedTempDir {
+class ScopedTempDir {
  public:
   ScopedTempDir();
   explicit ScopedTempDir(fxl::StringView parent_path);

@@ -10,9 +10,9 @@
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/glob.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/glob.h"
 #include "lib/fxl/strings/join_strings.h"
 
 #include "gtest/gtest.h"

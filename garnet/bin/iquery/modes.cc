@@ -11,8 +11,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/strings/split_string.h>

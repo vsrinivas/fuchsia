@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/files/glob.h"
+#include "src/lib/files/glob.h"
 
 #include <fcntl.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/directory.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/fxl/strings/substitute.h"
 
 namespace files {

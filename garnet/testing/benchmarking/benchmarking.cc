@@ -15,7 +15,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"

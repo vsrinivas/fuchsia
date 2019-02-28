@@ -8,7 +8,7 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/strings/string_view.h>
 #include <openssl/sha.h>
 

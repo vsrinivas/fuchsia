@@ -21,11 +21,11 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/arraysize.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/file.h>
-#include <lib/fxl/files/file_descriptor.h>
-#include <lib/fxl/files/path.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/file_descriptor.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/memory/weak_ptr.h>

@@ -11,7 +11,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <trace/event.h>

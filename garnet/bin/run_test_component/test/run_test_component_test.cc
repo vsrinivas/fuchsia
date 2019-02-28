@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 
 TEST(Run, TestHermeticEnv) {
   std::string hub_name;

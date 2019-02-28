@@ -4,8 +4,8 @@
 
 #include <lib/sys/cpp/file_descriptor.h>
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace component {
 namespace {

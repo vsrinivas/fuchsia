@@ -8,7 +8,7 @@
 #include <rapidjson/document.h>
 
 #include "garnet/lib/inet/ip_address.h"
-#include "lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 

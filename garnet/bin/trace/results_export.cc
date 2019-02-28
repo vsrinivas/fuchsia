@@ -8,7 +8,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "garnet/public/lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 
 namespace tracing {
 

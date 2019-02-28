@@ -21,8 +21,8 @@
 #include "garnet/lib/far/alignment.h"
 #include "garnet/lib/far/file_operations.h"
 #include "garnet/lib/far/format.h"
-#include "lib/fxl/files/file_descriptor.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/file_descriptor.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace archive {
 

@@ -11,7 +11,7 @@
 #include <string>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/files/unique_fd.h>
+#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>

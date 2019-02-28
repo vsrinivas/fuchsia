@@ -4,8 +4,8 @@
 
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
 
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

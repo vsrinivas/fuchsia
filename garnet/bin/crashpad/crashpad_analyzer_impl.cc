@@ -9,8 +9,8 @@
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 #include <stdio.h>

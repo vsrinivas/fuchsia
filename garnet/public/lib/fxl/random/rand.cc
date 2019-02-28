@@ -15,8 +15,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "lib/fxl/files/file_descriptor.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/file_descriptor.h"
+#include "src/lib/files/unique_fd.h"
 #endif
 
 namespace fxl {

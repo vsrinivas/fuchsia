@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/files/directory.h"
+#include "src/lib/files/directory.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/path.h"
 #include "lib/fxl/logging.h"
 
 namespace files {

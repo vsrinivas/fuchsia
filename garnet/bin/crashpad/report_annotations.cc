@@ -13,7 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>

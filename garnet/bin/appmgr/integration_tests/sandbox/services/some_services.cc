@@ -13,7 +13,7 @@
 #include <zircon/errors.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/files/directory.h"
+#include "src/lib/files/directory.h"
 
 TEST_F(NamespaceTest, SomeServices) {
   // Only whitelisted service is available.

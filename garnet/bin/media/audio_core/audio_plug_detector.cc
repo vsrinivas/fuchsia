@@ -20,7 +20,7 @@
 #include "garnet/bin/media/audio_core/audio_input.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
 #include "garnet/bin/media/audio_core/driver_output.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace media::audio {
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/files/file_descriptor.h"
+#include "src/lib/files/file_descriptor.h"
 
-#include "lib/fxl/files/eintr_wrapper.h"
+#include "src/lib/files/eintr_wrapper.h"
 #include "lib/fxl/logging.h"
 
 namespace fxl {

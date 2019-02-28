@@ -8,7 +8,7 @@
 
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/command_line.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/macros.h>
 
 namespace modular {

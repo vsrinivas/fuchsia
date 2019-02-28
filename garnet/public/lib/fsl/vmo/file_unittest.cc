@@ -11,8 +11,8 @@
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace fsl {

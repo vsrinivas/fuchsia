@@ -17,7 +17,7 @@
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/files/path.h"
+#include "src/lib/files/path.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/utf_codecs.h"
 

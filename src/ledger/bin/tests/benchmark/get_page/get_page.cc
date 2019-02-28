@@ -10,8 +10,8 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/scoped_temp_dir.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>

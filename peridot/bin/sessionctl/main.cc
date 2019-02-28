@@ -21,7 +21,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fxl/command_line.h>
-#include <lib/fxl/files/file.h>
+#include "src/lib/files/file.h"
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/strings/string_printf.h>
 #include "lib/fxl/functional/make_copyable.h"

@@ -50,7 +50,7 @@
 #include "garnet/bin/guest/vmm/virtio_net_legacy.h"
 #include "garnet/bin/guest/vmm/virtio_vsock.h"
 #include "garnet/bin/guest/vmm/zircon.h"
-#include "garnet/public/lib/fxl/files/file.h"
+#include "src/lib/files/file.h"
 
 #if __aarch64__
 #include "garnet/bin/guest/vmm/arch/arm64/pl031.h"

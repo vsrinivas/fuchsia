@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/files/file_descriptor.h"
+#include "src/lib/files/file_descriptor.h"
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace fxl {
 namespace {

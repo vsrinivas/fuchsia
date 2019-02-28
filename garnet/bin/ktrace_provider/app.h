@@ -10,7 +10,7 @@
 #include "garnet/bin/ktrace_provider/log_importer.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 
 namespace ktrace_provider {

@@ -19,8 +19,8 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/test_util.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/glob.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/glob.h"
 #include "lib/fxl/strings/string_printf.h"
 
 using fuchsia::sys::TerminationReason;

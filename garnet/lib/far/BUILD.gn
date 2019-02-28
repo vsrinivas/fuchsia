@@ -22,5 +22,6 @@ source_set("far") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//src/lib/files",
   ]
 }

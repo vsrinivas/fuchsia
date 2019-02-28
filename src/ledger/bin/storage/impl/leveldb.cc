@@ -8,8 +8,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/files/directory.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 #include <lib/fxl/logging.h>
 #include <trace/event.h>
 

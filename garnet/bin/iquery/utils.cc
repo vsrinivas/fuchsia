@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fostr/hex_dump.h>
-#include <lib/fxl/files/path.h>
+#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/utf_codecs.h>
