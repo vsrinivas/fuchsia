@@ -21,6 +21,7 @@
 
 #include <utility>
 
+#include "composite-device.h"
 #include "device.h"
 #include "driver.h"
 #include "metadata.h"
@@ -258,6 +259,11 @@ public:
                             uint32_t length);
     zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
                                 const void* data, uint32_t length);
+    zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+                                   const zx_device_prop_t* props_data, size_t props_count,
+                                   const fuchsia_device_manager_DeviceComponent* components,
+                                   size_t components_count, uint32_t coresident_device_index);
+
     zx_status_t DmCommand(size_t len, const char* cmd);
     zx_status_t DmOpenVirtcon(zx::channel virtcon_receiver) const;
     void DmMexec(zx::vmo kernel, zx::vmo bootdata);
@@ -343,6 +349,10 @@ private:
 
     // All DevHosts
     fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> devhosts_;
+
+    // All composite devices
+    fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>, CompositeDevice::Node>
+            composite_devices_;
 
     fbl::RefPtr<Device> root_device_;
     fbl::RefPtr<Device> misc_device_;

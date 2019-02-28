@@ -45,7 +45,7 @@ private:
     uint32_t protocol_id_ = 0;
 };
 
-using devmgr::internal::DeviceComponentPartDescriptor;
+using devmgr::ComponentPartDescriptor;
 using devmgr::internal::Match;
 using devmgr::internal::MatchParts;
 
@@ -76,7 +76,7 @@ bool composite_match_one_part_one_device_fail() {
     auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 2),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part) },
     };
 
@@ -95,7 +95,7 @@ bool composite_match_one_part_one_device_succeed() {
     auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part) },
     };
 
@@ -119,7 +119,7 @@ bool composite_match_two_part_one_device() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
     };
@@ -157,7 +157,7 @@ bool composite_match_one_part_two_devices() {
     auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part) },
     };
 
@@ -183,7 +183,7 @@ bool composite_match_two_parts_two_devices_fail() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         // First entry should match the root, but this rule matches leaf
         { std::move(part2) },
         // Last entry should match the leaf, but this rule matches root
@@ -212,7 +212,7 @@ bool composite_match_two_parts_two_devices_succeed() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
     };
@@ -242,7 +242,7 @@ bool composite_match_three_parts_two_devices() {
     auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
         { std::move(part3) },
@@ -277,7 +277,7 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail1() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         // This matches the middle device, not the leaf
         { std::move(part2) },
@@ -312,7 +312,7 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail2() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         // This matches the middle device, not the root
         { std::move(part1) },
         { std::move(part2) },
@@ -347,7 +347,7 @@ bool composite_match_two_parts_three_devices_no_mid_topo_success() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
     };
@@ -382,7 +382,7 @@ bool composite_match_two_parts_three_devices_mid_topo() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         // We need to match on the topological node, but we don't have a rule
         // for it.
@@ -422,7 +422,7 @@ bool composite_match_three_parts_three_devices_mid_topo() {
     auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
         { std::move(part3) },
@@ -460,7 +460,7 @@ bool composite_match_two_parts_four_devices_one_topo() {
     auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
     };
@@ -500,7 +500,7 @@ bool composite_match_three_parts_four_devices_one_topo() {
     auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
         { std::move(part3) },
@@ -544,7 +544,7 @@ bool composite_match_four_parts_four_devices_one_topo() {
     auto part4 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
         { std::move(part3) },
@@ -579,7 +579,7 @@ bool composite_match_three_parts_four_devices_ambiguous() {
     auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         // This matches both of the inner devices.
         { std::move(part2) },
@@ -614,7 +614,7 @@ bool composite_match_three_parts_four_devices_ambiguous_against_leaf() {
     auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
         // This matches the leaf and its parent, but is not considered ambiguous
@@ -650,7 +650,7 @@ bool composite_match_three_parts_four_devices_ambiguous_against_root() {
     auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         // This matches the root and its immediate child, but is not considered
         // ambiguous isnce we force the match to the root
         { std::move(part1) },
@@ -705,7 +705,7 @@ bool composite_match_complex_topology() {
     auto part5 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         { std::move(part2) },
         { std::move(part3) },
@@ -745,7 +745,7 @@ bool composite_match_complex_ambiguity() {
     auto part4 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
     });
-    DeviceComponentPartDescriptor parts[] = {
+    ComponentPartDescriptor parts[] = {
         { std::move(part1) },
         // parts 2 and 3 can match ancestors 1 and 2 or 2 and 3.
         { std::move(part2) },

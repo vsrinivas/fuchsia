@@ -45,6 +45,7 @@
 #include "../shared/fdio.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
+#include "composite-device.h"
 #include "devfs.h"
 #include "devhost-loader-service.h"
 #include "fidl-proxy.h"
@@ -857,6 +858,43 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     return ZX_OK;
 }
 
+zx_status_t Coordinator::AddCompositeDevice(
+        const fbl::RefPtr<Device>& dev, fbl::StringPiece name, const zx_device_prop_t* props_data,
+        size_t props_count, const fuchsia_device_manager_DeviceComponent* components,
+        size_t components_count, uint32_t coresident_device_index) {
+    // Only the platform bus driver should be able to use this.  It is the
+    // descendant of the sys device node.
+    if (dev->parent() != sys_device_) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    std::unique_ptr<CompositeDevice> new_device;
+    zx_status_t status = CompositeDevice::Create(name, props_data, props_count, components,
+                                                 components_count, coresident_device_index,
+                                                 &new_device);
+    if (status != ZX_OK) {
+        return status;
+    }
+    composite_devices_.push_back(std::move(new_device));
+    return ZX_OK;
+
+    // TODO:
+    // - Kick off bind attempt against existing devices
+    // - Update BindDevice() to try all composites
+    // - Logic for creating the new bindpoint once the bookkeeping finds
+    //   everything is ready
+    // - Logic for sending an unbind() when some component goes away
+    // - Implementation of Composite Banjo protocol
+    //
+    // Tests to write:
+    // - Introducing a composite device when all components are already ready
+    // - Introducing a composite device when some component is already ready
+    // - Introducing a composite device when no components are ready
+    // - A component going away after instantiation
+    // - The composite device is in the same process as the coresident_device_index requests
+    // - Issuing device_add_composite from not the PBD
+}
+
 zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path,
                                       zx::vmo* vmo, size_t* size) {
     static const char* fwdirs[] = {
@@ -1184,12 +1222,19 @@ static zx_status_t fidl_PublishMetadata(void* ctx, const char* device_path_data,
 }
 
 static zx_status_t fidl_AddCompositeDevice(
-        void* ctx, const char* name_data, size_t name_size, const uint64_t* props,
+        void* ctx, const char* name_data, size_t name_size, const uint64_t* props_data,
         size_t props_count, const fuchsia_device_manager_DeviceComponent components[16],
         uint32_t components_count, uint32_t coresident_device_index, fidl_txn_t* txn) {
 
-    //auto dev = static_cast<Device*>(ctx);
-    return fuchsia_device_manager_CoordinatorAddCompositeDevice_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
+
+    fbl::StringPiece name(name_data, name_size);
+    auto props = reinterpret_cast<const zx_device_prop_t*>(props_data);
+
+    zx_status_t status = dev->coordinator->AddCompositeDevice(dev, name, props, props_count,
+                                                              components, components_count,
+                                                              coresident_device_index);
+    return fuchsia_device_manager_CoordinatorAddCompositeDevice_reply(txn, status);
 }
 
 static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* command_data,

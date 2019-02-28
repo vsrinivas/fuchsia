@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 #include "coordinator.h"
+#include "composite-device.h"
 #include "device.h"
 
 namespace devmgr {
@@ -42,13 +43,6 @@ bool EvaluateBindProgram(const fbl::RefPtr<T>& device, const char* drv_name,
     ctx.autobind = autobind ? 1 : 0;
     return EvaluateBindProgram(&ctx);
 }
-
-// Describes a single device that makes up part of a composite device
-// TODO(teisenbe): This structure will move as we integrate it into the
-// libdriver API.
-struct DeviceComponentPartDescriptor {
-    fbl::Array<const zx_bind_inst_t> match_program;
-};
 
 // Represents the number of match chains found by a run of MatchParts()
 enum class Match : uint8_t {
@@ -151,7 +145,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::
 // the properties except for property 6 hold, it returns Match::Many.
 // Otherwise, it returns Match::None.
 template <typename T>
-Match MatchParts(const fbl::RefPtr<T>& device, DeviceComponentPartDescriptor* parts,
+Match MatchParts(const fbl::RefPtr<T>& device, const ComponentPartDescriptor* parts,
                  uint32_t parts_count) {
     static_assert(has_props<T>::value && has_topo_prop<T>::value && has_parent<T>::value &&
                   has_protocol_id<T>::value);
@@ -222,8 +216,8 @@ Match MatchParts(const fbl::RefPtr<T>& device, DeviceComponentPartDescriptor* pa
 
     // We need to find a match for each intermediate part.  We'll move from the
     // closest to the leaf to the furthest.
-    for (uint32_t part_idx = parts_count - 2; part_idx >= 1; --part_idx) {
-        const DeviceComponentPartDescriptor& part = parts[part_idx];
+    for (size_t part_idx = parts_count - 2; part_idx >= 1; --part_idx) {
+        const ComponentPartDescriptor& part = parts[part_idx];
 
         // The number of matches we have so far is the sum of the number of
         // matches from the last iteration (i.e. of the chain of components from

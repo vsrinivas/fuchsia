@@ -33,6 +33,7 @@ source_set("common") {
     "binding.cpp",
     "boot-args.cpp",
     "boot-args.h",
+    "composite-device.cpp",
     "coordinator.cpp",
     "coordinator.h",
     "devfs.cpp",
