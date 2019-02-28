@@ -132,16 +132,18 @@ DoubleMetric State::CreateDoubleMetric(fbl::StringPiece name, BlockIndex parent,
     return DoubleMetric(fbl::WrapRefPtr(this), name_index, value_index);
 }
 
-Property State::CreateProperty(fbl::StringPiece name, BlockIndex parent, fbl::StringPiece value) {
+Property State::CreateProperty(fbl::StringPiece name, BlockIndex parent, fbl::StringPiece value, PropertyFormat format) {
     fbl::AutoLock lock(&mutex_);
     auto gen = AutoGenerationIncrement(header_, heap_.get());
 
     BlockIndex name_index, value_index;
     zx_status_t status;
-    status = InnerCreateValue(name, BlockType::kStringValue, parent, &name_index, &value_index);
+    status = InnerCreateValue(name, BlockType::kPropertyValue, parent, &name_index, &value_index);
     if (status != ZX_OK) {
         return Property();
     }
+    auto* block = heap_->GetBlock(value_index);
+    block->payload.u64 = PropertyBlockPayload::Flags::Make(format);
     status = InnerSetStringExtents(value_index, value);
     if (status != ZX_OK) {
         heap_->Free(name_index);
@@ -459,7 +461,7 @@ zx_status_t State::InnerCreateValue(fbl::StringPiece name, BlockType type, Block
 
 void State::InnerFreeStringExtents(BlockIndex string_index) {
     auto* str = heap_->GetBlock(string_index);
-    if (!str || GetType(str) != BlockType::kStringValue) {
+    if (!str || GetType(str) != BlockType::kPropertyValue) {
         return;
     }
 
@@ -474,7 +476,8 @@ void State::InnerFreeStringExtents(BlockIndex string_index) {
 
     // Leave the string value allocated (and empty).
     str->payload.u64 =
-        PropertyBlockPayload::TotalLength::Make(0) | PropertyBlockPayload::ExtentIndex::Make(0);
+        PropertyBlockPayload::TotalLength::Make(0) | PropertyBlockPayload::ExtentIndex::Make(0) |
+        PropertyBlockPayload::Flags::Make(PropertyBlockPayload::Flags::Get<uint8_t>(str->payload.u64));
 }
 
 zx_status_t State::InnerSetStringExtents(BlockIndex string_index, fbl::StringPiece value) {
@@ -486,7 +489,8 @@ zx_status_t State::InnerSetStringExtents(BlockIndex string_index, fbl::StringPie
         // The extent index is 0 if no extents were needed (the value is empty).
         block->payload.u64 =
             PropertyBlockPayload::TotalLength::Make(value.size()) |
-            PropertyBlockPayload::ExtentIndex::Make(0);
+            PropertyBlockPayload::ExtentIndex::Make(0) |
+            PropertyBlockPayload::Flags::Make(PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64));
         return ZX_OK;
     }
 
@@ -500,7 +504,8 @@ zx_status_t State::InnerSetStringExtents(BlockIndex string_index, fbl::StringPie
 
     block->payload.u64 =
         PropertyBlockPayload::TotalLength::Make(value.size()) |
-        PropertyBlockPayload::ExtentIndex::Make(extent_index);
+        PropertyBlockPayload::ExtentIndex::Make(extent_index) |
+        PropertyBlockPayload::Flags::Make(PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64));
 
     // Thread the value through extents, creating new extents as needed.
     size_t offset = 0;

@@ -25,10 +25,15 @@ enum class BlockType {
     kIntValue = 4,
     kUintValue = 5,
     kDoubleValue = 6,
-    kStringValue = 7,
+    kPropertyValue = 7,
     kExtent = 8,
     kName = 9,
     kTombstone = 10
+};
+
+enum class PropertyFormat {
+    kUtf8 = 0,
+    kBinary = 1
 };
 
 namespace internal {
@@ -110,6 +115,7 @@ struct ValueBlockFields : public BlockFields {
 struct PropertyBlockPayload {
     using TotalLength = Field<0, 31>;
     using ExtentIndex = Field<32, 59>;
+    using Flags = Field<60, 63>;
 };
 
 struct ExtentBlockFields : public BlockFields {
@@ -142,4 +148,4 @@ constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);
 } // namespace vmo
 } // namespace inspect
 
-#endif  // LIB_INSPECT_VMO_BLOCK_H_
+#endif // LIB_INSPECT_VMO_BLOCK_H_

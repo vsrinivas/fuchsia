@@ -18,6 +18,7 @@ using inspect::vmo::IntMetric;
 using inspect::vmo::kNumOrders;
 using inspect::vmo::Object;
 using inspect::vmo::Property;
+using inspect::vmo::PropertyFormat;
 using inspect::vmo::Snapshot;
 using inspect::vmo::UintMetric;
 using inspect::vmo::internal::Block;
@@ -46,7 +47,7 @@ struct ScannedBlock : public fbl::WAVLTreeContainable<fbl::unique_ptr<ScannedBlo
 bool CompareBlock(const Block* actual, const Block expected) {
     BEGIN_HELPER;
 
-    EXPECT_BYTES_EQ((const uint8_t*)(actual), (const uint8_t*)(&expected), sizeof(Block),
+    EXPECT_BYTES_EQ((const uint8_t*)(&expected), (const uint8_t*)(actual), sizeof(Block),
                     "Block header contents did not match");
 
     END_HELPER;
@@ -290,8 +291,8 @@ bool CreateSmallProperties() {
     auto heap = fbl::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
-    Property a = state->CreateProperty("a", 0, "Hello");
-    Property b = state->CreateProperty("b", 0, "88888888");
+    Property a = state->CreateProperty("a", 0, "Hello", PropertyFormat::kUtf8);
+    Property b = state->CreateProperty("b", 0, "88888888", PropertyFormat::kBinary);
 
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
@@ -307,7 +308,7 @@ bool CreateSmallProperties() {
 
     // Property a fits in the first 3 blocks (value, name, extent).
     EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::NameIndex::Make(2),
                                        PropertyBlockPayload::ExtentIndex::Make(3) |
                                            PropertyBlockPayload::TotalLength::Make(5))));
@@ -321,10 +322,11 @@ bool CreateSmallProperties() {
 
     // Property b fits in the next 3 blocks (value, name, extent).
     EXPECT_TRUE(CompareBlock(blocks.find(4)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::NameIndex::Make(5),
                                        PropertyBlockPayload::ExtentIndex::Make(6) |
-                                           PropertyBlockPayload::TotalLength::Make(8))));
+                                           PropertyBlockPayload::TotalLength::Make(8) |
+                                           PropertyBlockPayload::Flags::Make(PropertyFormat::kBinary))));
     EXPECT_TRUE(CompareBlock(
         blocks.find(5)->block,
         MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
@@ -351,8 +353,8 @@ bool CreateLargeSingleExtentProperties() {
         contents[i] = input[i % input_size];
     }
     contents[2040] = 0;
-    Property a = state->CreateProperty("a", 0, {contents, 2040});
-    Property b = state->CreateProperty("b", 0, {contents, 2040});
+    Property a = state->CreateProperty("a", 0, {contents, 2040}, PropertyFormat::kUtf8);
+    Property b = state->CreateProperty("b", 0, {contents, 2040}, PropertyFormat::kBinary);
 
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
@@ -369,7 +371,7 @@ bool CreateLargeSingleExtentProperties() {
     // Property a has the first 2 blocks for value and name, but needs a large block for the
     // contents.
     EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::NameIndex::Make(2),
                                        PropertyBlockPayload::ExtentIndex::Make(128) |
                                            PropertyBlockPayload::TotalLength::Make(2040))));
@@ -386,10 +388,11 @@ bool CreateLargeSingleExtentProperties() {
     // Property b has the next 2 blocks at the beginning for its value and name, but it claims
     // another large block for the extent.
     EXPECT_TRUE(CompareBlock(blocks.find(3)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::NameIndex::Make(4),
                                        PropertyBlockPayload::ExtentIndex::Make(256) |
-                                           PropertyBlockPayload::TotalLength::Make(2040))));
+                                           PropertyBlockPayload::TotalLength::Make(2040) |
+                                           PropertyBlockPayload::Flags::Make(PropertyFormat::kBinary))));
     EXPECT_TRUE(CompareBlock(
         blocks.find(4)->block,
         MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
@@ -418,7 +421,7 @@ bool CreateMultiExtentProperty() {
         contents[i] = input[i % input_size];
     }
     contents[6000] = 0;
-    Property a = state->CreateProperty("a", 0, {contents, 6000});
+    Property a = state->CreateProperty("a", 0, {contents, 6000}, PropertyFormat::kUtf8);
 
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
@@ -434,7 +437,7 @@ bool CreateMultiExtentProperty() {
 
     // Property a has the first 2 blocks for its value and name.
     EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::NameIndex::Make(2),
                                        PropertyBlockPayload::ExtentIndex::Make(128) |
                                            PropertyBlockPayload::TotalLength::Make(6000))));
@@ -473,35 +476,44 @@ bool SetSmallProperty() {
     auto heap = fbl::make_unique<Heap>(std::move(vmo));
     auto state = State::Create(std::move(heap));
 
-    Property a = state->CreateProperty("a", 0, "Hello");
+    struct test_case {
+        int expected_generation;
+        PropertyFormat format;
+    };
+    fbl::Vector<test_case> cases = {{4, PropertyFormat::kUtf8}, {10, PropertyFormat::kBinary}};
 
-    a.Set("World");
+    for (const auto& test : cases) {
+        Property a = state->CreateProperty("a", 0, "Hello", test.format);
 
-    fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
-    size_t free_blocks, allocated_blocks;
-    auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
-    ASSERT_TRUE(snapshot);
+        a.Set("World");
 
-    // Header (1), 1 single extent property (3)
-    EXPECT_EQ(1 + 3, allocated_blocks);
-    EXPECT_EQ(6, free_blocks);
+        fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+        size_t free_blocks, allocated_blocks;
+        auto snapshot =
+            SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        ASSERT_TRUE(snapshot);
 
-    EXPECT_TRUE(CompareBlock(blocks.find(0)->block, MakeHeader(4)));
+        // Header (1), 1 single extent property (3)
+        EXPECT_EQ(1 + 3, allocated_blocks);
+        EXPECT_EQ(6, free_blocks);
 
-    // Property a fits in the first 3 blocks (value, name, extent).
-    EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
-                                           ValueBlockFields::NameIndex::Make(2),
-                                       PropertyBlockPayload::ExtentIndex::Make(3) |
-                                           PropertyBlockPayload::TotalLength::Make(5))));
-    EXPECT_TRUE(CompareBlock(
-        blocks.find(2)->block,
-        MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
-                  "a\0\0\0\0\0\0\0")));
-    EXPECT_TRUE(
-        CompareBlock(blocks.find(3)->block,
-                     MakeBlock(ValueBlockFields::Type::Make(BlockType::kExtent), "World\0\0\0")));
+        EXPECT_TRUE(CompareBlock(blocks.find(0)->block, MakeHeader(test.expected_generation)));
+
+        // Property a fits in the first 3 blocks (value, name, extent).
+        EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
+                                 MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+                                               ValueBlockFields::NameIndex::Make(2),
+                                           PropertyBlockPayload::ExtentIndex::Make(3) |
+                                               PropertyBlockPayload::TotalLength::Make(5) |
+                                               PropertyBlockPayload::Flags::Make(test.format))));
+        EXPECT_TRUE(CompareBlock(
+            blocks.find(2)->block,
+            MakeBlock(NameBlockFields::Type::Make(BlockType::kName) | NameBlockFields::Length::Make(1),
+                      "a\0\0\0\0\0\0\0")));
+        EXPECT_TRUE(
+            CompareBlock(blocks.find(3)->block,
+                         MakeBlock(ValueBlockFields::Type::Make(BlockType::kExtent), "World\0\0\0")));
+    }
 
     END_TEST;
 }
@@ -522,7 +534,7 @@ bool SetLargeProperty() {
     }
     contents[6000] = '\0';
 
-    Property a = state->CreateProperty("a", 0, {contents, 6000});
+    Property a = state->CreateProperty("a", 0, {contents, 6000}, PropertyFormat::kUtf8);
 
     a.Set("World");
 
@@ -540,7 +552,7 @@ bool SetLargeProperty() {
 
     // Property a fits in the first 3 blocks (value, name, extent).
     EXPECT_TRUE(CompareBlock(blocks.find(1)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::NameIndex::Make(2),
                                        PropertyBlockPayload::ExtentIndex::Make(3) |
                                            PropertyBlockPayload::TotalLength::Make(5))));
@@ -568,7 +580,7 @@ bool SetPropertyOutOfMemory() {
         vec.push_back('a');
     }
 
-    Property a = state->CreateProperty("a", 0, {vec.begin(), vec.size()});
+    Property a = state->CreateProperty("a", 0, {vec.begin(), vec.size()}, PropertyFormat::kUtf8);
     EXPECT_FALSE(bool(a));
 
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
@@ -598,7 +610,7 @@ bool CreateObjectHierarchy() {
     auto network = req.CreateUintMetric("network", 10);
     auto wifi = req.CreateUintMetric("wifi", 5);
 
-    auto version = root.CreateProperty("version", "1.0beta2");
+    auto version = root.CreateProperty("version", "1.0beta2", PropertyFormat::kUtf8);
 
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
@@ -660,7 +672,7 @@ bool CreateObjectHierarchy() {
 
     // Version property
     EXPECT_TRUE(CompareBlock(blocks.find(9)->block,
-                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kStringValue) |
+                             MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
                                            ValueBlockFields::ParentIndex::Make(1) |
                                            ValueBlockFields::NameIndex::Make(10),
                                        PropertyBlockPayload::ExtentIndex::Make(11) |
@@ -752,7 +764,7 @@ bool TombstoneCleanup() {
                 Object new_child = root.CreateChild("child");
                 m = std::make_unique<IntMetric>(new_child.CreateIntMetric("value", -1));
             }
-            Property temp = child.CreateProperty("temp", "test");
+            Property temp = child.CreateProperty("temp", "test", PropertyFormat::kUtf8);
             m.reset();
         }
     }
@@ -830,7 +842,7 @@ int ChildThread(void* input) {
     Object* object = reinterpret_cast<Object*>(input);
     for (size_t i = 0; i < kThreadTimes; i++) {
         Object child = object->CreateChild("this_is_a_child");
-        Property temp = child.CreateProperty("temp", "test");
+        Property temp = child.CreateProperty("temp", "test", PropertyFormat::kUtf8);
     }
     return 0;
 }

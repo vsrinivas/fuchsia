@@ -51,7 +51,7 @@ public:
 
     // Create a new |Property| in the Inspect VMO. The returned object releases
     // the metric when destroyed.
-    Property CreateProperty(fbl::StringPiece name, BlockIndex parent, fbl::StringPiece value);
+    Property CreateProperty(fbl::StringPiece name, BlockIndex parent, fbl::StringPiece value, PropertyFormat format);
 
     // Create a new |Object| in the Inspect VMO. Objects are refcounted such that
     // Metrics and Properties nested under the object remain valid until all
@@ -124,4 +124,4 @@ private:
 } // namespace vmo
 } // namespace inspect
 
-#endif  // LIB_INSPECT_VMO_STATE_H_
+#endif // LIB_INSPECT_VMO_STATE_H_

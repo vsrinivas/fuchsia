@@ -97,7 +97,7 @@ private:
              internal::BlockIndex value)
         : state_(std::move(state)), name_index_(name), value_index_(value) {}
 
-    // Reference to the state containing this metric.
+    // Reference to the state containing this property.
     fbl::RefPtr<internal::State> state_;
 
     // Index of the name block in the state.
@@ -142,10 +142,10 @@ public:
     // also not be stored in a buffer.
     [[nodiscard]] DoubleMetric CreateDoubleMetric(fbl::StringPiece name, double value);
 
-    // Create a new |Property| with the given name that is a child of this object.
+    // Create a new |Property| with the given name and format that is a child of this object.
     // If this object is not stored in a buffer, the created property will
     // also not be stored in a buffer.
-    [[nodiscard]] Property CreateProperty(fbl::StringPiece name, fbl::StringPiece value);
+    [[nodiscard]] Property CreateProperty(fbl::StringPiece name, fbl::StringPiece value, PropertyFormat format);
 
     // Return true if this object is stored in a buffer. False otherwise.
     explicit operator bool() { return state_.get() != nullptr; }
@@ -169,4 +169,4 @@ private:
 } // namespace vmo
 } // namespace inspect
 
-#endif  // LIB_INSPECT_VMO_TYPES_H_
+#endif // LIB_INSPECT_VMO_TYPES_H_

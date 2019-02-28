@@ -35,10 +35,9 @@ Inspector::Inspector(size_t capacity, size_t max_size) {
     if (!state_) {
         return;
     }
-
 }
 
-Object Inspector::CreateObject(const char* name) const{
+Object Inspector::CreateObject(const char* name) const {
     return state_->CreateObject(name, /*parent=*/0);
 }
 

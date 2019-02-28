@@ -245,7 +245,7 @@ void Reader::InnerScanBlocks() {
           auto parent_index =
               ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
           InnerParseMetric(GetOrCreate(parent_index), block);
-        } else if (type == BlockType::kStringValue) {
+        } else if (type == BlockType::kPropertyValue) {
           // This block defines a property for an Object, parse the property
           // into the properties field of the ParsedObject.
           auto parent_index =
@@ -377,7 +377,12 @@ void Reader::InnerParseProperty(ParsedObject* parent, const Block* block) {
 
   fuchsia::inspect::Property property;
   property.key = std::move(name);
-  property.value.str() = std::string(buf, total_length);
+  if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
+      static_cast<uint8_t>(inspect::vmo::PropertyFormat::kBinary)) {
+    property.value.bytes() = std::vector<uint8_t>(buf, buf + total_length);
+  } else {
+    property.value.str() = std::string(buf, total_length);
+  }
   parent->properties.emplace_back(std::move(property));
 }
 

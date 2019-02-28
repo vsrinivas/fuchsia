@@ -33,12 +33,14 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
   auto volume = object.CreateDoubleMetric("volume", 0.75);
   auto assets = object.CreateIntMetric("assets", -100);
 
-  auto version = object.CreateProperty("version", "1.0beta2");
+  auto version = object.CreateProperty("version", "1.0beta2",
+                                       inspect::vmo::PropertyFormat::kUtf8);
 
   char dump[4001];
   memset(dump, 'a', 5);
   memset(dump + 5, 'b', 4000 - 5);
-  auto dump_prop = req.CreateProperty("dump", "");
+  auto dump_prop =
+      req.CreateProperty("dump", "", inspect::vmo::PropertyFormat::kBinary);
   dump_prop.Set({dump, 4000});
   dump[4000] = '\0';
 
@@ -48,7 +50,8 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
 
   std::vector<fit::result<inspect::ObjectHierarchy>> hierarchies;
   hierarchies.emplace_back(inspect::ReadFromSnapshot(std::move(snapshot)));
-  hierarchies.emplace_back(inspect::ReadFromVmo(inspector->GetReadOnlyVmoClone()));
+  hierarchies.emplace_back(
+      inspect::ReadFromVmo(inspector->GetReadOnlyVmoClone()));
   for (auto& root : hierarchies) {
     ASSERT_TRUE(root.is_ok());
     EXPECT_THAT(
@@ -62,8 +65,9 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
                                                 IntMetricIs("assets", -100))))),
             ChildrenMatch(UnorderedElementsAre(ObjectMatches(AllOf(
                 NameMatches("requests"),
-                PropertyList(
-                    UnorderedElementsAre(StringPropertyIs("dump", dump))),
+                PropertyList(UnorderedElementsAre(ByteVectorPropertyIs(
+                    "dump",
+                    std::vector((uint8_t*)dump, (uint8_t*)dump + 4000)))),
                 MetricList(UnorderedElementsAre(UIntMetricIs("network", 10),
                                                 UIntMetricIs("wifi", 5)))))))));
   }

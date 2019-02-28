@@ -194,9 +194,9 @@ DoubleMetric Object::CreateDoubleMetric(fbl::StringPiece name, double value) {
     return DoubleMetric();
 }
 
-Property Object::CreateProperty(fbl::StringPiece name, fbl::StringPiece value) {
+Property Object::CreateProperty(fbl::StringPiece name, fbl::StringPiece value, PropertyFormat format) {
     if (state_) {
-        return state_->CreateProperty(name, value_index_, value);
+        return state_->CreateProperty(name, value_index_, value, format);
     }
     return Property();
 }

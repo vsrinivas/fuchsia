@@ -101,7 +101,8 @@ bool TestProperty(perftest::RepeatState* state, int size) {
   auto inspector =
       Inspector(1024 * 1024 /*capacity*/, 1024 * 1024 /*max size*/);
   auto root = inspector.CreateObject("objects");
-  auto item = root.CreateProperty(kName, "");
+  auto item =
+      root.CreateProperty(kName, "", inspect::vmo::PropertyFormat::kUtf8);
   std::string string;
   string.resize(size, 'a');
 
@@ -111,7 +112,8 @@ bool TestProperty(perftest::RepeatState* state, int size) {
   state->DeclareStep("Destroy");
 
   while (state->KeepRunning()) {
-    auto item = root.CreateProperty(kName, "");
+    auto item =
+        root.CreateProperty(kName, "", inspect::vmo::PropertyFormat::kUtf8);
     state->NextStep();
     item.Set(string);
     state->NextStep();
