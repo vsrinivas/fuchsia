@@ -1,11 +1,6 @@
 use {
     fuchsia_zircon as zx,
-    std::{
-        ffi::CStr,
-        marker::PhantomData,
-        mem,
-        ptr,
-    },
+    std::{ffi::CStr, marker::PhantomData, mem, ptr},
 };
 
 // Re-export libc to be used from the c_char macro
@@ -35,7 +30,7 @@ impl Scope {
 /// Creates a `&'static CStr` from a string literal.
 #[macro_export]
 macro_rules! cstr {
-    ($s:expr) => (
+    ($s:expr) => {
         // `concat` macro always produces a static string literal.
         // It is always safe to create a CStr from a null-terminated string.
         // If there are interior null bytes, the string will just end early.
@@ -44,25 +39,21 @@ macro_rules! cstr {
                 concat!($s, "\0").as_ptr() as *const $crate::__libc_reexport::c_char
             )
         }
-    )
+    };
 }
 
 /// Returns true if tracing is enabled.
 #[inline]
 pub fn is_enabled() -> bool {
     // Trivial no-argument function that will not race
-    unsafe {
-        sys::trace_is_enabled()
-    }
+    unsafe { sys::trace_is_enabled() }
 }
 
 /// Returns true if tracing has been enabled for the given category.
 pub fn category_enabled(category: &'static CStr) -> bool {
     // Function requires a pointer to a static null-terminated string literal,
     // which `&'static CStr` is.
-    unsafe {
-        sys::trace_is_category_enabled(category.as_ptr())
-    }
+    unsafe { sys::trace_is_category_enabled(category.as_ptr()) }
 }
 
 /// `Arg` holds an argument to a tracing function, which can be one of many types.
@@ -76,7 +67,8 @@ pub struct Arg<'a>(sys::trace_arg_t, PhantomData<&'a ()>);
 /// `ArgValue`, such as `i32`, `f64`, or `&str`.
 pub trait ArgValue {
     fn of<'a>(key: &'a str, value: Self) -> Arg<'a>
-        where Self: 'a;
+    where
+        Self: 'a;
 }
 
 // Implements `arg_from` for many types.
@@ -108,6 +100,7 @@ macro_rules! arg_from {
 }
 
 // Implement ArgFrom for a variety of types
+#[rustfmt::skip]
 arg_from!(val,
     ((), sys::TRACE_ARG_NULL, sys::trace_arg_union_t { int32_value: 0 })
     (i32, sys::TRACE_ARG_INT32, sys::trace_arg_union_t { int32_value: val })
@@ -119,17 +112,21 @@ arg_from!(val,
 
 impl<'a> ArgValue for &'a str {
     fn of<'b>(key: &'b str, val: Self) -> Arg<'b>
-        where Self: 'b
+    where
+        Self: 'b,
     {
-        Arg(sys::trace_arg_t {
-            name_ref: trace_make_inline_string_ref(key),
-            value: sys::trace_arg_value_t {
-                type_: sys::TRACE_ARG_STRING,
-                value: sys::trace_arg_union_t {
-                    string_value_ref: trace_make_inline_string_ref(val),
-                }
+        Arg(
+            sys::trace_arg_t {
+                name_ref: trace_make_inline_string_ref(key),
+                value: sys::trace_arg_value_t {
+                    type_: sys::TRACE_ARG_STRING,
+                    value: sys::trace_arg_union_t {
+                        string_value_ref: trace_make_inline_string_ref(val),
+                    },
+                },
             },
-        }, PhantomData)
+            PhantomData,
+        )
     }
 }
 
@@ -176,7 +173,7 @@ pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args:
                 &helper.name_ref,
                 scope.into_raw(),
                 args.as_ptr() as *const sys::trace_arg_t,
-                args.len()
+                args.len(),
             );
             sys::trace_release_context(context);
         }
@@ -235,7 +232,7 @@ pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, ar
                 &helper.name_ref,
                 counter_id,
                 args.as_ptr() as *const sys::trace_arg_t,
-                args.len()
+                args.len(),
             );
             sys::trace_release_context(context);
         }
@@ -266,7 +263,7 @@ impl DurationScope {
     /// when it goes out of scope or is `drop`ped.
     ///
     /// Example:
-    /// 
+    ///
     /// ```rust
     /// {
     ///     let _scope = duration!("foo", "bar").end_on_drop();
@@ -285,7 +282,8 @@ impl DurationScope {
         unsafe {
             let DurationScope { category, name } = self;
             let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-            let context = sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+            let context =
+                sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
             if context != ptr::null() {
                 let helper = EventHelper::new(context, name);
 
@@ -296,7 +294,7 @@ impl DurationScope {
                     &category_ref,
                     &helper.name_ref,
                     ptr::null(),
-                    0
+                    0,
                 );
                 sys::trace_release_context(context);
             }
@@ -352,7 +350,7 @@ pub fn duration(category: &'static CStr, name: &'static CStr, args: &[Arg]) -> D
                 &category_ref,
                 &helper.name_ref,
                 args.as_ptr() as *const sys::trace_arg_t,
-                args.len()
+                args.len(),
             );
             sys::trace_release_context(context);
         }
@@ -398,9 +396,7 @@ fn trim_to_last_char_boundary(string: &str, max_len: usize) -> &[u8] {
         // by another character boundary (end followed by beginning).
         len = max_len;
         while len > 0 {
-            if string.is_char_boundary(len - 1) &&
-                string.is_char_boundary(len)
-            {
+            if string.is_char_boundary(len - 1) && string.is_char_boundary(len) {
                 break;
             }
             len -= 1;
@@ -417,8 +413,8 @@ fn trace_make_inline_string_ref(string: &str) -> sys::trace_string_ref_t {
         return trace_make_empty_string_ref();
     }
 
-    let string = trim_to_last_char_boundary(
-        string, sys::TRACE_ENCODED_STRING_REF_MAX_LENGTH as usize);
+    let string =
+        trim_to_last_char_boundary(string, sys::TRACE_ENCODED_STRING_REF_MAX_LENGTH as usize);
 
     sys::trace_string_ref_t {
         encoded_value: sys::TRACE_ENCODED_STRING_REF_INLINE_FLAG | len,
@@ -428,7 +424,7 @@ fn trace_make_inline_string_ref(string: &str) -> sys::trace_string_ref_t {
 
 mod sys {
     #![allow(non_camel_case_types, unused)]
-    use fuchsia_zircon::sys::{zx_koid_t, zx_obj_type_t, zx_handle_t, zx_status_t};
+    use fuchsia_zircon::sys::{zx_handle_t, zx_koid_t, zx_obj_type_t, zx_status_t};
 
     pub type trace_ticks_t = u64;
     pub type trace_counter_id_t = u64;
@@ -517,15 +513,14 @@ mod sys {
     pub struct trace_handler_ops_t {
         pub is_category_enabled:
             unsafe fn(handler: *const trace_handler_t, category: *const libc::c_char) -> bool,
-        pub trace_started:
-            unsafe fn(handler: *const trace_handler_t),
-        pub trace_stopped:
-            unsafe fn(handler: *const trace_handler_t,
-                      async_ptr: *const (),//async_t,
-                      disposition: zx_status_t,
-                      buffer_bytes_written: libc::size_t),
-        pub buffer_overflow:
-            unsafe fn(handler: *const trace_handler_t),
+        pub trace_started: unsafe fn(handler: *const trace_handler_t),
+        pub trace_stopped: unsafe fn(
+            handler: *const trace_handler_t,
+            async_ptr: *const (), //async_t,
+            disposition: zx_status_t,
+            buffer_bytes_written: libc::size_t,
+        ),
+        pub buffer_overflow: unsafe fn(handler: *const trace_handler_t),
     }
 
     #[repr(C)]
@@ -539,57 +534,67 @@ mod sys {
 
         pub fn trace_context_is_category_enabled(
             context: *const trace_context_t,
-            category_literal: *const libc::c_char) -> bool;
+            category_literal: *const libc::c_char,
+        ) -> bool;
 
         pub fn trace_context_register_string_copy(
             context: *const trace_context_t,
             string: *const libc::c_char,
             length: libc::size_t,
-            out_ref: *mut trace_string_ref_t);
+            out_ref: *mut trace_string_ref_t,
+        );
 
         pub fn trace_context_register_string_literal(
             context: *const trace_context_t,
             string_literal: *const libc::c_char,
-            out_ref: *mut trace_string_ref_t);
+            out_ref: *mut trace_string_ref_t,
+        );
 
         pub fn trace_context_register_category_literal(
             context: *const trace_context_t,
             category_literal: *const libc::c_char,
-            out_ref: *mut trace_string_ref_t) -> bool;
+            out_ref: *mut trace_string_ref_t,
+        ) -> bool;
 
         pub fn trace_context_register_current_thread(
             context: *const trace_context_t,
-            out_ref: *mut trace_thread_ref_t);
-        
+            out_ref: *mut trace_thread_ref_t,
+        );
+
         pub fn trace_context_register_thread(
             context: *const trace_context_t,
             process_koid: zx_koid_t,
             thread_koid: zx_koid_t,
-            out_ref: *mut trace_thread_ref_t);
+            out_ref: *mut trace_thread_ref_t,
+        );
 
         pub fn trace_context_write_kernel_object_record(
             context: *const trace_context_t,
             koid: zx_koid_t,
             type_: zx_obj_type_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_kernel_object_record_for_handle(
             context: *const trace_context_t,
             handle: zx_handle_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_process_info_record(
             context: *const trace_context_t,
             process_koid: zx_koid_t,
-            process_name_ref: *const trace_string_ref_t);
+            process_name_ref: *const trace_string_ref_t,
+        );
 
         pub fn trace_context_write_thread_info_record(
             context: *const trace_context_t,
             process_koid: zx_koid_t,
             thread_koid: zx_koid_t,
-            thread_name_ref: *const trace_string_ref_t);
+            thread_name_ref: *const trace_string_ref_t,
+        );
 
         pub fn trace_context_write_context_switch_record(
             context: *const trace_context_t,
@@ -597,14 +602,16 @@ mod sys {
             cpu_number: trace_cpu_number_t,
             outgoing_thread_state: trace_thread_state_t,
             outgoing_thread_ref: *const trace_thread_ref_t,
-            incoming_thread_ref: *const trace_thread_ref_t);
+            incoming_thread_ref: *const trace_thread_ref_t,
+        );
 
         pub fn trace_context_write_log_record(
             context: *const trace_context_t,
             event_time: trace_ticks_t,
             thread_ref: *const trace_thread_ref_t,
             log_message: *const libc::c_char,
-            log_message_length: libc::size_t);
+            log_message_length: libc::size_t,
+        );
 
         pub fn trace_context_write_instant_event_record(
             context: *const trace_context_t,
@@ -614,7 +621,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             scope: trace_scope_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_counter_event_record(
             context: *const trace_context_t,
@@ -624,7 +632,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             counter_id: trace_counter_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_duration_event_record(
             context: *const trace_context_t,
@@ -634,7 +643,8 @@ mod sys {
             category_ref: *const trace_string_ref_t,
             name_ref: *const trace_string_ref_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_duration_begin_event_record(
             context: *const trace_context_t,
@@ -643,7 +653,8 @@ mod sys {
             category_ref: *const trace_string_ref_t,
             name_ref: *const trace_string_ref_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_duration_end_event_record(
             context: *const trace_context_t,
@@ -652,7 +663,8 @@ mod sys {
             category_ref: *const trace_string_ref_t,
             name_ref: *const trace_string_ref_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_async_begin_event_record(
             context: *const trace_context_t,
@@ -662,7 +674,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             async_id: trace_async_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_async_instant_event_record(
             context: *const trace_context_t,
@@ -672,7 +685,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             async_id: trace_async_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_async_end_event_record(
             context: *const trace_context_t,
@@ -682,7 +696,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             async_id: trace_async_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_flow_begin_event_record(
             context: *const trace_context_t,
@@ -692,7 +707,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             flow_id: trace_flow_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_flow_step_event_record(
             context: *const trace_context_t,
@@ -702,7 +718,8 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             flow_id: trace_flow_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_flow_end_event_record(
             context: *const trace_context_t,
@@ -712,27 +729,32 @@ mod sys {
             name_ref: *const trace_string_ref_t,
             flow_id: trace_flow_id_t,
             args: *const trace_arg_t,
-            num_args: libc::size_t);
+            num_args: libc::size_t,
+        );
 
         pub fn trace_context_write_initialization_record(
             context: *const trace_context_t,
-            ticks_per_second: u64);
+            ticks_per_second: u64,
+        );
 
         pub fn trace_context_write_string_record(
             context: *const trace_context_t,
             index: trace_string_index_t,
             string: *const libc::c_char,
-            length: libc::size_t);
+            length: libc::size_t,
+        );
 
         pub fn trace_context_write_thread_record(
             context: *const trace_context_t,
             index: trace_thread_index_t,
             procss_koid: zx_koid_t,
-            thread_koid: zx_koid_t);
+            thread_koid: zx_koid_t,
+        );
 
         pub fn trace_context_alloc_record(
             context: *const trace_context_t,
-            num_bytes: libc::size_t) -> *const libc::c_void;
+            num_bytes: libc::size_t,
+        ) -> *const libc::c_void;
 
         // From trace-engine/handler.h
         /*
@@ -743,8 +765,7 @@ mod sys {
             buffer_num_bytes: libc::size_t) -> zx_status_t;
             */
 
-        pub fn trace_stop_engine(
-            disposition: zx_status_t) -> zx_status_t;
+        pub fn trace_stop_engine(disposition: zx_status_t) -> zx_status_t;
 
         // From trace-engine/instrumentation.h
 
@@ -754,14 +775,14 @@ mod sys {
 
         pub fn trace_is_enabled() -> bool;
 
-        pub fn trace_is_category_enabled(
-            category_literal: *const libc::c_char) -> bool;
+        pub fn trace_is_category_enabled(category_literal: *const libc::c_char) -> bool;
 
         pub fn trace_acquire_context() -> *const trace_context_t;
 
         pub fn trace_acquire_context_for_category(
             category_literal: *const libc::c_char,
-            out_ref: *mut trace_string_ref_t) -> *const trace_context_t;
+            out_ref: *mut trace_string_ref_t,
+        ) -> *const trace_context_t;
 
         pub fn trace_release_context(context: *const trace_context_t);
 
@@ -775,7 +796,7 @@ mod sys {
 
 #[cfg(test)]
 mod test {
-    use crate::{Scope, trim_to_last_char_boundary};
+    use crate::{trim_to_last_char_boundary, Scope};
 
     #[test]
     fn trim_to_last_char_boundary_trims_to_last_character_boundary() {
