@@ -40,8 +40,16 @@ class BazelTester(object):
         self.optional_flags = optional_flags
 
 
+    def _add_bazel_flags(self, command):
+        # The following flag is needed because some Dart build rules use a
+        # `cfg = "data"` construct that's now an error.
+        # TODO: remove this flag when we don't build Dart stuff in this SDK.
+        command += ['--incompatible_disallow_data_transition=false']
+
+
     def _invoke_bazel(self, command, targets):
         command = [self.bazel_bin, command, '--keep_going']
+        self._add_bazel_flags(command)
         command += self.optional_flags
         command += targets
         job = Popen(command, cwd=SCRIPT_DIR)
@@ -59,6 +67,7 @@ class BazelTester(object):
 
     def _query(self, query):
         command = [self.bazel_bin, 'query', query]
+        self._add_bazel_flags(command)
         return set(check_output(command, cwd=SCRIPT_DIR).splitlines())
 
 
