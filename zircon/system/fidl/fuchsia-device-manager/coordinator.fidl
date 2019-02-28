@@ -14,6 +14,9 @@ using zx;
 // we can make this reflect the actual structure.
 using DeviceProperty = uint64;
 
+// Same as above, but for bind zx_bind_inst_t.
+using BindInstruction = uint64;
+
 /// This definition must match ZX_DEVICE_NAME_MAX and is checked by a static assert.
 const uint32 DEVICE_NAME_MAX = 31;
 
@@ -32,6 +35,33 @@ const uint32 COMMAND_MAX = 1024;
 
 /// Maximum number of properties that can be attached to a device
 const uint32 PROPERTIES_MAX = 256;
+
+/// Maximum number of components that a composite device can have
+const uint32 COMPONENTS_MAX = 8;
+
+/// Maximum number of parts that a composite device component can have
+const uint32 DEVICE_COMPONENT_PARTS_MAX = 16;
+
+/// Maximum instructions in a match program
+const uint32 DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32;
+
+/// A part of a description of a DeviceComponent
+struct DeviceComponentPart {
+    // This is an awful hack around the LLCPP bindings not being ready yet.
+    // Since we're using the C ones for now, we can only embed these structures as
+    // arrays instead of vectors.
+    uint32 match_program_count;
+    array<BindInstruction>:DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX match_program;
+};
+
+/// A piece of a composite device
+struct DeviceComponent {
+    // This is an awful hack around the LLCPP bindings not being ready yet.
+    // Since we're using the C ones for now, we can only embed these structures as
+    // arrays instead of vectors.
+    uint32 parts_count;
+    array<DeviceComponentPart>:DEVICE_COMPONENT_PARTS_MAX parts;
+};
 
 // All functions in these interfaces have the most-significant-byte set to 0x01 to allow
 // multiplexing these interfaces and parts of the fuchsia.io interfaces.
@@ -147,6 +177,16 @@ protocol Coordinator {
     /// fail.
     PublishMetadata(string:DEVICE_PATH_MAX device_path, uint32 key,
                     vector<uint8>:METADATA_MAX? data) -> (zx.status status);
+
+    /// Adds the given composite device.  This causes the devcoordinator to try to match the
+    /// components against the existing device tree, and to monitor all new device additions
+    /// in order to find the components as they are created.
+    // The treatment of |components| is an awful hack around the LLCPP bindings not being ready
+    // yet.  Since we're using the C ones for now, we can only embed these structures as arrays
+    // instead of vectors.
+    AddCompositeDevice(string:DEVICE_NAME_MAX name, vector<DeviceProperty>:PROPERTIES_MAX props,
+                       array<DeviceComponent>:COMPONENTS_MAX components, uint32 components_count,
+                       uint32 coresident_device_index) -> (zx.status status);
 
     /// Special commands for implementing the dmctl device.
     // TODO(teisenbe): We should revisit how these are carried over.

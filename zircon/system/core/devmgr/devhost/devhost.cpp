@@ -1185,6 +1185,64 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
     return call_status;
 }
 
+zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev,
+                                         const char* name, const zx_device_prop_t* props,
+                                         size_t props_count, const device_component_t* components,
+                                         size_t components_count,
+                                         uint32_t coresident_device_index) {
+    if ((props == nullptr && props_count > 0) || components == nullptr || name == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (components_count > fuchsia_device_manager_COMPONENTS_MAX) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    const zx::channel& rpc = *dev->rpc;
+    if (!rpc.is_valid()) {
+        return ZX_ERR_IO_REFUSED;
+    }
+
+    // Ideally we could perform the entire serialization with a single
+    // allocation, but for now we allocate this (potentially large) array on
+    // the heap.  The array is extra-large because of the use of FIDL array
+    // types instead of vector types, to get around the SimpleLayout
+    // restrictions.
+    std::unique_ptr<fuchsia_device_manager_DeviceComponent[]> fidl_components(
+            new fuchsia_device_manager_DeviceComponent[fuchsia_device_manager_COMPONENTS_MAX]());
+    for (size_t i = 0; i < components_count; ++i) {
+        auto& component = fidl_components[i];
+        component.parts_count = components[i].parts_count;
+        if (component.parts_count > fuchsia_device_manager_DEVICE_COMPONENT_PARTS_MAX) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        for (size_t j = 0; j < component.parts_count; ++j) {
+            auto& part = fidl_components[i].parts[j];
+            part.match_program_count = components[i].parts[j].instruction_count;
+            if (part.match_program_count >
+                fuchsia_device_manager_DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            static_assert(sizeof(components[i].parts[j].match_program[0]) ==
+                          sizeof(part.match_program[0]));
+            memcpy(part.match_program, components[i].parts[j].match_program,
+                   sizeof(part.match_program[0]) * part.match_program_count);
+        }
+    }
+
+    log_rpc(dev, "create-composite");
+    zx_status_t call_status;
+    static_assert(sizeof(props[0]) == sizeof(uint64_t));
+    zx_status_t status = fuchsia_device_manager_CoordinatorAddCompositeDevice(
+        rpc.get(), name, strlen(name), reinterpret_cast<const uint64_t*>(props), props_count,
+        fidl_components.get(), static_cast<uint32_t>(components_count),
+        coresident_device_index, &call_status);
+    log_rpc_result("create-composite", status, call_status);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return call_status;
+}
+
 zx_handle_t root_resource_handle;
 
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::channel h) {

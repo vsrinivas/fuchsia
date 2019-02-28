@@ -1183,6 +1183,15 @@ static zx_status_t fidl_PublishMetadata(void* ctx, const char* device_path_data,
     return fuchsia_device_manager_CoordinatorPublishMetadata_reply(txn, status);
 }
 
+static zx_status_t fidl_AddCompositeDevice(
+        void* ctx, const char* name_data, size_t name_size, const uint64_t* props,
+        size_t props_count, const fuchsia_device_manager_DeviceComponent components[16],
+        uint32_t components_count, uint32_t coresident_device_index, fidl_txn_t* txn) {
+
+    //auto dev = static_cast<Device*>(ctx);
+    return fuchsia_device_manager_CoordinatorAddCompositeDevice_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
 static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* command_data,
                                   size_t command_size, fidl_txn_t* txn) {
     zx::socket log_socket(raw_log_socket);
@@ -1299,6 +1308,8 @@ static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .GetMetadataSize = fidl_GetMetadataSize,
     .AddMetadata = fidl_AddMetadata,
     .PublishMetadata = fidl_PublishMetadata,
+    .AddCompositeDevice = fidl_AddCompositeDevice,
+
     .DmCommand = fidl_DmCommand,
     .DmOpenVirtcon = fidl_DmOpenVirtcon,
     .DmMexec = fidl_DmMexec,

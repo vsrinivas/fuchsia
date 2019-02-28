@@ -263,6 +263,8 @@ __EXPORT zx_status_t device_add_composite(
         zx_device_t* dev, const char* name, const zx_device_prop_t* props, size_t props_count,
         const device_component_t* components, size_t components_count,
         uint32_t coresident_device_index) {
-    // TODO(ZX-2648): Implement
-    return ZX_ERR_NOT_SUPPORTED;
+    ApiAutoLock lock;
+    auto dev_ref = fbl::WrapRefPtr(dev);
+    return devhost_device_add_composite(dev_ref, name, props, props_count, components,
+                                        components_count, coresident_device_index);
 }

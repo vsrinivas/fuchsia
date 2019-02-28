@@ -163,6 +163,12 @@ zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
 zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                      uint32_t type, const void* data, size_t length) REQ_DM_LOCK;
 
+zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev,
+                                         const char* name, const zx_device_prop_t* props,
+                                         size_t props_count, const device_component_t* components,
+                                         size_t components_count,
+                                         uint32_t coresident_device_index) REQ_DM_LOCK;
+
 // shared between devhost.c and rpc-device.c
 struct DevcoordinatorConnection : AsyncLoopOwnedRpcHandler<DevcoordinatorConnection> {
     DevcoordinatorConnection() = default;
