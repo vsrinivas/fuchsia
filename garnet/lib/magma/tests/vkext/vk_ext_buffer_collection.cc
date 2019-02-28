@@ -211,7 +211,7 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
     VkImageCreateInfo image_create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = nullptr,
-        .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+        .flags = 0u,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
         .extent = VkExtent3D{width, 64, 1},
@@ -219,7 +219,10 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = linear ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        // Only use sampled, because on Mali some other usages (like color attachment) aren't
+        // supported for NV12, and some others (implementation-dependent) aren't supported with
+        // AFBC.
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,     // not used since not sharing
         .pQueueFamilyIndices = nullptr, // not used since not sharing
@@ -268,6 +271,11 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
     if (status != ZX_OK) {
         return DRETF(false, "Close failed: %d", status);
     }
+
+    fuchsia::sysmem::PixelFormat pixel_format =
+        buffer_collection_info.settings.image_format_constraints.pixel_format;
+    DLOG("Allocated format %d has_modifier %d modifier %lx\n", pixel_format.type,
+         pixel_format.has_format_modifier, pixel_format.format_modifier.value);
 
     fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
     encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
