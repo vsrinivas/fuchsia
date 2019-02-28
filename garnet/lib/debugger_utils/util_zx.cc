@@ -93,20 +93,6 @@ std::string ExceptionNameAsString(uint32_t type) {
   return fxl::StringPrintf("UNKNOWN(%u)", type);
 }
 
-zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code) {
-  zx_info_process_t info;
-  auto status = zx_object_get_info(process, ZX_INFO_PROCESS, &info,
-                                   sizeof(info), nullptr, nullptr);
-  if (status == ZX_OK) {
-    FXL_VLOG(2) << "Process exited with code " << info.return_code;
-    *out_return_code = info.return_code;
-  } else {
-    FXL_VLOG(2) << "Error getting process return code: "
-                << debugger_utils::ZxErrorString(status);
-  }
-  return status;
-}
-
 bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max) {
   while (max > 1) {
     if (!m.Read(vaddr, ptr, 1)) {

@@ -71,13 +71,6 @@ std::string ZxErrorString(zx_status_t status);
 size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter,
                    char* buffer, size_t buffer_size);
 
-// An argv abstraction, and easier to type.
-using Argv = std::vector<std::string>;
-
-Argv BuildArgv(const fxl::StringView& args);
-
-std::string ArgvToString(const Argv& argv);
-
 // Same as strdup but exit if malloc fails.
 char* xstrdup(const char* s);
 
@@ -114,11 +107,6 @@ std::string GetObjectName(const zx::object_base& object);
 // This does not take a |zx_excp_type_t| value because it also handles
 // invalid values.
 const char* ExceptionName(uint32_t type);
-
-// Fetch the return code of an exited process.
-// It is the caller's responsibility to only call this when the process
-// has exited.
-zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code);
 
 // Return the string form of the exception's name.
 // Returns "UNKNOWN(value)" for bad |type|.

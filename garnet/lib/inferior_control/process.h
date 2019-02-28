@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include "garnet/lib/debugger_utils/dso_list.h"
+#include "garnet/lib/debugger_utils/processes.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/process/process_builder.h"
 

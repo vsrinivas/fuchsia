@@ -9,6 +9,8 @@ import("//build/testing/environments.gni")
 
 static_library("debugger_utils") {
   sources = [
+    "argv.cc",
+    "argv.h",
     "breakpoints.h",
     "build_ids.cc",
     "build_ids.h",
@@ -68,6 +70,7 @@ static_library("debugger_utils") {
   if (is_fuchsia) {
     deps += [ "//zircon/public/lib/inspector" ]
     public_deps += [
+      "//garnet/lib/process",
       "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
@@ -82,22 +85,14 @@ executable("tests") {
   output_name = "debugger_utils_tests"
 
   sources = [
-    "jobs.cc",
-    "jobs.h",
+    "argv_unittest.cc",
     "jobs_unittest.cc",
     "processes_unittest.cc",
     "run_all_unittests.cc",
-    "sysinfo.cc",
-    "sysinfo.h",
     "test_helper_fixture.cc",
     "test_helper_fixture.h",
-    "threads.cc",
-    "threads.h",
     "threads_unittest.cc",
-    "util.cc",
-    "util.h",
     "util_unittest.cc",
-    "util_zx.cc",
     "util_zx_unittest.cc",
   ]
 

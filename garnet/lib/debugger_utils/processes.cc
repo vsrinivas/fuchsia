@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <string>
+
 #include <lib/fxl/logging.h>
+#include <lib/zx/job.h>
 
 #include "processes.h"
 #include "util.h"
@@ -103,6 +107,60 @@ zx_status_t GetProcessThreadKoids(const zx::process& process, size_t try_count,
                                   size_t* out_num_available_threads) {
   return GetProcessThreadKoids(process.get(), try_count, max_num_new_threads,
                                out_threads, out_num_available_threads);
+}
+
+zx_status_t CreateProcessBuilder(
+    const zx::job& job, const std::string& path,
+    const debugger_utils::Argv& argv,
+    std::shared_ptr<sys::ServiceDirectory> services,
+    std::unique_ptr<process::ProcessBuilder>* out_builder) {
+  FXL_DCHECK(argv.size() > 0);
+  zx::job builder_job;
+  zx_status_t status = zx_handle_duplicate(job.get(), ZX_RIGHT_SAME_RIGHTS,
+                                           builder_job.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to duplicate job handle: "
+                   << debugger_utils::ZxErrorString(status);
+    return status;
+  }
+
+  auto builder = std::make_unique<process::ProcessBuilder>(
+      std::move(builder_job), std::move(services));
+
+  status = builder->LoadPath(path);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to load binary: " << path
+                   << ": " << debugger_utils::ZxErrorString(status);
+    return status;
+  }
+  FXL_VLOG(2) << "Binary loaded";
+
+  builder->AddArgs(argv);
+
+  FXL_VLOG(2) << "path: " << path;
+  FXL_VLOG(2) << "argv: " << debugger_utils::ArgvToString(argv);
+
+  *out_builder = std::move(builder);
+  return ZX_OK;
+}
+
+zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code) {
+  zx_info_process_t info;
+  auto status = zx_object_get_info(process, ZX_INFO_PROCESS, &info,
+                                   sizeof(info), nullptr, nullptr);
+  if (status == ZX_OK) {
+    FXL_VLOG(2) << "Process exited with code " << info.return_code;
+    *out_return_code = info.return_code;
+  } else {
+    FXL_VLOG(2) << "Error getting process return code: "
+                << debugger_utils::ZxErrorString(status);
+  }
+  return status;
+}
+
+zx_status_t GetProcessReturnCode(const zx::process& process,
+                                 int* out_return_code) {
+  return GetProcessReturnCode(process.get(), out_return_code);
 }
 
 }  // namespace debugger_utils

@@ -93,8 +93,8 @@ static int PerformWaitPeerClosed(zx::channel channel) {
   zx_handle_t thread = zx_thread_self();
   zx_status_t status = channel.write(0, nullptr, 0, &thread, 1);
   if (status != ZX_OK) {
-    fprintf(stderr, "Test helper: channel write failed: %s\n",
-            debugger_utils::ZxErrorString(status).c_str());
+    FXL_LOG(ERROR) << "Test helper: channel write failed: "
+                   << debugger_utils::ZxErrorString(status);
     return EXIT_FAILURE;
   }
 
@@ -106,39 +106,46 @@ static int PerformWaitPeerClosed(zx::channel channel) {
 int main(int argc, char* argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(cl)) {
-    return 1;
+    return EXIT_FAILURE;
   }
 
   const std::vector<std::string>& args = cl.positional_args();
 
-  if (!args.empty()) {
-    zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
-    // If no channel was passed we're running standalone.
-    if (!channel.is_valid()) {
-      FXL_LOG(WARNING) << "Test helper: channel not received";
-    }
-
-    const std::string& cmd = args[0];
-    FXL_LOG(INFO) << argv[0] << ": Command " << cmd;
-    if (cmd == "wait-peer-closed") {
-      return PerformWaitPeerClosed(std::move(channel));
-    } else if (cmd == "start-n-threads") {
-      if (args.size() < 2) {
-        FXL_LOG(ERROR) << "Missing iteration count";
-        return 1;
-      }
-      int num_threads = 0;
-      if (!fxl::StringToNumberWithError(args[1], &num_threads) ||
-          num_threads < 1) {
-        FXL_LOG(ERROR) << "Error parsing number of threads";
-        return EXIT_FAILURE;
-      }
-      return StartNThreads(std::move(channel), num_threads);
-    }
-    FXL_LOG(ERROR) << "Unknown helper command";
+  if (args.empty()) {
+    FXL_LOG(ERROR) << "Missing command";
     return EXIT_FAILURE;
   }
 
-  printf("Hello.\n");
-  return EXIT_SUCCESS;
+  const std::string& cmd = args[0];
+  FXL_LOG(INFO) << argv[0] << ": Command " << cmd;
+
+  if (cmd == "hello") {
+    FXL_LOG(INFO) << "Hello.";
+    return EXIT_SUCCESS;
+  }
+
+  zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
+  // If no channel was passed we're running standalone.
+  if (!channel.is_valid()) {
+    FXL_LOG(WARNING) << "Test helper: channel not received";
+  }
+
+  if (cmd == "wait-peer-closed") {
+    return PerformWaitPeerClosed(std::move(channel));
+  } else if (cmd == "start-n-threads") {
+    if (args.size() < 2) {
+      FXL_LOG(ERROR) << "Missing iteration count";
+      return EXIT_FAILURE;
+    }
+    int num_threads = 0;
+    if (!fxl::StringToNumberWithError(args[1], &num_threads) ||
+        num_threads < 1) {
+      FXL_LOG(ERROR) << "Error parsing number of threads";
+      return EXIT_FAILURE;
+    }
+    return StartNThreads(std::move(channel), num_threads);
+  }
+
+  FXL_LOG(ERROR) << "Unknown helper command";
+  return EXIT_FAILURE;
 }

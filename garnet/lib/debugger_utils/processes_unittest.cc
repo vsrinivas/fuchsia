@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
+#include <zircon/processargs.h>
+#include <zx/channel.h>
+#include <zx/time.h>
 
 #include "jobs.h"
 #include "processes.h"
@@ -13,6 +17,11 @@
 
 namespace debugger_utils {
 namespace {
+
+const char* const kHelloArgv[] = { kTestHelperPath, "hello" };
+const char* const kWaitPeerClosedArgv[] = {
+    kTestHelperPath, "wait-peer-closed"
+};
 
 void WaitChannelReadable(const zx::channel& channel) {
   zx_signals_t pending;
@@ -111,6 +120,73 @@ TEST_F(TestWithHelper, GetProcessThreads) {
             ZX_ERR_ACCESS_DENIED);
   EXPECT_EQ(threads.size(), 0u);
   process2.reset();
+}
+
+TEST(Processes, Argv) {
+  std::unique_ptr<process::ProcessBuilder> builder;
+  Argv argv = BuildArgv(kHelloArgv, arraysize(kHelloArgv));
+  ASSERT_EQ(CreateProcessBuilder(GetDefaultJob(), kTestHelperPath, argv,
+                                 sys::ServiceDirectory::CreateFromNamespace(),
+                                 &builder), ZX_OK);
+  builder->CloneAll();
+  ASSERT_EQ(builder->Prepare(nullptr), ZX_OK);
+  EXPECT_TRUE(builder->data().process.is_valid());
+  EXPECT_TRUE(builder->data().root_vmar.is_valid());
+  EXPECT_GT(builder->data().stack, 0u);
+  EXPECT_GT(builder->data().entry, 0u);
+  EXPECT_GT(builder->data().vdso_base, 0u);
+  EXPECT_GT(builder->data().base, 0u);
+
+  zx::process process;
+  EXPECT_EQ(builder->Start(&process), ZX_OK);
+  zx_signals_t observed;
+  EXPECT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
+                             &observed), ZX_OK);
+  int rc;
+  EXPECT_EQ(GetProcessReturnCode(process.get(), &rc), ZX_OK);
+  EXPECT_EQ(rc, 0);
+}
+
+// We don't need to test all the ProcessBuilder API, but it's useful to
+// test a few things we use.
+
+TEST(Processes, PassHandle) {
+  std::unique_ptr<process::ProcessBuilder> builder;
+  Argv argv = BuildArgv(kWaitPeerClosedArgv, arraysize(kWaitPeerClosedArgv));
+  ASSERT_EQ(CreateProcessBuilder(GetDefaultJob(), kTestHelperPath, argv,
+                                 sys::ServiceDirectory::CreateFromNamespace(),
+                                 &builder), ZX_OK);
+  builder->CloneAll();
+
+  zx::channel our_channel, their_channel;
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  builder->AddHandle(PA_HND(PA_USER0, 0), std::move(their_channel));
+
+  ASSERT_EQ(builder->Prepare(nullptr), ZX_OK);
+
+  zx::process process;
+  EXPECT_EQ(builder->Start(&process), ZX_OK);
+
+  zx_signals_t pending;
+  ASSERT_EQ(our_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
+                                 &pending), ZX_OK);
+
+  zx::thread thread;
+  uint32_t actual_bytes, actual_handles;
+  ASSERT_EQ(our_channel.read(0u, nullptr, 0u,
+                             &actual_bytes, thread.reset_and_get_address(),
+                             1u, &actual_handles), ZX_OK);
+  EXPECT_EQ(actual_bytes, 0u);
+  EXPECT_EQ(actual_handles, 1u);
+
+  // At this point the inferior is waiting for us to close the channel.
+  our_channel.reset();
+
+  EXPECT_EQ(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(),
+                             &pending), ZX_OK);
+  int rc;
+  EXPECT_EQ(GetProcessReturnCode(process.get(), &rc), ZX_OK);
+  EXPECT_EQ(rc, 0);
 }
 
 }  // namespace

@@ -150,41 +150,6 @@ size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter,
   return index;
 }
 
-Argv BuildArgv(const fxl::StringView& args) {
-  Argv result;
-
-  // TODO: quoting, escapes, etc.
-  // TODO: tweaks for gdb-like command simplification?
-  // (e.g., p/x foo -> p /x foo)
-
-  size_t n = args.size();
-  for (size_t i = 0; i < n; ++i) {
-    while (i < n && isspace(args[i]))
-      ++i;
-    if (i == n)
-      break;
-    size_t start = i;
-    ++i;
-    while (i < n && !isspace(args[i]))
-      ++i;
-    result.push_back(args.substr(start, i - start).ToString());
-  }
-
-  return result;
-}
-
-std::string ArgvToString(const Argv& argv) {
-  if (argv.size() == 0)
-    return "";
-
-  std::string result(argv[0]);
-
-  for (auto a = argv.begin() + 1; a != argv.end(); ++a)
-    result += " " + *a;
-
-  return result;
-}
-
 char* xstrdup(const char* s) {
   char* result = strdup(s);
   if (!result) {

@@ -5,13 +5,21 @@
 #ifndef GARNET_LIB_DEBUGGER_UTILS_PROCESSES_H_
 #define GARNET_LIB_DEBUGGER_UTILS_PROCESSES_H_
 
+#include <memory>
 #include <stddef.h>
+#include <string>
 #include <vector>
 
 #include <zircon/types.h>
 
+#include <lib/fxl/strings/string_view.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+
+#include "garnet/lib/debugger_utils/argv.h"
+#include "garnet/lib/process/process_builder.h"
 
 namespace debugger_utils {
 
@@ -51,6 +59,19 @@ zx_status_t TryGetProcessThreadKoidsForTesting(
     const zx::process& process, size_t try_count, size_t initial_num_threads,
     size_t max_num_new_threads, std::vector<zx_koid_t>* out_threads,
     size_t* out_num_available_threads);
+
+zx_status_t CreateProcessBuilder(
+    const zx::job& job, const std::string& path,
+    const debugger_utils::Argv& argv,
+    std::shared_ptr<sys::ServiceDirectory> services,
+    std::unique_ptr<process::ProcessBuilder>* out_builder);
+
+// Fetch the return code of an exited process.
+// It is the caller's responsibility to only call this when the process
+// has exited.
+zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code);
+zx_status_t GetProcessReturnCode(const zx::process& process,
+                                 int* out_return_code);
 
 }  // namespace debugger_utils
 
