@@ -123,7 +123,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
         scenic::EntityNode translate_1(session), translate_2(session);
 
         root_node->AddChild(translate_1);
-        translate_1.SetTranslation(0, 0, 1);
+        translate_1.SetTranslationRH(0, 0, -1);
         translate_1.Export(std::move(export_1));
 
         root_node->AddChild(translate_2);

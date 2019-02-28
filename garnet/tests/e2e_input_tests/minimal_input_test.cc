@@ -59,7 +59,7 @@ class MinimalClientView : public scenic::BaseView {
 
     scenic::Rectangle rectangle(session(), width, height);
     background.SetShape(rectangle);
-    background.SetTranslation(width / 2, height / 2, 10.f);
+    background.SetTranslationRH(width / 2, height / 2, -10.f);
 
     view().AddChild(background);
   }
