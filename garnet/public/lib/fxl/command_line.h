@@ -54,7 +54,7 @@ namespace fxl {
 // Class that stores processed command lines ("argv[0]", options, and positional
 // arguments) and provides access to them. For more details, see the file-level
 // comment above. This class is thread-safe.
-class FXL_EXPORT CommandLine final {
+class CommandLine final {
  private:
   class ConstructionHelper;
 
@@ -145,7 +145,7 @@ namespace internal {
 
 // Helper class for building command lines (finding options, etc.) from raw
 // arguments.
-class FXL_EXPORT CommandLineBuilder final {
+class CommandLineBuilder final {
  public:
   CommandLineBuilder();
   ~CommandLineBuilder();
@@ -235,8 +235,7 @@ inline CommandLine CommandLineFromInitializerList(
 // This is the "opposite" of the above factory functions, transforming a
 // |CommandLine| into a vector of argument strings according to the rules
 // outlined at the top of this file.
-FXL_EXPORT std::vector<std::string> CommandLineToArgv(
-    const CommandLine& command_line);
+std::vector<std::string> CommandLineToArgv(const CommandLine& command_line);
 
 }  // namespace fxl
 

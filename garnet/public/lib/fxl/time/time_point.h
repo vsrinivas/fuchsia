@@ -20,7 +20,7 @@ namespace fxl {
 // WARNING: This class should not be serialized across reboots, or across
 // devices: the reference point is only stable for a given device between
 // reboots.
-class FXL_EXPORT TimePoint {
+class TimePoint {
  public:
   // Default TimePoint with internal value 0 (epoch).
   constexpr TimePoint() = default;

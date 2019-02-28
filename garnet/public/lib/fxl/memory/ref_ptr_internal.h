@@ -16,7 +16,7 @@ template <typename T>
 class RefPtr;
 
 template <typename T>
-FXL_EXPORT RefPtr<T> AdoptRef(T* ptr);
+RefPtr<T> AdoptRef(T* ptr);
 
 namespace internal {
 

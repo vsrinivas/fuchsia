@@ -15,7 +15,7 @@
 
 namespace fxl {
 
-class FXL_EXPORT Thread {
+class Thread {
  public:
   static constexpr size_t default_stack_size = 1 * 1024 * 1024;
 

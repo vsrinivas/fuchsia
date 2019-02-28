@@ -2,15 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if (is_fuchsia) {
-  import("//build/package.gni")
-}
-
-if (is_android) {
-  import("//build/config/android/config.gni")
-}
-
-source_set("fxl_common") {
+source_set("common") {
   visibility = [ ":*" ]
 
   sources = [
@@ -24,35 +16,36 @@ source_set("fxl_common") {
   public_configs = [ "//garnet/public:config" ]
 }
 
-source_set("fxl_header_only_types") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "functional/closure.h",
-    "time/time_delta.h",
-  ]
-
-  public_configs = [ "//garnet/public:config" ]
+if (is_fuchsia) {
+  fxl_logging_type = "shared_library"
+} else {
+  fxl_logging_type = "source_set"
 }
 
-# These are sources that store static global state that may impose potential
-# constraints on dynamic linking. We separate these out here.
-source_set("stateful_sources") {
-  visibility = [ ":*" ]
-
+target(fxl_logging_type, "fxl_logging") {
+  # Some of these sources store static global state that may impose potential
+  # constraints on dynamic linking.
   sources = [
+    "debug/debugger.cc",
+    "debug/debugger.h",
     "log_level.h",
+    "log_settings.cc",
     "log_settings.h",
     "log_settings_state.cc",
+    "logging.cc",
+    "logging.h",
   ]
 
   public_deps = [
-    ":fxl_common",
+    ":common",
   ]
 }
 
 source_set("memory") {
-  visibility = [ ":*", "//src/lib/files" ]
+  visibility = [
+    ":*",
+    "//src/lib/files",
+  ]
 
   sources = [
     "memory/ref_counted.h",
@@ -66,13 +59,16 @@ source_set("memory") {
   ]
 
   public_deps = [
-    ":fxl_common",
+    ":common",
     ":fxl_logging",
   ]
 }
 
 source_set("strings") {
-  visibility = [ ":*", "//src/lib/files" ]
+  visibility = [
+    ":*",
+    "//src/lib/files",
+  ]
 
   sources = [
     "strings/ascii.cc",
@@ -99,22 +95,51 @@ source_set("strings") {
   ]
 
   public_deps = [
-    ":fxl_common",
+    ":common",
     ":fxl_logging",
   ]
 }
 
-source_set("fxl_lib") {
-  visibility = [ ":*", "//src/lib/files" ]
+source_set("time") {
+  visibility = [ ":*" ]
 
+  sources = [
+    "time/stopwatch.cc",
+    "time/stopwatch.h",
+    "time/time_delta.h",
+    "time/time_point.cc",
+    "time/time_point.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":fxl_logging",
+  ]
+}
+
+source_set("functional") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "functional/apply.h",
+    "functional/cancelable_callback.h",
+    "functional/closure.h",
+    "functional/make_copyable.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":fxl_logging",
+    ":memory",
+  ]
+}
+
+static_library("fxl") {
   sources = [
     "command_line.cc",
     "command_line.h",
     "log_settings_command_line.cc",
     "log_settings_command_line.h",
-    "functional/apply.h",
-    "functional/cancelable_callback.h",
-    "functional/make_copyable.h",
     "observer_list.h",
     "random/rand.cc",
     "random/uuid.cc",
@@ -124,92 +149,26 @@ source_set("fxl_lib") {
     "tasks/task_runner.h",
     "threading/thread.cc",
     "threading/thread.h",
-    "time/stopwatch.cc",
-    "time/stopwatch.h",
-    "time/time_point.cc",
-    "time/time_point.h",
     "type_converter.h",
   ]
 
   public_deps = [
-    ":fxl_common",
+    ":common",
+    ":functional",
     ":fxl_logging",
     ":memory",
     ":strings",
+    ":time",
     "//src/lib/files",
     "//zircon/public/lib/fit",
   ]
+
   if (is_fuchsia) {
     libs = [ "zircon" ]
   }
 }
 
-source_set("fxl_logging_lib") {
-  visibility = [
-    ":fxl_logging",
-    ":fxl_logging_shlib",
-  ]
-  sources = [
-    "debug/debugger.cc",
-    "debug/debugger.h",
-    "log_settings.cc",
-    "logging.cc",
-    "logging.h",
-  ]
-
-  if (is_android) {
-    defines = [ "ANDROID_LOG_TAG=$android_log_tag" ]
-    libs = [ "log" ]
-  }
-
-  public_deps = [
-    ":fxl_common",
-    ":fxl_header_only_types",
-    ":stateful_sources",
-  ]
-}
-
-if (is_fuchsia) {
-  shared_library("fxl_logging") {
-    public_deps = [
-      ":fxl_logging_lib",
-    ]
-
-    public_configs = [ "//garnet/public:config" ]
-  }
-} else {
-  group("fxl_logging") {
-    public_deps = [
-      ":fxl_logging_lib",
-    ]
-  }
-}
-
-if (is_fuchsia) {
-  shared_library("fxl_so") {
-    output_name = "fxl"
-
-    public_deps = [
-      ":fxl_lib",
-    ]
-  }
-
-  # TODO: Remove once clients express their dependency on //src/lib/files explicitly.
-  group("fxl") {
-    public_deps = [
-      ":fxl_so",
-      "//src/lib/files",
-    ]
-  }
-} else {
-  group("fxl") {
-    public_deps = [
-      ":fxl_lib",
-    ]
-  }
-}
-
-source_set("fxl_printers") {
+source_set("printers") {
   testonly = true
 
   sources = [
@@ -220,15 +179,10 @@ source_set("fxl_printers") {
   ]
 }
 
-# TODO(IN-819): In the future we may want to use output_name here so that the a
-# host test and on-device test are named the same for the purposes of fx
-# run-test/run-host-tests.
-executable("fxl_unittests_bin") {
+executable("fxl_unittests") {
   testonly = true
 
   sources = [
-    "arraysize_unittest.cc",
-    "command_line_unittest.cc",
     # TODO: Move the files-related tests to a separate target.
     "//src/lib/files/directory_unittest.cc",
     "//src/lib/files/file_descriptor_unittest.cc",
@@ -236,6 +190,8 @@ executable("fxl_unittests_bin") {
     "//src/lib/files/glob_unittest.cc",
     "//src/lib/files/path_unittest.cc",
     "//src/lib/files/scoped_temp_dir_unittest.cc",
+    "arraysize_unittest.cc",
+    "command_line_unittest.cc",
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
     "functional/make_copyable_unittest.cc",
@@ -268,7 +224,7 @@ executable("fxl_unittests_bin") {
   deps = [
     ":fxl",
     ":fxl_logging",
-    ":fxl_printers",
+    ":printers",
     "test",
     "test:gtest_main",
     "//src/lib/files",
@@ -278,15 +234,18 @@ executable("fxl_unittests_bin") {
 }
 
 if (is_fuchsia) {
-  package("fxl_unittests") {
+  import("//build/package.gni")
+
+  package("fxl_tests") {
     testonly = true
 
     deps = [
-      ":fxl_unittests_bin",
+      ":fxl_unittests",
     ]
+
     tests = [
       {
-        name = "fxl_unittests_bin"
+        name = "fxl_unittests"
       },
     ]
   }

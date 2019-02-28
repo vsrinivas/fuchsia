@@ -23,7 +23,7 @@ enum class Base { k10, k16 };
 // representation of it. This is available for all |NumberType|s (u)intN_t (from
 // <stdint.h>) and also (unsigned) int.
 template <typename NumberType>
-FXL_EXPORT std::string NumberToString(NumberType number, Base base = Base::k10);
+std::string NumberToString(NumberType number, Base base = Base::k10);
 
 // Converts |string| containing a locale-independent representation of a
 // number to a numeric representation of that number. (On error, this returns
@@ -34,9 +34,8 @@ FXL_EXPORT std::string NumberToString(NumberType number, Base base = Base::k10);
 // unsigned types, unary '-' is not allowed. For signed types, "-0", "-00", etc.
 // are also allowed.
 template <typename NumberType>
-FXL_EXPORT bool StringToNumberWithError(fxl::StringView string,
-                                        NumberType* number,
-                                        Base base = Base::k10);
+bool StringToNumberWithError(fxl::StringView string, NumberType* number,
+                             Base base = Base::k10);
 
 // Converts |string| containing a locale-independent representation of a
 // number to a numeric representation of that number. (On error, this returns

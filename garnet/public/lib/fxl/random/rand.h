@@ -15,10 +15,10 @@
 namespace fxl {
 
 // Generates |output_length| random bytes into |output|.
-FXL_EXPORT void RandBytes(void* output, size_t output_length);
+void RandBytes(void* output, size_t output_length);
 
 // Returns a random number in range [0, UINT64_MAX]
-FXL_EXPORT uint64_t RandUint64();
+uint64_t RandUint64();
 
 }  // namespace fxl
 

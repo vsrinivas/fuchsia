@@ -14,7 +14,7 @@
 namespace fxl {
 
 // Posts tasks to a task queue.
-class FXL_EXPORT TaskRunner : public RefCountedThreadSafe<TaskRunner> {
+class TaskRunner : public RefCountedThreadSafe<TaskRunner> {
  public:
   // Posts a task to run as soon as possible.
   virtual void PostTask(Closure task) = 0;

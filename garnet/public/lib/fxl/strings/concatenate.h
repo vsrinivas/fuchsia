@@ -14,8 +14,7 @@
 namespace fxl {
 
 // Concatenates a fixed list of strings.
-FXL_EXPORT std::string Concatenate(
-    std::initializer_list<fxl::StringView> string_views);
+std::string Concatenate(std::initializer_list<fxl::StringView> string_views);
 
 }  // namespace fxl
 

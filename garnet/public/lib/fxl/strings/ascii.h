@@ -24,8 +24,7 @@ inline char ToUpperASCII(char c) {
   return (c >= 'a' && c <= 'z') ? (c + ('A' - 'a')) : c;
 }
 
-FXL_EXPORT bool EqualsCaseInsensitiveASCII(fxl::StringView v1,
-                                           fxl::StringView v2);
+bool EqualsCaseInsensitiveASCII(fxl::StringView v1, fxl::StringView v2);
 
 }  // namespace fxl
 

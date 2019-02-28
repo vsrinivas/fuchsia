@@ -76,7 +76,7 @@ source_set("unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/fxl:printers",
     "//garnet/public/lib/gtest",
     "//peridot/lib/convert",
     "//peridot/lib/rng:testing",

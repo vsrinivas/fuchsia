@@ -15,7 +15,7 @@
 namespace fxl {
 
 // A simple "stopwatch" for measuring time elapsed from a given starting point.
-class FXL_EXPORT Stopwatch final {
+class Stopwatch final {
  public:
   Stopwatch() {}
   ~Stopwatch() {}

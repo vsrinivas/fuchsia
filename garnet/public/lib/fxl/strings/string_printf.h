@@ -18,20 +18,19 @@
 namespace fxl {
 
 // Formats |printf()|-like input and returns it as an |std::string|.
-FXL_EXPORT std::string StringPrintf(const char* format, ...)
+std::string StringPrintf(const char* format, ...)
     FXL_PRINTF_FORMAT(1, 2) FXL_WARN_UNUSED_RESULT;
 
 // Formats |vprintf()|-like input and returns it as an |std::string|.
-FXL_EXPORT std::string StringVPrintf(const char* format,
-                                     va_list ap) FXL_WARN_UNUSED_RESULT;
+std::string StringVPrintf(const char* format,
+                          va_list ap) FXL_WARN_UNUSED_RESULT;
 
 // Formats |printf()|-like input and appends it to |*dest|.
-FXL_EXPORT void StringAppendf(std::string* dest, const char* format, ...)
+void StringAppendf(std::string* dest, const char* format, ...)
     FXL_PRINTF_FORMAT(2, 3);
 
 // Formats |vprintf()|-like input and appends it to |*dest|.
-FXL_EXPORT void StringVAppendf(std::string* dest, const char* format,
-                               va_list ap);
+void StringVAppendf(std::string* dest, const char* format, va_list ap);
 
 }  // namespace fxl
 

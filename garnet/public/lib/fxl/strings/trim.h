@@ -14,8 +14,7 @@ namespace fxl {
 
 // Returns a StringView over str, where chars_to_trim are removed from the
 // beginning and end of the StringView.
-FXL_EXPORT fxl::StringView TrimString(fxl::StringView str,
-                                      fxl::StringView chars_to_trim);
+fxl::StringView TrimString(fxl::StringView str, fxl::StringView chars_to_trim);
 
 }  // namespace fxl
 

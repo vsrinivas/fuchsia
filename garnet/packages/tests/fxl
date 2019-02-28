@@ -1,8 +1,8 @@
 {
     "host_tests": [
-        "//garnet/public/lib/fxl:fxl_unittests_bin"
+        "//garnet/public/lib/fxl:fxl_unittests"
     ],
     "packages": [
-        "//garnet/public/lib/fxl:fxl_unittests"
+        "//garnet/public/lib/fxl:fxl_tests"
     ]
 }

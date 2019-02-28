@@ -23,7 +23,7 @@
 namespace fxl {
 
 // A string-like object that points to a sized piece of memory.
-class FXL_EXPORT StringView {
+class StringView {
  public:
   // Types.
   using const_iterator = const char*;
@@ -154,15 +154,15 @@ class FXL_EXPORT StringView {
 
 // Comparison.
 
-FXL_EXPORT bool operator==(StringView lhs, StringView rhs);
-FXL_EXPORT bool operator!=(StringView lhs, StringView rhs);
-FXL_EXPORT bool operator<(StringView lhs, StringView rhs);
-FXL_EXPORT bool operator>(StringView lhs, StringView rhs);
-FXL_EXPORT bool operator<=(StringView lhs, StringView rhs);
-FXL_EXPORT bool operator>=(StringView lhs, StringView rhs);
+bool operator==(StringView lhs, StringView rhs);
+bool operator!=(StringView lhs, StringView rhs);
+bool operator<(StringView lhs, StringView rhs);
+bool operator>(StringView lhs, StringView rhs);
+bool operator<=(StringView lhs, StringView rhs);
+bool operator>=(StringView lhs, StringView rhs);
 
 // IO.
-FXL_EXPORT std::ostream& operator<<(std::ostream& o, StringView string_view);
+std::ostream& operator<<(std::ostream& o, StringView string_view);
 
 }  // namespace fxl
 

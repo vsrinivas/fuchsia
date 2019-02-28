@@ -27,16 +27,15 @@ struct LogSettings;
 // Returns false and leaves |out_settings| unchanged if there was an
 // error parsing the options.  Otherwise updates |out_settings| with any
 // values which were overridden by the command-line.
-FXL_EXPORT bool ParseLogSettings(const fxl::CommandLine& command_line,
-                                 LogSettings* out_settings);
+bool ParseLogSettings(const fxl::CommandLine& command_line,
+                      LogSettings* out_settings);
 
 // Parses and applies log settings from standard command-line options.
 // Returns false and leaves the active settings unchanged if there was an
 // error parsing the options.
 //
 // See |ParseLogSettings| for syntax.
-FXL_EXPORT bool SetLogSettingsFromCommandLine(
-    const fxl::CommandLine& command_line);
+bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line);
 
 }  // namespace fxl
 
