@@ -11,6 +11,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <usb/usb.h>
 #include <zircon/listnode.h>
@@ -37,7 +38,7 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 
 class UsbAudioStream;
 using UsbAudioStreamBase = ddk::Device<UsbAudioStream,
-                                       ddk::Ioctlable,
+                                       ddk::Messageable,
                                        ddk::Unbindable>;
 
 class UsbAudioStream : public UsbAudioStreamBase,
@@ -54,9 +55,9 @@ public:
     // DDK device implementation
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op,
-                         const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+        return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    }
 
 private:
     friend class fbl::RefPtr<UsbAudioStream>;
@@ -77,6 +78,9 @@ private:
     void ComputePersistentUniqueId();
 
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
+
+    // Device FIDL implementation
+    zx_status_t GetChannel(fidl_txn_t* txn);
 
     // Thunks for dispatching stream channel events.
     zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
@@ -120,6 +124,9 @@ private:
     void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
     static void RequestCompleteCallback(void* ctx, usb_request_t* request);
+
+    static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
+
     UsbAudioDevice& parent_;
     const fbl::unique_ptr<UsbAudioStreamInterface> ifc_;
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };

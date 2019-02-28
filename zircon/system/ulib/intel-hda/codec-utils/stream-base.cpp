@@ -22,6 +22,13 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
+// Device FIDL thunks
+fuchsia_hardware_audio_Device_ops_t IntelHDAStreamBase::AUDIO_FIDL_THUNKS {
+    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
+                        return reinterpret_cast<IntelHDAStreamBase*>(ctx)->GetChannel(txn);
+                   },
+};
+
 zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
@@ -33,16 +40,14 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .read         = nullptr,
     .write        = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](void* ctx, uint32_t op,
-                       const void* in_buf, size_t in_len,
-                       void* out_buf, size_t out_len, size_t* out_actual) -> zx_status_t {
-                        return reinterpret_cast<IntelHDAStreamBase*>(ctx)->
-                            DeviceIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-                    },
+    .ioctl        = nullptr,
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
-    .message      = nullptr,
+    .message      = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+                        return fuchsia_hardware_audio_Device_dispatch(ctx, txn, msg,
+                                                                      &AUDIO_FIDL_THUNKS);
+                    },
 };
 
 IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)
@@ -315,22 +320,7 @@ zx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
     return ZX_OK;
 }
 
-zx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
-                                            const void* in_buf,
-                                            size_t in_len,
-                                            void* out_buf,
-                                            size_t out_len,
-                                            size_t* out_actual) {
-    // The only IOCTL we support is get channel.
-    if (op != AUDIO_IOCTL_GET_CHANNEL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if ((out_buf == nullptr) ||
-        (out_actual == nullptr) ||
-        (out_len != sizeof(zx_handle_t))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
+zx_status_t IntelHDAStreamBase::GetChannel(fidl_txn_t* txn) {
     fbl::AutoLock obj_lock(&obj_lock_);
 
     // Do not allow any new connections if we are in the process of shutting down
@@ -390,8 +380,7 @@ zx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
             stream_channel_ = channel;
         }
 
-        *(reinterpret_cast<zx_handle_t*>(out_buf)) = client_endpoint.release();
-        *out_actual = sizeof(zx_handle_t);
+        fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
     }
 
     return res;

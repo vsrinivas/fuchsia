@@ -17,8 +17,10 @@ library("audio-utils") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-audio:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/zx",
   ]
 }

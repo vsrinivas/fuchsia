@@ -13,6 +13,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
@@ -31,7 +32,7 @@ namespace gauss {
 
 class TdmOutputStream;
 using TdmAudioStreamBase = ddk::Device<TdmOutputStream,
-                                       ddk::Ioctlable,
+                                       ddk::Messageable,
                                        ddk::Unbindable>;
 
 class TdmOutputStream : public TdmAudioStreamBase,
@@ -45,9 +46,9 @@ public:
     // DDK device implementation
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op,
-                         const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+        return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    }
 
 private:
     static int IrqThread(void* arg);
@@ -68,6 +69,9 @@ private:
           create_time_(zx_clock_get_monotonic()) { }
 
     virtual ~TdmOutputStream();
+
+    // Device FIDL implementation
+    zx_status_t GetChannel(fidl_txn_t* txn);
 
     zx_status_t Bind(const char* devname);
 
@@ -120,6 +124,8 @@ private:
         __TA_REQUIRES(lock_);
     zx_status_t OnStopLocked(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
         __TA_REQUIRES(lock_);
+
+    static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
     fbl::Mutex lock_;
     fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);

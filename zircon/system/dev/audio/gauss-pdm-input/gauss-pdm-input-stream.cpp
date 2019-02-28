@@ -19,6 +19,13 @@
 namespace audio {
 namespace gauss {
 
+// Device FIDL thunks
+fuchsia_hardware_audio_Device_ops_t GaussPdmInputStream::AUDIO_FIDL_THUNKS {
+    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
+                        return reinterpret_cast<GaussPdmInputStream*>(ctx)->GetChannel(txn);
+                   },
+};
+
 GaussPdmInputStream::~GaussPdmInputStream() {}
 
 // static
@@ -122,20 +129,7 @@ void GaussPdmInputStream::DdkRelease() {
     auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
 }
 
-zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op, const void* in_buf,
-                                          size_t in_len, void* out_buf,
-                                          size_t out_len, size_t* out_actual) {
-    zxlogf(DEBUG1, "%s\n", __func__);
-    // The only IOCTL we support is get channel.
-    if (op != AUDIO_IOCTL_GET_CHANNEL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    if ((out_buf == nullptr) || (out_actual == nullptr) ||
-        (out_len != sizeof(zx_handle_t))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
+zx_status_t GaussPdmInputStream::GetChannel(fidl_txn_t* txn) {
     fbl::AutoLock lock(&lock_);
 
     // Attempt to allocate a new driver channel and bind it to us.  If we don't
@@ -174,8 +168,7 @@ zx_status_t GaussPdmInputStream::DdkIoctl(uint32_t op, const void* in_buf,
             stream_channel_ = std::move(channel);
         }
 
-        *(reinterpret_cast<zx_handle_t*>(out_buf)) = client_endpoint.release();
-        *out_actual = sizeof(zx_handle_t);
+        return fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
     }
 
     return res;

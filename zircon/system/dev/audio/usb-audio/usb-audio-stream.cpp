@@ -26,6 +26,13 @@
 namespace audio {
 namespace usb {
 
+// Device FIDL thunks
+fuchsia_hardware_audio_Device_ops_t UsbAudioStream::AUDIO_FIDL_THUNKS {
+    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
+                        return reinterpret_cast<UsbAudioStream*>(ctx)->GetChannel(txn);
+                   },
+};
+
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 8;
 
 static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
@@ -238,38 +245,7 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
     ring_buffer_vmo_.reset();
 }
 
-void UsbAudioStream::DdkUnbind() {
-    // Close all of our client event sources if we have not already.
-    default_domain_->Deactivate();
-
-    // Unpublish our device node.
-    DdkRemove();
-}
-
-void UsbAudioStream::DdkRelease() {
-    // Reclaim our reference from the driver framework and let it go out of
-    // scope.  If this is our last reference (it should be), we will destruct
-    // immediately afterwards.
-    auto stream = fbl::internal::MakeRefPtrNoAdopt(this);
-
-    // Make sure that our parent is no longer holding a reference to us.
-    parent_.RemoveAudioStream(stream);
-}
-
-zx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
-                                     const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len, size_t* out_actual) {
-    // The only IOCTL we support is get channel.
-    if (op != AUDIO_IOCTL_GET_CHANNEL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    if ((out_buf == nullptr) ||
-        (out_actual == nullptr) ||
-        (out_len != sizeof(zx_handle_t))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
+zx_status_t UsbAudioStream::GetChannel(fidl_txn_t* txn) {
     fbl::AutoLock lock(&lock_);
 
     // Attempt to allocate a new driver channel and bind it to us.  If we don't
@@ -307,11 +283,28 @@ zx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
             stream_channel_ = channel;
         }
 
-        *(reinterpret_cast<zx_handle_t*>(out_buf)) = client_endpoint.release();
-        *out_actual = sizeof(zx_handle_t);
+        return fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
     }
 
     return res;
+}
+
+void UsbAudioStream::DdkUnbind() {
+    // Close all of our client event sources if we have not already.
+    default_domain_->Deactivate();
+
+    // Unpublish our device node.
+    DdkRemove();
+}
+
+void UsbAudioStream::DdkRelease() {
+    // Reclaim our reference from the driver framework and let it go out of
+    // scope.  If this is our last reference (it should be), we will destruct
+    // immediately afterwards.
+    auto stream = fbl::internal::MakeRefPtrNoAdopt(this);
+
+    // Make sure that our parent is no longer holding a reference to us.
+    parent_.RemoveAudioStream(stream);
 }
 
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)         \

@@ -12,6 +12,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -33,7 +34,7 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase = ddk::Device<SimpleAudioStream,
-                                          ddk::Ioctlable,
+                                          ddk::Messageable,
                                           ddk::Unbindable>;
 
 class SimpleAudioStream : public SimpleAudioStreamBase,
@@ -83,9 +84,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // DDK device implementation
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op,
-                         const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+        return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    }
 
   protected:
     friend class fbl::RefPtr<SimpleAudioStream>;
@@ -310,6 +311,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // publish the stream device node.
     zx_status_t PublishInternal();
 
+    // fuchsia hardware audio Device Interface
+    zx_status_t GetChannel(fidl_txn_t* txn);
+
     // Stream interface
     zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged)
         __TA_REQUIRES(domain_->token());
@@ -365,6 +369,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
     zx_status_t OnStop(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
         __TA_REQUIRES(domain_->token());
+
+    static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
     // Stream and ring buffer channel state.
     fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_->token());

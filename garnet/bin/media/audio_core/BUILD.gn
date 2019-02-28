@@ -84,10 +84,12 @@ executable("audio_core") {
     "//garnet/public/lib/media/audio",
     "//garnet/public/lib/media/timeline:no_converters",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-hardware-audio",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
   ]

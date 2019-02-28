@@ -10,9 +10,6 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
 
-#define AUDIO_IOCTL_GET_CHANNEL IOCTL(IOCTL_KIND_GET_HANDLE, 0xFE, 0x00)
-IOCTL_WRAPPER_OUT(ioctl_audio_get_channel, AUDIO_IOCTL_GET_CHANNEL, zx_handle_t);
-
 // When communicating with an Audio driver using zx_channel_call, do not use
 // the AUDIO_INVALID_TRANSACTION_ID as your message's transaction ID.  It is
 // reserved for async notifications sent from the driver to the application.

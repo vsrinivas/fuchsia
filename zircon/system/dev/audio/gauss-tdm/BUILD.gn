@@ -13,6 +13,7 @@ driver("gauss-tdm") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-audio:c",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",

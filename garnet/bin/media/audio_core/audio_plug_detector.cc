@@ -7,7 +7,10 @@
 #include <dirent.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/audio/cpp/fidl.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <sys/stat.h>
@@ -55,8 +58,8 @@ zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
   // Create our watchers.
   for (const auto& devnode : AUDIO_DEVNODES) {
     auto watcher = fsl::DeviceWatcher::Create(
-        devnode.path,
-        [this, is_input = devnode.is_input](int dir_fd, const std::string& filename) {
+        devnode.path, [this, is_input = devnode.is_input](
+                          int dir_fd, const std::string& filename) {
           AddAudioDevice(dir_fd, filename, is_input);
         });
 
@@ -86,7 +89,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
     return;
 
   // Open the device node.
-  fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
+  fbl::unique_fd dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     FXL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
                      << name << "\". (" << strerror(errno) << " : " << errno
@@ -94,13 +97,24 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
     return;
   }
 
+  // Obtain the FDIO device channel, then wrap it in a synchronous proxy and use
+  // it to get the stream channel.
+  zx_status_t res;
+  zx::channel dev_channel;
+  res = fdio_get_service_handle(dev_node.release(),
+                                dev_channel.reset_and_get_address());
+  if (res != ZX_OK) {
+    FXL_LOG(WARNING) << "Failed to obtain FDIO service channel to AudioOutput "
+                     << "(res " << res << ")";
+    return;
+  }
+
   // Obtain the stream channel
   zx::channel channel;
-  ssize_t res;
+  ::fuchsia::hardware::audio::Device_SyncProxy dev(std::move(dev_channel));
 
-  res =
-      ioctl_audio_get_channel(dev_node.get(), channel.reset_and_get_address());
-  if (res < 0) {
+  res = dev.GetChannel(&channel);
+  if (res != ZX_OK) {
     FXL_LOG(WARNING) << "Failed to open channel to AudioOutput (res " << res
                      << ")";
     return;

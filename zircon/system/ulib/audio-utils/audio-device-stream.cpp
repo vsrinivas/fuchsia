@@ -6,11 +6,13 @@
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
 #include <limits>
 #include <fbl/auto_call.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <lib/fdio/io.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmar.h>
@@ -108,19 +110,18 @@ zx_status_t AudioDeviceStream::Open() {
     if (stream_ch_ != ZX_HANDLE_INVALID)
         return ZX_ERR_BAD_STATE;
 
-    int fd = ::open(name(), O_RDONLY);
-    if (fd < 0) {
-        printf("Failed to open \"%s\" (res %d)\n", name(), fd);
-        return fd;
+    fbl::unique_fd fd{::open(name(), O_RDONLY)};
+    if (!fd.is_valid()) {
+        printf("Failed to open \"%s\"\n", name());
+        return ZX_ERR_NOT_FOUND;
     }
 
-    ssize_t res = ::fdio_ioctl(fd, AUDIO_IOCTL_GET_CHANNEL,
-                               nullptr, 0,
-                               &stream_ch_, sizeof(stream_ch_));
-    ::close(fd);
+    fzl::FdioCaller dev(std::move(fd));
+    zx_status_t res = fuchsia_hardware_audio_DeviceGetChannel(dev.borrow_channel(),
+                                                              stream_ch_.reset_and_get_address());
 
-    if (res != sizeof(stream_ch_)) {
-        printf("Failed to obtain channel (res %zd)\n", res);
+    if (res != ZX_OK) {
+        printf("Failed to obtain channel (res %d)\n", res);
         return static_cast<zx_status_t>(res);
     }
 

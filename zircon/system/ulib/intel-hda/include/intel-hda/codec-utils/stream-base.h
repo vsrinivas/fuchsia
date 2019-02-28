@@ -13,6 +13,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
 
 #include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
@@ -139,6 +140,9 @@ protected:
     void ReleaseUnsolTagLocked(uint8_t tag) __TA_REQUIRES(obj_lock_);
 
 private:
+    // fuchsia.hardware.audio.Device
+    zx_status_t GetChannel(fidl_txn_t* txn) __TA_EXCLUDES(obj_lock_);
+
     // Thunks for dispatching channel events.
     zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool privileged);
     void ProcessClientDeactivate(const dispatcher::Channel* channel, bool privileged);
@@ -173,12 +177,6 @@ private:
         __TA_REQUIRES(obj_lock_);
 
     zx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
-    zx_status_t DeviceIoctl(uint32_t op,
-                            const void* in_buf,
-                            size_t in_len,
-                            void* out_buf,
-                            size_t out_len,
-                            size_t* out_actual) __TA_EXCLUDES(obj_lock_);
 
     const uint32_t id_;
     const bool     is_input_;
@@ -207,6 +205,8 @@ private:
     static zx_status_t EncodeStreamFormat(const audio_proto::StreamSetFmtReq& fmt,
                                           uint16_t* encoded_fmt_out);
 
+
+    static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
     static zx_protocol_device_t STREAM_DEVICE_THUNKS;
 };
 
