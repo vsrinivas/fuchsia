@@ -16,11 +16,11 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/types/type_converters.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/unique_fd.h"
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
@@ -79,10 +79,12 @@ constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 // services.
 constexpr char kSessionCtlDir[] = "sessionctl";
 
-fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig() {
+fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig(
+    const std::string& user_profile_id) {
   fuchsia::ledger::cloud::firestore::Config config;
   config.server_id = kFirebaseProjectId;
   config.api_key = kFirebaseApiKey;
+  config.user_profile_id = user_profile_id;
   return config;
 }
 
@@ -299,7 +301,8 @@ void SessionmgrImpl::InitializeLedger(
       startup_context_->ConnectToEnvironmentService(
           cloud_provider.NewRequest());
     } else {
-      cloud_provider = LaunchCloudProvider(std::move(ledger_token_manager));
+      cloud_provider = LaunchCloudProvider(account_->profile_id,
+                                           std::move(ledger_token_manager));
     }
 
     ledger_user_id = account_->profile_id;
@@ -909,6 +912,7 @@ void SessionmgrImpl::ConnectToStoryEntityProvider(
 }
 
 fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::LaunchCloudProvider(
+    const std::string& user_profile_id,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
   FXL_CHECK(ledger_token_manager);
 
@@ -923,7 +927,7 @@ fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::LaunchCloudProvider(
   // TODO(mesch): Teardown cloud_provider_app_ ?
 
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  auto cloud_provider_config = GetLedgerFirestoreConfig();
+  auto cloud_provider_config = GetLedgerFirestoreConfig(user_profile_id);
 
   cloud_provider_factory_->GetCloudProvider(
       std::move(cloud_provider_config), std::move(ledger_token_manager),

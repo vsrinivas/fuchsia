@@ -177,6 +177,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   fuchsia::ledger::cloud::CloudProviderPtr LaunchCloudProvider(
+      const std::string& user_profile_id,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
 
   // Called during initialization. Schedules the given action to be executed

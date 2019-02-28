@@ -21,9 +21,11 @@ std::shared_ptr<grpc::Channel> MakeChannel() {
 }
 
 firebase_auth::FirebaseAuthImpl::Config GetFirebaseAuthConfig(
-    const std::string& api_key, const std::string& cobalt_client_name) {
+    const std::string& api_key, const std::string& user_profile_id,
+    const std::string& cobalt_client_name) {
   firebase_auth::FirebaseAuthImpl::Config config;
   config.api_key = api_key;
+  config.user_profile_id = user_profile_id;
   config.cobalt_client_name = cobalt_client_name;
 
   return config;
@@ -60,8 +62,9 @@ void FactoryImpl::GetCloudProvider(
         cloud_provider_request,
     GetCloudProviderCallback callback) {
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      GetFirebaseAuthConfig(config.api_key, cobalt_client_name_), dispatcher_,
-      random_, token_manager.Bind(), startup_context_);
+      GetFirebaseAuthConfig(config.api_key, config.user_profile_id,
+                            cobalt_client_name_),
+      dispatcher_, random_, token_manager.Bind(), startup_context_);
 
   GetFirebaseCloudProvider(std::move(config), std::move(firebase_auth),
                            std::move(cloud_provider_request),

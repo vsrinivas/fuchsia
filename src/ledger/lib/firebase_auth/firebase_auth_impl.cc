@@ -112,8 +112,7 @@ void FirebaseAuthImpl::GetToken(
   oauth_config.auth_provider_type = "google";
 
   token_manager_->GetFirebaseToken(
-      std::move(oauth_config), "", /*user_profile_id*/
-      "",                          /*audience*/
+      std::move(oauth_config), config_.user_profile_id, /*audience*/ "",
       config_.api_key,
       fxl::MakeCopyable([this, max_retries, callback = std::move(callback)](
                             fuchsia::auth::Status status,

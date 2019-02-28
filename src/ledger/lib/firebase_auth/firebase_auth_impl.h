@@ -42,6 +42,8 @@ class FirebaseAuthImpl : public FirebaseAuth {
   struct Config {
     // Value of the Firebase api key.
     std::string api_key;
+    // The user profile id to use with the |token_manager|.
+    std::string user_profile_id;
     // Name of the client to record during Cobalt error reporting.
     std::string cobalt_client_name;
     // Maximum number of retries on non-fatal errors.

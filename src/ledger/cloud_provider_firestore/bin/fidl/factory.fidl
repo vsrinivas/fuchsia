@@ -14,6 +14,9 @@ struct Config {
 
     // API key to use when authenticating with Firebase Auth.
     string api_key;
+
+    // The user profile id to use with the |token_manager|.
+    string user_profile_id;
 };
 
 [Discoverable]
