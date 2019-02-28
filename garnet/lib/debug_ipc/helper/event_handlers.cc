@@ -71,18 +71,17 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
                 << watch_info->resource_name;
   }
 
+  // async-loop will remove the handler for this event, so we need to re-add it.
+  signal_handler.WaitForSignals();
   switch (watch_info->type) {
     case WatchType::kFdio:
-      signal_handler.WaitForSignals();
       loop->OnFdioSignal(watch_info_id, *watch_info, signal->observed);
       break;
     case WatchType::kSocket:
-      signal_handler.WaitForSignals();
       loop->OnSocketSignal(watch_info_id, *watch_info, signal->observed);
       break;
     case WatchType::kTask:
       FXL_DCHECK(watch_info_id == kTaskSignalKey);
-      signal_handler.WaitForSignals();
       loop->CheckAndProcessPendingTasks();
       break;
     case WatchType::kProcessExceptions:

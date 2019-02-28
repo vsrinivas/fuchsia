@@ -13,7 +13,7 @@ namespace debug_ipc {
 class ZirconExceptionWatcher;
 class SocketWatcher;
 
-enum class WatchType {
+enum class WatchType : uint32_t {
   kTask,
   kFdio,
   kProcessExceptions,

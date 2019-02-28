@@ -13,6 +13,8 @@
 
 namespace debug_ipc {
 
+enum class WatchType : uint32_t;
+
 // This signal on the task_event_ indicates there is work to do.
 constexpr uint32_t kTaskSignal = ZX_USER_SIGNAL_0;
 
