@@ -102,6 +102,16 @@ package("cobalt") {
       dest = "certs/cobaltv0.1/shuffler_public.pem"
     },
     {
+      # Cobalt 1.0 analyzer public key.
+      path = rebase_path("//third_party/cobalt/keys/analyzer_public_key.tink")
+      dest = "keys/analyzer_public"
+    },
+    {
+      # Cobalt 1.0 shuffler public key.
+      path = rebase_path("//third_party/cobalt/keys/shuffler_public_key.tink")
+      dest = "keys/shuffler_public"
+    },
+    {
       path = rebase_path(get_label_info(":cobalt_internal_metrics_registry",
                                         "target_gen_dir") +
                          "/cobalt_internal_metrics_registry.pb")
