@@ -525,24 +525,21 @@ zx_status_t intel_serialio_i2c_issue_rx(
     return ZX_OK;
 }
 
+zx_status_t intel_serialio_i2c_flush_rx_full_irq(
+    intel_serialio_i2c_device_t* controller) {
+
+    mtx_lock(&controller->irq_mask_mutex);
+    zx_status_t status = zx_object_signal(controller->event_handle, RX_FULL_SIGNAL, 0);
+    RMWREG32(&controller->regs->intr_mask, INTR_RX_FULL, 1, 1);
+    mtx_unlock(&controller->irq_mask_mutex);
+    return status;
+}
+
 zx_status_t intel_serialio_i2c_read_rx(
     intel_serialio_i2c_device_t* controller,
     uint8_t* data) {
 
     *data = readl(&controller->regs->data_cmd);
-
-    uint32_t rx_tl;
-    intel_serialio_i2c_get_rx_fifo_threshold(controller, &rx_tl);
-    const uint32_t rxflr = readl(&controller->regs->rxflr) & 0x1ff;
-    // If we've dropped the RX queue level below the threshold, clear the signal
-    // and unmask the interrupt.
-    if (rxflr < rx_tl) {
-        mtx_lock(&controller->irq_mask_mutex);
-        zx_status_t status = zx_object_signal(controller->event_handle, RX_FULL_SIGNAL, 0);
-        RMWREG32(&controller->regs->intr_mask, INTR_RX_FULL, 1, 1);
-        mtx_unlock(&controller->irq_mask_mutex);
-        return status;
-    }
     return ZX_OK;
 }
 

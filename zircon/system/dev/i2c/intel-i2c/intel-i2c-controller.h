@@ -177,6 +177,8 @@ zx_status_t intel_serialio_i2c_wait_for_stop_detect(
 zx_status_t intel_serialio_i2c_issue_rx(
     intel_serialio_i2c_device_t* controller,
     uint32_t data_cmd);
+zx_status_t intel_serialio_i2c_flush_rx_full_irq(
+    intel_serialio_i2c_device_t* controller);
 zx_status_t intel_serialio_i2c_read_rx(
     intel_serialio_i2c_device_t* controller,
     uint8_t* data);
