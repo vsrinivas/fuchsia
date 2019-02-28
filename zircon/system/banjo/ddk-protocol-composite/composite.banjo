@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.composite;
+
+using ddk.driver;
+using zx;
+
+[Layout = "ddk-protocol"]
+interface Composite {
+    /// Returns the number of components that can be returned by GetComponents().
+    GetComponentCount() -> (uint32 count);
+    /// Returns a list of all of the components of this device, in the order
+    /// in which they were provided to device_add_composite().  The returned
+    /// devices must not be used after the composite device is unbound.
+    GetComponents() -> (vector<ddk.driver.ZxDevice?> components);
+};

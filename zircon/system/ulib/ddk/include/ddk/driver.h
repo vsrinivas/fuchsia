@@ -141,6 +141,50 @@ zx_status_t device_remove(zx_device_t* device);
 zx_status_t device_rebind(zx_device_t* device);
 void device_make_visible(zx_device_t* device);
 
+// A description of a part of a device component.  It provides a bind program
+// that will match a device on the path from the root of the device tree to the
+// target device.
+typedef struct device_component_part {
+    uint32_t instruction_count;
+    const zx_bind_inst_t* match_program;
+} device_component_part_t;
+
+// A description of a device that makes up part of a composite device.  The
+// particular device is identified by a sequence of part descriptions.  Each
+// part description must match either the target device or one of its ancestors.
+// The first element in |parts| must describe the root of the device tree.  The
+// last element in |parts| must describe the target device itself.  The
+// remaining elements of |parts| must match devices on the path from the root to
+// the target device, in order.  Some of those devices may be skipped, but every
+// element of |parts| must have a match.  Every device on the path that has a
+// property from the range [BIND_TOPO_START, BIND_TOPO_END] must be matched to
+// an element of |parts|.  This sequences of matches between |parts| and devices
+// must be unique.
+typedef struct device_component {
+    uint32_t parts_count;
+    const device_component_part_t* parts;
+} device_component_t;
+
+// Create a composite device with the properties |props| out of the devices
+// described by |components|.  The composite device will reside in the same
+// devhost as the device that matches |components[coresident_device_index]|,
+// unless |coresident_device_index| is UINT32_MAX, in which case it reside in
+// a new devhost.  Once all of the component devices are found, the composite
+// device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the
+// given properties.  A driver may then bind to the created device, and
+// access its parents via the protocol operations returned by
+// get_protocol(ZX_PROTOCOL_COMPOSITE).
+//
+// |name| must be no longer than ZX_DEVICE_NAME_MAX, and is used primarily as a
+// diagnostic.
+//
+// |dev| must be the zx_device_t corresponding to the "sys" device (i.e., the
+// Platform Bus Driver's device).
+zx_status_t device_add_composite(
+        zx_device_t* dev, const char* name, const zx_device_prop_t* props, size_t props_count,
+        const device_component_t* components, size_t components_count,
+        uint32_t coresident_device_index);
+
 #define ROUNDUP(a, b)   (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDDOWN(a, b) ((a) & ~((b)-1))
 #define ALIGN(a, b) ROUNDUP(a, b)
