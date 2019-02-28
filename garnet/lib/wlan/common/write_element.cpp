@@ -8,53 +8,42 @@ namespace wlan {
 namespace common {
 
 namespace {
-    template<typename T>
-    struct PartTraits {
-        static constexpr size_t size_bytes(const T& t) {
-            return sizeof(T);
-        }
 
-        static void write(BufferWriter* w, const T& t) {
-            w->Write(as_bytes(Span<const T>{&t, 1u}));
-        }
-    };
+template <typename T> struct PartTraits {
+    static constexpr size_t size_bytes(const T& t) { return sizeof(T); }
 
-    template<typename T>
-    struct PartTraits<Span<T>> {
-        static constexpr size_t size_bytes(const Span<T>& t) {
-            return t.size_bytes();
-        }
+    static void write(BufferWriter* w, const T& t) { w->Write(as_bytes(Span<const T>{&t, 1u})); }
+};
 
-        static void write(BufferWriter* w, const Span<T>& t) {
-            w->Write(as_bytes(t));
-        }
-    };
+template <typename T> struct PartTraits<Span<T>> {
+    static constexpr size_t size_bytes(const Span<T>& t) { return t.size_bytes(); }
 
-    template<size_t PadTo, typename... T>
-    void WriteWithPadding(BufferWriter* w, element_id::ElementId elem_id, const T&... parts) {
-        w->WriteByte(elem_id);
+    static void write(BufferWriter* w, const Span<T>& t) { w->Write(as_bytes(t)); }
+};
 
-        size_t total_size = (PartTraits<T>::size_bytes(parts) + ...);
-        size_t unpadded = total_size % PadTo;
-        size_t padding = 0;
-        if (unpadded > 0) {
-            padding = PadTo - unpadded;
-        }
+template <size_t PadTo, typename... T>
+void WriteWithPadding(BufferWriter* w, element_id::ElementId elem_id, const T&... parts) {
+    w->WriteByte(elem_id);
 
-        w->WriteByte(static_cast<uint8_t>(total_size + padding));
+    size_t total_size = (PartTraits<T>::size_bytes(parts) + ...);
+    size_t unpadded = total_size % PadTo;
+    size_t padding = 0;
+    if (unpadded > 0) { padding = PadTo - unpadded; }
 
-        (PartTraits<T>::write(w, parts) , ...);
+    w->WriteByte(static_cast<uint8_t>(total_size + padding));
 
-        for (size_t i = 0; i < padding; ++i) {
-            w->WriteByte(0);
-        }
+    (PartTraits<T>::write(w, parts), ...);
+
+    for (size_t i = 0; i < padding; ++i) {
+        w->WriteByte(0);
     }
+}
 
-    template<typename... T>
-    void Write(BufferWriter* w, element_id::ElementId elem_id, const T&... parts) {
-        WriteWithPadding<1>(w, elem_id, parts...);
-    }
-} // namespace
+template <typename... T>
+void Write(BufferWriter* w, element_id::ElementId elem_id, const T&... parts) {
+    WriteWithPadding<1>(w, elem_id, parts...);
+}
+}  // namespace
 
 void WriteSsid(BufferWriter* w, Span<const uint8_t> ssid) {
     Write(w, element_id::kSsid, ssid);
@@ -128,19 +117,19 @@ void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_i
 }
 
 void WritePreq(BufferWriter* w, const PreqHeader& header,
-               const common::MacAddr* originator_external_addr,
-               const PreqMiddle& middle, Span<const PreqPerTarget> per_target) {
+               const common::MacAddr* originator_external_addr, const PreqMiddle& middle,
+               Span<const PreqPerTarget> per_target) {
     auto ext_bytes = originator_external_addr == nullptr
-        ? Span<const uint8_t>{}
-        : Span<const uint8_t>{originator_external_addr->byte};
+                         ? Span<const uint8_t>{}
+                         : Span<const uint8_t>{originator_external_addr->byte};
     Write(w, element_id::kPreq, header, ext_bytes, middle, per_target);
 }
 
 void WritePrep(BufferWriter* w, const PrepHeader& header,
                const common::MacAddr* target_external_addr, const PrepTail& tail) {
     auto ext_bytes = target_external_addr == nullptr
-        ? Span<const uint8_t>{}
-        : Span<const uint8_t>{target_external_addr->byte};
+                         ? Span<const uint8_t>{}
+                         : Span<const uint8_t>{target_external_addr->byte};
     Write(w, element_id::kPrep, header, ext_bytes, tail);
 }
 
@@ -148,5 +137,5 @@ void WritePerr(BufferWriter* w, const PerrHeader& header, Span<const uint8_t> de
     Write(w, element_id::kPerr, header, destinations);
 }
 
-} // namespace common
-} // namespace wlan
+}  // namespace common
+}  // namespace wlan

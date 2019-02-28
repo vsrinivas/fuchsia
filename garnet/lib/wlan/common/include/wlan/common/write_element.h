@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_WRITER_H_
-#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_WRITER_H_
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_WRITE_ELEMENT_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_WRITE_ELEMENT_H_
 
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element.h>
@@ -30,13 +30,13 @@ void WriteMpmOpen(BufferWriter* w, MpmHeader mpm_header, const MpmPmk* pmk);
 void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_id,
                      const MpmPmk* pmk);
 void WritePreq(BufferWriter* w, const PreqHeader& header,
-               const common::MacAddr* originator_external_addr,
-               const PreqMiddle& middle, Span<const PreqPerTarget> per_target);
+               const common::MacAddr* originator_external_addr, const PreqMiddle& middle,
+               Span<const PreqPerTarget> per_target);
 void WritePrep(BufferWriter* w, const PrepHeader& header,
                const common::MacAddr* target_external_addr, const PrepTail& tail);
 void WritePerr(BufferWriter* w, const PerrHeader& header, Span<const uint8_t> destinations);
 
-} // namespace common
-} // namespace wlan
+}  // namespace common
+}  // namespace wlan
 
-#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_ELEMENT_WRITER_H_
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_WRITE_ELEMENT_H_
