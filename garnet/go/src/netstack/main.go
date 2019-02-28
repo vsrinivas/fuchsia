@@ -32,7 +32,7 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	tcpipstack "github.com/google/netstack/tcpip/stack"
-	"github.com/google/netstack/tcpip/transport/ping"
+	"github.com/google/netstack/tcpip/transport/icmp"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -77,7 +77,7 @@ func Main() {
 		ipv6.ProtocolName,
 		arp.ProtocolName,
 	}, []string{
-		ping.ProtocolName4,
+		icmp.ProtocolName4,
 		tcp.ProtocolName,
 		udp.ProtocolName,
 	}, tcpipstack.Options{})

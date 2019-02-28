@@ -16,7 +16,7 @@ import (
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/transport/ping"
+	"github.com/google/netstack/tcpip/transport/icmp"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
@@ -46,7 +46,7 @@ func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
 		case C.IPPROTO_IP, C.IPPROTO_UDP:
 			return 0, udp.ProtocolNumber
 		case C.IPPROTO_ICMP:
-			return 0, ping.ProtocolNumber4
+			return 0, icmp.ProtocolNumber4
 		}
 	}
 	return C.EPROTONOSUPPORT, 0
