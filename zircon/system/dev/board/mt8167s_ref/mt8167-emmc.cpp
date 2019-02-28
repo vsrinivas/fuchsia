@@ -86,14 +86,24 @@ zx_status_t Mt8167::EmmcInit() {
     };
 
     static const guid_map_t guid_map[] = {
+        // Mappings for Android Things paritition names, for mt8167s_ref and cleo.
         { "boot_a", GUID_ZIRCON_A_VALUE },
         { "boot_b", GUID_ZIRCON_B_VALUE },
         { "vbmeta_a", GUID_VBMETA_A_VALUE },
         { "vbmeta_b", GUID_VBMETA_B_VALUE },
-        { "userdata", GUID_FVM_VALUE },
         // For now, just give the paver a place to write Zircon-R,
         // even though the bootloader won't support it.
         { "vendor_a", GUID_ZIRCON_R_VALUE },
+
+        // Mappings for eagle partitions.
+        { "boot", GUID_ZIRCON_A_VALUE },
+        // For now, just give the paver a place to write Zircon-B,
+        // even though the bootloader won't support it.
+        { "vendor", GUID_ZIRCON_B_VALUE },
+        { "recovery", GUID_ZIRCON_R_VALUE },
+
+        // This works for all three boards.
+        { "userdata", GUID_FVM_VALUE },
     };
     static_assert(fbl::count_of(guid_map) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
 

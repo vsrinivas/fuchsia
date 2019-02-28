@@ -51,7 +51,7 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // GUID map (for GPT driver)
 // type: array of guid_map_t
 #define DEVICE_METADATA_GUID_MAP                  0x44495547 // GUID
-#define DEVICE_METADATA_GUID_MAP_MAX_ENTRIES      8
+#define DEVICE_METADATA_GUID_MAP_MAX_ENTRIES      16
 
 // list of buttons_button_config_t
 #define DEVICE_METADATA_BUTTONS_BUTTONS           0x424E5442 // BTNB
