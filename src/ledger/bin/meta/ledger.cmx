@@ -6,7 +6,6 @@
         "features": [],
         "services": [
             "fuchsia.netconnector.NetConnector",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider",
             "fuchsia.tracelink.Registry",
             "fuchsia.cobalt.LoggerFactory"
