@@ -230,13 +230,8 @@ void FetchBenchmark::ConnectReader() {
     return;
   }
 
-  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
-                   [this](Status status) {
-                     if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
-                       return;
-                     }
-                     WaitForReaderDownload();
-                   });
+  reader_->GetPageNew(fidl::MakeOptional(page_id_), reader_page_.NewRequest());
+  WaitForReaderDownload();
 }
 
 void FetchBenchmark::WaitForReaderDownload() {

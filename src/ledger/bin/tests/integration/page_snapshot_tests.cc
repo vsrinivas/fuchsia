@@ -726,7 +726,7 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
 
   page.Unbind();
 
-  page = instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
+  page = instance->GetPage(fidl::MakeOptional(test_page_id));
   PageId page_id;
   waiter = NewWaiter();
   page->GetId(callback::Capture(waiter->GetCallback(), &page_id));

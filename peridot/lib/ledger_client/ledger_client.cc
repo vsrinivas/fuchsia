@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include <lib/fsl/vmo/strings.h>
+#include <zircon/types.h>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -228,23 +229,27 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
   std::map<std::string, PageClient::Conflict> conflicts_;
 };
 
-LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger)
+LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger,
+                           fit::function<void(zx_status_t)> error)
     : ledger_(std::move(ledger)) {
-  ledger_->SetConflictResolverFactory(
-      bindings_.AddBinding(this), [](fuchsia::ledger::Status status) {
-        if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
-                         << LedgerStatusToString(status);
-        }
-      });
+  ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
+    if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
+      FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+      error(status);
+    } else {
+      FXL_LOG(INFO) << "Ledger disconnected: " << LedgerEpitaphToString(status);
+    }
+  });
+  ledger_->SetConflictResolverFactoryNew(bindings_.AddBinding(this));
 }
 
 LedgerClient::LedgerClient(
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
-    const std::string& name, fit::function<void()> error) {
-  ledger_.set_error_handler([](zx_status_t status) {
+    const std::string& name, fit::function<void(zx_status_t)> error) {
+  ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
       FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
+      error(status);
     } else {
       FXL_LOG(INFO) << "Ledger disconnected: " << LedgerEpitaphToString(status);
     }
@@ -254,15 +259,7 @@ LedgerClient::LedgerClient(
 
   // This must be the first call after GetLedger, otherwise the Ledger
   // starts with one reconciliation strategy, then switches to another.
-  ledger_->SetConflictResolverFactory(
-      bindings_.AddBinding(this),
-      [error = std::move(error)](fuchsia::ledger::Status status) {
-        if (status != fuchsia::ledger::Status::OK) {
-          FXL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
-                         << LedgerStatusToString(status);
-          error();
-        }
-      });
+  ledger_->SetConflictResolverFactoryNew(bindings_.AddBinding(this));
 }
 
 LedgerClient::~LedgerClient() = default;
@@ -283,13 +280,7 @@ fuchsia::ledger::Page* LedgerClient::GetPage(
   fuchsia::ledger::PageIdPtr page_id_copy = fuchsia::ledger::PageId::New();
 
   page_id_copy->id = page_id.id;
-  ledger_->GetPage(std::move(page_id_copy), page.NewRequest(),
-                   [context](fuchsia::ledger::Status status) {
-                     if (status != fuchsia::ledger::Status::OK) {
-                       FXL_LOG(ERROR) << "Ledger.GetPage() " << context << " "
-                                      << fidl::ToUnderlying(status);
-                     }
-                   });
+  ledger_->GetPageNew(std::move(page_id_copy), page.NewRequest());
 
   auto entry = std::make_unique<PageEntry>();
   entry->page_id = CloneStruct(page_id);

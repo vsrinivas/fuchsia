@@ -77,14 +77,7 @@ class CreateStoryCall
  private:
   void Run() override {
     FlowToken flow{this, &story_name_, &story_page_id_};
-    ledger()->GetPage(nullptr, story_page_.NewRequest(),
-                      Protect([this, flow](fuchsia::ledger::Status status) {
-                        if (status != fuchsia::ledger::Status::OK) {
-                          FXL_LOG(ERROR) << trace_name() << " "
-                                         << "Ledger.GetPage() "
-                                         << fidl::ToUnderlying(status);
-                        }
-                      }));
+    ledger()->GetPageNew(nullptr, story_page_.NewRequest());
     story_page_->GetId([this, flow](fuchsia::ledger::PageId id) {
       story_page_id_ = std::move(id);
       Cont(flow);
@@ -172,22 +165,9 @@ class DeleteStoryCall : public Operation<> {
 
   void Cont1(FlowToken flow) {
     // Get the story page so we can remove its contents.
-    ledger_->GetPage(std::make_unique<fuchsia::ledger::PageId>(
-                         *std::move(story_data_.mutable_story_page_id())),
-                     story_page_.NewRequest(),
-                     [this, flow, story_name = story_data_.story_info()->id](
-                         fuchsia::ledger::Status status) {
-                       if (status != fuchsia::ledger::Status::OK) {
-                         FXL_LOG(ERROR)
-                             << "Ledger.GetPage() for story " << story_name
-                             << ": " << fidl::ToUnderlying(status);
-                         return;
-                       }
-                       Cont2(flow);
-                     });
-  }
-
-  void Cont2(FlowToken flow) {
+    ledger_->GetPageNew(std::make_unique<fuchsia::ledger::PageId>(
+                            *std::move(story_data_.mutable_story_page_id())),
+                        story_page_.NewRequest());
     story_page_->Clear([this, flow, story_name = story_data_.story_info()->id](
                            fuchsia::ledger::Status status) {
       if (status != fuchsia::ledger::Status::OK) {
@@ -195,11 +175,11 @@ class DeleteStoryCall : public Operation<> {
                        << fidl::ToUnderlying(status);
         return;
       }
-      Cont3(flow);
+      Cont2(flow);
     });
   }
 
-  void Cont3(FlowToken flow) {
+  void Cont2(FlowToken flow) {
     // Remove the story data in the session page.
     session_page_->Delete(
         to_array(StoryNameToStoryDataKey(story_data_.story_info()->id)),
@@ -210,11 +190,11 @@ class DeleteStoryCall : public Operation<> {
             FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
                            << fidl::ToUnderlying(status);
           }
-          Cont4(flow);
+          Cont3(flow);
         });
   }
 
-  void Cont4(FlowToken flow) {
+  void Cont3(FlowToken flow) {
     // Remove the story snapshot in the session page.
     session_page_->Delete(
         to_array(StoryNameToStorySnapshotKey(story_data_.story_info()->id)),

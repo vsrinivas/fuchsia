@@ -54,7 +54,7 @@ class LedgerAppInstanceFactory {
     // Ledger object.
     PagePtr GetTestPage();
     // Returns a connection to the given page on the default Ledger object.
-    PagePtr GetPage(const PageIdPtr& page_id, Status expected_status);
+    PagePtr GetPage(const PageIdPtr& page_id);
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;

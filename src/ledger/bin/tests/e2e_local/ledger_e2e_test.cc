@@ -142,8 +142,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
-  ledger_->GetRootPage(page.NewRequest(), &status);
-  ASSERT_EQ(ledger::Status::OK, status);
+  ledger_->GetRootPageNew(page.NewRequest());
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(ledger::Status::OK, status);
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
@@ -191,8 +190,8 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
   // Create 5 pages, add contents and clear them.
   for (int i = 0; i < page_count; ++i) {
     fidl::SynchronousInterfacePtr<ledger::Page> page;
-    ledger_->GetPage(nullptr, page.NewRequest(), &status);
-    ASSERT_EQ(ledger::Status::OK, status);
+    ledger_->GetPageNew(nullptr, page.NewRequest());
+    ASSERT_EQ(ledger_->Sync(), ZX_OK);
 
     // Check that the directory has been created.
     ledger::PageId page_id;
@@ -377,9 +376,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
 
   // Write and read some data to verify that Ledger still works.
   fidl::SynchronousInterfacePtr<ledger::Page> page;
-  status = ledger::Status::INTERNAL_ERROR;
-  ledger_->GetPage(nullptr, page.NewRequest(), &status);
-  ASSERT_EQ(ledger::Status::OK, status);
+  ledger_->GetPageNew(nullptr, page.NewRequest());
   status = ledger::Status::INTERNAL_ERROR;
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(ledger::Status::OK, status);
@@ -424,9 +421,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
 
   // Write some data.
   fidl::SynchronousInterfacePtr<ledger::Page> page;
-  status = ledger::Status::INTERNAL_ERROR;
-  ledger_->GetPage(nullptr, page.NewRequest(), &status);
-  ASSERT_EQ(ledger::Status::OK, status);
+  ledger_->GetPageNew(nullptr, page.NewRequest());
   status = ledger::Status::INTERNAL_ERROR;
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(ledger::Status::OK, status);

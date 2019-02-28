@@ -272,14 +272,12 @@ void BacklogBenchmark::ConnectUploader() {
 
   TRACE_ASYNC_BEGIN("benchmark", "get_uploader_page", 0);
   TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
-  uploader_->GetPage(fidl::MakeOptional(page_id_), uploader_page_.NewRequest(),
-                     [this](Status status) {
-                       if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
-                         return;
-                       }
-                       TRACE_ASYNC_END("benchmark", "get_uploader_page", 0);
-                       WaitForUploaderUpload();
-                     });
+  uploader_->GetPageNew(fidl::MakeOptional(page_id_),
+                        uploader_page_.NewRequest());
+  uploader_->Sync([this] {
+    TRACE_ASYNC_END("benchmark", "get_uploader_page", 0);
+    WaitForUploaderUpload();
+  });
 }
 
 void BacklogBenchmark::WaitForUploaderUpload() {
@@ -316,14 +314,11 @@ void BacklogBenchmark::ConnectReader() {
 
   TRACE_ASYNC_BEGIN("benchmark", "download", 0);
   TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
-  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
-                   [this](Status status) {
-                     if (QuitOnError(QuitLoopClosure(), status, "GetPage")) {
-                       return;
-                     }
-                     TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
-                     WaitForReaderDownload();
-                   });
+  reader_->GetPageNew(fidl::MakeOptional(page_id_), reader_page_.NewRequest());
+  reader_->Sync([this] {
+    TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
+    WaitForReaderDownload();
+  });
 }
 
 void BacklogBenchmark::WaitForReaderDownload() {

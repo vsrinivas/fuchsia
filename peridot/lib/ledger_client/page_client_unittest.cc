@@ -98,11 +98,9 @@ class PageClientTest : public TestWithLedger {
 
   fuchsia::ledger::PagePtr CreatePagePtr(const std::string& page_id) {
     fuchsia::ledger::PagePtr page;
-    ledger_client()->ledger()->GetPage(
+    ledger_client()->ledger()->GetPageNew(
         std::make_unique<fuchsia::ledger::PageId>(MakePageId(page_id)),
-        page.NewRequest(), [](fuchsia::ledger::Status status) {
-          ASSERT_EQ(fuchsia::ledger::Status::OK, status);
-        });
+        page.NewRequest());
     return page;
   }
 

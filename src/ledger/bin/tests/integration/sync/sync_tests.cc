@@ -72,7 +72,7 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   // Create the second instance, connect to the same page and download the
   // data.
   auto instance2 = NewLedgerAppInstance();
-  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
   auto page2_state_watcher = WatchPageSyncState(&page2);
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
@@ -114,7 +114,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto loop_waiter = NewWaiter();
   page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
   auto page2_state_watcher = WatchPageSyncState(&page2);
   // Wait until the sync on the second device is idle and record the number of
   // state updates.
@@ -182,7 +182,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   auto loop_waiter = NewWaiter();
   page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
   auto page2_state_watcher = WatchPageSyncState(&page2);
   // Wait until the sync on the second device is idle and record the number of
   // state updates.

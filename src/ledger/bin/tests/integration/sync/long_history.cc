@@ -73,7 +73,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   // Create the second instance, connect to the same page and download the
   // data.
   auto instance2 = NewLedgerAppInstance();
-  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id), Status::OK);
+  auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
   auto page2_state_watcher = WatchPageSyncState(&page2);
   ASSERT_TRUE(page2_state_watcher);
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));

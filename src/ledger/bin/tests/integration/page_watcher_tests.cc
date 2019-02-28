@@ -501,8 +501,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  PagePtr page2 =
-      instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
+  PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
   PageWatcherPtr watcher1_ptr;
   auto watcher_waiter1 = NewWaiter();
@@ -625,8 +624,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  PagePtr page2 =
-      instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
+  PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
   PageWatcherPtr watcher1_ptr;
   auto watcher1_waiter = NewWaiter();

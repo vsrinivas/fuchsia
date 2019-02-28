@@ -342,10 +342,9 @@ void SessionmgrImpl::InitializeLedger(
   });
   AtEnd(Reset(&ledger_repository_));
 
-  ledger_client_ =
-      std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this] {
-        FXL_LOG(ERROR)
-            << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
+  ledger_client_ = std::make_unique<LedgerClient>(
+      ledger_repository_.get(), kAppId, [this](zx_status_t status) {
+        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Shutdown();
       });
   AtEnd(Reset(&ledger_client_));

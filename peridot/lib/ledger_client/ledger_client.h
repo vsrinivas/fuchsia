@@ -29,8 +29,10 @@ class PageClient;
 class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
  public:
   LedgerClient(fuchsia::ledger::internal::LedgerRepository* ledger_repository,
-               const std::string& name, fit::function<void()> error);
-  LedgerClient(fuchsia::ledger::LedgerPtr ledger);
+               const std::string& name,
+               fit::function<void(zx_status_t status)> error);
+  LedgerClient(fuchsia::ledger::LedgerPtr ledger,
+               fit::function<void(zx_status_t status)> error);
   ~LedgerClient() override;
 
   fuchsia::ledger::Ledger* ledger() const { return ledger_.get(); }

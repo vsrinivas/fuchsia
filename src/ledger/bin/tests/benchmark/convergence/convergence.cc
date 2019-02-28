@@ -169,10 +169,9 @@ void ConvergenceBenchmark::Run() {
     if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
       return;
     }
-    device_context->ledger->GetPage(
+    device_context->ledger->GetPageNew(
         fidl::MakeOptional(page_id_),
-        device_context->page_connection.NewRequest(),
-        QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
+        device_context->page_connection.NewRequest());
     PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
     device_context->page_connection->GetSnapshot(

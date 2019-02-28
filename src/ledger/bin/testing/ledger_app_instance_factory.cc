@@ -68,35 +68,15 @@ LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
 }
 
 PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
-  fidl::InterfaceHandle<Page> page;
-  Status status;
-  LedgerPtr ledger = GetTestLedger();
-  auto waiter = loop_controller_->NewWaiter();
-  ledger->GetPage(nullptr, page.NewRequest(),
-                  callback::Capture(waiter->GetCallback(), &status));
-  if (!waiter->RunUntilCalled()) {
-    ADD_FAILURE() << "|GetPage| failed to call back.";
-    return nullptr;
-  }
-  EXPECT_EQ(Status::OK, status);
-
-  return page.Bind();
+  PagePtr page;
+  GetTestLedger()->GetPageNew(nullptr, page.NewRequest());
+  return page;
 }
 
 PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
-    const PageIdPtr& page_id, Status expected_status) {
+    const PageIdPtr& page_id) {
   PagePtr page_ptr;
-  Status status;
-  LedgerPtr ledger = GetTestLedger();
-  auto waiter = loop_controller_->NewWaiter();
-  ledger->GetPage(fidl::Clone(page_id), page_ptr.NewRequest(),
-                  callback::Capture(waiter->GetCallback(), &status));
-  if (!waiter->RunUntilCalled()) {
-    ADD_FAILURE() << "|GetPage| failed to call back.";
-    return nullptr;
-  }
-  EXPECT_EQ(expected_status, status);
-
+  GetTestLedger()->GetPageNew(fidl::Clone(page_id), page_ptr.NewRequest());
   return page_ptr;
 }
 

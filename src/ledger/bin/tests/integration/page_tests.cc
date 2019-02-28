@@ -59,13 +59,11 @@ TEST_P(PageIntegrationTest, GetLedger) {
 TEST_P(PageIntegrationTest, GetRootPage) {
   auto instance = NewLedgerAppInstance();
   LedgerPtr ledger = instance->GetTestLedger();
-  Status status;
   PagePtr page;
+  ledger->GetRootPageNew(page.NewRequest());
   auto loop_waiter = NewWaiter();
-  ledger->GetRootPage(page.NewRequest(),
-                      callback::Capture(loop_waiter->GetCallback(), &status));
+  ledger->Sync(loop_waiter->GetCallback());
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 }
 
 TEST_P(PageIntegrationTest, NewPage) {
@@ -84,7 +82,7 @@ TEST_P(PageIntegrationTest, GetPage) {
   // Create a page and expect to find it by its id.
   PagePtr page = instance->GetTestPage();
   PageId id = PageGetId(&page);
-  instance->GetPage(fidl::MakeOptional(id), Status::OK);
+  instance->GetPage(fidl::MakeOptional(id));
 }
 
 // Verifies that a page can be connected to twice.
@@ -95,7 +93,7 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   PageId page_id_1 = PageGetId(&page1);
 
   // Connect to the same page again.
-  PagePtr page2 = instance->GetPage(fidl::MakeOptional(page_id_1), Status::OK);
+  PagePtr page2 = instance->GetPage(fidl::MakeOptional(page_id_1));
   PageId page_id_2 = PageGetId(&page2);
   EXPECT_EQ(page_id_1.id, page_id_2.id);
 }

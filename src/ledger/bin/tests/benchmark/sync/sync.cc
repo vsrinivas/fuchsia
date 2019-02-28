@@ -192,9 +192,7 @@ void SyncBenchmark::Run() {
         }
         alpha_page_ = std::move(page);
         page_id_ = id;
-        beta_->GetPage(fidl::MakeOptional(id), beta_page_.NewRequest(),
-                       QuitOnErrorCallback(QuitLoopClosure(), "GetPage"));
-
+        beta_->GetPageNew(fidl::MakeOptional(id), beta_page_.NewRequest());
         PageSnapshotPtr snapshot;
         beta_page_->GetSnapshot(
             snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),

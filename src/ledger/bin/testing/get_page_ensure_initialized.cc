@@ -21,31 +21,20 @@ void GetPageEnsureInitialized(
     fit::function<void(Status, PagePtr, PageId)> callback) {
   auto page = std::make_unique<PagePtr>();
   auto request = page->NewRequest();
-  (*ledger)->GetPage(
-      std::move(requested_id), std::move(request),
-      [delay_callback, page = std::move(page),
-       error_handler = std::move(error_handler),
-       callback = std::move(callback)](Status status) mutable {
-        if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Failure while getting a page.";
-          callback(status, nullptr, {});
-          return;
-        }
-
-        page->set_error_handler(
-            [error_handler = std::move(error_handler)](zx_status_t status) {
-              FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-              error_handler();
-            });
-
-        auto page_ptr = (*page).get();
-        page_ptr->GetId([delay_callback, page = std::move(page),
-                         callback = std::move(callback)](PageId page_id) {
-          if (delay_callback == DelayCallback::YES) {
-            zx_nanosleep(zx_deadline_after(kDelay.get()));
-          }
-          callback(Status::OK, std::move(*page), page_id);
-        });
+  (*ledger)->GetPageNew(std::move(requested_id), std::move(request));
+  page->set_error_handler(
+      [error_handler = std::move(error_handler)](zx_status_t status) {
+        FXL_LOG(ERROR) << "The page connection was closed, quitting.";
+        error_handler();
       });
+
+  auto page_ptr = (*page).get();
+  page_ptr->GetId([delay_callback, page = std::move(page),
+                   callback = std::move(callback)](PageId page_id) {
+    if (delay_callback == DelayCallback::YES) {
+      zx_nanosleep(zx_deadline_after(kDelay.get()));
+    }
+    callback(Status::OK, std::move(*page), page_id);
+  });
 }
 }  // namespace ledger
