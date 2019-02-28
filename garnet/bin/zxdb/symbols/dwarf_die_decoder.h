@@ -100,6 +100,30 @@ class DwarfDieDecoder {
   void AddFile(llvm::dwarf::Attribute attribute,
                llvm::Optional<std::string>* output);
 
+  // A special handler to get the parent of the most deep abstract origin.
+  //
+  // Most DIEs can have an "abstract origin" which is another DIE that
+  // underlays values. Theroretically abstract origins can be linked into
+  // arbitrarily long chains. In the current Clang this mostly happens for
+  // inlined functions, where the inlined instance references the actual
+  // function definition as its abstract origin. But abstract origins can
+  // theoretically appear almost anywhere.
+  //
+  // Normally this class handles abstract origins transparently when querying
+  // attributes. But the parent DIE is not an attribute so needs to be handled
+  // explicitly. In the example of inlined functions, the parent of the inlined
+  // subroutine DIE will be the block it's inlined into, but the parent of the
+  // abstract origin will be the namespace or class that lexically encloses
+  // that function.
+  //
+  // This function will cause the parent of the deepest abstract origin to be
+  // placed into the given output when the DIE is decoded.
+  //
+  // If there is no abstract origin, this will be filled in with the regular
+  // parent of the DIE. The only case the output should be !isValid() is when
+  // decoding a toplevel DIE with no parent.
+  void AddAbstractParent(llvm::DWARFDie* output);
+
   // Extracts data with a custom callback. When the attribute is encountered,
   // the callback is executed with the associated form value. This can be used
   // to cover attributes that could be encoded using multiple different
@@ -139,6 +163,11 @@ class DwarfDieDecoder {
   // Normally there will be few attributes and a brute-force search through a
   // contiguous array will be faster than a map lookup.
   std::vector<Dispatch> attrs_;
+
+  // Non-null indicates that the caller has requested the abstract parent (see
+  // AddAbstractParent() above) be computed. This variable will hold the
+  // desired output location for the parent of the decoded DIE.
+  llvm::DWARFDie* abstract_parent_ = nullptr;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DwarfDieDecoder);
 };

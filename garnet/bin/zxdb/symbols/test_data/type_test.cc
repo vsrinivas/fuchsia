@@ -54,6 +54,10 @@ EXPORT int DoStructCall(const Struct& arg1, int arg2) {
   }
 }
 
+__attribute__((always_inline)) int InlinedFunction(int param) {
+  return param * 2;
+}
+
 }  // namespace my_ns
 
 void My2DArray() {
@@ -70,9 +74,22 @@ struct ForInline {
   }
 };
 
-EXPORT int CallInline(int param) {
+// Call both inline member functions and an inlined function declared in
+// the same file.
+//
+// As of this writing, Clang will generate the inline member as an inlined
+// subroutine with an abstract origin of the implementation, that in turn
+// references the declaration inside the class. The enclosing scope should come
+// from the declaration.
+//
+// The non-member inlined function will skip the declaration, meaning the
+// enclosing scope should come from the abstract origin instead.
+EXPORT int CallInlineMember(int param) {
   ForInline for_inline;
   return for_inline.InlinedFunction(param + 1);
+}
+EXPORT int CallInline(int param) {
+  return my_ns::InlinedFunction(param + 1);
 }
 
 struct StructWithEnums {

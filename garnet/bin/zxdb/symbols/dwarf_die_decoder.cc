@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 
@@ -177,6 +177,11 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
       });
 }
 
+void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
+  FXL_DCHECK(!abstract_parent_);
+  abstract_parent_ = output;
+}
+
 void DwarfDieDecoder::AddCustom(
     llvm::dwarf::Attribute attribute,
     std::function<void(const llvm::DWARFFormValue&)> callback) {
@@ -244,7 +249,6 @@ bool DwarfDieDecoder::DecodeInternal(
                               unit_);
       abstract_origin = DecodeReference(unit_, form_value);
       decoded_current = true;
-      needs_dispatch = false;
     } else {
       // Track attributes that we've already seen and don't decode duplicates
       // (most DIEs won't have duplicates, this is for when we recursively
@@ -266,10 +270,12 @@ bool DwarfDieDecoder::DecodeInternal(
           continue;
 
         // Found the attribute, dispatch it and mark it read.
-        form_value.extractValue(extractor_, &offset, unit_->getFormParams(),
-                                unit_);
+        if (!decoded_current) {
+          form_value.extractValue(extractor_, &offset, unit_->getFormParams(),
+                                  unit_);
+          decoded_current = true;
+        }
         dispatch.second(form_value);
-        decoded_current = true;
         break;
       }
     }
@@ -285,6 +291,11 @@ bool DwarfDieDecoder::DecodeInternal(
   if (abstract_origin.isValid() && abstract_origin_refs_to_follow > 0) {
     return DecodeInternal(*abstract_origin.getDebugInfoEntry(),
                           abstract_origin_refs_to_follow - 1, seen_attrs);
+  } else {
+    // The deepest DIE in the abstract origin chain was found (which will be
+    // the original DIE itself if there was no abstract origin).
+    if (abstract_parent_)
+      *abstract_parent_ = unit_->getParent(&die);
   }
 
   return true;

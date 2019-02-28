@@ -246,6 +246,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
     const llvm::DWARFDie& die, int tag, bool is_specification) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
+
   llvm::DWARFDie specification;
   decoder.AddReference(llvm::dwarf::DW_AT_specification, &specification);
 
@@ -339,7 +342,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   function->set_inner_blocks(std::move(inner_blocks));
   function->set_variables(std::move(variables));
 
-  llvm::DWARFDie parent = die.getParent();
   if (parent) {
     if (!function->parent()) {
       // Set the parent symbol when it hasn't already been set. We always want
@@ -428,6 +430,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(
   // This object and its setup could be cached for better performance.
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
+
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
 
@@ -458,12 +465,20 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(
   if (bit_offset)
     base_type->set_bit_offset(static_cast<int>(*bit_offset));
 
+  if (parent)
+    base_type->set_parent(MakeLazy(parent));
+
   return base_type;
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
     const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
 
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
@@ -497,6 +512,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
   }
   result->set_data_members(std::move(data));
   result->set_inherited_from(std::move(inheritance));
+
+  if (parent)
+    result->set_parent(MakeLazy(parent));
+
   return result;
 }
 
@@ -529,6 +548,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   DwarfDieDecoder main_decoder(symbols_->context(), die.getDwarfUnit());
+
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  main_decoder.AddAbstractParent(&parent);
 
   // Name is optional (enums can be anonymous).
   llvm::Optional<const char*> type_name;
@@ -590,14 +614,22 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   if (type)
     lazy_type = MakeLazy(type);
   const char* type_name_str = type_name ? *type_name : "";
-  return fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type),
+  auto result = fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type),
                                           *byte_size, is_signed,
                                           std::move(map));
+  if (parent)
+    result->set_parent(MakeLazy(parent));
+  return result;
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(
     const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
 
   llvm::DWARFDie return_type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &return_type);
@@ -623,6 +655,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(
 
   auto function = fxl::MakeRefCounted<FunctionType>(lazy_return_type,
                                                     std::move(parameters));
+  if (parent)
+    function->set_parent(MakeLazy(parent));
   return function;
 }
 
@@ -704,6 +738,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
     const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
+
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
 
@@ -723,12 +762,20 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
   if (name)
     result->set_assigned_name(*name);
 
+  if (parent)
+    result->set_parent(MakeLazy(parent));
+
   return result;
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
     const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
 
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
@@ -739,6 +786,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
   auto result = fxl::MakeRefCounted<Namespace>();
   if (name)
     result->set_assigned_name(*name);
+
+  if (parent)
+    result->set_parent(MakeLazy(parent));
   return result;
 }
 

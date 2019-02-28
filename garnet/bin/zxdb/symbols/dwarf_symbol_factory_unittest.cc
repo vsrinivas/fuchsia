@@ -28,6 +28,7 @@ const char kDoStructCallName[] = "DoStructCall";
 const char kGetIntPtrName[] = "GetIntPtr";
 const char kGetStructMemberPtrName[] = "GetStructMemberPtr";
 const char kPassRValueRefName[] = "PassRValueRef";
+const char kCallInlineMemberName[] = "CallInlineMember";
 const char kCallInlineName[] = "CallInline";
 
 // Returns the function symbol with the given name. The name is assumed to
@@ -114,14 +115,14 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
             member->GetFullName());
 }
 
-TEST(DwarfSymbolFactory, InlinedFunction) {
+TEST(DwarfSymbolFactory, InlinedMemberFunction) {
   ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the CallInline function.
   fxl::RefPtr<const Function> call_function =
-      GetFunctionWithName(module, kCallInlineName);
+      GetFunctionWithName(module, kCallInlineMemberName);
   ASSERT_TRUE(call_function);
 
   // It should have one inner block that's the inline function.
@@ -130,6 +131,8 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
       call_function->inner_blocks()[0].Get()->AsFunction();
   ASSERT_TRUE(inline_func);
   EXPECT_EQ(Symbol::kTagInlinedSubroutine, inline_func->tag());
+
+  EXPECT_EQ("ForInline::InlinedFunction", inline_func->GetFullName());
 
   // The inline function should have two parameters, "this" and "param".
   ASSERT_EQ(2u, inline_func->parameters().size());
@@ -148,6 +151,29 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   // "this" parameter specified on the abstract origin. We need to correlate
   // it to the one on the inlined instance to get the location correct.
   EXPECT_EQ(this_param, inline_func->GetObjectPointerVariable());
+}
+
+TEST(DwarfSymbolFactory, InlinedFunction) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the CallInline function.
+  fxl::RefPtr<const Function> call_function =
+      GetFunctionWithName(module, kCallInlineName);
+  ASSERT_TRUE(call_function);
+
+  // It should have one inner block that's the inline function.
+  ASSERT_EQ(1u, call_function->inner_blocks().size());
+  const Function* inline_func =
+      call_function->inner_blocks()[0].Get()->AsFunction();
+  ASSERT_TRUE(inline_func);
+  EXPECT_EQ(Symbol::kTagInlinedSubroutine, inline_func->tag());
+
+  // Parameter decoding is tested by the InlinedMemberFunction test above. Here
+  // we care that the enclosing namespace is correct because of the different
+  // ways these inlined routines are declared.
+  EXPECT_EQ("my_ns::InlinedFunction", inline_func->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, ModifiedBaseType) {
