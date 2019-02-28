@@ -38,6 +38,8 @@ default_args = {
 check_targets = [
   "//garnet/*",
   "//peridot/*",
+  "//sdk/*",
+  "//src/*",
   "//topaz/*",
   "//vendor/*",
   "//zircon/*",
