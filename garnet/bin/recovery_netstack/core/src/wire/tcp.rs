@@ -15,7 +15,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddr, IpProto};
+use crate::ip::{Ip, IpAddress, IpProto};
 use crate::transport::tcp::TcpOption;
 use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum, Options};
 
@@ -69,19 +69,19 @@ pub struct TcpSegment<B> {
 }
 
 /// Arguments required to parse a TCP segment.
-pub struct TcpParseArgs<A: IpAddr> {
+pub struct TcpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
-impl<A: IpAddr> TcpParseArgs<A> {
+impl<A: IpAddress> TcpParseArgs<A> {
     /// Construct a new `TcpParseArgs`.
     pub fn new(src_ip: A, dst_ip: A) -> TcpParseArgs<A> {
         TcpParseArgs { src_ip, dst_ip }
     }
 }
 
-impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, TcpParseArgs<A>> for TcpSegment<B> {
+impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegment<B> {
     type Error = ParseError;
 
     fn parse_metadata(&self) -> ParseMetadata {
@@ -133,7 +133,7 @@ impl<B: ByteSlice> TcpSegment<B> {
 
     // Compute the TCP checksum, skipping the checksum field itself. Returns
     // None if the segment size is too large.
-    fn compute_checksum<A: IpAddr>(&self, src_ip: A, dst_ip: A) -> Option<u16> {
+    fn compute_checksum<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> Option<u16> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
         let mut checksum = Checksum::new();
         checksum.add_bytes(src_ip.bytes());
@@ -233,7 +233,7 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder<A: IpAddr>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
+    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
         let mut s = TcpSegmentBuilder {
             src_ip,
             dst_ip,
@@ -258,7 +258,7 @@ impl<B: ByteSlice> TcpSegment<B> {
 // always has a valid checksum.
 
 /// A builder for TCP segments.
-pub struct TcpSegmentBuilder<A: IpAddr> {
+pub struct TcpSegmentBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: u16,
@@ -269,7 +269,7 @@ pub struct TcpSegmentBuilder<A: IpAddr> {
     window_size: u16,
 }
 
-impl<A: IpAddr> TcpSegmentBuilder<A> {
+impl<A: IpAddress> TcpSegmentBuilder<A> {
     /// Construct a new `TcpSegmentBuilder`.
     ///
     /// If `ack_num` is `Some`, then the ACK flag will be set.
@@ -319,7 +319,7 @@ impl<A: IpAddr> TcpSegmentBuilder<A> {
     }
 }
 
-impl<A: IpAddr> PacketBuilder for TcpSegmentBuilder<A> {
+impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
     fn header_len(&self) -> usize {
         TCP_MIN_HDR_LEN
     }
@@ -602,7 +602,7 @@ mod tests {
     }
 
     // Return a stock TcpSegmentBuilder with reasonable default values.
-    fn new_builder<A: IpAddr>(src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
+    fn new_builder<A: IpAddress>(src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
         TcpSegmentBuilder::new(
             src_ip,
             dst_ip,

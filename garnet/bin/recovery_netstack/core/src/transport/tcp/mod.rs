@@ -15,7 +15,7 @@ use std::num::NonZeroU16;
 
 use packet::BufferMut;
 
-use crate::ip::{Ip, IpAddr, Ipv4, Ipv6};
+use crate::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use crate::wire::tcp::{TcpParseArgs, TcpSegment};
 use crate::{Context, EventDispatcher};
 
@@ -42,13 +42,13 @@ pub struct TcpTimerId {
 }
 
 #[derive(Eq, PartialEq, Hash)]
-struct TwoTuple<A: IpAddr> {
+struct TwoTuple<A: IpAddress> {
     local_ip: A,
     local_port: NonZeroU16,
 }
 
 #[derive(Eq, PartialEq, Hash)]
-struct FourTuple<A: IpAddr> {
+struct FourTuple<A: IpAddress> {
     local_ip: A,
     local_port: NonZeroU16,
     remote_ip: A,
@@ -59,7 +59,7 @@ struct FourTuple<A: IpAddr> {
 ///
 /// In the event of an unreachable port, `receive_ip_packet` returns the buffer
 /// in its original state (with the TCP segment un-parsed) in the `Err` variant.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,

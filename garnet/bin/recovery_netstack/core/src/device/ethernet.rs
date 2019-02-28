@@ -8,12 +8,12 @@ use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
 use packet::{Buf, ParseBuffer, Serializer};
-use specialize_ip_macro::specialize_ip_addr;
+use specialize_ip_macro::specialize_ip_address;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::DeviceId;
-use crate::ip::{Ip, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
+use crate::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
@@ -206,8 +206,8 @@ impl EthernetIpExt for Ipv6 {
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new Ethernet frame and sends it.
-#[specialize_ip_addr]
-pub fn send_ip_frame<D: EventDispatcher, A: IpAddr, S: Serializer>(
+#[specialize_ip_address]
+pub fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     ctx: &mut Context<D>,
     device_id: u64,
     local_addr: A,
@@ -278,8 +278,8 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
 }
 
 /// Get the IP address associated with this device.
-#[specialize_ip_addr]
-pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+pub fn get_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: u64,
 ) -> Option<(A, Subnet<A>)> {
@@ -290,8 +290,8 @@ pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
 }
 
 /// Set the IP address associated with this device.
-#[specialize_ip_addr]
-pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+pub fn set_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: u64,
     addr: A,

@@ -25,14 +25,14 @@ pub enum IpVersion {
 /// An IP address.
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum IpAddress {
+pub enum IpAddr {
     V4(Ipv4Addr),
     V6(Ipv6Addr),
 }
 
-impl<A: IpAddr> From<A> for IpAddress {
-    fn from(addr: A) -> IpAddress {
-        addr.into_ip_address()
+impl<A: IpAddress> From<A> for IpAddr {
+    fn from(addr: A) -> IpAddr {
+        addr.into_ip_addr()
     }
 }
 
@@ -60,7 +60,7 @@ impl IpVersion {
 
 mod sealed {
     // Ensure that only Ipv4 and Ipv6 can implement IpVersion and that only
-    // Ipv4Addr and Ipv6Addr can implement IpAddr.
+    // Ipv4Addr and Ipv6Addr can implement IpAddress.
     pub trait Sealed {}
 
     impl Sealed for super::Ipv4 {}
@@ -95,7 +95,7 @@ pub trait Ip: Sized + self::sealed::Sealed {
     /// The address type for this IP version.
     ///
     /// `Ipv4Addr` for IPv4 and `Ipv6Addr` for IPv6.
-    type Addr: IpAddr<Version = Self>;
+    type Addr: IpAddress<Version = Self>;
 }
 
 /// IPv4.
@@ -141,7 +141,7 @@ impl Ip for Ipv6 {
 }
 
 /// An IPv4 or IPv6 address.
-pub trait IpAddr
+pub trait IpAddress
 where
     Self: Sized + Eq + PartialEq + Hash + Copy + Display + Debug + self::sealed::Sealed,
 {
@@ -164,7 +164,7 @@ where
     fn mask(&self, bits: u8) -> Self;
 
     /// Convert a statically-typed IP address into a dynamically-typed one.
-    fn into_ip_address(self) -> IpAddress;
+    fn into_ip_addr(self) -> IpAddr;
 }
 
 /// An IPv4 address.
@@ -184,7 +184,7 @@ impl Ipv4Addr {
     }
 }
 
-impl IpAddr for Ipv4Addr {
+impl IpAddress for Ipv4Addr {
     const BYTES: u8 = 4;
 
     type Version = Ipv4;
@@ -207,8 +207,8 @@ impl IpAddr for Ipv4Addr {
         &self.0
     }
 
-    fn into_ip_address(self) -> IpAddress {
-        IpAddress::V4(self)
+    fn into_ip_addr(self) -> IpAddr {
+        IpAddr::V4(self)
     }
 }
 
@@ -247,7 +247,7 @@ impl Ipv6Addr {
     }
 }
 
-impl IpAddr for Ipv6Addr {
+impl IpAddress for Ipv6Addr {
     const BYTES: u8 = 16;
 
     type Version = Ipv6;
@@ -270,8 +270,8 @@ impl IpAddr for Ipv6Addr {
         &self.0
     }
 
-    fn into_ip_address(self) -> IpAddress {
-        IpAddress::V6(self)
+    fn into_ip_addr(self) -> IpAddr {
+        IpAddr::V6(self)
     }
 }
 
@@ -314,7 +314,7 @@ pub enum IpSubnet {
     V6(Subnet<Ipv6Addr>),
 }
 
-impl<A: IpAddr> From<Subnet<A>> for IpSubnet {
+impl<A: IpAddress> From<Subnet<A>> for IpSubnet {
     default fn from(_addr: Subnet<A>) -> IpSubnet {
         unreachable!()
     }
@@ -358,7 +358,7 @@ impl<A> Subnet<A> {
     }
 }
 
-impl<A: IpAddr> Subnet<A> {
+impl<A: IpAddress> Subnet<A> {
     /// Create a new subnet.
     ///
     /// Create a new subnet with the given network address and prefix length.
@@ -412,13 +412,13 @@ impl Subnet<Ipv4Addr> {
     }
 }
 
-impl<A: IpAddr> Display for Subnet<A> {
+impl<A: IpAddress> Display for Subnet<A> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }
 }
 
-impl<A: IpAddr> Debug for Subnet<A> {
+impl<A: IpAddress> Debug for Subnet<A> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }

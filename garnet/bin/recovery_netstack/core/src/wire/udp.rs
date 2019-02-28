@@ -15,7 +15,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddr, IpProto};
+use crate::ip::{Ip, IpAddress, IpProto};
 use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum};
 
 pub const HEADER_BYTES: usize = 8;
@@ -69,19 +69,19 @@ pub struct UdpPacket<B> {
 }
 
 /// Arguments required to parse a UDP packet.
-pub struct UdpParseArgs<A: IpAddr> {
+pub struct UdpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
-impl<A: IpAddr> UdpParseArgs<A> {
+impl<A: IpAddress> UdpParseArgs<A> {
     /// Construct a new `UdpParseArgs`.
     pub fn new(src_ip: A, dst_ip: A) -> UdpParseArgs<A> {
         UdpParseArgs { src_ip, dst_ip }
     }
 }
 
-impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B> {
+impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B> {
     type Error = ParseError;
 
     fn parse_metadata(&self) -> ParseMetadata {
@@ -144,7 +144,7 @@ impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B
 impl<B: ByteSlice> UdpPacket<B> {
     // Compute the UDP checksum, skipping the checksum field itself. Returns
     // None if the packet size is too large.
-    fn compute_checksum<A: IpAddr>(&self, src_ip: A, dst_ip: A) -> Option<u16> {
+    fn compute_checksum<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> Option<u16> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Checksum_computation
         let mut c = Checksum::new();
         c.add_bytes(src_ip.bytes());
@@ -212,7 +212,7 @@ impl<B: ByteSlice> UdpPacket<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder<A: IpAddr>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
+    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
         UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
     }
 }
@@ -224,14 +224,14 @@ impl<B: ByteSlice> UdpPacket<B> {
 // has a valid checksum.
 
 /// A builder for UDP packets.
-pub struct UdpPacketBuilder<A: IpAddr> {
+pub struct UdpPacketBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: Option<NonZeroU16>,
     dst_port: NonZeroU16,
 }
 
-impl<A: IpAddr> UdpPacketBuilder<A> {
+impl<A: IpAddress> UdpPacketBuilder<A> {
     /// Construct a new `UdpPacketBuilder`.
     pub fn new(
         src_ip: A,
@@ -243,7 +243,7 @@ impl<A: IpAddr> UdpPacketBuilder<A> {
     }
 }
 
-impl<A: IpAddr> PacketBuilder for UdpPacketBuilder<A> {
+impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
     fn header_len(&self) -> usize {
         HEADER_BYTES
     }
@@ -447,7 +447,13 @@ mod tests {
         // Test thact while a given byte pattern optionally succeeds, zeroing out
         // certain bytes causes failure. `zero` is a list of byte indices to
         // zero out that should cause failure.
-        fn test_zero<I: IpAddr>(src: I, dst: I, succeeds: bool, zero: &[usize], err: ParseError) {
+        fn test_zero<I: IpAddress>(
+            src: I,
+            dst: I,
+            succeeds: bool,
+            zero: &[usize],
+            err: ParseError,
+        ) {
             // Set checksum to zero so that, in IPV4, it will be ignored. In
             // IPv6, this /is/ the test.
             let mut buf = [1, 2, 3, 4, 0, 8, 0, 0];

@@ -8,9 +8,9 @@ use std::mem;
 
 use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer};
-use specialize_ip_macro::specialize_ip_addr;
+use specialize_ip_macro::specialize_ip_address;
 
-use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use crate::ip::{send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::icmp::{
     IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
     Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode,
@@ -19,8 +19,8 @@ use crate::wire::icmp::{
 use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
-#[specialize_ip_addr]
-pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+#[specialize_ip_address]
+pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -118,8 +118,8 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// payload with the problematic Next Header type. In other words, in an IPv6
 /// packet with a single header with a Next Header type of TCP, it `header_len`
 /// would be the length of the single header (40 bytes).
-#[specialize_ip_addr]
-pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+#[specialize_ip_address]
+pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -186,8 +186,8 @@ pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMu
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
-#[specialize_ip_addr]
-pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+#[specialize_ip_address]
+pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -230,8 +230,8 @@ pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
-#[specialize_ip_addr]
-pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+#[specialize_ip_address]
+pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -281,8 +281,8 @@ pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
-#[specialize_ip_addr]
-pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+#[specialize_ip_address]
+pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,

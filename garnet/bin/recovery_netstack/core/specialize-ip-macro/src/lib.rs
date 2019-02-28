@@ -25,12 +25,12 @@ pub fn specialize_ip(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn specialize_ip_addr(attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn specialize_ip_address(attr: TokenStream, input: TokenStream) -> TokenStream {
     specialize_ip_inner(
         attr,
         input,
-        "specialize_ip_addr",
-        "IpAddr",
+        "specialize_ip_address",
+        "IpAddress",
         "Ipv4Addr",
         "Ipv6Addr",
         "ipv4addr",
@@ -39,7 +39,7 @@ pub fn specialize_ip_addr(attr: TokenStream, input: TokenStream) -> TokenStream 
 }
 
 // Hook the inner attributes so that we can print reasonable error messages if
-// they're ever used outside of a #[specialize_ip[addr]] function; otherwise,
+// they're ever used outside of a #[specialize_ip[address]] function; otherwise,
 // the error message is simply about an unrecognized attribute.
 
 #[proc_macro_attribute]
@@ -69,7 +69,7 @@ pub fn ipv4addr(attr: TokenStream, _input: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     Error::new_spanned(
         attr,
-        "#[ipv4addr] attribute outside of #[specialize_ip_addr] function or in unexpected location",
+        "#[ipv4addr] attribute outside of #[specialize_ip_address] function or in unexpected location",
     )
     .to_compile_error()
     .into()
@@ -80,7 +80,7 @@ pub fn ipv6addr(attr: TokenStream, _input: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     Error::new_spanned(
         attr,
-        "#[ipv6addr] attribute outside of #[specialize_ip_addr] function or in unexpected location",
+        "#[ipv6addr] attribute outside of #[specialize_ip_address] function or in unexpected location",
     )
     .to_compile_error()
     .into()
@@ -111,10 +111,10 @@ fn specialize_ip_inner(
 }
 
 // A configuration that allows us to implement most of the logic agnostic to
-// whether we're implementing #[specialize_ip] or #[specialize_ip_addr].
+// whether we're implementing #[specialize_ip] or #[specialize_ip_address].
 #[derive(Debug)]
 struct Config {
-    // specialize_ip or specialize_ip_addr
+    // specialize_ip or specialize_ip_address
     attr_name: &'static str,
     // Ip or IpAddr
     trait_name: &'static str,

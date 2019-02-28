@@ -254,11 +254,11 @@ pub const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig 
 /// state configured.
 #[derive(Clone, Default)]
 pub struct DummyEventDispatcherBuilder {
-    devices: Vec<(Mac, Option<(IpAddress, IpSubnet)>)>,
+    devices: Vec<(Mac, Option<(IpAddr, IpSubnet)>)>,
     arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
     // usize refers to index into devices Vec
     device_routes: Vec<(IpSubnet, usize)>,
-    routes: Vec<(IpSubnet, IpAddress)>,
+    routes: Vec<(IpSubnet, IpAddr)>,
 }
 
 impl DummyEventDispatcherBuilder {
@@ -288,7 +288,12 @@ impl DummyEventDispatcherBuilder {
     ///
     /// `add_device_with_ip` is like `add_device`, except that it takes an
     /// associated IP address and subnet to assign to the device.
-    pub fn add_device_with_ip<A: IpAddr>(&mut self, mac: Mac, ip: A, subnet: Subnet<A>) -> usize {
+    pub fn add_device_with_ip<A: IpAddress>(
+        &mut self,
+        mac: Mac,
+        ip: A,
+        subnet: Subnet<A>,
+    ) -> usize {
         let idx = self.devices.len();
         self.devices.push((mac, Some((ip.into(), subnet.into()))));
         idx
@@ -300,12 +305,12 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Add a route to the forwarding table.
-    pub fn add_route<A: IpAddr>(&mut self, subnet: Subnet<A>, next_hop: A) {
+    pub fn add_route<A: IpAddress>(&mut self, subnet: Subnet<A>, next_hop: A) {
         self.routes.push((subnet.into(), next_hop.into()));
     }
 
     /// Add a device route to the forwarding table.
-    pub fn add_device_route<A: IpAddr>(&mut self, subnet: Subnet<A>, device: usize) {
+    pub fn add_device_route<A: IpAddress>(&mut self, subnet: Subnet<A>, device: usize) {
         self.device_routes.push((subnet.into(), device));
     }
 
@@ -321,10 +326,10 @@ impl DummyEventDispatcherBuilder {
             let id = ctx.state().add_ethernet_device(mac, IPV6_MIN_MTU);
             idx_to_device_id.insert(idx, id);
             match ip_subnet {
-                Some((IpAddress::V4(ip), IpSubnet::V4(subnet))) => {
+                Some((IpAddr::V4(ip), IpSubnet::V4(subnet))) => {
                     crate::device::set_ip_addr(&mut ctx, id, ip, subnet)
                 }
-                Some((IpAddress::V6(ip), IpSubnet::V6(subnet))) => {
+                Some((IpAddr::V6(ip), IpSubnet::V6(subnet))) => {
                     crate::device::set_ip_addr(&mut ctx, id, ip, subnet)
                 }
                 None => {}
@@ -344,10 +349,10 @@ impl DummyEventDispatcherBuilder {
         }
         for (subnet, next_hop) in routes {
             match (subnet, next_hop) {
-                (IpSubnet::V4(subnet), IpAddress::V4(next_hop)) => {
+                (IpSubnet::V4(subnet), IpAddr::V4(next_hop)) => {
                     crate::ip::add_route(&mut ctx, subnet, next_hop)
                 }
-                (IpSubnet::V6(subnet), IpAddress::V6(next_hop)) => {
+                (IpSubnet::V6(subnet), IpAddr::V6(next_hop)) => {
                     crate::ip::add_route(&mut ctx, subnet, next_hop)
                 }
                 _ => unreachable!(),

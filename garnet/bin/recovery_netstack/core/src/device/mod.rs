@@ -14,7 +14,7 @@ use log::debug;
 use packet::Serializer;
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
-use crate::ip::{IpAddr, Ipv4Addr, Subnet};
+use crate::ip::{IpAddress, Ipv4Addr, Subnet};
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -131,7 +131,7 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
     local_addr: A,
     body: S,
 ) where
-    A: IpAddr,
+    A: IpAddress,
     S: Serializer,
 {
     match device.protocol {
@@ -147,7 +147,7 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId,
 }
 
 /// Get the IP address and subnet associated with this device.
-pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
+pub fn get_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
 ) -> Option<(A, Subnet<A>)> {
@@ -157,7 +157,7 @@ pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
 }
 
 /// Set the IP address and subnet associated with this device.
-pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
+pub fn set_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr: A,

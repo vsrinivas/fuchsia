@@ -30,7 +30,7 @@ use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, Serialize
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv6};
+use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
 use crate::wire::util::{fits_in_u32, Checksum, OptionImpl, Options};
 
@@ -313,12 +313,12 @@ impl<
 }
 
 /// Arguments required to parse an ICMP packet.
-pub struct IcmpParseArgs<A: IpAddr> {
+pub struct IcmpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
-impl<A: IpAddr> IcmpParseArgs<A> {
+impl<A: IpAddress> IcmpParseArgs<A> {
     /// Construct a new `IcmpParseArgs`.
     pub fn new(src_ip: A, dst_ip: A) -> IcmpParseArgs<A> {
         IcmpParseArgs { src_ip, dst_ip }

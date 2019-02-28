@@ -8,10 +8,10 @@ use std::hash::Hash;
 use std::num::NonZeroU16;
 
 use packet::{BufferMut, BufferSerializer, ParsablePacket, Serializer};
-use specialize_ip_macro::specialize_ip_addr;
+use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
-use crate::ip::{Ip, IpAddr, IpProto, Ipv4Addr, Ipv6Addr};
+use crate::ip::{Ip, IpAddress, IpProto, Ipv4Addr, Ipv6Addr};
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{Context, EventDispatcher, StackState};
@@ -39,21 +39,21 @@ impl<D: EventDispatcher> Default for UdpState<D> {
     }
 }
 
-struct UdpStateInner<D: EventDispatcher, A: IpAddr> {
+struct UdpStateInner<D: EventDispatcher, A: IpAddress> {
     conns: ConnAddrMap<D::UdpConn, Conn<A>>,
     listeners: ListenerAddrMap<D::UdpListener, Listener<A>>,
     wildcard_listeners: ListenerAddrMap<D::UdpListener, NonZeroU16>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-struct Conn<A: IpAddr> {
+struct Conn<A: IpAddress> {
     local_addr: A,
     local_port: NonZeroU16,
     remote_addr: A,
     remote_port: NonZeroU16,
 }
 
-impl<A: IpAddr> Conn<A> {
+impl<A: IpAddress> Conn<A> {
     /// Construct a `Conn` from an incoming packet.
     ///
     /// The source is treated as the remote address/port, and the destination is
@@ -70,12 +70,12 @@ impl<A: IpAddr> Conn<A> {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-struct Listener<A: IpAddr> {
+struct Listener<A: IpAddress> {
     addr: A,
     port: NonZeroU16,
 }
 
-impl<A: IpAddr> Listener<A> {
+impl<A: IpAddress> Listener<A> {
     /// Construct a `Listener` from an incoming packet.
     ///
     /// The destination is treated as the local address/port.
@@ -111,7 +111,7 @@ pub trait UdpEventDispatcher {
     }
 
     /// Receive a UDP packet for a listener.
-    fn receive_udp_from_listen<A: IpAddr>(
+    fn receive_udp_from_listen<A: IpAddress>(
         &mut self,
         listener: &Self::UdpListener,
         src_ip: A,
@@ -127,7 +127,7 @@ pub trait UdpEventDispatcher {
 ///
 /// In the event of an unreachable port, `receive_ip_packet` returns the buffer
 /// in its original state (with the UDP packet un-parsed) in the `Err` variant.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+pub fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -229,7 +229,7 @@ pub fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+pub fn send_udp_listener<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     listener: &D::UdpListener,
     local_addr: A,
@@ -306,7 +306,7 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// # Panics
 ///
 /// `connect_udp` panics if `conn` is already in use.
-pub fn connect_udp<D: EventDispatcher, A: IpAddr>(
+pub fn connect_udp<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     conn: D::UdpConn,
     local_addr: Option<A>,
@@ -359,7 +359,7 @@ pub fn connect_udp<D: EventDispatcher, A: IpAddr>(
 /// # Panics
 ///
 /// `listen_udp` panics if `listener` is already in use.
-pub fn listen_udp<D: EventDispatcher, A: IpAddr>(
+pub fn listen_udp<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     listener: D::UdpListener,
     addrs: Vec<A>,
@@ -396,8 +396,8 @@ pub fn listen_udp<D: EventDispatcher, A: IpAddr>(
     }
 }
 
-#[specialize_ip_addr]
-fn get_inner_state<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+fn get_inner_state<D: EventDispatcher, A: IpAddress>(
     state: &mut StackState<D>,
 ) -> &mut UdpStateInner<D, A> {
     #[ipv4addr]

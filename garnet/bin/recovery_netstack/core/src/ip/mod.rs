@@ -17,7 +17,7 @@ use std::mem;
 use packet::{
     BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
 };
-use specialize_ip_macro::specialize_ip_addr;
+use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::DeviceId;
 use crate::ip::forwarding::{Destination, ForwardingTable};
@@ -58,7 +58,7 @@ struct IpLayerStateInner<I: Ip> {
 ///
 /// `dispatch_receive_ip_packet` panics if the protocol is unrecognized and
 /// `parse_metadata` is `None`.
-fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
+fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     proto: IpProto,
     src_ip: I,
@@ -196,7 +196,7 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
 /// `local_address_for_remote` looks up the route to `remote`. If one is found,
 /// it returns the IP address of the interface specified by the route, or `None`
 /// if the interface has no IP address.
-pub fn local_address_for_remote<D: EventDispatcher, A: IpAddr>(
+pub fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     remote: A,
 ) -> Option<A> {
@@ -209,8 +209,8 @@ pub fn local_address_for_remote<D: EventDispatcher, A: IpAddr>(
 // - dst_ip is equal to the address set on the device
 // - dst_ip is equal to the broadcast address of the subnet set on the device
 // - dst_ip is equal to the global broadcast address
-#[specialize_ip_addr]
-fn deliver<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+fn deliver<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     dst_ip: A,
@@ -229,8 +229,8 @@ fn deliver<D: EventDispatcher, A: IpAddr>(
 }
 
 // Should we forward this packet, and if so, to whom?
-#[specialize_ip_addr]
-fn forward<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+fn forward<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     dst_ip: A,
 ) -> Option<Destination<A::Version>> {
@@ -249,8 +249,8 @@ fn forward<D: EventDispatcher, A: IpAddr>(
 }
 
 // Look up the route to a host.
-#[specialize_ip_addr]
-fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destination<A::Version>> {
+#[specialize_ip_address]
+fn lookup_route<A: IpAddress>(state: &IpLayerState, dst_ip: A) -> Option<Destination<A::Version>> {
     #[ipv4addr]
     return state.v4.table.lookup(dst_ip);
     #[ipv6addr]
@@ -258,8 +258,8 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 }
 
 /// Add a route to the forwarding table.
-#[specialize_ip_addr]
-pub fn add_route<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+pub fn add_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     next_hop: A,
@@ -273,8 +273,8 @@ pub fn add_route<D: EventDispatcher, A: IpAddr>(
 }
 
 /// Add a device route to the forwarding table.
-#[specialize_ip_addr]
-pub fn add_device_route<D: EventDispatcher, A: IpAddr>(
+#[specialize_ip_address]
+pub fn add_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
@@ -291,7 +291,7 @@ pub fn add_device_route<D: EventDispatcher, A: IpAddr>(
 ///
 /// `is_local_addr` returns whether `addr` is the address associated with one of
 /// our local interfaces.
-pub fn is_local_addr<D: EventDispatcher, A: IpAddr>(ctx: &mut Context<D>, addr: A) -> bool {
+pub fn is_local_addr<D: EventDispatcher, A: IpAddress>(ctx: &mut Context<D>, addr: A) -> bool {
     log_unimplemented!(false, "ip::is_local_addr: not implemented")
 }
 
@@ -307,7 +307,7 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
     proto: IpProto,
     get_body: F,
 ) where
-    A: IpAddr,
+    A: IpAddress,
     S: Serializer,
     F: FnOnce(A) -> S,
 {
@@ -370,7 +370,7 @@ pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
     proto: IpProto,
     body: S,
 ) where
-    A: IpAddr,
+    A: IpAddress,
     S: Serializer,
 {
     // TODO(joshlf): Figure out how to compute a route with the restrictions
@@ -399,7 +399,7 @@ pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     proto: IpProto,
     body: S,
 ) where
-    A: IpAddr,
+    A: IpAddress,
     S: Serializer,
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
