@@ -100,7 +100,7 @@ public:
         magma_image_format_constraints_t image_constraints;
         image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
         image_constraints.has_format_modifier = true;
-        image_constraints.format_modifier = MAGMA_FORMAT_MODIFIER_INTEL_I915_X_TILED;
+        image_constraints.format_modifier = MAGMA_FORMAT_MODIFIER_INTEL_X_TILED;
         image_constraints.width = 512;
         image_constraints.height = 512;
         image_constraints.layers = 1;
@@ -113,7 +113,7 @@ public:
         std::unique_ptr<magma::PlatformBufferDescription> description;
         EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(0, &description).get());
         EXPECT_TRUE(description->has_format_modifier);
-        EXPECT_EQ(MAGMA_FORMAT_MODIFIER_INTEL_I915_X_TILED, description->format_modifier);
+        EXPECT_EQ(MAGMA_FORMAT_MODIFIER_INTEL_X_TILED, description->format_modifier);
     }
 };
 
