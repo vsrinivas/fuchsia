@@ -179,6 +179,12 @@ source_set("printers") {
   ]
 }
 
+group("fxl_printers") {
+  testonly = true
+
+  public_deps = [ ":printers" ]
+}
+
 executable("fxl_unittests") {
   testonly = true
 
