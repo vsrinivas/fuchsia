@@ -62,23 +62,14 @@ func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload b
 	}
 
 	ethHdr := &header.EthernetFields{
-		Type: protocol,
+		DstAddr: r.RemoteLinkAddress,
+		Type:    protocol,
 	}
 	// Preserve the src address if it's set in the route.
 	if r.LocalLinkAddress != "" {
 		ethHdr.SrcAddr = r.LocalLinkAddress
 	} else {
 		ethHdr.SrcAddr = tcpip.LinkAddress(e.client.Info.Mac.Octets[:])
-	}
-	switch {
-	case header.IsV4MulticastAddress(r.RemoteAddress):
-		// RFC 1112.6.4
-		ethHdr.DstAddr = tcpip.LinkAddress([]byte{0x01, 0x00, 0x5e, r.RemoteAddress[1] & 0x7f, r.RemoteAddress[2], r.RemoteAddress[3]})
-	case header.IsV6MulticastAddress(r.RemoteAddress):
-		// RFC 2464.7
-		ethHdr.DstAddr = tcpip.LinkAddress([]byte{0x33, 0x33, r.RemoteAddress[12], r.RemoteAddress[13], r.RemoteAddress[14], r.RemoteAddress[15]})
-	default:
-		ethHdr.DstAddr = r.RemoteLinkAddress
 	}
 	header.Ethernet(buf).Encode(ethHdr)
 	used := header.EthernetMinimumSize
