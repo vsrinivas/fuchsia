@@ -1,11 +1,11 @@
 # _fx_set__board completes a board name
 _fx_set__board() {
-  compadd ${(u)$(cd ${fuchsia_dir} >/dev/null 2>&1;echo */boards/*.gni(N:t:r) vendor/*/boards/*.gni(N:t:r))}
+  compadd ${(u)$(echo ${fuchsia_dir}/boards/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/boards/*.gni(N:t:r))}
 }
 
 # _fx_set__product completes a product name
 _fx_set__product() {
-  compadd ${(u)$(cd ${fuchsia_dir} >/dev/null 2>&1;echo */products/*.gni(N:t:r) vendor/*/products/*.gni(N:t:r))}
+  compadd ${(u)$(echo ${fuchsia_dir}/products/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/products/*.gni(N:t:r))}
 }
 
 # _fx_set__package completes a package name
