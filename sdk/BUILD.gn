@@ -96,7 +96,7 @@ sdk("core") {
 
   category = "partner"
 
-  api = "garnet.api"
+  api = "core.api"
 
   testonly = true
 
