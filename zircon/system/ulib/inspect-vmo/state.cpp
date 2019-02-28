@@ -407,7 +407,6 @@ void State::FreeObject(Object* object) {
                                         static_cast<uint64_t>(BlockType::kTombstone));
         }
     }
-    object->state_ = nullptr;
 }
 
 zx_status_t State::InnerCreateValue(fbl::StringPiece name, BlockType type, BlockIndex parent_index,

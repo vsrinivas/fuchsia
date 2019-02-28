@@ -8,6 +8,7 @@
 #include <unittest/unittest.h>
 
 using inspect::vmo::Inspector;
+using inspect::vmo::Object;
 
 namespace {
 
@@ -20,8 +21,30 @@ bool CreateClone() {
     END_TEST;
 }
 
+bool CreateDeleteActive() {
+    BEGIN_TEST;
+
+    Object object;
+
+    {
+        auto inspector = fbl::make_unique<Inspector>();
+        object = inspector->CreateObject("object");
+        EXPECT_TRUE(object);
+        Object child = object.CreateChild("child");
+        EXPECT_TRUE(child);
+    }
+
+    EXPECT_TRUE(object);
+
+    Object child = object.CreateChild("child");
+    EXPECT_TRUE(child);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(InspectTests)
 RUN_TEST(CreateClone)
+RUN_TEST(CreateDeleteActive)
 END_TEST_CASE(InspectTests)
