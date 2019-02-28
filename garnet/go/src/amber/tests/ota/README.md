@@ -13,8 +13,8 @@ into the system image. You can do this by running:
 
 ```
 % fx set x64 \
-  --products garnet/products/default.gni \
-  --packages garnet/go/src/amber/tests/ota/ota-test.package \
+  --product garnet/products/default.gni \
+  --monolith garnet/go/src/amber/tests/ota/ota-test.package \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"'
 % fx build
 ```
@@ -79,8 +79,8 @@ output to the terminal:
 
 ```
 % fx set x64 \
-  --products garnet/products/default.gni \
-  --packages garnet/go/src/amber/tests/ota/ota-test.package \
+  --product garnet/products/default.gni \
+  --monolith garnet/go/src/amber/tests/ota/ota-test.package \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"' \
   --args 'kernel_cmdline_args=["kernel.serial=legacy"]'
 % fx build

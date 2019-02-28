@@ -9,6 +9,7 @@ go_library("system_ota") {
   name = "system_ota"
   deps = [
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
+    "//garnet/public/go/third_party:golang.org/x/crypto",
   ]
 }
 
