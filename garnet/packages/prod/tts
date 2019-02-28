@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/media_audio"
+    ],
+    "packages": [
+        "//garnet/bin/tts:tts_service"
+    ]
+}

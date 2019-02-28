@@ -95,6 +95,7 @@
         "garnet/packages/prod/tiles",
         "garnet/packages/prod/timezone",
         "garnet/packages/prod/tracing",
+        "garnet/packages/prod/tts",
         "garnet/packages/prod/tz-util",
         "garnet/packages/prod/usb_video",
         "garnet/packages/prod/vboot_reference",

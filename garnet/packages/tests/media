@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "garnet/packages/prod/media_audio"
+    ],
     "packages": [
         "//garnet/bin/media/audio_core/mixer:audio_mixer_tests",
         "//garnet/bin/media/audio_core/test:audio_device_tests",
