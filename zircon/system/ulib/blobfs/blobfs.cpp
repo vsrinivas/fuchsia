@@ -49,7 +49,8 @@ constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 constexpr int64_t kFsProjectId = 107;
 
 cobalt_client::CollectorOptions MakeCollectorOptions() {
-    cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
+    cobalt_client::CollectorOptions options =
+        cobalt_client::CollectorOptions::GeneralAvailability();
 #ifdef __Fuchsia__
     // Filesystems project id.
     options.project_id = kFsProjectId;

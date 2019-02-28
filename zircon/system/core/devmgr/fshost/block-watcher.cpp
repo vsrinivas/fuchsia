@@ -574,6 +574,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
 
         mount_options_t options = default_mount_options;
         options.enable_journal = true;
+        options.collect_metrics = true;
         zx_status_t status = watcher->MountBlob(std::move(fd), &options);
         if (status != ZX_OK) {
             printf("fshost: Failed to mount blobfs partition %s at %s: %s.\n", device_path,
