@@ -1,3 +1,6 @@
+sdk://docs/low_level
+sdk://docs/metadata_schemas
+sdk://docs/open_source
 sdk://fidl/fuchsia.bluetooth
 sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.le

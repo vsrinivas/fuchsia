@@ -35,10 +35,6 @@ def main():
         manifest = json.load(manifest_file)
 
     ids = map(lambda a: a['id'], manifest['atoms'])
-    # Ignore documentation for now, as we use some documentation atoms to carry
-    # ids.
-    # TODO(DX-954): re-add documentation atoms.
-    ids = filter(lambda i: not i.startswith('sdk://docs'), ids)
     # Ignore images which are very architecture-dependent.
     # TODO(DX-981): remove this exception when obsolete.
     ids = filter(lambda i: not i.startswith('sdk://images'), ids)
