@@ -1,4 +1,4 @@
-# Mozart Input Injection Tool
+# Scenic Input Injection Tool
 
 This directory contains input, a simple tool to inject input events into
 Scenic.

@@ -10,6 +10,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 #include <zx/time.h>
 
 #include "garnet/bin/ui/input/inverse_keymap.h"
@@ -317,6 +319,7 @@ For further details, see README.md.
 
   void SendTap(fuchsia::ui::input::InputDevicePtr input_device, uint32_t x,
                uint32_t y, zx::duration duration) {
+    TRACE_DURATION("input", "SendTap");
     // DOWN
     fuchsia::ui::input::Touch touch;
     touch.finger_id = 1;
@@ -331,11 +334,13 @@ For further details, see README.md.
     report.touchscreen = std::move(touchscreen);
 
     FXL_VLOG(1) << "SendTap " << report;
+    TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
     input_device->DispatchReport(std::move(report));
 
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         [this, device = std::move(input_device)] {
+          TRACE_DURATION("input", "SendTap");
           // UP
           fuchsia::ui::input::TouchscreenReportPtr touchscreen =
               fuchsia::ui::input::TouchscreenReport::New();
@@ -346,6 +351,7 @@ For further details, see README.md.
           report.touchscreen = std::move(touchscreen);
 
           FXL_VLOG(1) << "SendTap " << report;
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
           device->DispatchReport(std::move(report));
           loop_->Quit();
         },
@@ -354,6 +360,7 @@ For further details, see README.md.
 
   void SendKeyPress(fuchsia::ui::input::InputDevicePtr input_device,
                     uint32_t usage, zx::duration duration) {
+    TRACE_DURATION("input", "SendKeyPress");
     // PRESSED
     fuchsia::ui::input::KeyboardReportPtr keyboard =
         fuchsia::ui::input::KeyboardReport::New();
@@ -363,11 +370,13 @@ For further details, see README.md.
     report.event_time = InputEventTimestampNow();
     report.keyboard = std::move(keyboard);
     FXL_VLOG(1) << "SendKeyPress " << report;
+    TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
     input_device->DispatchReport(std::move(report));
 
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         [this, device = std::move(input_device)] {
+          TRACE_DURATION("input", "SendKeyPress");
           // RELEASED
           fuchsia::ui::input::KeyboardReportPtr keyboard =
               fuchsia::ui::input::KeyboardReport::New();
@@ -377,6 +386,7 @@ For further details, see README.md.
           report.event_time = InputEventTimestampNow();
           report.keyboard = std::move(keyboard);
           FXL_VLOG(1) << "SendKeyPress " << report;
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
           device->DispatchReport(std::move(report));
           loop_->Quit();
         },
@@ -386,6 +396,7 @@ For further details, see README.md.
   void SendText(fuchsia::ui::input::InputDevicePtr input_device,
                 std::vector<fuchsia::ui::input::KeyboardReportPtr> key_sequence,
                 zx::duration duration, size_t at = 0) {
+    TRACE_DURATION("input", "SendText");
     if (at >= key_sequence.size()) {
       loop_->Quit();
       return;
@@ -397,6 +408,7 @@ For further details, see README.md.
     report.event_time = InputEventTimestampNow();
     report.keyboard = std::move(keyboard);
     FXL_VLOG(1) << "SendText " << report;
+    TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
     input_device->DispatchReport(std::move(report));
 
     zx::duration stroke_duration;
@@ -419,6 +431,7 @@ For further details, see README.md.
   void SendSwipe(fuchsia::ui::input::InputDevicePtr input_device, uint32_t x0,
                  uint32_t y0, uint32_t x1, uint32_t y1, zx::duration duration,
                  uint32_t move_event_count) {
+    TRACE_DURATION("input", "SendSwipe");
     // DOWN
     fuchsia::ui::input::Touch touch;
     touch.finger_id = 1;
@@ -432,12 +445,14 @@ For further details, see README.md.
     report.event_time = InputEventTimestampNow();
     report.touchscreen = std::move(touchscreen);
     FXL_VLOG(1) << "SendSwipe " << report;
+    TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
     input_device->DispatchReport(std::move(report));
 
     async::PostDelayedTask(
         async_get_default_dispatcher(),
         [this, device = std::move(input_device), x0, y0, x1, y1,
          move_event_count] {
+          TRACE_DURATION("input", "SendSwipe");
           // MOVE
           for (uint32_t i = 0; i < move_event_count; i++) {
             fuchsia::ui::input::Touch touch;
@@ -458,6 +473,7 @@ For further details, see README.md.
             report.event_time = InputEventTimestampNow();
             report.touchscreen = std::move(touchscreen);
             FXL_VLOG(1) << "SendSwipe " << report;
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
             device->DispatchReport(std::move(report));
           }
 
@@ -471,6 +487,7 @@ For further details, see README.md.
           report.event_time = InputEventTimestampNow();
           report.touchscreen = std::move(touchscreen);
           FXL_VLOG(1) << "SendSwipe " << report;
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
           device->DispatchReport(std::move(report));
 
           loop_->Quit();
@@ -493,6 +510,7 @@ int main(int argc, char** argv) {
   input::InputApp app(&loop);
   async::PostTask(loop.dispatcher(),
                   [&app, command_line] { app.Run(command_line); });
+  trace::TraceProvider trace_provider(loop.dispatcher(), "input");
   loop.Run();
   return 0;
 }
