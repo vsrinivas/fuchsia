@@ -84,7 +84,7 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
-use fidl_fuchsia_net::{SocketProviderRequest, SocketControlRequest};
+use fidl_fuchsia_net::{SocketControlRequest, SocketProviderRequest};
 use fidl_fuchsia_net_ext as fidl_net_ext;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
@@ -103,12 +103,9 @@ use futures::{select, TryFutureExt, TryStreamExt};
 use log::{error, info};
 
 use netstack_core::{
-    add_device_route, get_ip_addr, handle_timeout, set_ip_addr, Context, EventDispatcher,
-    StackState, TimerId,
-};
-
-use netstack_core::types::{
-    receive_frame, DeviceId, DeviceLayerEventDispatcher, DeviceLayerTimerId, Mac, Subnet,
+    add_device_route, get_ip_addr_subnet, handle_timeout, receive_frame, set_ip_addr_subnet,
+    AddrSubnet, AddrSubnetEither, Context, DeviceId, DeviceLayerEventDispatcher,
+    DeviceLayerTimerId, EventDispatcher, Mac, StackState, Subnet, SubnetEither, TimerId,
     TransportLayerEventDispatcher, TransportLayerTimerId, UdpEventDispatcher,
 };
 
@@ -349,9 +346,9 @@ impl EventLoop {
                 self.fidl_get_forwarding_table(responder);
             }
             StackRequest::AddForwardingEntry { entry, responder } => {
-                responder.send(self.fidl_add_forwarding_entry(entry).as_mut().map(
-                    fidl::encoding::OutOfLine
-                ));
+                responder.send(
+                    self.fidl_add_forwarding_entry(entry).as_mut().map(fidl::encoding::OutOfLine),
+                );
             }
             StackRequest::DelForwardingEntry { subnet, responder } => {
                 self.fidl_del_forwarding_entry(subnet, responder);
@@ -428,8 +425,14 @@ impl EventLoop {
         let mut err = fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound };
         responder.send(if let Some(device_id) = device_id {
             // TODO(wesleyac): Check for address already existing.
-            let ip: std::net::IpAddr = fidl_net_ext::IpAddress::from(addr.ip_address).0;
-            set_ip_addr(&mut self.ctx, device_id, ip, Subnet::new(ip, addr.prefix_len));
+            set_ip_addr_subnet(
+                &mut self.ctx,
+                device_id,
+                AddrSubnetEither::new(
+                    fidl_net_ext::IpAddress::from(addr.ip_address).0.into(),
+                    addr.prefix_len,
+                ),
+            );
             None
         } else {
             Some(fidl::encoding::OutOfLine(&mut err)) // Invalid device ID
@@ -455,8 +458,8 @@ impl EventLoop {
                 if let Some(device_id) = self.ctx.dispatcher().get_device_client(id).map(|x| x.id) {
                     add_device_route(
                         &mut self.ctx,
-                        Subnet::new(
-                            fidl_net_ext::IpAddress::from(entry.subnet.addr).0,
+                        SubnetEither::new(
+                            fidl_net_ext::IpAddress::from(entry.subnet.addr).0.into(),
                             entry.subnet.prefix_len,
                         ),
                         device_id,
@@ -467,9 +470,7 @@ impl EventLoop {
                     Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound })
                 }
             }
-            fidl_net_stack::ForwardingDestination::NextHop(x) => {
-                None
-            }
+            fidl_net_stack::ForwardingDestination::NextHop(x) => None,
         }
     }
 

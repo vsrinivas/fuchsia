@@ -33,14 +33,47 @@ mod testutil;
 mod transport;
 mod wire;
 
-pub mod types;
-
-use crate::device::{ethernet::Mac, DeviceId, DeviceLayerEventDispatcher, DeviceLayerTimerId};
-use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
+pub use crate::device::{
+    ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
+    DeviceLayerTimerId,
+};
+pub use crate::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
+pub use crate::transport::udp::UdpEventDispatcher;
+pub use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
 
 use crate::device::DeviceLayerState;
 use crate::ip::IpLayerState;
 use crate::transport::TransportLayerState;
+
+/// Map an expression over either version of an address.
+///
+/// `map_addr_version!` takes a type which is an enum with two variants - `V4`
+/// and `V6` - and a value of that type. It matches on the variants, and for
+/// both variants, invokes an expression on the inner contents. `$addr` is both
+/// the name of the variable to match on, and the name that the address will be
+/// bound to for the scope of the expression.
+///
+/// To make it concrete, the expression `map_addr_version!(Foo, bar, blah(bar))`
+/// desugars to:
+///
+/// ```rust,ignore
+/// match bar {
+///     Foo::V4(bar) => blah(bar),
+///     Foo::V6(bar) => blah(bar),
+/// }
+/// ```
+#[macro_export]
+macro_rules! map_addr_version {
+    ($ty:tt, $addr:ident, $expr:expr) => {
+        match $addr {
+            $ty::V4($addr) => $expr,
+            $ty::V6($addr) => $expr,
+        }
+    };
+    ($ty:tt, $addr:ident, $expr:expr,) => {
+        map_addr_version!($addr, $expr)
+    };
+}
 
 /// The state associated with the network stack.
 pub struct StackState<D: EventDispatcher> {
@@ -172,65 +205,24 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
     fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant>;
 }
 
-/// Set the IP address for a device.
-// TODO(wesleyac): A real error type
-pub fn set_ip_addr<D: EventDispatcher>(
+/// Set the IP address and subnet for a device.
+pub fn set_ip_addr_subnet<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
-    addr: std::net::IpAddr,
-    subnet: types::Subnet,
-) -> Result<(), ()> {
-    match (addr, subnet.addr(), subnet.prefix_len()) {
-        (std::net::IpAddr::V4(ip), std::net::IpAddr::V4(subnet_addr), prefix_len) => {
-            crate::device::set_ip_addr(
-                ctx,
-                device,
-                crate::ip::Ipv4Addr::new(ip.octets()),
-                crate::ip::Subnet::new(crate::ip::Ipv4Addr::new(subnet_addr.octets()), prefix_len),
-            );
-            Ok(())
-        }
-        (std::net::IpAddr::V6(ip), std::net::IpAddr::V6(subnet_addr), prefix_len) => {
-            crate::device::set_ip_addr(
-                ctx,
-                device,
-                crate::ip::Ipv6Addr::new(ip.octets()),
-                crate::ip::Subnet::new(crate::ip::Ipv6Addr::new(subnet_addr.octets()), prefix_len),
-            );
-            Ok(())
-        }
-        _ => Err(()),
-    }
-}
-
-/// Get the IP addresses for a device.
-pub fn get_ip_addr<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
-) -> (Option<std::net::Ipv4Addr>, Option<std::net::Ipv6Addr>) {
-    unimplemented!();
+    addr_sub: AddrSubnetEither,
+) {
+    map_addr_version!(
+        AddrSubnetEither,
+        addr_sub,
+        crate::device::set_ip_addr_subnet(ctx, device, addr_sub)
+    );
 }
 
 /// Add a route to send all packets addressed to a specific subnet to a specific device.
 pub fn add_device_route<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    subnet: types::Subnet,
+    subnet: SubnetEither,
     device: DeviceId,
 ) {
-    match subnet.addr() {
-        std::net::IpAddr::V4(addr) => {
-            ip::add_device_route(
-                ctx,
-                ip::Subnet::new(ip::Ipv4Addr::from(addr), subnet.prefix_len()),
-                device,
-            );
-        }
-        std::net::IpAddr::V6(addr) => {
-            ip::add_device_route(
-                ctx,
-                ip::Subnet::new(ip::Ipv6Addr::from(addr), subnet.prefix_len()),
-                device,
-            );
-        }
-    }
+    map_addr_version!(SubnetEither, subnet, crate::ip::add_device_route(ctx, subnet, device));
 }

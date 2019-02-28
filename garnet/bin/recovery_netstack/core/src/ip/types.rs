@@ -2,9 +2,56 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std;
+/// Public and private types for the IP layer
+///
+/// This module contains types that represent IP addresses, subnets, and IP
+/// address + subnet pairs. The reason that we have so many types is to provide
+/// different safety guarantees, while allowing abstraction over different IP
+/// version. Specifically, we want to be able to represent both concrete IP
+/// versions (an IPv4 address, for instance), as well as enums that could be
+/// either a v4 or v6 type. However, just providing concrete types and enums
+/// doesn't give us the safety guarantees that we want. Specifically, if we have
+/// a function that takes, for instance, and IP address and a subnet:
+///
+/// ```rust,ignore
+/// fn foo(addr: IpAddr, subnet: SubnetEither) { ... }
+/// ```
+///
+/// The problem with this is that we cannot guarantee at the type level that
+/// both the IP address and the subnet are the same IP version - we would need
+/// to raise a runtime error if they did not match. This is why we additionally
+/// have types that allow specifying the IP version as a type parameter - we can
+/// rewrite the above function as:
+///
+/// ```rust,ignore
+/// fn foo<A: IpAddress>(addr: A, subnet: Subnet<A>) { ... }
+/// ```
+///
+/// This way, calling `foo()` with different IP versions for the different
+/// paramaters is impossible, since such a program would not typecheck.
+///
+/// We provide the following types:
+///
+/// # IP Addresses
+///
+/// * `Ipv4Addr`: A concrete IPv4 address
+/// * `Ipv6Addr`: A concrete IPv6 address
+/// * `IpAddr`: An enum representing either a v4 or v6 address.
+/// * `IpAddress`: An IP address trait that can be used to bound a type parameter.
+///
+/// # Subnets
+///
+/// * `Subnet`: A v4 or v6 subnet, as specificed by the type parameter.
+/// * `SubnetEither`: An enum of either a v4 subnet or a v6 subnet.
+///
+/// # Address + Subnet Pairs:
+///
+/// * `AddrSubnet`: A v4 or v6 subnet + address pair, as specificed by the type
+///   parameter.
+/// * `AddrSubnetEither`: An enum of either a v4 or a v6 subnet + address pair.
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
+use std::net;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{PacketBuilder, ParsablePacket};
@@ -30,9 +77,18 @@ pub enum IpAddr {
     V6(Ipv6Addr),
 }
 
-impl<A: IpAddress> From<A> for IpAddr {
+impl<A: ext::IpAddress> From<A> for IpAddr {
     fn from(addr: A) -> IpAddr {
         addr.into_ip_addr()
+    }
+}
+
+impl From<net::IpAddr> for IpAddr {
+    fn from(addr: net::IpAddr) -> IpAddr {
+        match addr {
+            net::IpAddr::V4(addr) => IpAddr::V4(addr.into()),
+            net::IpAddr::V6(addr) => IpAddr::V6(addr.into()),
+        }
     }
 }
 
@@ -140,6 +196,22 @@ impl Ip for Ipv6 {
     type Addr = Ipv6Addr;
 }
 
+/// The `IpAddress` trait which is part of the core's external API.
+///
+/// This module exists to hold the external `IpAddress` trait. It is necessary
+/// because that trait and the internal one have the same name, so they cannot
+/// be defined in the same module.
+pub mod ext {
+    /// An IP address.
+    ///
+    /// `IpAddress` is implemented by the concrete types `Ipv4Addr` and
+    /// `Ipv6Addr`, and is used as a trait bound wherever a generic IP address
+    /// of either version is needed, such as in `Subnet` and `AddrSubnet`.
+    pub trait IpAddress: super::IpAddress {}
+
+    impl<I: super::IpAddress> IpAddress for I {}
+}
+
 /// An IPv4 or IPv6 address.
 pub trait IpAddress
 where
@@ -212,8 +284,8 @@ impl IpAddress for Ipv4Addr {
     }
 }
 
-impl From<std::net::Ipv4Addr> for Ipv4Addr {
-    fn from(ip: std::net::Ipv4Addr) -> Self {
+impl From<net::Ipv4Addr> for Ipv4Addr {
+    fn from(ip: net::Ipv4Addr) -> Self {
         Ipv4Addr::new(ip.octets())
     }
 }
@@ -275,8 +347,8 @@ impl IpAddress for Ipv6Addr {
     }
 }
 
-impl From<std::net::Ipv6Addr> for Ipv6Addr {
-    fn from(ip: std::net::Ipv6Addr) -> Self {
+impl From<net::Ipv6Addr> for Ipv6Addr {
+    fn from(ip: net::Ipv6Addr) -> Self {
         Ipv6Addr::new(ip.octets())
     }
 }
@@ -285,7 +357,7 @@ impl Display for Ipv6Addr {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let to_u16 = |idx| NetworkEndian::read_u16(&self.0[idx..idx + 2]);
         Display::fmt(
-            &std::net::Ipv6Addr::new(
+            &net::Ipv6Addr::new(
                 to_u16(0),
                 to_u16(2),
                 to_u16(4),
@@ -303,32 +375,6 @@ impl Display for Ipv6Addr {
 impl Debug for Ipv6Addr {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
-    }
-}
-
-/// An IP subnet.
-#[allow(missing_docs)]
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum IpSubnet {
-    V4(Subnet<Ipv4Addr>),
-    V6(Subnet<Ipv6Addr>),
-}
-
-impl<A: IpAddress> From<Subnet<A>> for IpSubnet {
-    default fn from(_addr: Subnet<A>) -> IpSubnet {
-        unreachable!()
-    }
-}
-
-impl From<Subnet<Ipv4Addr>> for IpSubnet {
-    fn from(subnet: Subnet<Ipv4Addr>) -> IpSubnet {
-        IpSubnet::V4(subnet)
-    }
-}
-
-impl From<Subnet<Ipv6Addr>> for IpSubnet {
-    fn from(subnet: Subnet<Ipv6Addr>) -> IpSubnet {
-        IpSubnet::V6(subnet)
     }
 }
 
@@ -358,7 +404,7 @@ impl<A> Subnet<A> {
     }
 }
 
-impl<A: IpAddress> Subnet<A> {
+impl<A: ext::IpAddress> Subnet<A> {
     /// Create a new subnet.
     ///
     /// Create a new subnet with the given network address and prefix length.
@@ -412,15 +458,143 @@ impl Subnet<Ipv4Addr> {
     }
 }
 
-impl<A: IpAddress> Display for Subnet<A> {
+impl<A: ext::IpAddress> Display for Subnet<A> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }
 }
 
-impl<A: IpAddress> Debug for Subnet<A> {
+impl<A: ext::IpAddress> Debug for Subnet<A> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
+    }
+}
+
+/// An IPv4 subnet or an IPv6 subnet.
+///
+/// SubnetEither` is an enum of `Subnet<Ipv4Addr>` and `Subnet<Ipv6Addr>`.
+#[allow(missing_docs)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum SubnetEither {
+    V4(Subnet<Ipv4Addr>),
+    V6(Subnet<Ipv6Addr>),
+}
+
+impl SubnetEither {
+    /// Create a new subnet.
+    ///
+    /// `new` creates a new subnet with the given network address and prefix
+    /// length.
+    ///
+    /// # Panics
+    ///
+    /// `new` panics if `prefix` is longer than the number of bits in this type
+    /// of IP address (32 for IPv4 and 128 for IPv6).
+    pub fn new(network: IpAddr, prefix: u8) -> SubnetEither {
+        match network {
+            IpAddr::V4(network) => SubnetEither::V4(Subnet::new(network, prefix)),
+            IpAddr::V6(network) => SubnetEither::V6(Subnet::new(network, prefix)),
+        }
+    }
+}
+
+impl<A: ext::IpAddress> From<Subnet<A>> for SubnetEither {
+    default fn from(_addr: Subnet<A>) -> SubnetEither {
+        unreachable!()
+    }
+}
+
+impl From<Subnet<Ipv4Addr>> for SubnetEither {
+    fn from(subnet: Subnet<Ipv4Addr>) -> SubnetEither {
+        SubnetEither::V4(subnet)
+    }
+}
+
+impl From<Subnet<Ipv6Addr>> for SubnetEither {
+    fn from(subnet: Subnet<Ipv6Addr>) -> SubnetEither {
+        SubnetEither::V6(subnet)
+    }
+}
+
+/// An address and that address' subnet.
+///
+/// An `AddrSubnet` is a pair of an address and a subnet which maintains the
+/// invariant that the address is guaranteed to be in the subnet.
+#[derive(Copy, Clone)]
+pub struct AddrSubnet<A> {
+    addr: A,
+    prefix: u8,
+}
+
+impl<A: ext::IpAddress> AddrSubnet<A> {
+    /// Create a new `AddrSubnet`.
+    ///
+    /// `new` creates a new `AddrSubnet` with the given address and prefix
+    /// length. The network address of the subnet is taken to be the first
+    /// `prefix` bits of the address.
+    ///
+    /// # Panics
+    ///
+    /// `new` panics if `prefix` is longer than the number of bits in this type
+    /// of IP address (32 for IPv4 and 128 for IPv6).
+    pub fn new(addr: A, prefix: u8) -> AddrSubnet<A> {
+        assert!(prefix <= A::BYTES * 8);
+        AddrSubnet { addr, prefix }
+    }
+
+    /// Get the address.
+    pub fn addr(&self) -> A {
+        self.addr
+    }
+
+    /// Get the subnet.
+    pub fn subnet(&self) -> Subnet<A> {
+        Subnet::new(self.addr, self.prefix)
+    }
+
+    /// Consume the `AddrSubnet` and return the address.
+    pub fn into_addr(self) -> A {
+        self.addr
+    }
+
+    /// Consume the `AddrSubnet` and return the subnet.
+    pub fn into_subnet(self) -> Subnet<A> {
+        Subnet::new(self.addr, self.prefix)
+    }
+
+    /// Consume the `AddrSubnet` and return the address and subnet individually.
+    pub fn into_addr_subnet(self) -> (A, Subnet<A>) {
+        (self.addr, Subnet::new(self.addr, self.prefix))
+    }
+}
+
+/// An address and that address' subnet, either IPv4 or IPv6.
+///
+/// `AddrSubnetEither` is an enum of `AddrSubnet<Ipv4Addr>` and
+/// `AddrSubnet<Ipv6Addr>`.
+#[allow(missing_docs)]
+#[derive(Copy, Clone)]
+pub enum AddrSubnetEither {
+    V4(AddrSubnet<Ipv4Addr>),
+    V6(AddrSubnet<Ipv6Addr>),
+}
+
+impl AddrSubnetEither {
+    /// Create a new `AddrSubnetEither`.
+    ///
+    /// `new` creates a new `AddrSubnetEither` with the given address and prefix
+    /// length. The network address of the subnet is taken to be the first
+    /// `prefix` bits of the address.
+    ///
+    /// # Panics
+    ///
+    /// `new` panics if `prefix` is longer than the number of bits in this type
+    /// of IP address (32 for IPv4 and 128 for IPv6).
+    pub fn new(addr: IpAddr, prefix: u8) -> AddrSubnetEither {
+        match addr {
+            IpAddr::V4(addr) => AddrSubnetEither::V4(AddrSubnet::new(addr, prefix)),
+            IpAddr::V6(addr) => AddrSubnetEither::V6(AddrSubnet::new(addr, prefix)),
+        }
     }
 }
 

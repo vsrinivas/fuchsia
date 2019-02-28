@@ -201,7 +201,7 @@ pub fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
     remote: A,
 ) -> Option<A> {
     let route = lookup_route(&ctx.state().ip, remote)?;
-    crate::device::get_ip_addr(ctx, route.device).map(|(addr, _)| addr)
+    crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
 }
 
 // Should we deliver this packet locally?
@@ -221,7 +221,8 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
     //   is the easiest to implement for the time being, but we should actually
     //   put real thought into what our host model should be (NET-1011).
     #[ipv4addr]
-    return crate::device::get_ip_addr::<D, _>(ctx, device)
+    return crate::device::get_ip_addr_subnet(ctx, device)
+        .map(AddrSubnet::into_addr_subnet)
         .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
         .unwrap_or(dst_ip == Ipv4::BROADCAST_ADDRESS);
     #[ipv6addr]
@@ -273,18 +274,28 @@ pub fn add_route<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Add a device route to the forwarding table.
-#[specialize_ip_address]
-pub fn add_device_route<D: EventDispatcher, A: IpAddress>(
+pub fn add_device_route<D: EventDispatcher, A: ext::IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
 ) {
-    let state = &mut ctx.state().ip;
+    // NOTE(joshlf): This weird nesting is a holdover until
+    // #[specialize_ip_addr] supports ext::IpAddress in addition to IpAddress.
+    #[specialize_ip_address]
+    fn add_device_route<D: EventDispatcher, A: IpAddress>(
+        ctx: &mut Context<D>,
+        subnet: Subnet<A>,
+        device: DeviceId,
+    ) {
+        let state = &mut ctx.state().ip;
 
-    #[ipv4addr]
-    state.v4.table.add_device_route(subnet, device);
-    #[ipv6addr]
-    state.v6.table.add_device_route(subnet, device);
+        #[ipv4addr]
+        state.v4.table.add_device_route(subnet, device);
+        #[ipv6addr]
+        state.v6.table.add_device_route(subnet, device);
+    }
+
+    add_device_route(ctx, subnet, device);
 }
 
 /// Is this one of our local addresses?
@@ -336,8 +347,9 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
             None,
         );
     } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
-        let (src_ip, _) = crate::device::get_ip_addr(ctx, dest.device)
-            .expect("IP device route set for device without IP address");
+        let src_ip = crate::device::get_ip_addr_subnet(ctx, dest.device)
+            .expect("IP device route set for device without IP address")
+            .addr();
         send_ip_packet_from_device(
             ctx,
             dest.device,

@@ -18,7 +18,8 @@ use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{
-    Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, IpSubnet, Ipv4Addr, Subnet, IPV6_MIN_MTU,
+    AddrSubnet, Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, Ipv4Addr, Subnet, SubnetEither,
+    IPV6_MIN_MTU,
 };
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
@@ -254,11 +255,11 @@ pub const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig 
 /// state configured.
 #[derive(Clone, Default)]
 pub struct DummyEventDispatcherBuilder {
-    devices: Vec<(Mac, Option<(IpAddr, IpSubnet)>)>,
+    devices: Vec<(Mac, Option<(IpAddr, SubnetEither)>)>,
     arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
     // usize refers to index into devices Vec
-    device_routes: Vec<(IpSubnet, usize)>,
-    routes: Vec<(IpSubnet, IpAddr)>,
+    device_routes: Vec<(SubnetEither, usize)>,
+    routes: Vec<(SubnetEither, IpAddr)>,
 }
 
 impl DummyEventDispatcherBuilder {
@@ -326,11 +327,13 @@ impl DummyEventDispatcherBuilder {
             let id = ctx.state().add_ethernet_device(mac, IPV6_MIN_MTU);
             idx_to_device_id.insert(idx, id);
             match ip_subnet {
-                Some((IpAddr::V4(ip), IpSubnet::V4(subnet))) => {
-                    crate::device::set_ip_addr(&mut ctx, id, ip, subnet)
+                Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
+                    let addr_sub = AddrSubnet::new(ip, subnet.prefix());
+                    crate::device::set_ip_addr_subnet(&mut ctx, id, addr_sub);
                 }
-                Some((IpAddr::V6(ip), IpSubnet::V6(subnet))) => {
-                    crate::device::set_ip_addr(&mut ctx, id, ip, subnet)
+                Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
+                    let addr_sub = AddrSubnet::new(ip, subnet.prefix());
+                    crate::device::set_ip_addr_subnet(&mut ctx, id, addr_sub);
                 }
                 None => {}
                 _ => unreachable!(),
@@ -343,16 +346,16 @@ impl DummyEventDispatcherBuilder {
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
             match subnet {
-                IpSubnet::V4(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
-                IpSubnet::V6(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
+                SubnetEither::V4(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
+                SubnetEither::V6(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
             }
         }
         for (subnet, next_hop) in routes {
             match (subnet, next_hop) {
-                (IpSubnet::V4(subnet), IpAddr::V4(next_hop)) => {
+                (SubnetEither::V4(subnet), IpAddr::V4(next_hop)) => {
                     crate::ip::add_route(&mut ctx, subnet, next_hop)
                 }
-                (IpSubnet::V6(subnet), IpAddr::V6(next_hop)) => {
+                (SubnetEither::V6(subnet), IpAddr::V6(next_hop)) => {
                     crate::ip::add_route(&mut ctx, subnet, next_hop)
                 }
                 _ => unreachable!(),

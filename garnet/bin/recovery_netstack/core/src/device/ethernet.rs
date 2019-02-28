@@ -13,7 +13,7 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::DeviceId;
-use crate::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
+use crate::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
@@ -160,8 +160,8 @@ impl Debug for EtherType {
 pub struct EthernetDeviceState {
     mac: Mac,
     mtu: usize,
-    ipv4_addr: Option<(Ipv4Addr, Subnet<Ipv4Addr>)>,
-    ipv6_addr: Option<(Ipv6Addr, Subnet<Ipv6Addr>)>,
+    ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
+    ipv6_addr_sub: Option<AddrSubnet<Ipv6Addr>>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
 }
 
@@ -177,8 +177,8 @@ impl EthernetDeviceState {
         EthernetDeviceState {
             mac,
             mtu,
-            ipv4_addr: None,
-            ipv6_addr: None,
+            ipv4_addr_sub: None,
+            ipv6_addr_sub: None,
             ipv4_arp: ArpState::default(),
         }
     }
@@ -277,30 +277,29 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
     }
 }
 
-/// Get the IP address associated with this device.
+/// Get the IP address and subnet associated with this device.
 #[specialize_ip_address]
-pub fn get_ip_addr<D: EventDispatcher, A: IpAddress>(
+pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: u64,
-) -> Option<(A, Subnet<A>)> {
+) -> Option<AddrSubnet<A>> {
     #[ipv4addr]
-    return get_device_state(ctx, device_id).ipv4_addr;
+    return get_device_state(ctx, device_id).ipv4_addr_sub;
     #[ipv6addr]
-    return get_device_state(ctx, device_id).ipv6_addr;
+    return get_device_state(ctx, device_id).ipv6_addr_sub;
 }
 
-/// Set the IP address associated with this device.
+/// Set the IP address and subnet associated with this device.
 #[specialize_ip_address]
-pub fn set_ip_addr<D: EventDispatcher, A: IpAddress>(
+pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: u64,
-    addr: A,
-    subnet: Subnet<A>,
+    addr_sub: AddrSubnet<A>,
 ) {
     #[ipv4addr]
-    get_device_state(ctx, device_id).ipv4_addr = Some((addr, subnet));
+    get_device_state(ctx, device_id).ipv4_addr_sub = Some(addr_sub);
     #[ipv6addr]
-    get_device_state(ctx, device_id).ipv6_addr = Some((addr, subnet));
+    get_device_state(ctx, device_id).ipv6_addr_sub = Some(addr_sub);
 }
 
 /// Insert an entry into this device's ARP table.
@@ -354,7 +353,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         ctx: &mut Context<D>,
         device_id: u64,
     ) -> Option<Ipv4Addr> {
-        get_device_state(ctx, device_id).ipv4_addr.map(|x| x.0)
+        get_device_state(ctx, device_id).ipv4_addr_sub.map(AddrSubnet::into_addr)
     }
 
     fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Mac {

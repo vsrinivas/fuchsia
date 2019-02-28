@@ -368,8 +368,8 @@ mod tests {
     use packet::ParseBuffer;
 
     use super::*;
-    use crate::device::ethernet::{set_ip_addr, EtherType, Mac};
-    use crate::ip::{Ipv4Addr, Subnet, IPV6_MIN_MTU};
+    use crate::device::ethernet::{set_ip_addr_subnet, EtherType, Mac};
+    use crate::ip::{AddrSubnet, Ipv4Addr, IPV6_MIN_MTU};
     use crate::testutil;
     use crate::testutil::DummyEventDispatcher;
     use crate::wire::arp::{peek_arp_types, ArpPacketBuilder};
@@ -387,7 +387,7 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr(&mut ctx, dev_id.id, TEST_LOCAL_IPV4, Subnet::new(TEST_LOCAL_IPV4, 24));
+        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24));
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
@@ -431,7 +431,7 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr(&mut ctx, dev_id.id, TEST_LOCAL_IPV4, Subnet::new(TEST_LOCAL_IPV4, 24));
+        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24));
 
         let mut buf = ArpPacketBuilder::new(
             ArpOp::Request,

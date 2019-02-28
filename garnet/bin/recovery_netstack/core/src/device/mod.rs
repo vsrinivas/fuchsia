@@ -14,7 +14,7 @@ use log::debug;
 use packet::Serializer;
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
-use crate::ip::{IpAddress, Ipv4Addr, Subnet};
+use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr};
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -147,24 +147,22 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId,
 }
 
 /// Get the IP address and subnet associated with this device.
-pub fn get_ip_addr<D: EventDispatcher, A: IpAddress>(
+pub fn get_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
-) -> Option<(A, Subnet<A>)> {
+) -> Option<AddrSubnet<A>> {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr(ctx, device.id),
+        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnet(ctx, device.id),
     }
 }
 
 /// Set the IP address and subnet associated with this device.
-pub fn set_ip_addr<D: EventDispatcher, A: IpAddress>(
+pub fn set_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
-    addr: A,
-    subnet: Subnet<A>,
+    addr_sub: AddrSubnet<A>,
 ) {
-    assert!(subnet.contains(addr));
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::set_ip_addr(ctx, device.id, addr, subnet),
+        DeviceProtocol::Ethernet => self::ethernet::set_ip_addr_subnet(ctx, device.id, addr_sub),
     }
 }
