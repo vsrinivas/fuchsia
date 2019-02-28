@@ -90,16 +90,6 @@ public:
           inode_promise_(std::move(inode_promise)),
           block_promise_(std::move(block_promise)) {}
 
-    ~Transaction() {
-        // Unreserve all reserved inodes/blocks while the lock is still held.
-        if (inode_promise_ != nullptr) {
-            inode_promise_->Cancel();
-        }
-        if (block_promise_ != nullptr) {
-            block_promise_->Cancel();
-        }
-    }
-
     size_t AllocateInode() {
         ZX_DEBUG_ASSERT(inode_promise_ != nullptr);
         return inode_promise_->Allocate(GetWork());

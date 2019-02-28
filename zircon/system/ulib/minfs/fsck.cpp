@@ -280,7 +280,7 @@ const char* MinfsChecker::CheckDataBlock(blk_t bno) {
     if (bno >= fs_->Info().block_count) {
         return "out of range";
     }
-    if (!fs_->block_allocator_->map_.Get(bno, bno + 1)) {
+    if (!fs_->block_allocator_->CheckAllocated(bno)) {
         return "not allocated";
     }
     if (checked_blocks_.Get(bno, bno + 1)) {
@@ -393,7 +393,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
 
 void MinfsChecker::CheckReserved() {
     // Check reserved inode '0'.
-    if (fs_->inodes_->inode_allocator_->map_.Get(0, 1)) {
+    if (fs_->inodes_->inode_allocator_->CheckAllocated(0)) {
         checked_inodes_.Set(0, 1);
         alloc_inodes_++;
     } else {
@@ -402,7 +402,7 @@ void MinfsChecker::CheckReserved() {
     }
 
     // Check reserved data block '0'.
-    if (fs_->block_allocator_->map_.Get(0, 1)) {
+    if (fs_->block_allocator_->CheckAllocated(0)) {
         checked_blocks_.Set(0, 1);
         alloc_blocks_++;
     } else {
@@ -438,7 +438,7 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     checked_inodes_.Set(ino, ino + 1);
     alloc_inodes_++;
 
-    if (!fs_->inodes_->inode_allocator_->map_.Get(ino, ino + 1)) {
+    if (!fs_->inodes_->inode_allocator_->CheckAllocated(ino)) {
        FS_TRACE_WARN("check: ino#%u: not marked in-use\n", ino);
         conforming_ = false;
     }
@@ -516,7 +516,7 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
     unsigned missing = 0;
 
     for (unsigned n = 0; n < fs_->Info().block_count; n++) {
-        if (fs_->block_allocator_->map_.Get(n, n + 1)) {
+        if (fs_->block_allocator_->CheckAllocated(n)) {
             if (!checked_blocks_.Get(n, n + 1)) {
                 missing++;
             }
@@ -533,7 +533,7 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
 zx_status_t MinfsChecker::CheckForUnusedInodes() const {
     unsigned missing = 0;
     for (unsigned n = 0; n < fs_->Info().inode_count; n++) {
-        if (fs_->inodes_->inode_allocator_->map_.Get(n, n + 1)) {
+        if (fs_->inodes_->inode_allocator_->CheckAllocated(n)) {
             if (!checked_inodes_.Get(n, n + 1)) {
                 missing++;
             }

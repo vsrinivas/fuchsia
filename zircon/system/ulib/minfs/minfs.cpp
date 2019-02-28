@@ -300,8 +300,6 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     if (reserve_blocks &&
         (status = block_promise->Initialize(work.get(), reserve_blocks,
                                             block_allocator_.get())) != ZX_OK) {
-        // Cancel the inode promise, which may already contain a reservation.
-        inode_promise->Cancel();
         return status;
     }
 

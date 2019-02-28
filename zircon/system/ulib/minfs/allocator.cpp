@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <limits>
+#include <mutex>
+#include <utility>
+
 #include <stdlib.h>
 #include <string.h>
 
 #include <bitmap/raw-bitmap.h>
-
 #include <minfs/allocator.h>
 #include <minfs/block-txn.h>
-
-#include <utility>
 
 namespace minfs {
 namespace {
@@ -25,7 +25,7 @@ blk_t BitmapBlocksForSize(size_t size) {
 }  // namespace
 
 AllocatorPromise::~AllocatorPromise() {
-    ZX_DEBUG_ASSERT(reserved_ == 0);
+    Cancel();
 }
 
 zx_status_t AllocatorPromise::Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator) {
@@ -39,7 +39,7 @@ zx_status_t AllocatorPromise::Initialize(WriteTxn* txn, size_t reserved, Allocat
 
     ZX_DEBUG_ASSERT(reserved_ == 0);
 
-    zx_status_t status = allocator->Reserve(txn, reserved, this);
+    zx_status_t status = allocator->Reserve({}, txn, reserved, this);
     if (status == ZX_OK) {
         allocator_ = allocator;
         reserved_ = reserved;
@@ -51,7 +51,7 @@ size_t AllocatorPromise::Allocate(WriteTxn* txn) {
     ZX_DEBUG_ASSERT(allocator_ != nullptr);
     ZX_DEBUG_ASSERT(reserved_ > 0);
     reserved_--;
-    return allocator_->Allocate(txn);
+    return allocator_->Allocate({}, txn);
 }
 
 #ifdef __Fuchsia__
@@ -59,12 +59,12 @@ size_t AllocatorPromise::Swap(size_t old_index) {
     ZX_DEBUG_ASSERT(allocator_ != nullptr);
     ZX_DEBUG_ASSERT(reserved_ > 0);
     reserved_--;
-    return allocator_->Swap(old_index);
+    return allocator_->Swap({}, old_index);
 }
 
 void AllocatorPromise::SwapCommit(WriteTxn* txn) {
     ZX_DEBUG_ASSERT(allocator_ != nullptr);
-    allocator_->SwapCommit(txn);
+    allocator_->SwapCommit({}, txn);
 }
 
 void AllocatorPromise::Split(size_t requested, AllocatorPromise* other_promise) {
@@ -84,8 +84,8 @@ void AllocatorPromise::Split(size_t requested, AllocatorPromise* other_promise) 
 #endif
 
 void AllocatorPromise::Cancel() {
-    if (IsInitialized()) {
-        allocator_->Unreserve(reserved_);
+    if (IsInitialized() && reserved_ > 0) {
+        allocator_->Unreserve({}, reserved_);
         reserved_ = 0;
     }
 
@@ -132,12 +132,18 @@ AllocatorMetadata::~AllocatorMetadata() = default;
 
 Allocator::~Allocator() {
 #ifdef __Fuchsia__
+    AutoLock lock(&lock_);
     ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
     ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
 #endif
 }
 
-size_t Allocator::GetAvailable() {
+size_t Allocator::GetAvailable() const {
+    AutoLock lock(&lock_);
+    return GetAvailableLocked();
+}
+
+size_t Allocator::GetAvailableLocked() const {
     size_t total_reserved = reserved_;
 #ifdef __Fuchsia__
     total_reserved += swap_in_.num_bits();
@@ -147,13 +153,14 @@ size_t Allocator::GetAvailable() {
 }
 
 void Allocator::Free(WriteTxn* txn, size_t index) {
+    AutoLock lock(&lock_);
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(!swap_out_.GetOne(index));
 #endif
     ZX_DEBUG_ASSERT(map_.GetOne(index));
 
     map_.ClearOne(index);
-    storage_->PersistRange(txn, GetMapData(), index, 1);
+    storage_->PersistRange(txn, GetMapDataLocked(), index, 1);
     storage_->PersistRelease(txn, 1);
 
     if (index < first_free_) {
@@ -161,17 +168,7 @@ void Allocator::Free(WriteTxn* txn, size_t index) {
     }
 }
 
-zx_status_t Allocator::ResetMap() {
-    zx_status_t status;
-    blk_t total_blocks = storage_->PoolTotal();
-    blk_t pool_blocks = BitmapBlocksForSize(total_blocks);
-    if ((status = map_.Reset(pool_blocks * kMinfsBlockBits)) != ZX_OK) {
-        return status;
-    }
-    return map_.Shrink(total_blocks);
-}
-
-zx_status_t Allocator::GrowMap(size_t new_size, size_t* old_size) {
+zx_status_t Allocator::GrowMapLocked(size_t new_size, size_t* old_size) {
     ZX_DEBUG_ASSERT(new_size >= map_.size());
     *old_size = map_.size();
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -186,27 +183,38 @@ zx_status_t Allocator::GrowMap(size_t new_size, size_t* old_size) {
     return ZX_OK;
 }
 
-zx_status_t Allocator::Reserve(WriteTxn* txn, size_t count, AllocatorPromise* promise) {
-    if (GetAvailable() < count) {
+WriteData Allocator::GetMapDataLocked() const {
+#ifdef __Fuchsia__
+    return map_.StorageUnsafe()->GetVmo().get();
+#else
+    return map_.StorageUnsafe()->GetData();
+#endif
+}
+
+zx_status_t Allocator::Reserve(AllocatorPromiseKey, WriteTxn* txn, size_t count,
+                               AllocatorPromise* promise) {
+    AutoLock lock(&lock_);
+    if (GetAvailableLocked() < count) {
         // If we do not have enough free elements, attempt to extend the partition.
-        auto grow_map = [this](size_t pool_size, size_t* old_pool_size) {
-            return this->GrowMap(pool_size, old_pool_size);
-        };
+        auto grow_map = ([this](size_t pool_size, size_t* old_pool_size)
+                FS_TA_NO_THREAD_SAFETY_ANALYSIS {
+            return this->GrowMapLocked(pool_size, old_pool_size);
+        });
 
         zx_status_t status;
-        //TODO(planders): Allow Extend to take in count.
-        if ((status = storage_->Extend(txn, GetMapData(), grow_map)) != ZX_OK) {
+        // TODO(planders): Allow Extend to take in count.
+        if ((status = storage_->Extend(txn, GetMapDataLocked(), grow_map)) != ZX_OK) {
             return status;
         }
 
-        ZX_DEBUG_ASSERT(GetAvailable() >= count);
+        ZX_DEBUG_ASSERT(GetAvailableLocked() >= count);
     }
 
     reserved_ += count;
     return ZX_OK;
 }
 
-size_t Allocator::Find() {
+size_t Allocator::FindLocked() const {
     ZX_DEBUG_ASSERT(reserved_ > 0);
     size_t start = first_free_;
 
@@ -245,19 +253,26 @@ size_t Allocator::Find() {
     }
 }
 
-size_t Allocator::Allocate(WriteTxn* txn) {
+bool Allocator::CheckAllocated(size_t index) const {
+    AutoLock lock(&lock_);
+    return map_.Get(index, index + 1);
+}
+
+size_t Allocator::Allocate(AllocatorPromiseKey, WriteTxn* txn) {
+    AutoLock lock(&lock_);
     ZX_DEBUG_ASSERT(reserved_ > 0);
-    size_t bitoff_start = Find();
+    size_t bitoff_start = FindLocked();
 
     ZX_ASSERT(map_.SetOne(bitoff_start) == ZX_OK);
-    storage_->PersistRange(txn, GetMapData(), bitoff_start, 1);
+    storage_->PersistRange(txn, GetMapDataLocked(), bitoff_start, 1);
     reserved_ -= 1;
     storage_->PersistAllocate(txn, 1);
     first_free_ = bitoff_start + 1;
     return bitoff_start;
 }
 
-void Allocator::Unreserve(size_t count) {
+void Allocator::Unreserve(AllocatorPromiseKey, size_t count) {
+    AutoLock lock(&lock_);
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(swap_in_.num_bits() == 0);
     ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
@@ -267,7 +282,8 @@ void Allocator::Unreserve(size_t count) {
 }
 
 #ifdef __Fuchsia__
-size_t Allocator::Swap(size_t old_index) {
+size_t Allocator::Swap(AllocatorPromiseKey, size_t old_index) {
+    AutoLock lock(&lock_);
     ZX_DEBUG_ASSERT(reserved_ > 0);
 
     if (old_index > 0) {
@@ -275,7 +291,7 @@ size_t Allocator::Swap(size_t old_index) {
         ZX_ASSERT(swap_out_.SetOne(old_index) == ZX_OK);
     }
 
-    size_t new_index = Find();
+    size_t new_index = FindLocked();
     ZX_DEBUG_ASSERT(!swap_in_.GetOne(new_index));
     ZX_ASSERT(swap_in_.SetOne(new_index) == ZX_OK);
     reserved_--;
@@ -284,7 +300,8 @@ size_t Allocator::Swap(size_t old_index) {
     return new_index;
 }
 
-void Allocator::SwapCommit(WriteTxn* txn) {
+void Allocator::SwapCommit(AllocatorPromiseKey, WriteTxn* txn) {
+    AutoLock lock(&lock_);
     if (swap_in_.num_bits() == 0 && swap_out_.num_bits() == 0) {
         return;
     }
@@ -296,7 +313,7 @@ void Allocator::SwapCommit(WriteTxn* txn) {
         // Swap in the new bits.
         zx_status_t status = map_.Set(range->bitoff, range->end());
         ZX_DEBUG_ASSERT(status == ZX_OK);
-        storage_->PersistRange(txn, GetMapData(), range->bitoff, range->bitlen);
+        storage_->PersistRange(txn, GetMapDataLocked(), range->bitoff, range->bitlen);
     }
 
     for (auto range = swap_out_.begin(); range != swap_out_.end(); ++range) {
@@ -310,7 +327,7 @@ void Allocator::SwapCommit(WriteTxn* txn) {
         // Swap out the old bits.
         zx_status_t status = map_.Clear(range->bitoff, range->end());
         ZX_DEBUG_ASSERT(status == ZX_OK);
-        storage_->PersistRange(txn, GetMapData(), range->bitoff, range->bitlen);
+        storage_->PersistRange(txn, GetMapDataLocked(), range->bitoff, range->bitlen);
     }
 
     // Update count of allocated blocks.
@@ -327,6 +344,7 @@ void Allocator::SwapCommit(WriteTxn* txn) {
 
 #ifdef __Fuchsia__
 fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
+    AutoLock lock(&lock_);
     fbl::Vector<BlockRegion> out_regions;
     uint64_t offset = 0;
     uint64_t end = 0;
@@ -348,11 +366,18 @@ PersistentStorage::PersistentStorage(Bcache* bc, SuperblockManager* sb, size_t u
       sb_(sb),  grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
 
 zx_status_t Allocator::Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage> storage,
-                              fbl::unique_ptr<Allocator>* out) {
+                              fbl::unique_ptr<Allocator>* out) FS_TA_NO_THREAD_SAFETY_ANALYSIS {
+    // Ignore thread-safety analysis on the |allocator| object; no one has an
+    // external reference to it yet.
     zx_status_t status;
     fbl::unique_ptr<Allocator> allocator(new Allocator(std::move(storage)));
 
-    if ((status = allocator->ResetMap()) != ZX_OK) {
+    blk_t total_blocks = allocator->storage_->PoolTotal();
+    blk_t pool_blocks = BitmapBlocksForSize(total_blocks);
+    if ((status = allocator->map_.Reset(pool_blocks * kMinfsBlockBits)) != ZX_OK) {
+        return status;
+    }
+    if ((status = allocator->map_.Shrink(total_blocks)) != ZX_OK) {
         return status;
     }
 
@@ -364,7 +389,7 @@ zx_status_t Allocator::Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage
     }
     allocator->storage_->Load(txn, map_vmoid);
 #else
-    allocator->storage_->Load(txn, allocator->GetMapData());
+    allocator->storage_->Load(txn, allocator->GetMapDataLocked());
 #endif
     *out = std::move(allocator);
     return ZX_OK;
