@@ -62,7 +62,7 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-void DatagramSendtoRecvfrom() {
+TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   int recvfd = socket(AF_INET, SOCK_DGRAM, 0);
   ASSERT_GE(recvfd, 0);
 
@@ -171,7 +171,7 @@ void DatagramReadWriteV6(int recvfd, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-void DatagramSendtoRecvfromV6() {
+TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   int recvfd = socket(AF_INET6, SOCK_DGRAM, 0);
   ASSERT_GE(recvfd, 0);
 

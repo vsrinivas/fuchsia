@@ -28,7 +28,6 @@
 namespace netstack {
 
 const int32_t kTimeout = 10000;  // 10 seconds
-const int32_t kRepeatEach = 1;   // How many times to repeat each test
 
 // InterThread communication helper
 
@@ -88,7 +87,7 @@ void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-void BlockingAcceptWrite() {
+TEST(NetStreamTest, BlockingAcceptWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -129,17 +128,11 @@ void BlockingAcceptWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, BlockingAcceptWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    BlockingAcceptWrite();
-  }
-}
-
 // NetStreamTest.BlockingAcceptWriteMultiple
 
 const int32_t kConnections = 100;
 
-void BlockingAcceptWriteMultiple() {
+TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -191,12 +184,6 @@ void BlockingAcceptWriteMultiple() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    BlockingAcceptWriteMultiple();
-  }
-}
-
 // NetStreamTest.BlockAcceptWriteNoClose
 
 // NoClose simulates an unexpected process exit by closing the socket handle
@@ -213,7 +200,7 @@ void NoClose(int fd) {
   fdio_unsafe_release(io);
 }
 
-void BlockingAcceptWriteNoClose() {
+TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
   short port = 0;  // will be assigned by the first bind.
 
   for (int j = 0; j < 2; j++) {
@@ -269,15 +256,9 @@ void BlockingAcceptWriteNoClose() {
   }
 }
 
-TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    BlockingAcceptWriteNoClose();
-  }
-}
-
 // NetStreamTest.BlockAcceptDupWrite
 
-void BlockingAcceptDupWrite() {
+TEST(NetStreamTest, BlockingAcceptDupWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -322,15 +303,9 @@ void BlockingAcceptDupWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, BlockingAcceptDupWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    BlockingAcceptDupWrite();
-  }
-}
-
 // NetStreamTest.NonBlockingAcceptWrite
 
-void NonBlockingAcceptWrite() {
+TEST(NetStreamTest, NonBlockingAcceptWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -377,15 +352,9 @@ void NonBlockingAcceptWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, NonBlockingAcceptWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    NonBlockingAcceptWrite();
-  }
-}
-
 // NetStreamTest.NonBlockingAcceptDupWrite
 
-void NonBlockingAcceptDupWrite() {
+TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -436,12 +405,6 @@ void NonBlockingAcceptDupWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    NonBlockingAcceptDupWrite();
-  }
-}
-
 // NetStreamTest.NonBlockingConnectWrite
 
 void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd) {
@@ -462,7 +425,7 @@ void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-void NonBlockingConnectWrite() {
+TEST(NetStreamTest, NonBlockingConnectWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -520,12 +483,6 @@ void NonBlockingConnectWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, NonBlockingConnectWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    NonBlockingConnectWrite();
-  }
-}
-
 // NetStreamTest.NonBlockingConnectRead
 
 void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
@@ -542,7 +499,7 @@ void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-void NonBlockingConnectRead() {
+TEST(NetStreamTest, NonBlockingConnectRead) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -606,15 +563,9 @@ void NonBlockingConnectRead() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, NonBlockingConnectRead) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    NonBlockingConnectRead();
-  }
-}
-
 // NetStreamTest.NonBlockingConnectRefused
 
-void NonBlockingConnectRefused() {
+TEST(NetStreamTest, NonBlockingConnectRefused) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -656,15 +607,9 @@ void NonBlockingConnectRefused() {
   EXPECT_EQ(0, close(acptfd));
 }
 
-TEST(NetStreamTest, NonBlockingConnectRefused) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    NonBlockingConnectRefused();
-  }
-}
-
 // NetStreamTest.GetTcpInfo
 
-void GetTcpInfo() {
+TEST(NetStreamTest, GetTcpInfo) {
   int connfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(connfd, 0) << "socket failed: " << errno;
 
@@ -677,12 +622,6 @@ void GetTcpInfo() {
   ASSERT_EQ(0u, info.tcpi_rttvar);
 
   ASSERT_EQ(0, close(connfd));
-}
-
-TEST(NetStreamTest, GetTcpInfo) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    GetTcpInfo();
-  }
 }
 
 // NetStreamTest.Shutdown
@@ -713,7 +652,7 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
   NotifySuccess(ntfyfd);
 }
 
-void Shutdown() {
+TEST(NetStreamTest, Shutdown) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -755,12 +694,6 @@ void Shutdown() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, Shutdown) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    Shutdown();
-  }
-}
-
 // NetDatagramTest
 
 // NetDatagramTest.DatagramSendto
@@ -788,7 +721,7 @@ void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr,
   NotifySuccess(ntfyfd);
 }
 
-void DatagramSendto() {
+TEST(NetDatagramTest, DatagramSendto) {
   int recvfd = socket(AF_INET, SOCK_DGRAM, 0);
   ASSERT_GE(recvfd, 0);
 
@@ -831,31 +764,9 @@ void DatagramSendto() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetDatagramTest, DatagramSendto) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    DatagramSendto();
-  }
-}
-
-extern void DatagramSendtoRecvfrom();
-
-TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    DatagramSendtoRecvfrom();
-  }
-}
-
-extern void DatagramSendtoRecvfromV6();
-
-TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    DatagramSendtoRecvfromV6();
-  }
-}
-
 // NetDatagramTest.DatagramConnectWrite
 
-void DatagramConnectWrite() {
+TEST(NetDatagramTest, DatagramConnectWrite) {
   int recvfd = socket(AF_INET, SOCK_DGRAM, 0);
   ASSERT_GE(recvfd, 0);
 
@@ -897,15 +808,9 @@ void DatagramConnectWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetDatagramTest, DatagramConnectWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    DatagramConnectWrite();
-  }
-}
-
 // NetDatagramTest.Datagram.PartialRecv
 
-void DatagramPartialRecv() {
+TEST(NetDatagramTest, DatagramPartialRecv) {
   int recvfd = socket(AF_INET, SOCK_DGRAM, 0);
   ASSERT_GE(recvfd, 0);
 
@@ -965,12 +870,6 @@ void DatagramPartialRecv() {
   ASSERT_EQ(0, close(sendfd));
 
   EXPECT_EQ(0, close(recvfd));
-}
-
-TEST(NetDatagramTest, DatagramPartialRecv) {
-  for (int i = 0; i < kRepeatEach; i++) {
-    DatagramPartialRecv();
-  }
 }
 
 TEST(NetInvalidArgTest, Socket) {
