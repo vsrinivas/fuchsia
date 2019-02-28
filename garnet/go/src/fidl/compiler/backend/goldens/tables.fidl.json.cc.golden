@@ -111,7 +111,7 @@ bool operator==(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs) {
     if (!_rhs.has_x()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+    if (!::fidl::Equals(*_lhs.x(), *_rhs.x())) {
       return false;
     }
   } else if (_rhs.has_x()) {
@@ -334,7 +334,7 @@ bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
     if (!_rhs.has_x()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+    if (!::fidl::Equals(*_lhs.x(), *_rhs.x())) {
       return false;
     }
   } else if (_rhs.has_x()) {
@@ -344,7 +344,7 @@ bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
     if (!_rhs.has_y()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
+    if (!::fidl::Equals(*_lhs.y(), *_rhs.y())) {
       return false;
     }
   } else if (_rhs.has_y()) {
@@ -354,7 +354,7 @@ bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
     if (!_rhs.has_z()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
+    if (!::fidl::Equals(*_lhs.z(), *_rhs.z())) {
       return false;
     }
   } else if (_rhs.has_z()) {
@@ -522,7 +522,7 @@ bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs) {
     if (!_rhs.has_x()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+    if (!::fidl::Equals(*_lhs.x(), *_rhs.x())) {
       return false;
     }
   } else if (_rhs.has_x()) {
@@ -532,7 +532,7 @@ bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs) {
     if (!_rhs.has_y()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
+    if (!::fidl::Equals(*_lhs.y(), *_rhs.y())) {
       return false;
     }
   } else if (_rhs.has_y()) {

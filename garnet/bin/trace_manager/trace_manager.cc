@@ -55,24 +55,28 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
 
   uint32_t default_buffer_size_megabytes = kDefaultBufferSizeMegabytesHint;
   if (options.has_buffer_size_megabytes_hint()) {
-    const uint32_t buffer_size_mb_hint =
+    const uint32_t* buffer_size_mb_hint_ptr =
       options.buffer_size_megabytes_hint();
     default_buffer_size_megabytes =
-      ConstrainBufferSize(buffer_size_mb_hint);
+      ConstrainBufferSize(*buffer_size_mb_hint_ptr);
   }
 
   TraceProviderSpecMap provider_specs;
   if (options.has_provider_specs()) {
-    for (const auto& it : options.provider_specs()) {
-      provider_specs[it.name()] =
-        TraceProviderSpec{it.buffer_size_megabytes_hint()};
+    const std::vector<fuchsia::tracing::ProviderSpec>* provider_specs_ptr =
+      options.provider_specs();
+    for (const auto& it : *provider_specs_ptr) {
+      provider_specs[*it.name()] =
+        TraceProviderSpec{*it.buffer_size_megabytes_hint()};
     }
   }
 
   fuchsia::tracing::BufferingMode tracing_buffering_mode =
     kDefaultBufferingMode;
   if (options.has_buffering_mode()) {
-    tracing_buffering_mode = options.buffering_mode();
+    const fuchsia::tracing::BufferingMode* buffering_mode_ptr =
+      options.buffering_mode();
+    tracing_buffering_mode = *buffering_mode_ptr;
   }
   fuchsia::tracelink::BufferingMode tracelink_buffering_mode;
   const char* mode_name;
@@ -106,8 +110,9 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
   }
 
   std::vector<::std::string> categories;
+  const std::vector<::std::string>* categories_ptr = options.categories();
   if (options.has_categories()) {
-    categories = std::move(options.categories());
+    categories = std::move(*categories_ptr);
   }
   session_ = fxl::MakeRefCounted<TraceSession>(
       std::move(output), std::move(categories),
@@ -123,8 +128,9 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
 
   uint64_t start_timeout_milliseconds = kDefaultStartTimeoutMilliseconds;
   if (options.has_start_timeout_milliseconds()) {
-    start_timeout_milliseconds =
+    const uint64_t* start_timeout_milliseconds_ptr =
       options.start_timeout_milliseconds();
+    start_timeout_milliseconds = *start_timeout_milliseconds_ptr;
   }
   session_->WaitForProvidersToStart(
       std::move(start_callback), zx::msec(start_timeout_milliseconds));

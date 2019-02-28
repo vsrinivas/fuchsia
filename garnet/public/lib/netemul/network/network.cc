@@ -49,20 +49,20 @@ class NetworkBus : public data::BusConsumer {
     // reordering interceptor:
     if (config.has_reorder()) {
       interceptors_.emplace_back(new interceptor::Reorder(
-          config.reorder().store_buff, zx::msec(config.reorder().tick),
+          config.reorder()->store_buff, zx::msec(config.reorder()->tick),
           MakeInterceptorCallback()));
     }
     // latency interceptor:
     if (config.has_latency()) {
       interceptors_.emplace_back(new interceptor::Latency(
-          config.latency().average, config.latency().std_dev,
+          config.latency()->average, config.latency()->std_dev,
           MakeInterceptorCallback()));
     }
     // packet loss interceptor:
     if (config.has_packet_loss()) {
-      if (config.packet_loss().is_random_rate()) {
+      if (config.packet_loss()->is_random_rate()) {
         interceptors_.emplace_back(new interceptor::PacketLoss(
-            config.packet_loss().random_rate(), MakeInterceptorCallback()));
+            config.packet_loss()->random_rate(), MakeInterceptorCallback()));
       }
     }
   }
@@ -213,9 +213,9 @@ void Network::SetClosedCallback(Network::ClosedCallback cb) {
 
 bool Network::CheckConfig(const Config& config) {
   if (config.has_packet_loss()) {
-    if (config.packet_loss().is_random_rate()) {
+    if (config.packet_loss()->is_random_rate()) {
       // random rate packet loss must be unsigned byte less or equal to 100
-      if (config.packet_loss().random_rate() > 100) {
+      if (config.packet_loss()->random_rate() > 100) {
         return false;
       }
     } else {

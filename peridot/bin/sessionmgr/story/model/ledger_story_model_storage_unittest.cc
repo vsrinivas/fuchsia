@@ -170,7 +170,7 @@ TEST_F(LedgerStoryModelStorageTest, UpdatesAreSequential) {
   executor.schedule_task(std::move(promise1));
 
   RunLoopUntilNumMutationsObserved(observed_mutations, 2);
-  EXPECT_EQ(StoryState::STOPPING, observed_model->runtime_state());
+  EXPECT_EQ(StoryState::STOPPING, *observed_model->runtime_state());
 }
 
 // When Load() is called, read what is stored in the Ledger back out and

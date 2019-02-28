@@ -81,11 +81,11 @@ void GenerateObservedMutationsForDeviceState(
 
   if (model.has_runtime_state()) {
     commands->resize(commands->size() + 1);
-    commands->back().set_set_runtime_state(model.runtime_state());
+    commands->back().set_set_runtime_state(*model.runtime_state());
   }
   if (model.has_visibility_state()) {
     commands->resize(commands->size() + 1);
-    commands->back().set_set_visibility_state(model.visibility_state());
+    commands->back().set_set_visibility_state(*model.visibility_state());
   }
 }
 

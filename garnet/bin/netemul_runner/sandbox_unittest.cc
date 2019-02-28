@@ -139,7 +139,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
       if (!event.has_code()) {
         return;
       }
-      auto code = event.code();
+      auto code = *event.code();
       std::cout << "Observed event " << code << std::endl;
       // assert that code hasn't happened yet.
       // given we're putting codes in a set, it's an invalid test setup

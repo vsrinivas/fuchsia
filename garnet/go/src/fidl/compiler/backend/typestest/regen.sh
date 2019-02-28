@@ -21,7 +21,6 @@ EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 EXAMPLE_DIR="$( echo $EXAMPLE_DIR | sed -e "s+${FUCHSIA_DIR}/++" )"
 GOLDENS_DIR="${EXAMPLE_DIR}/../goldens"
 GOLDENS=()
-cd "${FUCHSIA_DIR}"
 for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     src_name="$( basename "${src_path}" )"
     json_name=${src_name}.json

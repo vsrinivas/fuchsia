@@ -17,9 +17,8 @@ class OlderSimpleTable  {
  public:
   static const fidl_type_t* FidlType;
   
-  const int64_t& x() const {
-    ZX_ASSERT(has_x_);
-    return x_value_.value;
+  const int64_t* x() const {
+    return has_x_ ? &x_value_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
@@ -90,9 +89,8 @@ class NewerSimpleTable  {
  public:
   static const fidl_type_t* FidlType;
   
-  const int64_t& x() const {
-    ZX_ASSERT(has_x_);
-    return x_value_.value;
+  const int64_t* x() const {
+    return has_x_ ? &x_value_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
@@ -121,9 +119,8 @@ class NewerSimpleTable  {
     Destruct(&x_value_.value);
   }
   
-  const int64_t& y() const {
-    ZX_ASSERT(has_y_);
-    return y_value_.value;
+  const int64_t* y() const {
+    return has_y_ ? &y_value_.value : nullptr;
   }
   bool has_y() const {
     return has_y_;
@@ -152,9 +149,8 @@ class NewerSimpleTable  {
     Destruct(&y_value_.value);
   }
   
-  const int64_t& z() const {
-    ZX_ASSERT(has_z_);
-    return z_value_.value;
+  const int64_t* z() const {
+    return has_z_ ? &z_value_.value : nullptr;
   }
   bool has_z() const {
     return has_z_;
@@ -241,9 +237,8 @@ class SimpleTable  {
  public:
   static const fidl_type_t* FidlType;
   
-  const int64_t& x() const {
-    ZX_ASSERT(has_x_);
-    return x_value_.value;
+  const int64_t* x() const {
+    return has_x_ ? &x_value_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
@@ -272,9 +267,8 @@ class SimpleTable  {
     Destruct(&x_value_.value);
   }
   
-  const int64_t& y() const {
-    ZX_ASSERT(has_y_);
-    return y_value_.value;
+  const int64_t* y() const {
+    return has_y_ ? &y_value_.value : nullptr;
   }
   bool has_y() const {
     return has_y_;

@@ -20,9 +20,8 @@ class {{ .Name }}  {
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
-  const {{ .Type.Decl }}& {{ .Name }}() const {
-    ZX_ASSERT({{ .FieldPresenceName }});
-    return {{ .FieldDataName }}.value;
+  const {{ .Type.Decl }}* {{ .Name }}() const {
+    return {{ .FieldPresenceName }} ? &{{ .FieldDataName }}.value : nullptr;
   }
   bool {{ .MethodHasName }}() const {
     return {{ .FieldPresenceName }};
@@ -231,7 +230,7 @@ bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
     if (!_rhs.{{ .MethodHasName }}()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.{{ .Name }}(), _rhs.{{ .Name }}())) {
+    if (!::fidl::Equals(*_lhs.{{ .Name }}(), *_rhs.{{ .Name }}())) {
       return false;
     }
   } else if (_rhs.{{ .MethodHasName }}()) {

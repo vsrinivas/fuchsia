@@ -57,7 +57,7 @@ OperationBase* MakeWriteStoryDataCall(
     fuchsia::modular::internal::StoryDataPtr story_data,
     std::function<void()> result_call) {
   return new WriteDataCall<fuchsia::modular::internal::StoryData>(
-      page, StoryNameToStoryDataKey(story_data->story_info().id), XdrStoryData,
+      page, StoryNameToStoryDataKey(story_data->story_info()->id), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
 
@@ -178,7 +178,7 @@ class DeleteStoryCall : public Operation<> {
     ledger_->GetPage(std::make_unique<fuchsia::ledger::PageId>(
                          *std::move(story_data_.mutable_story_page_id())),
                      story_page_.NewRequest(),
-                     [this, flow, story_name = story_data_.story_info().id](
+                     [this, flow, story_name = story_data_.story_info()->id](
                          fuchsia::ledger::Status status) {
                        if (status != fuchsia::ledger::Status::OK) {
                          FXL_LOG(ERROR)
@@ -191,7 +191,7 @@ class DeleteStoryCall : public Operation<> {
   }
 
   void Cont2(FlowToken flow) {
-    story_page_->Clear([this, flow, story_name = story_data_.story_info().id](
+    story_page_->Clear([this, flow, story_name = story_data_.story_info()->id](
                            fuchsia::ledger::Status status) {
       if (status != fuchsia::ledger::Status::OK) {
         FXL_LOG(ERROR) << "Page.Clear() for story " << story_name << ": "
@@ -205,7 +205,7 @@ class DeleteStoryCall : public Operation<> {
   void Cont3(FlowToken flow) {
     // Remove the story data in the session page.
     session_page_->Delete(
-        to_array(StoryNameToStoryDataKey(story_data_.story_info().id)),
+        to_array(StoryNameToStoryDataKey(story_data_.story_info()->id)),
         [this, flow](fuchsia::ledger::Status status) {
           // Deleting a key that doesn't exist is OK, not
           // KEY_NOT_FOUND.
@@ -220,7 +220,7 @@ class DeleteStoryCall : public Operation<> {
   void Cont4(FlowToken flow) {
     // Remove the story snapshot in the session page.
     session_page_->Delete(
-        to_array(StoryNameToStorySnapshotKey(story_data_.story_info().id)),
+        to_array(StoryNameToStorySnapshotKey(story_data_.story_info()->id)),
         [this, flow](fuchsia::ledger::Status status) {
           // Deleting a key that doesn't exist is OK, not
           // KEY_NOT_FOUND.
@@ -301,7 +301,7 @@ class MutateStoryDataCall : public Operation<> {
 FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(
     fidl::StringPtr story_name, const int64_t ts) {
   auto mutate = [ts](fuchsia::modular::internal::StoryData* const story_data) {
-    if (story_data->story_info().last_focus_time == ts) {
+    if (story_data->story_info()->last_focus_time == ts) {
       return false;
     }
     story_data->mutable_story_info()->last_focus_time = ts;
@@ -340,7 +340,7 @@ FuturePtr<> SessionStorage::UpdateStoryOptions(
   auto mutate = fxl::MakeCopyable(
       [story_options = std::move(story_options)](
           fuchsia::modular::internal::StoryData* story_data) mutable {
-        if (story_data->story_options() != story_options) {
+        if (*story_data->story_options() != story_options) {
           story_data->set_story_options(std::move(story_options));
           return true;
         }
@@ -362,7 +362,7 @@ FuturePtr<std::unique_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
        story_name](fuchsia::modular::internal::StoryDataPtr story_data) {
         if (story_data) {
           auto story_storage = std::make_unique<StoryStorage>(
-              ledger_client_, story_data->story_page_id());
+              ledger_client_, *story_data->story_page_id());
           returned_future->Complete(std::move(story_storage));
         } else {
           returned_future->Complete(nullptr);

@@ -91,14 +91,14 @@ class BusTest : public TestWithEnvironment {
   static bool EventEquals(const netemul::Bus::FEvent& e1,
                           const netemul::Bus::FEvent& e2) {
     return (e1.has_code() == e2.has_code() &&
-            (!e1.has_code() || e1.code() == e2.code())) &&
+            (!e1.has_code() || *e1.code() == *e2.code())) &&
            (e1.has_message() == e2.has_message() &&
-            (!e1.has_message() || e1.message() == e2.message())) &&
+            (!e1.has_message() || *e1.message() == *e2.message())) &&
            (e1.has_arguments() == e2.has_arguments() &&
             (!e1.has_arguments() ||
-             (e1.arguments().size() == e2.arguments().size() &&
-              memcmp(e1.arguments().data(), e2.arguments().data(),
-                     e1.arguments().size()) == 0)));
+             (e1.arguments()->size() == e2.arguments()->size() &&
+              memcmp(e1.arguments()->data(), e2.arguments()->data(),
+                     e1.arguments()->size()) == 0)));
   }
 
   void DataExchangeTest(const Bus::FEvent& ref_event_1,

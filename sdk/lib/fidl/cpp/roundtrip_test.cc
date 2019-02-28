@@ -140,10 +140,10 @@ TEST(SimpleTable, SerializeAndDeserialize) {
   EXPECT_EQ(input, RoundTrip<SimpleTable>(input));
   // OlderSimpleTable is an abbreviated ('old') version of SimpleTable:
   // We should be able to decode to it.
-  EXPECT_EQ(1, RoundTrip<OlderSimpleTable>(input).x());
+  EXPECT_EQ(1, *RoundTrip<OlderSimpleTable>(input).x());
   // NewerSimpleTable is an extended ('new') version of SimpleTable:
   // We should be able to decode to it.
-  EXPECT_EQ(1, RoundTrip<NewerSimpleTable>(input).x());
+  EXPECT_EQ(1, *RoundTrip<NewerSimpleTable>(input).x());
 }
 
 TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
@@ -156,7 +156,7 @@ TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   EXPECT_FALSE(RoundTrip<OlderSimpleTable>(input).has_x());
   // NewerSimpleTable is an extended ('new') version of SimpleTable:
   // We should be able to decode to it.
-  EXPECT_EQ(1, RoundTrip<NewerSimpleTable>(input).y());
+  EXPECT_EQ(1, *RoundTrip<NewerSimpleTable>(input).y());
 }
 
 TEST(Empty, SerializeAndDeserialize) {

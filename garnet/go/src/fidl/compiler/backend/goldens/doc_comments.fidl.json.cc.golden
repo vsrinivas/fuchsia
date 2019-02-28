@@ -297,7 +297,7 @@ bool operator==(const Table& _lhs, const Table& _rhs) {
     if (!_rhs.has_Field()) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.Field(), _rhs.Field())) {
+    if (!::fidl::Equals(*_lhs.Field(), *_rhs.Field())) {
       return false;
     }
   } else if (_rhs.has_Field()) {
