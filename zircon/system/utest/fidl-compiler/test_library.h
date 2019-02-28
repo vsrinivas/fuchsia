@@ -68,13 +68,18 @@ public:
                library_->Compile();
     }
 
-    bool Lint() {
+    bool Lint(fidl::linter::LintingTreeVisitor::Options& options) {
         auto ast = parser_.Parse();
         if (!parser_.Ok())
             return false;
-        LintingTreeVisitor visitor(error_reporter_);
+        fidl::linter::LintingTreeVisitor visitor(options, error_reporter_);
         visitor.OnFile(ast);
         return true;
+    }
+
+    bool Lint() {
+        fidl::linter::LintingTreeVisitor::Options options;
+        return Lint(options);
     }
 
     std::string GenerateJSON() {

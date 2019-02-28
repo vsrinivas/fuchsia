@@ -159,6 +159,36 @@ using bar as baz;
     END_TEST;
 }
 
+bool library_name_prefix_good() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library shibboleth.b.c;
+
+)FIDL");
+    fidl::linter::LintingTreeVisitor::Options options;
+    options.add_permitted_library_prefix("shibboleth");
+    ASSERT_TRUE(library.Lint());
+    ASSERT_WARNINGS(0, library, "");
+
+    END_TEST;
+}
+
+bool library_name_prefix_bad() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library shibboleth.b.c;
+
+)FIDL");
+    fidl::linter::LintingTreeVisitor::Options options;
+    options.add_permitted_library_prefix("metasyntax");
+    ASSERT_TRUE(library.Lint());
+    ASSERT_WARNINGS(1, library, "shibboleth");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(lint_test);

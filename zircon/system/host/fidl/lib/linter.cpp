@@ -7,23 +7,49 @@
 #include <algorithm>
 #include <sstream>
 
-void IdentifierChecker::WarnOnMismatch(fidl::raw::Identifier& identifier) {
-    std::string id(identifier.end_.data().data(), identifier.end_.data().size());
+namespace fidl {
+namespace linter {
+
+namespace {
+
+std::string IdentifierToString(fidl::raw::Identifier& identifier) {
+    return std::string(identifier.end_.data().data(), identifier.end_.data().size());
+}
+
+std::string CompoundName(std::unique_ptr<fidl::raw::CompoundIdentifier>& library_name) {
+    std::string compound_name;
+    for (auto id_it = library_name->components.begin();
+         id_it != library_name->components.end();
+         ++id_it) {
+        compound_name.append(IdentifierToString(**id_it));
+        if (id_it != library_name->components.end() - 1) {
+            compound_name += ".";
+        }
+    }
+    return compound_name;
+}
+
+} // anonymous namespace
+
+void IdentifierChecker::WarnOnMismatch(std::string& id, SourceLocation location) {
     if (!Check(id)) {
         std::string error = "Identifier\n    ";
         error.append(id);
         error.append("\nis not ");
-        error.append(name_);
-        error.append(" (Pattern: ");
-        error.append(pattern_s_);
-        error.append(")\n");
+        error.append(description_);
+        error.append("\n");
         std::optional<std::string> recommendation = Recommend(id);
         if (recommendation) {
             error.append("Did you mean:\n    ");
             error.append(*recommendation);
         }
-        error_reporter_->ReportWarning(identifier.start_.location(), error);
+        error_reporter_->ReportWarning(location, error);
     }
+}
+
+void IdentifierChecker::WarnOnMismatch(fidl::raw::Identifier& identifier) {
+    std::string id = IdentifierToString(identifier);
+    WarnOnMismatch(id, identifier.start_.location());
 }
 
 // Many, many people will either a) lower-case the first letter, or b) get the
@@ -59,13 +85,19 @@ std::optional<std::string> UpperCamelCaseChecker::Recommend(std::string& id) {
     return {};
 }
 
-LintingTreeVisitor::LintingTreeVisitor(fidl::ErrorReporter* error_reporter)
+LintingTreeVisitor::LintingTreeVisitor(const Options& options, fidl::ErrorReporter* error_reporter)
     : tokenizer_(error_reporter),
       legal_library_name_("a legal library name", "^((?!(common|service|util|base|f.l|zx[a-z]*)).)*$", tokenizer_, error_reporter),
       single_identifier_("single identifier", "[a-z][a-z0-9]*", tokenizer_, error_reporter),
       upper_snake_case_(tokenizer_, error_reporter),
       lower_snake_case_("lower snake case", "[a-z0-9]+(_[a-z0-9]+)*", tokenizer_, error_reporter),
-      upper_camel_case_(tokenizer_, error_reporter) {}
+      upper_camel_case_(tokenizer_, error_reporter) {
+    if (options.permitted_library_prefixes_.size() != 0) {
+        prefix_checker_ = std::make_optional<PrefixChecker>(
+            options.permitted_library_prefixes_,
+            tokenizer_, error_reporter);
+    }
+}
 
 std::vector<std::string> IdentifierTokenizer::Tokenize(
     std::string& identifier) const {
@@ -119,7 +151,7 @@ std::vector<std::string> IdentifierTokenizer::Tokenize(
 // Break into tokens, recommend UpperSnakeCase version of tokens.
 std::optional<std::string> UpperSnakeCaseChecker::Recommend(
     std::string& identifier) {
-    std::vector<std::string> tokens = tokenizer_.Tokenize(identifier);
+    std::vector<std::string> tokens = tokenizer_->Tokenize(identifier);
 
     // identifiers must start with [a-zA-Z], which means there should always be
     // some token.
@@ -137,10 +169,44 @@ std::optional<std::string> UpperSnakeCaseChecker::Recommend(
     return recommendation;
 }
 
+PrefixChecker::PrefixChecker(std::vector<std::string> allowed_prefixes,
+                             const IdentifierTokenizer& tokenizer,
+                             fidl::ErrorReporter* error_reporter)
+    : IdentifierChecker(tokenizer, error_reporter),
+      allowed_prefixes_(allowed_prefixes) {
+    description_ = "one of : [";
+    for (auto prefix_it = allowed_prefixes.begin();
+         prefix_it != allowed_prefixes.end();
+         ++prefix_it) {
+        description_.append(*prefix_it);
+        if (prefix_it + 1 != allowed_prefixes.end()) {
+            description_.append(", ");
+        }
+    }
+    description_.append("]");
+}
+
+bool PrefixChecker::Check(const std::string& identifier) const {
+    for (auto& prefix : allowed_prefixes_) {
+        if (identifier.find(prefix.c_str(), 0, prefix.size()) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void LintingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& element) {
-    for (auto& id : element->library_name->components) {
-        single_identifier_.WarnOnMismatch(*id);
-        legal_library_name_.WarnOnMismatch(*id);
+    for (auto id_it = element->library_name->components.begin();
+         id_it != element->library_name->components.end();
+         ++id_it) {
+        auto id = **id_it;
+        single_identifier_.WarnOnMismatch(id);
+        legal_library_name_.WarnOnMismatch(id);
+    }
+    if (prefix_checker_) {
+        std::string full_library_name = CompoundName(element->library_name);
+        prefix_checker_->WarnOnMismatch(full_library_name,
+                                        element->library_name->components[0]->start_.location());
     }
     element->Accept(*this);
 }
@@ -161,3 +227,11 @@ void LintingTreeVisitor::OnUsing(std::unique_ptr<fidl::raw::Using> const& elemen
     }
     element->Accept(*this);
 }
+
+void LintingTreeVisitor::Options::add_permitted_library_prefix(
+    std::string prefix) {
+    permitted_library_prefixes_.push_back(prefix);
+}
+
+} // namespace linter
+} // namespace fidl
