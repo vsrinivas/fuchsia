@@ -74,7 +74,3 @@ private:
 };
 
 } // namespace board_mt8167
-
-__BEGIN_CDECLS
-zx_status_t mt8167_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS
