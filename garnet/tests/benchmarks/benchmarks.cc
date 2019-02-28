@@ -22,6 +22,9 @@ int main(int argc, const char** argv) {
       "benchmark_example",
       "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
 
+  // TODO(INTK-858): Re-enable these tests.  These invocations were broken
+  // by Zircon's switch to using GN to build.
+#if 0
   // Performance tests implemented in the Zircon repo.
   benchmarks_runner.AddLibPerfTestBenchmark("zircon.perf_test",
                                             "/system/test/sys/perf-test");
@@ -31,10 +34,14 @@ int main(int argc, const char** argv) {
   benchmarks_runner.AddLibPerfTestBenchmark(
       "zircon_benchmarks",
       "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
+#endif
 
   AddGraphicsBenchmarks(&benchmarks_runner);
 
   // Test storage performance.
+  // TODO(INTK-858): Re-enable these tests.  These invocations were broken
+  // by Zircon's switch to using GN to build.
+#if 0
   std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
   if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
     constexpr const char* block_device =
@@ -77,6 +84,7 @@ int main(int argc, const char** argv) {
                    << "' not recognized: please update benchmarks.cc in garnet";
     exit(1);
   }
+#endif
 
   // List block devices.  This is for debugging purposes and to help with
   // enabling the storage tests above on new devices.  We do this at the end
