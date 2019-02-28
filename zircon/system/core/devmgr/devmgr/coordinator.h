@@ -10,6 +10,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -23,6 +24,7 @@
 #include "device.h"
 #include "driver.h"
 #include "metadata.h"
+#include "vmo-writer.h"
 
 namespace devmgr {
 
@@ -290,7 +292,10 @@ public:
     zx_status_t HandleDeviceRead(Device* dev);
     void HandleNewDevice(Device* dev);
     zx_status_t PrepareProxy(Device* dev);
-    void DumpState() const;
+
+    void DumpState(VmoWriter* vmo) const;
+    void DumpDrivers(VmoWriter* vmo) const;
+    void DumpGlobalDeviceProps(VmoWriter* vmo) const;
 
     const zx::resource& root_resource() const { return config_.root_resource; }
     const zx::event& fshost_event() const { return config_.fshost_event; }
@@ -325,6 +330,8 @@ public:
 
     SuspendContext& suspend_context() { return suspend_context_; }
     const SuspendContext& suspend_context() const { return suspend_context_; }
+
+    zx_status_t BindFidlServiceProxy(zx::channel listen_on);
 
 private:
     CoordinatorConfig config_;
@@ -366,11 +373,8 @@ private:
 
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
 
-    void DmPrintf(const char* fmt, ...) const;
-    void DumpDevice(const Device* dev, size_t indent) const;
-    void DumpDeviceProps(const Device* dev) const;
-    void DumpGlobalDeviceProps() const;
-    void DumpDrivers() const;
+    void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
+    void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
 
     void BuildSuspendList();
     void Suspend(SuspendContext ctx);

@@ -357,9 +357,10 @@ zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
-zx_status_t svchost_start(const zx::resource& root_resource, bool require_system) {
+zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator) {
     printf("devmgr: svc init\n");
 
+    const auto& root_resource = coordinator->root_resource();
     zx::channel dir_request, svchost_local;
     zx::debuglog logger;
     zx::channel appmgr_svc_req;
@@ -408,6 +409,21 @@ zx_status_t svchost_start(const zx::resource& root_resource, bool require_system
         return status;
     }
 
+    zx::channel fidl_client;
+    {
+        zx::channel fidl_server;
+        status = zx::channel::create(0, &fidl_server, &fidl_client);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = coordinator->BindFidlServiceProxy(std::move(fidl_server));
+        if (status != ZX_OK) {
+            printf("Unable to start fidl services.\n");
+            return status;
+        }
+    }
+
     // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
     // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
     zx::resource root_resource_copy;
@@ -438,6 +454,9 @@ zx_status_t svchost_start(const zx::resource& root_resource, bool require_system
     if (root_resource_copy.is_valid()) {
         launchpad_add_handle(lp, root_resource_copy.release(), PA_HND(PA_USER0, 2));
     }
+
+    // Add handle to channel to allow svchost to proxy fidl services to us.
+    launchpad_add_handle(lp, fidl_client.release(), PA_HND(PA_USER0, 3));
 
     // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
     // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -946,7 +965,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        status = svchost_start(coordinator.root_resource(), require_system);
+        status = svchost_start(require_system, &coordinator);
         if (status != ZX_OK) {
             fprintf(stderr, "devmgr: failed to start svchost: %d", status);
             return 1;

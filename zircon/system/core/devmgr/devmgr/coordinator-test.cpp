@@ -75,28 +75,26 @@ bool open_virtcon() {
 
 bool dump_state() {
     BEGIN_TEST;
-
     devmgr::Coordinator coordinator(default_config(nullptr));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
-    zx::socket client, server;
-    status = zx::socket::create(0, &client, &server);
-    ASSERT_EQ(ZX_OK, status);
-    coordinator.set_dmctl_socket(std::move(client));
-    coordinator.DumpState();
+    constexpr int32_t kBufSize  = 256;
+    char buf[kBufSize + 1] = {0};
 
-    zx_signals_t signals;
-    status = server.wait_one(ZX_SOCKET_READABLE, zx::time::infinite(), &signals);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(signals & ZX_SOCKET_READABLE);
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, zx::vmo::create(kBufSize, 0, &vmo));
+    devmgr::VmoWriter writer(std::move(vmo));
 
-    uint8_t buf[256];
-    size_t actual;
-    status = server.read(0, buf, sizeof(buf), &actual);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_NE(0, actual);
+    coordinator.DumpState(&writer);
+
+    ASSERT_EQ(writer.written(), writer.available());
+    ASSERT_LT(writer.written(), kBufSize);
+    ASSERT_GT(writer.written(), 0);
+    ASSERT_EQ(ZX_OK, writer.vmo().read(buf, 0, writer.written()));
+
+    ASSERT_NE(nullptr, strstr(buf, "[root]"));
 
     END_TEST;
 }

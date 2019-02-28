@@ -538,6 +538,64 @@ static int send_dmctl(const char* command, size_t length) {
     return 0;
 }
 
+static const uint32_t kVmoBufferSize = 512*1024;
+
+typedef struct {
+    zx_handle_t vmo;
+    zx_handle_t vmo_copy;
+    size_t bytes_in_buffer;
+    size_t bytes_available_on_service;
+} VmoBuffer;
+
+static zx_status_t initialize_vmo_buffer(VmoBuffer* buffer) {
+    buffer->bytes_in_buffer = 0;
+    buffer->bytes_available_on_service = 0;
+
+    zx_status_t status = zx_vmo_create(kVmoBufferSize, 0, &buffer->vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = zx_handle_duplicate(buffer->vmo, ZX_RIGHTS_IO | ZX_RIGHT_TRANSFER, &buffer->vmo_copy);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+static zx_status_t print_vmo_buffer(VmoBuffer* buffer) {
+    // It is possible this will be larger than kVmoBufferSize so we dynamically
+    // allocate memory for buffer.
+    char* to_print = (char*)malloc(buffer->bytes_in_buffer);
+    if (to_print == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = zx_vmo_read(buffer->vmo, to_print, 0, buffer->bytes_in_buffer);
+    if (status == ZX_OK) {
+        size_t written = 0;
+        while (written < buffer->bytes_in_buffer) {
+            ssize_t count = write(STDOUT_FILENO, to_print + written,
+                                  buffer->bytes_in_buffer - written);
+            if (count < 0) {
+                break;
+            }
+            written += count;
+        }
+    } else {
+      printf("Call to service failed, status: %d\n", status);
+    }
+
+    if (buffer->bytes_in_buffer < buffer->bytes_available_on_service) {
+      printf("\n-- OUTPUT TRUNCATED; %zu bytes available, %u buffer size --\n",
+             buffer->bytes_available_on_service, kVmoBufferSize);
+    }
+
+    free(to_print);
+    return ZX_OK;
+}
+
 static zx_status_t connect_to_service(const char* service, zx_handle_t* channel) {
     zx_handle_t channel_local, channel_remote;
     zx_status_t status = zx_channel_create(0, &channel_local, &channel_remote);
@@ -598,6 +656,36 @@ static int send_kernel_tracing_enabled(bool enabled) {
     return 0;
 }
 
+static int send_dump(zx_status_t(*fidl_call)(zx_handle_t, zx_handle_t,
+                                             zx_status_t*, size_t*, size_t*)) {
+    zx_handle_t channel;
+    zx_status_t status = connect_to_service("/svc/fuchsia.device.manager.DebugDumper", &channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    VmoBuffer buffer;
+    status = initialize_vmo_buffer(&buffer);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t call_status;
+    status = fidl_call(channel, buffer.vmo_copy,
+                       &call_status, &buffer.bytes_in_buffer, &buffer.bytes_available_on_service);
+
+    zx_handle_close(channel);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        return -1;
+    }
+
+    status = print_vmo_buffer(&buffer);
+    if (zx_handle_close(buffer.vmo) != ZX_OK) {
+        printf("Failed to close vmo handle.\n");
+    }
+    return status;
+}
+
 static bool command_cmp(const char* command, const char* input, int* command_length) {
   *command_length = strlen(command);
   const size_t input_length = strlen(input);
@@ -631,6 +719,16 @@ int zxc_dm(int argc, char** argv) {
 
     } else if (command_cmp("help", argv[1], &command_length)) {
         return print_dm_help();
+
+    } else if (command_cmp("dump", argv[1], &command_length)) {
+        return send_dump(fuchsia_device_manager_DebugDumperDumpTree);
+
+    } else if (command_cmp("drivers", argv[1], &command_length)) {
+        return send_dump(fuchsia_device_manager_DebugDumperDumpDrivers);
+
+    } else if (command_cmp("devprops", argv[1], &command_length)) {
+        return send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
+
     }
 
     // Fallback to dmctl.

@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.manager;
+
+using zx;
+
+/// Dumps text debug information.
+///
+/// All methods dump ascii text into a VMO, this allows the caller the flexibility to decide
+/// how much data they want. Use the returned |written| value to read the data, no string
+/// termination is guaranteed.
+[Discoverable, Layout = "Simple"]
+protocol DebugDumper {
+    /// Print device tree into |output|, returns bytes |written| and bytes |available| to write.
+    DumpTree(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
+
+    /// Print information about all drivers into |output|, returns bytes |written| and bytes |available| to write.
+    DumpDrivers(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
+
+    /// Print all devices and their binding properties into |output|, returns bytes |written|
+    /// and bytes |available| to write.
+    DumpBindingProperties(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
+};

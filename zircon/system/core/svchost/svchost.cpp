@@ -5,6 +5,7 @@
 #include "sysmem.h"
 
 #include <fbl/algorithm.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
@@ -148,6 +149,16 @@ void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
     }
 }
 
+void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
+                           const char* name, zx::unowned_channel forwarding_channel) {
+    dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
+            [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
+                const auto request_handle = request.release();
+                return forwarding_channel->write(0, name, static_cast<uint32_t>(strlen(name)),
+                                                 &request_handle, 1);
+            }));
+}
+
 int main(int argc, char** argv) {
     bool require_system = false;
     if (argc > 1) {
@@ -160,6 +171,7 @@ int main(int argc, char** argv) {
     appmgr_svc = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
     root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
+    zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -214,6 +226,10 @@ int main(int argc, char** argv) {
     }
 
     publish_deprecated_services(outgoing.public_dir());
+
+    publish_proxy_service(outgoing.public_dir(),
+                          fuchsia_device_manager_DebugDumper_Name,
+                          zx::unowned_channel(devmgr_proxy_channel));
 
     start_crashsvc(zx::job(root_job),
         require_system? appmgr_svc : ZX_HANDLE_INVALID);

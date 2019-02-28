@@ -16,7 +16,6 @@
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
@@ -24,6 +23,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fidl-async/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -45,8 +45,10 @@
 #include "../shared/fdio.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
-#include "devhost-loader-service.h"
 #include "devfs.h"
+#include "devhost-loader-service.h"
+#include "fidl-proxy.h"
+#include "vmo-writer.h"
 
 namespace {
 
@@ -168,7 +170,6 @@ void ContinueSuspend(devmgr::SuspendContext* ctx, const zx::resource& root_resou
         }
     }
 }
-
 } // namespace
 
 namespace devmgr {
@@ -256,40 +257,7 @@ zx_status_t Coordinator::DmOpenVirtcon(zx::channel virtcon_receiver) const {
     return virtcon_channel_.write(0, nullptr, 0, &raw_virtcon_receiver, 1);
 }
 
-void Coordinator::DmPrintf(const char* fmt, ...) const {
-    if (!dmctl_socket_.is_valid()) {
-        return;
-    }
-    char buf[1024];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    size_t actual;
-    zx_status_t status = dmctl_socket_.write(0, buf, strlen(buf), &actual);
-    if (status != ZX_OK) {
-        dmctl_socket_.reset();
-    }
-}
-
 zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
-    if (len == 4) {
-        if (!memcmp(cmd, "dump", 4)) {
-            DumpState();
-            return ZX_OK;
-        }
-    }
-    if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
-        DumpDrivers();
-        return ZX_OK;
-    }
-    if (len == 8) {
-        if (!memcmp(cmd, "devprops", 8)) {
-            DumpGlobalDeviceProps();
-            return ZX_OK;
-        }
-    }
-
     if (InSuspend()) {
         log(ERROR, "devcoord: rpc: dm-command \"%.*s\" forbidden in suspend\n",
             static_cast<uint32_t>(len), cmd);
@@ -328,7 +296,6 @@ zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
         load_driver(path, fit::bind_member(this, &Coordinator::DriverAdded));
         return ZX_OK;
     }
-    DmPrintf("unknown command\n");
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int)len, cmd);
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -394,7 +361,7 @@ zx_status_t Coordinator::SetBootdata(const zx::unowned_vmo& vmo) {
     return vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &bootdata_vmo_);
 }
 
-void Coordinator::DumpDevice(const Device* dev, size_t indent) const {
+void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const {
     zx_koid_t pid = dev->host ? dev->host->koid() : 0;
     char extra[256];
     if (log_flags & LOG_DEVLC) {
@@ -403,93 +370,94 @@ void Coordinator::DumpDevice(const Device* dev, size_t indent) const {
         extra[0] = 0;
     }
     if (pid == 0) {
-        DmPrintf("%*s[%s]%s\n", (int)(indent * 3), "", dev->name.data(), extra);
+        vmo->Printf("%*s[%s]%s\n", (int)(indent * 3), "", dev->name.data(), extra);
     } else {
-        DmPrintf("%*s%c%s%c pid=%zu%s %s\n", (int)(indent * 3), "",
-                 dev->flags & DEV_CTX_PROXY ? '<' : '[', dev->name.data(),
-                 dev->flags & DEV_CTX_PROXY ? '>' : ']', pid, extra, dev->libname.data());
+        vmo->Printf("%*s%c%s%c pid=%zu%s %s\n", (int)(indent * 3), "",
+                    dev->flags & DEV_CTX_PROXY ? '<' : '[', dev->name.data(),
+                    dev->flags & DEV_CTX_PROXY ? '>' : ']', pid, extra, dev->libname.data());
     }
     if (dev->proxy) {
         indent++;
-        DumpDevice(dev->proxy, indent);
+        DumpDevice(vmo, dev->proxy, indent);
     }
     for (const auto& child : dev->children) {
-        DumpDevice(&child, indent + 1);
+        DumpDevice(vmo, &child, indent + 1);
     }
 }
 
-void Coordinator::DumpState() const {
-    DumpDevice(&root_device_, 0);
-    DumpDevice(&misc_device_, 1);
-    DumpDevice(&sys_device_, 1);
-    DumpDevice(&test_device_, 1);
+void Coordinator::DumpState(VmoWriter* vmo) const {
+    DumpDevice(vmo, &root_device_, 0);
+    DumpDevice(vmo, &misc_device_, 1);
+    DumpDevice(vmo, &sys_device_, 1);
+    DumpDevice(vmo, &test_device_, 1);
 }
 
-void Coordinator::DumpDeviceProps(const Device* dev) const {
+void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     if (dev->host) {
-        DmPrintf("Name [%s]%s%s%s\n", dev->name.data(), dev->libname.empty() ? "" : " Driver [",
-                 dev->libname.empty() ? "" : dev->libname.data(), dev->libname.empty() ? "" : "]");
-        DmPrintf("Flags   :%s%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
-                 dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
-                 dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
-                 dev->flags & DEV_CTX_BOUND ? " Bound" : "",
-                 dev->flags & DEV_CTX_DEAD ? " Dead" : "",
-                 dev->flags & DEV_CTX_ZOMBIE ? " Zombie" : "",
-                 dev->flags & DEV_CTX_PROXY ? " Proxy" : "");
+        vmo->Printf("Name [%s]%s%s%s\n", dev->name.data(), dev->libname.empty() ? "" : " Driver [",
+                    dev->libname.empty() ? "" : dev->libname.data(), dev->libname.empty() ? "" : "]");
+        vmo->Printf("Flags   :%s%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
+                    dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
+                    dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
+                    dev->flags & DEV_CTX_BOUND ? " Bound" : "",
+                    dev->flags & DEV_CTX_DEAD ? " Dead" : "",
+                    dev->flags & DEV_CTX_ZOMBIE ? " Zombie" : "",
+                    dev->flags & DEV_CTX_PROXY ? " Proxy" : "");
 
         char a = (char)((dev->protocol_id() >> 24) & 0xFF);
         char b = (char)((dev->protocol_id() >> 16) & 0xFF);
         char c = (char)((dev->protocol_id() >> 8) & 0xFF);
         char d = (char)(dev->protocol_id() & 0xFF);
-        DmPrintf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
-                 isprint(c) ? c : '.', isprint(d) ? d : '.', dev->protocol_id(), dev->protocol_id());
+        vmo->Printf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
+                    isprint(c) ? c : '.', isprint(d) ? d : '.',
+                    dev->protocol_id(), dev->protocol_id());
 
         const auto& props = dev->props();
-        DmPrintf("%u Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
+        vmo->Printf("%u Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
         for (uint32_t i = 0; i < props.size(); ++i) {
             const zx_device_prop_t* p = &props[i];
             const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
-                DmPrintf("[%2u/%2u] : Value 0x%08x Id %s\n", i, props.size(), p->value,
-                         param_name);
+                vmo->Printf("[%2u/%2u] : Value 0x%08x Id %s\n", i, props.size(), p->value,
+                            param_name);
             } else {
-                DmPrintf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n", i, props.size(), p->value,
-                         p->id);
+                vmo->Printf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n", i, props.size(), p->value,
+                            p->id);
             }
         }
-        DmPrintf("\n");
+        vmo->Printf("\n");
     }
 
     if (dev->proxy) {
-        DumpDeviceProps(dev->proxy);
+        DumpDeviceProps(vmo, dev->proxy);
     }
     for (const auto& child : dev->children) {
-        DumpDeviceProps(&child);
+        DumpDeviceProps(vmo, &child);
     }
 }
 
-void Coordinator::DumpGlobalDeviceProps() const {
-    DumpDeviceProps(&root_device_);
-    DumpDeviceProps(&misc_device_);
-    DumpDeviceProps(&sys_device_);
-    DumpDeviceProps(&test_device_);
+void Coordinator::DumpGlobalDeviceProps(VmoWriter* vmo) const {
+    DumpDeviceProps(vmo, &root_device_);
+    DumpDeviceProps(vmo, &misc_device_);
+    DumpDeviceProps(vmo, &sys_device_);
+    DumpDeviceProps(vmo, &test_device_);
 }
 
-void Coordinator::DumpDrivers() const {
+void Coordinator::DumpDrivers(VmoWriter* vmo) const {
     bool first = true;
     for (const auto& drv : drivers_) {
-        DmPrintf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
-        DmPrintf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
-        DmPrintf("Flags   : 0x%08x\n", drv.flags);
+        vmo->Printf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
+        vmo->Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
+        vmo->Printf("Flags   : 0x%08x\n", drv.flags);
         if (drv.binding_size) {
             char line[256];
             uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(drv.binding[0]));
-            DmPrintf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
+            vmo->Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
                      drv.binding_size);
             for (uint32_t i = 0; i < count; ++i) {
                 di_dump_bind_inst(&drv.binding[i], line, sizeof(line));
-                DmPrintf("[%u/%u]: %s\n", i + 1, count, line);
+                vmo->Printf("[%u/%u]: %s\n", i + 1, count, line);
             }
         }
         first = false;
@@ -2046,6 +2014,10 @@ void Coordinator::BindDrivers() {
 
 void Coordinator::UseFallbackDrivers() {
     drivers_.splice(drivers_.end(), fallback_drivers_);
+}
+
+zx_status_t Coordinator::BindFidlServiceProxy(zx::channel listen_on) {
+    return FidlProxyHandler::Create(this, config_.dispatcher, std::move(listen_on));
 }
 
 } // namespace devmgr
