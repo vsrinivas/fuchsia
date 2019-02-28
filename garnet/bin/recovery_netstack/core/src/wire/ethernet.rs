@@ -84,10 +84,12 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         let ethertype_or_tpid = NetworkEndian::read_u16(buffer.as_ref());
         let (tag, ethertype, body) = match ethertype_or_tpid {
             self::TPID_8021Q | self::TPID_8021AD => (
+                // Infallible since we verified the buffer length above.
                 Some(buffer.take_obj_front::<[u8; 4]>().unwrap()),
                 buffer.take_obj_front::<[u8; 2]>().unwrap(),
                 buffer.into_rest(),
             ),
+            // Infallible since we verified the buffer length above.
             _ => (None, buffer.take_obj_front::<[u8; 2]>().unwrap(), buffer.into_rest()),
         };
 

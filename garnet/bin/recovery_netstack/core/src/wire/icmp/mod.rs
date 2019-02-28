@@ -211,6 +211,7 @@ pub(crate) struct OriginalPacket<B>(B);
 
 impl<B: Deref<Target = [u8]>> OriginalPacket<B> {
     pub(crate) fn body<I: IcmpIpExt>(&self) -> &[u8] {
+        // TODO(joshlf): Can these debug_asserts be triggered by external input?
         let header_len = I::header_len(&self.0);
         debug_assert!(header_len <= self.0.len());
         debug_assert!(I::VERSION.is_v6() || self.0.len() - header_len == 8);

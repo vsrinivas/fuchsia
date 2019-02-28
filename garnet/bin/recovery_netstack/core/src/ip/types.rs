@@ -265,7 +265,13 @@ mod internal {
 
         /// Mask off the top bits of the address.
         ///
-        /// Return a copy of `self` where all but the top `bits` bits are set to 0.
+        /// Return a copy of `self` where all but the top `bits` bits are set to
+        /// 0.
+        ///
+        /// # Panics
+        ///
+        /// `mask` panics if `bits` is out of range - if it is greater than 32
+        /// for IPv4 or greater than 128 for IPv6.
         fn mask(&self, bits: u8) -> Self;
 
         /// Convert a statically-typed IP address into a dynamically-typed one.
@@ -416,7 +422,7 @@ mod internal {
     /// `Subnet` is a combination of an IP network address and a prefix length.
     #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct Subnet<A> {
-        // invariant: normalized to contain only prefix bits
+        // invariant: only contains prefix bits
         network: A,
         prefix: u8,
     }
@@ -429,9 +435,10 @@ mod internal {
         /// Create a new subnet without enforcing correctness.
         ///
         /// Unlike `new`, `new_unchecked` does not validate that `prefix` is in
-        /// the proper range, and does not mask `network`. It is up to the
-        /// caller to guarantee that `prefix` is in the proper range, and that
-        /// none of the bits of `network` beyond the prefix are set.
+        /// the proper range, and does not check that `network` has only the top
+        /// `prefix` bits set. It is up to the caller to guarantee that `prefix`
+        /// is in the proper range, and that none of the bits of `network`
+        /// beyond the prefix are set.
         pub(crate) const unsafe fn new_unchecked(network: A, prefix: u8) -> Subnet<A> {
             Subnet { network, prefix }
         }
@@ -440,17 +447,18 @@ mod internal {
     impl<A: ext::IpAddress> Subnet<A> {
         /// Create a new subnet.
         ///
-        /// Create a new subnet with the given network address and prefix
-        /// length.
-        ///
-        /// # Panics
-        ///
-        /// `new` panics if `prefix` is longer than the number of bits in this
-        /// type of IP address (32 for IPv4 and 128 for IPv6).
-        pub(crate) fn new(network: A, prefix: u8) -> Subnet<A> {
-            assert!(prefix <= A::BYTES * 8);
-            let network = network.mask(prefix);
-            Subnet { network, prefix }
+        /// `new` creates a new subnet with the given network address and prefix
+        /// length. It returns `None` if `prefix` is longer than the number of
+        /// bits in this type of IP address (32 for IPv4 and 128 for IPv6) or if
+        /// any of the lower bits (beyond the first `prefix` bits) are set in
+        /// `network`.
+        pub(crate) fn new(network: A, prefix: u8) -> Option<Subnet<A>> {
+            // TODO(joshlf): Is there a more efficient way we can perform this
+            // check? Do we care?
+            if prefix > A::BYTES * 8 || network != network.mask(prefix) {
+                return None;
+            }
+            Some(Subnet { network, prefix })
         }
 
         /// Get the network address component of this subnet.
@@ -519,17 +527,15 @@ mod internal {
         /// Create a new subnet.
         ///
         /// `new` creates a new subnet with the given network address and prefix
-        /// length.
-        ///
-        /// # Panics
-        ///
-        /// `new` panics if `prefix` is longer than the number of bits in this
-        /// type of IP address (32 for IPv4 and 128 for IPv6).
-        pub fn new(network: IpAddr, prefix: u8) -> SubnetEither {
-            match network {
-                IpAddr::V4(network) => SubnetEither::V4(Subnet::new(network, prefix)),
-                IpAddr::V6(network) => SubnetEither::V6(Subnet::new(network, prefix)),
-            }
+        /// length. It returns `None` if `prefix` is longer than the number of
+        /// bits in this type of IP address (32 for IPv4 and 128 for IPv6) or if
+        /// any of the lower bits (beyond the first `prefix` bits) are set in
+        /// `network`.
+        pub fn new(network: IpAddr, prefix: u8) -> Option<SubnetEither> {
+            Some(match network {
+                IpAddr::V4(network) => SubnetEither::V4(Subnet::new(network, prefix)?),
+                IpAddr::V6(network) => SubnetEither::V6(Subnet::new(network, prefix)?),
+            })
         }
     }
 
@@ -555,10 +561,10 @@ mod internal {
     ///
     /// An `AddrSubnet` is a pair of an address and a subnet which maintains the
     /// invariant that the address is guaranteed to be in the subnet.
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct AddrSubnet<A> {
         addr: A,
-        prefix: u8,
+        subnet: Subnet<A>,
     }
 
     impl<A: ext::IpAddress> AddrSubnet<A> {
@@ -566,15 +572,14 @@ mod internal {
         ///
         /// `new` creates a new `AddrSubnet` with the given address and prefix
         /// length. The network address of the subnet is taken to be the first
-        /// `prefix` bits of the address.
-        ///
-        /// # Panics
-        ///
-        /// `new` panics if `prefix` is longer than the number of bits in this
-        /// type of IP address (32 for IPv4 and 128 for IPv6).
-        pub(crate) fn new(addr: A, prefix: u8) -> AddrSubnet<A> {
-            assert!(prefix <= A::BYTES * 8);
-            AddrSubnet { addr, prefix }
+        /// `prefix` bits of the address. It returns `None` if `prefix` is
+        /// longer than the number of bits in this type of IP address (32 for
+        /// IPv4 and 128 for IPv6).
+        pub(crate) fn new(addr: A, prefix: u8) -> Option<AddrSubnet<A>> {
+            if prefix > A::BYTES * 8 {
+                return None;
+            }
+            Some(AddrSubnet { addr, subnet: Subnet { network: addr.mask(prefix), prefix } })
         }
 
         /// Get the address.
@@ -584,7 +589,7 @@ mod internal {
 
         /// Get the subnet.
         pub(crate) fn subnet(&self) -> Subnet<A> {
-            Subnet::new(self.addr, self.prefix)
+            self.subnet
         }
 
         /// Consume the `AddrSubnet` and return the address.
@@ -594,13 +599,13 @@ mod internal {
 
         /// Consume the `AddrSubnet` and return the subnet.
         pub(crate) fn into_subnet(self) -> Subnet<A> {
-            Subnet::new(self.addr, self.prefix)
+            self.subnet
         }
 
         /// Consume the `AddrSubnet` and return the address and subnet
         /// individually.
         pub(crate) fn into_addr_subnet(self) -> (A, Subnet<A>) {
-            (self.addr, Subnet::new(self.addr, self.prefix))
+            (self.addr, self.subnet)
         }
     }
 
@@ -620,17 +625,14 @@ mod internal {
         ///
         /// `new` creates a new `AddrSubnetEither` with the given address and
         /// prefix length. The network address of the subnet is taken to be the
-        /// first `prefix` bits of the address.
-        ///
-        /// # Panics
-        ///
-        /// `new` panics if `prefix` is longer than the number of bits in this
-        /// type of IP address (32 for IPv4 and 128 for IPv6).
-        pub fn new(addr: IpAddr, prefix: u8) -> AddrSubnetEither {
-            match addr {
-                IpAddr::V4(addr) => AddrSubnetEither::V4(AddrSubnet::new(addr, prefix)),
-                IpAddr::V6(addr) => AddrSubnetEither::V6(AddrSubnet::new(addr, prefix)),
-            }
+        /// first `prefix` bits of the address. It returns `None` if `prefix` is
+        /// longer than the number of bits in this type of IP address (32 for
+        /// IPv4 and 128 for IPv6).
+        pub fn new(addr: IpAddr, prefix: u8) -> Option<AddrSubnetEither> {
+            Some(match addr {
+                IpAddr::V4(addr) => AddrSubnetEither::V4(AddrSubnet::new(addr, prefix)?),
+                IpAddr::V6(addr) => AddrSubnetEither::V6(AddrSubnet::new(addr, prefix)?),
+            })
         }
     }
 
@@ -870,6 +872,20 @@ mod internal {
     #[cfg(test)]
     mod tests {
         use super::*;
+
+        #[test]
+        fn test_subnet_new() {
+            Subnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap();
+            // Prefix exceeds 32 bits
+            assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 33), None);
+            // Network address has more than top 8 bits set
+            assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), None);
+
+            AddrSubnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap();
+            // Prefix exceeds 32 bits (use assert, not assert_eq, because
+            // AddrSubnet doesn't impl Debug)
+            assert!(AddrSubnet::new(Ipv4Addr::new([255, 255, 255, 255]), 33) == None);
+        }
 
         macro_rules! add_mask_test {
             ($name:ident, $addr:ident, $from_ip:expr => {

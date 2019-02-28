@@ -425,14 +425,13 @@ impl EventLoop {
         let mut err = fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound };
         responder.send(if let Some(device_id) = device_id {
             // TODO(wesleyac): Check for address already existing.
-            set_ip_addr_subnet(
-                &mut self.ctx,
-                device_id,
-                AddrSubnetEither::new(
-                    fidl_net_ext::IpAddress::from(addr.ip_address).0.into(),
-                    addr.prefix_len,
-                ),
-            );
+            // TODO(joshlf): Return an error if the address/subnet pair is invalid.
+            if let Some(addr_sub) = AddrSubnetEither::new(
+                fidl_net_ext::IpAddress::from(addr.ip_address).0.into(),
+                addr.prefix_len,
+            ) {
+                set_ip_addr_subnet(&mut self.ctx, device_id, addr_sub);
+            }
             None
         } else {
             Some(fidl::encoding::OutOfLine(&mut err)) // Invalid device ID
@@ -456,14 +455,13 @@ impl EventLoop {
         match entry.destination {
             fidl_net_stack::ForwardingDestination::DeviceId(id) => {
                 if let Some(device_id) = self.ctx.dispatcher().get_device_client(id).map(|x| x.id) {
-                    add_device_route(
-                        &mut self.ctx,
-                        SubnetEither::new(
-                            fidl_net_ext::IpAddress::from(entry.subnet.addr).0.into(),
-                            entry.subnet.prefix_len,
-                        ),
-                        device_id,
-                    );
+                    // TODO(joshlf): Return an error if the subnet is invalid.
+                    if let Some(subnet) = SubnetEither::new(
+                        fidl_net_ext::IpAddress::from(entry.subnet.addr).0.into(),
+                        entry.subnet.prefix_len,
+                    ) {
+                        add_device_route(&mut self.ctx, subnet, device_id);
+                    }
                     None
                 } else {
                     // Invalid device ID

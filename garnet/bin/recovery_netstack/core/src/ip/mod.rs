@@ -353,6 +353,9 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
             None,
         );
     } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
+        // TODO(joshlf): Are we sure that a device route can never be set for a
+        // device without an IP address? At the least, this is not currently
+        // enforced anywhere, and is a DoS vector.
         let src_ip = crate::device::get_ip_addr_subnet(ctx, dest.device)
             .expect("IP device route set for device without IP address")
             .addr();

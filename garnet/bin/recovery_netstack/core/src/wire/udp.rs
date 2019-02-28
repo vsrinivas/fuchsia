@@ -184,6 +184,7 @@ impl<B: ByteSlice> UdpPacket<B> {
 
     /// The destination UDP port.
     pub(crate) fn dst_port(&self) -> NonZeroU16 {
+        // Infallible because it was validated in parse.
         NonZeroU16::new(self.header.dst_port()).unwrap()
     }
 

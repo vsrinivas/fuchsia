@@ -173,11 +173,13 @@ impl<B: ByteSlice> TcpSegment<B> {
 
     /// The source port.
     pub(crate) fn src_port(&self) -> NonZeroU16 {
+        // Infallible because this was already validated in parse
         NonZeroU16::new(self.hdr_prefix.src_port()).unwrap()
     }
 
     /// The destination port.
     pub(crate) fn dst_port(&self) -> NonZeroU16 {
+        // Infallible because this was already validated in parse
         NonZeroU16::new(self.hdr_prefix.dst_port()).unwrap()
     }
 

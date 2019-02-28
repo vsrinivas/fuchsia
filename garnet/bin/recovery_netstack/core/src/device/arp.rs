@@ -387,7 +387,7 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24));
+        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
@@ -431,7 +431,7 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24));
+        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
         let mut buf = ArpPacketBuilder::new(
             ArpOp::Request,

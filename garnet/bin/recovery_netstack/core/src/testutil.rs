@@ -332,11 +332,11 @@ impl DummyEventDispatcherBuilder {
             idx_to_device_id.insert(idx, id);
             match ip_subnet {
                 Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
-                    let addr_sub = AddrSubnet::new(ip, subnet.prefix());
+                    let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
                     crate::device::set_ip_addr_subnet(&mut ctx, id, addr_sub);
                 }
                 Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
-                    let addr_sub = AddrSubnet::new(ip, subnet.prefix());
+                    let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
                     crate::device::set_ip_addr_subnet(&mut ctx, id, addr_sub);
                 }
                 None => {}
