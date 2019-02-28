@@ -300,6 +300,36 @@ pub enum {{ $interface.Name }}Event {
 	{{- end -}}
 }
 
+pub struct {{ $interface.Name }}EventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> {{ $interface.Name }}EventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+	{{- range $method := $interface.Methods }}
+	{{- if not $method.HasRequest }}
+	pub fn send_{{ $method.Name }}(&self
+		{{- range $param := $method.Response -}},
+		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
+		{{- end -}}
+	) -> Result<(), fidl::Error> {
+		let (bytes, handles) = (&mut vec![], &mut vec![]);
+		{{ $interface.Name }}Encoder::encode_{{ $method.Name }}_response(
+			bytes, handles,
+			{{- range $index, $param := $method.Response -}}
+				{{ $param.Name -}},
+			{{- end -}}
+		)?;
+		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		Ok(())
+	}
+	{{ end }}
+	{{- end }}
+}
+
 #[deprecated(note = "use {{ $interface.Name }}RequestStream instead")]
 pub trait {{ $interface.Name }} {
 	type OnOpenFut: futures::Future<Output = ()> + Send;

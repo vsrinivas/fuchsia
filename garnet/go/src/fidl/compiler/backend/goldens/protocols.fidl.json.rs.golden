@@ -204,6 +204,27 @@ pub enum OvernetStreamProtocolEvent {
 	},
 	}
 
+pub struct OvernetStreamProtocolEventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> OvernetStreamProtocolEventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+	pub fn send_event_a(&self,
+		mut a: i64,
+		mut b: i64) -> Result<(), fidl::Error> {
+		let (bytes, handles) = (&mut vec![], &mut vec![]);
+		OvernetStreamProtocolEncoder::encode_event_a_response(
+			bytes, handles,a,b,)?;
+		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		Ok(())
+	}
+	
+}
+
 #[deprecated(note = "use OvernetStreamProtocolRequestStream instead")]
 pub trait OvernetStreamProtocol {
 	type OnOpenFut: futures::Future<Output = ()> + Send;
@@ -920,6 +941,27 @@ pub enum SocketControlProtocolEvent {
 		
 	},
 	}
+
+pub struct SocketControlProtocolEventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> SocketControlProtocolEventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+	pub fn send_event_a(&self,
+		mut a: i64,
+		mut b: i64) -> Result<(), fidl::Error> {
+		let (bytes, handles) = (&mut vec![], &mut vec![]);
+		SocketControlProtocolEncoder::encode_event_a_response(
+			bytes, handles,a,b,)?;
+		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		Ok(())
+	}
+	
+}
 
 #[deprecated(note = "use SocketControlProtocolRequestStream instead")]
 pub trait SocketControlProtocol {
@@ -1638,6 +1680,27 @@ pub enum ChannelProtocolEvent {
 	},
 	}
 
+pub struct ChannelProtocolEventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> ChannelProtocolEventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+	pub fn send_event_a(&self,
+		mut a: i64,
+		mut b: i64) -> Result<(), fidl::Error> {
+		let (bytes, handles) = (&mut vec![], &mut vec![]);
+		ChannelProtocolEncoder::encode_event_a_response(
+			bytes, handles,a,b,)?;
+		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		Ok(())
+	}
+	
+}
+
 #[deprecated(note = "use ChannelProtocolRequestStream instead")]
 pub trait ChannelProtocol {
 	type OnOpenFut: futures::Future<Output = ()> + Send;
@@ -2354,6 +2417,27 @@ pub enum KitchenSinkEvent {
 		
 	},
 	}
+
+pub struct KitchenSinkEventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> KitchenSinkEventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+	pub fn send_event_a(&self,
+		mut a: i64,
+		mut b: i64) -> Result<(), fidl::Error> {
+		let (bytes, handles) = (&mut vec![], &mut vec![]);
+		KitchenSinkEncoder::encode_event_a_response(
+			bytes, handles,a,b,)?;
+		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		Ok(())
+	}
+	
+}
 
 #[deprecated(note = "use KitchenSinkRequestStream instead")]
 pub trait KitchenSink {
