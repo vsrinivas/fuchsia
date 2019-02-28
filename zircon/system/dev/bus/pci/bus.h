@@ -7,6 +7,7 @@
 #include "config.h"
 #include "device.h"
 #include "root.h"
+
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
@@ -14,6 +15,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <list>
 
 namespace pci {
 
@@ -28,12 +30,18 @@ public:
     virtual void UnlinkDevice(pci::Device* device) = 0;
 };
 
+// An entry corresponding to a place in the topology to scan. Use to allow for
+// DFS traversal of the bus topology while keeping track of nodes upstream.
+struct BusScanEntry {
+    pci_bdf_t bdf;
+    UpstreamNode* upstream;
+};
+
 class Bus;
 using PciBusType = ddk::Device<Bus>;
 class Bus : public PciBusType,
             public BusLinkInterface {
 public:
-    using BridgeList = fbl::Vector<fbl::RefPtr<Bridge>>;
     using DeviceList = fbl::WAVLTree<pci_bdf_t,
                                      fbl::RefPtr<pci::Device>,
                                      pci::Device::KeyTraitsSortByBdf,
@@ -67,7 +75,7 @@ private:
     zx_status_t ScanDownstream(void);
     ddk::PcirootProtocolClient& pciroot(void) { return pciroot_; }
     // Scan a specific bus
-    void ScanBus(UpstreamNode* upstream, BridgeList* upstream_list);
+    void ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list);
     // Creates a Config object for accessing the config space of the device at |bdf|.
     zx_status_t MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* config);
 

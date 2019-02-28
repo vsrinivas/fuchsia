@@ -17,6 +17,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
+#include <list>
 
 namespace pci {
 
@@ -142,30 +143,39 @@ zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* out_config) {
 // unconfigured. In the end the Bus should have a list of all devides, and all bridges
 // should have a list of pointers to their own downstream devices.
 zx_status_t Bus::ScanDownstream(void) {
-    BridgeList bridge_list;
-    pci_tracef("ScanDownstream %u:%u\n", info_.start_bus_num, info_.end_bus_num);
-    // First scan the root.
-    ScanBus(root_.get(), &bridge_list);
-    // Process any bridges found underthe root, any bridges under those bridges, etc...
+    std::list<BusScanEntry> scan_list;
+    // First scan the bus id associated with our root.
+    BusScanEntry entry = {{ static_cast<uint8_t>(root_->managed_bus_id()), 0, 0 }, root_.get() };
+    entry.upstream = root_.get();
+    scan_list.push_back(entry);
+
+    // Process any bridges found under the root, any bridges under those bridges, etc...
     // It's important that we scan in the order we discover bridges (DFS) because
     // when we implement bus id assignment it will affect the overall numbering
     // scheme of the bus topology.
-    while (bridge_list.size() > 0) {
-        auto bridge = bridge_list.erase(0);
-        // 1. Scan the bus below to add devices to our downstream
-        ScanBus(bridge.get(), &bridge_list);
-        // 2. Confirm devices are in our downstream list
-        // 3. Allocate bars for the downstream list
-        // 4. Enable the downstream devices
+    while (!scan_list.empty()) {
+        auto entry = scan_list.back();
+        pci_tracef("scanning from %02x:%02x.%01x upstream: %s\n",
+                   entry.bdf.bus_id, entry.bdf.device_id, entry.bdf.function_id,
+                   (entry.upstream->type() == UpstreamNode::Type::ROOT) ?
+                        "root" : static_cast<Bridge*>(entry.upstream)->config()->addr());
+        // Remove this entry, otherwise we'll pop the wrong child off if the scan
+        // adds any new bridges / resume points.
+        scan_list.pop_back();
+        ScanBus(entry, &scan_list);
     }
+
     return ZX_OK;
 }
 
-void Bus::ScanBus(UpstreamNode* upstream, BridgeList* bridge_list) {
-    uint32_t bus_id = upstream->managed_bus_id();
-    pci_tracef("scanning bus %d\n", bus_id);
-    for (uint8_t dev_id = 0; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
-        for (uint8_t func_id = 0; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
+void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
+
+    uint32_t bus_id = entry.bdf.bus_id; // 32bit so bus_id won't overflow 8bit in the loop
+    uint8_t _dev_id = entry.bdf.device_id;
+    uint8_t _func_id = entry.bdf.function_id;
+    UpstreamNode* upstream = entry.upstream;
+    for (uint8_t dev_id = _dev_id; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
+        for (uint8_t func_id = _func_id; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
             fbl::RefPtr<Config> config;
             pci_bdf_t bdf = {static_cast<uint8_t>(bus_id), dev_id, func_id};
             zx_status_t status = MakeConfig(bdf, &config);
@@ -180,11 +190,11 @@ void Bus::ScanBus(UpstreamNode* upstream, BridgeList* bridge_list) {
 
             bool is_bridge = ((config->Read(Config::kHeaderType) & PCI_HEADER_TYPE_MASK)
                                 == PCI_HEADER_TYPE_BRIDGE);
-            printf("\tfound %s at %02x:%02x.%1x\n", (is_bridge) ? "bridge" : "device",
-                   bus_id, dev_id, func_id);
+            pci_tracef("\tfound %s at %02x:%02x.%1x\n", (is_bridge) ? "bridge" : "device",
+                       bus_id, dev_id, func_id);
 
-            // If we found a bridge, add it to our bridge list and initialize / enumerate it after
-            // we finish scanning this bus
+            // If we found a bridge, add it to our bridge list and initialize /
+            // enumerate it after we finish scanning this bus
             if (is_bridge) {
                 fbl::RefPtr<Bridge> bridge;
                 uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
@@ -193,12 +203,36 @@ void Bus::ScanBus(UpstreamNode* upstream, BridgeList* bridge_list) {
                     continue;
                 }
 
-                bridge_list->push_back(bridge);
+                // Create scan entries for the next device we would have looked
+                // at in the current level of the tree, as well as the new
+                // bridge. Since we always work our way from the top of the scan
+                // stack we effectively scan the bus in a DFS manner. |func_id|
+                // is always incremented by one to ensure we don't scan this
+                // same bdf again. If the incremented value is invalid then the
+                // device_id loop will iterate and we'll be in a good state
+                // again.
+                BusScanEntry resume_entry{};
+                resume_entry.bdf.bus_id = static_cast<uint8_t>(bus_id),
+                resume_entry.bdf.device_id = dev_id,
+                resume_entry.bdf.function_id = static_cast<uint8_t>(func_id + 1),
+                resume_entry.upstream = upstream, // Same upstream as this scan
+                scan_list->push_back(resume_entry);
+
+                BusScanEntry bridge_entry{};
+                bridge_entry.bdf.bus_id = static_cast<uint8_t>(bridge->managed_bus_id()),
+                bridge_entry.upstream = bridge.get(), // the new bridge will be this scan's upstream
+                scan_list->push_back(bridge_entry);
+                // Quit this scan and pick up again based on the scan entries found.
+                return;
             } else {
                 // Create a device
                 pci::Device::Create(std::move(config), upstream, this);
             }
         }
+
+        // Reset _func_id to zero here so that after we resume a single function
+        // scan we'll be able to scan the full 8 functions of a given device.
+        _func_id = 0;
     }
 }
 
