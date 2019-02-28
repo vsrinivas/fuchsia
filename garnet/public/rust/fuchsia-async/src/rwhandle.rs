@@ -5,7 +5,7 @@
 use {
     crate::executor::{EHandle, PacketReceiver, ReceiverRegistration},
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::task::{AtomicWaker, LocalWaker, Poll},
+    futures::task::{AtomicWaker, Waker, Poll},
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -118,7 +118,7 @@ where
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "readable" signal arrives.
-    pub fn poll_read(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_read(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (READABLE | CLOSED)) != 0 {
             Poll::Ready(Ok(()))
         } else {
@@ -130,7 +130,7 @@ where
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_write(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_write(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (WRITABLE | CLOSED)) != 0 {
             Poll::Ready(Ok(()))
         } else {
@@ -145,7 +145,7 @@ where
 
     /// Arranges for the current task to receive a notification when a
     /// "readable" signal arrives.
-    pub fn need_read(&self, lw: &LocalWaker) -> Result<(), zx::Status> {
+    pub fn need_read(&self, lw: &Waker) -> Result<(), zx::Status> {
         self.receiver().read_task.register(lw);
         let old = self
             .receiver()
@@ -165,7 +165,7 @@ where
 
     /// Arranges for the current task to receive a notification when a
     /// "writable" signal arrives.
-    pub fn need_write(&self, lw: &LocalWaker) -> Result<(), zx::Status> {
+    pub fn need_write(&self, lw: &Waker) -> Result<(), zx::Status> {
         self.receiver().write_task.register(lw);
         let old = self
             .receiver()

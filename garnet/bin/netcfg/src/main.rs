@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(async_await, await_macro, futures_api, try_from)]
+#![feature(async_await, await_macro, futures_api)]
 
 use std::borrow::Cow;
 use std::collections::HashMap;

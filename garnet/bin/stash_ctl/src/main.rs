@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(try_from,async_await,await_macro)]
+#![feature(async_await, await_macro, futures_api)]
 
 use failure::{err_msg, Error, ResultExt};
 use fidl::endpoints::create_proxy;

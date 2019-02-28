@@ -34,7 +34,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{
-        task::{LocalWaker, Waker},
+        task::Waker,
         Future,
         Poll,
         FutureExt,
@@ -608,11 +608,11 @@ impl Unpin for OnAdaptersFound {}
 impl Future for OnAdaptersFound {
     type Output = fidl::Result<HostDispatcher>;
 
-    fn poll(mut self: ::std::pin::Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: ::std::pin::Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         if self.hd.state.read().host_devices.len() == 0 {
             let hd = self.hd.clone();
             if self.waker_key.is_none() {
-                self.waker_key = Some(hd.state.write().host_requests.insert(lw.clone().into_waker()));
+                self.waker_key = Some(hd.state.write().host_requests.insert(lw.clone()));
             }
             Poll::Pending
         } else {

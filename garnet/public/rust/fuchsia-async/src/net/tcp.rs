@@ -10,7 +10,7 @@ use {
         io::{AsyncRead, AsyncWrite, Initializer},
         ready,
         stream::Stream,
-        task::{LocalWaker, Poll},
+        task::{Waker, Poll},
         try_ready,
     },
     net2::{TcpBuilder, TcpStreamExt},
@@ -67,7 +67,7 @@ impl TcpListener {
         AcceptStream(self)
     }
 
-    pub fn async_accept(&mut self, lw: &LocalWaker) -> Poll<io::Result<(TcpStream, SocketAddr)>> {
+    pub fn async_accept(&mut self, lw: &Waker) -> Poll<io::Result<(TcpStream, SocketAddr)>> {
         try_ready!(EventedFd::poll_readable(&self.0, lw));
 
         match self.0.as_ref().accept() {
@@ -95,7 +95,7 @@ pub struct Acceptor(Option<TcpListener>);
 impl Future for Acceptor {
     type Output = io::Result<(TcpListener, TcpStream, SocketAddr)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let (stream, addr);
         {
             let listener = self
@@ -116,7 +116,7 @@ pub struct AcceptStream(TcpListener);
 impl Stream for AcceptStream {
     type Item = io::Result<(TcpStream, SocketAddr)>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let (stream, addr) = ready!(self.0.async_accept(lw)?);
         Poll::Ready(Some(Ok((stream, addr))))
     }
@@ -167,7 +167,7 @@ impl TcpStream {
         })
     }
 
-    pub fn async_connect(&mut self, addr: &SocketAddr, lw: &LocalWaker) -> Poll<io::Result<()>> {
+    pub fn async_connect(&mut self, addr: &SocketAddr, lw: &Waker) -> Poll<io::Result<()>> {
         match self.state {
             ConnectState::New => match self.stream.as_ref().connect(addr) {
                 Err(e) => {
@@ -193,7 +193,7 @@ impl TcpStream {
         }
     }
 
-    pub fn read_buf<B: BufMut>(&self, buf: &mut B, lw: &LocalWaker) -> Poll<io::Result<usize>> {
+    pub fn read_buf<B: BufMut>(&self, buf: &mut B, lw: &Waker) -> Poll<io::Result<usize>> {
         match (&self.stream).as_ref().read(unsafe { buf.bytes_mut() }) {
             Ok(n) => {
                 unsafe {
@@ -209,7 +209,7 @@ impl TcpStream {
         }
     }
 
-    pub fn write_buf<B: Buf>(&self, buf: &mut B, lw: &LocalWaker) -> Poll<io::Result<usize>> {
+    pub fn write_buf<B: Buf>(&self, buf: &mut B, lw: &Waker) -> Poll<io::Result<usize>> {
         match (&self.stream).as_ref().write(buf.bytes()) {
             Ok(n) => {
                 buf.advance(n);
@@ -243,7 +243,7 @@ impl AsyncRead for TcpStream {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
+    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
         self.stream.poll_read(lw, buf)
     }
 
@@ -251,15 +251,15 @@ impl AsyncRead for TcpStream {
 }
 
 impl AsyncWrite for TcpStream {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<io::Result<usize>> {
         self.stream.poll_write(lw, buf)
     }
 
-    fn poll_flush(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
+    fn poll_flush(&mut self, _: &Waker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
+    fn poll_close(&mut self, _: &Waker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
@@ -274,7 +274,7 @@ pub struct Connector {
 impl Future for Connector {
     type Output = io::Result<TcpStream>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         {
             let stream = this

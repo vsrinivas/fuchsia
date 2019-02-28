@@ -11,7 +11,7 @@ use {
         io::{self, AsyncRead},
         ready,
         Stream,
-        task::{Poll, LocalWaker},
+        task::{Poll, Waker},
     },
     libc::{c_char, c_int, uint32_t, uint64_t, uint8_t},
     std::{
@@ -152,7 +152,7 @@ impl Stream for LoggerStream {
     /// LogMessage data structure.
     type Item = io::Result<(LogMessage, usize)>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         BUFFER.with(|b| {
             let mut b = b.borrow_mut();
             let len = ready!(self.socket.poll_read(lw, &mut *b)?);

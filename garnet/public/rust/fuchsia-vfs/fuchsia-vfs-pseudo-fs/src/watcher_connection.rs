@@ -11,7 +11,7 @@ use {
     },
     fuchsia_async::Channel,
     fuchsia_zircon::MessageBuf,
-    futures::{task::LocalWaker, Poll},
+    futures::{task::Waker, Poll},
     std::iter,
 };
 
@@ -158,7 +158,7 @@ impl WatcherConnection {
 
     /// Checks if the watcher has closed the connection.  And sets the waker to trigger when the
     /// connection is closed if it was still opened during the call.
-    pub fn is_dead(&self, lw: &LocalWaker) -> bool {
+    pub fn is_dead(&self, lw: &Waker) -> bool {
         let channel = &self.channel;
 
         if channel.is_closed() {

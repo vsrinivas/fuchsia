@@ -11,7 +11,7 @@ use {
     crate::executor::EHandle,
     fuchsia_zircon as zx,
     futures::{
-        task::{AtomicWaker, LocalWaker},
+        task::{AtomicWaker, Waker},
         Future, FutureExt, Poll, Stream,
         stream::FusedStream,
     },
@@ -70,7 +70,7 @@ where
 {
     type Output = F::Output;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         if let Poll::Ready(item) = self.as_mut().future().poll(lw) {
             return Poll::Ready(item);
         }
@@ -114,14 +114,14 @@ impl Timer {
         self.waker_and_bool.1.load(Ordering::SeqCst)
     }
 
-    fn register_task(&self, lw: &LocalWaker) {
+    fn register_task(&self, lw: &Waker) {
         self.waker_and_bool.0.register(lw);
     }
 }
 
 impl Future for Timer {
     type Output = ();
-    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         if self.did_fire() {
             Poll::Ready(())
         } else {
@@ -164,7 +164,7 @@ impl FusedStream for Interval {
 
 impl Stream for Interval {
     type Item = ();
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
         match this.timer.poll_unpin(lw) {
             Poll::Ready(()) => {

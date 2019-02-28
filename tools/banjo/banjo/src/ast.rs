@@ -778,7 +778,7 @@ impl BanjoAst {
                             ty = Ty::from_pair(&inner_pair)?;
                         }
                         Rule::constant => {
-                            value = Constant::from_str(inner_pair.clone().into_span().as_str());
+                            value = Constant::from_str(inner_pair.clone().as_span().as_str());
                         }
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }

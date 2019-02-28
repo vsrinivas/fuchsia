@@ -7,9 +7,9 @@ use crossbeam::queue::SegQueue;
 use fuchsia_zircon as zx;
 use futures::future::{self, FutureObj, LocalFutureObj};
 use futures::task::{
-    local_waker_from_nonlocal, local_waker_ref_from_nonlocal, AtomicWaker, Spawn, SpawnError,
+    ArcWake, waker_ref, AtomicWaker, Spawn, SpawnError,
 };
-use futures::{task, Future, FutureExt, Poll};
+use futures::{Future, FutureExt, Poll};
 use parking_lot::{Condvar, Mutex};
 use pin_utils::pin_mut;
 use slab::Slab;
@@ -175,8 +175,7 @@ impl Executor {
         F: Future,
     {
         pin_mut!(main_future);
-        let lw =
-            local_waker_from_nonlocal(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+        let lw = Arc::new(SingleThreadedMainTaskWake(self.inner.clone())).into_waker();
 
         let mut res = main_future.as_mut().poll(&lw);
 
@@ -210,7 +209,7 @@ impl Executor {
                     TASK_READY_WAKEUP_ID => {
                         // TODO: loop but don't starve
                         if let Some(task) = self.inner.ready_tasks.try_pop() {
-                            let lw = local_waker_ref_from_nonlocal(&task);
+                            let lw = waker_ref(&task);
                             task.future.try_poll(&lw);
                         }
                     }
@@ -235,8 +234,7 @@ impl Executor {
     where
         F: Future + Unpin,
     {
-        let lw =
-            local_waker_from_nonlocal(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())));
+        let lw = Arc::new(SingleThreadedMainTaskWake(self.inner.clone())).into_waker();
 
         let mut res = main_future.poll_unpin(&lw);
 
@@ -257,7 +255,7 @@ impl Executor {
                 }
                 TASK_READY_WAKEUP_ID => {
                     if let Some(task) = self.inner.ready_tasks.try_pop() {
-                        let lw = local_waker_ref_from_nonlocal(&task);
+                        let lw = waker_ref(&task);
                         task.future.try_poll(&lw);
                     }
                 }
@@ -404,7 +402,7 @@ impl Executor {
                     TASK_READY_WAKEUP_ID => {
                         // TODO: loop but don't starve
                         if let Some(task) = inner.ready_tasks.try_pop() {
-                            let lw = local_waker_ref_from_nonlocal(&task);
+                            let lw = waker_ref(&task);
                             task.future.try_poll(&lw);
                         }
                     }
@@ -434,7 +432,7 @@ fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
 // Since there are no other threads running, we don't have to use the EMPTY_WAKEUP_ID,
 // so instead we save it for use as the main task wakeup id.
 struct SingleThreadedMainTaskWake(Arc<Inner>);
-impl task::Wake for SingleThreadedMainTaskWake {
+impl ArcWake for SingleThreadedMainTaskWake {
     fn wake(arc_self: &Arc<Self>) {
         arc_self.0.notify_empty();
     }
@@ -712,7 +710,7 @@ struct Task {
     executor: Arc<Inner>,
 }
 
-impl task::Wake for Task {
+impl ArcWake for Task {
     fn wake(arc_self: &Arc<Self>) {
         arc_self.executor.ready_tasks.push(arc_self.clone());
         arc_self.executor.notify_task_ready();

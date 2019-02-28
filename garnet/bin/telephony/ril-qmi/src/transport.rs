@@ -7,7 +7,7 @@ use bytes::Buf;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
-    task::{LocalWaker, Waker},
+    task::Waker,
     Future, Poll,
 };
 use parking_lot::Mutex;
@@ -51,7 +51,7 @@ impl Unpin for QmiResponse {}
 
 impl Future for QmiResponse {
     type Output = Result<zx::MessageBuf, QmuxError>;
-    fn poll(mut self: Pin<&mut Self>, waker: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         let transport = this.transport.as_ref().ok_or(QmuxError::PollAfterCompletion)?;
         transport.poll_recv_msg_response(this.client_id, this.svc_id, this.tx_id, waker)
@@ -194,7 +194,7 @@ impl QmiTransport {
     /// Poll for the receipt of any response message or an event.
     ///
     /// Returns whether or not the channel is closed.
-    fn recv_all(&self, waker: &LocalWaker) -> Result<bool, QmuxError> {
+    fn recv_all(&self, waker: &Waker) -> Result<bool, QmuxError> {
         if let Some(ref transport_channel) = self.transport_channel {
             if transport_channel.is_closed() {
                 return Ok(true);
@@ -246,7 +246,7 @@ impl QmiTransport {
         client_id: ClientId,
         svc_id: SvcId,
         txid: TxId,
-        waker: &LocalWaker,
+        waker: &Waker,
     ) -> Poll<Result<zx::MessageBuf, QmuxError>> {
         let is_closed = self.recv_all(waker)?;
         let mut mi = self.message_interests.lock();
@@ -262,7 +262,7 @@ impl QmiTransport {
         } else {
             // Set the current waker to be notified when a response arrives.
             *message_interests.get_mut(txid.as_raw_id()).expect("Polled unregistered interest") =
-                MessageInterest::Waiting(waker.clone().into_waker());
+                MessageInterest::Waiting(waker.clone());
             if is_closed {
                 Poll::Ready(Err(QmuxError::ClientRead(zx::Status::PEER_CLOSED)))
             } else {

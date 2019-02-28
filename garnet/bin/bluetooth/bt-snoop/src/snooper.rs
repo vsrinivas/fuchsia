@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::hci,
     fuchsia_zircon::{Channel, MessageBuf},
-    futures::{task::LocalWaker, Poll, Stream},
+    futures::{task::Waker, Poll, Stream},
     std::{
         fs::OpenOptions,
         marker::Unpin,
@@ -114,7 +114,7 @@ impl Unpin for Snooper {}
 impl Stream for Snooper {
     type Item = (String, SnoopPacket);
 
-    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let mut buf = MessageBuf::new();
         match self.chan.recv_from(&mut buf, lw) {
             Poll::Ready(_t) => {

@@ -14,7 +14,7 @@ use {
         future::{Future, FutureExt, TryFutureExt},
         io::{self, AsyncReadExt},
         ready,
-        task::{LocalWaker, Poll, SpawnExt},
+        task::{Waker, Poll, SpawnExt},
     },
     hyper::{
         Body,
@@ -37,7 +37,7 @@ pub struct HyperTcpConnector(Result<TcpConnector, Option<io::Error>>);
 impl Future for HyperTcpConnector {
     type Output = Result<(Compat<TcpStream>, Connected), io::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let connector = self.0.as_mut().map_err(|x| x.take().unwrap())?;
         let stream = ready!(connector.poll_unpin(lw)?);
         Poll::Ready(Ok((

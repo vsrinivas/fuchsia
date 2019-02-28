@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use futures::future::FutureObj;
-use futures::task::LocalWaker;
+use futures::task::Waker;
 use futures::{FutureExt, Poll};
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
@@ -79,7 +79,7 @@ impl AtomicFuture {
     ///
     /// `try_poll` ensures that the future is polled at least once more
     /// unless it has already finished.
-    pub fn try_poll(&self, lw: &LocalWaker) -> AttemptPollResult {
+    pub fn try_poll(&self, lw: &Waker) -> AttemptPollResult {
         // AcqRel is used instead of SeqCst in the following code.
         //
         // AcqRel behaves like Acquire on loads and Release on stores.

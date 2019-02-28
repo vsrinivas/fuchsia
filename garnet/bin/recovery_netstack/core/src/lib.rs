@@ -7,7 +7,6 @@
 #![feature(async_await, await_macro)]
 #![feature(never_type)]
 #![feature(specialization)]
-#![feature(try_from)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]

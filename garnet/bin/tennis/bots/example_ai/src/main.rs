@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![feature(try_from, async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::create_endpoints;

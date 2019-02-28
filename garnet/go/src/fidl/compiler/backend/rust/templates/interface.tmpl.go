@@ -240,7 +240,7 @@ impl futures::stream::FusedStream for {{ $interface.Name }}EventStream {
 impl futures::Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -408,7 +408,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::LocalWaker,
+		lw: &futures::task::Waker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -564,7 +564,7 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 impl futures::Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;

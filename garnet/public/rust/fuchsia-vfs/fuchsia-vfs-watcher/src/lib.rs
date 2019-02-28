@@ -12,7 +12,7 @@ use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
 use fidl_fuchsia_io::{WATCH_MASK_ALL};
-use futures::{Poll, stream::{FusedStream, Stream}, task::LocalWaker};
+use futures::{Poll, stream::{FusedStream, Stream}, task::Waker};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -112,7 +112,7 @@ impl FusedStream for Watcher {
 impl Stream for Watcher {
     type Item = Result<WatchMessage, io::Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
         if this.idx >= this.buf.bytes().len() {
             this.reset_buf();

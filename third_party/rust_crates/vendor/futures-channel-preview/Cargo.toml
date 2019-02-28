@@ -13,18 +13,18 @@
 [package]
 edition = "2018"
 name = "futures-channel-preview"
-version = "0.3.0-alpha.12"
+version = "0.3.0-alpha.13"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "Channels for asynchronous communication using futures-rs.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.12/futures_channel"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_channel"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 
 [lib]
 name = "futures_channel"
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [features]

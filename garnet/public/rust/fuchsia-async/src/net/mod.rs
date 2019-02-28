@@ -12,7 +12,7 @@ pub use self::udp::UdpSocket;
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
-use futures::task::{AtomicWaker, LocalWaker};
+use futures::task::{AtomicWaker, Waker};
 use futures::{try_ready, Poll};
 use libc;
 
@@ -146,7 +146,7 @@ where
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_readable(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_readable(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         let receiver = self.signal_receiver.receiver();
         if (receiver.signals.load(Ordering::SeqCst) & (READABLE | ERROR | HUP)) != 0 {
             Poll::Ready(Ok(()))
@@ -159,7 +159,7 @@ where
     /// Tests to see if this resource is ready to be written to.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_writable(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_writable(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         let receiver = self.signal_receiver.receiver();
         if (receiver.signals.load(Ordering::SeqCst) & (WRITABLE | ERROR | HUP)) != 0 {
             Poll::Ready(Ok(()))
@@ -181,7 +181,7 @@ where
 
     /// Arranges for the current task to receive a notification when a "readable"
     /// signal arrives.
-    pub fn need_read(&self, lw: &LocalWaker) {
+    pub fn need_read(&self, lw: &Waker) {
         let receiver = self.signal_receiver.receiver();
         receiver.read_task.register(lw);
         let old = receiver.signals.fetch_and(!READABLE, Ordering::SeqCst);
@@ -194,7 +194,7 @@ where
 
     /// Arranges for the current task to receive a notification when a "writable"
     /// signal arrives.
-    pub fn need_write(&self, lw: &LocalWaker) {
+    pub fn need_write(&self, lw: &Waker) {
         let receiver = self.signal_receiver.receiver();
         receiver.write_task.register(lw);
         let old = receiver.signals.fetch_and(!WRITABLE, Ordering::SeqCst);
@@ -253,7 +253,7 @@ impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
+    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_readable(self, lw));
         let res = self.as_mut().read(buf);
         if let Err(e) = &res {
@@ -269,7 +269,7 @@ impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
 }
 
 impl<T: AsRawFd + Write> AsyncWrite for EventedFd<T> {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
+    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_writable(self, lw));
         let res = self.as_mut().write(buf);
         if let Err(e) = &res {
@@ -281,11 +281,11 @@ impl<T: AsRawFd + Write> AsyncWrite for EventedFd<T> {
         Poll::Ready(res.map_err(Into::into))
     }
 
-    fn poll_flush(&mut self, _: &LocalWaker) -> Poll<Result<(), io::Error>> {
+    fn poll_flush(&mut self, _: &Waker) -> Poll<Result<(), io::Error>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &LocalWaker) -> Poll<Result<(), io::Error>> {
+    fn poll_close(&mut self, _: &Waker) -> Poll<Result<(), io::Error>> {
         Poll::Ready(Ok(()))
     }
 
@@ -303,7 +303,7 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
+    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_readable(self, lw));
         let res = self.as_ref().read(buf);
         if let Err(e) = &res {
@@ -321,7 +321,7 @@ where
     T: AsRawFd,
     for<'b> &'b T: Write,
 {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
+    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
         try_ready!(EventedFd::poll_writable(self, lw));
         let res = self.as_ref().write(buf);
         if let Err(e) = &res {
@@ -333,11 +333,11 @@ where
         Poll::Ready(res.map_err(Into::into))
     }
 
-    fn poll_flush(&mut self, _: &LocalWaker) -> Poll<Result<(), io::Error>> {
+    fn poll_flush(&mut self, _: &Waker) -> Poll<Result<(), io::Error>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &LocalWaker) -> Poll<Result<(), io::Error>> {
+    fn poll_close(&mut self, _: &Waker) -> Poll<Result<(), io::Error>> {
         Poll::Ready(Ok(()))
     }
 }

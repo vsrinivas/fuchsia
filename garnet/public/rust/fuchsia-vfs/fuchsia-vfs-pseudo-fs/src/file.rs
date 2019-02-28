@@ -52,7 +52,7 @@ use {
     futures::{
         future::FusedFuture,
         stream::{FuturesUnordered, Stream, StreamExt, StreamFuture},
-        task::LocalWaker,
+        task::Waker,
         Future, Poll,
     },
     libc::{S_IRUSR, S_IWUSR},
@@ -282,7 +282,7 @@ impl Stream for FileConnection {
     // We are just proxying the FileRequestStream requests.
     type Item = <FileRequestStream as Stream>::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         self.requests.poll_next_unpin(lw)
     }
 }
@@ -809,7 +809,7 @@ where
 {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         loop {
             match self.connections.poll_next_unpin(lw) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {

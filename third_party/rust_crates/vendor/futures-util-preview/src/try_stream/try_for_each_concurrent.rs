@@ -1,11 +1,10 @@
 use crate::stream::{FuturesUnordered, StreamExt};
 use core::mem;
-use core::marker::Unpin;
 use core::pin::Pin;
 use core::num::NonZeroUsize;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::TryStream;
-use futures_core::task::{LocalWaker, Poll};
+use futures_core::task::{Waker, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// A stream combinator which executes a unit closure over each item on a
@@ -62,7 +61,7 @@ impl<St, Fut, F> Future for TryForEachConcurrent<St, Fut, F>
 {
     type Output = Result<(), St::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
         loop {
             let mut made_progress_this_iter = false;
 
@@ -71,7 +70,7 @@ impl<St, Fut, F> Future for TryForEachConcurrent<St, Fut, F>
             // Check if we've already created a number of futures greater than `limit`
             if self.limit.map(|limit| limit.get() > current_len).unwrap_or(true) {
                 let poll_res = match self.as_mut().stream().as_pin_mut() {
-                    Some(stream) => stream.try_poll_next(lw),
+                    Some(stream) => stream.try_poll_next(waker),
                     None => Poll::Ready(None),
                 };
 
@@ -100,7 +99,7 @@ impl<St, Fut, F> Future for TryForEachConcurrent<St, Fut, F>
                 }
             }
 
-            match self.as_mut().futures().poll_next_unpin(lw) {
+            match self.as_mut().futures().poll_next_unpin(waker) {
                 Poll::Ready(Some(Ok(()))) => made_progress_this_iter = true,
                 Poll::Ready(None) => {
                     if self.as_mut().stream().is_none() {

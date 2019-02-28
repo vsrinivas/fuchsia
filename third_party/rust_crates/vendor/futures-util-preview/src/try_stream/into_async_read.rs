@@ -1,7 +1,6 @@
-use core::marker::Unpin;
 use core::pin::Pin;
 use futures_core::stream::TryStream;
-use futures_core::task::{LocalWaker, Poll};
+use futures_core::task::{Waker, Poll};
 use futures_io::AsyncRead;
 use std::cmp;
 use std::io::{Error, Result};
@@ -52,7 +51,7 @@ where
 {
     fn poll_read(
         &mut self,
-        lw: &LocalWaker,
+        waker: &Waker,
         buf: &mut [u8],
     ) -> Poll<Result<usize>> {
         loop {
@@ -73,7 +72,7 @@ where
                     return Poll::Ready(Ok(len));
                 }
                 ReadState::PendingChunk => {
-                    match ready!(Pin::new(&mut self.stream).try_poll_next(lw)) {
+                    match ready!(Pin::new(&mut self.stream).try_poll_next(waker)) {
                         Some(Ok(chunk)) => {
                             self.state = ReadState::Ready {
                                 chunk,
@@ -104,12 +103,12 @@ mod tests {
     use super::*;
     use futures::stream::{self, StreamExt, TryStreamExt};
     use futures_io::AsyncRead;
-    use futures_test::task::noop_local_waker_ref;
+    use futures_test::task::noop_waker_ref;
 
     macro_rules! assert_read {
         ($reader:expr, $buf:expr, $item:expr) => {
-            let lw = noop_local_waker_ref();
-            match $reader.poll_read(lw, $buf) {
+            let waker = noop_waker_ref();
+            match $reader.poll_read(waker, $buf) {
                 Poll::Ready(Ok(x)) => {
                     assert_eq!(x, $item);
                 }

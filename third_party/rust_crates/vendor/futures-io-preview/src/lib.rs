@@ -6,16 +6,15 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#![warn(missing_docs, missing_debug_implementations)]
-#![deny(bare_trait_objects)]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.12/futures_io")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_io")]
 
 #![feature(futures_api)]
 
 #[cfg(feature = "std")]
 mod if_std {
-    use futures_core::task::{LocalWaker, Poll};
+    use futures_core::task::{Waker, Poll};
     use std::boxed::Box;
     use std::cmp;
     use std::io as StdIo;
@@ -100,7 +99,7 @@ mod if_std {
         ///
         /// If no data is available for reading, the method returns
         /// `Ok(Async::Pending)` and arranges for the current task (via
-        /// `lw.waker()`) to receive a notification when the object becomes
+        /// `waker.wake()`) to receive a notification when the object becomes
         /// readable or is closed.
         ///
         /// # Implementation
@@ -109,7 +108,7 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Async::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8])
+        fn poll_read(&mut self, waker: &Waker, buf: &mut [u8])
             -> Poll<Result<usize>>;
 
         /// Attempt to read from the `AsyncRead` into `vec` using vectored
@@ -122,7 +121,7 @@ mod if_std {
         ///
         /// If no data is available for reading, the method returns
         /// `Ok(Async::Pending)` and arranges for the current task (via
-        /// `lw.waker()`) to receive a notification when the object becomes
+        /// `waker.wake()`) to receive a notification when the object becomes
         /// readable or is closed.
         /// By default, this method delegates to using `poll_read` on the first
         /// buffer in `vec`. Objects which support vectored IO should override
@@ -134,11 +133,11 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Async::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_vectored_read(&mut self, lw: &LocalWaker, vec: &mut [&mut IoVec])
+        fn poll_vectored_read(&mut self, waker: &Waker, vec: &mut [&mut IoVec])
             -> Poll<Result<usize>>
         {
             if let Some(ref mut first_iovec) = vec.get_mut(0) {
-                self.poll_read(lw, first_iovec)
+                self.poll_read(waker, first_iovec)
             } else {
                 // `vec` is empty.
                 Poll::Ready(Ok(0))
@@ -160,7 +159,7 @@ mod if_std {
         ///
         /// If the object is not ready for writing, the method returns
         /// `Ok(Async::Pending)` and arranges for the current task (via
-        /// `lw.waker()`) to receive a notification when the object becomes
+        /// `waker.wake()`) to receive a notification when the object becomes
         /// readable or is closed.
         ///
         /// # Implementation
@@ -169,7 +168,7 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Async::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8])
+        fn poll_write(&mut self, waker: &Waker, buf: &[u8])
             -> Poll<Result<usize>>;
 
         /// Attempt to write bytes from `vec` into the object using vectored
@@ -182,7 +181,7 @@ mod if_std {
         ///
         /// If the object is not ready for writing, the method returns
         /// `Ok(Async::Pending)` and arranges for the current task (via
-        /// `lw.waker()`) to receive a notification when the object becomes
+        /// `waker.wake()`) to receive a notification when the object becomes
         /// readable or is closed.
         ///
         /// By default, this method delegates to using `poll_write` on the first
@@ -195,11 +194,11 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Async::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_vectored_write(&mut self, lw: &LocalWaker, vec: &[&IoVec])
+        fn poll_vectored_write(&mut self, waker: &Waker, vec: &[&IoVec])
             -> Poll<Result<usize>>
         {
             if let Some(ref first_iovec) = vec.get(0) {
-                self.poll_write(lw, &*first_iovec)
+                self.poll_write(waker, &*first_iovec)
             } else {
                 // `vec` is empty.
                 Poll::Ready(Ok(0))
@@ -213,7 +212,7 @@ mod if_std {
         ///
         /// If flushing cannot immediately complete, this method returns
         /// `Ok(Async::Pending)` and arranges for the current task (via
-        /// `lw.waker()`) to receive a notification when the object can make
+        /// `waker.wake()`) to receive a notification when the object can make
         /// progress towards flushing.
         ///
         /// # Implementation
@@ -222,7 +221,7 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Async::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_flush(&mut self, lw: &LocalWaker) -> Poll<Result<()>>;
+        fn poll_flush(&mut self, waker: &Waker) -> Poll<Result<()>>;
 
         /// Attempt to close the object.
         ///
@@ -230,7 +229,7 @@ mod if_std {
         ///
         /// If closing cannot immediately complete, this function returns
         /// `Ok(Async::Pending)` and arranges for the current task (via
-        /// `lw.waker()`) to receive a notification when the object can make
+        /// `waker.wake()`) to receive a notification when the object can make
         /// progress towards closing.
         ///
         /// # Implementation
@@ -239,7 +238,7 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Async::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_close(&mut self, lw: &LocalWaker) -> Poll<Result<()>>;
+        fn poll_close(&mut self, waker: &Waker) -> Poll<Result<()>>;
     }
 
     macro_rules! deref_async_read {
@@ -248,16 +247,16 @@ mod if_std {
                 (**self).initializer()
             }
 
-            fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8])
+            fn poll_read(&mut self, waker: &Waker, buf: &mut [u8])
                 -> Poll<Result<usize>>
             {
-                (**self).poll_read(lw, buf)
+                (**self).poll_read(waker, buf)
             }
 
-            fn poll_vectored_read(&mut self, lw: &LocalWaker, vec: &mut [&mut IoVec])
+            fn poll_vectored_read(&mut self, waker: &Waker, vec: &mut [&mut IoVec])
                 -> Poll<Result<usize>>
             {
-                (**self).poll_vectored_read(lw, vec)
+                (**self).poll_vectored_read(waker, vec)
             }
         }
     }
@@ -278,7 +277,7 @@ mod if_std {
                 Initializer::nop()
             }
 
-            fn poll_read(&mut self, _: &LocalWaker, buf: &mut [u8])
+            fn poll_read(&mut self, _: &Waker, buf: &mut [u8])
                 -> Poll<Result<usize>>
             {
                 Poll::Ready(StdIo::Read::read(self, buf))
@@ -300,24 +299,24 @@ mod if_std {
 
     macro_rules! deref_async_write {
         () => {
-            fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8])
+            fn poll_write(&mut self, waker: &Waker, buf: &[u8])
                 -> Poll<Result<usize>>
             {
-                (**self).poll_write(lw, buf)
+                (**self).poll_write(waker, buf)
             }
 
-            fn poll_vectored_write(&mut self, lw: &LocalWaker, vec: &[&IoVec])
+            fn poll_vectored_write(&mut self, waker: &Waker, vec: &[&IoVec])
                 -> Poll<Result<usize>>
             {
-                (**self).poll_vectored_write(lw, vec)
+                (**self).poll_vectored_write(waker, vec)
             }
 
-            fn poll_flush(&mut self, lw: &LocalWaker) -> Poll<Result<()>> {
-                (**self).poll_flush(lw)
+            fn poll_flush(&mut self, waker: &Waker) -> Poll<Result<()>> {
+                (**self).poll_flush(waker)
             }
 
-            fn poll_close(&mut self, lw: &LocalWaker) -> Poll<Result<()>> {
-                (**self).poll_close(lw)
+            fn poll_close(&mut self, waker: &Waker) -> Poll<Result<()>> {
+                (**self).poll_close(waker)
             }
         }
     }
@@ -332,18 +331,18 @@ mod if_std {
 
     macro_rules! delegate_async_write_to_stdio {
         () => {
-            fn poll_write(&mut self, _: &LocalWaker, buf: &[u8])
+            fn poll_write(&mut self, _: &Waker, buf: &[u8])
                 -> Poll<Result<usize>>
             {
                 Poll::Ready(StdIo::Write::write(self, buf))
             }
 
-            fn poll_flush(&mut self, _: &LocalWaker) -> Poll<Result<()>> {
+            fn poll_flush(&mut self, _: &Waker) -> Poll<Result<()>> {
                 Poll::Ready(StdIo::Write::flush(self))
             }
 
-            fn poll_close(&mut self, lw: &LocalWaker) -> Poll<Result<()>> {
-                self.poll_flush(lw)
+            fn poll_close(&mut self, waker: &Waker) -> Poll<Result<()>> {
+                self.poll_flush(waker)
             }
         }
     }
@@ -351,7 +350,7 @@ mod if_std {
     impl<T: AsMut<[u8]>> AsyncWrite for StdIo::Cursor<T> {
         fn poll_write(
             &mut self,
-            _: &LocalWaker,
+            _: &Waker,
             buf: &[u8],
         ) -> Poll<Result<usize>> {
             let position = self.position();
@@ -366,12 +365,12 @@ mod if_std {
             Poll::Ready(result)
         }
 
-        fn poll_flush(&mut self, _: &LocalWaker) -> Poll<Result<()>> {
+        fn poll_flush(&mut self, _: &Waker) -> Poll<Result<()>> {
             Poll::Ready(StdIo::Write::flush(&mut self.get_mut().as_mut()))
         }
 
-        fn poll_close(&mut self, lw: &LocalWaker) -> Poll<Result<()>> {
-            self.poll_flush(lw)
+        fn poll_close(&mut self, waker: &Waker) -> Poll<Result<()>> {
+            self.poll_flush(waker)
         }
     }
 

@@ -57,7 +57,7 @@ use {
         ops::Deref,
         pin::Pin,
         sync::Arc,
-        task::{LocalWaker, Poll},
+        task::{Waker, Poll},
     },
 };
 
@@ -705,7 +705,7 @@ impl Drop for OneshotEvent {
 impl Future for OneshotEvent {
     type Output = <oneshot::Receiver<()> as Future>::Output;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         match self.oneshot.poll_unpin(lw) {
             Poll::Ready(x) => {
                 // Take the event so that we don't try to deregister it later,
@@ -734,7 +734,7 @@ impl Drop for ListenStream {
 impl Stream for ListenStream {
     type Item = addr::Vsock;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         self.stream.poll_next_unpin(lw)
     }
 }

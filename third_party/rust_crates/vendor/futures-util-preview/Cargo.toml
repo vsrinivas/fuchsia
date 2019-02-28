@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "futures-util-preview"
-version = "0.3.0-alpha.12"
+version = "0.3.0-alpha.13"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "Common utilities and extension traits for the futures-rs library.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.12/futures_util"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_util"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang-nursery/futures-rs"
 
@@ -28,23 +28,23 @@ version = "1.4"
 default-features = false
 
 [dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-io-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-select-macro-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-sink-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures_01]
@@ -62,15 +62,15 @@ version = "0.5"
 version = "0.1.2"
 
 [dependencies.rand]
-version = "0.5.5"
+version = "0.6.4"
+optional = true
+
+[dependencies.rand_core]
+version = ">=0.2.2, <0.4"
 optional = true
 
 [dependencies.slab]
 version = "0.4"
-optional = true
-
-[dependencies.tokio-executor]
-version = "0.1.2"
 optional = true
 
 [dependencies.tokio-io]
@@ -79,9 +79,9 @@ optional = true
 
 [features]
 bench = []
+cfg-target-has-atomic = []
 compat = ["std", "futures_01"]
 default = ["std", "futures-core-preview/either", "futures-sink-preview/either"]
 io-compat = ["compat", "tokio-io"]
 nightly = []
-std = ["futures-core-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "futures-select-macro-preview/std", "either/use_std", "rand", "slab"]
-tokio-compat = ["compat", "tokio-executor"]
+std = ["futures-core-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "futures-select-macro-preview/std", "either/use_std", "rand", "rand_core", "slab"]

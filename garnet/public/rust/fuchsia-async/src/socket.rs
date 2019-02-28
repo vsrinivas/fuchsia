@@ -8,7 +8,7 @@ use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
 use futures::{
     future::poll_fn,
     stream::Stream,
-    task::{AtomicWaker, LocalWaker},
+    task::{AtomicWaker, Waker},
     try_ready, Poll,
 };
 use std::fmt;
@@ -224,7 +224,7 @@ where
     /// get a notification when the socket does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is readable again.
-    pub fn poll_read_task(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_read_task(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         if (self.receiver.receiver().signals.load(Ordering::SeqCst)
             & (F::READABLE.bits() | Signals::SOCKET_PEER_CLOSED.bits()))
             != 0
@@ -242,7 +242,7 @@ where
     /// get a notification when the socket does become writable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is writable again.
-    pub fn poll_write_task(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn poll_write_task(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         if (self.receiver.receiver().signals.load(Ordering::SeqCst)
             & (F::WRITABLE.bits() | Signals::SOCKET_PEER_CLOSED.bits()))
             != 0
@@ -256,7 +256,7 @@ where
 
     /// Arranges for the current task to receive a notification when a
     /// "readable" signal arrives.
-    pub fn need_read(&self, lw: &LocalWaker) -> Result<(), zx::Status> {
+    pub fn need_read(&self, lw: &Waker) -> Result<(), zx::Status> {
         self.receiver.receiver().read_task.register(lw);
         let old = self.receiver.receiver().signals.fetch_and(!F::READABLE.bits(), Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
@@ -273,7 +273,7 @@ where
 
     /// Arranges for the current task to receive a notification when a
     /// "writable" signal arrives.
-    pub fn need_write(&self, lw: &LocalWaker) -> Result<(), zx::Status> {
+    pub fn need_write(&self, lw: &Waker) -> Result<(), zx::Status> {
         self.receiver.receiver().write_task.register(lw);
         let old = self.receiver.receiver().signals.fetch_and(!F::WRITABLE.bits(), Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
@@ -299,7 +299,7 @@ where
 
     // Private helper for reading without `&mut` self.
     // This is used in the impls of `Read` for `Socket` and `&Socket`.
-    fn read_nomut(&self, buf: &mut [u8], lw: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
+    fn read_nomut(&self, buf: &mut [u8], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
         try_ready!(self.poll_read_task(lw));
         let res = self.read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
@@ -314,7 +314,7 @@ where
 
     // Private helper for writing without `&mut` self.
     // This is used in the impls of `Write` for `Socket` and `&Socket`.
-    fn write_nomut(&self, buf: &[u8], lw: &LocalWaker) -> Poll<Result<usize, zx::Status>> {
+    fn write_nomut(&self, buf: &[u8], lw: &Waker) -> Poll<Result<usize, zx::Status>> {
         try_ready!(self.poll_write_task(lw));
         let res = self.write(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
@@ -331,7 +331,7 @@ where
     pub fn poll_datagram(
         &self,
         out: &mut Vec<u8>,
-        lw: &LocalWaker,
+        lw: &Waker,
     ) -> Poll<Result<usize, zx::Status>> {
         try_ready!(self.poll_read_task(lw));
         let avail = self.avail_bytes()?;
@@ -377,7 +377,7 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
+    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
         self.read_nomut(buf, lw).map_err(Into::into)
     }
 }
@@ -386,15 +386,15 @@ impl<F: SocketRWFlags> AsyncWrite for GenericSocket<F>
 where
     GenericSocket<F>: SocketHandleRW,
 {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<io::Result<usize>> {
         self.write_nomut(buf, lw).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
+    fn poll_flush(&mut self, _: &Waker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
+    fn poll_close(&mut self, _: &Waker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -409,7 +409,7 @@ where
         Initializer::nop()
     }
 
-    fn poll_read(&mut self, lw: &LocalWaker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
+    fn poll_read(&mut self, lw: &Waker, buf: &mut [u8]) -> Poll<io::Result<usize>> {
         self.read_nomut(buf, lw).map_err(Into::into)
     }
 }
@@ -418,15 +418,15 @@ impl<'a, F: SocketRWFlags> AsyncWrite for &'a GenericSocket<F>
 where
     GenericSocket<F>: SocketHandleRW,
 {
-    fn poll_write(&mut self, lw: &LocalWaker, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(&mut self, lw: &Waker, buf: &[u8]) -> Poll<io::Result<usize>> {
         self.write_nomut(buf, lw).map_err(Into::into)
     }
 
-    fn poll_flush(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
+    fn poll_flush(&mut self, _: &Waker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(&mut self, _: &LocalWaker) -> Poll<io::Result<()>> {
+    fn poll_close(&mut self, _: &Waker) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -440,7 +440,7 @@ where
 {
     type Item = Result<Vec<u8>, zx::Status>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let mut res = Vec::<u8>::new();
         match self.poll_datagram(&mut res, lw) {
             Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),
@@ -456,7 +456,7 @@ where
 {
     type Item = Result<Vec<u8>, zx::Status>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let mut res = Vec::<u8>::new();
         match self.poll_datagram(&mut res, lw) {
             Poll::Ready(Ok(_size)) => Poll::Ready(Some(Ok(res))),

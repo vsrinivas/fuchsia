@@ -7,7 +7,7 @@
 use {
     fuchsia_async::{self as fasync, Timer},
     fuchsia_zircon::{Duration, Status, Time},
-    futures::{stream::Stream, task::LocalWaker, Poll},
+    futures::{stream::Stream, task::Waker, Poll},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc, sync::Weak},
 };
@@ -304,7 +304,7 @@ impl Drop for MediaStream {
 impl Stream for MediaStream {
     type Item = Result<Vec<u8>>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         let s = match self.stream.upgrade() {
             None => return Poll::Ready(None),
             Some(s) => s,

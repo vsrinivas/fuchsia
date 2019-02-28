@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "futures-preview"
-version = "0.3.0-alpha.12"
+version = "0.3.0-alpha.13"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "An implementation of futures and streams featuring zero allocations,\ncomposability, and iterator-like interfaces.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.12/futures"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures"
 readme = "../README.md"
 keywords = ["futures", "async", "future"]
 categories = ["asynchronous"]
@@ -27,36 +27,36 @@ repository = "https://github.com/rust-lang-nursery/futures-rs"
 [lib]
 name = "futures"
 [dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-executor-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-io-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-sink-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [dependencies.futures-util-preview]
-version = "=0.3.0-alpha.12"
+version = "=0.3.0-alpha.13"
 default-features = false
 
 [features]
+cfg-target-has-atomic = ["futures-core-preview/cfg-target-has-atomic", "futures-util-preview/cfg-target-has-atomic"]
 compat = ["std", "futures-util-preview/compat"]
 default = ["std"]
 io-compat = ["compat", "futures-util-preview/io-compat"]
 nightly = ["futures-util-preview/nightly", "futures-core-preview/nightly"]
 std = ["futures-core-preview/std", "futures-executor-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "futures-util-preview/std"]
-tokio-compat = ["compat", "futures-util-preview/tokio-compat"]
 [badges.appveyor]
 repository = "rust-lang-nursery/futures-rs"
 

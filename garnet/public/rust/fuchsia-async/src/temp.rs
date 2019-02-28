@@ -14,7 +14,7 @@ use {
         io::{self, AsyncRead, AsyncWrite},
         ready,
         stream::{Stream, StreamExt},
-        task::{LocalWaker, Poll},
+        task::{Waker, Poll},
         try_ready,
     },
     pin_utils::unsafe_pinned,
@@ -51,7 +51,7 @@ impl<St> FirstElem<St> {
 impl<St: Stream> Future for FirstElem<St> {
     type Output = Option<St::Item>;
 
-    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         self.stream().poll_next(lw)
     }
 }
@@ -65,7 +65,7 @@ impl<St> Unpin for TryIntoFuture<St> {}
 impl<T, E, St: Stream<Item = Result<T, E>> + Unpin> Future for TryIntoFuture<St> {
     type Output = Result<(Option<T>, St), E>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let res = ready!(self.stream.as_mut().unwrap().poll_next_unpin(lw));
         Poll::Ready(match res {
             Some(Ok(elem)) => Ok((Some(elem), self.stream.take().unwrap())),
@@ -119,7 +119,7 @@ where
 {
     type Output = io::Result<(A, T)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         match self.state {
             WriteState::Writing {
                 ref mut a,
@@ -196,7 +196,7 @@ impl<'a> Drop for Guard<'a> {
 // Because we're extending the buffer with uninitialized data for trusted
 // readers, we need to make sure to truncate that if any of this panics.
 fn read_to_end_internal<R: AsyncRead>(
-    r: &mut R, lw: &LocalWaker, buf: &mut Vec<u8>,
+    r: &mut R, lw: &Waker, buf: &mut Vec<u8>,
 ) -> Poll<io::Result<usize>> {
     let start_len = buf.len();
     let mut g = Guard {
@@ -236,7 +236,7 @@ where
 {
     type Output = io::Result<(A, Vec<u8>)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         match this.state {
             State::Reading {
@@ -301,7 +301,7 @@ impl<A, B> Either<A, B> {
 
 impl<A: Future, B: Future<Output = A::Output>> Future for Either<A, B> {
     type Output = A::Output;
-    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         unsafe {
             // Safety: neither child future is ever moved
             match Pin::get_unchecked_mut(self) {
@@ -324,7 +324,7 @@ impl<A, B> Select<A, B> {
 
 impl<A: Future, B: Future> Future for Select<A, B> {
     type Output = Either<A::Output, B::Output>;
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         if let Poll::Ready(a) = self.as_mut().a().poll(lw) {
             return Poll::Ready(Either::Left(a));
         }
@@ -342,7 +342,7 @@ pub struct SelectUnpin<A, B> {
 
 impl<A: Future + Unpin, B: Future + Unpin> Future for SelectUnpin<A, B> {
     type Output = Either<(A::Output, B), (A, B::Output)>;
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         if let Poll::Ready(a) = this.a.as_mut().unwrap().poll_unpin(lw) {
             return Poll::Ready(Either::Left((a, this.b.take().unwrap())));

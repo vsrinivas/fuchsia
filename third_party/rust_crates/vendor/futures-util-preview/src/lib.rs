@@ -2,14 +2,16 @@
 //! and the `AsyncRead` and `AsyncWrite` traits.
 
 #![feature(futures_api)]
-#![cfg_attr(feature = "std", feature(async_await, await_macro))]
-#![cfg_attr(feature = "nightly", feature(cfg_target_has_atomic))]
+#![cfg_attr(feature = "std", feature(async_await, await_macro, box_into_pin))]
+#![cfg_attr(feature = "cfg-target-has-atomic", feature(cfg_target_has_atomic))]
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![warn(missing_docs, missing_debug_implementations)]
-#![deny(bare_trait_objects)]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.12/futures_util")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures_util")]
+
+#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "nightly")))]
+compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` feature as an explicit opt-in to unstable features");
 
 #[macro_use]
 mod macros;
@@ -36,9 +38,9 @@ macro_rules! delegate_sink {
     ($field:ident) => {
         fn poll_ready(
             self: Pin<&mut Self>,
-            lw: &$crate::core_reexport::task::LocalWaker,
+            waker: &$crate::core_reexport::task::Waker,
         ) -> $crate::core_reexport::task::Poll<Result<(), Self::SinkError>> {
-            self.$field().poll_ready(lw)
+            self.$field().poll_ready(waker)
         }
 
         fn start_send(
@@ -50,16 +52,16 @@ macro_rules! delegate_sink {
 
         fn poll_flush(
             self: Pin<&mut Self>,
-            lw: &$crate::core_reexport::task::LocalWaker
+            waker: &$crate::core_reexport::task::Waker
         ) -> $crate::core_reexport::task::Poll<Result<(), Self::SinkError>> {
-            self.$field().poll_flush(lw)
+            self.$field().poll_flush(waker)
         }
 
         fn poll_close(
             self: Pin<&mut Self>,
-            lw: &$crate::core_reexport::task::LocalWaker
+            waker: &$crate::core_reexport::task::Waker
         ) -> $crate::core_reexport::task::Poll<Result<(), Self::SinkError>> {
-            self.$field().poll_close(lw)
+            self.$field().poll_close(waker)
         }
     }
 }

@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
     fuchsia_zircon::{self as zx, prelude::*},
-    futures::{channel::mpsc, ready, task::LocalWaker, Future, FutureExt, Poll, StreamExt},
+    futures::{channel::mpsc, ready, task::Waker, Future, FutureExt, Poll, StreamExt},
     std::{marker::Unpin, pin::Pin, sync::Arc},
     wlantap_client::Wlantap,
 };
@@ -43,7 +43,7 @@ where
 {
     type Output = Result<(T, EventStream), (E, EventStream)>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         match this.main_future.poll_unpin(lw) {
             Poll::Ready(Err(e)) => Poll::Ready(Err((e, this.event_stream.take().unwrap()))),

@@ -29,7 +29,7 @@ use {
     futures::{
         future::{FusedFuture, FutureExt},
         stream::{FuturesUnordered, Stream, StreamExt, StreamFuture},
-        task::LocalWaker,
+        task::Waker,
         Future, Poll,
     },
     libc::S_IRUSR,
@@ -104,7 +104,7 @@ impl Stream for DirectoryConnection {
     // We are just proxying the DirectoryRequestStream requests.
     type Item = <DirectoryRequestStream as Stream>::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         self.requests.poll_next_unpin(lw)
     }
 }
@@ -178,7 +178,7 @@ impl<'entries> PseudoDirectory<'entries> {
         });
     }
 
-    fn remove_dead_watchers(&mut self, lw: &LocalWaker) {
+    fn remove_dead_watchers(&mut self, lw: &Waker) {
         self.watchers.retain(|watcher| !watcher.is_dead(lw));
     }
 
@@ -565,7 +565,7 @@ impl<'entries> Unpin for PseudoDirectory<'entries> {}
 impl<'entries> Future for PseudoDirectory<'entries> {
     type Output = Void;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         loop {
             let mut did_work = false;
 

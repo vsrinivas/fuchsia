@@ -3,12 +3,11 @@
 //! This module contains a number of functions for working with `Stream`s,
 //! including the `StreamExt` trait which adds methods to `Stream` types.
 
-use core::marker::Unpin;
 use core::pin::Pin;
 use either::Either;
 use futures_core::future::Future;
 use futures_core::stream::{FusedStream, Stream};
-use futures_core::task::{LocalWaker, Poll};
+use futures_core::task::{Waker, Poll};
 use futures_sink::Sink;
 
 mod iter;
@@ -594,7 +593,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await, await_macro, futures_api)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -835,7 +834,7 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await, await_macro)]
+    /// #![feature(async_await, await_macro, futures_api)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -1047,11 +1046,11 @@ pub trait StreamExt: Stream {
     /// stream types.
     fn poll_next_unpin(
         &mut self,
-        lw: &LocalWaker
+        waker: &Waker
     ) -> Poll<Option<Self::Item>>
     where Self: Unpin + Sized
     {
-        Pin::new(self).poll_next(lw)
+        Pin::new(self).poll_next(waker)
     }
 
     /// Returns a [`Future`] that resolves when the next item in this stream is

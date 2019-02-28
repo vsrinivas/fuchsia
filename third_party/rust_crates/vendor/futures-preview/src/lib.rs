@@ -22,15 +22,16 @@
 //! completion, but *do not block* the thread running them.
 
 #![feature(futures_api)]
+#![cfg_attr(feature = "cfg-target-has-atomic", feature(cfg_target_has_atomic))]
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#![warn(missing_docs, missing_debug_implementations)]
-#![deny(bare_trait_objects)]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.12/futures")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.13/futures")]
 
-#![cfg_attr(feature = "nightly", feature(cfg_target_has_atomic))]
+#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "nightly")))]
+compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` feature as an explicit opt-in to unstable features");
 
 #[doc(hidden)] pub use futures_util::core_reexport;
 
@@ -52,7 +53,7 @@
 // Macro reexports
 pub use futures_util::{
     // Error/readiness propagation
-    try_ready, try_poll, ready,
+    try_ready, ready,
 };
 #[cfg(feature = "std")]
 pub use futures_util::{
@@ -89,9 +90,6 @@ pub mod compat {
         Future01CompatExt,
         Stream01CompatExt,
     };
-
-    #[cfg(feature = "tokio-compat")]
-    pub use futures_util::compat::TokioDefaultSpawner;
 }
 
 #[cfg(feature = "std")]
@@ -209,6 +207,11 @@ pub mod future {
         AndThen, ErrInto, FlattenSink, IntoFuture, MapErr, MapOk, OrElse,
         UnwrapOrElse,
         TryJoin, TryJoin3, TryJoin4, TryJoin5,
+    };
+
+    #[cfg(feature = "std")]
+    pub use futures_util::try_future::{
+        try_join_all, TryJoinAll,
     };
 }
 
@@ -362,26 +365,20 @@ pub mod task {
 
     pub use futures_core::task::{
         Poll, Spawn, LocalSpawn, SpawnError,
-        Waker, LocalWaker, UnsafeWake,
+        Waker, RawWaker, RawWakerVTable
     };
 
-    #[cfg(feature = "std")]
-    pub use futures_core::task::{
-        Wake, local_waker, local_waker_from_nonlocal
-    };
+    pub use futures_util::task::noop_waker;
 
     #[cfg(feature = "std")]
     pub use futures_util::task::{
-        LocalWakerRef, local_waker_ref, local_waker_ref_from_nonlocal,
+        WakerRef, waker_ref, ArcWake,
         SpawnExt, LocalSpawnExt,
-    };
-
-    pub use futures_util::task::{
-        noop_local_waker, noop_local_waker_ref,
+        noop_waker_ref,
     };
 
     #[cfg_attr(
-        feature = "nightly",
+        feature = "cfg-target-has-atomic",
         cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
     )]
     pub use futures_util::task::AtomicWaker;

@@ -17,7 +17,7 @@ use {
     futures::{
         Future, Poll,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::LocalWaker,
+        task::Waker,
     },
     fidl::endpoints::{RequestStream, ServiceMarker, Proxy},
     fidl_fuchsia_io::{
@@ -568,7 +568,7 @@ pub mod server {
     impl Future for FdioServer {
         type Output = Result<(), Error>;
 
-        fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+        fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
             loop {
                 match self.connections.poll_next_unpin(lw) {
                     Poll::Ready(Some((maybe_request, stream))) => {

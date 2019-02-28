@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
-#![feature(try_from, async_await, await_macro)]
+#![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_game_tennis::{GameState, TennisServiceMarker};

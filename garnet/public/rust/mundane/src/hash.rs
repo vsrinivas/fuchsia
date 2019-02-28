@@ -93,6 +93,7 @@ pub trait Digest: Eq + PartialEq + Display + Debug + Sized + self::inner::Digest
 
 // NOTE: InsecureSha1 is not publicly available; it is only used in HMAC-SHA1.
 #[deprecated(note = "SHA-1 is considered insecure")]
+#[allow(deprecated)] // FIXME(https://github.com/rust-lang/rust/issues/58822)
 #[derive(Default)]
 pub(crate) struct InsecureSha1 {
     ctx: CStackWrapper<boringssl::SHA_CTX>,

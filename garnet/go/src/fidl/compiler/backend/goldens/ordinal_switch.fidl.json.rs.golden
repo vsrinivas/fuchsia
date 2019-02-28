@@ -140,7 +140,7 @@ impl futures::stream::FusedStream for SwitchingOrdinalsEventStream {
 impl futures::Stream for SwitchingOrdinalsEventStream {
 	type Item = Result<SwitchingOrdinalsEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -279,7 +279,7 @@ impl<T: SwitchingOrdinals> futures::Future for SwitchingOrdinalsServer<T> {
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::LocalWaker,
+		lw: &futures::task::Waker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -417,7 +417,7 @@ impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
 impl futures::Stream for SwitchingOrdinalsRequestStream {
 	type Item = Result<SwitchingOrdinalsRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;

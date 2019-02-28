@@ -7,7 +7,6 @@ use futures_core::future::TryFuture;
 use futures_sink::Sink;
 
 #[cfg(feature = "compat")] use crate::compat::Compat;
-#[cfg(feature = "compat")] use core::marker::Unpin;
 
 /* TODO
 mod join;
@@ -21,8 +20,6 @@ mod join_all;
 mod select_all;
 #[cfg(feature = "std")]
 mod select_ok;
-#[cfg(feature = "std")]
-pub use self::join_all::{join_all, JoinAll};
 #[cfg(feature = "std")]
 pub use self::select_all::{SelectAll, SelectAllNext, select_all};
 #[cfg(feature = "std")]
@@ -56,6 +53,12 @@ pub use self::or_else::OrElse;
 
 mod unwrap_or_else;
 pub use self::unwrap_or_else::UnwrapOrElse;
+
+#[cfg(feature = "std")]
+mod try_join_all;
+
+#[cfg(feature = "std")]
+pub use self::try_join_all::{try_join_all, TryJoinAll};
 
 // Implementation details
 mod try_chain;

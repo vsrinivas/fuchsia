@@ -161,7 +161,7 @@ impl futures::stream::FusedStream for OvernetStreamProtocolEventStream {
 impl futures::Stream for OvernetStreamProtocolEventStream {
 	type Item = Result<OvernetStreamProtocolEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -291,7 +291,7 @@ impl<T: OvernetStreamProtocol> futures::Future for OvernetStreamProtocolServer<T
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::LocalWaker,
+		lw: &futures::task::Waker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -433,7 +433,7 @@ impl fidl::endpoints::RequestStream for OvernetStreamProtocolRequestStream {
 impl futures::Stream for OvernetStreamProtocolRequestStream {
 	type Item = Result<OvernetStreamProtocolRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
@@ -899,7 +899,7 @@ impl futures::stream::FusedStream for SocketControlProtocolEventStream {
 impl futures::Stream for SocketControlProtocolEventStream {
 	type Item = Result<SocketControlProtocolEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -1029,7 +1029,7 @@ impl<T: SocketControlProtocol> futures::Future for SocketControlProtocolServer<T
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::LocalWaker,
+		lw: &futures::task::Waker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -1171,7 +1171,7 @@ impl fidl::endpoints::RequestStream for SocketControlProtocolRequestStream {
 impl futures::Stream for SocketControlProtocolRequestStream {
 	type Item = Result<SocketControlProtocolRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
@@ -1637,7 +1637,7 @@ impl futures::stream::FusedStream for ChannelProtocolEventStream {
 impl futures::Stream for ChannelProtocolEventStream {
 	type Item = Result<ChannelProtocolEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -1767,7 +1767,7 @@ impl<T: ChannelProtocol> futures::Future for ChannelProtocolServer<T> {
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::LocalWaker,
+		lw: &futures::task::Waker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -1909,7 +1909,7 @@ impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
 impl futures::Stream for ChannelProtocolRequestStream {
 	type Item = Result<ChannelProtocolRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
@@ -2375,7 +2375,7 @@ impl futures::stream::FusedStream for KitchenSinkEventStream {
 impl futures::Stream for KitchenSinkEventStream {
 	type Item = Result<KitchenSinkEvent, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -2505,7 +2505,7 @@ impl<T: KitchenSink> futures::Future for KitchenSinkServer<T> {
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::LocalWaker,
+		lw: &futures::task::Waker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -2647,7 +2647,7 @@ impl fidl::endpoints::RequestStream for KitchenSinkRequestStream {
 impl futures::Stream for KitchenSinkRequestStream {
 	type Item = Result<KitchenSinkRequest, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;

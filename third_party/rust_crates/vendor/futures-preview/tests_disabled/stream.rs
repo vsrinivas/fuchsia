@@ -25,7 +25,7 @@ impl<I, T, E> Stream for Iter<I>
     type Item = T;
     type Error = E;
 
-    fn poll_next(&mut self, _: &LocalWaker) -> Poll<Option<T>, E> {
+    fn poll_next(&mut self, _: &Waker) -> Poll<Option<T>, E> {
         match self.iter.next() {
             Some(Ok(e)) => Ok(Async::Ready(Some(e))),
             Some(Err(e)) => Err(e),
@@ -288,13 +288,13 @@ fn peek() {
         type Item = ();
         type Error = u32;
 
-        fn poll(&mut self, lw: &LocalWaker) -> Poll<(), u32> {
+        fn poll(&mut self, waker: &Waker) -> Poll<(), u32> {
             {
-                let res = try_ready!(self.inner.peek(lw));
+                let res = try_ready!(self.inner.peek(waker));
                 assert_eq!(res, Some(&1));
             }
-            assert_eq!(self.inner.peek(lw).unwrap(), Some(&1).into());
-            assert_eq!(self.inner.poll_next(lw).unwrap(), Some(1).into());
+            assert_eq!(self.inner.peek(waker).unwrap(), Some(&1).into());
+            assert_eq!(self.inner.poll_next(waker).unwrap(), Some(1).into());
             Ok(Async::Ready(()))
         }
     }
@@ -326,21 +326,6 @@ fn chunks() {
 #[should_panic]
 fn chunks_panic_on_cap_zero() {
     let _ = list().chunks(0);
-}
-
-#[test]
-fn select() {
-    let a = iter_ok::<_, u32>(vec![1, 2, 3]);
-    let b = iter_ok(vec![4, 5, 6]);
-    assert_done(|| a.select(b).collect(), Ok(vec![1, 4, 2, 5, 3, 6]));
-
-    let a = iter_ok::<_, u32>(vec![1, 2, 3]);
-    let b = iter_ok(vec![1, 2]);
-    assert_done(|| a.select(b).collect(), Ok(vec![1, 1, 2, 2, 3]));
-
-    let a = iter_ok(vec![1, 2]);
-    let b = iter_ok::<_, u32>(vec![1, 2, 3]);
-    assert_done(|| a.select(b).collect(), Ok(vec![1, 1, 2, 2, 3]));
 }
 
 #[test]

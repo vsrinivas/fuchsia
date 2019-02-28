@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// #![deny(warnings)]
-
-#![feature(async_await, await_macro, try_from, futures_api)]
+#![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::RequestStream;

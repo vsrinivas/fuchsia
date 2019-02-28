@@ -12,7 +12,7 @@ use {
         future::FusedFuture,
         ready, select,
         stream::Stream,
-        task::{LocalWaker, Poll, Waker},
+        task::{Poll, Waker},
         FutureExt,
     },
     parking_lot::Mutex,
@@ -513,7 +513,7 @@ impl Unpin for RequestStream {}
 impl Stream for RequestStream {
     type Item = Result<Request>;
 
-    fn poll_next(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
         Poll::Ready(match ready!(self.inner.poll_recv_request(lw)) {
             Ok(UnparsedRequest(SignalingHeader { label, signal, .. }, body)) => {
                 match Request::parse(self.inner.clone(), label, signal, &body) {
@@ -824,7 +824,7 @@ impl Unpin for CommandResponse {}
 
 impl futures::Future for CommandResponse {
     type Output = Result<Vec<u8>>;
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         let res;
         {
@@ -909,7 +909,7 @@ impl PeerInner {
     // Resolves to an unprocessed request (header, body) if one was received.
     // Resolves to an error if there was an error reading from the socket or if the peer
     // disconnected.
-    fn poll_recv_request(&self, lw: &LocalWaker) -> Poll<Result<UnparsedRequest>> {
+    fn poll_recv_request(&self, lw: &Waker) -> Poll<Result<UnparsedRequest>> {
         let is_closed = self.recv_all(lw)?;
 
         let mut lock = self.incoming_requests.lock();
@@ -917,7 +917,7 @@ impl PeerInner {
         if let Some(request) = lock.queue.pop_front() {
             Poll::Ready(Ok(request))
         } else {
-            lock.listener = RequestListener::Some(lw.clone().into_waker());
+            lock.listener = RequestListener::Some(lw.clone());
             if is_closed {
                 Poll::Ready(Err(Error::PeerDisconnected))
             } else {
@@ -930,7 +930,7 @@ impl PeerInner {
     // Resolves to the bytes in the response body if one was received.
     // Resolves to an error if there was an error reading from the socket, if the peer
     // disconnected, or if the |label| is not being waited on.
-    fn poll_recv_response(&self, label: &TxLabel, lw: &LocalWaker) -> Poll<Result<Vec<u8>>> {
+    fn poll_recv_response(&self, label: &TxLabel, lw: &Waker) -> Poll<Result<Vec<u8>>> {
         let is_closed = self.recv_all(lw)?;
 
         let mut waiters = self.response_waiters.lock();
@@ -948,7 +948,7 @@ impl PeerInner {
         } else {
             // Set the waker to be notified when a response shows up.
             *waiters.get_mut(idx).expect("Polled unregistered waiter") =
-                ResponseWaiter::Waiting(lw.clone().into_waker());
+                ResponseWaiter::Waiting(lw.clone());
 
             if is_closed {
                 Poll::Ready(Err(Error::PeerDisconnected))
@@ -961,7 +961,7 @@ impl PeerInner {
     /// Poll for any packets on the signaling socket
     /// Returns whether the channel was closed, or an Error::PeerRead or Error::PeerWrite
     /// if there was a problem communicating on the socket.
-    fn recv_all(&self, lw: &LocalWaker) -> Result<bool> {
+    fn recv_all(&self, lw: &Waker) -> Result<bool> {
         let mut buf = Vec::<u8>::new();
         loop {
             let packet_size = match self.signaling.poll_datagram(&mut buf, lw) {

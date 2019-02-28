@@ -7,7 +7,7 @@ use crate::Never;
 use futures::{
     future::{Future, FutureExt, FutureObj},
     ready,
-    task::{LocalWaker, Poll},
+    task::{Waker, Poll},
 };
 use std::{marker::Unpin, pin::Pin};
 
@@ -22,7 +22,7 @@ impl<E> Unpin for StateMachine<E> {}
 impl<E> Future for StateMachine<E> {
     type Output = Result<Never, E>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         loop {
             match ready!(self.cur_state.0.poll_unpin(lw)) {
                 Ok(next) => self.cur_state = next,

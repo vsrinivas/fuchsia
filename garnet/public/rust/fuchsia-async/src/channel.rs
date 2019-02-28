@@ -7,7 +7,7 @@ use std::io;
 use std::pin::Pin;
 
 use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf};
-use futures::{task::LocalWaker, try_ready, Future, Poll};
+use futures::{task::Waker, try_ready, Future, Poll};
 
 use crate::RWHandle;
 
@@ -49,13 +49,13 @@ impl Channel {
     /// get a notification when the socket does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is readable again.
-    fn poll_read(&self, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    fn poll_read(&self, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         self.0.poll_read(lw)
     }
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, buf: &mut MessageBuf, lw: &LocalWaker) -> Poll<Result<(), zx::Status>> {
+    pub fn recv_from(&self, buf: &mut MessageBuf, lw: &Waker) -> Poll<Result<(), zx::Status>> {
         try_ready!(self.poll_read(lw));
 
         let res = self.0.get_ref().read(buf);
@@ -104,7 +104,7 @@ pub struct RecvMsg<'a> {
 impl<'a> Future for RecvMsg<'a> {
     type Output = Result<(), zx::Status>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let this = &mut *self;
         this.channel.recv_from(this.buf, lw)
     }

@@ -314,8 +314,8 @@ impl StateUpdateFutureInner {
         }
     }
 
-    fn store_task(&mut self, lw: &task::LocalWaker) {
-        let key = self.test_state.write().store_task(lw.clone().into_waker());
+    fn store_task(&mut self, lw: &task::Waker) {
+        let key = self.test_state.write().store_task(lw.clone());
         self.waker_key = Some(key);
     }
 }
@@ -343,7 +343,7 @@ impl std::marker::Unpin for AdapterStateFuture {}
 impl Future for AdapterStateFuture {
     type Output = Result<AdapterState, Error>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &task::LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &task::Waker) -> Poll<Self::Output> {
         self.inner.maybe_remove_waker();
         let states_match: bool = match &self.inner.test_state.read().host_info.state {
             None => false,
@@ -421,7 +421,7 @@ impl<'a> std::marker::Unpin for RemoteDeviceStateFuture<'a> {}
 impl<'a> Future for RemoteDeviceStateFuture<'a> {
     type Output = Result<(), Error>;
 
-    fn poll(mut self: Pin<&mut Self>, lw: &task::LocalWaker) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, lw: &task::Waker) -> Poll<Self::Output> {
         self.inner.maybe_remove_waker();
         if self.look_for_match() {
             Poll::Ready(Ok(()))

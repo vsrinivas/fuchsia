@@ -67,7 +67,7 @@ macro_rules! unsafe_many_futures {
         {
             type Output = $first::Output;
             fn poll(self: ::std::pin::Pin<&mut Self>,
-                    lw: &$crate::futures::task::LocalWaker,
+                    lw: &$crate::futures::task::Waker,
             ) -> $crate::futures::Poll<Self::Output> {
                 unsafe {
                     match ::std::pin::Pin::get_unchecked_mut(self) {
