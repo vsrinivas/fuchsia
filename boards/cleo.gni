@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/boards/arm64.gni")
+import("//boards/arm64.gni")
 
 custom_signing_script =
-    "//zircon/kernel/target/arm64/board/mt8167s_ref/package-image.sh"
+    "//zircon/kernel/target/arm64/board/cleo/package-image.sh"
 
 use_vbmeta = true
