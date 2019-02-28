@@ -54,20 +54,31 @@ zx_status_t VnodeVmo::ValidateFlags(uint32_t flags) {
 }
 
 zx_status_t VnodeVmo::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
-    zx_status_t status;
+    zx_info_handle_basic_t handle_info;
+    zx_status_t status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC,
+                                            &handle_info, sizeof(handle_info), NULL, NULL);
+    if (status != ZX_OK)
+        return status;
+
     if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
-        status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
+        zx_handle_t tmp_vmo;
+        status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &tmp_vmo);
         if (status < 0)
             return status;
+
+        // Restore ZX_RIGHT_EXECUTE, if necessary.
+        // TODO(mdempsky): Use non-COW clone once available.
+        if (handle_info.rights & ZX_RIGHT_EXECUTE) {
+            status = zx_vmo_replace_as_executable(tmp_vmo, ZX_HANDLE_INVALID, &vmo_);
+            if (status < 0)
+                return status;
+        } else {
+            vmo_ = tmp_vmo;
+        }
+
         offset_ = 0;
         have_local_clone_ = true;
     }
-
-    zx_info_handle_basic_t handle_info;
-    status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC,
-                                &handle_info, sizeof(handle_info), NULL, NULL);
-    if (status != ZX_OK)
-        return status;
 
     // Drop write rights.
     zx_handle_t vmo;

@@ -265,13 +265,13 @@ zx_status_t sys_vmo_clone(zx_handle_t handle, uint32_t options,
     // GET/SET_PROPERTY so the user can set ZX_PROP_NAME on the new clone.
     zx_rights_t rights =
         in_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY;
-    if (options & ZX_VMO_CLONE_COPY_ON_WRITE)
+    if (options & ZX_VMO_CLONE_COPY_ON_WRITE) {
+        rights &= ~ZX_RIGHT_EXECUTE;
         rights |= ZX_RIGHT_WRITE;
+    }
 
     // make sure we're somehow not elevating rights beyond what a new vmo should have
     DEBUG_ASSERT(((default_rights | ZX_RIGHT_EXECUTE) & rights) == rights);
-
-    // TODO(mdempsky): Assert W^X.
 
     // create a handle and attach the dispatcher to it
     return out_handle->make(ktl::move(dispatcher), rights);
