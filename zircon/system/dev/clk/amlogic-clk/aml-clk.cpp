@@ -16,7 +16,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/clk/c/fidl.h>
+#include <fuchsia/hardware/clock/c/fidl.h>
 #include <string.h>
 
 namespace amlogic_clock {
@@ -264,19 +264,19 @@ zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq) {
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t AmlClock::ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info) {
+zx_status_t AmlClock::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
     if (clk >= clk_table_.size()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    size_t max_len = sizeof(info->clk_name);
+    size_t max_len = sizeof(info->name);
     size_t len = strnlen(clk_table_[clk], max_len);
     if (len == max_len) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    memcpy(info->clk_name, clk_table_[clk], len + 1);
-    return ClkMeasureUtil(clk, &info->clk_freq);
+    memcpy(info->name, clk_table_[clk], len + 1);
+    return ClkMeasureUtil(clk, &info->frequency);
 }
 
 uint32_t AmlClock::GetClkCount() {
@@ -290,26 +290,26 @@ void AmlClock::ShutDown() {
 
 zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
     auto dev = static_cast<AmlClock*>(ctx);
-    fuchsia_hardware_clk_FrequencyInfo info;
+    fuchsia_hardware_clock_FrequencyInfo info;
 
     dev->ClkMeasure(clk, &info);
 
-    return fuchsia_hardware_clk_DeviceMeasure_reply(txn, &info);
+    return fuchsia_hardware_clock_DeviceMeasure_reply(txn, &info);
 }
 
 zx_status_t fidl_clk_get_count(void* ctx, fidl_txn_t* txn) {
     auto dev = static_cast<AmlClock*>(ctx);
 
-    return fuchsia_hardware_clk_DeviceGetCount_reply(txn, dev->GetClkCount());
+    return fuchsia_hardware_clock_DeviceGetCount_reply(txn, dev->GetClkCount());
 }
 
-static const fuchsia_hardware_clk_Device_ops_t fidl_ops_ = {
+static const fuchsia_hardware_clock_Device_ops_t fidl_ops_ = {
     .Measure = fidl_clk_measure,
     .GetCount = fidl_clk_get_count,
 };
 
 zx_status_t AmlClock::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_clk_Device_dispatch(this, txn, msg, &fidl_ops_);
+    return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 
 void AmlClock::DdkUnbind() {

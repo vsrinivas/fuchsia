@@ -14,7 +14,7 @@ driver("mtk-clk") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
-    "$zx/system/fidl/fuchsia-hardware-clk:c",
+    "$zx/system/fidl/fuchsia-hardware-clock:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

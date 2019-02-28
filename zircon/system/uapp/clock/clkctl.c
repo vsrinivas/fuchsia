@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <fuchsia/hardware/clk/c/fidl.h>
+#include <fuchsia/hardware/clock/c/fidl.h>
 #include <lib/fdio/util.h>
 
 int usage(const char* cmd) {
@@ -79,15 +79,15 @@ char* guess_dev(void) {
 }
 
 int measure_clk_util(zx_handle_t ch, uint32_t idx) {
-    fuchsia_hardware_clk_FrequencyInfo info;
-    ssize_t rc = fuchsia_hardware_clk_DeviceMeasure(ch, idx, &info);
+    fuchsia_hardware_clock_FrequencyInfo info;
+    ssize_t rc = fuchsia_hardware_clock_DeviceMeasure(ch, idx, &info);
 
     if (rc < 0) {
         fprintf(stderr, "ERROR: Failed to measure clock: %zd\n", rc);
         return rc;
     }
 
-    printf("[%4d][%4ld MHz] %s\n", idx, info.clk_freq, info.clk_name);
+    printf("[%4d][%4ld MHz] %s\n", idx, info.frequency, info.name);
     return 0;
 }
 
@@ -108,7 +108,7 @@ int measure_clk(const char* path, uint32_t idx, bool clk) {
     }
 
     uint32_t num_clocks = 0;
-    ssize_t rc = fuchsia_hardware_clk_DeviceGetCount(ch, &num_clocks);
+    ssize_t rc = fuchsia_hardware_clock_DeviceGetCount(ch, &num_clocks);
 
     if (rc < 0) {
         fprintf(stderr, "ERROR: Failed to get num_clocks: %zd\n", rc);

@@ -18,7 +18,7 @@ executable("clkctl") {
     "clkctl.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-clk:c",
+    "$zx/system/fidl/fuchsia-hardware-clock:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]

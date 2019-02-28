@@ -7,7 +7,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
 #include <lib/mmio/mmio.h>
-#include <fuchsia/hardware/clk/c/fidl.h>
+#include <fuchsia/hardware/clock/c/fidl.h>
 
 namespace clk {
 
@@ -27,7 +27,7 @@ public:
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-    zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info);
+    zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info);
     uint32_t GetClkCount();
 
 private:

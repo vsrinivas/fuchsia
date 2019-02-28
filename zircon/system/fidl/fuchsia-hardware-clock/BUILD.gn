@@ -4,8 +4,8 @@
 
 import("$zx/public/gn/fidl.gni")
 
-fidl_library("fuchsia-hardware-clk") {
+fidl_library("fuchsia-hardware-clock") {
   sources = [
-    "clk.fidl",
+    "clock.fidl",
   ]
 }

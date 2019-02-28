@@ -12,7 +12,7 @@ driver("amlogic-clk") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/mmio",
-    "$zx/system/fidl/fuchsia-hardware-clk:c",
+    "$zx/system/fidl/fuchsia-hardware-clock:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
