@@ -21,6 +21,7 @@ function HELP {
     echo "-v                   : build verbosely (pass -v to ninja)"
     echo "-r                   : build release build"
     echo "-d                   : build unoptimized, with full debug symbols"
+    echo "-t                   : build with tests disabled (for targets with small boot partitions)"
     echo "-h for help"
     echo "all arguments after -- become GN build arguments"
     exit 1
@@ -35,7 +36,7 @@ VARIANT=gcc
 BUILDDIR=
 BUILDDIR_SUFFIX=
 
-while getopts a:ACdhj:lLo:PqrvX FLAG; do
+while getopts a:ACdhj:lLo:PqrtvX FLAG; do
     case $FLAG in
         a) NINJA_ARGS+=("$OPTARG") ;;
         A) VARIANT=asan ;;
@@ -48,6 +49,7 @@ while getopts a:ACdhj:lLo:PqrvX FLAG; do
         P) VARIANT=profile ;;
         q) GN_SWITCHES+=(-q) ;;
         r) BUILDDIR_SUFFIX=-release GN_ARGS+=(assert_level=0) ;;
+        t) GN_ARGS+=(tests_in_image=false) ;;
         v) NINJA_ARGS+=(-v) ;;
         X) VARIANT=xray ;;
         h) HELP ;;
