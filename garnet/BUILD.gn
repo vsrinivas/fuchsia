@@ -33,35 +33,6 @@ if (build_info_version != "") {
   build_info_files.version = build_info_files.last_update
 }
 
-package("deprecated_build_info") {
-  deprecated_system_image = true
-  deps = [
-    ":last-update.txt",
-  ]
-  resources = [
-    {
-      dest = "build/product"
-      path = build_info_files.product
-    },
-    {
-      dest = "build/board"
-      path = build_info_files.board
-    },
-    {
-      dest = "build/version"
-      path = build_info_files.version
-    },
-    {
-      dest = "build/last-update"
-      path = build_info_files.last_update
-    },
-    {
-      dest = "build/snapshot"
-      path = build_info_files.jiri_snapshot
-    },
-  ]
-}
-
 package("build-info") {
   deps = [
     ":last-update.txt",
