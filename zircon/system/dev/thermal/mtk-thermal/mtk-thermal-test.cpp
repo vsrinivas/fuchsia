@@ -50,7 +50,7 @@ namespace thermal {
 
 class MtkThermalTest : public MtkThermal {
 public:
-    MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::ClkProtocolClient& clk, uint32_t clk_count,
+    MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::ClockProtocolClient& clk, uint32_t clk_count,
                    const thermal_device_info_t& thermal_info, zx::port port,
                    TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse,
                    TempCalibration2 cal2_fuse)
@@ -84,7 +84,7 @@ public:
         cal2_fuse.set_reg_value(kCal2Fuse);
 
         fbl::AllocChecker ac;
-        test->reset(new (&ac) MtkThermalTest(dummy_mmio, ddk::ClkProtocolClient(), 0, thermal_info,
+        test->reset(new (&ac) MtkThermalTest(dummy_mmio, ddk::ClockProtocolClient(), 0, thermal_info,
                                              std::move(port), cal0_fuse, cal1_fuse, cal2_fuse));
         return ac.check();
     }

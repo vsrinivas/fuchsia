@@ -7,7 +7,7 @@ driver("mtk-thermal") {
     "mtk-thermal.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-platform-device",
@@ -31,7 +31,7 @@ test("mtk-thermal-test") {
     "mtk-thermal.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-platform-device",

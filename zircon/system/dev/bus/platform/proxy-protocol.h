@@ -114,7 +114,7 @@ typedef struct {
     void* cookie;
 } rpc_i2c_rsp_t;
 
-// ZX_PROTOCOL_CLK proxy support.
+// ZX_PROTOCOL_CLOCK proxy support.
 enum {
     CLK_ENABLE,
     CLK_DISABLE,

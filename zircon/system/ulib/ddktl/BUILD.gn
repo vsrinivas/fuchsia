@@ -15,8 +15,8 @@ library("ddktl") {
     "pdev.cpp",
   ]
   public_deps = [
-    # <ddktl/pdev.h> has #include <ddktl/protocol/clk.h>.
-    "$zx/system/banjo/ddk-protocol-clk",
+    # <ddktl/pdev.h> has #include <ddktl/protocol/clock.h>.
+    "$zx/system/banjo/ddk-protocol-clock",
 
     # <ddktl/pdev.h> has #include <ddktl/protocol/gpio.h>.
     "$zx/system/banjo/ddk-protocol-gpio",

@@ -19,7 +19,7 @@ driver("platform-bus") {
     "platform-protocol-device.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
     "$zx/system/banjo/ddk-protocol-i2c",
@@ -47,7 +47,7 @@ driver("platform-bus.proxy") {
     "platform-proxy.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
     "$zx/system/banjo/ddk-protocol-i2c",

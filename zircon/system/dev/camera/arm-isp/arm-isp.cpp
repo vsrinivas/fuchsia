@@ -29,7 +29,7 @@ constexpr uint32_t kIsp = 4;
 
 // CLK Shifts & Masks
 constexpr uint32_t kClkMuxMask = 0xfff;
-constexpr uint32_t kClkEnableShift = 8;
+constexpr uint32_t kClockEnableShift = 8;
 
 } // namespace
 
@@ -69,7 +69,7 @@ void ArmIspDevice::PowerUpIsp() {
     hiu_mmio_.ClearBits32(kClkMuxMask, HHI_MIPI_ISP_CLK_CNTL);
     // set the divisor = 1 (writing (1-1) to div field)
     // source for the unused mux = S905D2_FCLK_DIV3   = 3 // 666.7 MHz
-    hiu_mmio_.SetBits32(((1 << kClkEnableShift) | 4 << 9),
+    hiu_mmio_.SetBits32(((1 << kClockEnableShift) | 4 << 9),
                          HHI_MIPI_ISP_CLK_CNTL);
 }
 

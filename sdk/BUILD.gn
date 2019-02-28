@@ -50,7 +50,7 @@ sdk("ddk") {
     "//zircon/public/banjo/ddk-protocol-block:ddk-protocol-block_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-bt-gattsvc:ddk-protocol-bt-gattsvc_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-bt-hci:ddk-protocol-bt-hci_sdk($banjo_toolchain)",
-    "//zircon/public/banjo/ddk-protocol-clk:ddk-protocol-clk_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-clock:ddk-protocol-clock_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-display-controller:ddk-protocol-display-controller_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-ethernet:ddk-protocol-ethernet_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-ethernet-board:ddk-protocol-ethernet-board_sdk($banjo_toolchain)",

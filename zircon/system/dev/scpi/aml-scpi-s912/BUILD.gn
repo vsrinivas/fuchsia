@@ -14,7 +14,7 @@ driver("aml-scpi-s912.mailbox") {
     "aml-mailbox.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-mailbox",
@@ -35,7 +35,7 @@ driver("scpi") {
     "aml-scpi.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-mailbox",

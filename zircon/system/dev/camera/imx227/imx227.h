@@ -6,7 +6,7 @@
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/ispimpl.h>
@@ -87,7 +87,7 @@ private:
     ddk::PDev pdev_;
     ddk::I2cChannel i2c_;
     ddk::GpioProtocolClient gpios_[GPIO_COUNT];
-    ddk::ClkProtocolClient clk_;
+    ddk::ClockProtocolClient clk_;
     ddk::MipiCsiProtocolClient mipi_;
     ddk::IspImplProtocolClient ispimpl_;
 

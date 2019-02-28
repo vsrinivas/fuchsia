@@ -7,7 +7,7 @@
 #include "platform-proxy-device.h"
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform/device.h>
@@ -71,17 +71,17 @@ private:
     fbl::RefPtr<PlatformProxy> proxy_;
 };
 
-class ProxyClk : public ddk::ClkProtocol<ProxyClk> {
+class ProxyClock : public ddk::ClockProtocol<ProxyClock> {
 public:
-    explicit ProxyClk(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
+    explicit ProxyClock(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
         : device_id_(device_id), proxy_(proxy) {}
 
     // Clock protocol implementation.
-    zx_status_t ClkEnable(uint32_t index);
-    zx_status_t ClkDisable(uint32_t index);
+    zx_status_t ClockEnable(uint32_t index);
+    zx_status_t ClockDisable(uint32_t index);
 
-    void GetProtocol(clk_protocol_t* proto) {
-        proto->ops = &clk_protocol_ops_;
+    void GetProtocol(clock_protocol_t* proto) {
+        proto->ops = &clock_protocol_ops_;
         proto->ctx = this;
     }
 
@@ -160,7 +160,7 @@ private:
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyGpio> gpios_;
     fbl::Vector<ProxyI2c> i2cs_;
-    ProxyClk clk_;
+    ProxyClock clk_;
 
     char name_[ZX_MAX_NAME_LEN];
     uint32_t metadata_count_;

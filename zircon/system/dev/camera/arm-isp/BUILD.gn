@@ -9,7 +9,7 @@ driver("arm-isp") {
     "init_sequences.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-isp",

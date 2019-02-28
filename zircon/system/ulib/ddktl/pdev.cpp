@@ -52,14 +52,14 @@ GpioProtocolClient PDev::GetGpio(uint32_t index) {
     return GpioProtocolClient(&gpio);
 }
 
-ClkProtocolClient PDev::GetClk(uint32_t index) {
-    clk_protocol_t clk;
+ClockProtocolClient PDev::GetClk(uint32_t index) {
+    clock_protocol_t clk;
     size_t actual;
-    zx_status_t res = GetProtocol(ZX_PROTOCOL_CLK, index, &clk, sizeof(clk), &actual);
+    zx_status_t res = GetProtocol(ZX_PROTOCOL_CLOCK, index, &clk, sizeof(clk), &actual);
     if (res != ZX_OK || actual != sizeof(clk)) {
         return {};
     }
-    return ClkProtocolClient(&clk);
+    return ClockProtocolClient(&clk);
 }
 
 } // namespace ddk

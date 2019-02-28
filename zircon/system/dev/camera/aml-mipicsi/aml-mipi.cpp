@@ -32,7 +32,7 @@ constexpr uint32_t kHiu = 4;
 
 // CLK Shifts & Masks
 constexpr uint32_t kClkMuxMask = 0xfff;
-constexpr uint32_t kClkEnableShift = 8;
+constexpr uint32_t kClockEnableShift = 8;
 
 } // namespace
 
@@ -41,7 +41,7 @@ void AmlMipiDevice::InitMipiClock() {
     hiu_mmio_->ClearBits32(kClkMuxMask, HHI_MIPI_CSI_PHY_CLK_CNTL);
     // set the divisor = 2 (writing (2-1) to div field)
     // source for the unused mux = S905D2_FCLK_DIV5   = 6 // 400 MHz
-    hiu_mmio_->SetBits32(((1 << kClkEnableShift) | 6 << 9 | 1),
+    hiu_mmio_->SetBits32(((1 << kClockEnableShift) | 6 << 9 | 1),
                          HHI_MIPI_CSI_PHY_CLK_CNTL);
     // TODO(braval@) Double check to look into if
     // this sleep is really necessary.

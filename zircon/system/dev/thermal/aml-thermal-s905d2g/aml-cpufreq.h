@@ -7,7 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <hwreg/mmio.h>
 #include <lib/zx/bti.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
@@ -36,7 +36,7 @@ private:
     // Initialize platform stuff.
     zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.
-    ddk::ClkProtocolClient clk_;
+    ddk::ClockProtocolClient clk_;
     // MMIOS.
     std::optional<ddk::MmioBuffer> hiu_mmio_;
     // BTI handle.

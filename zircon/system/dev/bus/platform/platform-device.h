@@ -85,8 +85,8 @@ private:
                                zx_handle_t channel);
     zx_status_t RpcI2cGetMaxTransferSize(const DeviceResources* dr, uint32_t index,
                                          size_t* out_size);
-    zx_status_t RpcClkEnable(const DeviceResources* dr, uint32_t index);
-    zx_status_t RpcClkDisable(const DeviceResources* dr, uint32_t index);
+    zx_status_t RpcClockEnable(const DeviceResources* dr, uint32_t index);
+    zx_status_t RpcClockDisable(const DeviceResources* dr, uint32_t index);
 
     PlatformBus* bus_;
     char name_[ZX_DEVICE_NAME_MAX + 1];

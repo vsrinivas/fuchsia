@@ -6,7 +6,7 @@
 #define DDKTL_PDEV_H_
 
 #include <ddktl/i2c-channel.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
 #include <lib/mmio/mmio.h>
@@ -47,7 +47,7 @@ public:
 
     I2cChannel GetI2c(uint32_t index);
     GpioProtocolClient GetGpio(uint32_t index);
-    ClkProtocolClient GetClk(uint32_t index);
+    ClockProtocolClient GetClk(uint32_t index);
 };
 
 } // namespace ddk

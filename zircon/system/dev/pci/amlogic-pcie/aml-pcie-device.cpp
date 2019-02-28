@@ -52,7 +52,7 @@ zx_status_t AmlPcieDevice::InitProtocols() {
         return st;
     }
 
-    st = device_get_protocol(parent_, ZX_PROTOCOL_CLK, &clk_);
+    st = device_get_protocol(parent_, ZX_PROTOCOL_CLOCK, &clk_);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to get clk protocol, st = %d", st);
         return st;
@@ -196,13 +196,13 @@ zx_status_t AmlPcieDevice::Init() {
 
     pcie_->ClearReset(kRstPcieApb | kRstPciePhy);
 
-    st = clk_enable(&clk_, kClk81);
+    st = clock_enable(&clk_, kClk81);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init root clock, st = %d\n", st);
         return st;
     }
 
-    st = clk_enable(&clk_, kClkPcieA);
+    st = clock_enable(&clk_, kClkPcieA);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init pciea clock, st = %d\n", st);
         return st;
@@ -210,7 +210,7 @@ zx_status_t AmlPcieDevice::Init() {
 
     pcie_->ClearReset(kRstPcieA);
 
-    st = clk_enable(&clk_, kClkPort);
+    st = clock_enable(&clk_, kClkPort);
     if (st != ZX_OK) {
         zxlogf(ERROR, "aml_pcie: failed to init port clock, st = %d\n", st);
         return st;

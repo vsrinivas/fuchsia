@@ -7,7 +7,7 @@ driver("hisi3660") {
     "hisi3660-clk.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/clk/hisi-lib",

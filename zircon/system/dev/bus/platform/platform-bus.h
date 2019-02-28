@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/i2cimpl.h>
 #include <ddktl/protocol/iommu.h>
@@ -79,7 +79,7 @@ public:
                                uint32_t* out_size);
 
     // Protocol accessors for PlatformDevice.
-    inline ddk::ClkProtocolClient* clk() { return &*clk_; }
+    inline ddk::ClockProtocolClient* clk() { return &*clk_; }
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
     inline ddk::I2cImplProtocolClient* i2c() { return &*i2c_; }
 
@@ -132,7 +132,7 @@ private:
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
-    std::optional<ddk::ClkProtocolClient> clk_;
+    std::optional<ddk::ClockProtocolClient> clk_;
     std::optional<ddk::GpioImplProtocolClient> gpio_;
     std::optional<ddk::IommuProtocolClient> iommu_;
     std::optional<ddk::I2cImplProtocolClient> i2c_;

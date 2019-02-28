@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <lib/mmio/mmio.h>
 #include <fuchsia/hardware/clk/c/fidl.h>
 
@@ -14,7 +14,7 @@ namespace clk {
 class MtkClk;
 using DeviceType = ddk::Device<MtkClk, ddk::Messageable>;
 
-class MtkClk : public DeviceType, public ddk::ClkProtocol<MtkClk, ddk::base_protocol> {
+class MtkClk : public DeviceType, public ddk::ClockProtocol<MtkClk, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 
@@ -22,8 +22,8 @@ public:
 
     zx_status_t Bind();
 
-    zx_status_t ClkEnable(uint32_t index);
-    zx_status_t ClkDisable(uint32_t index);
+    zx_status_t ClockEnable(uint32_t index);
+    zx_status_t ClockDisable(uint32_t index);
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

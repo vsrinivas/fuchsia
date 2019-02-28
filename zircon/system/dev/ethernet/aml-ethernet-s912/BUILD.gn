@@ -8,7 +8,7 @@ driver("aml-ethernet-s912") {
     "binding.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-ethernet",
     "$zx/system/banjo/ddk-protocol-ethernet-board",
     "$zx/system/banjo/ddk-protocol-gpio",

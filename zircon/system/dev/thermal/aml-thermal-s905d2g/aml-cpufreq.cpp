@@ -42,7 +42,7 @@ zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
     }
 
     // Get the clock protocol
-    clk_ = ddk::ClkProtocolClient(parent);
+    clk_ = ddk::ClockProtocolClient(parent);
     if (!clk_.is_valid()) {
         zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
         return ZX_ERR_NO_RESOURCES;

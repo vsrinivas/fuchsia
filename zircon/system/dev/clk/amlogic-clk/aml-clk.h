@@ -10,7 +10,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <hwreg/mmio.h>
@@ -28,7 +28,7 @@ using DeviceType = ddk::Device<AmlClock,
                                ddk::Messageable>;
 
 class AmlClock : public DeviceType,
-                 public ddk::ClkProtocol<AmlClock, ddk::base_protocol> {
+                 public ddk::ClockProtocol<AmlClock, ddk::base_protocol> {
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
@@ -38,8 +38,8 @@ public:
     static zx_status_t Create(zx_device_t* device);
 
     // CLK protocol implementation.
-    zx_status_t ClkEnable(uint32_t clk);
-    zx_status_t ClkDisable(uint32_t clk);
+    zx_status_t ClockEnable(uint32_t clk);
+    zx_status_t ClockDisable(uint32_t clk);
 
     // CLK IOCTL implementation.
     zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info);

@@ -15,7 +15,7 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/clk.h>
+#include <ddk/protocol/clock.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
@@ -44,7 +44,7 @@
 
 typedef struct hisi_clk {
     pdev_protocol_t pdev;
-    clk_protocol_t clk;
+    clock_protocol_t clk;
     zx_device_t* zxdev;
 
     mmio_buffer_t peri_crg_mmio;  // Separated Clock Gates
@@ -114,17 +114,17 @@ static zx_status_t hisi_clk_toggle(void* ctx, const uint32_t idx,
     return ZX_OK;
 }
 
-static zx_status_t hisi_clk_enable(void* ctx, uint32_t clk) {
+static zx_status_t hisi_clock_enable(void* ctx, uint32_t clk) {
     return hisi_clk_toggle(ctx, clk, true);
 }
 
-static zx_status_t hisi_clk_disable(void* ctx, uint32_t clk) {
+static zx_status_t hisi_clock_disable(void* ctx, uint32_t clk) {
     return hisi_clk_toggle(ctx, clk, false);
 }
 
-clk_protocol_ops_t clk_ops = {
-    .enable = hisi_clk_enable,
-    .disable = hisi_clk_disable,
+clock_protocol_ops_t clk_ops = {
+    .enable = hisi_clock_enable,
+    .disable = hisi_clock_disable,
 };
 
 static void hisi_clk_release(void* ctx) {
@@ -227,7 +227,7 @@ zx_status_t hisi_clk_init(const char* name, hisi_clk_gate_t* gates,
     hisi_clk->clk.ctx = hisi_clk;
 
     const platform_proxy_cb_t kCallback = {NULL, NULL};
-    st = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLK, &hisi_clk->clk, sizeof(hisi_clk->clk),
+    st = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &hisi_clk->clk, sizeof(hisi_clk->clk),
                                 &kCallback);
     if (st != ZX_OK) {
         zxlogf(ERROR, "hisi_clk_bind: pbus_register_protocol failed, st = %d\n", st);

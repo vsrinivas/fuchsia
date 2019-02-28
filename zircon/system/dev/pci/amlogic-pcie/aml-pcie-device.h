@@ -7,7 +7,7 @@
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/clk.h>
+#include <ddk/protocol/clock.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
@@ -39,7 +39,7 @@ class AmlPcieDevice {
 
     // Protocols
     pdev_protocol_t pdev_;
-    clk_protocol_t clk_;
+    clock_protocol_t clk_;
     gpio_protocol_t gpio_;
 
     // MMIO Buffers

@@ -32,7 +32,7 @@ zx_status_t gauss_clk_init(gauss_bus_t* bus) {
     zxlogf(INFO, "gauss_clk_init");
     zx_status_t st;
 
-    st = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_CLK, &clk_dev);
+    st = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_CLOCK, &clk_dev);
     if (st != ZX_OK) {
         zxlogf(ERROR, "gauss_clk_init: pbus_protocol_device_add failed, st = %d\n", st);
         return st;

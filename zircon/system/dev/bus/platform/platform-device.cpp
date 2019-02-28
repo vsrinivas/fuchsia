@@ -374,7 +374,7 @@ zx_status_t PlatformDevice::RpcI2cGetMaxTransferSize(const DeviceResources* dr, 
     return bus_->i2c()->GetMaxTransferSize(pdev_channel.bus_id, out_size);
 }
 
-zx_status_t PlatformDevice::RpcClkEnable(const DeviceResources* dr, uint32_t index) {
+zx_status_t PlatformDevice::RpcClockEnable(const DeviceResources* dr, uint32_t index) {
     if (bus_->clk() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -385,7 +385,7 @@ zx_status_t PlatformDevice::RpcClkEnable(const DeviceResources* dr, uint32_t ind
     return bus_->clk()->Enable(dr->clk(index).clk);
 }
 
-zx_status_t PlatformDevice::RpcClkDisable(const DeviceResources* dr, uint32_t index) {
+zx_status_t PlatformDevice::RpcClockDisable(const DeviceResources* dr, uint32_t index) {
     if (bus_->clk() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -552,7 +552,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         }
         break;
     }
-    case ZX_PROTOCOL_CLK: {
+    case ZX_PROTOCOL_CLOCK: {
         auto req = reinterpret_cast<rpc_clk_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
             zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
@@ -562,10 +562,10 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
 
         switch (req_header->op) {
         case CLK_ENABLE:
-            status = RpcClkEnable(dr, req->index);
+            status = RpcClockEnable(dr, req->index);
             break;
         case CLK_DISABLE:
-            status = RpcClkDisable(dr, req->index);
+            status = RpcClockDisable(dr, req->index);
             break;
         default:
             zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);

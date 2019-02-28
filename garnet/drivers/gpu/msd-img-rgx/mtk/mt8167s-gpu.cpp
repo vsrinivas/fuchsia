@@ -15,7 +15,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <hw/reg.h>
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -52,8 +52,8 @@ private:
 
     void EnableMfgHwApm();
 
-    clk_protocol_t clk_proto_ = {};
-    std::optional<ddk::ClkProtocolClient> clk_;
+    clock_protocol_t clk_proto_ = {};
+    std::optional<ddk::ClockProtocolClient> clk_;
     // MFG TOP MMIO - Controls mediatek's gpu-related power- and
     // clock-management hardware.
     std::optional<ddk::MmioBuffer> gpu_buffer_;
@@ -217,13 +217,13 @@ zx_status_t Mt8167sGpu::Bind()
 
     ddk::PDev pdev(&pdev_proto);
 
-    status = device_get_protocol(parent(), ZX_PROTOCOL_CLK, &clk_proto_);
+    status = device_get_protocol(parent(), ZX_PROTOCOL_CLOCK, &clk_proto_);
     if (status != ZX_OK) {
-        GPU_ERROR("ZX_PROTOCOL_CLK not available: %d", status);
+        GPU_ERROR("ZX_PROTOCOL_CLOCK not available: %d", status);
         return status;
     }
 
-    clk_ = ddk::ClkProtocolClient(&clk_proto_);
+    clk_ = ddk::ClockProtocolClient(&clk_proto_);
 
     status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
     if (status != ZX_OK) {

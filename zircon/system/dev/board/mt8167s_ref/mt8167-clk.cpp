@@ -29,7 +29,7 @@ zx_status_t Mt8167::ClkInit() {
     clk_dev.irq_count = 0;
     clk_dev.gpio_count = 0;
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLK, &clk_dev);
+    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK, &clk_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd clk failed %d\n", __FUNCTION__, status);
     }

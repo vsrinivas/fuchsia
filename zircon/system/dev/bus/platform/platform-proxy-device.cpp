@@ -231,20 +231,20 @@ void ProxyI2c::I2cTransact(const i2c_op_t* ops, size_t cnt, i2c_transact_callbac
     return;
 }
 
-zx_status_t ProxyClk::ClkEnable(uint32_t index) {
+zx_status_t ProxyClock::ClockEnable(uint32_t index) {
     rpc_clk_req_t req = {};
     platform_proxy_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_CLK;
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.header.op = CLK_ENABLE;
     req.index = index;
 
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
-zx_status_t ProxyClk::ClkDisable(uint32_t index) {
+zx_status_t ProxyClock::ClockDisable(uint32_t index) {
     rpc_clk_req_t req = {};
     platform_proxy_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_CLK;
+    req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.header.op = CLK_DISABLE;
     req.index = index;
 
@@ -633,8 +633,8 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         i2cs_[0].GetProtocol(proto);
         return ZX_OK;
     }
-    case ZX_PROTOCOL_CLK: {
-        auto* proto = static_cast<clk_protocol_t*>(out);
+    case ZX_PROTOCOL_CLOCK: {
+        auto* proto = static_cast<clock_protocol_t*>(out);
         clk_.GetProtocol(proto);
         return ZX_OK;
     }

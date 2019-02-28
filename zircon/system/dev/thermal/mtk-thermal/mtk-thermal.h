@@ -9,7 +9,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
-#include <ddktl/protocol/clk.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <lib/zx/interrupt.h>
@@ -43,7 +43,7 @@ protected:
     // Visible for testing.
     MtkThermal(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer pll_mmio,
                ddk::MmioBuffer pmic_mmio, ddk::MmioBuffer infracfg_mmio,
-               const ddk::ClkProtocolClient& clk, uint32_t clk_count,
+               const ddk::ClockProtocolClient& clk, uint32_t clk_count,
                const thermal_device_info_t& thermal_info, zx::port port, zx::interrupt irq,
                TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse, TempCalibration2 cal2_fuse)
         : DeviceType(parent), mmio_(std::move(mmio)), pll_mmio_(std::move(pll_mmio)),
@@ -78,7 +78,7 @@ private:
 
     int Thread();
 
-    ddk::ClkProtocolClient clk_;
+    ddk::ClockProtocolClient clk_;
     const uint32_t clk_count_;
     const thermal_device_info_t thermal_info_;
     uint32_t current_opp_idx_ = 0;
