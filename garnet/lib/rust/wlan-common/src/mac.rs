@@ -686,6 +686,18 @@ impl LlcHdr {
     }
 }
 
+pub struct LlcFrame<B> {
+    pub hdr: LayoutVerified<B, LlcHdr>,
+    pub body: B,
+}
+
+impl<B: ByteSlice> LlcFrame<B> {
+    pub fn parse(bytes: B) -> Option<Self> {
+        let (hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+        Some(Self { hdr, body })
+    }
+}
+
 // IEEE Std 802.3-2015, 3.1.1
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
@@ -770,19 +782,33 @@ impl<'a> Iterator for AmsduReader<'a> {
     }
 }
 
+pub enum DataFrameBody<B> {
+    Llc { llc_frame: B },
+    Amsdu { amsdu: B },
+}
+
 pub enum DataSubtype<B> {
     // QoS or regular data type.
-    Data { is_qos: bool, hdr: LayoutVerified<B, LlcHdr>, payload: B },
+    Data(DataFrameBody<B>),
     Unsupported { subtype: u16 },
 }
 
 impl<B: ByteSlice> DataSubtype<B> {
-    pub fn parse(subtype: u16, bytes: B) -> Option<DataSubtype<B>> {
+    pub fn parse(
+        subtype: u16,
+        qos_ctrl: Option<LayoutVerified<B, RawQosControl>>,
+        bytes: B,
+    ) -> Option<DataSubtype<B>> {
         match subtype {
             DATA_SUBTYPE_DATA | DATA_SUBTYPE_QOS_DATA => {
-                let (hdr, payload) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 let is_qos = subtype == DATA_SUBTYPE_QOS_DATA;
-                Some(DataSubtype::Data { hdr, is_qos, payload })
+                if is_qos {
+                    let qos_ctrl = QosControl(qos_ctrl?.get());
+                    if qos_ctrl.amsdu_present() {
+                        return Some(DataSubtype::Data(DataFrameBody::Amsdu { amsdu: bytes }));
+                    }
+                }
+                Some(DataSubtype::Data(DataFrameBody::Llc { llc_frame: bytes }))
             }
             subtype => Some(DataSubtype::Unsupported { subtype }),
         }
@@ -927,7 +953,11 @@ mod tests {
         bytes
     }
 
-    fn make_data_frame(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4]>) -> Vec<u8> {
+    fn make_data_hdr(
+        addr4: Option<[u8; 6]>,
+        qos_ctrl: [u8; 2],
+        ht_ctrl: Option<[u8; 4]>,
+    ) -> Vec<u8> {
         let mut fc = FrameControl(0);
         fc.set_frame_type(FRAME_TYPE_DATA);
         fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
@@ -951,13 +981,18 @@ mod tests {
             bytes.extend_from_slice(&addr4);
         }
 
-        // QoS Control
-        bytes.extend_from_slice(&[1, 1]);
+        bytes.extend_from_slice(&qos_ctrl);
 
         if let Some(ht_ctrl) = ht_ctrl {
             bytes.extend_from_slice(&ht_ctrl);
         }
+        bytes
+    }
 
+    fn make_data_frame_single_llc(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4]>) -> Vec<u8> {
+        let qos_ctrl = [1, 1];
+        let mut bytes = make_data_hdr(addr4, qos_ctrl, ht_ctrl);
+        #[rustfmt::skip]
         bytes.extend_from_slice(&[
             // LLC Header
             7, 7, 7, // DSAP, SSAP & control
@@ -970,27 +1005,14 @@ mod tests {
     }
 
     fn make_data_frame_with_padding() -> Vec<u8> {
-        let mut fc = FrameControl(0);
-        fc.set_frame_type(FRAME_TYPE_DATA);
-        fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
-        let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
-
+        let mut bytes = make_data_hdr(None, [1, 1], None);
         #[rustfmt::skip]
-        let bytes = vec![
-            // Data Header
-            fc[0], fc[1], // fc
-            2, 2, // duration
-            3, 3, 3, 3, 3, 3, // addr1
-            4, 4, 4, 4, 4, 4, // addr2
-            5, 5, 5, 5, 5, 5, // addr3
-            6, 6, // sequence control
-            // QoS Control
-            1, 1,
+        bytes.extend(vec![
             // Padding
             2, 2,
             // Body
             7, 7, 7,
-        ];
+        ]);
         bytes
     }
 
@@ -1064,7 +1086,7 @@ mod tests {
 
     #[test]
     fn parse_data_frame() {
-        let bytes = make_data_frame(None, None);
+        let bytes = make_data_frame_single_llc(None, None);
         match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Data { data_hdr, addr4, qos_ctrl, ht_ctrl, body }) => {
                 assert_eq!([0b10001000, 0], data_hdr.frame_ctrl);
@@ -1101,20 +1123,21 @@ mod tests {
 
     #[test]
     fn parse_llc_with_addr4_ht_ctrl() {
-        let bytes = make_data_frame(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
+        let bytes = make_data_frame_single_llc(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
         match MacFrame::parse(&bytes[..], false) {
-            Some(MacFrame::Data { data_hdr, body, .. }) => {
+            Some(MacFrame::Data { data_hdr, qos_ctrl, body, .. }) => {
                 let fc = FrameControl(data_hdr.frame_ctrl());
-                match DataSubtype::parse(fc.frame_subtype(), &body[..]) {
-                    Some(DataSubtype::Data { hdr, payload, is_qos }) => {
-                        assert!(is_qos);
-                        assert_eq!(7, hdr.dsap);
-                        assert_eq!(7, hdr.ssap);
-                        assert_eq!(7, hdr.control);
-                        assert_eq!([8, 8, 8], hdr.oui);
-                        assert_eq!([9, 10], hdr.protocol_id_be);
-                        assert_eq!(0x090A, hdr.protocol_id());
-                        assert_eq!(&[11, 11, 11], payload);
+                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, &body[..]) {
+                    Some(DataSubtype::Data(DataFrameBody::Llc { llc_frame })) => {
+                        let llc =
+                            LlcFrame::parse(llc_frame).expect("frame too short for LLC header");
+                        assert_eq!(7, llc.hdr.dsap);
+                        assert_eq!(7, llc.hdr.ssap);
+                        assert_eq!(7, llc.hdr.control);
+                        assert_eq!([8, 8, 8], llc.hdr.oui);
+                        assert_eq!([9, 10], llc.hdr.protocol_id_be);
+                        assert_eq!(0x090A, llc.hdr.protocol_id());
+                        assert_eq!(&[11, 11, 11], llc.body);
                     }
                     _ => panic!("failed parsing LLC"),
                 }
@@ -1132,7 +1155,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_amsdu() {
+    fn parse_data_amsdu() {
         #[rustfmt::skip]
         let first_msdu = vec![
             // LLC header
@@ -1172,41 +1195,57 @@ mod tests {
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
         ];
 
+        let mut qos_ctrl = QosControl(0);
+        qos_ctrl.set_amsdu_present(true);
+        let mut raw_qos_ctrl = RawQosControl([0, 0]);
+        raw_qos_ctrl.set(qos_ctrl.value());
+        let mut amsdu_data_frame = make_data_hdr(None, raw_qos_ctrl.0, None);
         #[rustfmt::skip]
-        let mut amsdu_frame = vec![
+        amsdu_data_frame.extend(vec![
             // A-MSDU Subframe #1
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7,
-            0xa1, 0xbe, 0xb9, 0xab,
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
+            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
             0x00, 0x74, // MSDU length
-        ];
-        amsdu_frame.extend(&first_msdu[..]);
+        ]);
+        amsdu_data_frame.extend(&first_msdu[..]);
         #[rustfmt::skip]
-        amsdu_frame.extend(vec![
+        amsdu_data_frame.extend(vec![
             // Padding
             0x00, 0x00,
             // A-MSDU Subframe #2
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7,
-            0xa1, 0xbe, 0xb9, 0xab, 0x00,
-            0x66, // MSDU length
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
+            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
+            0x00, 0x66, // MSDU length
         ]);
-        amsdu_frame.extend(&second_msdu[..]);
+        amsdu_data_frame.extend(&second_msdu[..]);
 
-        let mut found_msdus = (false, false);
-        let mut rdr = AmsduReader(&amsdu_frame[..]);
-        for msdu in &mut rdr {
-            match found_msdus {
-                (false, false) => {
-                    assert_eq!(msdu, &first_msdu[..]);
-                    found_msdus = (true, false);
+        match MacFrame::parse(&amsdu_data_frame[..], false) {
+            Some(MacFrame::Data { data_hdr, qos_ctrl, body, .. }) => {
+                let fc = FrameControl(data_hdr.frame_ctrl());
+                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, &body[..]) {
+                    Some(DataSubtype::Data(DataFrameBody::Amsdu { amsdu })) => {
+                        let mut found_msdus = (false, false);
+                        let mut rdr = AmsduReader(&amsdu[..]);
+                        for msdu in &mut rdr {
+                            match found_msdus {
+                                (false, false) => {
+                                    assert_eq!(msdu, &first_msdu[..]);
+                                    found_msdus = (true, false);
+                                }
+                                (true, false) => {
+                                    assert_eq!(msdu, &second_msdu[..]);
+                                    found_msdus = (true, true);
+                                }
+                                _ => panic!("unexpected MSDU: {:x?}", msdu),
+                            }
+                        }
+                        assert_eq!((true, true), found_msdus);
+                    }
+                    _ => panic!("failed parsing A-MSDU"),
                 }
-                (true, false) => {
-                    assert_eq!(msdu, &second_msdu[..]);
-                    found_msdus = (true, true);
-                }
-                _ => panic!("unexpected MSDU: {:x?}", msdu),
             }
+            _ => panic!("failed parsing data frame"),
         }
-        assert_eq!((true, true), found_msdus);
     }
 
     #[test]
