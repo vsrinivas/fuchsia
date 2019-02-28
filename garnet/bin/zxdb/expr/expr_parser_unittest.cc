@@ -299,7 +299,7 @@ TEST_F(ExprParserTest, Templates) {
   ASSERT_FALSE(result);
   EXPECT_EQ("Unmatched '['.", parser().err().msg());
 
-  // Dupliate template spec.
+  // Duplicate template spec.
   result = Parse("Foo<Bar><Baz>");
   ASSERT_FALSE(result);
   EXPECT_EQ("Duplicate template specification.", parser().err().msg());

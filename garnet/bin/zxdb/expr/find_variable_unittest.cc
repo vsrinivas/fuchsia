@@ -79,7 +79,7 @@ TEST(FindVariable, FindLocalVariable) {
 
   auto int32_type = MakeInt32Type();
 
-  // Empyt DWARF location expression. Since we don't evaluate any variables
+  // Empty DWARF location expression. Since we don't evaluate any variables
   // they can all be empty.
   std::vector<uint8_t> var_loc;
 
@@ -201,7 +201,7 @@ TEST(FindVariable, FindLocalVariable) {
   block->set_parent(LazySymbol());
 }
 
-// This only tests the ModulSymbols and function naming integration, the
+// This only tests the ModuleSymbols and function naming integration, the
 // details of the index searching are tested by FindGlobalVariableInModule()
 TEST(FindVariable, FindGlobalVariable) {
   ProcessSymbolsTestSetup setup;

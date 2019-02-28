@@ -714,7 +714,7 @@ void FormatValue::FormatPointer(const ExprValue& value,
   // things like a pointer to a member.
 
   // Type info. The caller will have handled the case when type printing was
-  // forced always on, so we need only ahndle the lower verbosities.
+  // forced always on, so we need only handle the lower verbosities.
   if (options.verbosity == Verbosity::kMinimal) {
     out->Append(Syntax::kComment, "(*) ");
   } else if (options.verbosity == Verbosity::kMedium) {

@@ -209,7 +209,7 @@ std::optional<FoundVariable> FindGlobalVariableInModule(
     const Identifier& identifier) {
   IndexWalker walker(&module_symbols->GetIndex());
   if (!identifier.InGlobalNamespace()) {
-    // Unless the input identifier is fully qualifed, start the search in the
+    // Unless the input identifier is fully qualified, start the search in the
     // current context.
     walker.WalkIntoClosest(current_scope);
   }

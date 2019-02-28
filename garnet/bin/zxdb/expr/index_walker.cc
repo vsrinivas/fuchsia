@@ -48,7 +48,7 @@ bool IndexWalker::WalkInto(const Identifier::Component& comp) {
   // This is complicated by templates which can't be string-compared for
   // equality without canonicalization. Search everything in the index with the
   // same base (non-template-part) name. With the index being sorted, we can
-  // start at the item that begins lexographically >= the input.
+  // start at the item that begins lexicographically >= the input.
   auto iter = node->sub().lower_bound(comp_name);
   if (iter == node->sub().end())
     return false;  // Nothing can match.

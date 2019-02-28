@@ -84,7 +84,7 @@ Examples
 )";
 
 // Returns true if processing should stop (either a frame command or an error),
-// false to continue processing to the nex noun type.
+// false to continue processing to the next noun type.
 bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kFrame))
     return false;
@@ -431,7 +431,7 @@ void ListProcesses(ConsoleContext* context) {
 }
 
 // Returns true if processing should stop (either a thread command or an error),
-// false to continue processing to the nex noun type.
+// false to continue processing to the next noun type.
 bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kProcess))
     return false;

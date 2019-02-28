@@ -62,7 +62,7 @@ bool IsNumberLike(const Type* t) {
   return IsIntegerLike(t) || IsFloatingPointBaseType(t);
 }
 
-// Craetes an ExprValue with the contents of the given "value". The size of
+// Creates an ExprValue with the contents of the given "value". The size of
 // "value" must match the destination type. This function always places the
 // output into *result and returns an empty Err() for the convenience of the
 // callers.
@@ -238,7 +238,7 @@ Err CastNumberToBool(const ExprValue& source, const Type* concrete_from,
 // Returns true if the two concrete types (as a result of calling
 // Type::GetConcreteType()) can be coerced by copying the data. This includes
 // things that are actually the same, as well as things like signed/unsigned
-// conversions and pointer/int conversions that our very loose coersion rules
+// conversions and pointer/int conversions that our very loose coercion rules
 // support.
 bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
   // TODO(brettw) need to handle bit fields.
@@ -261,7 +261,7 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
 
 Err CoerceValueTo(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                   const ExprValueSource& dest_source, ExprValue* result) {
-  // There are several findamental types of things that can be casted:
+  // There are several fundamental types of things that can be casted:
   //  - Aggregate types: Can only convert if they're the same.
   //  - Integers and integer-like things: This includes pointers.
   //  - Floating-point numbers.

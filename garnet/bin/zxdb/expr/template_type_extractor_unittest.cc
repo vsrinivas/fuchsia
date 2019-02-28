@@ -9,7 +9,7 @@
 namespace zxdb {
 
 TEST(TemplateTypeExtractor, Basic) {
-  // No template contents: "Foo<>". When extracing the type, we'll be given
+  // No template contents: "Foo<>". When extracting the type, we'll be given
   // the first token after the template opening (the 2nd token, ">").
   TemplateTypeResult result =
       ExtractTemplateType({ExprToken(ExprToken::kName, "Foo", 0),

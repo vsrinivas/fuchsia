@@ -17,7 +17,7 @@ class SymbolDataProvider;
 class Type;
 
 // Gets the values from a range given an array of a given type. The end index
-// is the index of one-past-tne-end of the desired data.
+// is the index of one-past-the-end of the desired data.
 //
 // The input will be clipped to the array size so the result may be empty
 // or smaller than requested.

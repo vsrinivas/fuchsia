@@ -64,7 +64,7 @@ const SwitchRecord* FindLongSwitch(const std::string& str,
   // Should have two leading dashes.
   FXL_DCHECK(str.size() >= 2 && str.substr(0, 2) == "--");
 
-  // Extract the switch value (varing depend on presence of '='), not counting
+  // Extract the switch value (varying depend on presence of '='), not counting
   // the two leading dashes.
   *equals_index = str.find('=');
   std::string switch_str;

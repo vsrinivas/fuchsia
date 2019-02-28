@@ -139,7 +139,7 @@ std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg,
           ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, DV),
           ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, TV),
           ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, PMUV),
-          // The register count values have 1 substracted to them.
+          // The register count values have 1 subtracted to them.
           ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, BRP) + 1,
           ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, WRP) + 1,
           ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, CTX_CMP) + 1,

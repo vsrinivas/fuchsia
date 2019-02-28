@@ -283,7 +283,7 @@ bool MemoryAnalysis::GetData(uint64_t address, uint64_t* out_value) const {
   // Need to handle invalid memory. The easiest thing is to read a byte at a
   // time. This doesn't handle invalid regions spanning a pointer; that
   // shouldn't happen because valid memory regions should always be aligned
-  // more coarsly than the size of a pointer.
+  // more coarsely than the size of a pointer.
   uint64_t data = 0;
   for (uint64_t i = 0; i < kAlign; i++) {
     uint8_t byte;

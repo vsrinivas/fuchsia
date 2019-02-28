@@ -94,7 +94,7 @@ void AddSettingToTable(const StoredSetting& setting,
 OutputBuffer FormatSettingStore(const SettingStore& store) {
   std::vector<std::vector<OutputBuffer>> rows;
   for (auto [key, item] : store.schema()->items()) {
-    // Overriden settings are meant to be listen in another schema.
+    // Overridden settings are meant to be listen in another schema.
     if (item.overriden())
       continue;
 
@@ -112,7 +112,7 @@ OutputBuffer FormatSettingStore(const SettingStore& store) {
 OutputBuffer FormatSchema(const SettingSchema& schema) {
   std::vector<std::vector<OutputBuffer>> rows;
   for (auto [key, item] : schema.items()) {
-    // Overriden settings are meant to be listen in another schema.
+    // Overridden settings are meant to be listen in another schema.
     if (item.overriden())
       continue;
 

@@ -192,7 +192,7 @@ Console::Result Console::ProcessInputLine(const std::string& line,
                                           CommandCallback callback) {
   Result result = DispatchInputLine(line, callback);
   if (result == Result::kQuit) {
-    // If we're not connected, quit immediatelly.
+    // If we're not connected, quit immediately.
     if (!quit_agent_on_quit() || !context().session()->IsConnected()) {
       debug_ipc::MessageLoop::Current()->QuitNow();
       return result;

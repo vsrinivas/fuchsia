@@ -104,7 +104,7 @@ TEST(ResolveCollection, BadMemberArgs) {
   ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
                  ExprValueSource(kBaseAddr));
 
-  // Null datat member pointer.
+  // Null data member pointer.
   out = ExprValue();
   err = ResolveMember(base, nullptr, &out);
   EXPECT_TRUE(err.has_error());

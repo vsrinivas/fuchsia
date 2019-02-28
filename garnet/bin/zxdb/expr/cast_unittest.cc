@@ -95,7 +95,7 @@ TEST(Cast, Coerce) {
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(static_cast<uint64_t>(-2), result.GetAs<uint64_t>());
 
-  // Floating point promption.
+  // Floating point promotion.
   err = CoerceValueTo(float_minus_two, double_type, ExprValueSource(), &result);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(-2.0, result.GetAs<double>());

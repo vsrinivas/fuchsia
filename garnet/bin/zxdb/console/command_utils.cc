@@ -249,7 +249,7 @@ std::string JobContextStateToString(JobContext::State state) {
 std::string ThreadStateToString(
     debug_ipc::ThreadRecord::State state,
     debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
-  // Blocked can have many cases, so we handle it separatedly.
+  // Blocked can have many cases, so we handle it separately.
   if (state != debug_ipc::ThreadRecord::State::kBlocked)
     return debug_ipc::ThreadRecord::StateToString(state);
 
@@ -413,7 +413,7 @@ std::string DescribeInputLocation(const InputLocation& location) {
 OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
   const auto& [err, identifier] = Identifier::FromString(str);
   if (err.has_error()) {
-    // Not parseable as an identnfier, just write the string.
+    // Not parseable as an identifier, just write the string.
     return OutputBuffer(str);
   }
 

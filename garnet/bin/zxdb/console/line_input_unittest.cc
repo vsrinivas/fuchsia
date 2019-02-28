@@ -218,7 +218,7 @@ TEST(LineInput, Scroll) {
   EXPECT_EQ("FGHI", input.GetAndClearOutput());
 
   // Add a 10th character. The whole line should scroll one to the left,
-  // leaving the cursor at the last column (colum offset 9 = "9C" at the end).
+  // leaving the cursor at the last column (column offset 9 = "9C" at the end).
   EXPECT_FALSE(input.OnInput('J'));
   EXPECT_EQ("\rBCDEFGHIJ\x1b[0K\r\x1B[9C", input.GetAndClearOutput());
 

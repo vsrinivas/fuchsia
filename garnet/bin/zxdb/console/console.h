@@ -16,7 +16,7 @@ namespace zxdb {
 class OutputBuffer;
 class Session;
 
-// The console has some virtual functions for ease of mocking the interace
+// The console has some virtual functions for ease of mocking the interface
 // for tests.
 class Console : public debug_ipc::FDWatcher {
  public:

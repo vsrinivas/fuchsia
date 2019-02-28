@@ -57,7 +57,7 @@ class ExprTokenizer {
   bool IsCurrentString(std::string_view s) const;
 
   // Returns true if the next characters in the buffer are the given ones, and
-  // the one after that is a name boundary (puntuation, end of buffer, etc.).
+  // the one after that is a name boundary (punctuation, end of buffer, etc.).
   bool IsCurrentName(std::string_view s) const;
 
   ExprToken::Type ClassifyCurrent();

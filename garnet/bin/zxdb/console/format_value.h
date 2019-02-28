@@ -53,7 +53,7 @@ class Variable;
 //   helper->Complete([helper](OutputBuffer out) { UseIt(out); });
 class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
  public:
-  // Abstruct interface for looking up information about a process.
+  // Abstract interface for looking up information about a process.
   class ProcessContext {
    public:
     virtual ~ProcessContext() = default;
