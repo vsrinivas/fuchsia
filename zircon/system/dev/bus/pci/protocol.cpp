@@ -1,0 +1,57 @@
+#include "device.h"
+
+// This file contains the PciProtocol implementation contained within pci::Device
+namespace pci {
+
+zx_status_t Device::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciEnableBusMaster(bool enable) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciResetDevice() {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciMapInterrupt(zx_status_t which_irq, zx::interrupt* out_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciGetDeviceInfo(zx_pcie_device_info_t* out_into) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigRead(uint16_t offset, size_t width, uint32_t* out_value) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciConfigWrite(uint16_t offset, size_t width, uint32_t value) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+uint8_t Device::PciGetNextCapability(uint8_t type, uint8_t offset) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciGetAuxdata(const char* args,
+                                  void* out_data_buffer,
+                                  size_t data_size,
+                                  size_t* out_data_actual) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::PciGetBti(uint32_t index, zx::bti* out_bti) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+} // namespace pci

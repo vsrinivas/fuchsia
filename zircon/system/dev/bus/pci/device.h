@@ -10,6 +10,8 @@
 #include "config.h"
 #include "ref_counted.h"
 #include <assert.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/pci.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -43,14 +45,42 @@ struct BarInfo {
     fbl::unique_ptr<PciAllocation> allocation;
 };
 
-// A Device represents a given PCI(e) device on a bus. It can be used standalone
-// for a regular PCI(e) device on the bus, or as the base class for a Bridge.
-// Most work a Device does is limited to its own registers in configuration space
-// and are managed through their Config object handled to it during creation.
-class Device : public fbl::DoublyLinkedListable<Device*> {
+// A pci::Device represents a given PCI(e) device on a bus. It can be used
+// standalone for a regular PCI(e) device on the bus, or as the base class for a
+// Bridge. Most work a pci::Device does is limited to its own registers in
+// configuration space and are managed through their Config object handled to it
+// during creation. One of the biggest responsibilities of the pci::Device class
+// is fulfill the PCI protocol for the driver downstream operating the PCI
+// device this corresponds to.
+class Device;
+using PciDeviceType = ddk::Device<pci::Device>;
+class Device : public PciDeviceType,
+               public ddk::PciProtocol<pci::Device>,
+               public fbl::DoublyLinkedListable<Device*> {
 public:
+    // DDKTL PciProtocol methods
+    zx_status_t PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_res);
+    zx_status_t PciEnableBusMaster(bool enable);
+    zx_status_t PciResetDevice();
+    zx_status_t PciMapInterrupt(zx_status_t which_irq, zx::interrupt* out_handle);
+    zx_status_t PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
+    zx_status_t PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count);
+    zx_status_t PciGetDeviceInfo(zx_pcie_device_info_t* out_into);
+    zx_status_t PciConfigRead(uint16_t offset, size_t width, uint32_t* out_value);
+    zx_status_t PciConfigWrite(uint16_t offset, size_t width, uint32_t value);
+    uint8_t PciGetNextCapability(uint8_t type, uint8_t offset);
+    zx_status_t PciGetAuxdata(const char* args,
+                              void* out_data_buffer,
+                              size_t data_size,
+                              size_t* out_data_actual);
+    zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+
+    // DDK mix-in impls
+    void DdkRelease() { delete this; }
+
     // Create, but do not initialize, a device.
-    static zx_status_t Create(fbl::RefPtr<Config>&& config,
+    static zx_status_t Create(zx_device_t* parent,
+                              fbl::RefPtr<Config>&& config,
                               UpstreamNode* upstream,
                               BusLinkInterface* bli);
     virtual ~Device();
@@ -182,12 +212,18 @@ public:
     };
 
 protected:
-    // Allow our upstream to disable / Unplug us.
-    friend class UpstreamNode;
-    Device(fbl::RefPtr<Config>&& config,
+    Device(zx_device_t* parent,
+           fbl::RefPtr<Config>&& config,
            UpstreamNode* upstream,
            BusLinkInterface* bli,
-           bool is_bridge);
+           bool is_bridge)
+        : PciDeviceType(parent),
+          is_bridge_(is_bridge),
+          cfg_(std::move(config)),
+          bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
+          upstream_(upstream),
+          bli_(bli) {}
+
     zx_status_t Init() TA_EXCL(dev_lock_);
     zx_status_t InitLocked() TA_REQ(dev_lock_);
     fbl::Mutex* dev_lock() { return &dev_lock_; }
@@ -201,24 +237,6 @@ protected:
     // TODO(cja): port zx_status_t ProbeCapabilitiesLocked();
     // TODO(cja): port zx_status_t ParseStdCapabilitiesLocked();
     // TODO(cja): port zx_status_t ParseExtCapabilitiesLocked();
-
-    // Probes a BAR's configuration. If it is already allocated it will try to
-    // reserve the existing address window for it so that devices configured by system
-    // firmware can be maintained as much as possible.
-    zx_status_t ProbeBar(uint32_t bar_id) TA_REQ(dev_lock_);
-    // Allocates address space for a BAR if it does not already exist.
-    zx_status_t AllocateBar(uint32_t bar_id) TA_REQ(dev_lock_);
-    // Called by an UpstreamNode to configure the BARs of a device downsteream.
-    // Bridge implements it so it can allocate its bridge windows and own BARs before
-    // configuring downstream BARs.
-    virtual zx_status_t ConfigureBars() TA_EXCL(dev_lock_);
-
-    // Disable a device, and anything downstream of it. The device will
-    // continue to enumerate, but users will only be able to access config (and
-    // only in a read only fashion). BAR windows, bus mastering, and interrupts
-    // will all be disabled.
-    virtual void Disable() TA_EXCL(dev_lock_);
-    void DisableLocked() TA_REQ(dev_lock_);
 
     fbl::Mutex cmd_reg_lock_;       // Protection for access to the command register.
     const bool is_bridge_;          // True if this device is also a bridge
@@ -246,6 +264,30 @@ protected:
     BusLinkInterface* const bli_;
 
 private:
+    // Allow UpstreamNode implementations to Probe/Allocate/Configure/Disable.
+    friend class UpstreamNode;
+    friend class Bridge;
+    friend class Root;
+    // Probes a BAR's configuration. If it is already allocated it will try to
+    // reserve the existing address window for it so that devices configured by system
+    // firmware can be maintained as much as possible.
+    zx_status_t ProbeBar(uint32_t bar_id) TA_REQ(dev_lock_);
+    // Allocates address space for a BAR if it does not already exist.
+    zx_status_t AllocateBar(uint32_t bar_id) TA_REQ(dev_lock_);
+    // Called a device to configure (probe/allocate) its BARs
+    zx_status_t ConfigureBarsLocked() TA_REQ(dev_lock_);
+    // Called by an UpstreamNode to configure the BARs of a device downsteream.
+    // Bridge implements it so it can allocate its bridge windows and own BARs before
+    // configuring downstream BARs..
+    virtual zx_status_t ConfigureBars() TA_EXCL(dev_lock_);
+
+    // Disable a device, and anything downstream of it.  The device will
+    // continue to enumerate, but users will only be able to access config (and
+    // only in a read only fashion).  BAR windows, bus mastering, and interrupts
+    // will all be disabled.
+    virtual void Disable() TA_EXCL(dev_lock_);
+    void DisableLocked() TA_REQ(dev_lock_);
+
     // Capabilities
     // TODO(cja): Port over the capability support from kernel pci.
 

@@ -31,7 +31,8 @@ namespace { // anon namespace.  Externals do not need to know about DeviceImpl
 
 class DeviceImpl : public Device {
 public:
-    static zx_status_t Create(fbl::RefPtr<Config>&& cfg,
+    static zx_status_t Create(zx_device_t* parent,
+                              fbl::RefPtr<Config>&& cfg,
                               UpstreamNode* upstream,
                               BusLinkInterface* bli);
 
@@ -42,15 +43,19 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(DeviceImpl);
 
 protected:
-    DeviceImpl(fbl::RefPtr<Config>&& cfg, UpstreamNode* upstream, BusLinkInterface* bli)
-        : Device(std::move(cfg), upstream, bli, false) {}
+    DeviceImpl(zx_device_t* parent,
+               fbl::RefPtr<Config>&& cfg,
+               UpstreamNode* upstream,
+               BusLinkInterface* bli)
+        : Device(parent, std::move(cfg), upstream, bli, false) {}
 };
 
-zx_status_t DeviceImpl::Create(fbl::RefPtr<Config>&& cfg,
+zx_status_t DeviceImpl::Create(zx_device_t* parent,
+                               fbl::RefPtr<Config>&& cfg,
                                UpstreamNode* upstream,
                                BusLinkInterface* bli) {
     fbl::AllocChecker ac;
-    auto raw_dev = new (&ac) DeviceImpl(std::move(cfg), upstream, bli);
+    auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bli);
     if (!ac.check()) {
         pci_errorf("Out of memory attemping to create PCIe device %s.\n", cfg->addr());
         return ZX_ERR_NO_MEMORY;
@@ -69,16 +74,6 @@ zx_status_t DeviceImpl::Create(fbl::RefPtr<Config>&& cfg,
 
 } // namespace
 
-Device::Device(fbl::RefPtr<Config>&& config,
-               UpstreamNode* upstream,
-               BusLinkInterface* bli,
-               bool is_bridge)
-    : is_bridge_(is_bridge),
-      cfg_(std::move(config)),
-      bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
-      upstream_(upstream),
-      bli_(bli) {}
-
 Device::~Device() {
     // We should already be unlinked from the bus's device tree.
     ZX_DEBUG_ASSERT(disabled_);
@@ -93,10 +88,11 @@ Device::~Device() {
     pci_tracef("%s [%s] dtor finished\n", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
 
-zx_status_t Device::Create(fbl::RefPtr<Config>&& config,
+zx_status_t Device::Create(zx_device_t* parent,
+                           fbl::RefPtr<Config>&& config,
                            UpstreamNode* upstream,
                            BusLinkInterface* bli) {
-    return DeviceImpl::Create(std::move(config), upstream, bli);
+    return DeviceImpl::Create(parent, std::move(config), upstream, bli);
 }
 
 zx_status_t Device::Init() {

@@ -198,7 +198,8 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
             if (is_bridge) {
                 fbl::RefPtr<Bridge> bridge;
                 uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
-                status = Bridge::Create(std::move(config), upstream, this, mbus_id, &bridge);
+                status = Bridge::Create(parent(), std::move(config), upstream, this, mbus_id,
+                                        &bridge);
                 if (status != ZX_OK) {
                     continue;
                 }
@@ -226,7 +227,7 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
                 return;
             } else {
                 // Create a device
-                pci::Device::Create(std::move(config), upstream, this);
+                pci::Device::Create(parent(), std::move(config), upstream, this);
             }
         }
 

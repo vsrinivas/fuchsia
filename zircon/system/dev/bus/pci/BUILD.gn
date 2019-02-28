@@ -27,6 +27,7 @@ driver("bus-pci") {
       "bus.cpp",
       "config.cpp",
       "device.cpp",
+      "protocol.cpp",
       "upstream_node.cpp",
     ]
     deps += [
