@@ -53,7 +53,8 @@ impl Session {
     }
 
     pub fn present(
-        &mut self, presentation_time: u64,
+        &mut self,
+        presentation_time: u64,
     ) -> fidl::client::QueryResponseFut<(PresentationInfo)> {
         self.flush();
         self.session.present(
@@ -134,16 +135,13 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(
-        session: SessionPtr, vmo: Vmo, allocation_size: u64, memory_type: MemoryType,
+        session: SessionPtr,
+        vmo: Vmo,
+        allocation_size: u64,
+        memory_type: MemoryType,
     ) -> Memory {
-        let args = MemoryArgs {
-            vmo: vmo,
-            allocation_size: allocation_size,
-            memory_type,
-        };
-        Memory {
-            resource: Resource::new(session, ResourceArgs::Memory(args)),
-        }
+        let args = MemoryArgs { vmo: vmo, allocation_size: allocation_size, memory_type };
+        Memory { resource: Resource::new(session, ResourceArgs::Memory(args)) }
     }
 }
 
@@ -189,13 +187,8 @@ pub struct Circle(Shape);
 
 impl Circle {
     pub fn new(session: SessionPtr, radius: f32) -> Circle {
-        let args = CircleArgs {
-            radius: Value::Vector1(radius),
-        };
-        Circle(Shape::new(Resource::new(
-            session,
-            ResourceArgs::Circle(args),
-        )))
+        let args = CircleArgs { radius: Value::Vector1(radius) };
+        Circle(Shape::new(Resource::new(session, ResourceArgs::Circle(args))))
     }
 }
 
@@ -211,14 +204,8 @@ pub struct Rectangle(Shape);
 
 impl Rectangle {
     pub fn new(session: SessionPtr, width: f32, height: f32) -> Rectangle {
-        let args = RectangleArgs {
-            width: Value::Vector1(width),
-            height: Value::Vector1(height),
-        };
-        Rectangle(Shape::new(Resource::new(
-            session,
-            ResourceArgs::Rectangle(args),
-        )))
+        let args = RectangleArgs { width: Value::Vector1(width), height: Value::Vector1(height) };
+        Rectangle(Shape::new(Resource::new(session, ResourceArgs::Rectangle(args))))
     }
 }
 
@@ -234,8 +221,13 @@ pub struct RoundedRectangle(Shape);
 
 impl RoundedRectangle {
     pub fn new(
-        session: SessionPtr, width: f32, height: f32, top_left_radius: f32, top_right_radius: f32,
-        bottom_right_radius: f32, bottom_left_radius: f32,
+        session: SessionPtr,
+        width: f32,
+        height: f32,
+        top_left_radius: f32,
+        top_right_radius: f32,
+        bottom_right_radius: f32,
+        bottom_left_radius: f32,
     ) -> RoundedRectangle {
         let args = RoundedRectangleArgs {
             width: Value::Vector1(width),
@@ -245,10 +237,7 @@ impl RoundedRectangle {
             bottom_right_radius: Value::Vector1(bottom_right_radius),
             bottom_left_radius: Value::Vector1(bottom_left_radius),
         };
-        RoundedRectangle(Shape::new(Resource::new(
-            session,
-            ResourceArgs::RoundedRectangle(args),
-        )))
+        RoundedRectangle(Shape::new(Resource::new(session, ResourceArgs::RoundedRectangle(args))))
     }
 }
 
@@ -267,9 +256,7 @@ pub struct Material {
 impl Material {
     pub fn new(session: SessionPtr) -> Material {
         let args = MaterialArgs { dummy: 0 };
-        Material {
-            resource: Resource::new(session, ResourceArgs::Material(args)),
-        }
+        Material { resource: Resource::new(session, ResourceArgs::Material(args)) }
     }
 
     fn id(&self) -> u32 {
@@ -281,8 +268,7 @@ impl Material {
     }
 
     pub fn set_texture(&self, image: &Image) {
-        self.resource
-            .enqueue(cmd::set_texture(self.id(), image.id()));
+        self.resource.enqueue(cmd::set_texture(self.id(), image.id()));
     }
 }
 
@@ -304,8 +290,7 @@ impl Node {
     }
 
     pub fn set_translation(&self, x: f32, y: f32, z: f32) {
-        self.resource
-            .enqueue(cmd::set_translation(self.id(), x, y, z))
+        self.resource.enqueue(cmd::set_translation(self.id(), x, y, z))
     }
 
     pub fn set_scale(&self, x: f32, y: f32, z: f32) {
@@ -313,8 +298,7 @@ impl Node {
     }
 
     pub fn set_rotation(&self, x: f32, y: f32, z: f32, w: f32) {
-        self.resource
-            .enqueue(cmd::set_rotation(self.id(), x, y, z, w))
+        self.resource.enqueue(cmd::set_rotation(self.id(), x, y, z, w))
     }
 
     pub fn detach(&self) {
@@ -331,10 +315,7 @@ pub struct ShapeNode(Node);
 impl ShapeNode {
     pub fn new(session: SessionPtr) -> ShapeNode {
         let args = ShapeNodeArgs { unused: 0 };
-        ShapeNode(Node::new(Resource::new(
-            session,
-            ResourceArgs::ShapeNode(args),
-        )))
+        ShapeNode(Node::new(Resource::new(session, ResourceArgs::ShapeNode(args))))
     }
 
     pub fn set_shape(&self, shape: &Shape) {
@@ -382,11 +363,7 @@ pub struct ImportNode(ContainerNode);
 
 impl ImportNode {
     pub fn new(session: SessionPtr, token: EventPair) -> ImportNode {
-        ImportNode(ContainerNode::new(Resource::import(
-            session,
-            token,
-            ImportSpec::Node,
-        )))
+        ImportNode(ContainerNode::new(Resource::import(session, token, ImportSpec::Node)))
     }
 }
 
@@ -403,10 +380,7 @@ pub struct EntityNode(ContainerNode);
 impl EntityNode {
     pub fn new(session: SessionPtr) -> EntityNode {
         let args = EntityNodeArgs { unused: 0 };
-        EntityNode(ContainerNode::new(Resource::new(
-            session,
-            ResourceArgs::EntityNode(args),
-        )))
+        EntityNode(ContainerNode::new(Resource::new(session, ResourceArgs::EntityNode(args))))
     }
 
     pub fn set_clip(&self, clip_id: u32, clip_to_self: bool) {
@@ -557,12 +531,7 @@ impl HostImageCycler {
         let content_material = Material::new(session);
         content_node.set_material(&content_material);
         node.add_child(&content_node);
-        HostImageCycler {
-            node,
-            content_node,
-            content_material,
-            content_shape: None,
-        }
+        HostImageCycler { node, content_node, content_material, content_shape: None }
     }
 
     pub fn node(&self) -> &EntityNode {
@@ -578,10 +547,7 @@ impl HostImageCycler {
 
         let memory = HostMemory::allocate(self.node.resource.session.clone(), desired_size)?;
         let image = HostImage::new(&memory, 0, info);
-        Ok(HostImageGuard {
-            cycler: self,
-            image: Some(image),
-        })
+        Ok(HostImageGuard { cycler: self, image: Some(image) })
     }
 
     fn release(&mut self, image: HostImage) {

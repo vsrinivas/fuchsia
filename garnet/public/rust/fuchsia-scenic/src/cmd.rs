@@ -38,38 +38,22 @@ pub fn set_event_mask(id: u32, event_mask: u32) -> Command {
 }
 
 pub fn set_clip(node_id: u32, clip_id: u32, clip_to_self: bool) -> Command {
-    let cmd = SetClipCmd {
-        node_id,
-        clip_id,
-        clip_to_self,
-    };
+    let cmd = SetClipCmd { node_id, clip_id, clip_to_self };
     Command::Gfx(GfxCommand::SetClip(cmd))
 }
 
 pub fn set_color(material_id: u32, value: ColorRgba) -> Command {
-    let cmd = SetColorCmd {
-        material_id,
-        color: ColorRgbaValue {
-            value,
-            variable_id: 0,
-        },
-    };
+    let cmd = SetColorCmd { material_id, color: ColorRgbaValue { value, variable_id: 0 } };
     Command::Gfx(GfxCommand::SetColor(cmd))
 }
 
 pub fn set_texture(material_id: u32, texture_id: u32) -> Command {
-    let cmd = SetTextureCmd {
-        material_id,
-        texture_id,
-    };
+    let cmd = SetTextureCmd { material_id, texture_id };
     Command::Gfx(GfxCommand::SetTexture(cmd))
 }
 
 pub fn set_material(node_id: u32, material_id: u32) -> Command {
-    let cmd = SetMaterialCmd {
-        node_id,
-        material_id,
-    };
+    let cmd = SetMaterialCmd { node_id, material_id };
     Command::Gfx(GfxCommand::SetMaterial(cmd))
 }
 
@@ -79,34 +63,20 @@ pub fn set_shape(node_id: u32, shape_id: u32) -> Command {
 }
 
 pub fn set_translation(id: u32, x: f32, y: f32, z: f32) -> Command {
-    let cmd = SetTranslationCmd {
-        id,
-        value: Vector3Value {
-            value: Vec3 { x, y, z },
-            variable_id: 0,
-        },
-    };
+    let cmd =
+        SetTranslationCmd { id, value: Vector3Value { value: Vec3 { x, y, z }, variable_id: 0 } };
     Command::Gfx(GfxCommand::SetTranslation(cmd))
 }
 
 pub fn set_scale(id: u32, x: f32, y: f32, z: f32) -> Command {
-    let cmd = SetScaleCmd {
-        id,
-        value: Vector3Value {
-            value: Vec3 { x, y, z },
-            variable_id: 0,
-        },
-    };
+    let cmd = SetScaleCmd { id, value: Vector3Value { value: Vec3 { x, y, z }, variable_id: 0 } };
     Command::Gfx(GfxCommand::SetScale(cmd))
 }
 
 pub fn set_rotation(id: u32, x: f32, y: f32, z: f32, w: f32) -> Command {
     let cmd = SetRotationCmd {
         id,
-        value: QuaternionValue {
-            value: Quaternion { x, y, z, w },
-            variable_id: 0,
-        },
+        value: QuaternionValue { value: Quaternion { x, y, z, w }, variable_id: 0 },
     };
     Command::Gfx(GfxCommand::SetRotation(cmd))
 }
