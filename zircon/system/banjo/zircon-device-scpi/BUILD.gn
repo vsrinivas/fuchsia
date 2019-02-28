@@ -4,11 +4,8 @@
 
 import("$zx/public/gn/banjo.gni")
 
-banjo_library("ddk-protocol-scpi") {
+banjo_library("zircon-device-scpi") {
   sources = [
     "scpi.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/zircon-device-scpi",
   ]
 }

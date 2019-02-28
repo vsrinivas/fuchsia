@@ -32,6 +32,7 @@ driver("mt8167s_ref") {
     "$zx/system/dev/lib/focaltech",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

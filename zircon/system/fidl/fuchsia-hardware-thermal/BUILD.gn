@@ -2,13 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/banjo.gni")
+import("$zx/public/gn/fidl.gni")
 
-banjo_library("ddk-protocol-scpi") {
+fidl_library("fuchsia-hardware-thermal") {
   sources = [
-    "scpi.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/zircon-device-scpi",
+    "thermal.fidl",
   ]
 }

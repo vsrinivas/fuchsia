@@ -34,7 +34,7 @@ typedef struct acpi_thermal_device {
 
     // programmable trip points
     uint32_t trip_point_count;
-    uint32_t trip_points[9];
+    uint32_t trip_points[MAX_TRIP_POINTS];
 } acpi_thermal_device_t;
 
 static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev, thermal_info_t* info) {

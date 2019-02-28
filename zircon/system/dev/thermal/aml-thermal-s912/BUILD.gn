@@ -13,6 +13,7 @@ driver("aml-thermal-s912") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-scpi",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

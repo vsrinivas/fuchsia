@@ -1,0 +1,161 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.thermal;
+
+using zx;
+
+/// The maximum number of trip points that can be used.
+const uint32 MAX_TRIP_POINTS = 16;
+
+/// The maximum number of DVFS domains a device can support (one for each cluster in a big-little
+/// architecture).
+const uint32 MAX_DVFS_DOMAINS = 2;
+
+/// TODO(bradenkell): Remove this if VoltageTable is moved.
+const uint32 MAX_VOLTAGE_TABLE = 31;
+
+/// The maximum number of operating points that can be used.
+const uint32 MAX_DVFS_OPPS = 16;
+
+/// Bitmask values for ThermalInfo.state.
+const uint32 THERMAL_STATE_NORMAL = 0;
+const uint32 THERMAL_STATE_TRIP_VIOLATION = 1;
+
+/// Devices with big-little architecture may have different operating points for each cluster.
+/// Other devices use BIG_CLUSTER_POWER_DOMAIN for getting/setting the operating point.
+enum PowerDomain : uint32 {
+    BIG_CLUSTER_POWER_DOMAIN = 0;
+    LITTLE_CLUSTER_POWER_DOMAIN = 1;
+};
+
+/// scpi_opp_t is typedef'd to this.
+struct OperatingPoint {
+    /// The device's operating points.
+    array<OperatingPointEntry>:MAX_DVFS_OPPS opp;
+    /// In microseconds.
+    uint32 latency;
+    /// The number of operating points in opp.
+    uint32 count;
+};
+
+/// scpi_opp_entry_t is typedef'd to this.
+struct OperatingPointEntry {
+    /// The operating point frequency in Hz.
+    uint32 freq_hz;
+    /// The operating point voltage in millivolts.
+    uint32 volt_mv;
+};
+
+/// Temperature units are in 10th of a degree Kelvin.
+struct ThermalInfo {
+    /// State is a bitmask of THERMAL_STATE_* values.
+    uint32 state;
+    /// The sensor temperature at which the system should activate passive cooling policy.
+    uint32 passive_temp;
+    /// The sensor temperature at which the system should perform critical shutdown.
+    uint32 critical_temp;
+    /// The number of trip points supported.
+    uint32 max_trip_count;
+    /// The currently active trip point.
+    array<uint32>:MAX_TRIP_POINTS active_trip;
+};
+
+struct ThermalTemperatureInfo {
+    /// The temperature must rise to up_temp to get to this trip point.
+    uint32 up_temp;
+    /// The temperature must fall to down_temp to get to this trip point.
+    uint32 down_temp;
+    /// The fan level for this trip point.
+    int32 fan_level;
+    /// The operating point index of the big cluster.
+    int32 big_cluster_dvfs_opp;
+    /// The operating point index of the little cluster.
+    int32 little_cluster_dvfs_opp;
+    /// The GPU clock source index.
+    int32 gpu_clk_freq_source;
+};
+
+struct ThermalDeviceInfo {
+    /// Active cooling support.
+    bool active_cooling;
+    /// Passive cooling support.
+    bool passive_cooling;
+    /// GPU throttling support.
+    bool gpu_throttling;
+    /// Number of trip points.
+    uint32 num_trip_points;
+    /// Big-little architecture.
+    bool big_little;
+    /// Critical temperature.
+    uint32 critical_temp;
+    /// Trip point information.
+    array<ThermalTemperatureInfo>:MAX_TRIP_POINTS trip_point_info;
+    /// Operating point information.
+    array<OperatingPoint>:MAX_DVFS_DOMAINS opps;
+};
+
+/// TODO(bradenkell): Remove this after converting the ioctls; id and temp can be passed to SetTrip
+///                   directly.
+struct TripPoint {
+    uint32 id;
+    uint32 temp;
+};
+
+/// TODO(bradenkell): Remove this after converting the ioctls; op_idx and power_domain can be passed
+///                   to SetDvfsOperatingPoint directly.
+struct DvfsInfo {
+    uint16 op_idx;
+    uint32 power_domain;
+};
+
+/// TODO(bradenkell): These are only used by the Amlogic S905D2 driver, move them to system/dev/lib.
+struct VoltageTable {
+    uint32 microvolt;
+    uint32 duty_cycle;
+};
+
+struct OperatingPointInfo {
+    array<OperatingPointEntry>:MAX_TRIP_POINTS opps;
+    array<VoltageTable>:MAX_VOLTAGE_TABLE voltage_table;
+};
+
+[Layout = "Simple"]
+protocol Device {
+    /// Get information about the device's current state.
+    GetInfo() -> (zx.status status, ThermalInfo info);
+
+    /// Get information about the device's thermal capabilities and trip points.
+    GetDeviceInfo() -> (zx.status status, ThermalDeviceInfo info);
+
+    /// Get the device's operating points.
+    /// TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
+    GetDvfsInfo(PowerDomain power_domain) -> (zx.status status, OperatingPoint info);
+
+    /// Get the current temperature.
+    GetTemperature() -> (zx.status status, uint32 temp);
+
+    /// Get an event to get trip point notifications on. ZX_USER_SIGNAL_0 is changed when either
+    /// trip point is reached. It is deasserted when the state is read via GetInfo.
+    GetStateChangeEvent() -> (zx.status status, handle<event>? handle);
+
+    /// Get a port to get trip point notification packets.
+    GetStateChangePort() -> (zx.status status, handle<port>? handle);
+
+    /// Sets a trip point. When the sensor reaches the trip point temperature the device will notify
+    /// on an event.
+    SetTrip(uint16 op_idx, PowerDomain power_domain) -> (zx.status status);
+
+    /// Get the current operating point index.
+    GetDvfsOperatingPoint(PowerDomain power_domain) -> (zx.status status, uint16 op_idx);
+
+    /// Set the operating point index.
+    SetDvfsOperatingPoint(uint16 op_idx, PowerDomain power_domain) -> (zx.status status);
+
+    /// Get the current fan level.
+    GetFanLevel() -> (zx.status status, uint32 fan_level);
+
+    /// Set the fan level.
+    SetFanLevel(uint32 fan_level) -> (zx.status status);
+};
