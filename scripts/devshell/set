@@ -148,51 +148,31 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-function guess_config_within_layer {
+function guess_config_location {
   local config_type="$1"
   local config_name="$2"
   local __resultvar="$3"
 
+  # If there is a vendor repository checked out, look there.
+  local vendor_repo
+  vendor_repo="$(${FUCHSIA_DIR}/build/gn/find_vendor_repo.py)" || return 1
+  readonly vendor_repo
+
+  if [[ -n "${vendor_repo}" ]]; then
+    guessed_config="${vendor_repo}/${config_type}/${config_name}.gni"
+    if [[ -a "${FUCHSIA_DIR}/${guessed_config}" ]]; then
+      eval "${__resultvar}"="${guessed_config}"
+      return
+    fi
+  fi
+
+  # Otherwise look at the top level location
   # Check if the configuration is in the top-level location
   guessed_config="${config_type}/${config_name}.gni"
   if [[ -a "${FUCHSIA_DIR}/${guessed_config}" ]]; then
     eval "${__resultvar}"="${guessed_config}"
     return
   fi
-  # Guess the petal we're using. We'll search at this petal and below for
-  # config matching the type and short name
-  local current_petal
-  current_petal="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
-  readonly current_petal
-
-  # Compute a lookup order starting at the current petal going down.
-  local petal_order="${current_petal}"
-  case $current_petal in
-    vendor/*)
-      petal_order="${petal_order},topaz,peridot,garnet"
-      ;;
-    "topaz")
-      petal_order="${petal_order},peridot,garnet"
-      ;;
-    "peridot")
-      petal_order="${petal_order},garnet"
-      ;;
-  esac
-  # Look in the top-level directories last.
-  petal_order="${petal_order},"
-  readonly petal_order
-
-  # Look through petals in this order to find configs with matching names.
-  IFS=,
-  local petal
-  for petal in $petal_order; do
-    guessed_config="${petal}/${config_type}/${config_name}.gni"
-    if [[ -a "${FUCHSIA_DIR}/${guessed_config}" ]]; then
-      echo "Guessing ${config_type} config ${guessed_config}"
-      eval "${__resultvar}"="${guessed_config}"
-      return
-    fi
-  done
 
   fx-error "Could not guess a ${config_type} configuration matching \"${config_name}\""
   fx-error "Please specify the full path from the root of the checkout such as"
@@ -420,13 +400,18 @@ function main {
   if [[ -z "${products}${packages}" ]]; then
     # This is the default logic GN would use, but if a user specified --netboot
     # we would short-circuit the logic, so repeat it here.
-    local layers
-    layers="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
-    readonly layers
-    local layer
-    for layer in $layers; do
-      products+="${products:+,}$layer/products/default.gni"
-    done
+    local vendor_repo
+    vendor_repo="$(${FUCHSIA_DIR}/build/gn/find_vendor_repo.py)" || return 1
+    readonly vendor_repo
+    if [[ -n "${vendor_repo}" ]]; then
+      products+="${vendor_repo}/products/default.gni"
+    else
+      products+="products/core.gni"
+    fi
+  fi
+
+  if [[ -z "${boards}" ]]; then
+    boards="boards/$arch.gni"
   fi
 
   # Remove any trailing slash from build directory name.
@@ -481,7 +466,7 @@ function main {
   for board in ${boards[@]}; do
     if [[ ! -f "${FUCHSIA_DIR}/${board}" ]]; then
       local guessed_board=""
-      guess_config_within_layer "boards" "${board}" guessed_board
+      guess_config_location "boards" "${board}" guessed_board
       board="${guessed_board}"
     fi
     gn_args+=" import(\"//${board}\")"
@@ -498,7 +483,7 @@ function main {
   for product in ${products[@]}; do
     if [[ ! -a "${FUCHSIA_DIR}/${product}" ]]; then
       local guessed_product=""
-      guess_config_within_layer "products" "${product}" guessed_product
+      guess_config_location "products" "${product}" guessed_product
       product="${guessed_product}"
     fi
     gn_args+=" import(\"//${product}\")"
