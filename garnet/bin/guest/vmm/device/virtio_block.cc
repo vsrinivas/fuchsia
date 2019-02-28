@@ -22,7 +22,7 @@ enum class Queue : uint16_t {
 class Request : public fbl::RefCounted<Request> {
  public:
   Request(VirtioChain chain) : chain_(std::move(chain)) {
-    TRACE_ASYNC_BEGIN("machina", "block:request", nonce_);
+    TRACE_FLOW_BEGIN("machina", "block:request", nonce_);
   }
 
   ~Request() {
@@ -30,10 +30,11 @@ class Request : public fbl::RefCounted<Request> {
       *status_ptr_ = status_;
     }
     chain_.Return();
-    TRACE_ASYNC_END("machina", "block:request", nonce_);
+    TRACE_FLOW_END("machina", "block:request", nonce_);
   }
 
   bool NextDescriptor(VirtioDescriptor* desc, bool writable) {
+    TRACE_DURATION("machina", "Request::NextDescriptor");
     bool has_next;
     // Read the next descriptor. If we have previously encountered an error,
     // keep reading descriptors until we find the status byte.
@@ -73,6 +74,7 @@ class RequestStream : public StreamBase {
   }
 
   void DoRequest(bool read_only) {
+    TRACE_DURATION("machina", "RequestStream::DoRequest");
     while (queue_.NextChain(&chain_)) {
       auto request = fbl::MakeRefCounted<Request>(std::move(chain_));
       if (!request->NextDescriptor(&desc_, false /* writable */) ||
@@ -126,6 +128,7 @@ class RequestStream : public StreamBase {
   std::string id_;
 
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
+    TRACE_DURATION("machina", "RequestStream::DoRead");
     while (request->NextDescriptor(&desc_, true /* writable */)) {
       const uint32_t size = desc_.len;
       if (size % kBlockSectorSize != 0) {
@@ -134,20 +137,22 @@ class RequestStream : public StreamBase {
       }
       const trace_async_id_t nonce = TRACE_NONCE();
       auto callback = [request, nonce, size](zx_status_t status) {
+        TRACE_DURATION("machina", "RequestStream::DoRead Callback");
         if (status != ZX_OK) {
           request->SetStatus(VIRTIO_BLK_S_IOERR);
         }
         request->AddUsed(size);
-        TRACE_ASYNC_END("machina", "block:read-at", nonce);
+        TRACE_FLOW_END("machina", "block:read-at", nonce);
       };
-      TRACE_ASYNC_BEGIN("machina", "block:read-at", nonce, "size", size, "off",
-                        off);
+      TRACE_FLOW_BEGIN("machina", "block:read-at", nonce, "size", size, "off",
+                       off);
       dispatcher_->ReadAt(desc_.addr, size, off, callback);
       off += size;
     }
   }
 
   void DoWrite(fbl::RefPtr<Request> request, uint64_t off) {
+    TRACE_DURATION("machina", "RequestStream::DoWrite");
     while (request->NextDescriptor(&desc_, false /* writable */)) {
       const uint32_t size = desc_.len;
       if (size % kBlockSectorSize != 0) {
@@ -156,33 +161,37 @@ class RequestStream : public StreamBase {
       }
       const trace_async_id_t nonce = TRACE_NONCE();
       auto callback = [request, nonce](zx_status_t status) {
+        TRACE_DURATION("machina", "RequestStream::DoWrite Callback");
         if (status != ZX_OK) {
           request->SetStatus(VIRTIO_BLK_S_IOERR);
         }
-        TRACE_ASYNC_END("machina", "block:write-at", nonce);
+        TRACE_FLOW_END("machina", "block:write-at", nonce);
       };
-      TRACE_ASYNC_BEGIN("machina", "block:write-at", nonce, "size", size, "off",
-                        off);
+      TRACE_FLOW_BEGIN("machina", "block:write-at", nonce, "size", size, "off",
+                       off);
       dispatcher_->WriteAt(desc_.addr, size, off, callback);
       off += size;
     }
   }
 
   void DoSync(fbl::RefPtr<Request> request) {
+    TRACE_DURATION("machina", "RequestStream::DoSync");
     const trace_async_id_t nonce = TRACE_NONCE();
     auto callback = [request, nonce](zx_status_t status) {
+      TRACE_DURATION("machina", "RequestStream::DoSync Callback");
       if (status != ZX_OK) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
       }
-      TRACE_ASYNC_END("machina", "block:sync", nonce);
+      TRACE_FLOW_END("machina", "block:sync", nonce);
     };
-    TRACE_ASYNC_BEGIN("machina", "block:sync", nonce);
+    TRACE_FLOW_BEGIN("machina", "block:sync", nonce);
     dispatcher_->Sync(callback);
     while (request->NextDescriptor(&desc_, false /* writable */)) {
     }
   }
 
   void DoId(fbl::RefPtr<Request> request) {
+    TRACE_DURATION("machina", "RequestStream::DoId");
     while (request->NextDescriptor(&desc_, true /* writable */)) {
       if (desc_.len != VIRTIO_BLK_ID_BYTES) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
@@ -196,6 +205,7 @@ class RequestStream : public StreamBase {
   }
 
   void DoError(fbl::RefPtr<Request> request, uint8_t status) {
+    TRACE_DURATION("machina", "RequestStream::DoError");
     request->SetStatus(status);
     while (request->NextDescriptor(&desc_, false /* writable */)) {
     }
@@ -210,6 +220,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 
   // |fuchsia::guest::device::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
+    TRACE_DURATION("machina", "VirtioBlockImpl::NotifyQueue");
     switch (static_cast<Queue>(queue)) {
       case Queue::REQUEST:
         request_stream_.DoRequest(read_only_);

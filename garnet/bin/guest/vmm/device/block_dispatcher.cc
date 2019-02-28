@@ -7,6 +7,7 @@
 #include <bitmap/rle-bitmap.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
+#include <trace/event.h>
 
 #include "garnet/bin/guest/vmm/device/block.h"
 #include "garnet/bin/guest/vmm/device/qcow.h"
@@ -25,10 +26,15 @@ class RawBlockDispatcher : public BlockDispatcher {
  private:
   fuchsia::io::FilePtr file_;
 
-  void Sync(Callback callback) override { file_->Sync(std::move(callback)); }
+  void Sync(Callback callback) override {
+    TRACE_DURATION("machina", "RawBlockDispatcher::Sync");
+    file_->Sync(std::move(callback));
+  }
 
   void ReadAt(void* data, uint64_t size, uint64_t off,
               Callback callback) override {
+    TRACE_DURATION("machina", "RawBlockDispatcher::ReadAt", "size", size, "off",
+                   off);
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<uint8_t*>(data);
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
@@ -49,6 +55,8 @@ class RawBlockDispatcher : public BlockDispatcher {
 
   void WriteAt(const void* data, uint64_t size, uint64_t off,
                Callback callback) override {
+    TRACE_DURATION("machina", "RawBlockDispatcher::WriteAt", "size", size,
+                   "off", off);
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<const uint8_t*>(data);
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
@@ -84,10 +92,15 @@ class VmoBlockDispatcher : public BlockDispatcher {
   const size_t vmo_size_;
   const uintptr_t vmar_addr_;
 
-  void Sync(Callback callback) override { file_->Sync(std::move(callback)); }
+  void Sync(Callback callback) override {
+    TRACE_DURATION("machina", "VmoBlockDispatcher::Sync");
+    file_->Sync(std::move(callback));
+  }
 
   void ReadAt(void* data, uint64_t size, uint64_t off,
               Callback callback) override {
+    TRACE_DURATION("machina", "VmoBlockDispatcher::ReadAt", "size", size, "off",
+                   off);
     if (size + off < size || size + off > vmo_size_) {
       callback(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -98,6 +111,8 @@ class VmoBlockDispatcher : public BlockDispatcher {
 
   void WriteAt(const void* data, uint64_t size, uint64_t off,
                Callback callback) override {
+    TRACE_DURATION("machina", "VmoBlockDispatcher::WriteAt", "size", size,
+                   "off", off);
     if (size + off < size || size + off > vmo_size_) {
       callback(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -156,12 +171,15 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
   }
 
   void Sync(Callback callback) override {
+    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::Sync");
     // Writes are synchronous, so sync is a no-op.
     callback(ZX_OK);
   }
 
   void ReadAt(void* data, uint64_t size, uint64_t off,
               Callback callback) override {
+    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::ReadAt", "size",
+                   size, "off", off);
     if (!IsAccessValid(size, off)) {
       callback(ZX_ERR_INVALID_ARGS);
       return;
@@ -205,6 +223,8 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
   void WriteAt(const void* data, uint64_t size, uint64_t off,
                Callback callback) override {
+    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::WriteAt", "size",
+                   size, "off", off);
     if (!IsAccessValid(size, off)) {
       callback(ZX_ERR_INVALID_ARGS);
       return;
@@ -273,16 +293,21 @@ class QcowBlockDispatcher : public BlockDispatcher {
 
   void Sync(Callback callback) override {
     // Writes are not supported, so sync is a no-op.
+    TRACE_DURATION("machina", "QcowBlockDispatcher::Sync");
     callback(ZX_OK);
   }
 
   void ReadAt(void* data, uint64_t size, uint64_t off,
               Callback callback) override {
+    TRACE_DURATION("machina", "QcowBlockDispatcher::ReadAt", "size", size,
+                   "off", off);
     file_->ReadAt(disp_.get(), data, size, off, std::move(callback));
   }
 
   void WriteAt(const void* data, uint64_t size, uint64_t off,
                Callback callback) override {
+    TRACE_DURATION("machina", "QcowBlockDispatcher::WriteAt", "size", size,
+                   "off", off);
     callback(ZX_ERR_NOT_SUPPORTED);
   }
 };

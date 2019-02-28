@@ -79,6 +79,7 @@ source_set("block") {
     ":device",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/trace",
   ]
 }
 
