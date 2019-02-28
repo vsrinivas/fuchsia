@@ -425,7 +425,7 @@ void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-TEST(NetStreamTest, NonBlockingConnectWrite) {
+TEST(NetStreamTest, DISABLED_NonBlockingConnectWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
