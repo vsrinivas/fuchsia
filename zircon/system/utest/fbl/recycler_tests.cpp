@@ -14,13 +14,13 @@ template <typename T> struct PtrTraits;
 
 template <typename T>
 struct PtrTraits<fbl::unique_ptr<T>> {
-    using ObjType = typename fbl::remove_cv<T>::type;
+    using ObjType = std::remove_cv_t<T>;
     static fbl::unique_ptr<T> MakePointer(T* raw) { return fbl::unique_ptr<T>(raw); }
 };
 
 template <typename T>
 struct PtrTraits<fbl::RefPtr<T>> {
-    using ObjType = typename fbl::remove_cv<T>::type;
+    using ObjType = std::remove_cv_t<T>;
     static fbl::RefPtr<T> MakePointer(T* raw) { return fbl::AdoptRef<T>(raw); }
 };
 

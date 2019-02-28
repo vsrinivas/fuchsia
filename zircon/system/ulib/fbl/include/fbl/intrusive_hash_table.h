@@ -46,7 +46,7 @@ template <typename KeyType,
           typename HashType,
           HashType kNumBuckets>
 struct DefaultHashTraits {
-    static_assert(is_unsigned_integer<HashType>::value, "HashTypes must be unsigned integers");
+    static_assert(std::is_unsigned_v<HashType>, "HashTypes must be unsigned integers");
     static HashType GetHash(const KeyType& key) {
         return static_cast<HashType>(ObjType::GetHash(key) % kNumBuckets);
     }
@@ -112,7 +112,7 @@ public:
     static constexpr bool IsSequenced = false;
 
     static_assert(kNumBuckets > 0, "Hash tables must have at least one bucket");
-    static_assert(is_unsigned_integer<HashType>::value, "HashTypes must be unsigned integers");
+    static_assert(std::is_unsigned_v<HashType>, "HashTypes must be unsigned integers");
 
     constexpr HashTable() {}
     ~HashTable() { ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty()); }

@@ -8,7 +8,6 @@
 #include <zircon/compiler.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/recycler.h>
-#include <fbl/type_support.h>
 
 #include <utility>
 #include <type_traits>
@@ -71,12 +70,12 @@ public:
     //
     // @see the notes in unique_ptr.h
     template <typename U,
-              typename = typename std::enable_if<is_convertible_pointer<U*, T*>::value>::type>
+              typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
     RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
-        static_assert((is_class<T>::value == is_class<U>::value) &&
-                      (!is_class<T>::value ||
-                       has_virtual_destructor<T>::value ||
-                       is_same<T, const U>::value),
+        static_assert((std::is_class_v<T> == std::is_class_v<U>) &&
+                      (!std::is_class_v<T> ||
+                       std::has_virtual_destructor_v<T> ||
+                       std::is_same_v<T, const U>),
                 "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
                 "nor U are class/struct types, or T has a virtual destructor,"
                 "or T == const U.");
@@ -106,12 +105,12 @@ public:
     //
     // @see the notes in RefPtr.h
     template <typename U,
-              typename = typename std::enable_if<is_convertible_pointer<U*, T*>::value>::type>
+              typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
     RefPtr(RefPtr<U>&& r) : ptr_(r.ptr_) {
-        static_assert((is_class<T>::value == is_class<U>::value) &&
-                      (!is_class<T>::value ||
-                       has_virtual_destructor<T>::value ||
-                       is_same<T, const U>::value),
+        static_assert((std::is_class_v<T> == std::is_class_v<U>) &&
+                      (!std::is_class_v<T> ||
+                       std::has_virtual_destructor_v<T> ||
+                       std::is_same_v<T, const U>),
                 "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
                 "nor U are class/struct types, or T has a virtual destructor,"
                 "or T == const U");
@@ -144,7 +143,7 @@ public:
     template <typename BaseRefPtr>
     static RefPtr Downcast(BaseRefPtr base) {
         // Make certain that BaseRefPtr is some form of RefPtr<T>
-        static_assert(is_same<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType>>::value,
+        static_assert(std::is_same_v<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType>>,
                       "BaseRefPtr must be a RefPtr<T>!");
 
         if (base != nullptr)
@@ -215,7 +214,7 @@ private:
         : ptr_(ptr) {}
 
     static void recycle(T* ptr) {
-        if (::fbl::internal::has_fbl_recycle<T>::value) {
+        if constexpr (::fbl::internal::has_fbl_recycle_v<T>) {
             ::fbl::internal::recycler<T>::recycle(ptr);
         } else {
             delete ptr;

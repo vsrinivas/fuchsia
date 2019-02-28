@@ -53,7 +53,7 @@ bool RefCallCounter::Release() {
     return add_ref_calls_ == release_calls_;
 }
 
-static_assert(fbl::is_standard_layout<fbl::RefPtr<RefCallCounter>>::value,
+static_assert(std::is_standard_layout_v<fbl::RefPtr<RefCallCounter>>,
               "fbl::RefPtr<T>'s should have a standard layout.");
 
 static bool ref_ptr_test() {

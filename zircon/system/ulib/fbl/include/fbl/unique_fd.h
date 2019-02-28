@@ -8,7 +8,6 @@
 #include <unistd.h>
 
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 
 namespace fbl {
 

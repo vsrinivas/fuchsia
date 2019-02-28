@@ -9,7 +9,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
@@ -20,7 +19,7 @@ namespace fbl {
 namespace internal {
 
 template <typename U>
-using remove_cv_ref = typename remove_cv<typename remove_reference<U>::type>::type;
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<U>>;
 
 } // namespace internal
 
@@ -260,10 +259,10 @@ public:
 private:
     // TODO(smklein): In the future, if we want to be able to push back
     // function pointers and arrays with impunity without requiring exact
-    // types, this 'remove_cv_ref' call should probably be replaced with a
+    // types, this 'remove_cvref_t' call should probably be replaced with a
     // 'fbl::decay' call.
     template <typename U,
-              typename = typename std::enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+              typename = std::enable_if_t<std::is_same_v<internal::remove_cvref_t<U>, T>>>
     void push_back_internal(U&& value, AllocChecker* ac) {
         if (!grow_for_new_element(ac)) {
             return;
@@ -272,7 +271,7 @@ private:
     }
 
     template <typename U,
-              typename = typename std::enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+              typename = std::enable_if_t<std::is_same_v<internal::remove_cvref_t<U>, T>>>
     void push_back_internal(U&& value) {
         grow_for_new_element();
         new (&ptr_[size_++]) T(std::forward<U>(value));
@@ -283,7 +282,7 @@ private:
     //
     // Index must be less than or equal to the size of the vector.
     template <typename U,
-              typename = typename std::enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+              typename = std::enable_if_t<std::is_same_v<internal::remove_cvref_t<U>, T>>>
     void insert_internal(size_t index, U&& value, AllocChecker* ac) {
         ZX_DEBUG_ASSERT(index <= size_);
         if (!grow_for_new_element(ac)) {
@@ -293,7 +292,7 @@ private:
     }
 
     template <typename U,
-              typename = typename std::enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+              typename = std::enable_if_t<std::is_same_v<internal::remove_cvref_t<U>, T>>>
     void insert_internal(size_t index, U&& value) {
         ZX_DEBUG_ASSERT(index <= size_);
         grow_for_new_element();
@@ -303,7 +302,7 @@ private:
     // The second half of 'insert', which asumes that there is enough
     // room for a new element.
     template <typename U,
-              typename = typename std::enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+              typename = std::enable_if_t<std::is_same_v<internal::remove_cvref_t<U>, T>>>
     void insert_complete(size_t index, U&& value) {
         if (index == size_) {
             // Inserting into the end of the vector; nothing to shift
@@ -322,7 +321,7 @@ private:
     // leaving an 'empty' object at index.
     // Increases the size of the vector by one.
     template <typename U = T>
-    typename std::enable_if<is_pod<U>::value, void>::type
+    std::enable_if_t<std::is_pod_v<U>, void>
     shift_back(size_t index) {
         ZX_DEBUG_ASSERT(size_ < capacity_);
         ZX_DEBUG_ASSERT(size_ > 0);
@@ -331,7 +330,7 @@ private:
     }
 
     template <typename U = T>
-    typename std::enable_if<!is_pod<U>::value, void>::type
+    std::enable_if_t<!std::is_pod_v<U>, void>
     shift_back(size_t index) {
         ZX_DEBUG_ASSERT(size_ < capacity_);
         ZX_DEBUG_ASSERT(size_ > 0);
@@ -345,7 +344,7 @@ private:
     // Moves all objects in the internal storage (after index) forward by one.
     // Decreases the size of the vector by one.
     template <typename U = T>
-    typename std::enable_if<is_pod<U>::value, void>::type
+    std::enable_if_t<std::is_pod_v<U>, void>
     shift_forward(size_t index) {
         ZX_DEBUG_ASSERT(size_ > 0);
         memmove(&ptr_[index], &ptr_[index + 1], sizeof(T) * (size_ - (index + 1)));
@@ -353,7 +352,7 @@ private:
     }
 
     template <typename U = T>
-    typename std::enable_if<!is_pod<U>::value, void>::type
+    std::enable_if_t<!std::is_pod_v<U>, void>
     shift_forward(size_t index) {
         ZX_DEBUG_ASSERT(size_ > 0);
         for (size_t i = index; (i + 1) < size_; i++) {
@@ -363,13 +362,13 @@ private:
     }
 
     template <typename U = T>
-    typename std::enable_if<is_pod<U>::value, void>::type
+    std::enable_if_t<std::is_pod_v<U>, void>
     transfer_to(T* newPtr, size_t elements) {
         memcpy(newPtr, ptr_, elements * sizeof(T));
     }
 
     template <typename U = T>
-    typename std::enable_if<!is_pod<U>::value, void>::type
+    std::enable_if_t<!std::is_pod_v<U>, void>
     transfer_to(T* newPtr, size_t elements) {
         for (size_t i = 0; i < elements; i++) {
             new (&newPtr[i]) T(std::move(ptr_[i]));

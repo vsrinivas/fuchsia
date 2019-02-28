@@ -6,7 +6,6 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fbl/type_support.h>
 #include <memory>
 #include <stdint.h>
 #include <zircon/compiler.h>

@@ -12,8 +12,7 @@
 
 #include <utility>
 
-namespace fbl {
-namespace tests {
+namespace fbl::tests {
 namespace {
 
 // Different container classes for the types of objects
@@ -838,8 +837,8 @@ bool VectorGetConstness() {
     auto __UNUSED int_ptr = ref_vector_int.get();
     auto __UNUSED const_int_ptr = const_ref_vector_int.get();
 
-    static_assert(!fbl::is_const<fbl::remove_pointer<decltype(int_ptr)>::type>::value, "");
-    static_assert(fbl::is_const<fbl::remove_pointer<decltype(const_int_ptr)>::type>::value, "");
+    static_assert(!std::is_const_v<std::remove_pointer_t<decltype(int_ptr)>>);
+    static_assert(std::is_const_v<std::remove_pointer_t<decltype(const_int_ptr)>>);
 
     END_TEST;
 }
@@ -879,5 +878,4 @@ RUN_TEST(VectorTestImplicitConversion)
 RUN_TEST(VectorGetConstness)
 END_TEST_CASE(vector_tests)
 
-} // namespace tests
-} // namespace fbl
+} // namespace fbl::tests

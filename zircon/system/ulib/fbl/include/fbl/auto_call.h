@@ -5,7 +5,6 @@
 #pragma once
 
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 
 #include <utility>
 

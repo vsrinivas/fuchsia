@@ -12,7 +12,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
 namespace fbl {
@@ -157,7 +156,7 @@ struct FunctionTargetHolder final {
         using InlineFunctionTarget = fbl::internal::InlineFunctionTarget<Callable, Result, Args...>;
         using HeapFunctionTarget = fbl::internal::HeapFunctionTarget<Callable, Result, Args...>;
         static constexpr bool can_inline = (sizeof(InlineFunctionTarget) <= target_size);
-        using Type = typename fbl::conditional<can_inline, InlineFunctionTarget, HeapFunctionTarget>::type;
+        using Type = std::conditional_t<can_inline, InlineFunctionTarget, HeapFunctionTarget>;
         static_assert(sizeof(Type) <= target_size, "Target should fit in FunctionTargetHolder.");
     };
 

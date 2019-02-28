@@ -12,7 +12,6 @@
 #include <fbl/null_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_malloc.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <new>
 #include <type_traits>
@@ -376,10 +375,10 @@ struct SlabOriginSetter {
 // have (or need) a slab_origin.  Their "origin setter" is a no-op.
 template <typename SATraits>
 struct SlabOriginSetter<SATraits,
-                        typename std::enable_if<
+                        std::enable_if_t<
                             (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC) ||
                             (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
-                        >::type> {
+                        >> {
 
     static inline void SetOrigin(typename SATraits::ObjType* ptr,
                                  internal::SlabAllocator<SATraits>* origin) { }
@@ -553,7 +552,7 @@ public:
     static_assert(AllocsPerSlab > 0, "SLAB_SIZE too small to hold even 1 allocation");
 
     // Slab allocated objects must derive from SlabAllocated<SATraits>.
-    static_assert(is_base_of<SlabAllocated<SATraits>, ObjType>::value,
+    static_assert(std::is_base_of_v<SlabAllocated<SATraits>, ObjType>,
                   "Objects which are slab allocated from an allocator of type "
                   "SlabAllocator<T> must derive from SlabAllocated<T>.");
 
@@ -701,10 +700,10 @@ struct SlabAllocatorTraits {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    typename std::enable_if<
+                    std::enable_if_t<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED) ||
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
-                    >::type>
+                    >>
       : public internal::SlabAllocator<SATraits> {
 public:
     using PtrTraits         = typename SATraits::PtrTraits;
@@ -737,9 +736,9 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename std::enable_if<
+                    std::enable_if_t<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED)
-                    >::type> {
+                    >> {
 public:
     using AllocatorType = internal::SlabAllocator<SATraits>;
     using ObjType       = typename SATraits::ObjType;
@@ -769,10 +768,10 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename std::enable_if<
+                    std::enable_if_t<
                         (SATraits::PtrTraits::IsManaged == false) &&
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
-                    >::type> {
+                    >> {
 public:
      SlabAllocated() { }
     ~SlabAllocated() { }
@@ -840,9 +839,9 @@ using UnlockedManualDeleteSlabAllocatorTraits =
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    typename std::enable_if<
+                    std::enable_if_t<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
-                    >::type> {
+                    >> {
 public:
     using PtrTraits             = typename SATraits::PtrTraits;
     using PtrType               = typename SATraits::PtrType;
@@ -880,9 +879,9 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename std::enable_if<
+                    std::enable_if_t<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
-                    >::type> {
+                    >> {
 public:
     SlabAllocated() { }
     DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);

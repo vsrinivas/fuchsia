@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -33,13 +32,13 @@ struct DeleteCounter {
 using CountingPtr    = fbl::unique_ptr<DeleteCounter>;
 using CountingArrPtr = fbl::unique_ptr<DeleteCounter[]>;
 
-static_assert(fbl::is_standard_layout<int>::value,
+static_assert(std::is_standard_layout_v<int>,
               "fbl::unique_ptr<T>'s should have a standard layout");
-static_assert(fbl::is_standard_layout<CountingPtr>::value,
+static_assert(std::is_standard_layout_v<CountingPtr>,
               "fbl::unique_ptr<T>'s should have a standard layout");
-static_assert(fbl::is_standard_layout<int[]>::value,
+static_assert(std::is_standard_layout_v<int[]>,
               "fbl::unique_ptr<T[]>'s should have a standard layout");
-static_assert(fbl::is_standard_layout<CountingArrPtr>::value,
+static_assert(std::is_standard_layout_v<CountingArrPtr>,
               "fbl::unique_ptr<T[]>'s should have a standard layout");
 
 static bool uptr_test_scoped_destruction() {

@@ -87,7 +87,7 @@ class Recyclable {
     // Note: static assert must depend on T in order to trigger only when the template gets
     // expanded.  If it does not depend on any template parameters, eg static_assert(false), then it
     // will always explode, regardless of whether or not the template is ever expanded.
-    static_assert(is_same<T, T>::value == false,
+    static_assert(std::is_same_v<T, T> == false,
                   "fbl::Recyclable<T> objects must not specify cv-qualifiers for T.  "
                   "IOW - derive from fbl::Recyclable<Foo>, not fbl::Recyclable<const Foo>");
 };
@@ -97,7 +97,8 @@ namespace internal {
 // Test to see if an object is recyclable.  An object of type T is considered to
 // be recyclable if it derives from fbl::Recyclable<T>
 template <typename T>
-using has_fbl_recycle = is_base_of<::fbl::Recyclable<typename remove_cv<T>::type>, T>;
+inline constexpr bool has_fbl_recycle_v =
+                std::is_base_of_v<::fbl::Recyclable<std::remove_cv_t<T>>, T>;
 
 // internal::recycler is the internal helper class which is permitted to call
 // Recyclable<T>::fbl_recycle_thunk.  It can be removed when we move to C++17
@@ -109,10 +110,10 @@ struct recycler {
 };
 
 template <typename T>
-struct recycler<T, typename std::enable_if<has_fbl_recycle<T>::value == true>::type> {
+struct recycler<T, std::enable_if_t<has_fbl_recycle_v<T> == true>> {
     static inline void recycle(T* ptr) {
-        Recyclable<typename remove_cv<T>::type>::fbl_recycle_thunk(
-                const_cast<typename remove_cv<T>::type *>(ptr));
+        Recyclable<std::remove_cv_t<T>>::fbl_recycle_thunk(
+                const_cast<std::remove_cv_t<T>*>(ptr));
     }
 };
 
@@ -120,7 +121,7 @@ struct recycler<T, typename std::enable_if<has_fbl_recycle<T>::value == true>::t
 
 template <typename T>
 class Recyclable<T,
-                 typename std::enable_if<is_same<typename remove_cv<T>::type, T>::value>::type> {
+                 std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, T>>> {
 private:
     // Recyclable is friends with all cv-forms of the internal::recycler.  This
     // way, managed pointer types can say internal::recycler<T>::recycle(ptr)
@@ -131,7 +132,7 @@ private:
     friend struct ::fbl::internal::recycler<const volatile T>;
 
     static void fbl_recycle_thunk(T* ptr) {
-        static_assert(is_same<decltype(&T::fbl_recycle), void (T::*)(void)>::value,
+        static_assert(std::is_same_v<decltype(&T::fbl_recycle), void (T::*)(void)>,
                       "fbl_recycle() methods must be non-static member "
                       "functions with the signature 'void fbl_recycle()', and "
                       "be visible to fbl::Recyclable<T> (either because they are "

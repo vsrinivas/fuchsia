@@ -5,7 +5,6 @@
 #pragma once
 
 #include <limits.h>
-#include <fbl/type_support.h>
 
 namespace fbl {
 

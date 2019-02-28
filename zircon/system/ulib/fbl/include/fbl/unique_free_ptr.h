@@ -6,7 +6,6 @@
 
 #include <stdlib.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 
 namespace fbl {
 
@@ -15,7 +14,7 @@ namespace fbl {
 template <typename T>
 class unique_free_ptr {
 public:
-    static_assert(has_trivial_destructor<T>::value, "unique_free_ptr can only be used on types with trivial destructors");
+    static_assert(std::is_trivially_destructible_v<T>, "unique_free_ptr can only be used on types with trivial destructors");
 
     constexpr unique_free_ptr() : ptr_(nullptr) {}
     constexpr unique_free_ptr(decltype(nullptr)) : unique_free_ptr() {}

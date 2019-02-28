@@ -8,7 +8,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/recycler.h>
-#include <fbl/type_support.h>
 #include <zircon/compiler.h>
 
 #include <type_traits>
@@ -108,11 +107,11 @@ public:
     // T as an implicit upcast regardless of whether or not T has a virtual
     // destructor.
     template <typename U,
-              typename = typename std::enable_if<is_convertible_pointer<U*, T*>::value>::type>
+              typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
     unique_ptr(unique_ptr<U>&& o) : ptr_(o.release()) {
-        static_assert(is_same<T, const U>::value ||
-                (is_class<T>::value == is_class<U>::value &&
-                     (!is_class<T>::value || has_virtual_destructor<T>::value)),
+        static_assert(std::is_same_v<T, const U> ||
+                (std::is_class_v<T> == std::is_class_v<U> &&
+                     (!std::is_class_v<T> || std::has_virtual_destructor_v<T>)),
                 "Cannot convert unique_ptr<U> to unique_ptr<T> unless T is the same "
                 "as const U, neither T nor U are class/struct types, or T has a "
                 "virtual destructor");
@@ -122,7 +121,7 @@ private:
     static void recycle(T* ptr) {
         enum { type_must_be_complete = sizeof(T) };
         if (ptr) {
-            if (::fbl::internal::has_fbl_recycle<T>::value) {
+            if constexpr (::fbl::internal::has_fbl_recycle_v<T>) {
                 ::fbl::internal::recycler<T>::recycle(ptr);
             } else {
                 delete ptr;
@@ -234,7 +233,7 @@ make_unique(Args&&... args) {
 template <typename T, typename... Args>
 typename internal::unique_type<T>::incomplete_array
 make_unique(size_t size) {
-    using single_type = typename remove_extent<T>::type;
+    using single_type = std::remove_extent_t<T>;
     return unique_ptr<single_type[]>(new single_type[size]());
 }
 

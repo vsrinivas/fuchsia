@@ -19,14 +19,14 @@ namespace internal {
 template <typename CoreType, CoreType generator>
 class Lfsr {
 public:
-    static_assert(is_unsigned_integer<CoreType>::value,
+    static_assert(std::is_unsigned_v<CoreType>,
                  "LFSR core type must be an unsigned integer!");
 
     constexpr explicit Lfsr(CoreType initial_core) : core_(initial_core) { }
 
     template <typename T>
     void SetCore(T val) {
-        static_assert(is_unsigned_integer<T>::value,
+        static_assert(std::is_unsigned_v<T>,
                      "LFSR initializer type must be an unsigned integer!");
         core_ = static_cast<CoreType>(val);
     };
@@ -72,8 +72,8 @@ class Lfsr;
 #define MAKE_LFSR(_bits, _gen)                                                  \
 template <typename T>                                                           \
 class Lfsr<T,                                                                   \
-           typename std::enable_if<is_unsigned_integer<T>::value &&             \
-                                  ((sizeof(T) << 3) == _bits)>::type            \
+           std::enable_if_t<std::is_unsigned_v<T> &&                            \
+                                  ((sizeof(T) << 3) == _bits)>                  \
           > : public internal::Lfsr<uint ## _bits ## _t, _gen> {                \
 public:                                                                         \
     using CoreType = uint ## _bits ## _t;                                       \
@@ -81,7 +81,7 @@ public:                                                                         
     template <typename U>                                                       \
     constexpr explicit Lfsr(U initial_core)                                     \
         : internal::Lfsr<CoreType, _gen>(static_cast<CoreType>(initial_core)) { \
-        static_assert(is_unsigned_integer<U>::value,                            \
+        static_assert(std::is_unsigned_v<U>,                                    \
                      "LFSR initializer type must be an unsigned integer!");     \
     }                                                                           \
                                                                                 \
