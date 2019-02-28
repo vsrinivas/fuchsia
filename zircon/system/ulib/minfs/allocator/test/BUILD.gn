@@ -5,14 +5,15 @@
 group("test") {
   testonly = true
   deps = [
-    ":minfs-unit",
+    ":minfs-allocator-unit",
   ]
 }
 
-test("minfs-unit") {
+test("minfs-allocator-unit") {
   test_group = "fs"
   sources = [
     "allocator-test.cpp",
+    "main.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",
@@ -20,4 +21,6 @@ test("minfs-unit") {
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/zxtest",
   ]
+
+  include_dirs = [ ".." ]
 }

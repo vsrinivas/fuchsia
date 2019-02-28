@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
+#include <utility>
 
 #include <minfs/block-txn.h>
-#include <minfs/inode-manager.h>
 
-#include <utility>
+#include "inode-manager.h"
 
 namespace minfs {
 

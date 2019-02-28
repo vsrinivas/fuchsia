@@ -6,10 +6,13 @@ library("minfs") {
   host = true
   static = true
   sources = [
-    "allocator.cpp",
+    "allocator/allocator-promise.cpp",
+    "allocator/allocator.cpp",
+    "allocator/inode-manager.cpp",
+    "allocator/metadata.cpp",
+    "allocator/storage.cpp",
     "bcache.cpp",
     "fsck.cpp",
-    "inode-manager.cpp",
     "minfs.cpp",
     "superblock.cpp",
     "transaction-limits.cpp",

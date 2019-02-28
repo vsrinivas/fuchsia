@@ -15,9 +15,10 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #endif
 
-#include <minfs/allocator.h>
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
+
+#include "allocator.h"
 
 namespace minfs {
 

@@ -18,6 +18,7 @@
 #include <lib/async/dispatcher.h>
 #endif
 
+#include <minfs/bcache.h>
 #include <minfs/format.h>
 
 #include <utility>

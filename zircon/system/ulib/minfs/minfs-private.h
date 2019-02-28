@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
@@ -36,15 +38,14 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <lib/zircon-internal/fnv1hash.h>
-#include <minfs/allocator.h>
 #include <minfs/format.h>
-#include <minfs/inode-manager.h>
 #include <minfs/minfs.h>
 #include <minfs/superblock.h>
 #include <minfs/transaction-limits.h>
 #include <minfs/writeback.h>
 
-#include <utility>
+#include "allocator/allocator.h"
+#include "allocator/inode-manager.h"
 
 constexpr uint32_t kExtentCount = 6;
 
@@ -55,7 +56,6 @@ constexpr uint32_t kExtentCount = 6;
 // #define MINFS_PARANOID_MODE
 
 namespace minfs {
-
 #ifdef __Fuchsia__
 using BlockRegion = fuchsia_minfs_BlockRegion;
 

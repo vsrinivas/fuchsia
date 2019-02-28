@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <utility>
+
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -17,16 +19,12 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-
 #include <fs/queue.h>
 #include <fs/vfs.h>
-
-#include <minfs/allocator.h>
+#include <minfs/allocator-promise.h>
 #include <minfs/bcache.h>
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
-
-#include <utility>
 
 namespace minfs {
 

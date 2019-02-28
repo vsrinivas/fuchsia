@@ -5,8 +5,9 @@
 // Tests Minfs Allocator and AllocatorPromise behavior.
 
 #include <fbl/array.h>
-#include <minfs/allocator.h>
 #include <zxtest/zxtest.h>
+
+#include "allocator.h"
 
 namespace minfs {
 namespace {

@@ -10,81 +10,30 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <bitmap/storage.h>
-
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
-
-#ifdef __Fuchsia__
-#include <fuchsia/minfs/c/fidl.h>
-#endif
-
+#include <minfs/allocator-promise.h>
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>
 #include <minfs/superblock.h>
 
+#ifdef __Fuchsia__
+#include <fuchsia/minfs/c/fidl.h>
+#endif
+
+#include "storage.h"
+
 namespace minfs {
+
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 using BlockRegion = fuchsia_minfs_BlockRegion;
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
-
-class Allocator;
-
-// This class represents a promise from an Allocator to save a particular number of reserved
-// elements for later allocation. Allocation for reserved elements must be done through the
-// AllocatorPromise class.
-// This class is thread-compatible.
-// This class is not assignable, copyable, or moveable.
-class AllocatorPromise {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromise);
-
-    AllocatorPromise() {}
-    ~AllocatorPromise();
-
-    // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
-    // initialized. Returns an error if not enough elements are available for reservation,
-    // |allocator| is null, or |this| was previously initialized.
-    zx_status_t Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator);
-
-    bool IsInitialized() const { return allocator_ != nullptr; }
-
-    // Allocate a new item in allocator_. Return the index of the newly allocated item.
-    // A call to Allocate() is effectively the same as a call to Swap(0) + SwapCommit(), but under
-    // the hood completes these operations more efficiently as additional state doesn't need to be
-    // stored between the two.
-    size_t Allocate(WriteTxn* txn);
-
-    // Unreserve all currently reserved items.
-    void Cancel();
-
-#ifdef __Fuchsia__
-    // Swap the element currently allocated at |old_index| for a new index.
-    // If |old_index| is 0, a new block will still be allocated, but no blocks will be de-allocated.
-    // The swap will not be persisted until a call to SwapCommit is made.
-    size_t Swap(size_t old_index);
-
-    // Commit any pending swaps, allocating new indices and de-allocating old indices.
-    void SwapCommit(WriteTxn* txn);
-
-    // Remove |requested| reserved elements and give them to |other_promise|.
-    // The reserved count belonging to the Allocator does not change.
-    void Split(size_t requested, AllocatorPromise* other_promise);
-
-    size_t GetReserved() const { return reserved_; }
-#endif
-private:
-    Allocator* allocator_ = nullptr;
-    size_t reserved_ = 0;
-
-    // TODO(planders): Optionally store swap info in AllocatorPromise,
-    //                 to ensure we only swap the current promise's blocks on SwapCommit.
-};
 
 // An empty key class which represents the |AllocatorPromise|'s access to
 // restricted |Allocator| interfaces.
@@ -94,218 +43,6 @@ public:
 private:
     friend AllocatorPromise;
     AllocatorPromiseKey() {}
-};
-
-// Represents the FVM-related information for the allocator, including
-// slice usage and a mechanism to grow the allocation pool.
-class AllocatorFvmMetadata {
-public:
-    AllocatorFvmMetadata();
-    AllocatorFvmMetadata(uint32_t* data_slices, uint32_t* metadata_slices,
-                         uint64_t slice_size);
-    AllocatorFvmMetadata(AllocatorFvmMetadata&&);
-    AllocatorFvmMetadata& operator=(AllocatorFvmMetadata&&);
-    ~AllocatorFvmMetadata();
-
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatorFvmMetadata);
-
-    uint32_t UnitsPerSlices(uint32_t slice, uint32_t unit_size) const;
-    uint32_t SlicesToBlocks(uint32_t slices) const;
-    uint32_t BlocksToSlices(uint32_t blocks) const;
-
-    uint32_t DataSlices() const {
-        return *data_slices_;
-    }
-
-    void SetDataSlices(uint32_t slices) {
-        *data_slices_ = slices;
-    }
-
-    uint32_t MetadataSlices() const {
-        return *metadata_slices_;
-    }
-
-    void SetMetadataSlices(uint32_t slices) {
-        *metadata_slices_ = slices;
-    }
-
-    uint64_t SliceSize() const {
-        return slice_size_;
-    }
-
-private:
-    // Slices used by the allocator's data.
-    uint32_t* data_slices_;
-    // Slices used by the allocator's metadata.
-    uint32_t* metadata_slices_;
-    // Constant slice size used by FVM.
-    uint64_t slice_size_;
-};
-
-// Metadata information used to initialize a generic allocator.
-//
-// This structure contains references to the global superblock,
-// for fields that are intended to be updated.
-//
-// The allocator is the sole mutator of these fields while the
-// filesystem is mounted.
-class AllocatorMetadata {
-public:
-    AllocatorMetadata();
-    AllocatorMetadata(blk_t data_start_block, blk_t metadata_start_block, bool using_fvm,
-                      AllocatorFvmMetadata fvm, uint32_t* pool_used, uint32_t* pool_total);
-    AllocatorMetadata(AllocatorMetadata&&);
-    AllocatorMetadata& operator=(AllocatorMetadata&&);
-    ~AllocatorMetadata();
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatorMetadata);
-
-    blk_t DataStartBlock() const {
-        return data_start_block_;
-    }
-
-    blk_t MetadataStartBlock() const {
-        return metadata_start_block_;
-    }
-
-    bool UsingFvm() const {
-        return using_fvm_;
-    }
-
-    AllocatorFvmMetadata& Fvm() {
-        ZX_DEBUG_ASSERT(UsingFvm());
-        return fvm_;
-    }
-
-    uint32_t PoolUsed() const {
-        return *pool_used_;
-    }
-
-    // Return the number of elements which are still available for allocation/reservation.
-    uint32_t PoolAvailable() const {
-        return *pool_total_ - *pool_used_;
-    }
-
-    void PoolAllocate(uint32_t units) {
-        ZX_DEBUG_ASSERT(*pool_used_ + units <= *pool_total_);
-        *pool_used_ += units;
-    }
-
-    void PoolRelease(uint32_t units) {
-        ZX_DEBUG_ASSERT(*pool_used_ >= units);
-        *pool_used_ -= units;
-    }
-
-    uint32_t PoolTotal() const {
-        return *pool_total_;
-    }
-
-    void SetPoolTotal(uint32_t total) {
-        *pool_total_ = total;
-    }
-
-private:
-    // Block at which data for the allocator starts.
-    blk_t data_start_block_;
-
-    // Block at which metadata for the allocator starts.
-    blk_t metadata_start_block_;
-
-    // This metadata is only valid if the Allocator is using an FVM.
-    bool using_fvm_;
-    AllocatorFvmMetadata fvm_;
-
-    // This information should be re-derivable from the allocator,
-    // but is typically stored in the superblock to make mounting
-    // faster.
-    uint32_t* pool_used_;
-    uint32_t* pool_total_;
-};
-
-// Types of data to use with read and write transactions.
-#ifdef __Fuchsia__
-using ReadData = vmoid_t;
-using WriteData = zx_handle_t;
-#else
-using ReadData = const void*;
-using WriteData = const void*;
-#endif
-
-using GrowMapCallback = fbl::Function<zx_status_t(size_t pool_size, size_t* old_pool_size)>;
-
-// Interface for an Allocator's underlying storage.
-class AllocatorStorage {
-public:
-    AllocatorStorage() = default;
-    AllocatorStorage(const AllocatorStorage&) = delete;
-    AllocatorStorage& operator=(const AllocatorStorage&) = delete;
-    virtual ~AllocatorStorage() {}
-
-#ifdef __Fuchsia__
-    virtual zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) = 0;
-#endif
-
-    // Loads data from disk into |data| using |txn|.
-    virtual void Load(fs::ReadTxn* txn, ReadData data) = 0;
-
-    // Extend the on-disk extent containing map_.
-    virtual zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) = 0;
-
-    // Returns the number of unallocated elements.
-    virtual uint32_t PoolAvailable() const = 0;
-
-    // Returns the total number of elements.
-    virtual uint32_t PoolTotal() const = 0;
-
-    // Persists the map at range |index| - |index + count|.
-    virtual void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) = 0;
-
-    // Marks |count| elements allocated and persists the latest data.
-    virtual void PersistAllocate(WriteTxn* txn, size_t count) = 0;
-
-    // Marks |count| elements released and persists the latest data.
-    virtual void PersistRelease(WriteTxn* txn, size_t count) = 0;
-};
-
-// A type of storage which represents a persistent disk.
-class PersistentStorage : public AllocatorStorage {
-public:
-    // Callback invoked after the data portion of the allocator grows.
-    using GrowHandler = fbl::Function<zx_status_t(uint32_t pool_size)>;
-
-    PersistentStorage() = delete;
-    PersistentStorage(const PersistentStorage&) = delete;
-    PersistentStorage& operator=(const PersistentStorage&) = delete;
-
-    // |grow_cb| is an optional callback to increase the size of the allocator.
-    PersistentStorage(Bcache* bc, SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
-                      AllocatorMetadata metadata);
-    ~PersistentStorage() {}
-
-#ifdef __Fuchsia__
-    zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid);
-#endif
-
-    void Load(fs::ReadTxn* txn, ReadData data);
-
-    zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) final;
-
-    uint32_t PoolAvailable() const final { return metadata_.PoolAvailable(); }
-
-    uint32_t PoolTotal() const final { return metadata_.PoolTotal(); }
-
-    void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) final;
-
-    void PersistAllocate(WriteTxn* txn, size_t count) final;
-
-    void PersistRelease(WriteTxn* txn, size_t count) final;
-private:
-#ifdef __Fuchsia__
-    Bcache* bc_;
-    size_t unit_size_;
-#endif
-    SuperblockManager* sb_;
-    GrowHandler grow_cb_;
-    AllocatorMetadata metadata_;
 };
 
 // The Allocator class is used to abstract away the mechanism by which minfs
@@ -426,4 +163,5 @@ private:
     bitmap::RleBitmap swap_out_ FS_TA_GUARDED(lock_);
 #endif
 };
+
 } // namespace minfs
