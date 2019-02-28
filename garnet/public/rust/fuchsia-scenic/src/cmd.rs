@@ -6,8 +6,9 @@ use fidl_fuchsia_ui_gfx::Command as GfxCommand;
 use fidl_fuchsia_ui_gfx::{
     AddChildCmd, AddPartCmd, ColorRgba, ColorRgbaValue, CreateResourceCmd, DetachCmd,
     ExportResourceCmd, ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue,
-    ReleaseResourceCmd, ResourceArgs, SetClipCmd, SetColorCmd, SetEventMaskCmd, SetMaterialCmd,
-    SetRotationCmd, SetScaleCmd, SetShapeCmd, SetTextureCmd, SetTranslationCmd, Vec3, Vector3Value,
+    ReleaseResourceCmd, ResourceArgs, SetAnchorCmd, SetClipCmd, SetColorCmd, SetEventMaskCmd,
+    SetMaterialCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd, SetTextureCmd, SetTranslationCmd,
+    Vec3, Vector3Value,
 };
 use fidl_fuchsia_ui_scenic::Command;
 use fuchsia_zircon::EventPair;
@@ -66,6 +67,11 @@ pub fn set_translation(id: u32, x: f32, y: f32, z: f32) -> Command {
     let cmd =
         SetTranslationCmd { id, value: Vector3Value { value: Vec3 { x, y, z }, variable_id: 0 } };
     Command::Gfx(GfxCommand::SetTranslation(cmd))
+}
+
+pub fn set_anchor(id: u32, x: f32, y: f32, z: f32) -> Command {
+    let cmd = SetAnchorCmd { id, value: Vector3Value { value: Vec3 { x, y, z }, variable_id: 0 } };
+    Command::Gfx(GfxCommand::SetAnchor(cmd))
 }
 
 pub fn set_scale(id: u32, x: f32, y: f32, z: f32) -> Command {

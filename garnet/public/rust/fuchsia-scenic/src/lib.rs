@@ -301,6 +301,10 @@ impl Node {
         self.resource.enqueue(cmd::set_rotation(self.id(), x, y, z, w))
     }
 
+    pub fn set_anchor(&self, x: f32, y: f32, z: f32) {
+        self.resource.enqueue(cmd::set_anchor(self.id(), x, y, z))
+    }
+
     pub fn detach(&self) {
         self.resource.enqueue(cmd::detach(self.id()))
     }
