@@ -9,6 +9,9 @@ mod icmp;
 mod igmp;
 mod types;
 
+// It's ok to `pub use` rather `pub(crate) use` here because the items in
+// `types` which are themselves `pub(crate)` will still not be allowed to be
+// re-exported from the root.
 pub use self::types::*;
 
 use log::{debug, trace};
@@ -27,11 +30,11 @@ use crate::{Context, EventDispatcher};
 const DEFAULT_TTL: u8 = 64;
 
 // minimum MTU required by all IPv6 devices
-pub const IPV6_MIN_MTU: usize = 1280;
+pub(crate) const IPV6_MIN_MTU: usize = 1280;
 
 /// The state associated with the IP layer.
 #[derive(Default)]
-pub struct IpLayerState {
+pub(crate) struct IpLayerState {
     v4: IpLayerStateInner<Ipv4>,
     v6: IpLayerStateInner<Ipv6>,
 }
@@ -136,7 +139,7 @@ macro_rules! drop_packet_and_undo_parse {
 }
 
 /// Receive an IP packet from a device.
-pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
+pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     mut buffer: B,
@@ -196,7 +199,7 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
 /// `local_address_for_remote` looks up the route to `remote`. If one is found,
 /// it returns the IP address of the interface specified by the route, or `None`
 /// if the interface has no IP address.
-pub fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     remote: A,
 ) -> Option<A> {
@@ -260,7 +263,7 @@ fn lookup_route<A: IpAddress>(state: &IpLayerState, dst_ip: A) -> Option<Destina
 
 /// Add a route to the forwarding table.
 #[specialize_ip_address]
-pub fn add_route<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     next_hop: A,
@@ -274,7 +277,7 @@ pub fn add_route<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Add a device route to the forwarding table.
-pub fn add_device_route<D: EventDispatcher, A: ext::IpAddress>(
+pub(crate) fn add_device_route<D: EventDispatcher, A: ext::IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
@@ -302,7 +305,10 @@ pub fn add_device_route<D: EventDispatcher, A: ext::IpAddress>(
 ///
 /// `is_local_addr` returns whether `addr` is the address associated with one of
 /// our local interfaces.
-pub fn is_local_addr<D: EventDispatcher, A: IpAddress>(ctx: &mut Context<D>, addr: A) -> bool {
+pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    addr: A,
+) -> bool {
     log_unimplemented!(false, "ip::is_local_addr: not implemented")
 }
 
@@ -312,7 +318,7 @@ pub fn is_local_addr<D: EventDispatcher, A: IpAddress>(ctx: &mut Context<D>, add
 /// callback. It computes the routing information, and invokes the callback with
 /// the computed destination address. The callback returns a
 /// `SerializationRequest`, which is serialized in a new IP packet and sent.
-pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
+pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
     ctx: &mut Context<D>,
     dst_ip: A,
     proto: IpProto,
@@ -375,7 +381,7 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
 /// restriction that the packet must originate from the source address, and must
 /// eagress over the interface associated with that source address. If this
 /// restriction cannot be met, a "no route to host" error is returned.
-pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
+pub(crate) fn send_ip_packet_from<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -402,7 +408,7 @@ pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
 /// Since `send_ip_packet_from_device` specifies a physical device, it cannot
 /// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
 /// the loopback subnet, `send_ip_packet_from_device` will panic.
-pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
+pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: A,

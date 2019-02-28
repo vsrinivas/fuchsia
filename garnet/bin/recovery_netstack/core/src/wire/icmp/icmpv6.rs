@@ -26,7 +26,7 @@ use super::{
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub enum Icmpv6Packet<B> {
+pub(crate) enum Icmpv6Packet<B> {
     DestUnreachable(IcmpPacket<Ipv6, B, IcmpDestUnreachable>),
     PacketTooBig(IcmpPacket<Ipv6, B, Icmpv6PacketTooBig>),
     TimeExceeded(IcmpPacket<Ipv6, B, IcmpTimeExceeded>),
@@ -154,7 +154,7 @@ impl_icmp_message!(
 
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct Icmpv6PacketTooBig {
+pub(crate) struct Icmpv6PacketTooBig {
     mtu: [u8; 4],
 }
 
@@ -178,12 +178,12 @@ create_net_enum! {
 /// An ICMPv6 Parameter Problem message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct Icmpv6ParameterProblem {
+pub(crate) struct Icmpv6ParameterProblem {
     pointer: [u8; 4],
 }
 
 impl Icmpv6ParameterProblem {
-    pub fn new(pointer: u32) -> Icmpv6ParameterProblem {
+    pub(crate) fn new(pointer: u32) -> Icmpv6ParameterProblem {
         let mut buf = [0u8; 4];
         NetworkEndian::write_u32(&mut buf[..], pointer);
         Icmpv6ParameterProblem { pointer: buf }

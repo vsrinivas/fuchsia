@@ -20,7 +20,7 @@ use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
 #[specialize_ip_address]
-pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -119,7 +119,7 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
 /// packet with a single header with a Next Header type of TCP, it `header_len`
 /// would be the length of the single header (40 bytes).
 #[specialize_ip_address]
-pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -187,7 +187,7 @@ pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: Buffe
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
 #[specialize_ip_address]
-pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -231,7 +231,7 @@ pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
 #[specialize_ip_address]
-pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -282,7 +282,7 @@ pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
 #[specialize_ip_address]
-pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,

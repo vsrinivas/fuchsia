@@ -21,7 +21,7 @@ use log::debug;
 #[derive(Debug, Eq, PartialEq)]
 #[allow(missing_docs)]
 #[repr(u16)]
-pub enum ArpOp {
+pub(crate) enum ArpOp {
     Request = ArpOp::REQUEST,
     Response = ArpOp::RESPONSE,
 }
@@ -34,7 +34,7 @@ impl ArpOp {
     ///
     /// `from_u16` returns the `ArpOp` with the numerical value `u`, or `None`
     /// if the value is unrecognized.
-    pub fn from_u16(u: u16) -> Option<ArpOp> {
+    pub(crate) fn from_u16(u: u16) -> Option<ArpOp> {
         match u {
             Self::REQUEST => Some(ArpOp::Request),
             Self::RESPONSE => Some(ArpOp::Response),
@@ -47,7 +47,7 @@ impl ArpOp {
 #[derive(Debug, PartialEq)]
 #[allow(missing_docs)]
 #[repr(u16)]
-pub enum ArpHardwareType {
+pub(crate) enum ArpHardwareType {
     Ethernet = ArpHardwareType::ETHERNET,
 }
 
@@ -58,7 +58,7 @@ impl ArpHardwareType {
     ///
     /// `from_u16` returns the `ArpHardwareType` with the numerical value `u`,
     /// or `None` if the value is unrecognized.
-    pub fn from_u16(u: u16) -> Option<ArpHardwareType> {
+    pub(crate) fn from_u16(u: u16) -> Option<ArpHardwareType> {
         match u {
             Self::ETHERNET => Some(ArpHardwareType::Ethernet),
             _ => None,
@@ -70,7 +70,7 @@ impl ArpHardwareType {
 ///
 /// This is used to retry sending ARP requests.
 #[derive(Copy, Clone, PartialEq)]
-pub struct ArpTimerId<P: PType> {
+pub(crate) struct ArpTimerId<P: PType> {
     device_id: u64,
     ip_addr: P,
 }
@@ -79,7 +79,7 @@ pub struct ArpTimerId<P: PType> {
 ///
 /// An `ArpDevice<P>` is a device layer protocol which can support ARP with the
 /// network protocol `P` (e.g., IPv4, IPv6, etc).
-pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
+pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// The hardware address type used by this protocol.
     type HardwareAddr: HType;
 
@@ -118,7 +118,7 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
 /// This currently only supports Ipv4/Ethernet ARP, since we know that that is
 /// the only case that the netstack currently handles. In the future, this may
 /// be extended to support other hardware or protocol types.
-pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: ArpTimerId<Ipv4Addr>) {
+pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: ArpTimerId<Ipv4Addr>) {
     handle_timeout_inner::<D, Ipv4Addr, EthernetArpDevice>(ctx, id);
 }
 
@@ -136,7 +136,7 @@ fn handle_timeout_inner<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<
 /// hardware types in a given context, it is the caller's responsibility to call
 /// `peek_arp_types` in order to determine which types to use in calling this
 /// function.
-pub fn receive_arp_packet<
+pub(crate) fn receive_arp_packet<
     D: EventDispatcher,
     P: PType + Eq + Hash,
     AD: ArpDevice<P>,
@@ -232,7 +232,7 @@ pub fn receive_arp_packet<
 }
 
 /// Insert an entry into the ARP table.
-pub fn insert<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+pub(crate) fn insert<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
     device_id: u64,
     net: P,
@@ -242,7 +242,7 @@ pub fn insert<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
 }
 
 /// Look up the hardware address for a network protocol address.
-pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+pub(crate) fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
     device_id: u64,
     local_addr: AD::HardwareAddr,
@@ -312,7 +312,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
 ///
 /// Each device will contain an `ArpState` object for each of the network
 /// protocols that it supports.
-pub struct ArpState<P: PType + Hash + Eq, D: ArpDevice<P>> {
+pub(crate) struct ArpState<P: PType + Hash + Eq, D: ArpDevice<P>> {
     // NOTE(joshlf): Taking an ArpDevice type parameter is technically
     // unnecessary here; we could instead just be parametric on a hardware type
     // and a network protocol type. However, doing it this way ensure that

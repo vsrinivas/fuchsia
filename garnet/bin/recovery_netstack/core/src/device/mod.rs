@@ -4,8 +4,8 @@
 
 //! The device layer.
 
-pub mod arp;
-pub mod ethernet;
+pub(crate) mod arp;
+pub(crate) mod ethernet;
 
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -26,7 +26,7 @@ pub struct DeviceId {
 
 impl DeviceId {
     /// Construct a new `DeviceId` for an Ethernet device.
-    pub fn new_ethernet(id: u64) -> DeviceId {
+    pub(crate) fn new_ethernet(id: u64) -> DeviceId {
         DeviceId { id, protocol: DeviceProtocol::Ethernet }
     }
 
@@ -66,7 +66,7 @@ impl Display for DeviceProtocol {
 }
 
 /// The state associated with the device layer.
-pub struct DeviceLayerState {
+pub(crate) struct DeviceLayerState {
     // Invariant: even though each protocol has its own hash map, IDs (used as
     // keys in the hash maps) are unique across all hash maps. This is
     // guaranteed by allocating IDs sequentially, and never re-using an ID.
@@ -76,7 +76,7 @@ pub struct DeviceLayerState {
 
 impl DeviceLayerState {
     /// Add a new ethernet device to the device layer.
-    pub fn add_ethernet_device(&mut self, mac: Mac, mtu: usize) -> DeviceId {
+    pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: usize) -> DeviceId {
         let id = self.allocate_id();
         self.ethernet.insert(id, EthernetDeviceState::new(mac, mtu));
         debug!("adding Ethernet device with ID {}", id);
@@ -100,13 +100,13 @@ impl Default for DeviceLayerState {
 
 /// The identifier for timer events in the device layer.
 #[derive(Copy, Clone, PartialEq)]
-pub enum DeviceLayerTimerId {
+pub(crate) enum DeviceLayerTimerId {
     /// A timer event in the ARP layer with a protocol type of IPv4
     ArpIpv4(arp::ArpTimerId<Ipv4Addr>),
 }
 
 /// Handle a timer event firing in the device layer.
-pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
+pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: DeviceLayerTimerId) {
     match id {
         DeviceLayerTimerId::ArpIpv4(inner_id) => arp::handle_timeout(ctx, inner_id),
     }
@@ -125,7 +125,7 @@ pub trait DeviceLayerEventDispatcher {
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new device layer frame and sends it.
-pub fn send_ip_frame<D: EventDispatcher, A, S>(
+pub(crate) fn send_ip_frame<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
     local_addr: A,

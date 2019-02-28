@@ -28,7 +28,7 @@ use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::{handle_timeout, Context, EventDispatcher, TimerId};
 
 /// Create a new deterministic RNG from a seed.
-pub fn new_rng(mut seed: u64) -> XorShiftRng {
+pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
     if seed == 0 {
         // XorShiftRng can't take 0 seeds
         seed = 1;
@@ -42,16 +42,16 @@ pub fn new_rng(mut seed: u64) -> XorShiftRng {
 }
 
 #[derive(Default, Debug)]
-pub struct TestCounters {
+pub(crate) struct TestCounters {
     data: HashMap<String, usize>,
 }
 
 impl TestCounters {
-    pub fn increment(&mut self, key: &str) {
+    pub(crate) fn increment(&mut self, key: &str) {
         *(self.data.entry(key.to_string()).or_insert(0)) += 1;
     }
 
-    pub fn get(&self, key: &str) -> &usize {
+    pub(crate) fn get(&self, key: &str) -> &usize {
         self.data.get(key).unwrap_or(&0)
     }
 }
@@ -81,7 +81,7 @@ static LOGGER_ONCE: Once = Once::new();
 ///
 /// Call this method at the beginning of the test for which logging is desired.  This function sets
 /// global program state, so all tests that run after this function is called will use the logger.
-pub fn set_logger_for_test() {
+pub(crate) fn set_logger_for_test() {
     // log::set_logger will panic if called multiple times; using a Once makes
     // set_logger_for_test idempotent
     LOGGER_ONCE.call_once(|| {
@@ -94,7 +94,7 @@ pub fn set_logger_for_test() {
 ///
 /// Returns true if a timer was triggered, false if there were no timers waiting to be
 /// triggered.
-pub fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
+pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
     match ctx
         .dispatcher
         .timer_events
@@ -116,7 +116,9 @@ pub fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
 ///
 /// `parse_ethernet_frame` parses an ethernet frame, returning the body along
 /// with some important header fields.
-pub fn parse_ethernet_frame(mut buf: &[u8]) -> ParseResult<(&[u8], Mac, Mac, Option<EtherType>)> {
+pub(crate) fn parse_ethernet_frame(
+    mut buf: &[u8],
+) -> ParseResult<(&[u8], Mac, Mac, Option<EtherType>)> {
     let frame = (&mut buf).parse::<EthernetFrame<_>>()?;
     let src_mac = frame.src_mac();
     let dst_mac = frame.dst_mac();
@@ -128,7 +130,9 @@ pub fn parse_ethernet_frame(mut buf: &[u8]) -> ParseResult<(&[u8], Mac, Mac, Opt
 ///
 /// `parse_ip_packet` parses an IP packet, returning the body along with some
 /// important header fields.
-pub fn parse_ip_packet<I: Ip>(mut buf: &[u8]) -> ParseResult<(&[u8], I::Addr, I::Addr, IpProto)> {
+pub(crate) fn parse_ip_packet<I: Ip>(
+    mut buf: &[u8],
+) -> ParseResult<(&[u8], I::Addr, I::Addr, IpProto)> {
     let packet = (&mut buf).parse::<<I as IpExt<_>>::Packet>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
@@ -147,7 +151,7 @@ pub fn parse_ip_packet<I: Ip>(mut buf: &[u8]) -> ParseResult<(&[u8], I::Addr, I:
 /// `parse_icmp_packet` parses an ICMP packet, returning the body along with
 /// some important fields. Before returning, it invokes the callback `f` on the
 /// parsed packet.
-pub fn parse_icmp_packet<
+pub(crate) fn parse_icmp_packet<
     I: Ip,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
@@ -175,7 +179,7 @@ where
 /// `parse_ip_packet_in_ethernet_frame` parses an IP packet in an Ethernet
 /// frame, returning the body of the IP packet along with some important fields
 /// from both the IP and Ethernet headers.
-pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
+pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
     buf: &[u8],
 ) -> ParseResult<(&[u8], Mac, Mac, I::Addr, I::Addr, IpProto)> {
     use crate::device::ethernet::EthernetIpExt;
@@ -194,7 +198,7 @@ pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
 /// an IP packet in an Ethernet frame, returning the message and code from the
 /// ICMP packet along with some important fields from both the IP and Ethernet
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
-pub fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
+pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
     I: Ip,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
@@ -223,22 +227,22 @@ where
 ///
 /// `DummyEventDispatcherConfig` describes a simple network with two IPv4 hosts
 /// - one remote and one local - both on the same Ethernet network.
-pub struct DummyEventDispatcherConfig {
+pub(crate) struct DummyEventDispatcherConfig {
     /// The subnet of the local Ethernet network.
-    pub subnet: Subnet<Ipv4Addr>,
+    pub(crate) subnet: Subnet<Ipv4Addr>,
     /// The IP address of our interface to the local network (must be in
     /// subnet).
-    pub local_ip: Ipv4Addr,
+    pub(crate) local_ip: Ipv4Addr,
     /// The MAC address of our interface to the local network.
-    pub local_mac: Mac,
+    pub(crate) local_mac: Mac,
     /// The remote host's IP address (must be in subnet).
-    pub remote_ip: Ipv4Addr,
+    pub(crate) remote_ip: Ipv4Addr,
     /// The remote host's MAC address.
-    pub remote_mac: Mac,
+    pub(crate) remote_mac: Mac,
 }
 
 /// A `DummyEventDispatcherConfig` with reasonable values.
-pub const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig {
+pub(crate) const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig {
     subnet: unsafe { Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16) },
     local_ip: Ipv4Addr::new([192, 168, 0, 1]),
     local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
@@ -254,7 +258,7 @@ pub const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig 
 /// producing a `Context<DummyEventDispatcher>` with all of the appropriate
 /// state configured.
 #[derive(Clone, Default)]
-pub struct DummyEventDispatcherBuilder {
+pub(crate) struct DummyEventDispatcherBuilder {
     devices: Vec<(Mac, Option<(IpAddr, SubnetEither)>)>,
     arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
     // usize refers to index into devices Vec
@@ -264,7 +268,7 @@ pub struct DummyEventDispatcherBuilder {
 
 impl DummyEventDispatcherBuilder {
     /// Construct a `DummyEventDispatcherBuilder` from a `DummyEventDispatcherConfig`.
-    pub fn from_config(cfg: DummyEventDispatcherConfig) -> DummyEventDispatcherBuilder {
+    pub(crate) fn from_config(cfg: DummyEventDispatcherConfig) -> DummyEventDispatcherBuilder {
         assert!(cfg.subnet.contains(cfg.local_ip));
         assert!(cfg.subnet.contains(cfg.remote_ip));
 
@@ -279,7 +283,7 @@ impl DummyEventDispatcherBuilder {
     ///
     /// `add_device` returns a key which can be used to refer to the device in
     /// future calls to `add_arp_table_entry` and `add_device_route`.
-    pub fn add_device(&mut self, mac: Mac) -> usize {
+    pub(crate) fn add_device(&mut self, mac: Mac) -> usize {
         let idx = self.devices.len();
         self.devices.push((mac, None));
         idx
@@ -289,7 +293,7 @@ impl DummyEventDispatcherBuilder {
     ///
     /// `add_device_with_ip` is like `add_device`, except that it takes an
     /// associated IP address and subnet to assign to the device.
-    pub fn add_device_with_ip<A: IpAddress>(
+    pub(crate) fn add_device_with_ip<A: IpAddress>(
         &mut self,
         mac: Mac,
         ip: A,
@@ -301,22 +305,22 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Add an ARP table entry for a device's ARP table.
-    pub fn add_arp_table_entry(&mut self, device: usize, ip: Ipv4Addr, mac: Mac) {
+    pub(crate) fn add_arp_table_entry(&mut self, device: usize, ip: Ipv4Addr, mac: Mac) {
         self.arp_table_entries.push((device, ip, mac));
     }
 
     /// Add a route to the forwarding table.
-    pub fn add_route<A: IpAddress>(&mut self, subnet: Subnet<A>, next_hop: A) {
+    pub(crate) fn add_route<A: IpAddress>(&mut self, subnet: Subnet<A>, next_hop: A) {
         self.routes.push((subnet.into(), next_hop.into()));
     }
 
     /// Add a device route to the forwarding table.
-    pub fn add_device_route<A: IpAddress>(&mut self, subnet: Subnet<A>, device: usize) {
+    pub(crate) fn add_device_route<A: IpAddress>(&mut self, subnet: Subnet<A>, device: usize) {
         self.device_routes.push((subnet.into(), device));
     }
 
     /// Build a `Context<DummyEventDispatcher>` from the present configuration.
-    pub fn build(self) -> Context<DummyEventDispatcher> {
+    pub(crate) fn build(self) -> Context<DummyEventDispatcher> {
         let mut ctx = Context::default();
 
         let DummyEventDispatcherBuilder { devices, arp_table_entries, device_routes, routes } =
@@ -371,24 +375,24 @@ impl DummyEventDispatcherBuilder {
 /// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
 /// testing purposes. It provides facilities to inspect the history of what
 /// events have been emitted to the system.
-pub struct DummyEventDispatcher {
+pub(crate) struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
     timer_events: BTreeMap<Instant, TimerId>,
     current_time: Instant,
 }
 
 impl DummyEventDispatcher {
-    pub fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
+    pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
         &self.frames_sent
     }
 
     /// Get an ordered list of all scheduled timer events
-    pub fn timer_events<'a>(&'a self) -> impl Iterator<Item = (&'a Instant, &'a TimerId)> {
+    pub(crate) fn timer_events<'a>(&'a self) -> impl Iterator<Item = (&'a Instant, &'a TimerId)> {
         self.timer_events.iter()
     }
 
     /// Get the current (fake) time
-    pub fn current_time(self) -> Instant {
+    pub(crate) fn current_time(self) -> Instant {
         self.current_time
     }
 }

@@ -18,12 +18,12 @@ use crate::wire::util;
 
 use super::{IcmpIpExt, IcmpUnusedCode};
 
-pub type Options<B> = util::Options<B, options::NdpOptionImpl>;
+pub(crate) type Options<B> = util::Options<B, options::NdpOptionImpl>;
 
 /// An NDP Router Solicitation.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct RouterSolicitation {
+pub(crate) struct RouterSolicitation {
     _reserved: [u8; 4],
 }
 
@@ -32,7 +32,7 @@ impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode,
 /// An NDP Router Advertisment.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct RouterAdvertisment {
+pub(crate) struct RouterAdvertisment {
     current_hop_limit: u8,
     configuration_mo: u8,
     router_lifetime: [u8; 2],
@@ -43,15 +43,15 @@ pub struct RouterAdvertisment {
 impl_icmp_message!(Ipv6, RouterAdvertisment, RouterAdvertisment, IcmpUnusedCode, Options<B>);
 
 impl RouterAdvertisment {
-    pub fn router_lifetime(&self) -> u16 {
+    pub(crate) fn router_lifetime(&self) -> u16 {
         NetworkEndian::read_u16(&self.router_lifetime)
     }
 
-    pub fn reachable_time(&self) -> u32 {
+    pub(crate) fn reachable_time(&self) -> u32 {
         NetworkEndian::read_u32(&self.reachable_time)
     }
 
-    pub fn retransmit_timer(&self) -> u32 {
+    pub(crate) fn retransmit_timer(&self) -> u32 {
         NetworkEndian::read_u32(&self.retransmit_timer)
     }
 }
@@ -59,7 +59,7 @@ impl RouterAdvertisment {
 /// An NDP Neighbor Solicitation.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct NeighborSolicitation {
+pub(crate) struct NeighborSolicitation {
     _reserved: [u8; 4],
     target_address: Ipv6Addr,
 }
@@ -69,7 +69,7 @@ impl_icmp_message!(Ipv6, NeighborSolicitation, NeighborSolicitation, IcmpUnusedC
 /// An NDP Neighbor Advertisment.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct NeighborAdvertisment {
+pub(crate) struct NeighborAdvertisment {
     flags_rso: u8,
     _reserved: [u8; 3],
     target_address: Ipv6Addr,
@@ -80,7 +80,7 @@ impl_icmp_message!(Ipv6, NeighborAdvertisment, NeighborAdvertisment, IcmpUnusedC
 /// An ICMPv6 Redirect Message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct Redirect {
+pub(crate) struct Redirect {
     _reserved: [u8; 4],
     target_address: Ipv6Addr,
     destination_address: Ipv6Addr,
@@ -88,7 +88,7 @@ pub struct Redirect {
 
 impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 
-pub mod options {
+pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::LayoutVerified;
 
@@ -105,7 +105,7 @@ pub mod options {
     }
 
     #[derive(Debug)]
-    pub struct PrefixInformation<'a> {
+    pub(crate) struct PrefixInformation<'a> {
         prefix_length: u8,
         flags_la: u8,
         valid_lifetime: &'a [u8],
@@ -114,22 +114,22 @@ pub mod options {
     }
 
     impl<'a> PrefixInformation<'a> {
-        pub fn valid_lifetime(&self) -> u32 {
+        pub(crate) fn valid_lifetime(&self) -> u32 {
             NetworkEndian::read_u32(&self.valid_lifetime)
         }
 
-        pub fn preferred_lifetime(&self) -> u32 {
+        pub(crate) fn preferred_lifetime(&self) -> u32 {
             NetworkEndian::read_u32(&self.preferred_lifetime)
         }
 
-        pub fn prefix(&self) -> &Ipv6Addr {
+        pub(crate) fn prefix(&self) -> &Ipv6Addr {
             &self.prefix
         }
     }
 
     #[allow(missing_docs)]
     #[derive(Debug)]
-    pub enum NdpOption<'a> {
+    pub(crate) enum NdpOption<'a> {
         SourceLinkLayerAddress(&'a [u8]),
         TargetLinkLayerAddress(&'a [u8]),
         PrefixInformation(PrefixInformation<'a>),
@@ -140,7 +140,7 @@ pub mod options {
     }
 
     #[derive(Debug)]
-    pub struct NdpOptionImpl;
+    pub(crate) struct NdpOptionImpl;
 
     impl OptionImplErr for NdpOptionImpl {
         type Error = String;

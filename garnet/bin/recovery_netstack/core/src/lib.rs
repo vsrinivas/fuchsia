@@ -35,15 +35,14 @@ mod wire;
 
 pub use crate::device::{
     ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
-    DeviceLayerTimerId,
 };
 pub use crate::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
 pub use crate::transport::udp::UdpEventDispatcher;
-pub use crate::transport::{TransportLayerEventDispatcher, TransportLayerTimerId};
+pub use crate::transport::TransportLayerEventDispatcher;
 
-use crate::device::DeviceLayerState;
+use crate::device::{DeviceLayerState, DeviceLayerTimerId};
 use crate::ip::IpLayerState;
-use crate::transport::TransportLayerState;
+use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of an address.
 ///

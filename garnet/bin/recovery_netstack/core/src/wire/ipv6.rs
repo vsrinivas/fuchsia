@@ -16,12 +16,12 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv6Addr};
 
-pub const IPV6_FIXED_HDR_LEN: usize = 40;
+pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
 
 #[allow(missing_docs)]
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct FixedHeader {
+pub(crate) struct FixedHeader {
     version_tc_flowlabel: [u8; 4],
     payload_len: [u8; 2],
     next_hdr: u8,
@@ -59,7 +59,7 @@ impl FixedHeader {
 /// An `Ipv6Packet` shares its underlying memory with the byte slice it was
 /// parsed from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
-pub struct Ipv6Packet<B> {
+pub(crate) struct Ipv6Packet<B> {
     fixed_hdr: LayoutVerified<B, FixedHeader>,
     extension_hdrs: Option<B>,
     body: B,
@@ -97,27 +97,27 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
 
 impl<B: ByteSlice> Ipv6Packet<B> {
     /// The packet body.
-    pub fn body(&self) -> &[u8] {
+    pub(crate) fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The Differentiated Services (DS) field.
-    pub fn ds(&self) -> u8 {
+    pub(crate) fn ds(&self) -> u8 {
         self.fixed_hdr.ds()
     }
 
     /// The Explicit Congestion Notification (ECN).
-    pub fn ecn(&self) -> u8 {
+    pub(crate) fn ecn(&self) -> u8 {
         self.fixed_hdr.ecn()
     }
 
     /// The flow label.
-    pub fn flowlabel(&self) -> u32 {
+    pub(crate) fn flowlabel(&self) -> u32 {
         self.fixed_hdr.flowlabel()
     }
 
     /// The hop limit.
-    pub fn hop_limit(&self) -> u8 {
+    pub(crate) fn hop_limit(&self) -> u8 {
         self.fixed_hdr.hop_limit
     }
 
@@ -125,18 +125,18 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     ///
     /// The Next Header field is the IPv6 equivalent of IPv4's protocol field,
     /// and uses the same codes, encoded by the Rust type `IpProto`.
-    pub fn next_header(&self) -> IpProto {
+    pub(crate) fn next_header(&self) -> IpProto {
         // TODO(tkilbourn): support extension headers
         IpProto::from(self.fixed_hdr.next_hdr)
     }
 
     /// The source IP address.
-    pub fn src_ip(&self) -> Ipv6Addr {
+    pub(crate) fn src_ip(&self) -> Ipv6Addr {
         Ipv6Addr::new(self.fixed_hdr.src_ip)
     }
 
     /// The destination IP address.
-    pub fn dst_ip(&self) -> Ipv6Addr {
+    pub(crate) fn dst_ip(&self) -> Ipv6Addr {
         Ipv6Addr::new(self.fixed_hdr.dst_ip)
     }
 
@@ -150,7 +150,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder(&self) -> Ipv6PacketBuilder {
+    pub(crate) fn builder(&self) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: self.ds(),
             ecn: self.ecn(),
@@ -165,7 +165,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
 
 impl<B: ByteSliceMut> Ipv6Packet<B> {
     /// Set the hop limit.
-    pub fn set_hop_limit(&mut self, hlim: u8) {
+    pub(crate) fn set_hop_limit(&mut self, hlim: u8) {
         self.fixed_hdr.hop_limit = hlim;
     }
 }
@@ -187,7 +187,7 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
 }
 
 /// A builder for IPv6 packets.
-pub struct Ipv6PacketBuilder {
+pub(crate) struct Ipv6PacketBuilder {
     ds: u8,
     ecn: u8,
     flowlabel: u32,
@@ -199,7 +199,7 @@ pub struct Ipv6PacketBuilder {
 
 impl Ipv6PacketBuilder {
     /// Construct a new `Ipv6PacketBuilder`.
-    pub fn new(
+    pub(crate) fn new(
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
         hop_limit: u8,
@@ -221,7 +221,7 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `ds` panics if `ds` is greater than 2^6 - 1.
-    pub fn ds(&mut self, ds: u8) {
+    pub(crate) fn ds(&mut self, ds: u8) {
         assert!(ds <= 1 << 6, "invalid DS: {}", ds);
         self.ds = ds;
     }
@@ -231,7 +231,7 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `ecn` panics if `ecn` is greater than 3.
-    pub fn ecn(&mut self, ecn: u8) {
+    pub(crate) fn ecn(&mut self, ecn: u8) {
         assert!(ecn <= 0b11, "invalid ECN: {}", ecn);
         self.ecn = ecn
     }
@@ -241,7 +241,7 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `flowlabel` panics if `flowlabel` is greater than 2^20 - 1.
-    pub fn flowlabel(&mut self, flowlabel: u32) {
+    pub(crate) fn flowlabel(&mut self, flowlabel: u32) {
         assert!(flowlabel <= 1 << 20, "invalid flowlabel: {:x}", flowlabel);
         self.flowlabel = flowlabel;
     }

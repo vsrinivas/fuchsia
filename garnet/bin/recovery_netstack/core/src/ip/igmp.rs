@@ -14,7 +14,7 @@ use log::trace;
 use packet::BufferMut;
 
 /// Receive an IGMP message in an IP packet.
-pub fn receive_igmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn receive_igmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,

@@ -15,7 +15,7 @@ macro_rules! create_net_enum {
       #[allow(missing_docs)]
       #[derive(Debug, PartialEq, Copy, Clone)]
       #[repr(u8)]
-      pub enum $t {
+pub(crate)enum $t {
         $($val = $t::$const),*
       }
 

@@ -28,7 +28,7 @@ impl Mac {
     ///
     /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame should
     /// be received by all receivers regardless of their local MAC address.
-    pub const BROADCAST: Mac = Mac([0xFF; 6]);
+    pub(crate) const BROADCAST: Mac = Mac([0xFF; 6]);
 
     const EUI_MAGIC: [u8; 2] = [0xff, 0xfe];
 
@@ -38,7 +38,7 @@ impl Mac {
     }
 
     /// Get the bytes of the MAC address.
-    pub fn bytes(&self) -> [u8; 6] {
+    pub(crate) fn bytes(&self) -> [u8; 6] {
         self.0
     }
 
@@ -47,8 +47,8 @@ impl Mac {
     /// `eui_magic` is the two bytes that are inserted between the MAC address
     /// to form the identifier. If None, the standard 0xfffe will be used.
     ///
-    /// TODO: remove `eui_magic` arg if/once it is unused.
-    pub fn to_eui64(&self, eui_magic: Option<[u8; 2]>) -> [u8; 8] {
+    // TODO: remove `eui_magic` arg if/once it is unused.
+    pub(crate) fn to_eui64(&self, eui_magic: Option<[u8; 2]>) -> [u8; 8] {
         let mut eui = [0; 8];
         eui[0..3].copy_from_slice(&self.0[0..3]);
         eui[3..5].copy_from_slice(&eui_magic.unwrap_or(Self::EUI_MAGIC));
@@ -63,7 +63,7 @@ impl Mac {
     /// to form the identifier. If None, the standard 0xfffe will be used.
     ///
     /// TODO: remove `eui_magic` arg if/once it is unused.
-    pub fn to_slaac_ipv6(&self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
+    pub(crate) fn to_slaac_ipv6(&self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
         let mut ipv6_addr = [0; 16];
         ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64(eui_magic));
@@ -74,7 +74,7 @@ impl Mac {
     ///
     /// Returns true if the least significant bit of the first byte of the
     /// address is 0.
-    pub fn is_unicast(&self) -> bool {
+    pub(crate) fn is_unicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         self.0[0] & 1 == 0
     }
@@ -83,7 +83,7 @@ impl Mac {
     ///
     /// Returns true if the least significant bit of the first byte of the
     /// address is 1.
-    pub fn is_multicast(&self) -> bool {
+    pub(crate) fn is_multicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         self.0[0] & 1 == 1
     }
@@ -91,7 +91,7 @@ impl Mac {
     /// Is this the broadcast MAC address?
     ///
     /// Returns true if this is the broadcast MAC address, FF:FF:FF:FF:FF:FF.
-    pub fn is_broadcast(&self) -> bool {
+    pub(crate) fn is_broadcast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         *self == Mac::BROADCAST
     }
@@ -100,7 +100,7 @@ impl Mac {
 /// An EtherType number.
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-pub enum EtherType {
+pub(crate) enum EtherType {
     Ipv4,
     Arp,
     Ipv6,
@@ -157,7 +157,7 @@ impl Debug for EtherType {
 }
 
 /// The state associated with an Ethernet device.
-pub struct EthernetDeviceState {
+pub(crate) struct EthernetDeviceState {
     mac: Mac,
     mtu: usize,
     ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
@@ -167,7 +167,7 @@ pub struct EthernetDeviceState {
 
 impl EthernetDeviceState {
     /// Construct a new `EthernetDeviceState`.
-    pub fn new(mac: Mac, mtu: usize) -> EthernetDeviceState {
+    pub(crate) fn new(mac: Mac, mtu: usize) -> EthernetDeviceState {
         // TODO(joshlf): Ensure that the configured MTU meets the minimum IPv6 MTU
         // requirement. A few questions:
         // - How much do we have to take into account link-layer headers when
@@ -185,7 +185,7 @@ impl EthernetDeviceState {
 }
 
 /// An extension trait adding IP-related functionality to `Ipv4` and `Ipv6`.
-pub trait EthernetIpExt: Ip {
+pub(crate) trait EthernetIpExt: Ip {
     const ETHER_TYPE: EtherType;
 }
 
@@ -207,7 +207,7 @@ impl EthernetIpExt for Ipv6 {
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new Ethernet frame and sends it.
 #[specialize_ip_address]
-pub fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
+pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     ctx: &mut Context<D>,
     device_id: u64,
     local_addr: A,
@@ -243,7 +243,11 @@ pub fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
 }
 
 /// Receive an Ethernet frame from the network.
-pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, bytes: &mut [u8]) {
+pub(crate) fn receive_frame<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+    bytes: &mut [u8],
+) {
     let mut buffer = Buf::new(bytes, ..);
     let frame = if let Ok(frame) = buffer.parse::<EthernetFrame<_>>() {
         frame
@@ -279,7 +283,7 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
 
 /// Get the IP address and subnet associated with this device.
 #[specialize_ip_address]
-pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: u64,
 ) -> Option<AddrSubnet<A>> {
@@ -291,7 +295,7 @@ pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 
 /// Set the IP address and subnet associated with this device.
 #[specialize_ip_address]
-pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: u64,
     addr_sub: AddrSubnet<A>,
@@ -303,7 +307,7 @@ pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Insert an entry into this device's ARP table.
-pub fn insert_arp_table_entry<D: EventDispatcher>(
+pub(crate) fn insert_arp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device_id: u64,
     addr: Ipv4Addr,
@@ -324,7 +328,7 @@ fn get_device_state<D: EventDispatcher>(
 }
 
 // Dummy type used to implement ArpDevice.
-pub struct EthernetArpDevice;
+pub(crate) struct EthernetArpDevice;
 
 impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;

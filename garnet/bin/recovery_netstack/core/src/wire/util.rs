@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use self::checksum::*;
-pub use self::options::*;
-pub use self::records::*;
+pub(crate) use self::checksum::*;
+pub(crate) use self::options::*;
 
 /// Whether `size` fits in a `u16`.
-pub fn fits_in_u16(size: usize) -> bool {
+pub(crate) fn fits_in_u16(size: usize) -> bool {
     size < 1 << 16
 }
 
 /// Whether `size` fits in a `u32`.
-pub fn fits_in_u32(size: usize) -> bool {
+pub(crate) fn fits_in_u32(size: usize) -> bool {
     // trivially true when usize is 32 bits wide
     cfg!(target_pointer_width = "32") || size < 1 << 32
 }
@@ -32,7 +31,7 @@ mod checksum {
     /// in [RFC 1071].
     ///
     /// [RFC 1071]: https://tools.ietf.org/html/rfc1071
-    pub struct Checksum {
+    pub(crate) struct Checksum {
         sum: u32,
         // since odd-length inputs are treated specially, we store the trailing
         // byte for use in future calls to add_bytes(), and only treat it as a
@@ -42,7 +41,7 @@ mod checksum {
 
     impl Checksum {
         /// Initialize a new checksum.
-        pub fn new() -> Self {
+        pub(crate) fn new() -> Self {
             Checksum { sum: 0, trailing_byte: None }
         }
 
@@ -50,7 +49,7 @@ mod checksum {
         ///
         /// If `bytes` does not contain an even number of bytes, a single zero byte
         /// will be added to the end before updating the checksum.
-        pub fn add_bytes(&mut self, mut bytes: &[u8]) {
+        pub(crate) fn add_bytes(&mut self, mut bytes: &[u8]) {
             // if there's a trailing byte, consume it first
             if let Some(byte) = self.trailing_byte {
                 if !bytes.is_empty() {
@@ -87,7 +86,7 @@ mod checksum {
         /// `update` panics if `old.len() != new.len()`.
         ///
         /// [RFC 1624]: https://tools.ietf.org/html/rfc1624
-        pub fn update(checksum: u16, mut old: &[u8], mut new: &[u8]) -> u16 {
+        pub(crate) fn update(checksum: u16, mut old: &[u8], mut new: &[u8]) -> u16 {
             assert_eq!(old.len(), new.len());
 
             // We compute on the sum, not the one's complement of the sum.
@@ -123,7 +122,7 @@ mod checksum {
         /// If an odd number of bytes have been added so far, the checksum will
         /// be computed as though a single 0 byte had been added at the end in
         /// order to even out the length of the input.
-        pub fn checksum(&self) -> u16 {
+        pub(crate) fn checksum(&self) -> u16 {
             let mut sum = self.sum;
             if let Some(byte) = self.trailing_byte {
                 Self::add_u16(&mut sum, NetworkEndian::read_u16(&[byte, 0]));
@@ -272,20 +271,20 @@ mod records {
     /// `Records` represents a pre-parsed set of records whose structure is
     /// enforced by the impl in `O`.
     #[derive(Debug)]
-    pub struct Records<B, R: RecordsImplLimit> {
+    pub(crate) struct Records<B, R: RecordsImplLimit> {
         bytes: B,
         limit: R::Limit,
     }
 
     /// An iterator over the records contained inside a `Records` instance.
-    pub struct RecordsIter<'a, R: RecordsImpl<'a>> {
+    pub(crate) struct RecordsIter<'a, R: RecordsImpl<'a>> {
         bytes: &'a [u8],
         limit: R::Limit,
     }
 
     /// Trait that specifies the type of errors to emit
     /// when parsing sequential records.
-    pub trait RecordsImplErr {
+    pub(crate) trait RecordsImplErr {
         type Error;
     }
 
@@ -299,7 +298,7 @@ mod records {
     /// that can be provided as the `Limit` type in the `RecordsImpl` trait.
     /// The `usize` impl will limit to `n` records read, while `()` will not
     /// impose any limit.
-    pub trait RecordsLimit {
+    pub(crate) trait RecordsLimit {
         /// Decrements the current value held by 1.
         /// Implementers should `panic` if `decrement` is called
         /// when `has_more` would've returned `false`.
@@ -328,7 +327,7 @@ mod records {
     }
 
     /// Trait that provides record limiting to `RecordsImpl` implementers.
-    pub trait RecordsImplLimit {
+    pub(crate) trait RecordsImplLimit {
         /// A limit type that can be used to limit record-reading.
         /// See the `RecordsLimit` trait.
         type Limit: Sized + RecordsLimit + Clone;
@@ -339,7 +338,7 @@ mod records {
     /// `RecordsImpl` provides functions to parse sequential records.
     ///  It is required in order to construct a `Records` or
     /// `RecordsIter`.
-    pub trait RecordsImpl<'a>: RecordsImplErr + RecordsImplLimit {
+    pub(crate) trait RecordsImpl<'a>: RecordsImplErr + RecordsImplLimit {
         /// The type of a single record; the output from the `parse` function.
         ///
         /// For long or variable-length data, the user is advised to make
@@ -398,7 +397,10 @@ mod records {
         /// to verify that they are well-formed.
         /// Once `parse_with_limit` returns successfully, the resulting
         /// `Records` can be used to construct infallible iterators.
-        pub fn parse_with_limit(bytes: B, limit: R::Limit) -> Result<Records<B, R>, R::Error> {
+        pub(crate) fn parse_with_limit(
+            bytes: B,
+            limit: R::Limit,
+        ) -> Result<Records<B, R>, R::Error> {
             // First, do a single pass over the bytes to detect any errors up
             // front. Once this is done, since we have a reference to `bytes`,
             // these bytes can't change out from under us, and so we can treat
@@ -423,7 +425,7 @@ mod records {
         /// Parses a set of records.
         ///
         /// Equivalent to calling `parse_with_limit` with `limit = ()`.
-        pub fn parse(bytes: B) -> Result<Records<B, R>, R::Error> {
+        pub(crate) fn parse(bytes: B) -> Result<Records<B, R>, R::Error> {
             Self::parse_with_limit(bytes, ())
         }
     }
@@ -436,7 +438,7 @@ mod records {
         ///
         /// `bytes` returns a reference to the byte slice backing this
         /// `Options`.
-        pub fn bytes(&self) -> &[u8] {
+        pub(crate) fn bytes(&self) -> &[u8] {
             &self.bytes
         }
     }
@@ -451,7 +453,7 @@ mod records {
         /// `iter` constructs an iterator over the records. Since the records
         /// were validated in `parse`, then so long as `from_kind` and
         /// `from_data` are deterministic, the iterator is infallible.
-        pub fn iter(&'a self) -> RecordsIter<'a, R> {
+        pub(crate) fn iter(&'a self) -> RecordsIter<'a, R> {
             RecordsIter { bytes: &self.bytes, limit: self.limit.clone() }
         }
     }
@@ -521,7 +523,7 @@ mod records {
         /// lifetime `a`.
         /// All slices returned by the `BufferView` impl of `LongLivedBuff` are
         /// guaranteed to return slice references tied to the same lifetime `a`.
-        pub fn new(data: &'a [u8]) -> LongLivedBuff<'a> {
+        pub(crate) fn new(data: &'a [u8]) -> LongLivedBuff<'a> {
             LongLivedBuff::<'a>(data)
         }
     }
@@ -698,7 +700,7 @@ mod options {
     ///
     /// `Options` represents a parsed set of options from a TCP or IPv4 header.
     /// `Options` uses `Records` below the surface.
-    pub type Options<B, O> = Records<B, O>;
+    pub(crate) type Options<B, O> = Records<B, O>;
 
     impl<'a, O> RecordsImplErr for O
     where
@@ -734,7 +736,7 @@ mod options {
     /// larger than the remaining bytes in the options buffer), or `External`,
     /// which indicates that the `OptionImpl::parse` callback returned an error.
     #[derive(Debug, Eq, PartialEq)]
-    pub enum OptionParseErr<E> {
+    pub(crate) enum OptionParseErr<E> {
         Internal,
         External(E),
     }
@@ -744,7 +746,7 @@ mod options {
     /// This is split from the `OptionImpl` trait so that the associated `Error`
     /// type does not depend on the lifetime parameter to `OptionImpl`.
     /// Lifetimes aside, `OptionImplError` is conceptually part of `OptionImpl`.
-    pub trait OptionImplErr {
+    pub(crate) trait OptionImplErr {
         type Error;
     }
 
@@ -759,7 +761,7 @@ mod options {
     /// `OptionImpl` provides functions to parse fixed- and variable-length
     /// options. It is required in order to construct an `Options` or
     /// `OptionIter`.
-    pub trait OptionImpl<'a>: OptionImplErr {
+    pub(crate) trait OptionImpl<'a>: OptionImplErr {
         /// The value to multiply read lengths by.
         ///
         /// By default, this value is 1, but for some protocols (such as NDP)

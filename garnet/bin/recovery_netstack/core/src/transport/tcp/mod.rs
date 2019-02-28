@@ -8,7 +8,7 @@ mod conn;
 mod listen;
 mod types;
 
-pub use self::types::*;
+pub(crate) use self::types::*;
 
 use std::collections::HashMap;
 use std::num::NonZeroU16;
@@ -24,7 +24,7 @@ use self::listen::Listener;
 
 /// The state associated with the TCP protocol.
 #[derive(Default)]
-pub struct TcpState {
+pub(crate) struct TcpState {
     v4: TcpStateInner<Ipv4>,
     v6: TcpStateInner<Ipv6>,
 }
@@ -37,7 +37,7 @@ struct TcpStateInner<I: Ip> {
 
 /// The identifier for timer events in the TCP layer.
 #[derive(Copy, Clone, PartialEq)]
-pub struct TcpTimerId {
+pub(crate) struct TcpTimerId {
     // TODO
 }
 
@@ -59,7 +59,7 @@ struct FourTuple<A: IpAddress> {
 ///
 /// In the event of an unreachable port, `receive_ip_packet` returns the buffer
 /// in its original state (with the TCP segment un-parsed) in the `Err` variant.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,

@@ -20,9 +20,9 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::Ipv4Addr;
 
 #[cfg(test)]
-pub const ARP_HDR_LEN: usize = 8;
+pub(crate) const ARP_HDR_LEN: usize = 8;
 #[cfg(test)]
-pub const ARP_ETHERNET_IPV4_PACKET_LEN: usize = 28;
+pub(crate) const ARP_ETHERNET_IPV4_PACKET_LEN: usize = 28;
 
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -87,7 +87,7 @@ impl Header {
 /// Note that `peek_arp_types` only inspects certain fields in the header, and
 /// so `peek_arp_types` succeeding does not guarantee that a subsequent call to
 /// `parse` will also succeed.
-pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, EtherType)> {
+pub(crate) fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, EtherType)> {
     let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     let hw = ArpHardwareType::from_u16(header.hardware_protocol()).ok_or_else(debug_err_fn!(
@@ -169,7 +169,7 @@ impl<HwAddr: Copy, ProtoAddr: Copy> Body<HwAddr, ProtoAddr> {
 }
 
 /// A trait to represent a ARP hardware type.
-pub trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone {
+pub(crate) trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone {
     /// The hardware type.
     fn htype() -> ArpHardwareType;
     /// The in-memory size of an instance of the type.
@@ -177,7 +177,7 @@ pub trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone {
 }
 
 /// A trait to represent a ARP protocol type.
-pub trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone {
+pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone {
     /// The protocol type.
     fn ptype() -> EtherType;
     /// The in-memory size of an instance of the type.
@@ -218,7 +218,7 @@ impl PType for Ipv4Addr {
 /// A `ArpPacket` shares its underlying memory with the byte slice it was parsed
 /// from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
-pub struct ArpPacket<B, HwAddr, ProtoAddr> {
+pub(crate) struct ArpPacket<B, HwAddr, ProtoAddr> {
     header: LayoutVerified<B, Header>,
     body: LayoutVerified<B, Body<HwAddr, ProtoAddr>>,
 }
@@ -279,33 +279,33 @@ where
     ProtoAddr: Copy + PType + FromBytes + Unaligned,
 {
     /// The type of ARP packet
-    pub fn operation(&self) -> ArpOp {
+    pub(crate) fn operation(&self) -> ArpOp {
         // This is verified in `parse`, so should be safe to unwrap
         ArpOp::from_u16(self.header.op_code()).unwrap()
     }
 
     /// The hardware address of the ARP packet sender.
-    pub fn sender_hardware_address(&self) -> HwAddr {
+    pub(crate) fn sender_hardware_address(&self) -> HwAddr {
         self.body.sha
     }
 
     /// The protocol address of the ARP packet sender.
-    pub fn sender_protocol_address(&self) -> ProtoAddr {
+    pub(crate) fn sender_protocol_address(&self) -> ProtoAddr {
         self.body.spa
     }
 
     /// The hardware address of the ARP packet target.
-    pub fn target_hardware_address(&self) -> HwAddr {
+    pub(crate) fn target_hardware_address(&self) -> HwAddr {
         self.body.tha
     }
 
     /// The protocol address of the ARP packet target.
-    pub fn target_protocol_address(&self) -> ProtoAddr {
+    pub(crate) fn target_protocol_address(&self) -> ProtoAddr {
         self.body.tpa
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder(&self) -> ArpPacketBuilder<HwAddr, ProtoAddr> {
+    pub(crate) fn builder(&self) -> ArpPacketBuilder<HwAddr, ProtoAddr> {
         ArpPacketBuilder {
             op: self.operation(),
             sha: self.sender_hardware_address(),
@@ -317,7 +317,7 @@ where
 }
 
 /// A builder for ARP packets.
-pub struct ArpPacketBuilder<HwAddr, ProtoAddr> {
+pub(crate) struct ArpPacketBuilder<HwAddr, ProtoAddr> {
     op: ArpOp,
     sha: HwAddr,
     spa: ProtoAddr,
@@ -327,7 +327,7 @@ pub struct ArpPacketBuilder<HwAddr, ProtoAddr> {
 
 impl<HwAddr, ProtoAddr> ArpPacketBuilder<HwAddr, ProtoAddr> {
     /// Construct a new `ArpPacketBuilder`.
-    pub fn new(
+    pub(crate) fn new(
         operation: ArpOp,
         sender_hardware_addr: HwAddr,
         sender_protocol_addr: ProtoAddr,

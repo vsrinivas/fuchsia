@@ -27,7 +27,7 @@ use super::{
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub enum Icmpv4Packet<B> {
+pub(crate) enum Icmpv4Packet<B> {
     EchoReply(IcmpPacket<Ipv4, B, IcmpEchoReply>),
     DestUnreachable(IcmpPacket<Ipv4, B, IcmpDestUnreachable>),
     Redirect(IcmpPacket<Ipv4, B, Icmpv4Redirect>),
@@ -154,7 +154,7 @@ create_net_enum! {
 /// An ICMPv4 Redirect Message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct Icmpv4Redirect {
+pub(crate) struct Icmpv4Redirect {
     gateway: Ipv4Addr,
 }
 
@@ -212,12 +212,12 @@ struct Timestamp {
 /// An ICMPv4 Timestamp Request message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
-pub struct Icmpv4TimestampRequest(Timestamp);
+pub(crate) struct Icmpv4TimestampRequest(Timestamp);
 
 /// An ICMPv4 Timestamp Reply message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
-pub struct Icmpv4TimestampReply(Timestamp);
+pub(crate) struct Icmpv4TimestampReply(Timestamp);
 
 impl_icmp_message!(Ipv4, Icmpv4TimestampRequest, TimestampRequest, IcmpUnusedCode);
 impl_icmp_message!(Ipv4, Icmpv4TimestampReply, TimestampReply, IcmpUnusedCode);
@@ -232,7 +232,7 @@ create_net_enum! {
 /// An ICMPv4 Parameter Problem message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct Icmpv4ParameterProblem {
+pub(crate) struct Icmpv4ParameterProblem {
     pointer: u8,
     _unused: [u8; 3],
     /* The rest of Icmpv4ParameterProblem is variable-length, so is stored in

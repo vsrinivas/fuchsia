@@ -7,14 +7,14 @@
 use failure::Fail;
 
 /// Results returned from many functions in the netstack.
-pub type Result<T> = std::result::Result<T, NetstackError>;
+pub(crate) type Result<T> = std::result::Result<T, NetstackError>;
 
 /// Results returned from parsing functions in the netstack.
-pub type ParseResult<T> = std::result::Result<T, ParseError>;
+pub(crate) type ParseResult<T> = std::result::Result<T, ParseError>;
 
 /// Top-level error type the netstack.
 #[derive(Fail, Debug)]
-pub enum NetstackError {
+pub(crate) enum NetstackError {
     #[fail(display = "{}", _0)]
     /// Errors related to packet parsing.
     Parse(#[cause] ParseError),
@@ -24,7 +24,7 @@ pub enum NetstackError {
 /// Error type for packet parsing.
 #[derive(Fail, Debug, PartialEq)]
 #[allow(missing_docs)]
-pub enum ParseError {
+pub(crate) enum ParseError {
     #[fail(display = "Operation is not supported")]
     NotSupported,
     #[fail(display = "Operation was not expected in this context")]

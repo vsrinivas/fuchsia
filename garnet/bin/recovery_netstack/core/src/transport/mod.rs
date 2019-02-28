@@ -55,8 +55,8 @@
 //! connection will be accepted from a different interface. This is part of the
 //! "weak host model" vs "strong host model" discussion.
 
-pub mod tcp;
-pub mod udp;
+pub(crate) mod tcp;
+pub(crate) mod udp;
 
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -65,7 +65,7 @@ use crate::transport::udp::UdpEventDispatcher;
 use crate::{Context, EventDispatcher};
 
 /// The state associated with the transport layer.
-pub struct TransportLayerState<D: EventDispatcher> {
+pub(crate) struct TransportLayerState<D: EventDispatcher> {
     tcp: self::tcp::TcpState,
     udp: self::udp::UdpState<D>,
 }
@@ -81,13 +81,13 @@ impl<D: EventDispatcher> Default for TransportLayerState<D> {
 
 /// The identifier for timer events in the transport layer.
 #[derive(Copy, Clone, PartialEq)]
-pub enum TransportLayerTimerId {
+pub(crate) enum TransportLayerTimerId {
     /// A timer event in the TCP layer
     Tcp(tcp::TcpTimerId),
 }
 
 /// Handle a timer event firing in the transport layer.
-pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TransportLayerTimerId) {
+pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TransportLayerTimerId) {
     unimplemented!()
 }
 

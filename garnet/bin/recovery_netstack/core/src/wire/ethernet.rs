@@ -14,17 +14,17 @@ use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
 
 // used in PacketBuilder impl
-pub const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
+pub(crate) const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
 #[cfg(test)]
-pub const ETHERNET_HDR_LEN_WITH_TAG: usize = 18;
+pub(crate) const ETHERNET_HDR_LEN_WITH_TAG: usize = 18;
 #[cfg(test)]
-pub const ETHERNET_MIN_FRAME_LEN: usize = 60;
+pub(crate) const ETHERNET_MIN_FRAME_LEN: usize = 60;
 // used in PacketBuilder impl
-pub const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
+pub(crate) const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
 #[cfg(test)]
-pub const ETHERNET_MIN_BODY_LEN_WITH_TAG: usize = 42;
+pub(crate) const ETHERNET_MIN_BODY_LEN_WITH_TAG: usize = 42;
 #[cfg(test)]
-pub const ETHERNET_ETHERTYPE_BYTE_OFFSET: usize = 12;
+pub(crate) const ETHERNET_ETHERTYPE_BYTE_OFFSET: usize = 12;
 
 const ETHERNET_MIN_ILLEGAL_ETHERTYPE: u16 = 1501;
 const ETHERNET_MAX_ILLEGAL_ETHERTYPE: u16 = 1535;
@@ -44,7 +44,7 @@ const TPID_8021AD: u16 = 0x88a8;
 /// An `EthernetFrame` shares its underlying memory with the byte slice it was
 /// parsed from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
-pub struct EthernetFrame<B> {
+pub(crate) struct EthernetFrame<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     tag: Option<LayoutVerified<B, [u8; 4]>>,
     ethertype: LayoutVerified<B, [u8; 2]>,
@@ -107,17 +107,17 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
 
 impl<B: ByteSlice> EthernetFrame<B> {
     /// The frame body.
-    pub fn body(&self) -> &[u8] {
+    pub(crate) fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The source MAC address.
-    pub fn src_mac(&self) -> Mac {
+    pub(crate) fn src_mac(&self) -> Mac {
         Mac::new(self.hdr_prefix.src_mac)
     }
 
     /// The destination MAC address.
-    pub fn dst_mac(&self) -> Mac {
+    pub(crate) fn dst_mac(&self) -> Mac {
         Mac::new(self.hdr_prefix.dst_mac)
     }
 
@@ -126,7 +126,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
     /// `ethertype` returns the `EtherType` from the Ethernet header. However,
     /// some values of the EtherType header field are used to indicate the
     /// length of the frame's body. In this case, `ethertype` returns `None`.
-    pub fn ethertype(&self) -> Option<EtherType> {
+    pub(crate) fn ethertype(&self) -> Option<EtherType> {
         let et = NetworkEndian::read_u16(&self.ethertype[..]);
         if et < ETHERNET_MIN_ILLEGAL_ETHERTYPE {
             return None;
@@ -152,7 +152,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
     }
 
     /// Construct a builder with the same contents as this frame.
-    pub fn builder(&self) -> EthernetFrameBuilder {
+    pub(crate) fn builder(&self) -> EthernetFrameBuilder {
         EthernetFrameBuilder {
             src_mac: self.src_mac(),
             dst_mac: self.dst_mac(),
@@ -162,7 +162,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
 }
 
 /// A builder for Ethernet frames.
-pub struct EthernetFrameBuilder {
+pub(crate) struct EthernetFrameBuilder {
     src_mac: Mac,
     dst_mac: Mac,
     ethertype: u16,
@@ -170,7 +170,7 @@ pub struct EthernetFrameBuilder {
 
 impl EthernetFrameBuilder {
     /// Construct a new `EthernetFrameBuilder`.
-    pub fn new(src_mac: Mac, dst_mac: Mac, ethertype: EtherType) -> EthernetFrameBuilder {
+    pub(crate) fn new(src_mac: Mac, dst_mac: Mac, ethertype: EtherType) -> EthernetFrameBuilder {
         EthernetFrameBuilder { src_mac, dst_mac, ethertype: ethertype.into() }
     }
 }

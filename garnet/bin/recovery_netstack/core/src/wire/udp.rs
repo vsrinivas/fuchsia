@@ -18,7 +18,7 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto};
 use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum};
 
-pub const HEADER_BYTES: usize = 8;
+pub(crate) const HEADER_BYTES: usize = 8;
 
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -63,20 +63,20 @@ impl Header {
 ///
 /// A `UdpPacket` - whether parsed using `parse` or created using `serialize` -
 /// maintains the invariant that the checksum is always valid.
-pub struct UdpPacket<B> {
+pub(crate) struct UdpPacket<B> {
     header: LayoutVerified<B, Header>,
     body: B,
 }
 
 /// Arguments required to parse a UDP packet.
-pub struct UdpParseArgs<A: IpAddress> {
+pub(crate) struct UdpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
 impl<A: IpAddress> UdpParseArgs<A> {
     /// Construct a new `UdpParseArgs`.
-    pub fn new(src_ip: A, dst_ip: A) -> UdpParseArgs<A> {
+    pub(crate) fn new(src_ip: A, dst_ip: A) -> UdpParseArgs<A> {
         UdpParseArgs { src_ip, dst_ip }
     }
 }
@@ -171,19 +171,19 @@ impl<B: ByteSlice> UdpPacket<B> {
     }
 
     /// The packet body.
-    pub fn body(&self) -> &[u8] {
+    pub(crate) fn body(&self) -> &[u8] {
         self.body.deref()
     }
 
     /// The source UDP port, if any.
     ///
     /// The source port is optional, and may have been omitted by the sender.
-    pub fn src_port(&self) -> Option<NonZeroU16> {
+    pub(crate) fn src_port(&self) -> Option<NonZeroU16> {
         NonZeroU16::new(self.header.src_port())
     }
 
     /// The destination UDP port.
-    pub fn dst_port(&self) -> NonZeroU16 {
+    pub(crate) fn dst_port(&self) -> NonZeroU16 {
         NonZeroU16::new(self.header.dst_port()).unwrap()
     }
 
@@ -196,7 +196,7 @@ impl<B: ByteSlice> UdpPacket<B> {
     /// On IPv6, it is guaranteed that `checksummed` will return true because
     /// IPv6 requires a checksum, and so any UDP packet missing one will fail
     /// validation in `parse`.
-    pub fn checksummed(&self) -> bool {
+    pub(crate) fn checksummed(&self) -> bool {
         self.header.checksum() != 0
     }
 
@@ -212,7 +212,7 @@ impl<B: ByteSlice> UdpPacket<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
+    pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
         UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
     }
 }
@@ -224,7 +224,7 @@ impl<B: ByteSlice> UdpPacket<B> {
 // has a valid checksum.
 
 /// A builder for UDP packets.
-pub struct UdpPacketBuilder<A: IpAddress> {
+pub(crate) struct UdpPacketBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: Option<NonZeroU16>,
@@ -233,7 +233,7 @@ pub struct UdpPacketBuilder<A: IpAddress> {
 
 impl<A: IpAddress> UdpPacketBuilder<A> {
     /// Construct a new `UdpPacketBuilder`.
-    pub fn new(
+    pub(crate) fn new(
         src_ip: A,
         dst_ip: A,
         src_port: Option<NonZeroU16>,

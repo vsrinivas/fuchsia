@@ -15,7 +15,7 @@
 /// [RFC 793]: https://tools.ietf.org/html/rfc793#page-17
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum TcpOption<'a> {
+pub(crate) enum TcpOption<'a> {
     /// A Maximum Segment Size (MSS) option.
     Mss(u16),
     /// A window scale option.
@@ -40,9 +40,9 @@ pub enum TcpOption<'a> {
 ///
 /// [RFC 2018]: https://tools.ietf.org/html/rfc2018
 #[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
-pub struct TcpSackBlock {
+pub(crate) struct TcpSackBlock {
     /// The sequence number of the first byte in this block.
-    pub left_edge: u32,
+    pub(crate) left_edge: u32,
     /// The sequence number of the first byte following the end of this block.
-    pub right_edge: u32,
+    pub(crate) right_edge: u32,
 }

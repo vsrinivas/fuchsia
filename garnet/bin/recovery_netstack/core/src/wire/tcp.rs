@@ -22,9 +22,9 @@ use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum, Options};
 use self::options::TcpOptionImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
-pub const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
+pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 #[cfg(test)]
-pub const TCP_MAX_HDR_LEN: usize = 60;
+pub(crate) const TCP_MAX_HDR_LEN: usize = 60;
 
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -40,11 +40,11 @@ struct HeaderPrefix {
 }
 
 impl HeaderPrefix {
-    pub fn src_port(&self) -> u16 {
+    pub(crate) fn src_port(&self) -> u16 {
         NetworkEndian::read_u16(&self.src_port)
     }
 
-    pub fn dst_port(&self) -> u16 {
+    pub(crate) fn dst_port(&self) -> u16 {
         NetworkEndian::read_u16(&self.dst_port)
     }
 
@@ -62,21 +62,21 @@ impl HeaderPrefix {
 /// A `TcpSegment` - whether parsed using `parse` or created using
 /// `TcpSegmentBuilder` - maintains the invariant that the checksum is always
 /// valid.
-pub struct TcpSegment<B> {
+pub(crate) struct TcpSegment<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     options: Options<B, TcpOptionImpl>,
     body: B,
 }
 
 /// Arguments required to parse a TCP segment.
-pub struct TcpParseArgs<A: IpAddress> {
+pub(crate) struct TcpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
 impl<A: IpAddress> TcpParseArgs<A> {
     /// Construct a new `TcpParseArgs`.
-    pub fn new(src_ip: A, dst_ip: A) -> TcpParseArgs<A> {
+    pub(crate) fn new(src_ip: A, dst_ip: A) -> TcpParseArgs<A> {
         TcpParseArgs { src_ip, dst_ip }
     }
 }
@@ -127,7 +127,7 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegme
 
 impl<B: ByteSlice> TcpSegment<B> {
     /// Iterate over the TCP header options.
-    pub fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = TcpOption> {
+    pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = TcpOption> {
         self.options.iter()
     }
 
@@ -167,29 +167,29 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// The segment body.
-    pub fn body(&self) -> &[u8] {
+    pub(crate) fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The source port.
-    pub fn src_port(&self) -> NonZeroU16 {
+    pub(crate) fn src_port(&self) -> NonZeroU16 {
         NonZeroU16::new(self.hdr_prefix.src_port()).unwrap()
     }
 
     /// The destination port.
-    pub fn dst_port(&self) -> NonZeroU16 {
+    pub(crate) fn dst_port(&self) -> NonZeroU16 {
         NonZeroU16::new(self.hdr_prefix.dst_port()).unwrap()
     }
 
     /// The sequence number.
-    pub fn seq_num(&self) -> u32 {
+    pub(crate) fn seq_num(&self) -> u32 {
         NetworkEndian::read_u32(&self.hdr_prefix.seq_num)
     }
 
     /// The acknowledgement number.
     ///
     /// If the ACK flag is not set, `ack_num` returns `None`.
-    pub fn ack_num(&self) -> Option<u32> {
+    pub(crate) fn ack_num(&self) -> Option<u32> {
         if self.get_flag(ACK_MASK) {
             Some(NetworkEndian::read_u32(&self.hdr_prefix.ack))
         } else {
@@ -202,22 +202,22 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// The RST flag.
-    pub fn rst(&self) -> bool {
+    pub(crate) fn rst(&self) -> bool {
         self.get_flag(RST_MASK)
     }
 
     /// The SYN flag.
-    pub fn syn(&self) -> bool {
+    pub(crate) fn syn(&self) -> bool {
         self.get_flag(SYN_MASK)
     }
 
     /// The FIN flag.
-    pub fn fin(&self) -> bool {
+    pub(crate) fn fin(&self) -> bool {
         self.get_flag(FIN_MASK)
     }
 
     /// The sender's window size.
-    pub fn window_size(&self) -> u16 {
+    pub(crate) fn window_size(&self) -> u16 {
         NetworkEndian::read_u16(&self.hdr_prefix.window_size)
     }
 
@@ -233,7 +233,7 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
+    pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
         let mut s = TcpSegmentBuilder {
             src_ip,
             dst_ip,
@@ -258,7 +258,7 @@ impl<B: ByteSlice> TcpSegment<B> {
 // always has a valid checksum.
 
 /// A builder for TCP segments.
-pub struct TcpSegmentBuilder<A: IpAddress> {
+pub(crate) struct TcpSegmentBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: u16,
@@ -273,7 +273,7 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
     /// Construct a new `TcpSegmentBuilder`.
     ///
     /// If `ack_num` is `Some`, then the ACK flag will be set.
-    pub fn new(
+    pub(crate) fn new(
         src_ip: A,
         dst_ip: A,
         src_port: NonZeroU16,
@@ -304,17 +304,17 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
     }
 
     /// Set the RST flag.
-    pub fn rst(&mut self, rst: bool) {
+    pub(crate) fn rst(&mut self, rst: bool) {
         self.set_flag(RST_MASK, rst);
     }
 
     /// Set the SYN flag.
-    pub fn syn(&mut self, syn: bool) {
+    pub(crate) fn syn(&mut self, syn: bool) {
         self.set_flag(SYN_MASK, syn);
     }
 
     /// Set the FIN flag.
-    pub fn fin(&mut self, fin: bool) {
+    pub(crate) fn fin(&mut self, fin: bool) {
         self.set_flag(FIN_MASK, fin);
     }
 }
@@ -399,7 +399,7 @@ mod options {
     const OPTION_KIND_SACK: u8 = 5;
     const OPTION_KIND_TIMESTAMP: u8 = 8;
 
-    pub struct TcpOptionImpl;
+    pub(crate) struct TcpOptionImpl;
 
     impl OptionImplErr for TcpOptionImpl {
         type Error = ();

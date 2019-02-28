@@ -19,13 +19,13 @@ use crate::wire::util::{Checksum, Options};
 use self::options::Ipv4OptionImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
-pub const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
-pub const IPV4_MAX_HDR_LEN: usize = 60;
+pub(crate) const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
+pub(crate) const IPV4_MAX_HDR_LEN: usize = 60;
 
 #[allow(missing_docs)]
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub struct HeaderPrefix {
+pub(crate) struct HeaderPrefix {
     version_ihl: u8,
     dscp_ecn: u8,
     total_len: [u8; 2],
@@ -44,7 +44,7 @@ impl HeaderPrefix {
     }
 
     /// Get the Internet Header Length (IHL).
-    pub fn ihl(&self) -> u8 {
+    pub(crate) fn ihl(&self) -> u8 {
         self.version_ihl & 0xF
     }
 
@@ -66,7 +66,7 @@ impl HeaderPrefix {
 /// An `Ipv4Packet` - whether parsed using `parse` or created using
 /// `Ipv4PacketBuilder` - maintains the invariant that the checksum is always
 /// valid.
-pub struct Ipv4Packet<B> {
+pub(crate) struct Ipv4Packet<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     options: Options<B, Ipv4OptionImpl>,
     body: B,
@@ -125,7 +125,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
 
 impl<B: ByteSlice> Ipv4Packet<B> {
     /// Iterate over the IPv4 header options.
-    pub fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = Ipv4Option> {
+    pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = Ipv4Option> {
         self.options.iter()
     }
 
@@ -140,62 +140,62 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     /// The packet body.
-    pub fn body(&self) -> &[u8] {
+    pub(crate) fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The Differentiated Services Code Point (DSCP).
-    pub fn dscp(&self) -> u8 {
+    pub(crate) fn dscp(&self) -> u8 {
         self.hdr_prefix.dscp_ecn >> 2
     }
 
     /// The Explicit Congestion Notification (ECN).
-    pub fn ecn(&self) -> u8 {
+    pub(crate) fn ecn(&self) -> u8 {
         self.hdr_prefix.dscp_ecn & 3
     }
 
     /// The identification.
-    pub fn id(&self) -> u16 {
+    pub(crate) fn id(&self) -> u16 {
         NetworkEndian::read_u16(&self.hdr_prefix.id)
     }
 
     /// The Don't Fragment (DF) flag.
-    pub fn df_flag(&self) -> bool {
+    pub(crate) fn df_flag(&self) -> bool {
         // the flags are the top 3 bits, so we need to shift by an extra 5 bits
         self.hdr_prefix.flags_frag_off[0] & (1 << (5 + DF_FLAG_OFFSET)) > 0
     }
 
     /// The More Fragments (MF) flag.
-    pub fn mf_flag(&self) -> bool {
+    pub(crate) fn mf_flag(&self) -> bool {
         // the flags are the top 3 bits, so we need to shift by an extra 5 bits
         self.hdr_prefix.flags_frag_off[0] & (1 << (5 + MF_FLAG_OFFSET)) > 0
     }
 
     /// The fragment offset.
-    pub fn fragment_offset(&self) -> u16 {
+    pub(crate) fn fragment_offset(&self) -> u16 {
         ((u16::from(self.hdr_prefix.flags_frag_off[0] & 0x1F)) << 8)
             | u16::from(self.hdr_prefix.flags_frag_off[1])
     }
 
     /// The Time To Live (TTL).
-    pub fn ttl(&self) -> u8 {
+    pub(crate) fn ttl(&self) -> u8 {
         self.hdr_prefix.ttl
     }
 
     /// The IP Protocol.
     ///
     /// `proto` returns the `IpProto` from the protocol field.
-    pub fn proto(&self) -> IpProto {
+    pub(crate) fn proto(&self) -> IpProto {
         IpProto::from(self.hdr_prefix.proto)
     }
 
     /// The source IP address.
-    pub fn src_ip(&self) -> Ipv4Addr {
+    pub(crate) fn src_ip(&self) -> Ipv4Addr {
         Ipv4Addr::new(self.hdr_prefix.src_ip)
     }
 
     /// The destination IP address.
-    pub fn dst_ip(&self) -> Ipv4Addr {
+    pub(crate) fn dst_ip(&self) -> Ipv4Addr {
         Ipv4Addr::new(self.hdr_prefix.dst_ip)
     }
 
@@ -211,7 +211,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    pub fn builder(&self) -> Ipv4PacketBuilder {
+    pub(crate) fn builder(&self) -> Ipv4PacketBuilder {
         let mut s = Ipv4PacketBuilder {
             dscp: self.dscp(),
             ecn: self.ecn(),
@@ -236,7 +236,7 @@ where
     /// Set the Time To Live (TTL).
     ///
     /// Set the TTL and update the header checksum accordingly.
-    pub fn set_ttl(&mut self, ttl: u8) {
+    pub(crate) fn set_ttl(&mut self, ttl: u8) {
         // See the Checksum::update documentation for why we need to provide two
         // bytes which are at an even byte offset from the beginning of the
         // header.
@@ -270,7 +270,7 @@ where
 }
 
 /// A builder for IPv4 packets.
-pub struct Ipv4PacketBuilder {
+pub(crate) struct Ipv4PacketBuilder {
     dscp: u8,
     ecn: u8,
     id: u16,
@@ -284,7 +284,12 @@ pub struct Ipv4PacketBuilder {
 
 impl Ipv4PacketBuilder {
     /// Construct a new `Ipv4PacketBuilder`.
-    pub fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: IpProto) -> Ipv4PacketBuilder {
+    pub(crate) fn new(
+        src_ip: Ipv4Addr,
+        dst_ip: Ipv4Addr,
+        ttl: u8,
+        proto: IpProto,
+    ) -> Ipv4PacketBuilder {
         Ipv4PacketBuilder {
             dscp: 0,
             ecn: 0,
@@ -303,7 +308,7 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `dscp` panics if `dscp` is greater than 2^6 - 1.
-    pub fn dscp(&mut self, dscp: u8) {
+    pub(crate) fn dscp(&mut self, dscp: u8) {
         assert!(dscp <= 1 << 6, "invalid DCSP: {}", dscp);
         self.dscp = dscp;
     }
@@ -313,18 +318,18 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `ecn` panics if `ecn` is greater than 3.
-    pub fn ecn(&mut self, ecn: u8) {
+    pub(crate) fn ecn(&mut self, ecn: u8) {
         assert!(ecn <= 3, "invalid ECN: {}", ecn);
         self.ecn = ecn;
     }
 
     /// Set the identification.
-    pub fn id(&mut self, id: u16) {
+    pub(crate) fn id(&mut self, id: u16) {
         self.id = id;
     }
 
     /// Set the Don't Fragment (DF) flag.
-    pub fn df_flag(&mut self, df: bool) {
+    pub(crate) fn df_flag(&mut self, df: bool) {
         if df {
             self.flags |= 1 << DF_FLAG_OFFSET;
         } else {
@@ -333,7 +338,7 @@ impl Ipv4PacketBuilder {
     }
 
     /// Set the More Fragments (MF) flag.
-    pub fn mf_flag(&mut self, mf: bool) {
+    pub(crate) fn mf_flag(&mut self, mf: bool) {
         if mf {
             self.flags |= 1 << MF_FLAG_OFFSET;
         } else {
@@ -346,7 +351,7 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `fragment_offset` panics if `fragment_offset` is greater than 2^13 - 1.
-    pub fn fragment_offset(&mut self, fragment_offset: u16) {
+    pub(crate) fn fragment_offset(&mut self, fragment_offset: u16) {
         assert!(fragment_offset < 1 << 13, "invalid fragment offset: {}", fragment_offset);
         self.frag_off = fragment_offset;
     }
@@ -412,7 +417,7 @@ mod options {
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
 
-    pub struct Ipv4OptionImpl;
+    pub(crate) struct Ipv4OptionImpl;
 
     impl OptionImplErr for Ipv4OptionImpl {
         type Error = ();

@@ -104,9 +104,9 @@ use log::{error, info};
 
 use netstack_core::{
     add_device_route, get_ip_addr_subnet, handle_timeout, receive_frame, set_ip_addr_subnet,
-    AddrSubnet, AddrSubnetEither, Context, DeviceId, DeviceLayerEventDispatcher,
-    DeviceLayerTimerId, EventDispatcher, Mac, StackState, Subnet, SubnetEither, TimerId,
-    TransportLayerEventDispatcher, TransportLayerTimerId, UdpEventDispatcher,
+    AddrSubnet, AddrSubnetEither, Context, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
+    Mac, StackState, Subnet, SubnetEither, TimerId, TransportLayerEventDispatcher,
+    UdpEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an

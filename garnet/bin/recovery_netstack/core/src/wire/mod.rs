@@ -54,15 +54,15 @@ macro_rules! debug_err_fn {
 #[macro_use]
 mod macros;
 
-pub mod arp;
-pub mod ethernet;
-pub mod icmp;
-pub mod igmp;
-pub mod ipv4;
-pub mod ipv6;
-pub mod tcp;
+pub(crate) mod arp;
+pub(crate) mod ethernet;
+pub(crate) mod icmp;
+pub(crate) mod igmp;
+pub(crate) mod ipv4;
+pub(crate) mod ipv6;
+pub(crate) mod tcp;
 
 #[cfg(test)]
-pub mod testdata;
-pub mod udp;
+pub(crate) mod testdata;
+pub(crate) mod udp;
 mod util;

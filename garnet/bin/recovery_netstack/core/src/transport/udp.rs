@@ -17,7 +17,7 @@ use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{Context, EventDispatcher, StackState};
 
 /// The state associated with the UDP protocol.
-pub struct UdpState<D: EventDispatcher> {
+pub(crate) struct UdpState<D: EventDispatcher> {
     ipv4: UdpStateInner<D, Ipv4Addr>,
     ipv6: UdpStateInner<D, Ipv6Addr>,
 }
@@ -127,7 +127,7 @@ pub trait UdpEventDispatcher {
 ///
 /// In the event of an unreachable port, `receive_ip_packet` returns the buffer
 /// in its original state (with the UDP packet un-parsed) in the `Err` variant.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -195,7 +195,7 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
 /// # Panics
 ///
 /// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
-pub fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
+pub(crate) fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
     ctx: &mut Context<D>,
     conn: &D::UdpConn,
     body: B,
@@ -229,7 +229,7 @@ pub fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub fn send_udp_listener<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_udp_listener<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     listener: &D::UdpListener,
     local_addr: A,
@@ -306,7 +306,7 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddress, B: BufferMut>(
 /// # Panics
 ///
 /// `connect_udp` panics if `conn` is already in use.
-pub fn connect_udp<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn connect_udp<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     conn: D::UdpConn,
     local_addr: Option<A>,
@@ -359,7 +359,7 @@ pub fn connect_udp<D: EventDispatcher, A: IpAddress>(
 /// # Panics
 ///
 /// `listen_udp` panics if `listener` is already in use.
-pub fn listen_udp<D: EventDispatcher, A: IpAddress>(
+pub(crate) fn listen_udp<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     listener: D::UdpListener,
     addrs: Vec<A>,

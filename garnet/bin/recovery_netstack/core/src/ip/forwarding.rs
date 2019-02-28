@@ -26,9 +26,9 @@ use crate::ip::*;
 /// not necessarily the destination IP address of the IP packet. In particular,
 /// if the destination is not on the local network, the `next_hop` will be the
 /// IP address of the next IP router on the way to the destination.
-pub struct Destination<I: Ip> {
-    pub next_hop: I::Addr,
-    pub device: DeviceId,
+pub(crate) struct Destination<I: Ip> {
+    pub(crate) next_hop: I::Addr,
+    pub(crate) device: DeviceId,
 }
 
 impl<I: Ip> Debug for Destination<I> {
@@ -59,17 +59,17 @@ enum EntryDest<A> {
 /// `ForwardingTable` maps destination subnets to the nearest IP hosts (on the
 /// local network) able to route IP packets to those subnets.
 #[derive(Default)]
-pub struct ForwardingTable<I: Ip> {
+pub(crate) struct ForwardingTable<I: Ip> {
     entries: Vec<Entry<I>>,
 }
 
 impl<I: Ip> ForwardingTable<I> {
-    pub fn add_route(&mut self, subnet: Subnet<I::Addr>, next_hop: I::Addr) {
+    pub(crate) fn add_route(&mut self, subnet: Subnet<I::Addr>, next_hop: I::Addr) {
         debug!("adding route: {} -> {}", subnet, next_hop);
         self.entries.push(Entry { subnet, dest: EntryDest::Remote { next_hop } });
     }
 
-    pub fn add_device_route(&mut self, subnet: Subnet<I::Addr>, device: DeviceId) {
+    pub(crate) fn add_device_route(&mut self, subnet: Subnet<I::Addr>, device: DeviceId) {
         debug!("adding device route: {} -> {}", subnet, device);
         self.entries.push(Entry { subnet, dest: EntryDest::Local { device } });
     }
@@ -95,7 +95,7 @@ impl<I: Ip> ForwardingTable<I> {
     /// be properly routed without consulting the forwarding table, and traffic
     /// from the network with a loopback destination address is invalid and
     /// should be dropped before consulting the forwarding table.
-    pub fn lookup(&self, address: I::Addr) -> Option<Destination<I>> {
+    pub(crate) fn lookup(&self, address: I::Addr) -> Option<Destination<I>> {
         assert!(
             !I::LOOPBACK_SUBNET.contains(address),
             "loopback addresses should be handled before consulting the forwarding table"
