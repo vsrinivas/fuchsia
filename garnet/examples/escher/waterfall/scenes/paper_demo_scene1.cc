@@ -60,7 +60,7 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
   for (int i = 0; i < 10; ++i) {
     const float x = 20.f * i;
     const float y = 400.f + 80.f * i;
-    const float z = 187.5 - 20.f * i;
+    const float z = -(187.5 - 20.f * i);
     const float big_radius = 75.f;
     const float tiny_radius = 25.f;
     rectangles_.push_back(RectState{
@@ -109,7 +109,7 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
 
   // Create our background plane.  Don't waste GPU cycles casting shadows from
   // it, because there is nothing beneath it.
-  transform_stack->PushElevation(10);
+  transform_stack->PushElevation(-10);
   // Rounded rectangles are centered around their origin.
   transform_stack->PushTranslation(0.5f * vec2(screen_width, screen_height));
   constexpr float kCornerRadius = 30.f;

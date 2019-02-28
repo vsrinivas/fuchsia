@@ -16,8 +16,8 @@ ViewingVolume::ViewingVolume() {}
 ViewingVolume::ViewingVolume(const BoundingBox& box)
     : width_(box.width()),
       height_(box.height()),
-      top_(box.max().z),
-      bottom_(box.min().z) {
+      top_(box.min().z),
+      bottom_(box.max().z) {
   FXL_DCHECK(box.min().x == 0.f && box.min().y == 0.f);
 }
 

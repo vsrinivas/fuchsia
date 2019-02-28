@@ -5,7 +5,6 @@
 #include "garnet/examples/escher/waterfall2/waterfall_demo.h"
 
 #include "garnet/examples/escher/waterfall/scenes/paper_demo_scene1.h"
-#include "garnet/examples/escher/waterfall/scenes/ring_tricks2.h"
 #include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/paper/paper_scene.h"
@@ -21,8 +20,8 @@
 
 using namespace escher;
 
-static constexpr float kNear = 200.f;
-static constexpr float kFar = -1.f;
+static constexpr float kNear = 1.f;
+static constexpr float kFar = -200.f;
 
 WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
     : Demo(harness, "Waterfall Demo") {
@@ -31,8 +30,7 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
   // Initialize filesystem with files before creating renderer; it will use them
   // to generate the necessary ShaderPrograms.
   escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
-      {"shaders/model_renderer/main.frag",
-       "shaders/model_renderer/main.vert",
+      {"shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
        "shaders/model_renderer/default_position.vert",
        "shaders/model_renderer/shadow_map_generation.frag",
        "shaders/model_renderer/shadow_map_lighting.frag",
@@ -85,7 +83,6 @@ void WaterfallDemo::InitializePaperScene(
 
 void WaterfallDemo::InitializeDemoScenes() {
   demo_scenes_.emplace_back(new PaperDemoScene1(this));
-  demo_scenes_.emplace_back(new RingTricks2(this));
   for (auto& scene : demo_scenes_) {
     scene->Init(paper_scene_.get());
   }
@@ -208,25 +205,25 @@ static std::vector<escher::Camera> GenerateCameras(
     }
     // Perspective where floor plane is full-screen, and parallel to screen.
     case 1: {
+      vec3 eye(volume.width() / 2, volume.height() / 2, -10000);
+      vec3 target(volume.width() / 2, volume.height() / 2, 0);
+      vec3 up(0, -1, 0);
       return {escher::Camera::NewPerspective(
-          volume,
-          glm::translate(
-              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
-          glm::radians(8.f))};
+          volume, glm::lookAt(eye, target, up), glm::radians(8.f))};
     }
     // Perspective from tilted viewpoint (from x-center of stage).
     case 2: {
-      vec3 eye(volume.width() / 2, 6000, 2000);
+      vec3 eye(volume.width() / 2, 6000, -2000);
       vec3 target(volume.width() / 2, volume.height() / 2, 0);
-      vec3 up(0, 1, 0);
+      vec3 up(0, -1, 0);
       return {escher::Camera::NewPerspective(
           volume, glm::lookAt(eye, target, up), glm::radians(15.f))};
     } break;
     // Perspective from tilted viewpoint (from corner).
     case 3: {
-      vec3 eye(volume.width() / 3, 6000, 3000);
+      vec3 eye(volume.width() / 3, 6000, -3000);
       vec3 target(volume.width() / 2, volume.height() / 3, 0);
-      vec3 up(0, 1, 0);
+      vec3 up(0, -1, 0);
       return {escher::Camera::NewPerspective(
           volume, glm::lookAt(eye, target, up), glm::radians(15.f))};
     } break;
@@ -238,10 +235,10 @@ static std::vector<escher::Camera> GenerateCameras(
     // from the pose buffer, because the camera's position is used for z-sorting
     // etc.
     case 4: {
-      vec3 eye(volume.width() / 2, 6000, 3500);
+      vec3 eye(volume.width() / 2, 6000, -3500);
       vec3 eye_offset(40.f, 0.f, 0.f);
       vec3 target(volume.width() / 2, volume.height() / 2, 0);
-      vec3 up(0, 1, 0);
+      vec3 up(0, -1, 0);
       float fov = glm::radians(15.f);
       auto left_camera = escher::Camera::NewPerspective(
           volume, glm::lookAt(eye - eye_offset, target, up), fov);
@@ -311,17 +308,17 @@ static void UpdateLighting(PaperScene* paper_scene,
   if (num_point_lights == 1) {
     paper_scene->point_lights[0].position =
         vec3(width * .3f, height * .3f,
-             800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f));
+             -(800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
   } else {
     FXL_DCHECK(num_point_lights == 2);
 
     paper_scene->point_lights[0].position =
         vec3(width * .3f, height * .3f,
-             800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f));
+             -(800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
     paper_scene->point_lights[1].position =
         vec3(width * (0.6f + 0.3f * sin(stopwatch.GetElapsedSeconds() * 0.7f)),
              height * (0.4f + 0.2f * sin(stopwatch.GetElapsedSeconds() * 0.6f)),
-             900.f);
+             -900.f);
 
     // Make the light colors subtly different.
     vec3 color_diff =
