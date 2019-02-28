@@ -359,6 +359,159 @@ pub fn duration(category: &'static CStr, name: &'static CStr, args: &[Arg]) -> D
     DurationScope { category, name }
 }
 
+/// Convenience macro for the `flow_begin` function.
+///
+/// Example:
+///
+/// ```rust
+/// let flow_id = 1234;
+/// flow_begin!("foo", "bar", flow_id, "x" => 5, "y" => "boo");
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// flow_begin(cstr!("foo"), cstr!("bar"), flow_id,
+///     &[ArgValue::of("x", 5), ArgValue::of("y", "boo")]);
+/// ```
+#[macro_export]
+macro_rules! flow_begin {
+    ($category:expr, $name:expr, $flow_id:expr $(, $key:expr => $val:expr)*) => {
+        $crate::flow_begin($crate::cstr!($category), $crate::cstr!($name), $flow_id,
+            &[$($crate::ArgValue::of($key, $val)),*])
+    }
+}
+
+/// Convenience macro for the `flow_step` function.
+///
+/// Example:
+///
+/// ```rust
+/// let flow_id = 1234;
+/// flow_step!("foo", "bar", flow_id, "x" => 5, "y" => "boo");
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// flow_step(cstr!("foo"), cstr!("bar"), flow_id,
+///     &[ArgValue::of("x", 5), ArgValue::of("y", "boo")]);
+/// ```
+#[macro_export]
+macro_rules! flow_step {
+    ($category:expr, $name:expr, $flow_id:expr $(, $key:expr => $val:expr)*) => {
+        $crate::flow_step($crate::cstr!($category), $crate::cstr!($name), $flow_id,
+            &[$($crate::ArgValue::of($key, $val)),*])
+    }
+}
+
+/// Convenience macro for the `flow_end` function.
+///
+/// Example:
+///
+/// ```rust
+/// let flow_id = 1234;
+/// flow_end!("foo", "bar", flow_id, "x" => 5, "y" => "boo");
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// flow_end(cstr!("foo"), cstr!("bar"), flow_id,
+///     &[ArgValue::of("x", 5), ArgValue::of("y", "boo")]);
+/// ```
+#[macro_export]
+macro_rules! flow_end {
+    ($category:expr, $name:expr, $flow_id:expr $(, $key:expr => $val:expr)*) => {
+        $crate::flow_end($crate::cstr!($category), $crate::cstr!($name), $flow_id,
+            &[$($crate::ArgValue::of($key, $val)),*])
+    }
+}
+
+macro_rules! flow_event {
+    ($name:ident, $sys_method:path) => {
+        pub fn $name(category: &'static CStr, name: &'static CStr, flow_id: u64, args: &[Arg]) {
+            assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
+            // See justification in `instant`
+            unsafe {
+                let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
+                let context =
+                    sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+                if context != ptr::null() {
+                    let helper = EventHelper::new(context, name);
+                    $sys_method(
+                        context,
+                        helper.ticks,
+                        &helper.thread_ref,
+                        &category_ref,
+                        &helper.name_ref,
+                        flow_id,
+                        args.as_ptr() as *const sys::trace_arg_t,
+                        args.len(),
+                    );
+                    sys::trace_release_context(context);
+                }
+            }
+        }
+    };
+}
+
+/// Writes a flow begin event with the specified id.
+/// This event may be followed by flow steps events and must be matched by
+/// a flow end event with the same category, name, and id.
+///
+/// Flow events describe control flow handoffs between threads or across processes.
+/// They are typically represented as arrows in a visualizer.  Flow arrows are
+/// from the end of the duration event which encloses the beginning of the flow
+/// to the beginning of the duration event which encloses the next step or the
+/// end of the flow.  The id serves to correlate flows which share the same
+/// category and name across processes.
+///
+/// This event must be enclosed in a duration event which represents where
+/// the flow handoff occurs.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used
+/// to annotate the flow with additional information.  The arguments provided
+/// to matching flow begin, flow step, and flow end events are combined together
+/// in the trace; it is not necessary to repeat them.
+flow_event!(flow_begin, sys::trace_context_write_flow_begin_event_record);
+
+/// Writes a flow step event with the specified id.
+///
+/// Flow events describe control flow handoffs between threads or across processes.
+/// They are typically represented as arrows in a visualizer.  Flow arrows are
+/// from the end of the duration event which encloses the beginning of the flow
+/// to the beginning of the duration event which encloses the next step or the
+/// end of the flow.  The id serves to correlate flows which share the same
+/// category and name across processes.
+///
+/// This event must be enclosed in a duration event which represents where
+/// the flow handoff occurs.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used
+/// to annotate the flow with additional information.  The arguments provided
+/// to matching flow begin, flow step, and flow end events are combined together
+/// in the trace; it is not necessary to repeat them.
+flow_event!(flow_step, sys::trace_context_write_flow_step_event_record);
+
+/// Writes a flow end event with the specified id.
+///
+/// Flow events describe control flow handoffs between threads or across processes.
+/// They are typically represented as arrows in a visualizer.  Flow arrows are
+/// from the end of the duration event which encloses the beginning of the flow
+/// to the beginning of the duration event which encloses the next step or the
+/// end of the flow.  The id serves to correlate flows which share the same
+/// category and name across processes.
+///
+/// This event must be enclosed in a duration event which represents where
+/// the flow handoff occurs.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used
+/// to annotate the flow with additional information.  The arguments provided
+/// to matching flow begin, flow step, and flow end events are combined together
+/// in the trace; it is not necessary to repeat them.
+flow_event!(flow_end, sys::trace_context_write_flow_end_event_record);
+
 struct EventHelper {
     ticks: sys::trace_ticks_t,
     thread_ref: sys::trace_thread_ref_t,
