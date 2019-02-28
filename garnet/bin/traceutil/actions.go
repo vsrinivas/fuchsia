@@ -22,6 +22,7 @@ type captureTraceConfig struct {
 	Duration             time.Duration
 	BenchmarkResultsFile string
 	SpecFile             string
+	Binary               bool
 	Stream               bool
 	Compress             bool
 }
@@ -47,6 +48,8 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"",
 		"Relative filepath for storing benchmark results.",
 	)
+	f.BoolVar(&config.Binary, "binary", false,
+		"Capture trace in binary format on the target.")
 	f.BoolVar(&config.Stream, "stream", false,
 		"Stream trace output to a local file, instead of saving to target disk and then copying it.")
 	f.BoolVar(&config.Compress, "compress", false,
@@ -107,6 +110,9 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 		cmd = append(cmd, "--duration="+
 			strconv.FormatUint(uint64(config.Duration.Seconds()), 10))
 	}
+	if config.Binary {
+		cmd = append(cmd, "--binary")
+	}
 	if config.Compress {
 		cmd = append(cmd, "--compress")
 	}
@@ -148,18 +154,18 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 }
 
 func convertTrace(generator string, inputPath string, outputPath string,
-		title string) error {
+	title string) error {
 	fmt.Printf("Converting %s to %s... ", inputPath, outputPath)
 	var args []string
-	args = append(args, "--output=" + outputPath)
+	args = append(args, "--output="+outputPath)
 	if title != "" {
-		args = append(args, "--title=" + title)
+		args = append(args, "--title="+title)
 	}
 	args = append(args, inputPath)
 	err := runCommand(generator, args)
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())
-		fmt.Printf("Invoked as: %s %s\n", generator, args);
+		fmt.Printf("Invoked as: %s %s\n", generator, args)
 	} else {
 		fmt.Println("done.")
 	}

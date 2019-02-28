@@ -39,8 +39,10 @@ class Record : public CommandWithTraceController {
     std::vector<ProviderSpec> provider_specs;
     fuchsia::tracing::BufferingMode buffering_mode =
         fuchsia::tracing::BufferingMode::ONESHOT;
+    bool binary = false;
     bool compress = false;
     std::string output_file_name = "/data/trace.json";
+    static constexpr char kDefaultBinaryOutputFileName[] = "/data/trace.fxt";
     std::string benchmark_results_file;
     std::string test_suite;
     measure::Measurements measurements;
@@ -62,6 +64,8 @@ class Record : public CommandWithTraceController {
   void StartTimer();
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
+  std::unique_ptr<std::ostream> binary_out_;
+  // TODO(PT-113): Remove |exporter_|.
   std::unique_ptr<ChromiumExporter> exporter_;
   std::unique_ptr<Tracer> tracer_;
   // Aggregate events if there are any measurements to be performed, so that we

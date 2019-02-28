@@ -76,7 +76,6 @@ func (cmd *cmdRecord) SetFlags(f *flag.FlagSet) {
 
 func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	_ ...interface{}) subcommands.ExitStatus {
-
 	// Flag errors in report type early.
 	reportGenerator := builtinReports[cmd.reportType]
 	generatorPath := ""
@@ -115,32 +114,42 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 
 	prefix := cmd.getFilenamePrefix()
-	jsonFilename := prefix + ".json"
+	var localFilename string
+	if cmd.captureConfig.Binary {
+		localFilename = prefix + ".fxt"
+	} else {
+		localFilename = prefix + ".json"
+	}
 	outputFilename := prefix + "." + outputFileSuffix
 	// TODO(dje): Should we use prefix on the remote file name as well?
-	remoteFilename := "/data/trace.json"
+	var remoteFilename string
+	if cmd.captureConfig.Binary {
+		remoteFilename = "/data/trace.fxt"
+	} else {
+		remoteFilename = "/data/trace.json"
+	}
 
-	var jsonFile *os.File = nil
+	var localFile *os.File = nil
 	if cmd.captureConfig.Stream {
-		jsonFile, err = os.Create(jsonFilename)
+		localFile, err = os.Create(localFilename)
 		if err != nil {
 			fmt.Printf("Error creating intermediate file %s: %s\n",
-				jsonFilename, err.Error())
+				localFilename, err.Error())
 			return subcommands.ExitFailure
 		}
 	} else if cmd.captureConfig.Compress {
-		jsonFilename += ".gz"
+		localFilename += ".gz"
 		remoteFilename += ".gz"
 	}
 
-	err = captureTrace(cmd.captureConfig, conn, jsonFile)
+	err = captureTrace(cmd.captureConfig, conn, localFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return subcommands.ExitFailure
 	}
 
 	if !cmd.captureConfig.Stream {
-		err = cmd.downloadFile(conn, "trace", remoteFilename, jsonFilename)
+		err = cmd.downloadFile(conn, "trace", remoteFilename, localFilename)
 		if err != nil {
 			fmt.Println(err.Error())
 			return subcommands.ExitFailure
@@ -162,10 +171,13 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 
 	title := cmd.getReportTitle()
 
-	err = convertTrace(generatorPath, jsonFilename, outputFilename, title)
-	if err != nil {
-		fmt.Println(err.Error())
-		return subcommands.ExitFailure
+	// TODO(PT-113): Convert binary format to JSON and HTML when able.
+	if !cmd.captureConfig.Binary {
+		err = convertTrace(generatorPath, localFilename, outputFilename, title)
+		if err != nil {
+			fmt.Println(err.Error())
+			return subcommands.ExitFailure
+		}
 	}
 
 	if cmd.stdout {

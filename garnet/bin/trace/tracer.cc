@@ -22,9 +22,10 @@ Tracer::Tracer(fuchsia::tracing::TraceController* controller)
 
 Tracer::~Tracer() { CloseSocket(); }
 
-void Tracer::Start(fuchsia::tracing::TraceOptions options,
-                   RecordConsumer record_consumer, ErrorHandler error_handler,
-                   fit::closure start_callback, fit::closure done_callback) {
+void Tracer::Start(fuchsia::tracing::TraceOptions options, bool binary,
+                   BytesConsumer bytes_consumer, RecordConsumer record_consumer,
+                   ErrorHandler error_handler, fit::closure start_callback,
+                   fit::closure done_callback) {
   FXL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;
@@ -42,6 +43,8 @@ void Tracer::Start(fuchsia::tracing::TraceOptions options,
   controller_->StartTracing(std::move(options), std::move(outgoing_socket),
                             [this]() { start_callback_(); });
 
+  binary_ = binary;
+  bytes_consumer_ = std::move(bytes_consumer);
   reader_.reset(new trace::TraceReader(std::move(record_consumer),
                                        std::move(error_handler)));
 
@@ -81,9 +84,8 @@ void Tracer::OnHandleReady(async_dispatcher_t* dispatcher,
 void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
   for (;;) {
     size_t actual;
-    zx_status_t status =
-        socket_.read(0u, buffer_.data() + buffer_end_,
-                     buffer_.size() - buffer_end_, &actual);
+    zx_status_t status = socket_.read(0u, buffer_.data() + buffer_end_,
+                                      buffer_.size() - buffer_end_, &actual);
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait_.Begin(dispatcher);
       if (status != ZX_OK) {
@@ -104,16 +106,22 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
     size_t bytes_available = buffer_end_;
     FXL_DCHECK(bytes_available > 0);
 
-    trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
-                       trace::BytesToWords(bytes_available));
-    if (!reader_->ReadRecords(chunk)) {
-      FXL_LOG(ERROR) << "Trace stream is corrupted";
-      Done();
-      return;
+    size_t bytes_consumed;
+    if (binary_) {
+      bytes_consumer_(buffer_.data(), bytes_available);
+      bytes_consumed = bytes_available;
+    } else {
+      trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
+                         trace::BytesToWords(bytes_available));
+      if (!reader_->ReadRecords(chunk)) {
+        FXL_LOG(ERROR) << "Trace stream is corrupted";
+        Done();
+        return;
+      }
+      bytes_consumed =
+          bytes_available - trace::WordsToBytes(chunk.remaining_words());
     }
 
-    size_t bytes_consumed =
-        bytes_available - trace::WordsToBytes(chunk.remaining_words());
     bytes_available -= bytes_consumed;
     memmove(buffer_.data(), buffer_.data() + bytes_consumed, bytes_available);
     buffer_end_ = bytes_available;

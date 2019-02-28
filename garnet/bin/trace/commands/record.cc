@@ -22,15 +22,15 @@
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
 #include "lib/fsl/types/type_converters.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
-#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/strings/trim.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace tracing {
 
@@ -41,6 +41,7 @@ const char kSpecFile[] = "spec-file";
 const char kCategories[] = "categories";
 const char kAppendArgs[] = "append-args";
 const char kOutputFile[] = "output-file";
+const char kBinary[] = "binary";
 const char kCompress[] = "compress";
 const char kDuration[] = "duration";
 const char kDetach[] = "detach";
@@ -167,21 +168,13 @@ bool CheckBufferSize(uint32_t megabytes) {
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
-  const std::unordered_set<std::string> known_options = {kSpecFile,
-                                                         kCategories,
-                                                         kAppendArgs,
-                                                         kOutputFile,
-                                                         kCompress,
-                                                         kDuration,
-                                                         kDetach,
-                                                         kDecouple,
-                                                         kLaunchpad,
-                                                         kSpawn,
-                                                         kBufferSize,
-                                                         kProviderBufferSize,
-                                                         kBufferingMode,
-                                                         kBenchmarkResultsFile,
-                                                         kTestSuite};
+  const std::unordered_set<std::string> known_options = {
+      kSpecFile,           kCategories,    kAppendArgs,
+      kOutputFile,         kBinary,        kCompress,
+      kDuration,           kDetach,        kDecouple,
+      kLaunchpad,          kSpawn,         kBufferSize,
+      kProviderBufferSize, kBufferingMode, kBenchmarkResultsFile,
+      kTestSuite};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -265,17 +258,21 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     }
   }
 
-  // --output-file=<file>
-  if (command_line.HasOption(kOutputFile, &index)) {
-    output_file_name = command_line.options()[index].value;
+  // --binary
+  if (command_line.HasOption(kBinary, nullptr)) {
+    binary = true;
+    output_file_name = kDefaultBinaryOutputFileName;
   }
 
   // --compress
   if (command_line.HasOption(kCompress, nullptr)) {
     compress = true;
-    if (!command_line.HasOption(kOutputFile, nullptr)) {
-      output_file_name += ".gz";
-    }
+    output_file_name += ".gz";
+  }
+
+  // --output-file=<file>
+  if (command_line.HasOption(kOutputFile, &index)) {
+    output_file_name = command_line.options()[index].value;
   }
 
   // --duration=<seconds>
@@ -346,7 +343,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   // --provider-buffer-size=<name:megabytes>
   if (command_line.HasOption(kProviderBufferSize)) {
     std::vector<fxl::StringView> args =
-      command_line.GetOptionValues(kProviderBufferSize);
+        command_line.GetOptionValues(kProviderBufferSize);
     for (const auto& arg : args) {
       size_t colon = arg.rfind(':');
       if (colon == arg.npos) {
@@ -419,6 +416,10 @@ Command::Info Record::Describe() {
         "Trace data is stored in this file. "
         "If the output file is \"tcp:TCP-ADDRESS\" then the output is streamed "
         "to that address. This option is generally only used by traceutil."},
+       {"binary=[false]",
+        "Output the binary trace rather than converting to JSON. "
+        "If this is set, then the default output location will be "
+        "/data/trace.fxt"},
        {"compress=[false]",
         "Compress trace output. This option is ignored "
         "when streaming over a TCP socket."},
@@ -563,8 +564,33 @@ void Record::Start(const fxl::CommandLine& command_line) {
     return;
   }
 
-  exporter_.reset(new ChromiumExporter(std::move(out_stream)));
+  Tracer::BytesConsumer bytes_consumer;
+  Tracer::RecordConsumer record_consumer;
+  Tracer::ErrorHandler error_handler;
+  if (options_.binary) {
+    binary_out_ = std::move(out_stream);
+
+    bytes_consumer = [this](const unsigned char* buffer, size_t n_bytes) {
+      binary_out_->write(reinterpret_cast<const char*>(buffer), n_bytes);
+    };
+    record_consumer = [](trace::Record record) {};
+    error_handler = [](fbl::String error) {};
+  } else {
+    exporter_.reset(new ChromiumExporter(std::move(out_stream)));
+
+    bytes_consumer = [](const unsigned char* buffer, size_t n_bytes) {};
+    record_consumer = [this](trace::Record record) {
+      exporter_->ExportRecord(record);
+
+      if (aggregate_events_ && record.type() == trace::RecordType::kEvent) {
+        events_.push_back(std::move(record));
+      }
+    };
+    error_handler = [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); };
+  }
+
   tracer_.reset(new Tracer(trace_controller().get()));
+
   if (!options_.measurements.duration.empty()) {
     aggregate_events_ = true;
     measure_duration_.reset(
@@ -604,15 +630,8 @@ void Record::Start(const fxl::CommandLine& command_line) {
   trace_options.set_provider_specs(std::move(uniquified_provider_specs));
 
   tracer_->Start(
-      std::move(trace_options),
-      [this](trace::Record record) {
-        exporter_->ExportRecord(record);
-
-        if (aggregate_events_ && record.type() == trace::RecordType::kEvent) {
-          events_.push_back(std::move(record));
-        }
-      },
-      [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); },
+      std::move(trace_options), options_.binary, std::move(bytes_consumer),
+      std::move(record_consumer), std::move(error_handler),
       [this] {
         if (!options_.app.empty())
           options_.spawn ? LaunchTool() : LaunchApp();
@@ -719,8 +738,7 @@ void Record::DoneTrace() {
 void Record::LaunchApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
-  launch_info.arguments =
-      fxl::To<fidl::VectorPtr<std::string>>(options_.args);
+  launch_info.arguments = fxl::To<fidl::VectorPtr<std::string>>(options_.args);
 
   if (FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Launching: " << launch_info.url << " "

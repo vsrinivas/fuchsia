@@ -22,6 +22,7 @@ namespace tracing {
 // Runs traces.
 class Tracer {
  public:
+  using BytesConsumer = fbl::Function<void(const unsigned char*, size_t)>;
   using RecordConsumer = trace::TraceReader::RecordConsumer;
   using ErrorHandler = trace::TraceReader::ErrorHandler;
 
@@ -31,9 +32,11 @@ class Tracer {
   // Starts tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops.
-  void Start(fuchsia::tracing::TraceOptions options,
-             RecordConsumer record_consumer, ErrorHandler error_handler,
-             fit::closure start_callback, fit::closure done_callback);
+  // TODO(PT-113): Remove |binary,record_consumer,error_handler|
+  void Start(fuchsia::tracing::TraceOptions options, bool binary,
+             BytesConsumer bytes_consumer, RecordConsumer record_consumer,
+             ErrorHandler error_handler, fit::closure start_callback,
+             fit::closure done_callback);
 
   // Stops the trace.
   // Does nothing if not started or if already stopping.
@@ -42,7 +45,7 @@ class Tracer {
  private:
   // Note: Buffer needs to be big enough to store records of maximum size.
   static constexpr size_t kReadBufferSize =
-    trace::RecordFields::kMaxRecordSizeBytes * 4;
+      trace::RecordFields::kMaxRecordSizeBytes * 4;
 
   void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                      zx_status_t status, const zx_packet_signal_t* signal);
@@ -62,6 +65,8 @@ class Tracer {
   zx::socket socket_;
   async_dispatcher_t* dispatcher_;
   async::WaitMethod<Tracer, &Tracer::OnHandleReady> wait_;
+  bool binary_;
+  BytesConsumer bytes_consumer_;
   std::unique_ptr<trace::TraceReader> reader_;
   // We don't use a vector here to avoid the housekeeping necessary to keep
   // checkers happy (e.g., asan). We use this buffer in an atypical way.
