@@ -580,8 +580,8 @@ static zx_status_t async_loop_cancel_task(async_dispatcher_t* async, async_task_
     // a later deadline.  If so, we will bump the timer along to that deadline.
     bool must_restart = !loop->dispatching_tasks &&
                         node->prev == &loop->task_list &&
-                        node->next != &loop->task_list &&
-                        node_to_task(node->next)->deadline > task->deadline;
+                        (node->next == &loop->task_list ||
+                        node_to_task(node->next)->deadline > task->deadline);
     list_delete(node);
     if (must_restart)
         async_loop_restart_timer_locked(loop);
