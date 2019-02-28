@@ -1,4 +1,4 @@
-# Editor/IDE Setup
+# C++ Editor/IDE Setup
 
 [TOC]
 
@@ -11,12 +11,41 @@ the fuchsia root directory.
 Then in CLion choose *Import Project from Sources* and select the
 fuchsia root directory.
 
-### Performance
+### CLion Performance Tweaks
 
-To improve performance you probably want to exclude directories you
-are not working with. You can do that in the Project View by
+To improve performance you can try some or all of the following. They
+are only suggestions, we recommend checking with directly with JetBrains
+at https://intellij-support.jetbrains.com/hc to be sure what works
+best for your environment. Also see 
+
+##### Exclude Directories
+
+To speed up indexing time you can exclude directories you are not
+working with. You can do that in the Project View by
 right-clicking each directory and choosing
-*Mark directory as->Excluded*.
+*Mark directory as->Excluded*. Note the affected configuration is stored
+in `<project>/.idea/misc.xml`
+
+See
+[Control Source, Library, and Exclude Directories \- Help \| CLion](https://www.jetbrains.com/help/clion/controlling-source-library-and-exclude-directories.html)
+for more information.
+
+##### Unregister Git Repositories
+
+The fuchsia source tree has a fair number of git repositories. Scanning
+them can use CPU cycles for CLion. You can unregister the git
+repositories you are not working on under
+*File -> Settings -> Version Control*. They will still be listed there
+so you can add them back later if needed.
+
+##### Tune JVM Options and Platform Properties
+
+See
+[Tuning CLion \- Help \| CLion](https://www.jetbrains.com/help/clion/tuning-the-ide.html)
+for general tips on tweaking CLion JVM Options and Platform Properties.
+As that link suggests, contact CLion support for instructions
+regarding the options and values that might help you with whatever issue
+you are trying to solve  
 
 ## VIM
 
