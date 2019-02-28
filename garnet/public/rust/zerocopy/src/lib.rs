@@ -21,9 +21,6 @@
 #![feature(refcell_map_split)]
 #![cfg_attr(not(test), no_std)]
 
-// Omit this when we're testing zerocopy_derive itself
-// to avoid a circular dependency.
-#[cfg(not(feature = "test-zerocopy-derive"))]
 pub use zerocopy_derive::*;
 
 use core::cell::{Ref, RefMut};

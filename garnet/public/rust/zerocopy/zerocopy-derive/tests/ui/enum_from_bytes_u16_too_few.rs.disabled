@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #[macro_use]
-extern crate zerocopy_derive;
 extern crate zerocopy;
 
 fn main() {}

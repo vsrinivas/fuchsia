@@ -5,7 +5,6 @@
 #![feature(repr_align_enum)]
 
 #[macro_use]
-extern crate zerocopy_derive;
 extern crate zerocopy;
 
 fn main() {}

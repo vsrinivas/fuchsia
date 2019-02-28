@@ -5,7 +5,6 @@
 #![allow(warnings)]
 
 use zerocopy::Unaligned;
-use zerocopy_derive::Unaligned;
 
 // A struct is Unaligned if:
 // - repr(align) is no more than 1 and either

@@ -1,13 +1,13 @@
 error: FromBytes only supported on repr(u8) enum with 256 variants
-   --> $DIR/enum_from_bytes_u8_too_few.rs:12:1
+   --> $DIR/enum_from_bytes_u8_too_few.rs:11:1
     |
-12  | / #[repr(u8)]
-13  | | enum Foo {
-14  | |     Variant0,
-15  | |     Variant1,
+11  | / #[repr(u8)]
+12  | | enum Foo {
+13  | |     Variant0,
+14  | |     Variant1,
 ...   |
-268 | |     Variant254,
-269 | | }
+267 | |     Variant254,
+268 | | }
     | |_^
 
 error: aborting due to previous error

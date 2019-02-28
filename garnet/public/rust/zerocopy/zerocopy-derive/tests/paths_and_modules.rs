@@ -5,13 +5,11 @@
 #![allow(warnings)]
 
 use zerocopy::FromBytes;
-use zerocopy_derive::FromBytes;
 
 // Ensure that types that are use'd and types that are referenced by path work.
 
 mod foo {
     use zerocopy::FromBytes;
-    use zerocopy_derive::FromBytes;
 
     #[derive(FromBytes)]
     #[repr(C, align(8))]

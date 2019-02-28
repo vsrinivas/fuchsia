@@ -13,7 +13,6 @@ use std::marker::PhantomData;
 use std::option::IntoIter;
 
 use _zerocopy::FromBytes;
-use zerocopy_derive::FromBytes;
 
 #[derive(FromBytes)]
 #[repr(C)]

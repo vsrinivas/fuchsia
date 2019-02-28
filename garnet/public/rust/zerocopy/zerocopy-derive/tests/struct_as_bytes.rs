@@ -8,7 +8,6 @@ use std::marker::PhantomData;
 use std::option::IntoIter;
 
 use zerocopy::AsBytes;
-use zerocopy_derive::AsBytes;
 
 // A struct is AsBytes if:
 // - all fields are AsBytes

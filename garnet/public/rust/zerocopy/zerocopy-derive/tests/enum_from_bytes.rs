@@ -6,7 +6,6 @@
 #![allow(warnings)]
 
 use zerocopy::FromBytes;
-use zerocopy_derive::FromBytes;
 
 // An enum is FromBytes if:
 // - repr(uN) or repr(iN)

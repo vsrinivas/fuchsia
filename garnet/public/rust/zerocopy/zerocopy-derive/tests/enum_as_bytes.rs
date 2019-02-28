@@ -6,7 +6,6 @@
 #![allow(warnings)]
 
 use zerocopy::AsBytes;
-use zerocopy_derive::AsBytes;
 
 // An enum is AsBytes if if has a defined repr
 

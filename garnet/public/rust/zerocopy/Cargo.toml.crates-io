@@ -7,7 +7,7 @@
 [package]
 edition = "2018"
 name = "zerocopy"
-version = "0.1.0"
+version = "0.2.1"
 authors = ["Joshua Liebow-Feeser <joshlf@google.com>"]
 description = "Utilities for zero-copy parsing and serialization"
 license = "BSD-3-Clause"
@@ -15,6 +15,5 @@ repository = "https://fuchsia.googlesource.com/garnet"
 
 include = ["src/*", "Cargo.toml", "LICENSE"]
 
-[features]
-# Used by the zerocopy-derive crate to break a dependency cycle when testing.
-test-zerocopy-derive = []
+[dependencies]
+zerocopy-derive = { version = "0.1" }

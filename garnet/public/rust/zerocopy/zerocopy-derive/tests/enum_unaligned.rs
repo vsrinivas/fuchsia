@@ -6,7 +6,6 @@
 #![allow(warnings)]
 
 use zerocopy::Unaligned;
-use zerocopy_derive::Unaligned;
 
 // An enum is Unaligned if:
 // - No repr(align(N > 1))

@@ -8,7 +8,6 @@ use std::marker::PhantomData;
 use std::option::IntoIter;
 
 use zerocopy::FromBytes;
-use zerocopy_derive::FromBytes;
 
 // A struct is FromBytes if:
 // - repr(C) or repr(transparent)
