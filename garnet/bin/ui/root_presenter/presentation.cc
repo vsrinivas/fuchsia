@@ -444,9 +444,9 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 
 void Presentation::OnReport(uint32_t device_id,
                             fuchsia::ui::input::InputReport input_report) {
-  TRACE_DURATION("input", "presentation_on_report");
-  TRACE_ASYNC_END("input", "dispatch_3_report_to_presentation",
-                  input_report.trace_id);
+  TRACE_DURATION("input", "presentation_on_report", "id",
+                 input_report.trace_id);
+  TRACE_FLOW_END("input", "report_to_presentation", input_report.trace_id);
 
   FXL_VLOG(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
@@ -465,8 +465,7 @@ void Presentation::OnReport(uint32_t device_id,
   size.width = display_model_actual_.display_info().width_in_px;
   size.height = display_model_actual_.display_info().height_in_px;
 
-  TRACE_ASYNC_BEGIN("input", "dispatch_4_report_to_device_state",
-                    input_report.trace_id);
+  TRACE_FLOW_BEGIN("input", "report_to_device_state", input_report.trace_id);
   state->Update(std::move(input_report), size);
 }
 
@@ -566,7 +565,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
 
       // TODO(SCN-1278): Use proper trace_id for tracing flow.
       trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
-      TRACE_ASYNC_END("input", "dispatch_event_to_presentation", trace_id);
+      TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
 
       if (pointer.type == fuchsia::ui::input::PointerEventType::MOUSE) {
         if (cursors_.count(pointer.device_id) == 0) {
