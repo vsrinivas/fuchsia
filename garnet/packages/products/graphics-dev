@@ -6,6 +6,7 @@
     "garnet/packages/prod/tracing",
     "garnet/packages/prod/vboot_reference",
     "garnet/packages/products/graphical",
+    "garnet/packages/tests/run_test_component",
     "garnet/packages/tools/scenic",
     "garnet/packages/tools/tiles"
   ]
