@@ -1249,6 +1249,9 @@ Status PageStorageImpl::SynchronousAddCommits(
     for (const CommitIdView& parent_id : parent_ids) {
       if (added_commits.find(&parent_id) == added_commits.end()) {
         s = ContainsCommit(handler, parent_id);
+        if (s == Status::INTERRUPTED) {
+          return s;
+        }
         if (s != Status::OK) {
           FXL_LOG(ERROR) << "Failed to find parent commit \""
                          << ToHex(parent_id) << "\" of commit \""
