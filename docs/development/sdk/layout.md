@@ -28,7 +28,7 @@ $root/
         fuchsia.some.service/
             meta.json
             some_service.fidl
-    arch                           # target-independent prebuilts
+    arch/                          # target-independent prebuilts
         x64/
             sysroot/
                 include/

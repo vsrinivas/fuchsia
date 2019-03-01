@@ -23,7 +23,7 @@ does not require any specific instance of these.
 While this might be viewed as a drawback, this is actually a feature, an
 integral part of a layered approach to building a fully-functional SDK.
 Even though it is not tied to a particular build system, the Core SDK contains
-metadata that may be used to produced support for a large variety of build
+metadata that may be used to produce support for a large variety of build
 systems, thereby producing various SDK distributions.
 Having the Core SDK cleanly separated from these various distributions allows
 for very flexible release schemes and iteration cycles.
