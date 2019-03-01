@@ -107,25 +107,6 @@ template("prebuilt_package") {
     deprecated_system_image = false
     meta_target = ":$pkg_target_name"
 
-    foreach(name, available_packages) {
-      if (name == pkg_label) {
-        package_set = "available"
-      }
-    }
-    foreach(name, preinstall_packages) {
-      if (name == pkg_label) {
-        package_set = "preinstall"
-      }
-    }
-    foreach(name, monolith_packages) {
-      if (name == pkg_label) {
-        package_set = "monolith"
-      }
-    }
-    if (!defined(package_set)) {
-      package_set = ""
-    }
-
     package_name = pkg.package_name
     package_version = pkg.package_version
     blobs_json = blobs_json
