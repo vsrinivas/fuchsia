@@ -20,6 +20,7 @@ type cmdRecord struct {
 	filePrefix     string
 	reportType     string
 	stdout         bool
+	zedmon         bool
 	captureConfig  *captureTraceConfig
 }
 
@@ -45,6 +46,8 @@ func NewCmdRecord() *cmdRecord {
 	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
 	cmd.flags.BoolVar(&cmd.stdout, "stdout", false,
 		"Send the report to stdout, in addition to writing to file.")
+	cmd.flags.BoolVar(&cmd.zedmon, "zedmon", false,
+		"UNDER DEVELOPMENT: Capture power trace data from connected zedmon device.")
 
 	cmd.captureConfig = newCaptureTraceConfig(cmd.flags)
 	return cmd
@@ -85,7 +88,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		generatorPath = getExternalReportGenerator(cmd.reportType)
 		outputFileSuffix = cmd.reportType
 	}
-	fmt.Printf("generator path: %s\n", generatorPath);
+	fmt.Printf("generator path: %s\n", generatorPath)
 	if _, err := os.Stat(generatorPath); os.IsNotExist(err) {
 		fmt.Printf("No generator for report type \"%s\"\n",
 			cmd.reportType)
@@ -98,6 +101,18 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		return subcommands.ExitFailure
 	}
 	defer conn.Close()
+
+	var offset, delta time.Duration
+	zedmon := cmd.zedmon
+	if zedmon {
+		offset, delta, err = conn.SyncClk()
+		if err != nil {
+			fmt.Printf("Error syncing with device clock: %v\n", err)
+			zedmon = false
+		} else {
+			fmt.Printf("Synced device clock: Offset: %v, +/-%v", offset, delta)
+		}
+	}
 
 	prefix := cmd.getFilenamePrefix()
 	jsonFilename := prefix + ".json"

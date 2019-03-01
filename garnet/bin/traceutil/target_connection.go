@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/sftp"
@@ -111,4 +115,104 @@ func (c *TargetConnection) GetFile(remotePath string, localPath string) error {
 
 	_, err = io.Copy(localFile, remoteFile)
 	return err
+}
+
+// SyncClk synchronizes local and remote clock over TargetConnection.
+// It selects the shortest round trip of 10 attempts to read remote timestamps.
+// Return is local-remote time offset, length of best round trip, error.
+// If error is not nil, first two paramters should not be trusted.
+func (c *TargetConnection) SyncClk() (offset time.Duration, delta time.Duration, err error) {
+	delta = time.Hour
+
+	session, err := c.client.NewSession()
+	if err != nil {
+		return offset, delta, err
+	}
+	defer session.Close()
+
+	cin, err := session.StdinPipe()
+	if err != nil {
+		return offset, delta, err
+	}
+	coutPipe, err := session.StdoutPipe()
+	if err != nil {
+		return offset, delta, err
+	}
+	cout := bufio.NewReader(coutPipe)
+
+	err = session.Start("trace time")
+	if err != nil {
+		return offset, delta, err
+	}
+
+	// Expect one line of "how to use timesync" output.
+	_, err = cout.ReadString('\n')
+	if err != nil {
+		return offset, delta, err
+	}
+
+	// Take 10 samples; each time:
+	// Send "t" to request time.
+	// Read one line; expect a timestamp.
+	for i := 0; i < 10; i++ {
+		start := time.Now()
+
+		n, err := cin.Write([]byte("t"))
+		if err != nil {
+			return offset, delta, err
+		}
+		if n != 1 {
+			return offset, delta, errors.New("Failed to send timestamp request")
+		}
+
+		// Read a line ending with '\n'.
+		usStr, err := cout.ReadString('\n')
+		if err != nil {
+			return offset, delta, err
+		}
+
+		end := time.Now()
+
+		// If this wasn't the fastest RTT we've seen so far, then continue.
+		d := end.Sub(start)
+		if d > delta {
+			continue
+		}
+
+		// Store new best delta; sync local time to midpoint between start and end.
+		delta = d
+		t1 := start.Add(delta / 2)
+
+		// Parse remote timestamp.
+		floatUSecs, err := strconv.ParseFloat(usStr, 64)
+		if err != nil {
+			return offset, delta, errors.New("Failed to parse timestamp")
+		}
+		secs := math.Floor(floatUSecs / 1000000)
+		nanoSecs := (floatUSecs - secs) * 1000
+		t2 := time.Unix(int64(secs), int64(nanoSecs))
+
+		// Store offset between local and remote timestamps.
+		offset = t1.Sub(t2)
+	}
+
+	// Instruct "timesync" utility to quit with "q" keystroke.
+	// Wait for it to shutdown.
+	n, err := cin.Write([]byte("q"))
+	if err != nil {
+		return offset, delta, err
+	}
+	if n != 1 {
+		return offset, delta, errors.New("Failed to send quit request")
+	}
+	err = cin.Close()
+	if err != nil {
+		return offset, delta, err
+	}
+	err = session.Wait()
+	if err != nil {
+		return offset, delta, err
+	}
+
+	return offset, delta, nil
 }
