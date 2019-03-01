@@ -1,0 +1,20 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### list boards available for building
+
+## usage: fx list-boards
+##
+## Lists all boards that are available for building. These are names that
+## can be passed to `fx set --board`
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+cd "${FUCHSIA_DIR}"
+board_gnis=($(echo {.,vendor/*}/boards/*.gni | xargs -n 1 basename | sort -u))
+for board in "${board_gnis[@]}"
+do
+  echo "${board%%.gni}"
+done
