@@ -59,7 +59,7 @@ library("trace-engine") {
 library("trace-engine-static") {
   forward_variables_from(common_pieces, "*")
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  defines = [ "STATIC_LIBRARY"]
+  defines = [ "STATIC_LIBRARY" ]
 
   shared = false
   static = true
@@ -83,4 +83,19 @@ library("trace-engine-driver") {
 
   shared = false
   static = true
+}
+
+# Header-only source package for use by exported trace-reader package
+library("trace-engine-headers-for-reader") {
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  sdk = "source"
+  sdk_headers = [
+    "trace-engine/fields.h",
+    "trace-engine/types.h",
+  ]
+  sources = []
+  host = true
+  deps = [
+    "$zx/system/ulib/fbl",
+  ]
 }
