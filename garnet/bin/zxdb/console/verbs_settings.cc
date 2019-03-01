@@ -5,18 +5,85 @@
 #include "garnet/bin/zxdb/console/verbs.h"
 
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/setting_schema.h"
+#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
-#include "garnet/bin/zxdb/console/format_settings.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
-#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/format_settings.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 namespace {
+
+// This list of nouns and the corresponding setting schema levels should be in
+// order and the search is stopped after a match is found on the command. Since
+// commands can have more than one nount ("process 2 thread 1"), the most
+// specific categories should be listed first.
+const std::pair<Noun, SettingSchema::Level> kNounLevelMapping[] = {
+    // It's important thread/process/global is in this order for the above
+    // reason.
+    {Noun::kThread, SettingSchema::Level::kThread},
+    {Noun::kProcess, SettingSchema::Level::kTarget},
+    {Noun::kGlobal, SettingSchema::Level::kSystem},
+    // Any nounds that don't have a nested hierarchy can go here. The ordering
+    // of these doesn't matter.
+    {Noun::kJob, SettingSchema::Level::kJob},
+};
+
+// The subset of categories of settings that will be output by default with no
+// noun context in the order they should appear.
+const SettingSchema::Level kDefaultSettingSchemaLevels[] = {
+    SettingSchema::Level::kSystem,
+    SettingSchema::Level::kJob,
+    SettingSchema::Level::kTarget,
+    SettingSchema::Level::kThread,
+};
+
+// Holds the information related to a given setting category for a comment. The
+// store may be null if there is no active object in the current context.
+struct SettingInfo {
+  SettingInfo(const SettingStore* st = nullptr, int id = -1)
+      : store(st), noun_id(id) {}
+
+  const SettingStore* store = nullptr;
+
+  // Frontend index for the noun, -1 if there's no ID (e.g. for the system) or
+  // if there's no store object.
+  int noun_id = -1;
+};
+
+SettingInfo SettingInfoForLevel(const ConsoleContext* console_context,
+                                const Command& cmd,
+                                SettingSchema::Level level) {
+  switch (level) {
+    case SettingSchema::Level::kDefault:
+      return SettingInfo();
+    case SettingSchema::Level::kJob:
+      if (auto job = cmd.job_context()) {
+        return SettingInfo(&job->settings(),
+                           console_context->IdForJobContext(job));
+      }
+      return SettingInfo();
+    case SettingSchema::Level::kTarget:
+      if (auto target = cmd.target()) {
+        return SettingInfo(&target->settings(),
+                           console_context->IdForTarget(target));
+      }
+      return SettingInfo();
+    case SettingSchema::Level::kSystem:
+      return SettingInfo(&cmd.target()->session()->system().settings());
+    case SettingSchema::Level::kThread:
+      if (auto thread = cmd.thread()) {
+        return SettingInfo(&thread->settings(),
+                           console_context->IdForThread(thread));
+      }
+      return SettingInfo();
+  }
+  return SettingInfo();
+}
 
 // get -------------------------------------------------------------------------
 
@@ -126,6 +193,25 @@ Examples
 
 constexpr int kGetSystemSwitch = 0;
 
+// If noun ID is non-negative, it will be appended to the title so the user
+// can read "Thread 3". Returns true if anything was output.
+bool OutputSettingLevel(ConsoleContext* context, const Command& cmd,
+                        SettingSchema::Level level, OutputBuffer* out) {
+  SettingInfo set = SettingInfoForLevel(context, cmd, level);
+  if (!set.store)
+    return false;
+
+  std::string heading = SettingSchemaLevelToString(level);
+  if (set.noun_id >= 0)
+    heading += fxl::StringPrintf(" %d\n", set.noun_id);
+  else
+    heading += "\n";
+
+  out->Append(OutputBuffer(Syntax::kHeading, heading));
+  out->Append(FormatSettingStore(*set.store));
+  return true;
+}
+
 Err DoGet(ConsoleContext* context, const Command& cmd) {
   std::string setting_name;
   if (!cmd.args().empty()) {
@@ -134,20 +220,61 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
     setting_name = cmd.args()[0];
   }
 
-  Err err;
   OutputBuffer out;
-  if (setting_name.empty()) {
-    out.Append({Syntax::kComment,
-                R"(Run "get <option>" to see detailed information. )"
-                R"(eg. "get symbol-paths").)"
-                "\n"});
-    FormatSettings(cmd, &out);
-  } else {
-    err = FormatSetting(cmd, setting_name, &out);
-  }
 
-  if (err.has_error())
-    return err;
+  if (cmd.nouns().empty()) {
+    if (cmd.args().empty()) {
+      // "get" by itself, show the default settings.
+      for (auto level : kDefaultSettingSchemaLevels) {
+        if (OutputSettingLevel(context, cmd, level, &out))
+          out.Append("\n");
+      }
+    } else {
+      // "get foo", try to find the correct noun to apply the setting to.
+      bool found = false;
+      for (auto level : kDefaultSettingSchemaLevels) {
+        SettingInfo set = SettingInfoForLevel(context, cmd, level);
+        if (set.store &&
+            !FormatSetting(*set.store, cmd.args()[0], &out).has_error()) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        return Err("Could not find setting \"%s\"", cmd.args()[0].c_str());
+    }
+  } else {
+    // A noun was explicitly provided for the command, get the setting on that
+    // noun.
+    std::optional<SettingSchema::Level> setting_level;
+    for (auto [noun, level] : kNounLevelMapping) {
+      if (cmd.HasNoun(noun)) {
+        setting_level = level;
+        break;
+      }
+    }
+    if (!setting_level)
+      return Err("No settings for this noun.");
+
+    if (cmd.args().empty()) {
+      // No setting name given, output all settings for that noun.
+      OutputSettingLevel(context, cmd, *setting_level, &out);
+    } else {
+      // Specific noun and setting provided ("job get filters").
+      SettingInfo set = SettingInfoForLevel(context, cmd, *setting_level);
+      if (set.store) {
+        Err err = FormatSetting(*set.store, setting_name, &out);
+        if (err.has_error())
+          return err;
+      } else {
+        // There is no settings store which means the user said something like
+        // "thread get foo" when there's no active thread.
+        return Err(fxl::StringPrintf(
+            "There is no %s to have settings in this context.",
+            SettingSchemaLevelToString(*setting_level)));
+      }
+    }
+  }
 
   Console::get()->Output(out);
   return Err();

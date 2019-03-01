@@ -4,9 +4,9 @@
 
 #include "garnet/bin/zxdb/console/format_settings.h"
 
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/setting_schema.h"
 #include "garnet/bin/zxdb/client/setting_store.h"
-#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -15,8 +15,8 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -47,7 +47,8 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
   output.reserve(list.size());
   auto bullet = GetBullet();
   for (const std::string& item : list)
-    output.emplace_back(fxl::StringPrintf("%s %s", bullet.data(), item.data()));
+    output.emplace_back(
+        fxl::StringPrintf("%s %s", bullet.c_str(), item.c_str()));
   return output;
 }
 
@@ -91,118 +92,12 @@ void AddSettingToTable(const StoredSetting& setting,
   }
 }
 
-OutputBuffer FormatSettingStore(const SettingStore& store) {
-  std::vector<std::vector<OutputBuffer>> rows;
-  for (auto [key, item] : store.schema()->items()) {
-    // Overridden settings are meant to be listen in another schema.
-    if (item.overriden())
-      continue;
-
-    auto setting = store.GetSetting(key);
-    FXL_DCHECK(!setting.value.is_null());
-
-    AddSettingToTable(setting, &rows);
-  }
-
-  OutputBuffer table;
-  FormatTable(std::vector<ColSpec>(3), rows, &table);
-  return table;
-}
-
-OutputBuffer FormatSchema(const SettingSchema& schema) {
-  std::vector<std::vector<OutputBuffer>> rows;
-  for (auto [key, item] : schema.items()) {
-    // Overridden settings are meant to be listen in another schema.
-    if (item.overriden())
-      continue;
-
-    StoredSetting setting;
-    setting.schema_item = schema.GetItem(key);
-    setting.value = setting.schema_item.value();
-    FXL_DCHECK(!setting.value.is_null());
-    AddSettingToTable(setting, &rows);
-  }
-
-  OutputBuffer table;
-  FormatTable(std::vector<ColSpec>(3), rows, &table);
-  return table;
-}
-
 }  // namespace
-
-void FormatSettings(const Command& cmd, OutputBuffer* out) {
-  // We print each setting
-  out->Append({Syntax::kHeading, "\nSystem\n"});
-  out->Append(FormatSettingStore(cmd.target()->session()->system().settings()));
-
-  OutputBuffer current;
-  JobContext* job = cmd.job_context();
-  current = job ? FormatSettingStore(job->settings())
-                : FormatSchema(*JobContext::GetSchema());
-  if (!current.empty()) {
-    out->Append({Syntax::kHeading, "\nJob\n"});
-    out->Append(current);
-  }
-
-  Target* target = cmd.target();
-  current = target ? FormatSettingStore(target->settings())
-                   : FormatSchema(*Target::GetSchema());
-  if (!current.empty()) {
-    out->Append({Syntax::kHeading, "\nTarget\n"});
-    out->Append(current);
-  }
-
-  Thread* thread = cmd.thread();
-  current = thread ? FormatSettingStore(thread->settings())
-                   : FormatSchema(*Thread::GetSchema());
-  if (!current.empty()) {
-    out->Append({Syntax::kHeading, "\nThread\n"});
-    out->Append(current);
-  }
-}
-
-Err FormatSetting(const Command& cmd, const std::string& setting_name,
-                  OutputBuffer* out) {
-  // We look from more specific to less specific for the setting.
-  Thread* thread = cmd.thread();
-  if (thread && thread->settings().HasSetting(setting_name)) {
-    OutputBuffer tmp;
-    Err err = FormatSetting(thread->settings(), setting_name, &tmp);
-    out->Append(std::move(tmp));
-    return err;
-  }
-
-  Target* target = cmd.target();
-  if (target && target->settings().HasSetting(setting_name)) {
-    OutputBuffer tmp;
-    Err err = FormatSetting(target->settings(), setting_name, &tmp);
-    out->Append(std::move(tmp));
-    return err;
-  }
-
-  JobContext* job = cmd.job_context();
-  if (job && job->settings().HasSetting(setting_name)) {
-    OutputBuffer tmp;
-    Err err = FormatSetting(job->settings(), setting_name, &tmp);
-    out->Append(std::move(tmp));
-    return err;
-  }
-
-  System& system = cmd.target()->session()->system();
-  if (system.settings().HasSetting(setting_name)) {
-    OutputBuffer tmp;
-    Err err = FormatSetting(system.settings(), setting_name, &tmp);
-    out->Append(std::move(tmp));
-    return err;
-  }
-
-  return Err("Could not find setting \"%s\"", setting_name.data());
-}
 
 Err FormatSetting(const SettingStore& store, const std::string& setting_name,
                   OutputBuffer* out) {
   if (!store.HasSetting(setting_name))
-    return Err("Could not find setting \"%s\"", setting_name.data());
+    return Err("Could not find setting \"%s\"", setting_name.c_str());
 
   auto setting = store.GetSetting(setting_name);
 
@@ -225,7 +120,7 @@ Err FormatSetting(const SettingStore& store, const std::string& setting_name,
     out->Append({Syntax::kComment,
                  "See \"help set\" about using the set value for lists.\n"});
     out->Append(fxl::StringPrintf("Set value: %s",
-                                  SettingValueToString(setting.value).data()));
+                                  SettingValueToString(setting.value).c_str()));
     out->Append("\n");
   }
   return Err();
@@ -241,18 +136,39 @@ OutputBuffer FormatSettingValue(const StoredSetting& setting) {
   return out;
 }
 
+OutputBuffer FormatSettingStore(const SettingStore& store) {
+  std::vector<std::vector<OutputBuffer>> rows;
+  for (auto [key, item] : store.schema()->items()) {
+    // Overriden settings are meant to be listen in another schema.
+    if (item.overriden())
+      continue;
+
+    auto setting = store.GetSetting(key);
+    FXL_DCHECK(!setting.value.is_null());
+
+    AddSettingToTable(setting, &rows);
+  }
+
+  OutputBuffer table;
+  FormatTable(std::vector<ColSpec>(3), rows, &table);
+  return table;
+}
+
 const char* SettingSchemaLevelToString(SettingSchema::Level level) {
+  // The return value here should be the noun name that the user will use to
+  // refer to this setting, hence "global" for the System and "process" for the
+  // Target.
   switch (level) {
     case SettingSchema::Level::kDefault:
-      return "default";
+      return "Default";
     case SettingSchema::Level::kSystem:
-      return "system";
+      return "Global";
     case SettingSchema::Level::kJob:
-      return "job";
+      return "Job";
     case SettingSchema::Level::kTarget:
-      return "target";
+      return "Process";
     case SettingSchema::Level::kThread:
-      return "thread";
+      return "Thread";
   }
 
   // Just in case.

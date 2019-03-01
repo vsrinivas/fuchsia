@@ -451,6 +451,28 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   return true;
 }
 
+// Global ----------------------------------------------------------------------
+
+const char kGlobalShortHelp[] =
+    "global / gl: Global override for commands.";
+const char kGlobalHelp[] =
+    R"("global <command> ...
+
+  Alias: "gl"
+
+  The "global" noun allows explicitly scoping a command to the global scope
+  as opposed to a process or thread.
+)";
+
+bool HandleGlobalNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+  if (!cmd.HasNoun(Noun::kGlobal))
+    return false;
+
+  Console::get()->Output("\"global\" only makes sense when applied to a verb, "
+                         "for example \"global get\".");
+  return true;
+}
+
 // Breakpoints -----------------------------------------------------------------
 
 const char kBreakpointShortHelp[] =
@@ -622,11 +644,16 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
     return result;
   if (HandleJobNoun(context, cmd, &result))
     return result;
+  if (HandleGlobalNoun(context, cmd, &result))
+    return result;
 
   return result;
 }
 
 void AppendNouns(std::map<Noun, NounRecord>* nouns) {
+  // If non-kNone, the "command groups" on the noun will cause the help for
+  // that noun to additionall appear under that section (people expect the
+  // "thread" command to appear in the process section).
   (*nouns)[Noun::kBreakpoint] =
       NounRecord({"breakpoint", "bp"}, kBreakpointShortHelp, kBreakpointHelp,
                  CommandGroup::kBreakpoint);
@@ -638,6 +665,8 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
                                        kThreadHelp, CommandGroup::kProcess);
   (*nouns)[Noun::kProcess] = NounRecord({"process", "pr"}, kProcessShortHelp,
                                         kProcessHelp, CommandGroup::kProcess);
+  (*nouns)[Noun::kGlobal] = NounRecord({"global", "gl"}, kGlobalShortHelp,
+                                        kGlobalHelp, CommandGroup::kNone);
   (*nouns)[Noun::kJob] =
       NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
 }

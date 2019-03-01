@@ -20,12 +20,13 @@ class Thread;
 
 enum class Noun {
   kNone = 0,
-  kFrame,
-  kThread,
-  kProcess,
-  kJob,
 
   kBreakpoint,
+  kFrame,
+  kJob,
+  kProcess,
+  kGlobal,
+  kThread,
 
   // Adding a new one? Add to GetNouns().
   kLast  // Not a real noun, keep last.
@@ -44,6 +45,9 @@ struct NounRecord {
   const char* short_help = nullptr;  // One-line help.
   const char* help = nullptr;
 
+  // What logical place this command should appear in the help under, in
+  // addition to the "nouns" list. This could be none if this noun should only
+  // appear in the nouns list.
   CommandGroup command_group;
 };
 

@@ -8,6 +8,8 @@ namespace zxdb {
 
 // Used to group similar commands in the help.
 enum class CommandGroup {
+  kNone,
+
   kAssembly,
   kBreakpoint,
   kGeneral,
