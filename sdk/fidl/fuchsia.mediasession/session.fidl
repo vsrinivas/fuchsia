@@ -6,14 +6,28 @@ library fuchsia.mediasession;
 
 using zx;
 using fuchsia.media;
+using fuchsia.mediaplayer;
 
-/// |Controller| is a handle for media playback, allowing clients to observe
+/// |ReadOnlySession| is a handle for media playback, allowing clients to observe
+/// a playback session.
+[FragileBase]
+protocol ReadOnlySession {
+    /// Sent on first connection and when playback
+    /// status changes.
+    -> OnPlaybackStatusChanged(PlaybackStatus playback_status);
+    /// Sent on first connection and when metadata
+    /// changes.
+    // TODO(turnage): Do a soft or hard transition to move Metadata into
+    // fuchsia.media.
+    -> OnMetadataChanged(fuchsia.mediaplayer.Metadata media_metadata);
+};
+
+/// |Session| is a handle for media playback, allowing clients to observe
 /// and control a media playback session. Unsupported commands are no-ops.
 /// Consult |PlaybackCapabilities|, sent by |OnPlaybackCapabilities|, to learn
 /// which commands are supported.
-[FragileBase]
-protocol Controller {
-    compose Observer;
+protocol Session {
+    compose ReadOnlySession;
 
     /// Sent on first connection and when supported
     /// playback capabilities change.

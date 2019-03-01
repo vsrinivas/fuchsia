@@ -6,10 +6,9 @@ use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_mediaplayer::TimelineFunction;
 use fidl_fuchsia_mediasession::{
-    ControllerControlHandle, ControllerEvent, ControllerMarker, ControllerRegistryEvent,
-    ControllerRegistryEventStream, ControllerRegistryMarker, ControllerRegistryProxy,
-    ControllerRequest, ControllerRequestStream, PlaybackState, PlaybackStatus, PublisherMarker,
-    PublisherProxy, RepeatMode,
+    PlaybackState, PlaybackStatus, PublisherMarker, PublisherProxy, RegistryEvent,
+    RegistryEventStream, RegistryMarker, RegistryProxy, RepeatMode, SessionControlHandle,
+    SessionEvent, SessionMarker, SessionRequest, SessionRequestStream,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
@@ -38,19 +37,18 @@ fn default_playback_status() -> PlaybackStatus {
 }
 
 struct TestSession {
-    request_stream: ControllerRequestStream,
-    control_handle: ControllerControlHandle,
-    client_end: ClientEnd<ControllerMarker>,
+    request_stream: SessionRequestStream,
+    control_handle: SessionControlHandle,
+    client_end: ClientEnd<SessionMarker>,
 }
 
 impl TestSession {
     fn new() -> Result<Self, Error> {
         let (client_end, server_end) =
-            create_endpoints::<ControllerMarker>().expect("Fidl endpoints.");
+            create_endpoints::<SessionMarker>().expect("Fidl endpoints.");
 
-        let (request_stream, control_handle) = server_end
-            .into_stream_and_control_handle()
-            .context("Unpacking Controller server end.")?;
+        let (request_stream, control_handle) =
+            server_end.into_stream_and_control_handle().context("Unpacking Session server end.")?;
 
         Ok(Self { request_stream, control_handle, client_end })
     }
@@ -61,8 +59,8 @@ struct TestService {
     #[allow(unused)]
     app: app::client::App,
     publisher: PublisherProxy,
-    controller_registry: ControllerRegistryProxy,
-    active_session_changes: ControllerRegistryEventStream,
+    controller_registry: RegistryProxy,
+    active_session_changes: RegistryEventStream,
 }
 
 impl TestService {
@@ -74,9 +72,8 @@ impl TestService {
 
         let publisher =
             mediasession.connect_to_service(PublisherMarker).context("Connecting to Publisher.")?;
-        let controller_registry = mediasession
-            .connect_to_service(ControllerRegistryMarker)
-            .context("Connecting to ControllerRegistry.")?;
+        let controller_registry =
+            mediasession.connect_to_service(RegistryMarker).context("Connecting to Registry.")?;
         let active_session_changes = controller_registry.take_event_stream();
 
         Ok(Self { app: mediasession, publisher, controller_registry, active_session_changes })
@@ -84,7 +81,7 @@ impl TestService {
 
     async fn expect_active_session(&mut self, expected: Option<zx::Koid>) {
         assert!(!self.active_session_changes.is_terminated());
-        let ControllerRegistryEvent::OnActiveSession { active_session: actual } =
+        let RegistryEvent::OnActiveSession { active_session: actual } =
             await!(self.active_session_changes.try_next())
                 .expect("Reported active session.")
                 .expect("Active session stream");
@@ -115,12 +112,12 @@ async fn service_routes_controls() {
             let session_id = await!(test_service.publisher.publish(test_session.client_end))
                 .expect("Session id.");
             let (client_end, server_end) =
-                create_endpoints::<ControllerMarker>().expect("Controller endpoints.");
+                create_endpoints::<SessionMarker>().expect("Session endpoints.");
             test_service
                 .controller_registry
-                .connect_to_controller_by_id(session_id, server_end)
+                .connect_to_session_by_id(session_id, server_end)
                 .expect("To connect to session.");
-            let proxy = client_end.into_proxy().expect("Controller a proxy.");
+            let proxy = client_end.into_proxy().expect("Session a proxy.");
             (proxy, test_session.request_stream)
         }
     };
@@ -135,12 +132,12 @@ async fn service_routes_controls() {
     let b_event = await!(request_stream_b.try_next()).expect("Next request from session b.");
 
     assert!(match a_event {
-        Some(ControllerRequest::Play { .. }) => true,
+        Some(SessionRequest::Play { .. }) => true,
         _ => false,
     },);
 
     assert!(match b_event {
-        Some(ControllerRequest::Pause { .. }) => true,
+        Some(SessionRequest::Pause { .. }) => true,
         _ => false,
     },);
 
@@ -151,7 +148,7 @@ async fn service_routes_controls() {
     let b_event = await!(request_stream_b.try_next()).expect("Next request from session b.");
 
     assert!(match b_event {
-        Some(ControllerRequest::Play { .. }) => true,
+        Some(SessionRequest::Play { .. }) => true,
         _ => false,
     },);
 }
@@ -223,10 +220,10 @@ async fn service_broadcasts_events() {
     let client_count: usize = 100;
     for _ in 0..client_count {
         let (client_end, server_end) =
-            create_endpoints::<ControllerMarker>().expect("Controller endpoints.");
+            create_endpoints::<SessionMarker>().expect("Session endpoints.");
         test_service
             .controller_registry
-            .connect_to_controller_by_id(
+            .connect_to_session_by_id(
                 session_id
                     .as_handle_ref()
                     .duplicate(zx::Rights::INSPECT | zx::Rights::TRANSFER)
@@ -235,14 +232,11 @@ async fn service_broadcasts_events() {
                 server_end,
             )
             .expect("To connect to session.");
-        let mut event_stream =
-            client_end.into_proxy().expect("Controller proxy").take_event_stream();
-        let event = await!(event_stream.try_next()).expect("Next Controller event.");
+        let mut event_stream = client_end.into_proxy().expect("Session proxy").take_event_stream();
+        let event = await!(event_stream.try_next()).expect("Next Session event.");
         assert_eq!(
             event.and_then(|event| match event {
-                ControllerEvent::OnPlaybackStatusChanged { playback_status } => {
-                    Some(playback_status)
-                }
+                SessionEvent::OnPlaybackStatusChanged { playback_status } => Some(playback_status),
                 _ => None,
             }),
             Some(default_playback_status())
@@ -296,10 +290,10 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     // Check all expectations.
     for (expectation, session_id) in expectations.into_iter() {
         let (client_end, server_end) =
-            create_endpoints::<ControllerMarker>().expect("Fidl endpoints.");
+            create_endpoints::<SessionMarker>().expect("Fidl endpoints.");
         test_service
             .controller_registry
-            .connect_to_controller_by_id(
+            .connect_to_session_by_id(
                 session_id
                     .as_handle_ref()
                     .duplicate(zx::Rights::INSPECT | zx::Rights::TRANSFER)
@@ -310,7 +304,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
             .expect(&format!("To make connection request to session {:?}", session_id));
         let mut event_stream = client_end
             .into_proxy()
-            .expect(&format!("Controller proxy for session {:?}.", session_id))
+            .expect(&format!("Session proxy for session {:?}.", session_id))
             .take_event_stream();
         let maybe_event = await!(event_stream.try_next()).expect("Next session event.");
         match expectation {
@@ -324,7 +318,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
                 }
             }
             Expectation::SessionReportsPlaybackStatus(expected) => match maybe_event {
-                Some(ControllerEvent::OnPlaybackStatusChanged { playback_status: actual }) => {
+                Some(SessionEvent::OnPlaybackStatusChanged { playback_status: actual }) => {
                     assert_eq!(actual, expected)
                 }
                 other => panic!("Expected a playback status event; got: {:?}", other),

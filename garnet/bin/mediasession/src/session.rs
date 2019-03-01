@@ -9,8 +9,8 @@ use failure::ResultExt;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_mediaplayer::TimelineFunction;
 use fidl_fuchsia_mediasession::{
-    ControllerControlHandle, ControllerEvent, ControllerEventStream, ControllerMarker,
-    ControllerProxy, ControllerRequest, Error, PlaybackCapabilities, PlaybackState, PlaybackStatus,
+    Error, PlaybackCapabilities, PlaybackState, PlaybackStatus, SessionControlHandle, SessionEvent,
+    SessionEventStream, SessionMarker, SessionProxy, SessionRequest,
 };
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -19,7 +19,7 @@ use futures::{
     future, select, Future, FutureExt, SinkExt, StreamExt, TryFutureExt, TryStreamExt,
 };
 
-/// `Session` multiplexes the `fuchsia.mediasession.Controller` implementation of
+/// `Session` multiplexes the `fuchsia.mediasession.Session` implementation of
 /// a published media session.
 pub struct Session {
     id: zx::Koid,
@@ -35,7 +35,7 @@ impl Session {
     /// `ServiceEvent`.
     pub fn new(
         id: zx::Koid,
-        controller_proxy: ControllerProxy,
+        controller_proxy: SessionProxy,
         service_event_sink: Sender<ServiceEvent>,
     ) -> Result<Self> {
         let event_stream = controller_proxy.take_event_stream();
@@ -51,7 +51,7 @@ impl Session {
         self.id
     }
 
-    pub async fn serve(self, mut fidl_requests: Receiver<ServerEnd<ControllerMarker>>) {
+    pub async fn serve(self, mut fidl_requests: Receiver<ServerEnd<SessionMarker>>) {
         let (forwarder_handle, forwarder_registration) = future::AbortHandle::new_pair();
         let request_sink = self.request_forwarder.start(forwarder_registration);
         let mut service_event_sink = self.service_event_sink;
@@ -91,17 +91,17 @@ impl Session {
 }
 
 /// Forwards requests from all proxied clients to the backing
-/// `fuchsia.mediasession.Controller` implementation.
+/// `fuchsia.mediasession.Session` implementation.
 struct RequestForwarder {
-    controller_proxy: ControllerProxy,
+    controller_proxy: SessionProxy,
 }
 
 impl RequestForwarder {
-    fn new(controller_proxy: ControllerProxy) -> Self {
+    fn new(controller_proxy: SessionProxy) -> Self {
         Self { controller_proxy }
     }
 
-    fn start(self, abort_registration: future::AbortRegistration) -> Sender<ControllerRequest> {
+    fn start(self, abort_registration: future::AbortRegistration) -> Sender<SessionRequest> {
         let (request_sink, request_stream) = channel(CHANNEL_BUFFER_SIZE);
         let serve_fut = future::Abortable::new(self.serve(request_stream), abort_registration)
             .unwrap_or_else(|_| {
@@ -112,42 +112,42 @@ impl RequestForwarder {
         request_sink
     }
 
-    async fn serve(self, mut request_stream: Receiver<ControllerRequest>) {
+    async fn serve(self, mut request_stream: Receiver<SessionRequest>) {
         while let Some(request) = await!(request_stream.next()) {
             trylog!(self.serve_request_with_controller(request));
         }
     }
 
-    /// Forwards a single request to the `ControllerProxy`.
-    fn serve_request_with_controller(&self, request: ControllerRequest) -> Result<()> {
+    /// Forwards a single request to the `SessionProxy`.
+    fn serve_request_with_controller(&self, request: SessionRequest) -> Result<()> {
         match request {
-            ControllerRequest::Play { .. } => self.controller_proxy.play()?,
-            ControllerRequest::Pause { .. } => self.controller_proxy.pause()?,
-            ControllerRequest::Stop { .. } => self.controller_proxy.stop()?,
-            ControllerRequest::SeekToPosition { position, .. } => {
+            SessionRequest::Play { .. } => self.controller_proxy.play()?,
+            SessionRequest::Pause { .. } => self.controller_proxy.pause()?,
+            SessionRequest::Stop { .. } => self.controller_proxy.stop()?,
+            SessionRequest::SeekToPosition { position, .. } => {
                 self.controller_proxy.seek_to_position(position)?
             }
-            ControllerRequest::SkipForward { skip_amount, .. } => {
+            SessionRequest::SkipForward { skip_amount, .. } => {
                 self.controller_proxy.skip_forward(skip_amount)?
             }
-            ControllerRequest::SkipReverse { skip_amount, .. } => {
+            SessionRequest::SkipReverse { skip_amount, .. } => {
                 self.controller_proxy.skip_reverse(skip_amount)?
             }
-            ControllerRequest::NextItem { .. } => self.controller_proxy.next_item()?,
-            ControllerRequest::PrevItem { .. } => self.controller_proxy.prev_item()?,
-            ControllerRequest::SetPlaybackRate { playback_rate, .. } => {
+            SessionRequest::NextItem { .. } => self.controller_proxy.next_item()?,
+            SessionRequest::PrevItem { .. } => self.controller_proxy.prev_item()?,
+            SessionRequest::SetPlaybackRate { playback_rate, .. } => {
                 self.controller_proxy.set_playback_rate(playback_rate)?
             }
-            ControllerRequest::SetRepeatMode { repeat_mode, .. } => {
+            SessionRequest::SetRepeatMode { repeat_mode, .. } => {
                 self.controller_proxy.set_repeat_mode(repeat_mode)?
             }
-            ControllerRequest::SetShuffleMode { shuffle_on, .. } => {
+            SessionRequest::SetShuffleMode { shuffle_on, .. } => {
                 self.controller_proxy.set_shuffle_mode(shuffle_on)?
             }
-            ControllerRequest::BindGainControl { gain_control_request, .. } => {
+            SessionRequest::BindGainControl { gain_control_request, .. } => {
                 self.controller_proxy.bind_gain_control(gain_control_request)?
             }
-            ControllerRequest::ConnectToExtension { extension, channel, .. } => {
+            SessionRequest::ConnectToExtension { extension, channel, .. } => {
                 self.controller_proxy.connect_to_extension(&extension, channel)?
             }
         };
@@ -156,13 +156,13 @@ impl RequestForwarder {
 }
 
 /// Stores the most recent events sent by the backing
-/// `fuchsia.mediasession.Controller` implementation which represent the state of
+/// `fuchsia.mediasession.Session` implementation which represent the state of
 /// the media session.
 #[derive(Default)]
 struct SessionState {
-    metadata: Option<ControllerEvent>,
-    playback_capabilities: Option<ControllerEvent>,
-    playback_status: Option<ControllerEvent>,
+    metadata: Option<SessionEvent>,
+    playback_capabilities: Option<SessionEvent>,
+    playback_status: Option<SessionEvent>,
 }
 
 impl SessionState {
@@ -171,32 +171,30 @@ impl SessionState {
     }
 
     /// Updates the stored state with the new `event`.
-    fn update(&mut self, event: ControllerEvent) {
+    fn update(&mut self, event: SessionEvent) {
         let to_update = match &event {
-            ControllerEvent::OnPlaybackStatusChanged { .. } => &mut self.playback_status,
-            ControllerEvent::OnMetadataChanged { .. } => &mut self.metadata,
-            ControllerEvent::OnPlaybackCapabilitiesChanged { .. } => {
-                &mut self.playback_capabilities
-            }
+            SessionEvent::OnPlaybackStatusChanged { .. } => &mut self.playback_status,
+            SessionEvent::OnMetadataChanged { .. } => &mut self.metadata,
+            SessionEvent::OnPlaybackCapabilitiesChanged { .. } => &mut self.playback_capabilities,
         };
         *to_update = Some(event);
     }
 }
 
-/// Broadcasts events from the backing `Controller` implementation to all proxied
+/// Broadcasts events from the backing `Session` implementation to all proxied
 /// clients and, if it is qualifying activity, to the Media Session service so it
 /// can track active sessions.
 struct EventBroadcaster {
     id: zx::Koid,
     service_event_sink: Sender<ServiceEvent>,
-    source: ControllerEventStream,
+    source: SessionEventStream,
 }
 
 impl EventBroadcaster {
     fn new(
         id: zx::Koid,
         service_event_sink: Sender<ServiceEvent>,
-        source: ControllerEventStream,
+        source: SessionEventStream,
     ) -> Self {
         Self { id, service_event_sink, source }
     }
@@ -204,7 +202,7 @@ impl EventBroadcaster {
     fn start(
         self,
         epitaph: impl Future<Output = ()> + Send + 'static,
-    ) -> Sender<ControllerControlHandle> {
+    ) -> Sender<SessionControlHandle> {
         let (listener_sink, listener_stream) = channel(CHANNEL_BUFFER_SIZE);
         fasync::spawn(
             async move {
@@ -222,7 +220,7 @@ impl EventBroadcaster {
     /// connection.
     ///
     /// Event listeners are dropped as their client ends disconnect.
-    async fn serve(mut self, mut listener_stream: Receiver<ControllerControlHandle>) {
+    async fn serve(mut self, mut listener_stream: Receiver<SessionControlHandle>) {
         let mut session_state = SessionState::new();
         let mut listeners = Vec::new();
 
@@ -267,16 +265,16 @@ impl EventBroadcaster {
     ///
     /// This will not work for events which have handles as they can only be sent
     /// once.
-    fn broadcast_event(event: &mut ControllerEvent, listeners: &mut Vec<ControllerControlHandle>) {
+    fn broadcast_event(event: &mut SessionEvent, listeners: &mut Vec<SessionControlHandle>) {
         listeners.retain(|listener| Self::send_event(listener, event).is_ok());
     }
 
     /// Sends an event to a listener by a control handle.
-    fn send_event(listener: &ControllerControlHandle, event: &mut ControllerEvent) -> Result<()> {
+    fn send_event(listener: &SessionControlHandle, event: &mut SessionEvent) -> Result<()> {
         // TODO(turnage): remove this field by field copy for a `.clone()` invocation
         //                when FIDL structs and tables get a method for that.
         match event {
-            ControllerEvent::OnPlaybackStatusChanged { playback_status } => listener
+            SessionEvent::OnPlaybackStatusChanged { playback_status } => listener
                 .send_on_playback_status_changed(PlaybackStatus {
                     duration: playback_status.duration.clone(),
                     playback_state: playback_status.playback_state.clone(),
@@ -297,10 +295,10 @@ impl EventBroadcaster {
                         description: error.description.clone(),
                     }),
                 }),
-            ControllerEvent::OnMetadataChanged { media_metadata } => {
+            SessionEvent::OnMetadataChanged { media_metadata } => {
                 listener.send_on_metadata_changed(media_metadata)
             }
-            ControllerEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => listener
+            SessionEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => listener
                 .send_on_playback_capabilities_changed(PlaybackCapabilities {
                     can_play: playback_capabilities.can_play,
                     can_stop: playback_capabilities.can_stop,
@@ -326,17 +324,17 @@ impl EventBroadcaster {
     }
 
     /// Delivers `state` to `listener`.
-    fn deliver_state(state: &mut SessionState, listener: &ControllerControlHandle) -> Result<()> {
+    fn deliver_state(state: &mut SessionState, listener: &SessionControlHandle) -> Result<()> {
         [&mut state.metadata, &mut state.playback_capabilities, &mut state.playback_status]
             .iter_mut()
-            .filter_map(|update: &mut &mut Option<ControllerEvent>| (*update).as_mut())
-            .map(|update: &mut ControllerEvent| Self::send_event(&listener, update))
+            .filter_map(|update: &mut &mut Option<SessionEvent>| (*update).as_mut())
+            .map(|update: &mut SessionEvent| Self::send_event(&listener, update))
             .collect()
     }
 
-    fn event_is_an_active_playback_status(event: &ControllerEvent) -> bool {
+    fn event_is_an_active_playback_status(event: &SessionEvent) -> bool {
         match *event {
-            ControllerEvent::OnPlaybackStatusChanged { ref playback_status }
+            SessionEvent::OnPlaybackStatusChanged { ref playback_status }
                 if playback_status.playback_state == Some(PlaybackState::Playing) =>
             {
                 true

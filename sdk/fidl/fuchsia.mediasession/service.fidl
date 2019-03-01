@@ -13,7 +13,7 @@ using zx;
 protocol Publisher {
     /// Publishes a session. Returns |session_id| which can be used to
     /// to identify the session.
-    Publish(Controller controller) -> (handle<event> session_id);
+    Publish(Session controller) -> (handle<event> session_id);
 };
 
 /// Describes the session which is currently implementing the active session
@@ -22,25 +22,14 @@ table ActiveSession {
     1: handle<event> session_id;
 };
 
-/// |ControllerRegistry| observes the collection of published media sessions
+/// |Registry| observes the collection of published media sessions
 /// and vends control handles to them.
 [Discoverable]
-protocol ControllerRegistry {
+protocol Registry {
     /// |OnActiveSession| is sent on connection and when the
     /// underlying active session is changed.
     -> OnActiveSession(ActiveSession active_session);
 
-    /// Connects to a |Controller| for |session_id| if present.
-    ConnectToControllerById(handle<event> session_id, request<Controller> controller_request);
-};
-
-/// |ObserverRegistry| vends handles to observe published media sessions.
-[Discoverable]
-protocol ObserverRegistry {
-    /// |OnActiveSession| is sent on connection and when the
-    /// underlying active session is changed.
-    -> OnActiveSession(ActiveSession active_session);
-
-    /// Connects to an |Observer| for |session_id| if present.
-    GetObserverById(handle<event> session_id, request<Observer> observer_request);
+    /// Connects to a |Session| for |session_id| if present.
+    ConnectToSessionById(handle<event> session_id, request<Session> controller_request);
 };

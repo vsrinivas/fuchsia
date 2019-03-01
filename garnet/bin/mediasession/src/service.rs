@@ -8,7 +8,7 @@ use crate::session_id_rights;
 use crate::Result;
 use crate::CHANNEL_BUFFER_SIZE;
 use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_mediasession::{ActiveSession, ControllerMarker, ControllerRegistryControlHandle};
+use fidl_fuchsia_mediasession::{ActiveSession, RegistryControlHandle, SessionMarker};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
@@ -65,14 +65,14 @@ pub enum ServiceEvent {
     NewSession((Session, zx::Event)),
     SessionClosed(zx::Koid),
     SessionActivity(zx::Koid),
-    NewControllerRequest { session_id: zx::Koid, request: ServerEnd<ControllerMarker> },
-    NewActiveSessionChangeListener(ControllerRegistryControlHandle),
+    NewSessionRequest { session_id: zx::Koid, request: ServerEnd<SessionMarker> },
+    NewActiveSessionChangeListener(RegistryControlHandle),
 }
 
 /// The Media Session service.
 pub struct Service {
-    published_sessions: HashMap<zx::Koid, (Sender<ServerEnd<ControllerMarker>>, zx::Event)>,
-    active_session_listeners: Vec<ControllerRegistryControlHandle>,
+    published_sessions: HashMap<zx::Koid, (Sender<ServerEnd<SessionMarker>>, zx::Event)>,
+    active_session_listeners: Vec<RegistryControlHandle>,
     /// The most recent sessions to broadcast activity.
     active_session_queue: ActiveSessionQueue,
 }
@@ -103,7 +103,7 @@ impl Service {
                         self.broadcast_active_session()?;
                     }
                 }
-                ServiceEvent::NewControllerRequest { session_id, request } => {
+                ServiceEvent::NewSessionRequest { session_id, request } => {
                     if let Some((request_sink, _)) = self.published_sessions.get_mut(&session_id) {
                         log_error_discard_result(await!(request_sink.send(request)));
                     }
@@ -135,7 +135,7 @@ impl Service {
         Ok(())
     }
 
-    fn send_active_session(&self, recipient: &ControllerRegistryControlHandle) -> Result<()> {
+    fn send_active_session(&self, recipient: &RegistryControlHandle) -> Result<()> {
         recipient.send_on_active_session(self.active_session_update()?).map_err(Into::into)
     }
 

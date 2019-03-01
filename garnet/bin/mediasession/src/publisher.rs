@@ -9,7 +9,7 @@ use crate::Result;
 use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
 use fidl_fuchsia_mediasession::{
-    ControllerMarker, PublisherMarker, PublisherRequest, PublisherRequestStream,
+    PublisherMarker, PublisherRequest, PublisherRequestStream, SessionMarker,
 };
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
@@ -47,7 +47,7 @@ impl Publisher {
         Ok(())
     }
 
-    async fn publish(&mut self, controller: ClientEnd<ControllerMarker>) -> Result<zx::Event> {
+    async fn publish(&mut self, controller: ClientEnd<SessionMarker>) -> Result<zx::Event> {
         let event = zx::Event::create()?;
         let session_id: zx::Event = event.as_handle_ref().duplicate(session_id_rights())?.into();
         let id = event.as_handle_ref().get_koid()?;

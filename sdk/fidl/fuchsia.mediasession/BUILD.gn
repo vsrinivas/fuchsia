@@ -6,11 +6,10 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.mediasession") {
   sources = [
-    "controller.fidl",
-    "observer.fidl",
     "playback_capabilities.fidl",
     "playback_status.fidl",
     "service.fidl",
+    "session.fidl",
   ]
 
   public_deps = [
