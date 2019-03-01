@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <lib/fxl/logging.h>
+#include <trace/event.h>
 
 #include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
@@ -44,6 +45,7 @@ VirtioMagma::~VirtioMagma() {
   } break
 
 void VirtioMagma::HandleCommand(VirtioChain* chain) {
+  TRACE_DURATION("machina", "VirtioMagma::HandleCommand");
   VirtioDescriptor request_desc;
   if (!chain->NextDescriptor(&request_desc)) {
     FXL_LOG(ERROR) << "Failed to read request descriptor";
@@ -89,6 +91,7 @@ void VirtioMagma::HandleCommand(VirtioChain* chain) {
 }
 
 void VirtioMagma::OnCommandAvailable() {
+  TRACE_DURATION("machina", "VirtioMagma::OnCommandAvailable");
   VirtioChain chain;
   while (out_queue_->NextChain(&chain)) {
     HandleCommand(&chain);
@@ -99,6 +102,7 @@ void VirtioMagma::OnQueueReady() {}
 
 void VirtioMagma::Query(const virtio_magma_query_t* request,
                         virtio_magma_query_resp_t* response) {
+  TRACE_DURATION("machina", "VirtioMagma::Query");
   FXL_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_QUERY);
   if (request->field_id == MAGMA_QUERY_DEVICE_ID ||
       request->field_id >= MAGMA_QUERY_VENDOR_PARAM_0) {
@@ -116,6 +120,7 @@ void VirtioMagma::Query(const virtio_magma_query_t* request,
 void VirtioMagma::CreateConnection(
     const virtio_magma_create_connection_t* request,
     virtio_magma_create_connection_resp_t* response) {
+  TRACE_DURATION("machina", "VirtioMagma::CreateConnection");
   FXL_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_CREATE_CONNECTION);
   magma_connection_t connection;
   magma_status_t status =
@@ -134,6 +139,7 @@ void VirtioMagma::CreateConnection(
 void VirtioMagma::ReleaseConnection(
     const virtio_magma_release_connection_t* request,
     virtio_magma_release_connection_resp_t* response) {
+  TRACE_DURATION("machina", "VirtioMagma::ReleaseConnection");
   FXL_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_RELEASE_CONNECTION);
   auto connection = connections_.find(request->connection);
   if (connection == connections_.end()) {
