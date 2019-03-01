@@ -15,17 +15,17 @@ package("magma-intel-gen") {
 
     deps = build_libvulkan
 
-    filename = "$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"
+    # api_version must be present but is unused
     icd_data = [
       "{",
       "\"file_format_version\": \"1.0.0\",",
       "\"ICD\": {",
       "\"library_path\": \"libvulkan_intel.so\",",
-      "\"api_version\": \"1.0.68\"",
+      "\"api_version\": \"0.0.0\"",
       "}",
       "}",
     ]
-    write_file(filename, icd_data)
+    write_file("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json", icd_data)
 
     resources = [
       {
