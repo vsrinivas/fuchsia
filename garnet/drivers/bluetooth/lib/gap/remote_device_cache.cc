@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/async/default.h"
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace btlib {
 namespace gap {
@@ -37,7 +37,7 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const DeviceAddress& address,
                                            bool connectable) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   auto* const device =
-      InsertDeviceRecord(fxl::GenerateUUID(), address, connectable);
+      InsertDeviceRecord(uuid::Generate(), address, connectable);
   if (device) {
     UpdateExpiry(*device);
     NotifyDeviceUpdated(*device);

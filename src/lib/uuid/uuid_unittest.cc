@@ -2,25 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 
 #include <stdint.h>
 
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
-namespace fxl {
 namespace {
 
-TEST(Random, Uuid) {
+TEST(UUID, Generate) {
   for (int i = 0; i < 256; ++i) {
-    auto uuid = GenerateUUID();
-    EXPECT_TRUE(IsValidUUID(uuid));
-    EXPECT_TRUE(IsValidUUIDOutputString(uuid));
+    auto uuid = uuid::Generate();
+    EXPECT_TRUE(uuid::IsValid(uuid));
+    EXPECT_TRUE(uuid::IsValidOutputString(uuid));
   }
 }
 
 }  // namespace
-}  // namespace fxl

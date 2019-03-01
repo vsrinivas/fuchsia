@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 
-#include <lib/fxl/random/uuid.h>
+#include "src/lib/uuid/uuid.h"
 
 namespace modular {
 
@@ -24,7 +24,7 @@ SuggestionPrototype* CreateSuggestionPrototype(
   SuggestionPrototype* suggestion_prototype =
       prototype_pair.first->second.get();
   suggestion_prototype->preloaded_story_id = preloaded_story_id;
-  suggestion_prototype->suggestion_id = fxl::GenerateUUID();
+  suggestion_prototype->suggestion_id = uuid::Generate();
   suggestion_prototype->source_url = source_url;
   suggestion_prototype->timestamp = zx::clock::get_monotonic();
   suggestion_prototype->proposal = std::move(proposal);

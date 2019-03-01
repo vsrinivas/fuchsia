@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 
+#include <lib/fxl/strings/string_printf.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/syscalls.h>
 
 #include <string>
 
-#include "lib/fxl/random/rand.h"
-#include "lib/fxl/strings/string_printf.h"
-
-namespace fxl {
+namespace uuid {
 namespace {
 
 inline bool IsHexDigit(char c) {
@@ -24,8 +23,8 @@ inline bool IsLowerHexDigit(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
 }
 
-bool IsValidUUIDInternal(const std::string& guid, bool strict) {
-  const size_t kUUIDLength = 36U;
+bool IsValidInternal(const std::string& guid, bool strict) {
+  constexpr size_t kUUIDLength = 36U;
   if (guid.length() != kUUIDLength)
     return false;
   for (size_t i = 0; i < guid.length(); ++i) {
@@ -43,8 +42,9 @@ bool IsValidUUIDInternal(const std::string& guid, bool strict) {
 
 }  // namespace
 
-std::string GenerateUUID() {
-  uint64_t bytes[2] = {fxl::RandUint64(), fxl::RandUint64()};
+std::string Generate() {
+  uint64_t bytes[2];
+  zx_cprng_draw(bytes, sizeof(bytes));
 
   // Set the UUID to version 4 as described in RFC 4122, section 4.4.
   // The format of UUID version 4 must be xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx,
@@ -58,20 +58,20 @@ std::string GenerateUUID() {
   bytes[1] &= 0x3fffffffffffffffULL;
   bytes[1] |= 0x8000000000000000ULL;
 
-  return StringPrintf("%08x-%04x-%04x-%04x-%012llx",
-                      static_cast<unsigned int>(bytes[0] >> 32),
-                      static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
-                      static_cast<unsigned int>(bytes[0] & 0x0000ffff),
-                      static_cast<unsigned int>(bytes[1] >> 48),
-                      bytes[1] & 0x0000ffffffffffffULL);
+  return fxl::StringPrintf(
+      "%08x-%04x-%04x-%04x-%012llx", static_cast<unsigned int>(bytes[0] >> 32),
+      static_cast<unsigned int>((bytes[0] >> 16) & 0x0000ffff),
+      static_cast<unsigned int>(bytes[0] & 0x0000ffff),
+      static_cast<unsigned int>(bytes[1] >> 48),
+      bytes[1] & 0x0000ffffffffffffULL);
 }
 
-bool IsValidUUID(const std::string& guid) {
-  return IsValidUUIDInternal(guid, false /* strict */);
+bool IsValid(const std::string& guid) {
+  return IsValidInternal(guid, false /* strict */);
 }
 
-bool IsValidUUIDOutputString(const std::string& guid) {
-  return IsValidUUIDInternal(guid, true /* strict */);
+bool IsValidOutputString(const std::string& guid) {
+  return IsValidInternal(guid, true /* strict */);
 }
 
-}  // namespace fxl
+}  // namespace uuid

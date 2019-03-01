@@ -19,7 +19,7 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
-#include <lib/fxl/random/uuid.h>
+#include "src/lib/uuid/uuid.h"
 #include <lib/zx/time.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"

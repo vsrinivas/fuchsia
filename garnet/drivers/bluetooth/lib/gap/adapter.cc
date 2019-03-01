@@ -15,7 +15,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 
 #include "bredr_connection_manager.h"
 #include "bredr_discovery_manager.h"
@@ -49,7 +49,7 @@ std::string GetHostname() {
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
                  fbl::RefPtr<data::Domain> data_domain,
                  fbl::RefPtr<gatt::GATT> gatt)
-    : identifier_(fxl::GenerateUUID()),
+    : identifier_(uuid::Generate()),
       dispatcher_(async_get_default_dispatcher()),
       hci_(hci),
       init_state_(State::kNotInitialized),

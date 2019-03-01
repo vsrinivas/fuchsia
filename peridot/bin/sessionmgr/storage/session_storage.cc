@@ -6,7 +6,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fxl/functional/make_copyable.h>
-#include <lib/fxl/random/uuid.h>
+#include "src/lib/uuid/uuid.h"
 #include <unordered_set>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
@@ -100,7 +100,7 @@ class CreateStoryCall
     // doesn't expose internal information by being a page ID.
     // TODO(thatguy): Generate a GUID instead.
     if (!story_name_ || story_name_->empty()) {
-      story_name_ = fxl::GenerateUUID();
+      story_name_ = uuid::Generate();
     }
 
     story_data_ = fuchsia::modular::internal::StoryData::New();

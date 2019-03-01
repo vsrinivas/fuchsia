@@ -7,7 +7,7 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/random/uuid.h>
+#include "src/lib/uuid/uuid.h"
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/tests/cloud_provider/convert.h"
@@ -218,7 +218,7 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   // previous test runs.
   // TODO(ppi): use a fixed ID here once the cloud provider implementations
   // support erasing objects.
-  const std::string id = fxl::GenerateUUID();
+  const std::string id = uuid::Generate();
   ASSERT_EQ(ZX_OK, page_cloud->AddObject(
                        ToArray(id), std::move(data).ToTransport(), &status));
   EXPECT_EQ(Status::OK, status);

@@ -66,6 +66,7 @@ source_set("session_storage") {
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
+    "//src/lib/uuid",
   ]
 
   public_deps = [

@@ -94,6 +94,7 @@ source_set("story_runner") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//src/lib/uuid",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

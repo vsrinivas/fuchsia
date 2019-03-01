@@ -9,7 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "low_energy_address_manager.h"
@@ -40,7 +40,7 @@ void WriteFlags(common::MutableByteBuffer* buffer, bool limited = false) {
 class LowEnergyAdvertisingManager::ActiveAdvertisement final {
  public:
   explicit ActiveAdvertisement(const common::DeviceAddress& address)
-      : address_(address), id_(fxl::GenerateUUID()) {}
+      : address_(address), id_(uuid::Generate()) {}
 
   ~ActiveAdvertisement() = default;
 

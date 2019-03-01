@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("uuid") {
+  sources = [
+    "uuid.cc",
+    "uuid.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("uuid_unittests") {
+  testonly = true
+
+  sources = [
+    "uuid_unittest.cc",
+  ]
+
+  deps = [
+    ":uuid",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("uuid_tests") {
+  testonly = true
+
+  deps = [
+    ":uuid_unittests",
+  ]
+
+  tests = [
+    {
+      name = "uuid_unittests"
+    },
+  ]
+}

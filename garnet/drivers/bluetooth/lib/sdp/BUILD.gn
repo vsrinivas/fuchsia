@@ -17,6 +17,7 @@ source_set("definitions") {
 
   public_deps = [
     "//garnet/drivers/bluetooth/lib/common",
+    "//src/lib/uuid",
   ]
 }
 

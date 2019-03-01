@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//src/lib/uuid:uuid_tests"
+    ]
+}

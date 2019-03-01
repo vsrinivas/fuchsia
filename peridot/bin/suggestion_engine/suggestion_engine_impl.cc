@@ -14,7 +14,7 @@
 #include <lib/fxl/time/time_delta.h>
 #include <lib/fxl/time/time_point.h>
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
 #include "peridot/bin/suggestion_engine/filters/conjugate_ranked_passive_filter.h"

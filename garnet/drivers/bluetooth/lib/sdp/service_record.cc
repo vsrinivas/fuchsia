@@ -9,7 +9,7 @@
 #include <set>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "garnet/public/lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace btlib {
 namespace sdp {
@@ -36,7 +36,7 @@ void AddAllUUIDs(const DataElement& elem,
 
 ServiceRecord::ServiceRecord() {
   common::UUID service_uuid;
-  common::StringToUuid(fxl::GenerateUUID(), &service_uuid);
+  common::StringToUuid(uuid::Generate(), &service_uuid);
   SetAttribute(kServiceId, DataElement(service_uuid));
 }
 

@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_RANDOM_UUID_H_
-#define LIB_FXL_RANDOM_UUID_H_
+#ifndef SRC_LIB_UUID_UUID_H_
+#define SRC_LIB_UUID_UUID_H_
 
 #include <stdint.h>
 
 #include <string>
 
-#include "lib/fxl/fxl_export.h"
-
-namespace fxl {
+namespace uuid {
 
 // Generate a 128-bit (pseudo) random UUID in the form of version 4 as described
 // in RFC 4122, section 4.4.
@@ -19,20 +17,20 @@ namespace fxl {
 // where y is one of [8, 9, A, B].
 // The hexadecimal values "a" through "f" are output as lower case characters.
 // If UUID generation fails an empty string is returned.
-std::string GenerateUUID();
+std::string Generate();
 
 // Returns true if the input string conforms to the version 4 UUID format.
 // Note that this does NOT check if the hexadecimal values "a" through "f"
 // are in lower case characters, as Version 4 RFC says they're
-// case insensitive. (Use IsValidUUIDOutputString for checking if the
+// case insensitive. (Use IsValidOutputString for checking if the
 // given string is valid output string)
-bool IsValidUUID(const std::string& guid);
+bool IsValid(const std::string& guid);
 
 // Returns true if the input string is valid version 4 UUID output string.
 // This also checks if the hexadecimal values "a" through "f" are in lower
 // case characters.
-bool IsValidUUIDOutputString(const std::string& guid);
+bool IsValidOutputString(const std::string& guid);
 
-}  // namespace fxl
+}  // namespace uuid
 
-#endif  // LIB_FXL_RANDOM_UUID_H_
+#endif  // SRC_LIB_UUID_UUID_H_

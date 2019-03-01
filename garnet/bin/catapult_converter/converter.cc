@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "lib/fxl/logging.h"
-#include "lib/fxl/random/uuid.h"
+#include "src/lib/uuid/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
@@ -220,7 +220,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output,
     if (args->use_test_guids) {
       uuid = fxl::StringPrintf("dummy_guid_%d", next_dummy_guid++);
     } else {
-      uuid = fxl::GenerateUUID();
+      uuid = uuid::Generate();
     }
     return helper.MakeString(uuid.c_str());
   };

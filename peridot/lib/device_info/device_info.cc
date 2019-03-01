@@ -11,7 +11,7 @@
 #include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
-#include <lib/fxl/random/uuid.h>
+#include "src/lib/uuid/uuid.h"
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/trim.h>
 
@@ -49,7 +49,7 @@ std::string LoadDeviceID(const std::string& user) {
 
   if (!files::ReadFileToString(path, &device_id)) {
     // no existing device id. generate a UUID and store it to disk
-    device_id = fxl::GenerateUUID();
+    device_id = uuid::Generate();
     bool success = files::WriteFile(path, device_id.data(), device_id.length());
     FXL_DCHECK(success);
   }

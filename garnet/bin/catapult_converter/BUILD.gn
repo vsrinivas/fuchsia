@@ -12,6 +12,7 @@ source_set("converter") {
   ]
   deps = [
     "//garnet/public/lib/fxl",
+    "//src/lib/uuid",
     "//third_party/rapidjson",
   ]
 }

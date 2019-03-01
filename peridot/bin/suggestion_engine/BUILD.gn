@@ -70,6 +70,7 @@ source_set("suggestion_engine_impl") {
     "//peridot/public/lib/context/cpp:context_helper",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/uuid",
   ]
 
   public_deps = [

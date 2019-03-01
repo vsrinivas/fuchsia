@@ -19,6 +19,7 @@ executable("cloud_provider") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//src/lib/uuid",
   ]
 
   public_deps = [
