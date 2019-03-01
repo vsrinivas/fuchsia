@@ -31,7 +31,6 @@ PageManager::PageManager(Environment* environment,
       task_runner_(environment->dispatcher()) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
-  page_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
 
   if (page_sync_) {
     page_sync_->SetSyncWatcher(&watchers_);
@@ -82,12 +81,6 @@ void PageManager::AddPageDelayingFacade(
       .emplace(environment_->coroutine_service(), this, page_storage_.get(),
                merge_resolver_.get(), &watchers_, std::move(delaying_facade))
       .Init(std::move(traced_on_done));
-}
-
-void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
-                                fit::function<void(Status)> callback) {
-  page_debug_bindings_.AddBinding(this, std::move(page_debug));
-  callback(Status::OK);
 }
 
 void PageManager::BindPageSnapshot(
@@ -145,8 +138,7 @@ void PageManager::IsOfflineAndEmpty(
 
 bool PageManager::IsEmpty() {
   return pages_.empty() && snapshots_.empty() && delaying_facades_.empty() &&
-         merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle()) &&
-         page_debug_bindings_.size() == 0;
+         merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle());
 }
 
 void PageManager::CheckEmpty() {
@@ -166,63 +158,6 @@ void PageManager::OnSyncBacklogDownloaded() {
                           std::move(delaying_facade.second));
   }
   delaying_facades_.clear();
-}
-
-void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {
-  std::vector<storage::CommitId> heads;
-  storage::Status status = page_storage_->GetHeadCommitIds(&heads);
-  fidl::VectorPtr<ledger_internal::CommitId> result;
-  result.resize(0);
-  for (const auto& head : heads) {
-    ledger_internal::CommitId commit_id;
-    commit_id.id = convert::ToArray(head);
-    result.push_back(std::move(commit_id));
-  }
-
-  callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
-           std::move(result));
-}
-
-void PageManager::GetSnapshot(
-    ledger_internal::CommitId commit_id,
-    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    GetSnapshotCallback callback) {
-  page_storage_->GetCommit(
-      convert::ToStringView(commit_id.id),
-      [this, snapshot_request = std::move(snapshot_request),
-       callback = std::move(callback)](
-          storage::Status status,
-          std::unique_ptr<const storage::Commit> commit) mutable {
-        if (status == storage::Status::OK) {
-          BindPageSnapshot(std::move(commit), std::move(snapshot_request), "");
-        }
-        callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT));
-      });
-}
-
-void PageManager::GetCommit(ledger_internal::CommitId commit_id,
-                            GetCommitCallback callback) {
-  page_storage_->GetCommit(
-      convert::ToStringView(commit_id.id),
-      [callback = std::move(callback)](
-          storage::Status status,
-          std::unique_ptr<const storage::Commit> commit) mutable {
-        ledger_internal::CommitPtr commit_struct = nullptr;
-        if (status == storage::Status::OK) {
-          commit_struct = ledger_internal::Commit::New();
-          commit_struct->commit_id.id = convert::ToArray(commit->GetId());
-          commit_struct->parents_ids.resize(0);
-          for (const storage::CommitIdView& parent : commit->GetParentIds()) {
-            ledger_internal::CommitId id;
-            id.id = convert::ToArray(parent);
-            commit_struct->parents_ids.push_back(std::move(id));
-          }
-          commit_struct->timestamp = commit->GetTimestamp().get();
-          commit_struct->generation = commit->GetGeneration();
-        }
-        callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
-                 std::move(commit_struct));
-      });
 }
 
 }  // namespace ledger

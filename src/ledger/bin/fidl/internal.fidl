@@ -61,9 +61,6 @@ protocol LedgerRepository {
     // called.
     SetSyncStateWatcher(fuchsia.ledger.SyncWatcher watcher);
 
-    // Returns the debugging interface for this LedgerRepository
-    GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug);
-
     // Tries to clean up disk space on the device by removing unused data that are
     // already backed up in the cloud.
     DiskCleanUp();

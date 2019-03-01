@@ -39,8 +39,7 @@ namespace ledger {
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
-class LedgerManager : public LedgerImpl::Delegate,
-                      public ledger_internal::LedgerDebug {
+class LedgerManager : public LedgerImpl::Delegate {
  public:
   LedgerManager(
       Environment* environment, std::string ledger_name,
@@ -84,9 +83,6 @@ class LedgerManager : public LedgerImpl::Delegate,
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
-
-  // Creates a new proxy for the LedgerDebug implemented by this LedgerManager.
-  void BindLedgerDebug(fidl::InterfaceRequest<LedgerDebug> request);
 
  private:
   class PageManagerContainer;
@@ -170,14 +166,6 @@ class LedgerManager : public LedgerImpl::Delegate,
 
   void CheckEmpty();
 
-  // LedgerDebug:
-  void GetPagesList(GetPagesListCallback callback) override;
-
-  void GetPageDebug(
-      PageId page_id,
-      fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
-      GetPageDebugCallback callback) override;
-
   Environment* const environment_;
   std::string ledger_name_;
   std::unique_ptr<encryption::EncryptionService> encryption_service_;
@@ -197,8 +185,6 @@ class LedgerManager : public LedgerImpl::Delegate,
       page_managers_;
   PageUsageListener* page_usage_listener_;
   fit::closure on_empty_callback_;
-
-  fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;
 
   PageAvailabilityManager page_availability_manager_;
 

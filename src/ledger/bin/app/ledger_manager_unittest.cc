@@ -237,10 +237,7 @@ class LedgerManagerTest : public TestWithEnvironment {
     ResetLedgerPtr();
   }
 
-  void ResetLedgerPtr() {
-    ledger_manager_->BindLedger(ledger_.NewRequest());
-    ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
-  }
+  void ResetLedgerPtr() { ledger_manager_->BindLedger(ledger_.NewRequest()); }
 
   PageId RandomId() {
     PageId result;
@@ -254,7 +251,6 @@ class LedgerManagerTest : public TestWithEnvironment {
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
-  ledger_internal::LedgerDebugPtr ledger_debug_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManagerTest);
@@ -340,7 +336,6 @@ TEST_F(LedgerManagerTest, OnEmptyCalled) {
   ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
   ledger_.Unbind();
-  ledger_debug_.Unbind();
   RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
@@ -360,7 +355,6 @@ TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
 
   // Empty the Ledger manager.
   ledger_.Unbind();
-  ledger_debug_.Unbind();
   RunLoopUntilIdle();
   EXPECT_FALSE(on_empty_called);
 
@@ -742,48 +736,6 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
             static_cast<int32_t>(status));
   EXPECT_FALSE(ledger_);
   EXPECT_FALSE(sync_ptr->called);
-}
-
-// Verifies that LedgerDebugImpl proxy vended by LedgerManager works correctly.
-TEST_F(LedgerManagerTest, CallGetPagesList) {
-  std::vector<PagePtr> pages(3);
-  std::vector<PageId> ids;
-
-  for (size_t i = 0; i < pages.size(); ++i) {
-    ids.push_back(RandomId());
-  }
-
-  Status status;
-
-  std::vector<PageId> actual_pages_list;
-
-  EXPECT_EQ(0u, actual_pages_list.size());
-
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
-  for (size_t i = 0; i < pages.size(); ++i) {
-    ledger_->GetPage(fidl::MakeOptional(ids[i]), pages[i].NewRequest(),
-                     waiter->NewCallback());
-  }
-
-  bool called;
-  waiter->Finalize(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
-  ledger_debug_->GetPagesList(
-      callback::Capture(callback::SetWhenCalled(&called), &actual_pages_list));
-
-  RunLoopUntilIdle();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(pages.size(), actual_pages_list.size());
-
-  std::sort(ids.begin(), ids.end(), [](const PageId& lhs, const PageId& rhs) {
-    return convert::ToStringView(lhs.id) < convert::ToStringView(rhs.id);
-  });
-  for (size_t i = 0; i < ids.size(); i++)
-    EXPECT_EQ(ids[i].id, actual_pages_list.at(i).id);
 }
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {

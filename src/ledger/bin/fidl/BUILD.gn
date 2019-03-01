@@ -10,7 +10,6 @@ fidl("fidl") {
   name = "fuchsia.ledger.internal"
 
   sources = [
-    "debug.fidl",
     "internal.fidl",
   ]
 

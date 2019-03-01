@@ -217,12 +217,6 @@ class LedgerManager::PageManagerContainer {
   void BindPage(fidl::InterfaceRequest<Page> page_request,
                 fit::function<void(Status)> callback);
 
-  // Keeps track of |page_debug| and |callback|. Binds |page_debug| and fires
-  // |callback| when a PageManager is available or an error occurs.
-  void BindPageDebug(
-      fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
-      fit::function<void(Status)> callback);
-
   // Registers a new internal request for PageStorage.
   void NewInternalRequest(
       fit::function<void(Status, ExpiringToken, PageManager*)> callback);
@@ -254,9 +248,6 @@ class LedgerManager::PageManagerContainer {
   std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
                         fit::function<void(Status)>>>
       requests_;
-  std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::PageDebug>,
-                        fit::function<void(Status)>>>
-      debug_requests_;
   std::vector<fit::function<void(Status, ExpiringToken, PageManager*)>>
       internal_request_callbacks_;
   fit::closure on_empty_callback_;
@@ -273,9 +264,6 @@ LedgerManager::PageManagerContainer::PageManagerContainer(
 
 LedgerManager::PageManagerContainer::~PageManagerContainer() {
   for (const auto& request : requests_) {
-    request.second(Status::INTERNAL_ERROR);
-  }
-  for (const auto& request : debug_requests_) {
     request.second(Status::INTERNAL_ERROR);
   }
 }
@@ -307,22 +295,6 @@ void LedgerManager::PageManagerContainer::BindPage(
     return;
   }
   requests_.emplace_back(std::move(delaying_facade), std::move(callback));
-}
-
-void LedgerManager::PageManagerContainer::BindPageDebug(
-    fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
-    fit::function<void(Status)> callback) {
-  connection_notifier_.RegisterExternalRequest();
-
-  if (status_ != Status::OK) {
-    callback(status_);
-    return;
-  }
-  if (page_manager_) {
-    page_manager_->BindPageDebug(std::move(page_debug), std::move(callback));
-    return;
-  }
-  debug_requests_.emplace_back(std::move(page_debug), std::move(callback));
 }
 
 void LedgerManager::PageManagerContainer::NewInternalRequest(
@@ -362,16 +334,6 @@ void LedgerManager::PageManagerContainer::SetPageManager(
   }
   requests_.clear();
 
-  for (auto& request : debug_requests_) {
-    if (page_manager_) {
-      page_manager_->BindPageDebug(std::move(request.first),
-                                   std::move(request.second));
-    } else {
-      request.second(status_);
-    }
-  }
-  debug_requests_.clear();
-
   for (auto& callback : internal_request_callbacks_) {
     if (!page_manager_) {
       callback(status_, fit::defer<fit::closure>([] {}), nullptr);
@@ -390,8 +352,7 @@ void LedgerManager::PageManagerContainer::SetPageManager(
 }
 
 bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
-  return (page_manager_ && !page_manager_->IsEmpty()) || !requests_.empty() ||
-         !debug_requests_.empty();
+  return (page_manager_ && !page_manager_->IsEmpty()) || !requests_.empty();
 }
 
 void LedgerManager::PageManagerContainer::CheckEmpty() {
@@ -420,7 +381,6 @@ LedgerManager::LedgerManager(
       weak_factory_(this) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
-  ledger_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
 }
 
@@ -703,8 +663,7 @@ void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {
 
 void LedgerManager::CheckEmpty() {
   if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty() &&
-      ledger_debug_bindings_.size() == 0 && tracked_pages_ == 0 &&
-      page_availability_manager_.IsEmpty()) {
+      tracked_pages_ == 0 && page_availability_manager_.IsEmpty()) {
     on_empty_callback_();
   }
 }
@@ -712,36 +671,6 @@ void LedgerManager::CheckEmpty() {
 void LedgerManager::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory) {
   merge_manager_.AddFactory(std::move(factory));
-}
-
-void LedgerManager::BindLedgerDebug(
-    fidl::InterfaceRequest<LedgerDebug> request) {
-  ledger_debug_bindings_.AddBinding(this, std::move(request));
-}
-
-// TODO(ayaelattar): See LE-370: Inspect ledgers and pages not currently active.
-void LedgerManager::GetPagesList(GetPagesListCallback callback) {
-  fidl::VectorPtr<PageId> result;
-  result.resize(0);
-  for (const auto& key_value : page_managers_) {
-    PageId page_id;
-    convert::ToArray(key_value.first, &page_id.id);
-    result.push_back(page_id);
-  }
-  callback(std::move(result));
-}
-
-void LedgerManager::GetPageDebug(
-    PageId page_id,
-    fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
-    GetPageDebugCallback callback) {
-  MaybeMarkPageOpened(page_id.id);
-  auto it = page_managers_.find(convert::ExtendedStringView(page_id.id));
-  if (it != page_managers_.end()) {
-    it->second.BindPageDebug(std::move(page_debug), std::move(callback));
-  } else {
-    callback(Status::PAGE_NOT_FOUND);
-  }
 }
 
 }  // namespace ledger

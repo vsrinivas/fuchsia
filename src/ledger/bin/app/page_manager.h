@@ -38,7 +38,7 @@ namespace ledger {
 //
 // When the set of PageImpls becomes empty, client is notified through
 // |on_empty_callback|.
-class PageManager : public ledger_internal::PageDebug {
+class PageManager {
  public:
   // Whether the page storage needs to sync with the cloud provider before
   // binding new pages (|NEEDS_SYNC|) or whether it is immediately available
@@ -56,17 +56,13 @@ class PageManager : public ledger_internal::PageDebug {
               std::unique_ptr<MergeResolver> merge_resolver,
               PageManager::PageStorageState state,
               zx::duration sync_timeout = zx::sec(5));
-  ~PageManager() override;
+  ~PageManager();
 
   // Creates a new PageDelegate managed by this PageManager, and binds it to the
   // given PageDelayingFacade.
   void AddPageDelayingFacade(
       std::unique_ptr<PageDelayingFacade> delaying_facade,
       fit::function<void(Status)> on_done);
-
-  // Binds |page_debug| request and fires |callback| with Status::OK.
-  void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
-                     fit::function<void(Status)> callback);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
@@ -99,15 +95,6 @@ class PageManager : public ledger_internal::PageDebug {
   void CheckEmpty();
   void OnSyncBacklogDownloaded();
 
-  void GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) override;
-
-  void GetSnapshot(ledger_internal::CommitId commit_id,
-                   fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   GetSnapshotCallback callback) override;
-
-  void GetCommit(ledger_internal::CommitId commit_id,
-                 GetCommitCallback callback) override;
-
   Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<sync_coordinator::PageSync> page_sync_;
@@ -125,8 +112,6 @@ class PageManager : public ledger_internal::PageDebug {
       delaying_facades_;
 
   SyncWatcherSet watchers_;
-
-  fidl::BindingSet<PageDebug> page_debug_bindings_;
 
   // Registered references.
   std::map<uint64_t, storage::ObjectIdentifier> references_;

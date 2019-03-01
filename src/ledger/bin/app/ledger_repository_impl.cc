@@ -42,8 +42,6 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       page_usage_listener_(page_usage_listener) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
-  ledger_repository_debug_bindings_.set_empty_set_handler(
-      [this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
 }
 
@@ -194,17 +192,9 @@ void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;
   if (ledger_managers_.empty() && bindings_.empty() &&
-      ledger_repository_debug_bindings_.size() == 0 &&
       disk_cleanup_manager_->IsEmpty()) {
     on_empty_callback_();
   }
-}
-
-void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
-    fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
-    fit::function<void(Status)> callback) {
-  ledger_repository_debug_bindings_.AddBinding(this, std::move(request));
-  callback(Status::OK);
 }
 
 void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
@@ -226,27 +216,6 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
 DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
   FXL_DCHECK(!ledger_name.empty());
   return content_path_.SubPath(GetDirectoryName(ledger_name));
-}
-
-void LedgerRepositoryImpl::GetInstancesList(GetInstancesListCallback callback) {
-  std::vector<std::vector<uint8_t>> result;
-  for (const auto& key_value : ledger_managers_) {
-    result.push_back(convert::ToArray(key_value.first));
-  }
-  callback(std::move(result));
-}
-
-void LedgerRepositoryImpl::GetLedgerDebug(
-    std::vector<uint8_t> ledger_name,
-    fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
-    GetLedgerDebugCallback callback) {
-  auto it = ledger_managers_.find(ledger_name);
-  if (it == ledger_managers_.end()) {
-    callback(Status::KEY_NOT_FOUND);
-  } else {
-    it->second.BindLedgerDebug(std::move(request));
-    callback(Status::OK);
-  }
 }
 
 }  // namespace ledger

@@ -33,7 +33,6 @@ namespace ledger {
 
 class LedgerRepositoryImpl
     : public fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate,
-      public ledger_internal::LedgerRepositoryDebug,
       public PageEvictionManager::Delegate {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
@@ -82,9 +81,6 @@ class LedgerRepositoryImpl
       fit::function<void(Status)> callback) override;
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            fit::function<void(Status)> callback) override;
-  void GetLedgerRepositoryDebug(
-      fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
-      fit::function<void(Status)> callback) override;
   void DiskCleanUp(fit::function<void(Status)> callback) override;
 
  private:
@@ -96,14 +92,6 @@ class LedgerRepositoryImpl
   void CheckEmpty();
 
   DetachedPath GetPathFor(fxl::StringView ledger_name);
-
-  // LedgerRepositoryDebug:
-  void GetInstancesList(GetInstancesListCallback callback) override;
-
-  void GetLedgerDebug(
-      std::vector<uint8_t> ledger_name,
-      fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
-      GetLedgerDebugCallback callback) override;
 
   const DetachedPath content_path_;
   Environment* const environment_;
@@ -120,9 +108,6 @@ class LedgerRepositoryImpl
       fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate>>
       bindings_;
   fit::closure on_empty_callback_;
-
-  fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
-      ledger_repository_debug_bindings_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
 
