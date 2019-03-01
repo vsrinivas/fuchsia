@@ -627,16 +627,9 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	ns.mu.Unlock()
 
 	b := bridge.New(links)
-	ifs, err := ns.addEndpoint(b, b)
-	if err != nil {
-		return nil, err
-	}
-	ifs.mu.Lock()
-	if len(ifs.mu.nic.Name) == 0 {
-		ifs.mu.nic.Name = fmt.Sprintf("br%d", ifs.mu.nic.ID)
-	}
-	ifs.mu.Unlock()
-	return ifs, nil
+	return ns.addEndpoint(func(nicid tcpip.NICID) string {
+			return fmt.Sprintf("br%d", nicid)
+	}, b, b)
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
@@ -645,21 +638,22 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 		return nil, err
 	}
 
-	ifs, err := ns.addEndpoint(eth.NewLinkEndpoint(client), client)
+	ifs, err := ns.addEndpoint(func(nicid tcpip.NICID) string {
+		if len(config.Name) == 0 {
+			return fmt.Sprintf("eth%d", nicid)
+		}
+		return config.Name
+	}, eth.NewLinkEndpoint(client), client)
 	if err != nil {
 		return nil, err
 	}
 	ifs.mu.Lock()
 	ifs.mu.nic.Features = client.Info.Features
-	ifs.mu.nic.Name = config.Name
-	if len(ifs.mu.nic.Name) == 0 {
-		ifs.mu.nic.Name = fmt.Sprintf("eth%d", ifs.mu.nic.ID)
-	}
 	ifs.mu.Unlock()
 	return ifs, nil
 }
 
-func (ns *Netstack) addEndpoint(ep stack.LinkEndpoint, controller link.Controller) (*ifState, error) {
+func (ns *Netstack) addEndpoint(nameFn func(nicid tcpip.NICID) string, ep stack.LinkEndpoint, controller link.Controller) (*ifState, error) {
 	ifs := &ifState{
 		ns: ns,
 		eth: controller,
@@ -694,10 +688,11 @@ func (ns *Netstack) addEndpoint(ep stack.LinkEndpoint, controller link.Controlle
 	ns.mu.Lock()
 
 	nicid := ns.mu.countNIC + 1
+	name := nameFn(nicid)
 	ns.mu.ifStates[nicid] = ifs
 	ns.mu.countNIC++
 
-	logger.Infof("NIC %s added", ifs.mu.nic.Name)
+	logger.Infof("NIC %s added", name)
 
 	if err := ns.mu.stack.CreateNIC(nicid, linkID); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %v", ifs.mu.nic.Name, err)
@@ -712,9 +707,10 @@ func (ns *Netstack) addEndpoint(ep stack.LinkEndpoint, controller link.Controlle
 	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
 		return nil, fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.mu.nic.Name, snaddr, lladdr, err)
 	}
-	logger.Infof("NIC %s: link-local IPv6: %v", ifs.mu.nic.Name, lladdr)
+	logger.Infof("NIC %s: link-local IPv6: %v", name, lladdr)
 
 	ifs.mu.Lock()
+	ifs.mu.nic.Name = name
 	ifs.mu.nic.ID = nicid
 	ifs.mu.nic.Ipv6addrs = []tcpip.Address{lladdr}
 	ifs.statsEP.Nic = ifs.mu.nic
