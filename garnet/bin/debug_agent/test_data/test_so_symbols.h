@@ -18,12 +18,12 @@ EXPORT extern bool gTestPassed;
 
 // Breakpoint Test -------------------------------------------------------------
 
-EXPORT void InsertBreakpointFunction();
-EXPORT void AnotherFunctionForKicks();
+EXPORT NOINLINE int InsertBreakpointFunction(int);
+EXPORT NOINLINE void AnotherFunctionForKicks();
 
 // Write Register Symbols ------------------------------------------------------
 
-EXPORT void Test_BranchOnRAX();
-EXPORT void Test_PCJump();
+EXPORT NOINLINE void Test_BranchOnRAX();
+EXPORT NOINLINE void Test_PCJump();
 
 }

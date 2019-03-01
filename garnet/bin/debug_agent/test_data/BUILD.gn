@@ -107,3 +107,17 @@ if (current_cpu == "arm64") {
     ]
   }
 }
+
+executable("debug_test_true") {
+  sources = [
+    "true.c",
+  ]
+}
+
+executable("debug_test_false") {
+  sources = [
+    "false.c",
+  ]
+}
+
+

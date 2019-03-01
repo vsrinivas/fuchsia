@@ -558,8 +558,8 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
 
   switch (header.type) {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
-      debug_ipc::NotifyProcess notify;
-      if (!debug_ipc::ReadNotifyProcess(&reader, &notify))
+      debug_ipc::NotifyProcessExiting notify;
+      if (!debug_ipc::ReadNotifyProcessExiting(&reader, &notify))
         return;
 
       Process* process = system_.ProcessFromKoid(notify.process_koid);

@@ -115,7 +115,6 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
 }
 
 void DebugAgent::OnAttach(std::vector<char> serialized) {
-  TIME_BLOCK();
   debug_ipc::MessageReader reader(std::move(serialized));
   debug_ipc::AttachRequest request;
   uint32_t transaction_id = 0;
@@ -124,10 +123,16 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     return;
   }
 
+  OnAttach(transaction_id, request);
+}
+
+void DebugAgent::OnAttach(uint32_t transaction_id,
+                          const debug_ipc::AttachRequest& request) {
+  TIME_BLOCK();
   // Don't return early since we must send the reply at the bottom.
   debug_ipc::AttachReply reply;
   reply.status = ZX_ERR_NOT_FOUND;
-  if (request.type == debug_ipc::AttachRequest::Type::kProcess) {
+  if (request.type == debug_ipc::TaskType::kProcess) {
     zx::process process = GetProcessFromKoid(request.koid);
     if (process.is_valid()) {
       reply.name = NameForObject(process);
@@ -157,7 +162,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
         new_process->SendModuleNotification(std::move(paused_thread_koids));
       }
     }
-  } else if (request.type == debug_ipc::AttachRequest::Type::kJob) {
+  } else if (request.type == debug_ipc::TaskType::kJob) {
     zx::job job = GetJobFromKoid(request.koid);
     if (job.is_valid()) {
       reply.name = NameForObject(job);
@@ -169,7 +174,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteReply(reply, transaction_id, &writer);
     stream()->Write(writer.MessageComplete());
-  } else if (request.type == debug_ipc::AttachRequest::Type::kComponentRoot) {
+  } else if (request.type == debug_ipc::TaskType::kComponentRoot) {
     std::string koid_str;
     bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
     if (!file_read) {
@@ -211,7 +216,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
                           debug_ipc::DetachReply* reply) {
   TIME_BLOCK();
   switch (request.type) {
-    case debug_ipc::DetachRequest::Type::kJob: {
+    case debug_ipc::TaskType::kJob: {
       auto debug_job = GetDebuggedJob(request.koid);
       if (debug_job && debug_job->job().is_valid()) {
         RemoveDebuggedJob(request.koid);
@@ -221,7 +226,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
       }
       break;
     }
-    case debug_ipc::DetachRequest::Type::kProcess: {
+    case debug_ipc::TaskType::kProcess: {
       auto debug_process = GetDebuggedProcess(request.koid);
       if (debug_process && debug_process->process().is_valid()) {
         RemoveDebuggedProcess(request.koid);
@@ -264,8 +269,12 @@ void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-    if (proc)
+    if (proc) {
       proc->OnResume(request);
+    } else {
+      FXL_LOG(WARNING) << "Could not find process by koid: "
+                       << request.process_koid;
+    }
   } else {
     // All debugged processes.
     for (const auto& pair : procs_)

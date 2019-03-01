@@ -78,14 +78,12 @@ void DebuggedJob::SetFilters(std::vector<std::string> filters) {
 
   for (auto& filter : filters) {
     debug_ipc::Regex regex;
-    if (!regex.Init(filter)) {
+    if (!regex.Init(filter))
       FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
-    }
 
     FilterInfo filter_info = {};
     filter_info.filter = std::move(filter);
     filter_info.regex = std::move(regex);
-
     filters_.push_back(std::move(filter_info));
   }
 }

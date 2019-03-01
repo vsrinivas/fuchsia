@@ -126,7 +126,6 @@ executable("unit_tests") {
 
   sources = [
     "breakpoint_unittest.cc",
-    "debugged_job_unittest.cc",
     "debugged_thread_unittest.cc",
     "mock_arch_provider.cc",
     "mock_arch_provider.h",
@@ -155,19 +154,16 @@ executable("unit_tests") {
   ]
 }
 
-executable("debug_test_true") {
-  sources = [
-    "true.c",
-  ]
-}
-
 package("debug_agent_tests") {
   testonly = true
 
   package_name = "debug_agent_tests"
 
+  # TODO(donosoc): Move this to it's own package, this is getting pretty
+  #                annoyingly big.
   deps = [
-    ":debug_test_true",
+    "//garnet/bin/debug_agent/test_data:debug_test_false",
+    "//garnet/bin/debug_agent/test_data:debug_test_true",
     "//garnet/bin/debug_agent/test_data:breakpoint_test_exe",
     "//garnet/bin/debug_agent/test_data:debug_agent_test_loadable_module",
     "//garnet/bin/debug_agent/test_data:process_loop",
@@ -199,6 +195,9 @@ package("debug_agent_tests") {
     },
     {
       name = "debug_test_true"
+    },
+    {
+      name = "debug_test_false"
     },
     {
       name = "process_loop"

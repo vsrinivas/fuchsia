@@ -170,9 +170,9 @@ bool ReadRequest(MessageReader* reader, AttachRequest* request,
   uint32_t type;
   if (!reader->ReadUint32(&type))
     return false;
-  if (type >= static_cast<uint32_t>(AttachRequest::Type::kLast))
+  if (type >= static_cast<uint32_t>(TaskType::kLast))
     return false;
-  request->type = static_cast<AttachRequest::Type>(type);
+  request->type = static_cast<TaskType>(type);
   return reader->ReadUint64(&request->koid);
 }
 
@@ -195,9 +195,9 @@ bool ReadRequest(MessageReader* reader, DetachRequest* request,
   uint32_t type;
   if (!reader->ReadUint32(&type))
     return false;
-  if (type >= static_cast<uint32_t>(DetachRequest::Type::kLast))
+  if (type >= static_cast<uint32_t>(TaskType::kLast))
     return false;
-  request->type = static_cast<DetachRequest::Type>(type);
+  request->type = static_cast<TaskType>(type);
   return reader->ReadUint64(&request->koid);
 }
 
@@ -496,7 +496,8 @@ void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
 
 // Notifications ---------------------------------------------------------------
 
-void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer) {
+void WriteNotifyProcessExiting(const NotifyProcessExiting& notify,
+                               MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessExiting, 0);
   writer->WriteUint64(notify.process_koid);
   writer->WriteInt64(notify.return_code);

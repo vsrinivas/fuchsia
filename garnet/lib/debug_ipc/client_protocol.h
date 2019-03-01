@@ -136,12 +136,11 @@ bool ReadReply(MessageReader* reader, WriteMemoryReply* reply,
 //
 // (These don't have a "request"/"reply".)
 
-bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* notify);
-bool ReadNotifyProcessStarting(MessageReader* reader,
-                               NotifyProcessStarting* notify);
-bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify);
-bool ReadNotifyException(MessageReader* reader, NotifyException* notify);
-bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify);
+bool ReadNotifyProcessExiting(MessageReader*, NotifyProcessExiting*);
+bool ReadNotifyProcessStarting(MessageReader*, NotifyProcessStarting*);
+bool ReadNotifyThread(MessageReader*, NotifyThread*);
+bool ReadNotifyException(MessageReader*, NotifyException*);
+bool ReadNotifyModules(MessageReader*, NotifyModules*);
 
 }  // namespace debug_ipc
 

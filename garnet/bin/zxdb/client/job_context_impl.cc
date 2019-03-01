@@ -93,7 +93,7 @@ void JobContextImpl::OnAttachReply(Callback callback, const Err& err,
   callback(GetWeakPtr(), issue_err);
 }
 
-void JobContextImpl::AttachInternal(debug_ipc::AttachRequest::Type type,
+void JobContextImpl::AttachInternal(debug_ipc::TaskType type,
                                     uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
@@ -119,11 +119,11 @@ void JobContextImpl::AttachInternal(debug_ipc::AttachRequest::Type type,
 }
 
 void JobContextImpl::Attach(uint64_t koid, Callback callback) {
-  AttachInternal(debug_ipc::AttachRequest::Type::kJob, koid, callback);
+  AttachInternal(debug_ipc::TaskType::kJob, koid, callback);
 }
 
 void JobContextImpl::AttachToComponentRoot(Callback callback) {
-  AttachInternal(debug_ipc::AttachRequest::Type::kComponentRoot, 0, callback);
+  AttachInternal(debug_ipc::TaskType::kComponentRoot, 0, callback);
 }
 
 void JobContextImpl::Detach(Callback callback) {
@@ -143,7 +143,7 @@ void JobContextImpl::Detach(Callback callback) {
 
   debug_ipc::DetachRequest request;
   request.koid = job_->GetKoid();
-  request.type = debug_ipc::DetachRequest::Type::kJob;
+  request.type = debug_ipc::TaskType::kJob;
   session()->remote_api()->Detach(request, [
     callback, weak_job_context = impl_weak_factory_.GetWeakPtr()
   ](const Err& err, debug_ipc::DetachReply reply) {

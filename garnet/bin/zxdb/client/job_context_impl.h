@@ -68,7 +68,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
 
-  void AttachInternal(debug_ipc::AttachRequest::Type type, uint64_t koid,
+  void AttachInternal(debug_ipc::TaskType type, uint64_t koid,
                       Callback callback);
 
   static void OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context,

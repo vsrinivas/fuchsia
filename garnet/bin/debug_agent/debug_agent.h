@@ -57,6 +57,9 @@ class DebugAgent : public RemoteAPI,
   void OnKill(const debug_ipc::KillRequest& request,
               debug_ipc::KillReply* reply) override;
   void OnAttach(std::vector<char> serialized) override;
+  // |transaction_id| is the id of the IPC message.
+  void OnAttach(uint32_t transaction_id,
+                const debug_ipc::AttachRequest&) override;
   void OnDetach(const debug_ipc::DetachRequest& request,
                 debug_ipc::DetachReply* reply) override;
   void OnPause(const debug_ipc::PauseRequest& request,

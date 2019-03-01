@@ -4,10 +4,8 @@
 
 #include "garnet/bin/debug_agent/test_data/test_so_symbols.h"
 
-#include <stdio.h>
-
-void InsertBreakpointFunction() {
-  printf("Breakpoint function!\n");
+int InsertBreakpointFunction(int c) {
+  return 10 * c;
 }
 
 void AnotherFunctionForKicks() {}

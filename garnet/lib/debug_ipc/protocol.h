@@ -121,13 +121,19 @@ struct KillReply {
   zx_status_t status = 0;
 };
 
+enum class TaskType : uint32_t {
+  kProcess = 0,
+  kJob,
+  kComponentRoot,
+  kLast
+};
+const char* TaskTypeToString(TaskType);
+
 // The debug agent will follow a successful AttachReply with notifications for
 // all threads currently existing in the attached process.
 struct AttachRequest {
-  enum class Type : uint32_t { kProcess = 0, kJob, kComponentRoot, kLast };
-
-  Type type = Type::kProcess;
-  uint64_t koid = 0;
+  TaskType type = TaskType::kProcess;
+  uint64_t koid = 0;  // Unused for ComponentRoot.
 };
 
 struct AttachReply {
@@ -137,9 +143,7 @@ struct AttachReply {
 };
 
 struct DetachRequest {
-  enum class Type : uint32_t { kProcess = 0, kJob, kLast };
-
-  Type type = Type::kProcess;
+  TaskType type = TaskType::kProcess;
   uint64_t koid = 0;
 };
 struct DetachReply {
@@ -304,17 +308,17 @@ struct WriteRegistersReply {
 
 // Notifications ---------------------------------------------------------------
 
-// Data for process destroyed messages (process created messages are in
-// response to launch commands so is just the reply to that message).
-struct NotifyProcess {
-  uint64_t process_koid = 0;
-  int64_t return_code = 0;
-};
-
 // Notify that a new process was created in debugged job.
 struct NotifyProcessStarting {
   uint64_t koid = 0;
   std::string name = "";
+};
+
+// Data for process destroyed messages (process created messages are in
+// response to launch commands so is just the reply to that message).
+struct NotifyProcessExiting {
+  uint64_t process_koid = 0;
+  int64_t return_code = 0;
 };
 
 // Data for thread created and destroyed messages.

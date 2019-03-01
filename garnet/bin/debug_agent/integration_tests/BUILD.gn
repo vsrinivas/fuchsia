@@ -18,6 +18,7 @@ executable("integration_tests") {
   # The actual tests.
   sources += [
     "breakpoint_test.cc",
+    "debugged_job_test.cc",
 
     # TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
     #               emulated by QEMU without KVM. This will sometimes make tests

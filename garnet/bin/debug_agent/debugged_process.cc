@@ -255,7 +255,7 @@ void DebuggedProcess::UnregisterWatchpoint(
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
-  debug_ipc::NotifyProcess notify;
+  debug_ipc::NotifyProcessExiting notify;
   notify.process_koid = process_koid;
 
   zx_info_process info;
@@ -263,7 +263,7 @@ void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
   notify.return_code = info.return_code;
 
   debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcess(notify, &writer);
+  debug_ipc::WriteNotifyProcessExiting(notify, &writer);
   debug_agent_->stream()->Write(writer.MessageComplete());
 
   debug_agent_->RemoveDebuggedProcess(process_koid);

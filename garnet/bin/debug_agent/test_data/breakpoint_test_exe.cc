@@ -4,6 +4,7 @@
 
 #include "garnet/bin/debug_agent/test_data/test_so_symbols.h"
 
-int main() {
-  InsertBreakpointFunction();
+int main(int argc, char* argv[]) {
+  int res = InsertBreakpointFunction(argc - 1);
+  return res;
 }

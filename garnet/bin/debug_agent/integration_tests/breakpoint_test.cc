@@ -68,10 +68,7 @@ class BreakpointStreamBackend : public MockStreamBackend {
   // The messages we're interested in handling ---------------------------------
 
   // Searches the loaded modules for specific one.
-  void HandleNotifyModules(debug_ipc::MessageReader* reader) override {
-    debug_ipc::NotifyModules modules;
-    if (!debug_ipc::ReadNotifyModules(reader, &modules))
-      return;
+  void HandleNotifyModules(debug_ipc::NotifyModules modules) override {
     for (auto& module : modules.modules) {
       if (module.name == kModuleToSearch) {
         so_test_base_addr_ = module.base;
@@ -82,19 +79,13 @@ class BreakpointStreamBackend : public MockStreamBackend {
   }
 
   // Records the exception given from the debug agent.
-  void HandleNotifyException(debug_ipc::MessageReader* reader) override {
-    debug_ipc::NotifyException exception;
-    if (!debug_ipc::ReadNotifyException(reader, &exception))
-      return;
-    exception_ = exception;
+  void HandleNotifyException(debug_ipc::NotifyException exception) override {
+    exception_ = std::move(exception);
     loop_->QuitNow();
   }
 
-  void HandleNotifyThreadExiting(debug_ipc::MessageReader* reader) override {
-    debug_ipc::NotifyThread thread;
-    if (!debug_ipc::ReadNotifyThread(reader, &thread))
-      return;
-    thread_notification_ = thread;
+  void HandleNotifyThreadExiting(debug_ipc::NotifyThread thread) override {
+    thread_notification_ = std::move(thread);
     loop_->QuitNow();
   }
 

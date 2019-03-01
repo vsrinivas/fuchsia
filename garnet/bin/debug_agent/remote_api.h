@@ -29,6 +29,10 @@ class RemoteAPI {
   // can't use the automatic reply sending. It must manually deserialize and
   // send the reply.
   virtual void OnAttach(std::vector<char> serialized) = 0;
+  // This is an overload with the result of reading |serialized|.
+  // We have this so it's easier to call a MockRemoteAPI.
+  virtual void OnAttach(uint32_t transaction_id,
+                        const debug_ipc::AttachRequest&) = 0;
 
   virtual void OnDetach(const debug_ipc::DetachRequest& request,
                         debug_ipc::DetachReply* reply) = 0;

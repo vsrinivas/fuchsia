@@ -531,7 +531,8 @@ bool ReadReply(MessageReader* reader, WriteMemoryReply* reply,
 
 // Notifications ---------------------------------------------------------------
 
-bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {
+bool ReadNotifyProcessExiting(MessageReader* reader,
+                              NotifyProcessExiting* process) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;

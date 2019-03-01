@@ -132,10 +132,12 @@ TEST(Protocol, KillReply) {
 
 TEST(Protocol, AttachRequest) {
   AttachRequest initial;
+  initial.type = TaskType::kComponentRoot;
   initial.koid = 5678;
 
   AttachRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.type, second.type);
   EXPECT_EQ(initial.koid, second.koid);
 }
 
@@ -156,7 +158,7 @@ TEST(Protocol, AttachReply) {
 TEST(Protocol, DetachRequest) {
   DetachRequest initial;
   initial.koid = 5678;
-  initial.type = DetachRequest::Type::kJob;
+  initial.type = TaskType::kJob;
 
   DetachRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));

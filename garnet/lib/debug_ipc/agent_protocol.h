@@ -136,13 +136,11 @@ void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id,
 //
 // (These don't have a "request"/"reply".)
 
-void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer);
-void WriteNotifyProcessStarting(const NotifyProcessStarting& notify,
-                                MessageWriter* writer);
-void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
-                       MessageWriter* writer);
-void WriteNotifyException(const NotifyException& notify, MessageWriter* writer);
-void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer);
+void WriteNotifyProcessExiting(const NotifyProcessExiting&, MessageWriter*);
+void WriteNotifyProcessStarting(const NotifyProcessStarting&, MessageWriter*);
+void WriteNotifyThread(MsgHeader::Type, const NotifyThread&, MessageWriter*);
+void WriteNotifyException(const NotifyException& notify, MessageWriter*);
+void WriteNotifyModules(const NotifyModules& notify, MessageWriter*);
 
 }  // namespace debug_ipc
 

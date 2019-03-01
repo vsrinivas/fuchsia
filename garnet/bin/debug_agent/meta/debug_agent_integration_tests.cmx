@@ -3,6 +3,9 @@
     "binary": "test/debug_agent_integration_tests"
   },
   "sandbox": {
+    "features": [
+      "shell"
+    ],
     "services": [
       "fuchsia.process.Launcher"
     ],

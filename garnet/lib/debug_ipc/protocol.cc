@@ -122,5 +122,20 @@ const char* InferiorTypeToString(InferiorType type) {
   return nullptr;
 }
 
+const char* TaskTypeToString(TaskType type) {
+  switch (type) {
+    case TaskType::kProcess:
+      return "Process";
+    case TaskType::kJob:
+      return "Job";
+    case TaskType::kComponentRoot:
+      return "Component Root";
+    case TaskType::kLast:
+      return "Last";
+  }
+
+  FXL_NOTREACHED();
+  return nullptr;
+}
 
 }  // namespace debug_ipc
