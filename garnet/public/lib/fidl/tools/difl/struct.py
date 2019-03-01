@@ -4,7 +4,6 @@
 
 from difflib import SequenceMatcher
 from typing import List, Optional, Sequence, Tuple, FrozenSet, Set, Dict, NamedTuple
-from dataclasses import dataclass, field
 
 from difl.ir import Library, Struct, StructMember, Type, Table, Union, Protocol, Enum
 from difl.changes import *

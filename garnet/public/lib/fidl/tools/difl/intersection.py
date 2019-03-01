@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 from typing import Sequence, TypeVar, Generic, List, Tuple, Callable
-from dataclasses import dataclass
 
 from difl.ir import Declaration
 from difl.changes import Change, DeclAdded, DeclRemoved
