@@ -14,7 +14,7 @@ regular directory and dependency structure.
 
 Source repositories (whether open- or closed-source) also follow the
 conventions for areas and are mapped into subdirectories of `src` in
-fuchsia.git. Current, we have small number of petal repositories but will
+fuchsia.git. Currently, we have small number of petal repositories but will
 "promote" areas into separate petal repositories as the system stabilizes.
 
 The products directory contains a list of products that you can build. Some
@@ -41,7 +41,7 @@ across the whole project.
 
 ### Directory Structure
 
-Each area is required to have a [OWNERS](owners.md) file as well as
+Each area is required to have an [OWNERS](owners.md) file as well as
 documentation and tests. Areas can also include binaries, libraries, drivers,
 and other source code. In addition, areas can have subareas, which repeat the
 pattern:
@@ -169,7 +169,7 @@ separate repositories that are mapped into the directory structure using `jiri`
 
 ## Evolution
 
-As system stabilizes, we can promote areas out of fuchsia.git into separate
+As the system stabilizes, we can promote areas out of fuchsia.git into separate
 repositories. Generally, we should promote an area to a separate repository when
 the interface between the area and the rest of the system is sufficiently stable
 (requires approval by top-level OWNERS).
