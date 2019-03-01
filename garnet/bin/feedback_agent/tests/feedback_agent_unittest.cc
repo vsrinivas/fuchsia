@@ -5,29 +5,30 @@
 #include "garnet/bin/feedback_agent/feedback_agent.h"
 
 #include <stdint.h>
-
-#include <memory>
-#include <ostream>
-#include <vector>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/vector.h>
-#include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/startup_context_for_test.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
+
+#include <memory>
+#include <ostream>
+#include <vector>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include "src/lib/files/file.h"
 
 namespace fuchsia {
 namespace feedback {
