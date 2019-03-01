@@ -8,6 +8,12 @@ host_tool("mkfs-msdosfs") {
     "mkfs_msdos.h",
     "newfs_msdos.c",
   ]
+  if (is_fuchsia) {
+      deps = [
+        "$zx/system/ulib/fdio",
+        "$zx/system/ulib/zircon",
+    ]
+  }
   if (is_host) {
     defines = [
       "_XOPEN_SOURCE",
