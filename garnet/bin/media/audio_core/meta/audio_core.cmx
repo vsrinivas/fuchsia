@@ -11,7 +11,9 @@
             "system-temp",
             "deprecated-global-persistent-storage"
         ],
-        "services": [],
+        "services": [
+            "fuchsia.scheduler.ProfileProvider"
+        ],
         "system": [
             "data/media"
         ]

@@ -51,7 +51,8 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
 
   // Add a new client for the device enumerator functionality.  Called from the
   // service framework each time a new client attempts to connect.
-  void AddDeviceEnumeratorClient(zx::channel ch);
+  void AddDeviceEnumeratorClient(
+      fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
 
   // Add an AudioRenderer to the set of active AudioRenderers.
   void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) {

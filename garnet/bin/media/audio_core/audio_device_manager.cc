@@ -106,10 +106,9 @@ void AudioDeviceManager::Shutdown() {
   throttle_output_ = nullptr;
 }
 
-void AudioDeviceManager::AddDeviceEnumeratorClient(zx::channel ch) {
-  bindings_.AddBinding(
-      this, fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator>(
-                std::move(ch)));
+void AudioDeviceManager::AddDeviceEnumeratorClient(
+    fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
+  bindings_.AddBinding(this, std::move(request));
 }
 
 zx_status_t AudioDeviceManager::AddDevice(

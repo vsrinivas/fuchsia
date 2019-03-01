@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 
 #include <fs/service.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -16,12 +17,14 @@ namespace media::audio {
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl() : device_manager_(this) {
+AudioCoreImpl::AudioCoreImpl(
+    std::unique_ptr<sys::StartupContext> startup_context)
+    : device_manager_(this), ctx_(std::move(startup_context)) {
   // Stash a pointer to our async object.
   dispatcher_ = async_get_default_dispatcher();
   FXL_DCHECK(dispatcher_);
 
-  // TODO(johngro) : See MG-940
+  // TODO(johngro) : See ZX-940
   //
   // Eliminate this as soon as we have a more official way of
   // meeting real-time latency requirements.  The main async_t is
@@ -32,25 +35,26 @@ AudioCoreImpl::AudioCoreImpl() : device_manager_(this) {
   // (even non-realtime ones).  This, however, will take more significant
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
-  async::PostTask(dispatcher_, []() {
-    zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-  });
+  auto profile_provider =
+      ctx_->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
+  profile_provider->GetProfile(
+      24 /* HIGH_PRIORITY in LK */,
+      "garnet/bin/media/audio_core/audio_core_impl",
+      [](zx_status_t fidl_status, zx::profile profile) {
+        FXL_DCHECK(fidl_status == ZX_OK);
+        if (fidl_status == ZX_OK) {
+          zx_status_t status =
+              zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+          FXL_DCHECK(status == ZX_OK);
+        }
+      });
 
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
   FXL_DCHECK(res == ZX_OK);
 
-  // Wait for 50 mSec before we export our services and start to process client
-  // requests.  This will give the device manager layer time to discover the
-  // AudioInputs and AudioOutputs which are already connected to the system.
-  //
-  // TODO(johngro): With some more major surgery, we could rework the device
-  // manager so that we wait until we are certain that we have discovered and
-  // probed the capabilities of all of the pre-existing inputs and outputs
-  // before proceeding.  See MTWN-118
-  async::PostDelayedTask(
-      dispatcher_, [this]() { PublishServices(); }, zx::msec(50));
+  PublishServices();
 }
 
 AudioCoreImpl::~AudioCoreImpl() {
@@ -60,28 +64,20 @@ AudioCoreImpl::~AudioCoreImpl() {
 }
 
 void AudioCoreImpl::PublishServices() {
-  auto audio_service =
-      fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
+  ctx_->outgoing().AddPublicService<fuchsia::media::AudioCore>(
+      [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
         bindings_.AddBinding(
             this,
-            fidl::InterfaceRequest<fuchsia::media::AudioCore>(std::move(ch)));
+            std::move(request));
         bindings_.bindings().back()->events().SystemGainMuteChanged(
             system_gain_db_, system_muted_);
-        return ZX_OK;
-      }));
-  outgoing_.public_dir()->AddEntry(fuchsia::media::AudioCore::Name_,
-                                   std::move(audio_service));
+      });
   // TODO(dalesat): Load the gain/mute values.
 
-  auto audio_device_enumerator_service =
-      fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
-        device_manager_.AddDeviceEnumeratorClient(std::move(ch));
-        return ZX_OK;
-      }));
-  outgoing_.public_dir()->AddEntry(fuchsia::media::AudioDeviceEnumerator::Name_,
-                                   std::move(audio_device_enumerator_service));
-
-  outgoing_.ServeFromStartupInfo();
+  ctx_->outgoing().AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
+      [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
+        device_manager_.AddDeviceEnumeratorClient(std::move(request));
+      });
 }
 
 void AudioCoreImpl::Shutdown() {
