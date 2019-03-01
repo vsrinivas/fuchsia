@@ -1,5 +1,5 @@
 {
     "host_tests": [
-        "//garnet/bin/banjo:banjo_host_tests"
+        "//tools/banjo/banjo:banjo_host_tests"
     ]
 }

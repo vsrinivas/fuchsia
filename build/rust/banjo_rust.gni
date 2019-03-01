@@ -39,9 +39,9 @@ template("banjo_rust") {
 
     visibility = [ ":*" ]
 
-    tool = "//garnet/bin/banjo:banjo_bin"
+    tool = "//tools/banjo/banjo:banjo_bin"
 
-    inputs = [ "//garnet/bin/banjo/zx.banjo" ]
+    inputs = [ "//tools/banjo/banjo/zx.banjo" ]
     inputs += invoker.sources
 
     outputs = [
