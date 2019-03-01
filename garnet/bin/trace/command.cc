@@ -22,6 +22,10 @@ std::ostream& Command::out() {
   return std::cerr;
 }
 
+std::istream& Command::in() {
+  return std::cin;
+}
+
 void Command::Run(const fxl::CommandLine& command_line,
                   OnDoneCallback on_done) {
   if (return_code_ >= 0) {

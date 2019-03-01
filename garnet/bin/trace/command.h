@@ -40,6 +40,7 @@ class Command {
 
  protected:
   static std::ostream& out();
+  static std::istream& in();
 
   explicit Command(component::StartupContext* context);
 
