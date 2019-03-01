@@ -8,6 +8,8 @@
 # Add a tag (#tag) to each dest entry in the given manfiest file, writing to
 # the given output path.
 
+set -e
+
 readonly tag="$1"
 readonly input="$2"
 readonly output="$3"

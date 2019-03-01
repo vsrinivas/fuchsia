@@ -20,6 +20,58 @@ declare_args() {
   system_package_key = "//build/development.key"
 }
 
+# Generate a list of package metadata exported from all packages in the
+# transitive closure of declared dependencies, with an implied barrier at each
+# package (dependency chains cease processing at package targets).
+#
+# Paramters
+#
+#   data_keys (required)
+#     [list of strings] A list of package target metadata keys to collect into a
+#     list. See gn help for data_keys for more information.
+#
+#     Well known package metadata:
+#
+#       snapshot_entries
+#         The snapshot entries are consumed for the production of the snapshots
+#         that feed into `fx delta` for version to version OTA size computations.
+#
+#       blob_manifests
+#         The blob manifests are aggregated by the image build process to produce
+#         manifests to publish to repositories and to produce manifests to write
+#         into blobfs images.
+#
+#   data_deps (optional)
+#   deps (optional)
+#   metadata (optional)
+#   output_conversion (optional)
+#   outputs (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `generated_file()` target.
+template("package_metadata_list") {
+  generated_file(target_name) {
+    forward_variables_from(invoker, [
+      "data_deps",
+      "data_keys",
+      "deps",
+      "metadata",
+      "output_conversion",
+      "outputs",
+      "public_deps",
+      "testonly",
+      "visibility",
+    ])
+
+    if (!defined(outputs)) {
+      outputs = [target_gen_dir + "/" + target_name]
+    }
+
+    walk_keys = ["package_barrier"]
+  }
+}
+
 # Generate a signed, sealed package file from a manifest.
 #
 # Parameters
@@ -101,9 +153,23 @@ template("pm_build_package") {
     ]
 
     blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
+
+    # Package metadata must be kept in sync between package.gni and
+    # prebuilt_package.gni. The template package_metadata_list in package.gni
+    # documents the fields required to be implemented by both templates.
     metadata = {
+      # We only ever want to collect the following package manifests from
+      # packages, not from dependencies of packages, so the barrier prevents us
+      # from walking any further in the dependency chain. See `gn help
+      # walk_keys` for more information on the mechanic.
+      package_barrier = []
+
       snapshot_entries = [
         "$package_name/$package_variant=$blobs_json_path"
+      ]
+
+      blob_manifests = [
+        rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir),
       ]
     }
 
@@ -763,27 +829,6 @@ template("package") {
       public_deps = pkg.public_deps
       output_name = "${pkg_target_name}.system.rsp"
       response_file_contents = manifest_args
-    }
-
-    # TODO(raggi): once /system is removed, the blobs rsp's can be removed, as
-    # all packages would produce a blobs.json.
-    generate_response_file("${pkg_target_name}.blobs.rsp") {
-      if (pkg.deprecated_system_image) {
-        # A system_image package has no blobs of its own.
-        response_file_contents = []
-      } else {
-        # A real package needs blobs for all its contents and for its
-        # synthesized meta.far file.
-        deps = [
-          ":${pkg_target_name}.meta",
-        ]
-        response_file_contents = [
-          "--input",
-          rebase_path("${pkg_target_name}.meta/blobs.json",
-                      root_build_dir,
-                      target_out_dir),
-        ]
-      }
     }
 
     generate_response_file("${pkg_target_name}.shell_commands.rsp") {

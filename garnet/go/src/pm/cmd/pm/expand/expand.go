@@ -72,11 +72,7 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	if err := writeBlobsAndManifest(pkgArchive, outputDir); err != nil {
-		return err
-	}
-
-	return nil
+	return writeBlobs(pkgArchive, outputDir)
 }
 
 func merkleFor(b []byte) (build.MerkleRoot, error) {
@@ -161,9 +157,28 @@ func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	if err := json.NewEncoder(f).Encode(blobs); err != nil {
+		f.Close()
+		return err
+	}
+	f.Close()
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	// Write blobs.manifest
+	var buf bytes.Buffer
+	for _, blob := range blobs {
+		relpath, err := filepath.Rel(cwd, blob.SourcePath)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle, relpath)
+	}
+	if err := ioutil.WriteFile(filepath.Join(outputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
 		return err
 	}
 
@@ -207,11 +222,8 @@ func readMetaContents(pkgMeta *far.Reader) (build.MetaContents, error) {
 	return build.ParseMetaContents(bytes.NewReader(b))
 }
 
-// Extract out all the blobs into the `outputDir`, and write out a blob
-// manifest into `$outputDir/blobs.manifest`. The format of the manifest is:
-//
-//     $outputDir/$BLOB_MERKLE_ROOT=$BLOB_MERKLE_ROOT
-func writeBlobsAndManifest(pkgArchive *far.Reader, outputDir string) error {
+// Extract out all the blobs into the `outputDir`
+func writeBlobs(pkgArchive *far.Reader, outputDir string) error {
 	blobDir := filepath.Join(outputDir, "blobs")
 
 	// Extract out the package entries from the archive. Error out if the
@@ -230,21 +242,7 @@ func writeBlobsAndManifest(pkgArchive *far.Reader, outputDir string) error {
 	}
 
 	// Now, write all the blobs in parallel
-	if err := writeEntries(pkgArchive, blobDir, names); err != nil {
-		return err
-	}
-
-	f, err := os.Create(filepath.Join(outputDir, "blobs.manifest"))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	for _, name := range names {
-		fmt.Fprintf(f, "%s=%s\n", filepath.Join(outputDir, "blobs", name), name)
-	}
-
-	return nil
+	return writeEntries(pkgArchive, blobDir, names)
 }
 
 // Extract the specified entries from the .far and write them to the outputDir.

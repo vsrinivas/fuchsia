@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/images/collect_blob_manifest.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//garnet/build/pkgfs.gni")
@@ -89,39 +90,13 @@ pm_build_package("guest.meta") {
 }
 
 guest_blob_manifest = "$root_build_dir/guest_blob.manifest"
-action("guest_blob.manifest") {
+collect_blob_manifest("guest_blob.manifest") {
   visibility = [ ":*" ]
   testonly = true
-  deps = [
-    ":guest.manifest",
-    ":guest.meta",
-  ]
   outputs = [
     guest_blob_manifest,
   ]
-  depfile = guest_blob_manifest + ".d"
-  guest_manifest_outputs = get_target_outputs(":guest.manifest")
-  guest_manifest = guest_manifest_outputs[0]
-  inputs = [
-    guest_manifest,
-  ]
-  script = "//build/images/blob_manifest.py"
-  args = [ "@{{response_file_name}}" ]
-  response_file_contents = [
-    "--depfile=" + rebase_path(depfile, root_build_dir),
-    "--output=" + rebase_path(guest_blob_manifest, root_build_dir),
-    "--input=" +
-        rebase_path("$target_out_dir/guest.meta/blobs.json", root_build_dir),
-  ]
-  foreach(pkg_label, guest_packages) {
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_blobs_rsp = "$pkg_target_out_dir/${pkg_target_name}.blobs.rsp"
-    deps += [ "${pkg_label}.blobs.rsp" ]
-    inputs += [ pkg_blobs_rsp ]
-    response_file_contents +=
-        [ "@" + rebase_path(pkg_blobs_rsp, root_build_dir) ]
-  }
+  deps = guest_packages + [":guest.meta"]
 }
 
 zircon_tool_action("guest_blob.blk") {

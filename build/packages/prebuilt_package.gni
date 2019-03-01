@@ -49,10 +49,10 @@ template("prebuilt_package") {
 
     script = "//build/packages/prebuilt_package.py"
 
-    manifest = "$target_out_dir/$pkg_name.manifest"
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
     ids_txt = "$target_out_dir/$pkg_name.final.manifest.ids.txt"
     meta_merkle = "$meta_dir/meta.far.merkle"
+    blobs_manifest = "$meta_dir/blobs.manifest"
 
     args = [
       "--pm-tool",
@@ -63,8 +63,6 @@ template("prebuilt_package") {
       rebase_path(archive),
       "--workdir",
       rebase_path(meta_dir, root_build_dir),
-      "--manifest",
-      rebase_path(manifest, root_build_dir),
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
       "--ids-txt",
@@ -74,7 +72,7 @@ template("prebuilt_package") {
       archive,
     ]
     outputs = [
-      manifest,
+      blobs_manifest,
       ids_txt,
       system_rsp,
       blobs_json,
@@ -87,9 +85,23 @@ template("prebuilt_package") {
 
 
     blobs_json_path = rebase_path(blobs_json, root_build_dir)
+
+    # Package metadata must be kept in sync between package.gni and
+    # prebuilt_package.gni. The template package_metadata_list in package.gni
+    # documents the fields required to be implemented by both templates.
     metadata = {
+      # We only ever want to collect the following package manifests from
+      # packages, not from dependencies of packages, so the barrier prevents us
+      # from walking any further in the dependency chain. See `gn help
+      # walk_keys` for more information on the mechanic.
+      package_barrier = []
+
       snapshot_entries = [
         "${pkg.package_name}/${pkg.package_version}=$blobs_json_path"
+      ]
+
+      blob_manifests = [
+        rebase_path(blobs_manifest, root_build_dir),
       ]
     }
   }
