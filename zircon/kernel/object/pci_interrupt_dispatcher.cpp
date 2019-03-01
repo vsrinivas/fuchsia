@@ -64,7 +64,7 @@ zx_status_t PciInterruptDispatcher::Create(
         return status;
 
     // Everything seems to have gone well.  Make sure the interrupt is unmasked
-    // (if it is maskable) then transfer our dispatcher refererence to the
+    // (if it is maskable) then transfer our dispatcher reference to the
     // caller.
     if (maskable) {
         device->UnmaskIrq(irq_id);

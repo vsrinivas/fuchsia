@@ -353,7 +353,7 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) 
 fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t addr) {
     canary_.Assert();
 
-    // Find the first region with a base greather than *addr*.  If a region
+    // Find the first region with a base greater than *addr*.  If a region
     // exists for *addr*, it will be immediately before it.
     auto itr = --subregions_.upper_bound(addr);
     if (!itr.IsValid() || itr->base() > addr || addr > itr->base() + itr->size() - 1) {

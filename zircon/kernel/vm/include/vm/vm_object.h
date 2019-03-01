@@ -232,7 +232,7 @@ public:
     // Returns the number of children post-add.
     uint32_t AddChildLocked(VmObject* r) TA_REQ(lock_);
 
-    // Notifies the chlid observer that there is one child.
+    // Notifies the child observer that there is one child.
     void NotifyOneChild() TA_EXCL(lock_);
 
     void RemoveChild(VmObject* r);

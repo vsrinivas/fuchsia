@@ -134,7 +134,7 @@ void PagerSource::ClearAsyncRequest(page_request_t* request) {
     ASSERT(!closed_);
 
     if (request == active_request_) {
-        // Condition on whether or not we atually cancel the packet, to make sure
+        // Condition on whether or not we actually cancel the packet, to make sure
         // we don't race with a call to PagerSource::Free.
         if (port_->CancelQueued(&packet_)) {
             OnPacketFreedLocked();

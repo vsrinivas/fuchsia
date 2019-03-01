@@ -698,7 +698,7 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
 
         // cur_offset tracks how far we've made page requests, even if they're not done
         uint64_t cur_offset = offset;
-        // new_offset tracks how far we've succesfully committed and is where we'll
+        // new_offset tracks how far we've successfully committed and is where we'll
         // restart from if we need to retry the commit
         uint64_t new_offset = offset;
         while (cur_offset < end) {
@@ -1021,7 +1021,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
     }
 
     // Walk the list of pages and do the read/write. This is performed in
-    // a loop to deal with blocking on asynchronous page reuqests.
+    // a loop to deal with blocking on asynchronous page requests.
     uint64_t src_offset = offset;
     size_t dest_offset = 0;
     PageRequest page_request;

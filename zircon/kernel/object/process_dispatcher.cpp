@@ -127,7 +127,7 @@ ProcessDispatcher::~ProcessDispatcher() {
     kcounter_add(dispatcher_process_destroy_count, 1);
 
     // Remove ourselves from the parent job's raw ref to us. Note that this might
-    // have beeen called when transitioning State::DEAD. The Job can handle double calls.
+    // have been called when transitioning State::DEAD. The Job can handle double calls.
     job_->RemoveChildProcess(this);
 
     LTRACE_EXIT_OBJ;

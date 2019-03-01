@@ -85,7 +85,7 @@ static inline void i8042_write_command(uint8_t val) {
 #define I8042_CMD_KBD_MODE 0x01f0
 
 /*
- * used for flushing buffers. the i8042 internal buffer shoudn't exceed this.
+ * used for flushing buffers. the i8042 internal buffer shouldn't exceed this.
  */
 #define I8042_BUFFER_LENGTH 32
 

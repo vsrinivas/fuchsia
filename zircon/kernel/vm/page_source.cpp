@@ -80,7 +80,7 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
         auto cur = start;
         ++start;
 
-        // Calcualte how many pages were supplied to this request by finding the start and
+        // Calculate how many pages were supplied to this request by finding the start and
         // end offsets of the operation in this request.
         uint64_t req_offset, req_end;
         if (offset >= cur->offset_) {
@@ -91,7 +91,7 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
             req_offset = 0;
         }
         if (end < cur->GetEnd()) {
-            // The operation ended partway into this reqest.
+            // The operation ended partway into this request.
             req_end = end - cur->offset_;
 
             uint64_t unused;
@@ -136,7 +136,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request,
         return ZX_OK;
     }
 
-    // Check if request is initalized and initialize it if it isn't (it can be initialized
+    // Check if request is initialized and initialize it if it isn't (it can be initialized
     // for batch requests).
     if (request->offset_ == UINT64_MAX) {
         request->Init(fbl::RefPtr<PageSource>(this), offset);

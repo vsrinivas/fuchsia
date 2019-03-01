@@ -79,7 +79,7 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
 
         // Usermode drivers assume that if they requested a contiguous buffer in
         // memory, then the physical addresses will be contiguous.  Return an
-        // error if we can't acutally map the address contiguously.
+        // error if we can't actually map the address contiguously.
         zx_status_t status = bti_->iommu()->MapContiguous(bti_id, pinned_vmo_.vmo(),
                                                           pinned_vmo_.offset(), pinned_vmo_.size(),
                                                           perms, &vaddr, &mapped_len);

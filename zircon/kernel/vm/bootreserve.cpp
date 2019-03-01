@@ -123,7 +123,7 @@ retry:
         }
     }
 
-    // fell off the list without retrying, must have suceeded
+    // fell off the list without retrying, must have succeeded
     LTRACEF("returning [%#" PRIxPTR ", %#" PRIxPTR "]\n",
             alloc_pa, alloc_pa + alloc_len - 1);
 

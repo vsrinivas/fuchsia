@@ -213,7 +213,7 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
     resched_disable.Disable();
     Guard<fbl::Mutex> guard{get_lock()};
 
-    // Faling this test is only possible if this process has two threads racing:
+    // Failing this test is only possible if this process has two threads racing:
     // one thread is issuing channel_write() and one thread is moving the handle
     // to another process.
     if (owner != owner_)

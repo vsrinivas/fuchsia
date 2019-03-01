@@ -109,8 +109,8 @@ zx_status_t ResourceDispatcher::Create(fbl::RefPtr<ResourceDispatcher>* dispatch
         }
     }
 
-    // We've passd the first hurdle, so it's time to construct the dispatcher
-    // itself.  The constructor will handle adding itself to the shared list if
+    // We've passed the first hurdle, so it's time to construct the dispatcher
+    // itself. The constructor will handle adding itself to the shared list if
     // necessary.
     fbl::AllocChecker ac;
     auto disp = fbl::AdoptRef(new (&ac) ResourceDispatcher(kind, base, size, flags,

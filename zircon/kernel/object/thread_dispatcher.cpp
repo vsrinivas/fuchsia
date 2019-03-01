@@ -400,7 +400,7 @@ void ThreadDispatcher::Exiting() {
         // switch will effectively reenable interrupts in the new thread.
         arch_disable_ints();
 
-        // queue without reschdule since us exiting is a reschedule event already
+        // queue without reschedule since us exiting is a reschedule event already
         dpc_queue(&cleanup_dpc_, false);
     }
 

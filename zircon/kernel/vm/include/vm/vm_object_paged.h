@@ -58,7 +58,7 @@ public:
     // pages will be released into the general purpose page pool, so it is not possible
     // to create multiple VMOs for the same region using this method.
     //
-    // |exclusive| indicates whether or not the created vmo should have exlusive access to
+    // |exclusive| indicates whether or not the created vmo should have exclusive access to
     // the pages. If exclusive is true, then [data, data + size) will be unmapped from the
     // kernel address space (unless they lie in the physmap).
     static zx_status_t CreateFromWiredPages(const void* data, size_t size, bool exclusive,
