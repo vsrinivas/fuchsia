@@ -78,39 +78,36 @@ std::string SessionCtlApp::ExecuteAddModCommand(
 
   // Get the mod url and default the mod name and story name to the mod url
   std::string mod_url = command_line.positional_args().at(1);
-  std::string mod_name = mod_url;
-  std::string story_name = mod_url;
-
-  if (mod_url.find(kFuchsiaPkgPrefix) == 0) {
-    // Extract the component name from the mod url and use it as the mod and
-    // story name
-    std::regex pkg_regex(".*#meta/(\\w+)\\.cmx");
-    std::smatch match;
-    if (std::regex_search(mod_url, match, pkg_regex)) {
-      mod_name = match[1];
-      story_name = match[1];
-    }
-  } else {
-    // https://tools.ietf.org/html/rfc3986#section-3.1
-    std::regex url_regex("[a-zA-Z][a-zA-Z0-9+-.]+://([^/?#]+)");
-    std::smatch match;
-    if (std::regex_search(mod_url, match, url_regex)) {
-      // Extract the domain from the url and use it as the mod and
-      // story name
-      mod_name = match[1];
-      story_name = match[1];
-    } else {
-      // Replace mod url short name with full package path
-      mod_url =
-          fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
-    }
+  // If there's not a colon, resolve to the fuchsia package path
+  if (mod_url.find(":") == std::string::npos) {
+    mod_url =
+        fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
   }
 
-  // If the following options aren't specified, their respective values will
-  // remain unchanged.
-  command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-  command_line.GetOptionValue(kModNameFlagString, &mod_name);
+  std::string mod_name = mod_url;
+  std::string story_name = std::to_string(std::hash<std::string>{}(mod_url));
 
+  if (command_line.HasOption(kStoryNameFlagString)) {
+    command_line.GetOptionValue(kStoryNameFlagString, &story_name);
+    // https://tools.ietf.org/html/rfc3986#section-3.1
+    std::regex story_name_regex("[0-9a-zA-Z\\.\\-_:#]+");
+    std::smatch story_name_match;
+    if (!std::regex_search(story_name, story_name_match, story_name_regex)) {
+      auto parsing_error = "Bad characters in story_name: " + story_name;
+      logger_.LogError(kStoryNameFlagString, parsing_error);
+      return parsing_error;
+    }
+  } else {
+    std::cout << "Using auto-generated --story_name value of " << story_name
+              << std::endl;
+  }
+
+  command_line.GetOptionValue(kModNameFlagString, &mod_name);
+  if (!command_line.HasOption(kModNameFlagString)) {
+    std::cout << "Using auto-generated --mod_name value of " << mod_name
+              << std::endl;
+  }
+  
   auto commands = MakeAddModCommands(mod_url, mod_name);
 
   // Focus the mod and story by default

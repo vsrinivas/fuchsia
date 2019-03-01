@@ -89,14 +89,72 @@ TEST_F(SessionCtlAppTest, AddMod) {
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
+  std::string default_name_hash = std::to_string(std::hash<std::string>{}(
+      "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx"));
 
   // Assert the story and the mod were added with default story and mod names
-  auto story_data = GetStoryData("mod_url");
+  auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("mod_url", *story_data->story_name());
-  EXPECT_EQ("mod_url",
-            test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
+  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(
+      "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(1, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddModWithoutURL) {
+  // Add a mod
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString, "mod_name"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+  std::string default_name_hash = std::to_string(std::hash<std::string>{}(
+      "fuchsia-pkg://fuchsia.com/mod_name#meta/mod_name.cmx"));
+  auto story_data = GetStoryData(default_name_hash);
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_name#meta/mod_name.cmx",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(1, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddModWithColon) {
+  // Add a mod
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString, "mod_name:0000"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+  std::string default_name_hash =
+      std::to_string(std::hash<std::string>{}("mod_name:0000"));
+  auto story_data = GetStoryData(default_name_hash);
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ("mod_name:0000",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(1, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddModBadChars) {
+  // Add a mod
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString, "a:bad/mod/name"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+  std::string default_name_hash =
+      std::to_string(std::hash<std::string>{}("a:bad/mod/name"));
+
+  auto story_data = GetStoryData(default_name_hash);
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ("a:bad/mod/name",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
@@ -111,33 +169,15 @@ TEST_F(SessionCtlAppTest, AddModWeb) {
   });
 
   // Assert the story and the mod were added with default story and mod names
-  auto story_data = GetStoryData("www.google.com");
+  std::string default_name_hash =
+      std::to_string(std::hash<std::string>{}("https://www.google.com"));
+  auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("www.google.com", *story_data->story_name());
-  EXPECT_EQ("www.google.com",
-            test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
+  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(
+      "https://www.google.com",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("https://www.google.com",
-            test_executor_.last_commands().at(0).add_mod().intent.handler);
-  EXPECT_EQ(1, test_executor_.execute_count());
-}
-
-TEST_F(SessionCtlAppTest, AddModExoticScheme) {
-  // Add a mod
-  auto command_line = fxl::CommandLineFromInitializerList(
-      {kSessionCtlString, kAddModCommandString,
-       "foobar-pkg://mod_url?q=bad+wolf"});
-  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
-  RunLoopUntilCommandExecutes([&] {
-    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
-  });
-
-  // Assert the story and the mod were added with default story and mod names
-  auto story_data = GetStoryData("mod_url");
-  ASSERT_TRUE(story_data);
-  EXPECT_EQ("mod_url", *story_data->story_name());
-  EXPECT_EQ("mod_url",
-            test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
-  EXPECT_EQ("foobar-pkg://mod_url?q=bad+wolf",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
@@ -157,10 +197,25 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, *story_data->story_name());
-  EXPECT_EQ("m", test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
+  EXPECT_EQ(
+      "m",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
+  // mod_url becomes package
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddModBadStoryName) {
+  // Add a mod
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, "--story_name=??", "--mod_name=m",
+       kAddModCommandString, "mod_url"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  std::string error =
+      sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  RunLoopUntilIdle();
+  EXPECT_EQ("Bad characters in story_name: ??", error);
 }
 
 TEST_F(SessionCtlAppTest, AddModMissingModUrl) {
@@ -196,8 +251,9 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   auto story_data = GetStoryData(mod);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(mod, *story_data->story_name());
-  EXPECT_EQ(mod,
-            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ(
+      mod,
+      test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
@@ -224,8 +280,9 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, *story_data->story_name());
-  EXPECT_EQ(mod_name,
-            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ(
+      mod_name,
+      test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
@@ -277,17 +334,21 @@ TEST_F(SessionCtlAppTest, DeleteStoryMissingStoryName) {
 
 TEST_F(SessionCtlAppTest, DeleteAllStories) {
   // Add two mods
-  auto story1 = "story1";
+  auto mod1 = "mod1";
+  auto story1 = std::to_string(
+      std::hash<std::string>{}("fuchsia-pkg://fuchsia.com/mod1#meta/mod1.cmx"));
   auto command_line = fxl::CommandLineFromInitializerList(
-      {kSessionCtlString, kAddModCommandString, story1});
+      {kSessionCtlString, kAddModCommandString, mod1});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
-  auto story2 = "story2";
+  auto mod2 = "mod2";
+  auto story2 = std::to_string(
+      std::hash<std::string>{}("fuchsia-pkg://fuchsia.com/mod2#meta/mod2.cmx"));
   command_line = fxl::CommandLineFromInitializerList(
-      {kSessionCtlString, kAddModCommandString, story2});
+      {kSessionCtlString, kAddModCommandString, mod2});
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
