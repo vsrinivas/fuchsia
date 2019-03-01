@@ -14,9 +14,6 @@
 
 namespace fxl {
 
-// Generates |output_length| random bytes into |output|.
-void RandBytes(void* output, size_t output_length);
-
 // Returns a random number in range [0, UINT64_MAX]
 uint64_t RandUint64();
 

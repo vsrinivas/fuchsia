@@ -20,6 +20,7 @@
 #endif
 
 namespace fxl {
+namespace {
 
 void RandBytes(void* output, size_t output_length) {
   FXL_DCHECK(output);
@@ -35,6 +36,8 @@ void RandBytes(void* output, size_t output_length) {
   FXL_CHECK(len >= 0 && static_cast<size_t>(len) == output_length);
 #endif
 }
+
+} // namespace
 
 uint64_t RandUint64() {
   uint64_t number;

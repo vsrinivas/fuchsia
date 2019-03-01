@@ -10,6 +10,7 @@
 #include <lib/fxl/random/rand.h>
 #include <lib/svc/cpp/services.h>
 #include <test/appmgr/sandbox/cpp/fidl.h>
+#include <zircon/syscalls.h>
 
 namespace {
 
@@ -46,7 +47,7 @@ class IsolatedPersistentStorageTest
     // between test runs, and we want to ensure we aren't reading a file written
     // by a previous run.
     char random_bytes[100];
-    fxl::RandBytes(random_bytes, sizeof(random_bytes));
+    zx_cprng_draw(random_bytes, sizeof(random_bytes));
     test_file_content_ = std::string(random_bytes, sizeof(random_bytes));
   }
 
