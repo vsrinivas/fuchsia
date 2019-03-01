@@ -189,7 +189,8 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
         proto_completion_mutex_.Release();
         zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(10));
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s failed for protocol %08x\n", __FUNCTION__, proto_id);
+            zxlogf(ERROR, "%s sync_completion_wait(protocol %08x) failed: %d\n", __FUNCTION__,
+                   proto_id, status);
             return status;
         }
         proto_completion_mutex_.Acquire();
