@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/fuzzing/fuzzer.gni")
 
 ###############################################################################
@@ -11,6 +12,7 @@ source_set("lib") {
   public_deps = [
     ":packet_link",
     ":packet_nub",
+    ":stream_link",
   ]
 }
 
@@ -19,6 +21,7 @@ source_set("tests") {
   deps = [
     ":packet_link_test",
     ":packet_nub_test",
+    ":stream_link_test",
   ]
 }
 
@@ -51,6 +54,71 @@ source_set("packet_link_test") {
     "//garnet/lib/overnet/testing:trace_cout",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+# stream_link
+source_set("stream_link") {
+  sources = [
+    "stream_link.cc",
+    "stream_link.h",
+  ]
+  public_deps = [
+    "//garnet/lib/overnet/routing:router",
+  ]
+  deps = [
+    "//garnet/lib/overnet/environment:trace",
+  ]
+}
+
+source_set("stream_link_test") {
+  testonly = true
+  sources = [
+    "stream_link_test.cc",
+  ]
+  deps = [
+    ":stream_link",
+    "//garnet/lib/overnet/testing:flags",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fidl("fuchsia.overnet.streamlinkfuzzer") {
+  sources = [
+    "stream_link_fuzzer.test.fidl",
+  ]
+}
+
+fuzz_target("stream_link_untrusted_fuzzer") {
+  testonly = true
+  sources = [
+    "stream_link_untrusted_fuzzer.cc",
+  ]
+  deps = [
+    ":fuchsia.overnet.streamlinkfuzzer",
+    ":stream_link",
+    "//garnet/lib/overnet/protocol:fidl",
+    "//garnet/lib/overnet/protocol:varint",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+  ]
+}
+
+fuzz_target("stream_link_peer_to_peer_fuzzer") {
+  testonly = true
+  sources = [
+    "stream_link_peer_to_peer_fuzzer.cc",
+  ]
+  deps = [
+    ":fuchsia.overnet.streamlinkfuzzer",
+    ":stream_link",
+    "//garnet/lib/overnet/protocol:fidl",
+    "//garnet/lib/overnet/protocol:varint",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
   ]
 }
 

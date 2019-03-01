@@ -296,8 +296,9 @@ Status PacketLink::ProcessBody(TimeStamp received, Slice packet) {
     packet.TrimBegin(p - begin);
     auto msg_status = RoutableMessage::Parse(
         packet.TakeUntilOffset(serialized_length), router_->node_id(), peer_);
-    if (msg_status.is_error())
+    if (msg_status.is_error()) {
       return msg_status.AsStatus();
+    }
     router_->Forward(Message::SimpleForwarder(std::move(msg_status->message),
                                               std::move(msg_status->payload),
                                               received));

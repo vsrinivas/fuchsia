@@ -223,6 +223,11 @@ class [[nodiscard]] Status final {
   }
 
   void Ignore() {}
+  void MustSucceed() const {
+    if (is_error()) {
+      abort();
+    }
+  }
 
   static Status FromZx(int32_t zx_status);
   static Status FromZx(int32_t zx_status, const char* desc);

@@ -10,11 +10,11 @@ struct RoutingTableFuzzPlan {
   vector<RoutingTableAction> actions;
 };
 
-struct Empty {};
+struct Void {};
 
-union RoutingTableAction {
+xunion RoutingTableAction {
   uint64 step_time;
   fuchsia.overnet.protocol.NodeStatus update_node;
   fuchsia.overnet.protocol.LinkStatus update_link;
-  Empty update_flush;
+  Void update_flush;
 };

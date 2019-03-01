@@ -88,6 +88,8 @@ fuzz_package("overnet_fuzzers") {
     "datagram_stream:linearizer_fuzzer",
     "datagram_stream:receive_mode_fuzzer",
     "links:packet_nub_fuzzer",
+    "links:stream_link_untrusted_fuzzer",
+    "links:stream_link_peer_to_peer_fuzzer",
     "packet_protocol:packet_protocol_fuzzer",
     "protocol:ack_frame_fuzzer",
     "protocol:overnet_encoding_fuzzer",

@@ -1,0 +1,43 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.streamlinkfuzzer;
+
+/// A list of packets to process on a stream link
+/// For stream_link_untrusted_fuzzer
+struct UntrustedInputPlan {
+  vector<vector<uint8>> input;
+};
+
+/// A list of actions to perform on a peer to peer fixture
+/// For stream_link_peer_to_peer_fuzzer
+struct PeerToPeerPlan {
+  vector<PeerToPeerAction> actions;
+};
+
+/// Which node does an action apply to
+enum NodeId : uint8 {
+    A = 1;
+    B = 2;
+};
+
+/// An action in a peer to peer test
+struct PeerToPeerAction {
+    /// Which node performs the action
+    NodeId node;
+    /// The action to perform
+    PeerToPeerActionType type;
+};
+
+/// Helper empty type for union below
+struct Void {};
+
+xunion PeerToPeerActionType {
+    /// Request to send a packet from node --> the other node
+    vector<uint8>:32 send_packet;
+    /// Acknowledge a prior send_packet request on node
+    Void sent_packet;
+    /// Allow this many bytes to flow from node --> the other node
+    uint64 allow_bytes;
+};

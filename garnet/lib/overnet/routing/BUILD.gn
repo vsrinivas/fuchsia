@@ -81,7 +81,7 @@ source_set("routing_table") {
 
 fidl("fuchsia.overnet.routingtablefuzzer") {
   sources = [
-    "routing_table_fuzzer.fidl",
+    "routing_table_fuzzer.test.fidl",
   ]
 
   public_deps = [

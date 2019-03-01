@@ -196,6 +196,16 @@ class Slice final {
         });
   }
 
+  void Append(Slice slice) {
+    if (length() == 0) {
+      *this = std::move(slice);
+    } else if (slice.length() == 0) {
+      return;
+    } else {
+      *this = Join({std::move(*this), std::move(slice)});
+    }
+  }
+
   template <class IT>
   static Slice AlignedJoin(IT begin, IT end) {
     if (begin == end) {
