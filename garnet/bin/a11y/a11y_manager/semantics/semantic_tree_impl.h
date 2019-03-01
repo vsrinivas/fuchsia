@@ -36,7 +36,6 @@ class SemanticTreeImpl
       uint32_t node_id);
 
   // TODO(MI4-1736): Implement OnAccessibilityActionRequested().
-  // TODO(MI4-1736): Add logging support.
 
  private:
   // Semantic Tree for a particular view. Each client is responsible for
@@ -55,6 +54,15 @@ class SemanticTreeImpl
 
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
+
+  // Function for logging semantic tree.
+  void LogSemanticTree();
+
+  // Helper function to traverse semantic tree with a root node, and for
+  // creating string with tree information.
+  void LogSemanticTreeHelper(
+      fuchsia::accessibility::semantics::NodePtr root_node, int current_level,
+      std::string* tree_log);
 
   // Internal recursive hit-test function using the cached tree. Returns a
   // null pointer if no hit nodes were found. Returns a copy of the node

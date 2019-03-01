@@ -4,8 +4,14 @@
 
 #include "semantic_tree_impl.h"
 
-namespace a11y_manager {
+#include <lib/fxl/logging.h>
+#include <lib/syslog/cpp/logger.h>
 
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+
+namespace a11y_manager {
+const std::string kNewLine = "\n";
+const std::string::size_type kIndentSize = 4;
 const int kRootNode = 0;
 
 // Internal helper function to check if a point is within a bounding box.
@@ -91,6 +97,48 @@ void SemanticTreeImpl::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
   uncommitted_deletes_.insert(uncommitted_deletes_.end(),
                               std::make_move_iterator(node_ids.begin()),
                               std::make_move_iterator(node_ids.end()));
+}
+
+// Helper function to traverse semantic tree and create log message.
+void SemanticTreeImpl::LogSemanticTreeHelper(
+    fuchsia::accessibility::semantics::NodePtr root_node, int current_level,
+    std::string* tree_log) {
+  if (!root_node) {
+    return;
+  }
+
+  // Add constant spaces proportional to the current tree level, so that
+  // child nodes are indented under parent node.
+  tree_log->append(kIndentSize * current_level, ' ');
+
+  // Add logs for the current node.
+  absl::StrAppend(tree_log,
+                  "Node_id: ", std::to_string(*root_node.get()->node_id()),
+                  ", Label:", *root_node.get()->data()->label(), kNewLine);
+
+  // Iterate through all the children of the current node.
+  for (auto it = root_node.get()->children_traversal_order()->begin();
+       it != root_node.get()->children_traversal_order()->end(); ++it) {
+    fuchsia::accessibility::semantics::NodePtr node_ptr =
+        GetAccessibilityNode(*it);
+    LogSemanticTreeHelper(std::move(node_ptr), current_level + 1, tree_log);
+  }
+}
+
+void SemanticTreeImpl::LogSemanticTree() {
+  // Get the root node.
+  fuchsia::accessibility::semantics::NodePtr node_ptr =
+      GetAccessibilityNode(kRootNode);
+  if (!node_ptr) {
+    FX_LOGS(ERROR) << "Root Node not found.";
+  }
+
+  std::string tree_log;
+  // Start with the root node(i.e: Node - 0).
+  LogSemanticTreeHelper(std::move(node_ptr), kRootNode, &tree_log);
+  // TODO(MI4-1828): Replace logging of semantic tree with a file write in
+  // hub/debug directory.
+  FX_LOGS(INFO) << "Semantic Tree:" << std::endl << tree_log;
 }
 
 }  // namespace a11y_manager
