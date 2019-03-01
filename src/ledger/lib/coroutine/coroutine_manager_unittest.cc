@@ -40,20 +40,26 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
       std::make_unique<CoroutineManager>(&coroutine_service);
 
   bool called = false;
+  bool reached_callback = false;
+  bool executed_callback = false;
   CoroutineHandler* handler = nullptr;
   manager->StartCoroutine(callback::SetWhenCalled(&called),
-                          [&handler](CoroutineHandler* current_handler,
+                          [&](CoroutineHandler* current_handler,
                                      fit::function<void()> callback) {
                             handler = current_handler;
                             EXPECT_EQ(ContinuationStatus::INTERRUPTED,
                                       handler->Yield());
+                            reached_callback = true;
                             callback();
+                            executed_callback = true;
                           });
 
   ASSERT_TRUE(handler);
   EXPECT_FALSE(called);
+  EXPECT_FALSE(reached_callback);
   manager.reset();
-  EXPECT_TRUE(called);
+  EXPECT_FALSE(called);
+  EXPECT_TRUE(executed_callback);
 }
 
 TEST(CoroutineManager, NoCallback) {

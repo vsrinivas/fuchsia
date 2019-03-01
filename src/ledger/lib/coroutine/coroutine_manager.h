@@ -20,6 +20,7 @@ class CoroutineManager {
 
   ~CoroutineManager() {
     // Interrupt any active handlers.
+    in_deletion_ = true;
     while (!handlers_.empty()) {
       (*handlers_.begin())->Resume(coroutine::ContinuationStatus::INTERRUPTED);
     }
@@ -52,7 +53,9 @@ class CoroutineManager {
             // destructor is called in the callback.
             handlers_.erase(iter);
             callback_called = true;
-            callback(std::move(args)...);
+            if (!in_deletion_) {
+              callback(std::move(args)...);
+            }
           };
 
           runnable(handler, std::move(final_callback));
@@ -79,6 +82,7 @@ class CoroutineManager {
   }
 
  private:
+  bool in_deletion_ = false;
   std::list<coroutine::CoroutineHandler*> handlers_;
   CoroutineService* const service_;
 };
