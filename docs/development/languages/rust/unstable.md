@@ -75,24 +75,6 @@ The current list of reviewers is as follows:
 
 This list includes all of the unstable features currently used in Fuchsia.
 
-* Rust 2018 Edition
-    * Summary: The Rust 2018 edition is the upcoming release of Rust that makes several breaking
-      changes while still allowing interop with non-Rust 2018 crates. The main source of
-      breakages are (1) changes to the module system and (2) the addition of new keywords.
-      For more details on how editions work, see [the edition guide].
-    * Use in Fuchsia: An “edition” key has been added to the rustc_xxx set of GN templates.
-      All Rust targets will gradually move towards the use of `edition = “2018”` to prepare
-      for the upcoming release and allow for early use of the async/await feature. `async`
-      blocks and closures are only allowed in Rust 2018 because `async` was not a keyword in
-      Rust 2015.
-    * Remaining before stabilization: There’s some ongoing discussion around final non-breaking
-      tweaks to the new module system and perhaps some in-band-lifetimes lints against single-letter
-      lifetimes in impl body headers, but overall the edition is shaping up fast and is set to
-      ship later this year.
-      For more details, see [Rust 2018: an early preview] and [Rust 2018: the home stretch].
-      There are no major breaking changes expected before stabilization, and shipping the 2018
-      edition is a primary goal for this year, so the risk of never stabilizing is extremely low.
-    * Owner: cramertj@
 * `async_await` and `await_macro`
     * Summary: These two features enable the syntactic transformation from code that looks like
       `move async { await!(x); await!(y), await!(z); }` into an anonymous
@@ -107,26 +89,6 @@ This list includes all of the unstable features currently used in Fuchsia.
       are no major additional stability risks (read: no major unresolved design decisions)
       introduced by these features. There are changes planned to the implementation, but they’re
       mostly polish, performance optimizations, and a few scattered bugfixes.
-    * Owner: cramertj@
-* `pin`
-    * Summary: This feature includes the `PinMut` type and the `Unpin` trait. `PinMut` is a mutable
-      reference to an object that does not allow moving the underlying object unless it implements
-      the `Unpin` trait. This is used to create sound self-referential types.
-    * Use in Fuchsia: Needed for `async_await`
-    * Remaining before stabilization: This feature has gone through a number of design iterations
-      and is the most likely to receive backwards-incompatible changes -- there are a number of
-      design ideas floating around about the potential to make it safe to project from
-      `PinMut<MyType>` to `PinMut<FieldOfMyType>`, but these have so far been fruitless
-      (mostly depending on features that aren’t even RFC’d, let alone implemented). It’s likely
-      that PinMut will stabilize without these extensions, but cramertj@ will be in charge of
-      managing any transition necessary. This feature has also been proposed for stabilization.
-    * Owner: cramertj@
-* `arbitrary_self_types`
-    * Summary: This simple feature enables the use of `self: PinMut<Self>` which is necessary to
-      write implementations of the `Future` trait.
-    * Use in Fuchsia: Needed for `async_await`
-    * Remaining before stabilization: This is a particularly simple feature and likely won’t
-      see any breaking changes (especially to our minimal usage).
     * Owner: cramertj@
 * `futures_api`
     * Summary: This feature enables the `std::task` and `std::future` modules which provide the
