@@ -83,8 +83,10 @@ library fuchsia.media;
 // an OnEndOfStream event will be produced.  While an AudioCapturer will never
 // overwrite any region of the payload buffer after a completed region is
 // returned, it may overwrite the unfilled portions of a partially filled
-// buffer which has been returned as a result of a flDiscardAllPacketsush
+// buffer which has been returned as a result of a DiscardAllPackets
 // operation.
+// TODO(mpuryear): Add a new method to replace `DiscardAllPackets`, which will
+// be removed from `StreamSource`.
 //
 // ** Asynchronous mode **
 //

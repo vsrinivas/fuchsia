@@ -4,21 +4,30 @@
 
 library fuchsia.media;
 
+// fuchsia.media contains definitions shared by the various fuchsia.media.*
+// libraries. Definitions in this file concern the representation of type
+// (i.e. format or encoding) for elementary streams.
+
 using fuchsia.images;
 
-// Describes the type of an elementary stream.
+/// Describes the type of an elementary stream.
 struct StreamType {
-    // Medium-specific type information.
+    /// Medium-specific type information.
     MediumSpecificStreamType medium_specific;
 
-    // Encoding (see constants below).
-    string encoding;
+    /// Encoding (see constants below). This value is represented as a string
+    /// so that new encodings can be introduced without modifying this file.
+    string:255 encoding;
 
-    // Encoding-specific parameters.
-    bytes? encoding_parameters;
+    /// Encoding-specific parameters, sometimes referred to as 'out-of-band
+    /// data'. Typically, this data is associated with a compressed stream and
+    /// provides parameters required to decompress the stream. This data is
+    /// generally opaque to all parties except the producer and consumer of the
+    /// stream.
+    vector<uint8>? encoding_parameters;
 };
 
-// A union of all medium-specific stream type structs.
+/// A union of all medium-specific stream type structs.
 union MediumSpecificStreamType {
     AudioStreamType audio;
     VideoStreamType video;
@@ -26,8 +35,7 @@ union MediumSpecificStreamType {
     SubpictureStreamType subpicture;
 };
 
-const string MEDIA_ENCODING_UNSUPPORTED = "fuchsia.media.unsupported";
-
+/// Audio encodings.
 const string AUDIO_ENCODING_AAC = "fuchsia.media.aac";
 const string AUDIO_ENCODING_AMRNB = "fuchsia.media.amrnb";
 const string AUDIO_ENCODING_AMRWB = "fuchsia.media.amrwb";
@@ -41,6 +49,7 @@ const string AUDIO_ENCODING_PCMMULAW = "fuchsia.media.pcmmulaw";
 const string AUDIO_ENCODING_SBC = "fuchsia.media.sbc";
 const string AUDIO_ENCODING_VORBIS = "fuchsia.media.vorbis";
 
+/// Video encodings.
 const string VIDEO_ENCODING_H263 = "fuchsia.media.h263";
 const string VIDEO_ENCODING_H264 = "fuchsia.media.h264";
 const string VIDEO_ENCODING_MPEG4 = "fuchsia.media.mpeg4";
@@ -53,7 +62,7 @@ const string VIDEO_ENCODING_VP9 = "fuchsia.media.vp9";
 ///////////////////////////////////////////////////////////////////////////////
 // Audio
 
-// Describes the type of an audio elementary stream.
+/// Describes the type of an audio elementary stream.
 struct AudioStreamType {
     AudioSampleFormat sample_format;
     uint32 channels;
@@ -61,34 +70,45 @@ struct AudioStreamType {
     // TODO(mpuryear): Add channel config.
 };
 
+/// Enumerates the supported audio sample formats.
 enum AudioSampleFormat {
-    // 8-bit unsigned samples, sample size 1 byte.
+    /// 8-bit unsigned samples, sample size 1 byte.
     UNSIGNED_8 = 1;
 
-    // 16-bit signed samples, host-endian, sample size 2 bytes.
+    /// 16-bit signed samples, host-endian, sample size 2 bytes.
     SIGNED_16 = 2;
 
-    // 24-bit signed samples in 32 bits, host-endian, sample size 4 bytes.
+    /// 24-bit signed samples in 32 bits, host-endian, sample size 4 bytes.
     SIGNED_24_IN_32 = 3;
 
-    // 32-bit floating-point samples, sample size 4 bytes.
+    /// 32-bit floating-point samples, sample size 4 bytes.
     FLOAT = 4;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Video
 
-// Describes the type of a video elementary stream.
+/// Describes the type of a video elementary stream.
 struct VideoStreamType {
     fuchsia.images.PixelFormat pixel_format;
     // TODO(dalesat): Use fuchsia.images.ColorSpace.
     ColorSpace color_space;
+
+    /// Dimensions of the video frames as displayed in pixels.
     uint32 width;
     uint32 height;
+
+    /// Dimensions of the video frames as encoded in pixels. These values must
+    /// be equal to or greater than the respective width/height values.
     uint32 coded_width;
     uint32 coded_height;
+
+    /// The aspect ratio of a single pixel as frames are intended to be
+    /// displayed.
     uint32 pixel_aspect_ratio_width;
     uint32 pixel_aspect_ratio_height;
+
+    /// The number of bytes per 'coded' row in the primary video plane.
     uint32 stride;
 };
 
@@ -104,15 +124,15 @@ enum ColorSpace {
 ///////////////////////////////////////////////////////////////////////////////
 // Text
 
+/// Describes the type of a text elementary stream.
 struct TextStreamType {
     // TODO(dalesat): Define.
-    uint8 dummy;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Subpicture
 
+/// Describes the type of a subpicture elementary stream.
 struct SubpictureStreamType {
     // TODO(dalesat): Define.
-    uint8 dummy;
 };

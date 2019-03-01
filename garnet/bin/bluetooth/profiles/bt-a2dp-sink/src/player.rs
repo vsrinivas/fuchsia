@@ -244,7 +244,7 @@ impl Player {
             payload_size: frame.len() as u64,
             buffer_config: 0,
             flags: 0,
-            stream_id: 0,
+            stream_segment_id: 0,
         };
 
         self.stream_source.send_packet_no_reply(&mut packet)?;
