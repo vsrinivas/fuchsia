@@ -1,0 +1,60 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/json/validate_json.gni")
+import("//build/package.gni")
+
+# Validates a modular framework configuration file against a schema
+#
+# Parameters
+#   config (required)
+#     This is a modular framework configuration file that needs to be validated.
+template("modular_config_validate") {
+  validate_json(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data = invoker.config
+    schema = "//peridot/build/modular_config/modular_config_schema.json"
+  }
+}
+
+# Packages a modular framework configuration after validating the configuration.
+#
+# Parameters
+#   config (required)
+#     This is a file containing configuration for the modular framework.
+#     It will be schema-validated.
+template("modular_config") {
+  modular_config_validate(target_name + "_validate") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    config = invoker.config
+  }
+
+  package(target_name) {
+    deprecated_system_image = true
+
+    resources = [
+      {
+        path = rebase_path(invoker.config)
+        dest = "config/startup.config"
+      },
+    ]
+
+    deps = [
+      ":${target_name}_validate",
+    ]
+  }
+}

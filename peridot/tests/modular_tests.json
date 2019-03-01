@@ -86,7 +86,6 @@
       "exec": [
         "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
         "--test",
-        "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
         "--session_shell=fuchsia-pkg://fuchsia.com/story_shell_factory_test_session_shell#meta/story_shell_factory_test_session_shell.cmx",
         "--use_session_shell_for_story_shell_factory",

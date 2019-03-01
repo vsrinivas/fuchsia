@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "Schema for modular framework configuration",
+  "definitions": {
+    "basemgr": {
+      "type": "object",
+      "properties": {
+        "disable_statistics": { "type": "boolean", "default": false },
+        "enable_presenter": { "type": "boolean", "default": false },
+        "minfs": { "type": "boolean", "default": true },
+        "test": { "type": "boolean", "default": false },
+        "base_shell_url": {
+          "type": "string",
+          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "default": "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx"
+        },
+        "session_shell_launch_configs": { "$ref": "#/definitions/session_shell_launch_configs" }
+      },
+      "additionalProperties": false,
+      "required": [ "base_shell_url", "session_shell_launch_configs" ]
+    },
+    "session_shell_launch_configs": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "default": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx"
+        },
+        "display_usage": { "type": "string" },
+        "screen_height": { "type": "number" },
+        "screen_width": { "type": "number" }
+      },
+      "additionalProperties": false,
+      "required": [ "url" ]
+    },
+    "sessionmgr": {
+      "type": "object",
+      "properties": {
+        "cloud_provider_for_ledger": { "type": "boolean", "default": true },
+        "test": { "type": "boolean", "default": false },
+        "use_cloud_provider_from_environment": { "type": "boolean", "default": false },
+        "use_memfs_for_ledger": { "type": "boolean", "default": false },
+        "use_session_shell_for_story_shell_factory": { "type": "boolean", "default": false },
+        "startup_agents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
+          },
+          "uniqueItems": true
+        },
+        "session_agents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$"
+           },
+          "uniqueItems": true
+        },
+        "story_shell_url": {
+          "type": "string",
+          "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
+          "default": "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "basemgr": { "$ref": "#/definitions/basemgr" },
+    "sessionmgr": { "$ref": "#/definitions/sessionmgr" }
+  },
+  "required": [ "basemgr", "sessionmgr" ],
+  "additionalProperties": false
+}
