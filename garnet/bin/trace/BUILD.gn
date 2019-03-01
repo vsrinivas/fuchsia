@@ -37,10 +37,10 @@ source_set("trace_app") {
   public_deps = [
     "//garnet/lib/measure",
     "//garnet/lib/trace_converters:chromium",
-    "//sdk/fidl/fuchsia.tracing",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.tracing",
     "//third_party/zlib:zfstream",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
@@ -63,6 +63,7 @@ source_set("spec") {
   public_deps = [
     "//garnet/lib/measure",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/rapidjson_utils",
   ]
 
   deps = [

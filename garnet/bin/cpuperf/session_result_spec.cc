@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/fxl/logging.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/strings/string_printf.h>
+#include "src/lib/files/file.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -12,6 +12,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "session_result_spec.h"
 
 namespace cpuperf {
@@ -45,30 +46,7 @@ const char kNumIterationsKey[] = "num_iterations";
 const char kNumTracesKey[] = "num_traces";
 const char kOutputPathPrefixKey[] = "output_path_prefix";
 
-std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
-  rapidjson::Document schema_document;
-  if (schema_document.Parse(schemaSpec).HasParseError()) {
-    FXL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
-    return nullptr;
-  }
-  return std::make_unique<rapidjson::SchemaDocument>(schema_document);
-}
-
-bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema) {
-  rapidjson::SchemaValidator validator(schema);
-  if (!value.Accept(validator)) {
-    rapidjson::StringBuffer uri_buffer;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FXL_LOG(ERROR) << "Incorrect schema of session config at "
-                   << uri_buffer.GetString() << " , schema violation: "
-                   << validator.GetInvalidSchemaKeyword();
-    return false;
-  }
-  return true;
-}
-
-}
+}  // namespace
 
 SessionResultSpec::SessionResultSpec(const std::string& config_name,
                                      size_t num_iterations, size_t num_traces,
@@ -76,20 +54,19 @@ SessionResultSpec::SessionResultSpec(const std::string& config_name,
     : config_name(config_name),
       num_iterations(num_iterations),
       num_traces(num_traces),
-      output_path_prefix(output_path_prefix) {
-}
+      output_path_prefix(output_path_prefix) {}
 
 // Given an iteration number and trace number, return the output file.
 std::string SessionResultSpec::GetTraceFilePath(size_t iter_num,
                                                 size_t trace_num) const {
-  return fxl::StringPrintf("%s.%zu.%zu.cpuperf",
-                           output_path_prefix.c_str(), iter_num, trace_num);
+  return fxl::StringPrintf("%s.%zu.%zu.cpuperf", output_path_prefix.c_str(),
+                           iter_num, trace_num);
 }
 
 bool DecodeSessionResultSpec(const std::string& json,
                              SessionResultSpec* out_spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = InitSchema(kRootSchema);
+  auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
   if (!root_schema) {
     return false;
   }
@@ -104,7 +81,8 @@ bool DecodeSessionResultSpec(const std::string& json,
                    << offset << ", " << GetParseError_En(code);
     return false;
   }
-  if (!ValidateSchema(document, *root_schema)) {
+  if (!rapidjson_utils::ValidateSchema(document, *root_schema,
+                                       "session result spec")) {
     return false;
   }
 

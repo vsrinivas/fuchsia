@@ -21,10 +21,11 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include "src/lib/files/file.h"
 
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/lib/firebase_auth/testing/json_schema.h"
 #include "src/lib/files/file.h"
 
 namespace service_account {
@@ -47,7 +48,7 @@ constexpr fxl::StringView kIdentityResponseSchema = R"({
 })";
 
 rapidjson::SchemaDocument& GetResponseSchema() {
-  static auto schema = json_schema::InitSchema(kIdentityResponseSchema);
+  static auto schema = rapidjson_utils::InitSchema(kIdentityResponseSchema);
   FXL_DCHECK(schema);
   return *schema;
 }
@@ -315,7 +316,8 @@ void ServiceAccountTokenMinter::HandleIdentityResponse(
     return;
   }
 
-  if (!json_schema::ValidateSchema(document, GetResponseSchema())) {
+  if (!rapidjson_utils::ValidateSchema(document, GetResponseSchema(),
+                                       "identity response")) {
     ResolveCallbacks(api_key,
                      GetErrorResponse(Status::BAD_RESPONSE,
                                       "Malformed response: " + response_body));

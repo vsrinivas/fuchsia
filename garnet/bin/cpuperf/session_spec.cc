@@ -21,6 +21,7 @@
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/perfmon/events.h"
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 
 #include "session_spec.h"
 
@@ -103,33 +104,6 @@ const char kNumIterationsKey[] = "num_iterations";
 const char kOutputPathPrefixKey[] = "output_path_prefix";
 const char kSessionResultSpecPathKey[] = "session_result_spec_path";
 
-std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
-  rapidjson::Document schema_document;
-  if (schema_document.Parse(schemaSpec).HasParseError()) {
-    auto offset = schema_document.GetErrorOffset();
-    auto code = schema_document.GetParseError();
-    FXL_DCHECK(false) << "Schema validation spec itself is not valid JSON"
-                      << ": offset " << offset << ", "
-                      << GetParseError_En(code);
-    return nullptr;
-  }
-  return std::make_unique<rapidjson::SchemaDocument>(schema_document);
-}
-
-bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema) {
-  rapidjson::SchemaValidator validator(schema);
-  if (!value.Accept(validator)) {
-    rapidjson::StringBuffer uri_buffer;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FXL_LOG(ERROR) << "Incorrect schema of session config at "
-                   << uri_buffer.GetString() << " , schema violation: "
-                   << validator.GetInvalidSchemaKeyword();
-    return false;
-  }
-  return true;
-}
-
 template <typename T>
 bool DecodeEvents(T events, SessionSpec* out_spec) {
   FXL_DCHECK(events.Size() < PERFMON_MAX_EVENTS);
@@ -148,8 +122,7 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
     const std::string& group_name = event[kGroupNameKey].GetString();
     const std::string& event_name = event[kEventNameKey].GetString();
     const perfmon::EventDetails* details;
-    if (!LookupEventByName(group_name.c_str(), event_name.c_str(),
-                           &details)) {
+    if (!LookupEventByName(group_name.c_str(), event_name.c_str(), &details)) {
       FXL_LOG(ERROR) << "Unknown event: " << group_name << ":" << event_name;
       return false;
     }
@@ -160,8 +133,8 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
     if (event.HasMember(kFlagsKey)) {
       for (const auto& flag : event[kFlagsKey].GetArray()) {
         if (!flag.IsString()) {
-          FXL_LOG(ERROR) << "Flag for event " << group_name << ":"
-                         << event_name << " is not a string";
+          FXL_LOG(ERROR) << "Flag for event " << group_name << ":" << event_name
+                         << " is not a string";
           return false;
         }
         const std::string& flag_name = flag.GetString();
@@ -200,7 +173,7 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
 
 bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = InitSchema(kRootSchema);
+  auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
   if (!root_schema) {
     return false;
   }
@@ -215,7 +188,8 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
                    << offset << ", " << GetParseError_En(code);
     return false;
   }
-  if (!ValidateSchema(document, *root_schema)) {
+  if (!rapidjson_utils::ValidateSchema(document, *root_schema,
+                                       "session config")) {
     return false;
   }
 
@@ -243,7 +217,8 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   }
 
   if (document.HasMember(kDurationKey)) {
-    result.duration = fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
+    result.duration =
+        fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
   }
 
   if (document.HasMember(kNumIterationsKey)) {
@@ -256,7 +231,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
 
   if (document.HasMember(kSessionResultSpecPathKey)) {
     result.session_result_spec_path =
-      document[kSessionResultSpecPathKey].GetString();
+        document[kSessionResultSpecPathKey].GetString();
   }
 
   *out_spec = std::move(result);
@@ -269,7 +244,6 @@ const char SessionSpec::kDefaultSessionResultSpecPath[] =
 
 SessionSpec::SessionSpec()
     : output_path_prefix(kDefaultOutputPathPrefix),
-      session_result_spec_path(kDefaultSessionResultSpecPath) {
-}
+      session_result_spec_path(kDefaultSessionResultSpecPath) {}
 
 }  // namespace cpuperf

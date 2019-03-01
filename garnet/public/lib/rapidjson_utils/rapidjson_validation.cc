@@ -1,12 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/lib/firebase_auth/testing/json_schema.h"
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 
 #include <lib/fxl/logging.h>
 
-namespace json_schema {
+namespace rapidjson_utils {
 
 std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
   rapidjson::Document schema_document;
@@ -24,17 +24,22 @@ std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
 }
 
 bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema) {
+                    const rapidjson::SchemaDocument& schema,
+                    fxl::StringView value_name) {
   rapidjson::SchemaValidator validator(schema);
   if (!value.Accept(validator)) {
     rapidjson::StringBuffer uri_buffer;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FXL_LOG(ERROR) << "Incorrect schema at " << uri_buffer.GetString()
-                   << " , schema violation: "
+    std::string extra_log_info;
+    if (!value_name.empty()) {
+      extra_log_info = "of \"" + value_name.ToString() + "\" ";
+    }
+    FXL_LOG(ERROR) << "Incorrect schema " << extra_log_info << "at "
+                   << uri_buffer.GetString() << " , schema violation: "
                    << validator.GetInvalidSchemaKeyword();
     return false;
   }
   return true;
 }
 
-}  // namespace json_schema
+}  // namespace rapidjson_utils

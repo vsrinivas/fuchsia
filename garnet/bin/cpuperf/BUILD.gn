@@ -13,6 +13,7 @@ source_set("session_spec") {
   public_deps = [
     "//garnet/lib/perfmon",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/rapidjson_utils",
     "//third_party/rapidjson",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -28,6 +29,7 @@ source_set("session_result_spec") {
   public_deps = [
     "//garnet/lib/perfmon",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/rapidjson_utils",
     "//third_party/rapidjson",
   ]
 }

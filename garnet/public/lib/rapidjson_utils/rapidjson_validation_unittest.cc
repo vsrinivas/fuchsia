@@ -1,13 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/lib/firebase_auth/testing/json_schema.h"
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 
 #include "gtest/gtest.h"
 
-namespace json_schema {
-namespace {
+namespace rapidjson_utils {
 
 constexpr fxl::StringView kInvalidSchema = "Hello";
 
@@ -36,13 +35,15 @@ bool ParseJson(fxl::StringView json, rapidjson::Document* document) {
   return !document->HasParseError();
 }
 
-TEST(JsonSchemaTest, InvalidSchema) {
+TEST(RapidJsonValidation, InvalidSchema) {
   EXPECT_FALSE(InitSchema(kInvalidSchema));
 }
 
-TEST(JsonSchemaTest, ValidSchema) { EXPECT_TRUE(InitSchema(kValidSchema)); }
+TEST(RapidJsonValidation, ValidSchema) {
+  EXPECT_TRUE(InitSchema(kValidSchema));
+}
 
-TEST(JsonSchemaTest, ValidJson) {
+TEST(RapidJsonValidation, ValidJson) {
   auto schema = InitSchema(kValidSchema);
   ASSERT_TRUE(schema);
 
@@ -52,7 +53,7 @@ TEST(JsonSchemaTest, ValidJson) {
   EXPECT_TRUE(ValidateSchema(document, *schema));
 }
 
-TEST(JsonSchemaTest, InvalidJson) {
+TEST(RapidJsonValidation, InvalidJson) {
   auto schema = InitSchema(kValidSchema);
   ASSERT_TRUE(schema);
 
@@ -62,5 +63,4 @@ TEST(JsonSchemaTest, InvalidJson) {
   EXPECT_FALSE(ValidateSchema(document, *schema));
 }
 
-}  // namespace
-}  // namespace json_schema
+}  // namespace rapidjson_utils

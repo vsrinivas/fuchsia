@@ -82,6 +82,7 @@
         "garnet/packages/tests/process",
         "garnet/packages/tests/profiler",
         "garnet/packages/tests/recovery_netstack",
+        "garnet/packages/tests/rapidjson_utils",
         "garnet/packages/tests/run_test_component",
         "garnet/packages/tests/run_tests",
         "garnet/packages/tests/runtime",

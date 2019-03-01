@@ -7,7 +7,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
 
-#include "src/ledger/lib/firebase_auth/testing/json_schema.h"
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 
 namespace service_account {
 
@@ -55,10 +55,10 @@ std::unique_ptr<Credentials> Credentials::Parse(fxl::StringView json) {
 
 std::unique_ptr<Credentials> Credentials::Parse(const rapidjson::Value& json) {
   static auto service_account_schema =
-      json_schema::InitSchema(kServiceAccountConfigurationSchema);
-
+      rapidjson_utils::InitSchema(kServiceAccountConfigurationSchema);
+  FXL_DCHECK(service_account_schema);
   FXL_DCHECK(json.IsObject());
-  if (!json_schema::ValidateSchema(json, *service_account_schema)) {
+  if (!rapidjson_utils::ValidateSchema(json, *service_account_schema)) {
     return nullptr;
   }
 

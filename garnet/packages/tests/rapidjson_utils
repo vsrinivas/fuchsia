@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/public/lib/rapidjson_utils:rapidjson_utils_unittests"
+    ]
+}

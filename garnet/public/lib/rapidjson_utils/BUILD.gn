@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("rapidjson_utils") {
+  sources = [
+    "rapidjson_validation.cc",
+    "rapidjson_validation.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "rapidjson_utils_unittests"
+
+  sources = [
+    "rapidjson_validation_unittest.cc",
+  ]
+
+  deps = [
+    ":rapidjson_utils",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//third_party/rapidjson",
+  ]
+}
+
+package("rapidjson_utils_unittests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "rapidjson_utils_unittests"
+    },
+  ]
+}

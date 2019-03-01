@@ -11,6 +11,7 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
+#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "lib/fxl/logging.h"
 
 namespace tracing {
@@ -258,37 +259,15 @@ bool DecodeMeasureTimeBetween(const rapidjson::Value& value,
   return true;
 }
 
-std::unique_ptr<rapidjson::SchemaDocument> InitSchema(const char schemaSpec[]) {
-  rapidjson::Document schema_document;
-  if (schema_document.Parse(schemaSpec).HasParseError()) {
-    FXL_DCHECK(false) << "Schema validation spec itself is not valid JSON.";
-    return nullptr;
-  }
-  return std::make_unique<rapidjson::SchemaDocument>(schema_document);
-}
-
-bool ValidateSchema(const rapidjson::Value& value,
-                    const rapidjson::SchemaDocument& schema) {
-  rapidjson::SchemaValidator validator(schema);
-  if (!value.Accept(validator)) {
-    rapidjson::StringBuffer uri_buffer;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(uri_buffer);
-    FXL_LOG(ERROR) << "Incorrect schema of tracing spec at "
-                   << uri_buffer.GetString() << " , schema violation: "
-                   << validator.GetInvalidSchemaKeyword();
-    return false;
-  }
-  return true;
-}
-
 }  // namespace
 
 bool DecodeSpec(const std::string& json, Spec* spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = InitSchema(kRootSchema);
-  auto duration_schema = InitSchema(kDurationSchema);
-  auto time_between_schema = InitSchema(kTimeBetweenSchema);
-  auto argument_value_schema = InitSchema(kArgumentValueSchema);
+  auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
+  auto duration_schema = rapidjson_utils::InitSchema(kDurationSchema);
+  auto time_between_schema = rapidjson_utils::InitSchema(kTimeBetweenSchema);
+  auto argument_value_schema =
+      rapidjson_utils::InitSchema(kArgumentValueSchema);
   if (!root_schema || !duration_schema || !time_between_schema ||
       !argument_value_schema) {
     return false;
@@ -304,7 +283,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
                    << ", " << GetParseError_En(code);
     return false;
   }
-  if (!ValidateSchema(document, *root_schema)) {
+  if (!rapidjson_utils::ValidateSchema(document, *root_schema)) {
     return false;
   }
 
@@ -391,7 +370,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     if (type == kMeasureDurationType) {
       measure::DurationSpec spec;
       spec.common = std::move(common);
-      if (!ValidateSchema(measurement, *duration_schema) ||
+      if (!rapidjson_utils::ValidateSchema(measurement, *duration_schema) ||
           !DecodeMeasureDuration(measurement, &spec)) {
         return false;
       }
@@ -399,7 +378,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
       spec.common = std::move(common);
-      if (!ValidateSchema(measurement, *time_between_schema) ||
+      if (!rapidjson_utils::ValidateSchema(measurement, *time_between_schema) ||
           !DecodeMeasureTimeBetween(measurement, &spec)) {
         return false;
       }
@@ -407,7 +386,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
       spec.common = std::move(common);
-      if (!ValidateSchema(measurement, *argument_value_schema) ||
+      if (!rapidjson_utils::ValidateSchema(measurement,
+                                           *argument_value_schema) ||
           !DecodeMeasureArgumentValue(measurement, &spec)) {
         return false;
       }
