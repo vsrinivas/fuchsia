@@ -18,7 +18,7 @@ function HELP {
     echo "-l                   : use ThinLTO build"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
-    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
+    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
     echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
     echo "-G <version>         : use GIC v2 or v3"
@@ -256,6 +256,8 @@ if (( $DISK )); then
         ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
     elif [[ "$DISKTYPE" == "nvme" ]]; then
         ARGS+=" -device nvme,drive=mydisk,serial=zircon"
+    elif [[ "$DISKTYPE" == "virtio-scsi" ]]; then
+        ARGS+=" -device virtio-scsi-pci,id=scsi -device scsi-hd,drive=mydisk,scsi-id=1,lun=1"
     else
         echo unrecognized disk type \"$DISKTYPE\"
         exit
