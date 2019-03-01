@@ -77,27 +77,6 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     // to resume single-stepping in the outer frame.
     Log("Done stepping out of sub-frame.");
     finish_.reset();
-
-    // Pass the "none" exception type here to bypass checking the exception
-    // type.
-    //
-    // TODO(DX-1058): this is wrong. If the program crashes while stepping this
-    // might try to continue it. What we really want is a flag from the finish
-    // controller to differentiate "stop because crazy stuff is happening" and
-    // "stop because I reached my destination." The former implies we should
-    // also stop, the latter implies we should continue with this logic and can
-    // ignore the exception type.
-    //
-    // TODO(brettw) this re-uses the step-into controller that already reported
-    // stop (causing us to do the "finish" operation). Once a controller
-    // reports "stop" we should no re-use it. A new controller should be
-    // created. Possibly the code below that creates a new step_into_
-    // controller might be sufficient in which case this call can be deleted.
-    if (step_into_->OnThreadStop(debug_ipc::NotifyException::Type::kNone, {}) ==
-        kContinue) {
-      Log("Still in range after stepping out.");
-      return kContinue;
-    }
   } else {
     if (step_into_->OnThreadStop(stop_type, {}) == kContinue) {
       Log("Still in range after stepping out.");
@@ -177,7 +156,13 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // Pass the "none" exception type here to bypass checking the exception
   // type.
   //
-  // TODO(brettw) DX-1058 this is wrong, see similar comment above.
+  // TODO(DX-1058): this is wrong. If the program crashes while stepping this
+  // might try to continue it. What we really want is a flag from the finish
+  // controller to differentiate "stop because crazy stuff is happening" and
+  // "stop because I reached my destination." The former implies we should
+  // also stop, the latter implies we should continue with this logic and can
+  // ignore the exception type.
+  //
   return finish_->OnThreadStop(debug_ipc::NotifyException::Type::kNone, {});
 }
 
