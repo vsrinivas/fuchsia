@@ -18,10 +18,6 @@ declare_args() {
   # doesn't exist yet when it's needed, it will be generated.  New
   # keys can be generated with the `pm -k FILE genkey` host command.
   system_package_key = "//build/development.key"
-
-  # Whether to generate an assertion if the specified package set is
-  # inconsistent with the package definition.
-  assert_on_inconsistent_package_set = false
 }
 
 # Generate a signed, sealed package file from a manifest.
@@ -349,7 +345,6 @@ template("package") {
       if (!defined(tests)) {
         tests = []
       }
-      package_set = ""
     }
 
     pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
@@ -772,33 +767,9 @@ template("package") {
       }
     }
 
-    # Determine why this package is being built.
-    foreach(name, available_packages) {
-      if (name == pkg_label) {
-        pkg.package_set = "available"
-      }
-    }
-    foreach(name, preinstall_packages) {
-      if (name == pkg_label) {
-        pkg.package_set = "preinstall"
-      }
-    }
-    foreach(name, monolith_packages) {
-      if (name == pkg_label) {
-        pkg.package_set = "monolith"
-      }
-    }
-    if (assert_on_inconsistent_package_set) {
-      assert(
-          !pkg.deprecated_system_image || pkg.package_set == "monolith" ||
-              pkg.package_set == "",
-          "Package ${pkg_label} has deprecated_system_image but is in the \"${pkg.package_set}\" set, not monolith")
-    }
-
     generate_system_index("${pkg_target_name}.system_index.rsp") {
       deprecated_system_image = pkg.deprecated_system_image
       meta_target = ":${pkg_target_name}.meta"
-      package_set = pkg.package_set
       package_name = pkg.package_name
       package_version = pkg.package_version
       blobs_json = "${pkg_target_name}.meta/blobs.json"

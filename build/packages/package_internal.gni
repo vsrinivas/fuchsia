@@ -20,20 +20,14 @@ template("generate_system_index") {
                                "blobs_json",
                                "meta_target",
                                "package_name",
-                               "package_set",
                                "package_version",
                              ])
 
       deps = [
         "${meta_target}",
       ]
-      if (package_set == "") {
-        package_tags = ""
-      } else {
-        package_tags = "#${package_set}"
-      }
       response_file_contents =
-          [ "--entry=${package_name}/${package_version}${package_tags}=" +
+          [ "--entry=${package_name}/${package_version}=" +
             rebase_path(blobs_json, root_build_dir, target_out_dir) ]
     }
   }
