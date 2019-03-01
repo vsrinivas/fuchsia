@@ -75,9 +75,7 @@ public:
     void Query(volume_info_t* info) TA_EXCL(lock_);
 
     size_t DiskSize() const { return info_.block_count * info_.block_size; }
-    size_t SliceSize() const { return format_info_.slice_size(); }
-    // format_info_ is calculated on Load and never updated again.
-    const FormatInfo& format_info() const { return format_info_; }
+    size_t SliceSize() const { return slice_size_; }
     size_t VSliceMax() const { return VSLICE_MAX; }
     const block_info_t& Info() const { return info_; }
 
@@ -158,14 +156,14 @@ private:
     vpart_entry_t* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
 
     size_t PrimaryOffsetLocked() const TA_REQ(lock_) {
-        return format_info_.GetSuperblockOffset(
-            (first_metadata_is_primary_) ? SuperblockType::kPrimary : SuperblockType::kSecondary);
+        return first_metadata_is_primary_ ? 0 : MetadataSize();
     }
 
     size_t BackupOffsetLocked() const TA_REQ(lock_) {
-        return format_info_.GetSuperblockOffset(
-            (first_metadata_is_primary_) ? SuperblockType::kSecondary : SuperblockType::kPrimary);
+        return first_metadata_is_primary_ ? MetadataSize() : 0;
     }
+
+    size_t MetadataSize() const { return metadata_size_; }
 
     zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command);
 
@@ -175,12 +173,12 @@ private:
     fbl::Mutex lock_;
     fzl::OwnedVmoMapper metadata_ TA_GUARDED(lock_);
     bool first_metadata_is_primary_ TA_GUARDED(lock_);
+    size_t metadata_size_;
+    size_t slice_size_;
+    // Number of allocatable slices.
+    size_t pslice_total_count_;
     // Number of currently allocated slices.
     size_t pslice_allocated_count_ TA_GUARDED(lock_);
-
-    // Format information of the fvm. This is only set when the driver is loaded, and not
-    // modified.
-    fvm::FormatInfo format_info_;
 
     // Block Protocol
     const size_t block_op_size_;

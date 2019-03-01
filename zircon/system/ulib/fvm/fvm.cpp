@@ -12,8 +12,8 @@
 #include <unistd.h>
 
 #ifdef __Fuchsia__
-#include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
+#include <lib/zx/vmo.h>
 #endif
 
 #include <fbl/unique_fd.h>
@@ -25,21 +25,6 @@
 #define ZXDEBUG 0
 
 namespace {
-
-constexpr size_t MetadataSizeOrZero(size_t disk_size, size_t slice_size) {
-    if (disk_size == 0 || slice_size == 0) {
-        return 0;
-    }
-    return fvm::MetadataSize(disk_size, slice_size);
-}
-
-constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metadata_allocated_size,
-                                         size_t slice_size) {
-    if (slice_size == 0) {
-        return 0;
-    }
-    return (fvm_partition_size - 2 * metadata_allocated_size) / slice_size;
-}
 
 // Return true if g1 is greater than or equal to g2.
 // Safe against integer overflow.
@@ -72,35 +57,9 @@ bool fvm_check_hash(const void* metadata, size_t metadata_size) {
     return digest == header->hash;
 }
 
-} // namespace
+} // namespace anonymous
 
 #ifdef __cplusplus
-
-fvm::FormatInfo fvm::FormatInfo::FromSuperBlock(const fvm_t& superblock) {
-    fvm::FormatInfo summary;
-    summary.metadata_allocated_size_ = superblock.allocation_table_size + kAllocTableOffset;
-    summary.metadata_size_ =
-        MetadataSizeOrZero(superblock.fvm_partition_size, superblock.slice_size);
-    summary.slice_size_ = superblock.slice_size;
-    summary.slice_count_ = UsableSlicesCountOrZero(
-        superblock.fvm_partition_size, summary.metadata_allocated_size(), summary.slice_size());
-    return summary;
-}
-
-fvm::FormatInfo fvm::FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size,
-                                                      size_t slice_size) {
-    fvm::FormatInfo summary;
-    summary.metadata_allocated_size_ = MetadataSizeOrZero(max_size, slice_size);
-    summary.metadata_size_ = MetadataSizeOrZero(initial_size, slice_size);
-    summary.slice_size_ = slice_size;
-    summary.slice_count_ = UsableSlicesCountOrZero(initial_size, summary.metadata_allocated_size(),
-                                                   summary.slice_size());
-    return summary;
-}
-
-fvm::FormatInfo fvm::FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
-    return FromPreallocatedSize(disk_size, disk_size, slice_size);
-}
 
 uint64_t fvm::slice_entry::Vpart() const {
     uint64_t result = data & VPART_MASK;
@@ -134,8 +93,8 @@ void fvm_update_hash(void* metadata, size_t metadata_size) {
     memcpy(header->hash, hash, sizeof(header->hash));
 }
 
-zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t metadata_size,
-                                const void** out) {
+zx_status_t fvm_validate_header(const void* metadata, const void* backup,
+                                size_t metadata_size, const void** out) {
     const fvm::fvm_t* primary_header = static_cast<const fvm::fvm_t*>(metadata);
     const fvm::fvm_t* backup_header = static_cast<const fvm::fvm_t*>(backup);
 

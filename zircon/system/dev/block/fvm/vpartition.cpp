@@ -156,7 +156,8 @@ void VPartition::ExtentDestroyLocked(size_t vslice) TA_REQ(lock_) {
     AddBlocksLocked(-((length * mgr_->SliceSize()) / info_.block_size));
 }
 
-template <typename T> static zx_status_t RequestBoundCheck(const T& request, size_t vslice_max) {
+template <typename T>
+static zx_status_t RequestBoundCheck(const T& request, size_t vslice_max) {
     if (request.offset == 0 || request.offset > vslice_max) {
         return ZX_ERR_OUT_OF_RANGE;
     } else if (request.length > vslice_max) {
@@ -250,7 +251,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
         return;
     }
 
-    const FormatInfo& format_info = mgr_->format_info();
+    const size_t disk_size = mgr_->DiskSize();
     const size_t slice_size = mgr_->SliceSize();
     const uint64_t blocks_per_slice = slice_size / BlockSize();
     // Start, end both inclusive
@@ -265,7 +266,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
             completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, txn);
             return;
         }
-        txn->rw.offset_dev = format_info.GetSliceStart(pslice) / BlockSize() +
+        txn->rw.offset_dev = SliceStart(disk_size, slice_size, pslice) / BlockSize() +
                              (txn->rw.offset_dev % blocks_per_slice);
         mgr_->Queue(txn, completion_cb, cookie);
         return;
@@ -289,7 +290,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     // Ideal case: slices are contiguous
     if (contiguous) {
         uint32_t pslice = SliceGetLocked(vslice_start);
-        txn->rw.offset_dev = format_info.GetSliceStart(pslice) / BlockSize() +
+        txn->rw.offset_dev = SliceStart(disk_size, slice_size, pslice) / BlockSize() +
                              (txn->rw.offset_dev % blocks_per_slice);
         mgr_->Queue(txn, completion_cb, cookie);
         return;
@@ -338,7 +339,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
         memcpy(txns[i], txn, sizeof(*txn));
         txns[i]->rw.offset_vmo = offset_vmo;
         txns[i]->rw.length = static_cast<uint32_t>(length);
-        txns[i]->rw.offset_dev = format_info.GetSliceStart(pslice) / BlockSize();
+        txns[i]->rw.offset_dev = SliceStart(disk_size, slice_size, pslice) / BlockSize();
         if (vslice == vslice_start) {
             txns[i]->rw.offset_dev += (txn->rw.offset_dev % blocks_per_slice);
         }
@@ -429,13 +430,15 @@ zx_status_t VPartition::BlockVolumeQuerySlices(const uint64_t* start_list, size_
                                                slice_region_t* out_responses_list,
                                                size_t responses_count,
                                                size_t* out_responses_actual) {
-    if ((start_count > MAX_SLICE_QUERY_REQUESTS) || (start_count > responses_count)) {
+    if ((start_count > MAX_SLICE_QUERY_REQUESTS) ||
+        (start_count > responses_count)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     for (size_t i = 0; i < start_count; i++) {
         zx_status_t status;
-        if ((status = CheckSlices(start_list[i], &out_responses_list[i].count,
+        if ((status = CheckSlices(start_list[i],
+                                  &out_responses_list[i].count,
                                   &out_responses_list[i].allocated)) != ZX_OK) {
             return status;
         }
