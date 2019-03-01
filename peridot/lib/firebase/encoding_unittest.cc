@@ -6,7 +6,6 @@
 
 #include <string>
 
-#include <lib/fxl/random/rand.h>
 #include <lib/fxl/strings/utf_codecs.h>
 #include <zircon/syscalls.h>
 
@@ -133,7 +132,9 @@ TEST(EncodingTest, BackAndForth) {
 
   // Check random sequence of size less or equals 3.
   for (size_t i = 0; i < 10000; ++i) {
-    size_t size = fxl::RandUint64() % 4;
+    size_t size = 0;
+    zx_cprng_draw(&size, sizeof(size));
+    size = size % 4;
     char buffer[size];
     fxl::StringView view(buffer, size);
     zx_cprng_draw(reinterpret_cast<unsigned char*>(buffer), size);

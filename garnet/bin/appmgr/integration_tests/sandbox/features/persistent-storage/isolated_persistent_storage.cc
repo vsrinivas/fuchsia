@@ -7,7 +7,6 @@
 #include <gtest/gtest.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/random/rand.h>
 #include <lib/svc/cpp/services.h>
 #include <test/appmgr/sandbox/cpp/fidl.h>
 #include <zircon/syscalls.h>

@@ -5,6 +5,7 @@
 #include "low_energy_connection_manager.h"
 
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
@@ -15,7 +16,6 @@
 #include "garnet/drivers/bluetooth/lib/sm/pairing_state.h"
 #include "garnet/drivers/bluetooth/lib/sm/util.h"
 
-#include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "pairing_delegate.h"
@@ -269,7 +269,9 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
     if (method == sm::PairingMethod::kPasskeyEntryDisplay) {
       // Randomly generate a 6 digit passkey.
       // TODO(armansito): Use a uniform prng.
-      uint32_t passkey = fxl::RandUint64() % 1000000;
+      uint32_t passkey;
+      zx_cprng_draw(&passkey, sizeof(passkey));
+      passkey = passkey % 1000000;
       delegate->DisplayPasskey(
           id(), passkey,
           [passkey, responder = std::move(responder)](bool confirm) {

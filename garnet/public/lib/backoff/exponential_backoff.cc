@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <lib/fxl/logging.h>
+#include <zircon/syscalls.h>
 
 namespace backoff {
 
@@ -29,6 +30,12 @@ ExponentialBackoff::ExponentialBackoff(zx::duration initial_delay,
 }
 
 ExponentialBackoff::~ExponentialBackoff() {}
+
+uint64_t ExponentialBackoff::DefaultSeedGenerator() {
+  uint64_t seed = 0;
+  zx_cprng_draw(&seed, sizeof(seed));
+  return seed;
+}
 
 zx::duration ExponentialBackoff::GetNext() {
   // Add a random component in [0, next_delay).

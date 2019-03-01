@@ -7,6 +7,7 @@
 #include <map>
 
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
@@ -14,7 +15,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/local_address_delegate.h"
 
 #include "lib/fxl/macros.h"
-#include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace btlib {
@@ -363,7 +363,9 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp = CreateFakeAdvertisingData(21 /* size of ad */);
 
-  auto interval = zx::duration(fxl::RandUint64());
+  zx_duration_t random = 0;
+  zx_cprng_draw(&random, sizeof(random));
+  auto interval = zx::duration(random);
   adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, interval,
                               false /* anonymous */, GetSuccessCallback());
 

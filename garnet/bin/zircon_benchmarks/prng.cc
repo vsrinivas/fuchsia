@@ -9,7 +9,6 @@
 #include <random>
 #include <type_traits>
 
-#include "lib/fxl/random/rand.h"
 #include "perftest/perftest.h"
 
 namespace {
@@ -51,7 +50,6 @@ bool GetFromZxCprng(perftest::RepeatState* state) {
 }
 
 void RegisterTests() {
-  perftest::RegisterTest("Prng/Fxl/RandUint64", GetFrom<fxl::RandUint64>);
   perftest::RegisterTest("Prng/LibCpp/RandomDevice", GetFromRandomDevice);
   perftest::RegisterTest("Prng/Zx/CprngDraw", GetFromZxCprng);
 

@@ -5,9 +5,9 @@
 #include "garnet/bin/mdns/service/prober.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/fxl/random/rand.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
+#include <zircon/syscalls.h>
 
 namespace mdns {
 
@@ -55,8 +55,10 @@ void Prober::ReceiveResource(const DnsResource& resource,
 }
 
 fxl::TimeDelta Prober::InitialDelay() {
+  uint64_t random = 0;
+  zx_cprng_draw(&random, sizeof(random));
   int64_t random_nonnegative_int64 =
-      static_cast<int64_t>(fxl::RandUint64() >> 1);
+      static_cast<int64_t>(random >> 1);
   FXL_DCHECK(random_nonnegative_int64 >= 0);
   return fxl::TimeDelta::FromNanoseconds(random_nonnegative_int64 %
                                          kMaxProbeInterval.ToNanoseconds());
