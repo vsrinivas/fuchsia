@@ -6,10 +6,15 @@ library fuchsia.feedback;
 
 using fuchsia.math;
 using fuchsia.mem;
+using zx;
 
 /// Provides data useful to attach in feedback reports (crash or user feedback).
 [Discoverable]
 protocol DataProvider {
+    /// Returns all the feedback data except the screenshot, which is provided
+    /// separately.
+    GetData() -> (Data data) error zx.status;
+
     /// Returns an image of the current view encoded in the provided |encoding|.
     ///
     /// |screenshot| may be null if the encoding is not supported, the device
@@ -19,6 +24,35 @@ protocol DataProvider {
     /// The screenshot is provided separately from the rest of the data as
     /// callers might want to block on it before changing the view.
     GetScreenshot(ImageEncoding encoding) -> (Screenshot? screenshot);
+};
+
+
+/// Data to attach to feedback reports.
+///
+/// Clients typically upload the data straight to servers without expecting some
+/// particular fields. So the data comes in the form of arbitrary key-value pairs
+/// that clients can directly forward to the servers.
+table Data {
+  /// A vector of key-value string pairs. Keys are guaranteed to be unique.
+  1: vector<Annotation> annotations;
+
+  /// A vector of key-value string-to-VMO pairs. Keys are guaranteed to be unique.
+  2: vector<Attachment> attachments;
+};
+
+/// An annotation and its plain ASCII string key.
+/// Annotations are short strings, e.g., the board name or the build version.
+struct Annotation {
+  string:128 key;
+  string:1024 value;
+};
+
+/// An attachment and its plain ASCII string key.
+/// Attachments are larger objects, e.g., log files. They may be binary or text
+/// data.
+struct Attachment {
+  string:128 key;
+  fuchsia.mem.Buffer value;
 };
 
 /// The encoding used for the image.

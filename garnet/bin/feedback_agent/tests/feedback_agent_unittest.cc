@@ -364,8 +364,17 @@ TEST_F(FeedbackAgentTest, GetScreenshot_ParallelRequests) {
   }
 }
 
-}  // namespace
+TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
+  DataProvider_GetData_Result feedback_result;
+  agent_->GetData([&feedback_result](DataProvider_GetData_Result result) {
+    feedback_result = std::move(result);
+  });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(feedback_result.is_err());
+  EXPECT_EQ(feedback_result.err(), ZX_ERR_NOT_SUPPORTED);
+}
 
+}  // namespace
 }  // namespace feedback
 }  // namespace fuchsia
 

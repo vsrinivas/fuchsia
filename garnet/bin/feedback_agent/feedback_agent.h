@@ -21,6 +21,10 @@ class FeedbackAgent : public DataProvider {
  public:
   FeedbackAgent(::sys::StartupContext* startup_context);
 
+  // Returns all the feedback data except the screenshot, which is provided
+  // separately.
+  void GetData(GetDataCallback callback) override;
+
   // Returns an image of the current view encoded in the provided |encoding|.
   void GetScreenshot(ImageEncoding encoding,
                      GetScreenshotCallback callback) override;

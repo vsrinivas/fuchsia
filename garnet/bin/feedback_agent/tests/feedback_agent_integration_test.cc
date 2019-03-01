@@ -17,25 +17,43 @@ namespace {
 
 // Smoke-tests the real environment service for the
 // fuchsia.feedback.DataProvider FIDL interface, connecting through FIDL.
-//
+class FeedbackAgentIntegrationTest : public testing::Test {
+ public:
+  void SetUp() override {
+    auto environment_services_ = component::GetEnvironmentServices();
+    environment_services_->ConnectToService(
+        feedback_data_provider_.NewRequest());
+  }
+
+  void TearDown() override { feedback_data_provider_.Unbind(); }
+
+ protected:
+  DataProviderSyncPtr feedback_data_provider_;
+
+ private:
+  std::shared_ptr<component::Services> environment_services_;
+};
+
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan
 // to operate properly and take a screenshot. Note that calls to Scenic hang
 // indefinitely for headless devices so this test assumes the device has a
 // display like the other Scenic tests, see SCN-1281.
-VK_TEST(FeedbackAgentIntegrationTest, SmokeTest) {
-  DataProviderSyncPtr feedback_data_provider;
-  auto environment_services = component::GetEnvironmentServices();
-  environment_services->ConnectToService(feedback_data_provider.NewRequest());
-
+VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   std::unique_ptr<Screenshot> out_screenshot;
-  ASSERT_EQ(feedback_data_provider->GetScreenshot(ImageEncoding::PNG,
-                                                  &out_screenshot),
+  ASSERT_EQ(feedback_data_provider_->GetScreenshot(ImageEncoding::PNG,
+                                                   &out_screenshot),
             ZX_OK);
   // We cannot expect a particular payload in the response because depending on
   // the device on which the test runs, Scenic might return a screenshot or not.
 }
 
-}  // namespace
+TEST_F(FeedbackAgentIntegrationTest, GetData_SmokeTest) {
+  DataProvider_GetData_Result out_result;
+  ASSERT_EQ(feedback_data_provider_->GetData(&out_result), ZX_OK);
+  ASSERT_TRUE(out_result.is_err());
+  EXPECT_EQ(out_result.err(), ZX_ERR_NOT_SUPPORTED);
+}
 
+}  // namespace
 }  // namespace feedback
 }  // namespace fuchsia

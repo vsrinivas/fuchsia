@@ -7,6 +7,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include "garnet/bin/feedback_agent/image_conversion.h"
@@ -17,6 +18,12 @@ namespace feedback {
 FeedbackAgent::FeedbackAgent(::sys::StartupContext* startup_context)
     : context_(startup_context) {
   ConnectToScenic();
+}
+
+void FeedbackAgent::GetData(GetDataCallback callback) {
+  DataProvider_GetData_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  callback(std::move(result));
 }
 
 void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
