@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ledger/bin/storage/impl/leveldb_factory.h"
+
 #include <memory>
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
-#include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 
 namespace storage {
 namespace {

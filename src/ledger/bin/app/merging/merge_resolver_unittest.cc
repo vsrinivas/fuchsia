@@ -13,7 +13,6 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/macros.h>
 
 #include "gmock/gmock.h"
@@ -26,6 +25,7 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {

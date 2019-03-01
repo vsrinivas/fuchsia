@@ -8,8 +8,9 @@
 #include <fcntl.h>
 #include <string>
 
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/strings/string_view.h>
+
+#include "src/lib/files/unique_fd.h"
 
 namespace ledger {
 

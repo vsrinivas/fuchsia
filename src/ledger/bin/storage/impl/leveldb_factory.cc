@@ -9,14 +9,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/memory/ref_counted.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_view.h>
 #include <lib/fxl/synchronization/thread_annotations.h>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 // LevelDbFactory tries to keep an empty, initialized instance of LevelDb always
 // available. It stores this cached instance under cached_db/.

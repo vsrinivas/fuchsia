@@ -11,7 +11,6 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/macros.h>
 #include <lib/fxl/time/time_delta.h>
 #include <lib/zx/time.h>
@@ -20,6 +19,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 

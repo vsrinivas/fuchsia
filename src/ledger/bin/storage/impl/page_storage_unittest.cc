@@ -15,9 +15,6 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/arraysize.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_printf.h>
@@ -43,6 +40,9 @@
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 using testing::ElementsAre;
 using testing::IsEmpty;

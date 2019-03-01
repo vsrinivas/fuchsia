@@ -4,20 +4,16 @@
 
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 
-#include <string>
-
 #include <dirent.h>
 #include <algorithm>
 #include <iterator>
+#include <string>
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 
@@ -25,6 +21,9 @@
 #include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace storage {
 

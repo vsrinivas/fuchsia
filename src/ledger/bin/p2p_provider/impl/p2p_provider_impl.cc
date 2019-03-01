@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <iterator>
 
-#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 
 #include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
+#include "src/lib/files/file.h"
 
 namespace p2p_provider {
 namespace {

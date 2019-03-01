@@ -7,7 +7,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
@@ -17,6 +16,7 @@
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 #include "src/ledger/cloud_provider_firestore/bin/include/types.h"
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
+#include "src/lib/files/file.h"
 
 namespace cloud_provider_firestore {
 void PrintUsage(const char* executable_name) {

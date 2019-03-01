@@ -7,11 +7,10 @@
 #include <queue>
 #include <string>
 
+#include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-
-#include "src/ledger/bin/filesystem/directory_reader.h"
 
 namespace ledger {
 

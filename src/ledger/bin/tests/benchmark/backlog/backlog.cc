@@ -14,9 +14,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
@@ -33,6 +30,9 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/bin/testing/sync_params.h"
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 

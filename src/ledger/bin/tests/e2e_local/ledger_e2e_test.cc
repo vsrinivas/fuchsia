@@ -13,8 +13,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/vmo/strings.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/services.h>
 
@@ -27,6 +25,8 @@
 #include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 
 namespace test {
 namespace e2e_local {

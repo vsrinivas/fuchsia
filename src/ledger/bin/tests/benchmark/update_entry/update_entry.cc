@@ -11,8 +11,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_number_conversions.h>
@@ -27,6 +25,8 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {

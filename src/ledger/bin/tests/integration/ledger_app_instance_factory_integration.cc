@@ -13,7 +13,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/socket/strings.h>
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/timekeeper/test_loop_test_clock.h>
 
 #include "gtest/gtest.h"
@@ -33,6 +32,7 @@
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {

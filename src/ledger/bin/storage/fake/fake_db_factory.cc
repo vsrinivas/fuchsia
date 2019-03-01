@@ -4,9 +4,8 @@
 
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 
-#include "src/lib/files/directory.h"
-
 #include "src/ledger/bin/storage/fake/fake_db.h"
+#include "src/lib/files/directory.h"
 
 namespace storage {
 namespace fake {

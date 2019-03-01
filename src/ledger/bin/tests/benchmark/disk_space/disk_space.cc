@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace/event.h>
 #include <iostream>
 #include <memory>
 
@@ -12,12 +11,11 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
+#include <trace/event.h>
 
 #include "garnet/public/lib/callback/waiter.h"
 #include "peridot/lib/rng/test_random.h"
@@ -28,6 +26,8 @@
 #include "src/ledger/bin/testing/page_data_generator.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {

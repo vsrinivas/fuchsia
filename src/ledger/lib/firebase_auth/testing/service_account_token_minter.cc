@@ -10,7 +10,6 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/arraysize.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/fxl/strings/string_view.h>
@@ -26,6 +25,7 @@
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/lib/firebase_auth/testing/json_schema.h"
+#include "src/lib/files/file.h"
 
 namespace service_account {
 

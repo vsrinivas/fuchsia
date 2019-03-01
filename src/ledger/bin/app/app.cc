@@ -14,7 +14,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -28,6 +27,7 @@
 #include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace ledger {
 namespace {

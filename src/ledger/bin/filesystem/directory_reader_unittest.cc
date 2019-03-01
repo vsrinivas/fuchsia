@@ -7,13 +7,13 @@
 #include <fcntl.h>
 #include <set>
 
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/strings/string_view.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace ledger {
 namespace {

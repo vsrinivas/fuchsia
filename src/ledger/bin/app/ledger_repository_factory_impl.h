@@ -16,7 +16,6 @@
 #include <lib/callback/cancellable.h>
 #include <lib/callback/managed_container.h>
 #include <lib/component/cpp/expose.h>
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/macros.h>
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
@@ -27,6 +26,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace ledger {
 

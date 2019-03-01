@@ -7,13 +7,13 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <zircon/syscalls.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
+#include "src/lib/files/file.h"
 
 namespace cloud_sync {
 

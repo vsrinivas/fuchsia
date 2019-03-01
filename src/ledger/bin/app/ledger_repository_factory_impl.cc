@@ -17,11 +17,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/eintr_wrapper.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>
 #include <trace/event.h>
@@ -38,6 +33,11 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/eintr_wrapper.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 
