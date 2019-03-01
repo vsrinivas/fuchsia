@@ -52,7 +52,9 @@ Router* PacketNubFuzzer::Nub::GetRouter() { return &router_; }
 
 void PacketNubFuzzer::Nub::Publish(LinkPtr<> link) {
   auto node = link->GetLinkStatus().to;
-  assert(NodeId(node) != NodeId(1));
+  if (NodeId(node) != NodeId(1)) {
+    abort();
+  }
   router_.RegisterLink(std::move(link));
 }
 
