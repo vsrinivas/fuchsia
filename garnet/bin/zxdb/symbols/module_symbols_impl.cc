@@ -4,8 +4,11 @@
 
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 
+#include <stdio.h>
+
 #include <algorithm>
 
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
 #include "garnet/bin/zxdb/symbols/dwarf_symbol_factory.h"
 #include "garnet/bin/zxdb/symbols/find_line.h"
@@ -25,10 +28,58 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
+#include "src/lib/elflib/elflib.h"
 
 namespace zxdb {
 
 namespace {
+
+// IO Callbacks for Elflib.
+class FileAccessor : public elflib::ElfLib::MemoryAccessorForFile {
+ public:
+  FileAccessor(const std::string& filename)
+      : file_(fopen(filename.c_str(), "r")) {}
+
+  ~FileAccessor() {
+    if (file_) {
+      fclose(file_);
+    }
+  }
+
+  const uint8_t* GetMemory(uint64_t offset, size_t size) override {
+    if (!file_) {
+      return nullptr;
+    }
+
+    auto& ret = data_[std::make_pair(offset, size)];
+    if (ret.size() == size) {
+      return ret.data();
+    }
+
+    ret.resize(size);
+
+    fseek(file_, offset, SEEK_SET);
+    if (fread(ret.data(), 1, size, file_) != size) {
+      return nullptr;
+    }
+
+    return ret.data();
+  }
+
+  // Addresses will still point us to the right location in the file when we do
+  // symbol table lookups.
+  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
+    return GetMemory(offset, size);
+  }
+
+ private:
+  FILE* file_ = nullptr;
+
+  // Elflib treats our read functions like they're random-access, so we cache
+  // the results of reads. We could end up with overlaps in this map, though in
+  // practice we don't in today's code.
+  std::map<std::pair<uint64_t, size_t>, std::vector<uint8_t>> data_;
+};
 
 // Implementation of SymbolDataProvider that returns no memory or registers.
 // This is used when evaluating global variables' location expressions which
@@ -101,6 +152,11 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 }
 
 Err ModuleSymbolsImpl::Load() {
+  if (auto elf =
+          elflib::ElfLib::Create(std::make_unique<FileAccessor>(name_))) {
+    plt_locations_ = elf->GetPLTOffsets();
+  }
+
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> bin_or_err =
       llvm::object::createBinary(name_);
   if (!bin_or_err) {
@@ -251,7 +307,22 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
+  if (StringEndsWith(input_location.symbol, "@plt")) {
+    auto found = plt_locations_.find(
+        input_location.symbol.substr(0, input_location.symbol.size() - 4));
+
+    if (found == plt_locations_.end()) {
+      return {};
+    }
+
+    // TODO: We should have a location type that can properly hold names and
+    // sizes for PLT entries and other weird symbol-adjacent bits of code.
+    return {Location(Location::State::kAddress,
+                     symbol_context.RelativeToAbsolute(found->second))};
+  }
+
   std::vector<Location> result;
+
   for (const auto& die_ref : index_.FindExact(input_location.symbol)) {
     LazySymbol lazy_symbol = IndexDieRefToSymbol(die_ref);
     const Symbol* symbol = lazy_symbol.Get();

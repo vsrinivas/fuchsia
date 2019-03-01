@@ -110,6 +110,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   ModuleSymbolIndex index_;
 
+  std::map<std::string, uint64_t> plt_locations_;
+
   fxl::RefPtr<DwarfSymbolFactory> symbol_factory_;
 
   fxl::WeakPtrFactory<ModuleSymbolsImpl> weak_factory_;

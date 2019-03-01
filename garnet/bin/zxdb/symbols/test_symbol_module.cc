@@ -22,7 +22,10 @@ const char TestSymbolModule::kFunctionInTest2Name[] =
 const char TestSymbolModule::kMyMemberTwoName[] =
     "my_ns::MyClass::Inner::MyMemberTwo";
 const char TestSymbolModule::kGlobalName[] = "my_ns::kGlobal";
-const char TestSymbolModule::kClassStaticName[] = "my_ns::MyClass::kClassStatic";
+const char TestSymbolModule::kClassStaticName[] =
+    "my_ns::MyClass::kClassStatic";
+const char TestSymbolModule::kPltFunctionName[] = "__stack_chk_fail";
+const uint64_t TestSymbolModule::kPltFunctionOffset = 0x10e0U;
 
 TestSymbolModule::TestSymbolModule() = default;
 TestSymbolModule::~TestSymbolModule() = default;

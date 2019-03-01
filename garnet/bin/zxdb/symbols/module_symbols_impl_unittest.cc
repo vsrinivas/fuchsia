@@ -250,7 +250,8 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
 
   // Look up the class static.
   addrs = module.ResolveInputLocation(
-      symbol_context, InputLocation(TestSymbolModule::kClassStaticName), options);
+      symbol_context, InputLocation(TestSymbolModule::kClassStaticName),
+      options);
   ASSERT_LE(1u, addrs.size());
   EXPECT_TRUE(addrs[0].symbol());
   var = addrs[0].symbol().Get()->AsVariable();
@@ -263,6 +264,24 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   // This number may change if we recompile the symbol test. That's OK, just
   // make sure it agrees with the relative address from symbol dump.
   EXPECT_EQ(0x2004u, addrs[0].address());
+}
+
+TEST(ModuleSymbols, ResolvePLTEntry) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  auto addrs = module.ResolveInputLocation(
+      symbol_context,
+      InputLocation(std::string(TestSymbolModule::kPltFunctionName) + "@plt"),
+      ResolveOptions());
+
+  ASSERT_EQ(1u, addrs.size());
+  EXPECT_TRUE(addrs[0].is_valid());
+  EXPECT_FALSE(addrs[0].is_symbolized());
+  EXPECT_EQ(TestSymbolModule::kPltFunctionOffset, addrs[0].address());
 }
 
 }  // namespace zxdb

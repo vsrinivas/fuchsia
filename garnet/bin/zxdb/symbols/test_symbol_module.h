@@ -39,6 +39,8 @@ class TestSymbolModule {
   static const char kMyMemberTwoName[];
   static const char kGlobalName[];
   static const char kClassStaticName[];
+  static const char kPltFunctionName[];
+  static const uint64_t kPltFunctionOffset;
 
   TestSymbolModule();
   ~TestSymbolModule();
