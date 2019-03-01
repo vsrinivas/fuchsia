@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 library("task-utils") {
+  sdk = "source"
+  sdk_headers = [
+    "task-utils/get.h",
+    "task-utils/walker.h",
+  ]
   sources = [
     "get.c",
     "walker.cpp",
