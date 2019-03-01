@@ -134,7 +134,7 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_FALSE(update_callback_called);
 
   // Add a source segment.
-  bool source_segment_destroyed;
+  bool source_segment_destroyed = false;
   std::unique_ptr<FakeSourceSegment> source_segment = FakeSourceSegment::Create(
       [&source_segment_destroyed](FakeSourceSegment* source_segment) {
         source_segment_destroyed = true;
@@ -247,7 +247,7 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_EQ(&metadata, player_core.metadata());
 
   // Add a sink segment for audio.
-  bool audio_sink_segment_destroyed;
+  bool audio_sink_segment_destroyed = false;
   std::unique_ptr<FakeSinkSegment> audio_sink_segment = FakeSinkSegment::Create(
       [&audio_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
         audio_sink_segment_destroyed = true;
@@ -301,7 +301,7 @@ TEST_F(PlayerTest, FakeSegments) {
   ExpectNoStreams(player_core, StreamType::Medium::kSubpicture);
 
   // Add a sink segment for video.
-  bool video_sink_segment_destroyed;
+  bool video_sink_segment_destroyed = false;
   std::unique_ptr<FakeSinkSegment> video_sink_segment = FakeSinkSegment::Create(
       [&video_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
         video_sink_segment_destroyed = true;
