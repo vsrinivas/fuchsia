@@ -21,7 +21,8 @@ runbench_read_arguments "$@"
 
 # Performance tests implemented in the Zircon repo.
 runbench_exec "${OUT_DIR}/zircon.perf_test.json" \
-    /system/test/sys/perf-test -p --out="${OUT_DIR}/zircon.perf_test.json"
+    /pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test \
+    -p --out="${OUT_DIR}/zircon.perf_test.json"
 
 # Performance tests implemented in the Garnet repo (the name
 # "zircon_benchmarks" is now misleading).
