@@ -195,5 +195,7 @@ func Main() {
 		go fidl.Serve()
 	}
 
+	go pprofListen()
+
 	<-(chan struct{})(nil)
 }
