@@ -93,8 +93,11 @@ template("pm_build_package") {
       # seal
       "$pkg_out_dir/meta.far.merkle",
 
-      # package blob manifest
+      # package blob json manifest
       "$pkg_out_dir/blobs.json",
+
+      # package blob manifest
+      "$pkg_out_dir/blobs.manifest"
     ]
 
     blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
@@ -114,6 +117,7 @@ template("pm_build_package") {
       "build",
       "-depfile",
       "-blobsfile",
+      "-blobs-manifest",
     ]
   }
 }
