@@ -114,5 +114,11 @@ abigen("syscall-abi.generate") {
         "$target_gen_dir/zircon/syscall-kernel-branches.S",
       ]
     },
+    {
+      args = [ "-json" ]
+      outputs = [
+        "$target_gen_dir/zircon/definitions.json",
+      ]
+    },
   ]
 }

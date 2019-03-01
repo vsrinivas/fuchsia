@@ -92,5 +92,6 @@ In a future build this error will no longer occur.
 [`zx_vmo_get_size()`]: vmo_get_size.md
 [`zx_vmo_op_range()`]: vmo_op_range.md
 [`zx_vmo_read()`]: vmo_read.md
+[`zx_vmo_replace_as_executable()`]: vmo_replace_as_executable.md
 [`zx_vmo_set_size()`]: vmo_set_size.md
 [`zx_vmo_write()`]: vmo_write.md

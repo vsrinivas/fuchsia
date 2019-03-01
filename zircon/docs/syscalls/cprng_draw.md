@@ -42,4 +42,6 @@ There are no other error conditions.  If its arguments are valid,
 
  - [`zx_cprng_add_entropy()`]
 
+<!-- References updated by update-docs-from-abigen, do not edit. -->
+
 [`zx_cprng_add_entropy()`]: cprng_add_entropy.md

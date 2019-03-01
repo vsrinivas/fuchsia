@@ -40,8 +40,9 @@ def parse_args():
     parser.add_argument(
         '--json',
         default=os.path.normpath(
-            os.path.join(SCRIPT_DIR, os.pardir, 'build-x64', 'gen', 'global',
-                         'include', 'zircon', 'syscalls', 'definitions.json')),
+            os.path.join(SCRIPT_DIR, os.pardir, 'build-gcc', 'user-x64-gcc',
+                         'gen', 'kernel', 'syscalls', 'zircon',
+                         'definitions.json')),
         help='path to abigen .json output')
     parser.add_argument(
         '--docroot',
@@ -594,6 +595,9 @@ def main():
     missing_count = 0
     all_syscall_names = set(x['name'] for x in data['syscalls'])
     for syscall in data['syscalls']:
+        if 'internal' in syscall['attributes']:
+            # Don't generate documentation for syscalls tagged as internal.
+            continue
         name = syscall['name']
         if args.name and name not in args.name:
             continue
