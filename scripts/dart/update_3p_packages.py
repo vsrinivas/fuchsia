@@ -34,6 +34,7 @@ PROJECT_DEPENDENCIES = [
     'src/testing/sl4f/client',
     'topaz/app/dashboard',
     'topaz/public/dart/widgets',
+    'topaz/public/lib',
     'topaz/tools',
 ]
 
