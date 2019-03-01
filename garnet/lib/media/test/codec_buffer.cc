@@ -95,11 +95,14 @@ bool CodecBuffer::GetDupVmo(bool is_for_write, zx::vmo* out_vmo) {
 std::unique_ptr<CodecBuffer> CodecBuffer::Allocate(
     uint32_t buffer_index,
     const fuchsia::media::StreamBufferConstraints& constraints) {
+  ZX_ASSERT(constraints.has_per_packet_buffer_bytes_recommended());
   std::unique_ptr<CodecBuffer> result(new CodecBuffer(
-      buffer_index, constraints.per_packet_buffer_bytes_recommended));
-  if (constraints.is_physically_contiguous_required) {
+      buffer_index, *constraints.per_packet_buffer_bytes_recommended()));
+  if (constraints.has_is_physically_contiguous_required() &&
+      *constraints.is_physically_contiguous_required()) {
+    ZX_ASSERT(constraints.has_very_temp_kludge_bti_handle());
     result->SetPhysicallyContiguousRequired(
-        constraints.very_temp_kludge_bti_handle);
+        *(constraints.very_temp_kludge_bti_handle()));
   }
   if (!result->Init()) {
     return nullptr;

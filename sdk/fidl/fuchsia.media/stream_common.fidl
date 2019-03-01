@@ -4,10 +4,9 @@
 
 library fuchsia.media;
 
-// Value
-//
-
-// Generic "value" for use within generic "Parameter" struct.
+/// Value
+///
+/// Generic "value" for use within generic "Parameter" struct.
 union Value {
     bool bool_value;
     uint64 uint64_value;
@@ -17,14 +16,13 @@ union Value {
     bytes bytes_value;
 };
 
-// Parameter
-//
-// Generic parameter.
-//
-// We want to minimize use of this generic "Parameter" structure by natively
-// defining as many stream-specific parameter semantics as we can.
-//
-
+/// Parameter
+///
+/// Generic parameter.
+///
+/// We want to minimize use of this generic "Parameter" structure by natively
+/// defining as many stream-specific parameter semantics as we can.
+///
 // TODO: When possible, describe the very limited scenarios in which it would
 // still be reasonable to use a generic Parameter.
 struct Parameter {
@@ -77,21 +75,19 @@ struct Parameter {
 // separate struct - the main counter-argument would be if a consumer
 // immediately downstream of an encoder may have good reason to know encoder
 // settings to help process the data.  For example, the nominal bit-rate.
-
 // Compressed formats tend to be much more self-describing than uncompressed
 // formats.  (The "self" in "self-describing" includes the oob_bytes.)
 //
 // Most decoders can have FormatDetails.domain null.
 
-// AudioCompressedFormat
-//
-// Format details relevant to compressed audio, mostly for encoder settings.
-//
-// Unless otherwise specified in a comment on a field in this structure,
-// FormatDetails.domain is null for a decoder.  A sub-structure whose name
-// ends in "Encoder" is for encoder output settings.
-//
-
+/// AudioCompressedFormat
+///
+/// Format details relevant to compressed audio, mostly for encoder settings.
+///
+/// Unless otherwise specified in a comment on a field in this structure,
+/// FormatDetails.domain is null for a decoder.  A sub-structure whose name
+/// ends in "Encoder" is for encoder output settings.
+///
 // TODO(dustingreen): Consider whether splitting encoder settings out separately
 // would be better.
 union AudioCompressedFormat {
@@ -110,10 +106,9 @@ enum AudioBitrateMode {
     VBR = 2;
 };
 
-// AudioCompressedFormatAacEncoder
-//
-
-// Encoder settings for an AAC encoder.
+/// AudioCompressedFormatAacEncoder
+///
+/// Encoder settings for an AAC encoder.
 struct AudioCompressedFormatAacEncoder {
     // In SetOutputConfig():
     //
@@ -149,9 +144,8 @@ struct AudioCompressedFormatAacEncoder {
     // TODO(dustingreen): AAC profile settings.
 };
 
-// AudioPcmMode
-//
-
+/// AudioPcmMode
+///
 // TODO(dustingreen): Keep or discard any non-linear formats for purposes of the
 // Codec interface?
 enum AudioPcmMode {
@@ -167,13 +161,12 @@ enum AudioPcmMode {
     MULAW = 2;
 };
 
-// AudioChannelId
-//
-// Used in specifying which audio channel is for which speaker location / type.
-//
-// TODO(dustingreen): Do we need more channel IDs than this?
-//
-
+/// AudioChannelId
+///
+/// Used in specifying which audio channel is for which speaker location / type.
+///
+/// TODO(dustingreen): Do we need more channel IDs than this?
+///
 // TODO(dustingreen): Check with mpuryear@ re. naming consistency for "S" vs.
 // "R" as we move these to a common definition.  Also the ordering of LS/RS vs.
 // LR/RR - probably LR/RR being first would make more sense re. how channels
@@ -201,11 +194,10 @@ enum AudioChannelId {
     MAX = 0x7fffffff;
 };
 
-// PcmFormat
-//
-// PCM audio format details.
-//
-
+/// PcmFormat
+///
+/// PCM audio format details.
+///
 // TODO(dustingreen): Discuss with mpuryear@ re. where definitions for these
 // details go and make sure the common details can specify at least this much.
 struct PcmFormat {
@@ -246,30 +238,27 @@ struct PcmFormat {
     // under "Pcm", AFAICT based on OMX_NUMERICALDATATYPE and ACodec.cpp code.
 };
 
-// AudioUncompressedFormat
-//
-
+/// AudioUncompressedFormat
+///
 // Uncompressed audio format details.
 union AudioUncompressedFormat {
     PcmFormat pcm;
 };
 
-// AudioFormat
-//
-
+/// AudioFormat
+///
 // Audio format details.
 union AudioFormat {
     AudioCompressedFormat compressed;
     AudioUncompressedFormat uncompressed;
 };
 
-// VideoCompressedFormat
-//
-// Compressed video format details.
-//
-// Mostly encoder settings will go under here.
-//
-
+/// VideoCompressedFormat
+///
+/// Compressed video format details.
+///
+/// Mostly encoder settings will go under here.
+///
 // If a compressed video format is missing any fields here other than encoder
 // settings, it's because it's a good format and is already self-describing
 // given the mime_type + format-defined oob_bytes as appropriate +
@@ -283,11 +272,10 @@ union VideoCompressedFormat {
     uint32 temp_field_todo_remove;
 };
 
-// VideoUncompressedFormatSpecificDetails
-//
-// Extended format-specific uncompressed video format details.
-//
-
+/// VideoUncompressedFormatSpecificDetails
+///
+/// Extended format-specific uncompressed video format details.
+///
 // TODO(dustingreen): Switch to FIDL table instead.
 union VideoUncompressedFormatSpecificDetails {
     // TODO(dustingreen): Which formats that we care about really require
@@ -303,11 +291,10 @@ enum VideoColorSpace {
     INVALID = 0;
 };
 
-// VideoUncompressedFormat
-//
-// Uncompressed video format details.
-//
-
+/// VideoUncompressedFormat
+///
+/// Uncompressed video format details.
+///
 // TODO(dustingreen): Integrate with a system-wide structure for this purpose.
 struct VideoUncompressedFormat {
     // fourcc
@@ -410,18 +397,16 @@ struct VideoUncompressedFormat {
     VideoUncompressedFormatSpecificDetails special_formats;
 };
 
-// VideoFormat
-//
-
+/// VideoFormat
+///
 // Video (compress or uncompressed) format details.
 union VideoFormat {
     VideoCompressedFormat compressed;
     VideoUncompressedFormat uncompressed;
 };
 
-// DomainFormat
-//
-
+/// DomainFormat
+///
 // Domain-specific format details (audio or video, compressed or uncompressed).
 union DomainFormat {
     AudioFormat audio;
@@ -430,16 +415,15 @@ union DomainFormat {
 
 const uint64 kMaxOobBytesSize = 8192;
 
-// FormatDetails
-//
-
-// This describes/details the format on input or output of a StreamProcessor
-// (separate instances for input vs. output).
-struct FormatDetails {
+/// FormatDetails
+///
+/// This describes/details the format on input or output of a StreamProcessor (separate
+/// instances for input vs. output).
+table FormatDetails {
     // Particular instances of FormatDetails will set this field to make it
     // easier for a receiver to determine if any part of the format has changed
     // vs. the last FormatDetails received for the same context.
-    uint64 format_details_version_ordinal;
+    1: uint64 format_details_version_ordinal;
 
     // "mime_type" strings used by particular decoders / encoders so far:
     //
@@ -461,7 +445,7 @@ struct FormatDetails {
     // TODO(dustingreen): Consider "pseudo_mime_type", or an enum, + "domain"
     // details as needed instead, since calling this "mime_type" could lead to
     // confusion.
-    string mime_type;
+    2: string mime_type;
 
     // Some streams have their own binary configuration structure.  For those
     // streams we allow that binary structure to be directly conveyed to the
@@ -482,7 +466,7 @@ struct FormatDetails {
     // bytes here, we could potentially increase this restriction some, but
     // this interface isn't designed to support OOB config blobs that approach
     // ZX_CHANNEL_MAX_MSG_BYTES.
-    bytes? oob_bytes;
+    3: bytes oob_bytes;
 
     // Decoder input format:
     //
@@ -512,7 +496,7 @@ struct FormatDetails {
     //
     // This field contains fairly detailed information re. uncompressed data
     // format details, which tends to _not_ be self-describing in-band.
-    DomainFormat? domain;
+    4: DomainFormat domain;
 
     // See comments above on Parameter.  At the time we lock relevant FIDL
     // interfaces, there should be zero use of this field outside tests, but
@@ -526,5 +510,5 @@ struct FormatDetails {
     //
     // For streams that define their own stream-specific config/OOB data, put
     // that in oob_bytes above instead of this field.
-    vector<Parameter>? pass_through_parameters;
+    5: vector<Parameter> pass_through_parameters;
 };

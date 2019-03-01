@@ -50,13 +50,15 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // Returns the buffer lifetime ordinal passed to the constructor.
   uint64_t lifetime_ordinal() const {
     std::lock_guard<std::mutex> locker(mutex_);
-    return settings_.buffer_lifetime_ordinal;
+    FXL_DCHECK(settings_.has_buffer_lifetime_ordinal());
+    return *settings_.buffer_lifetime_ordinal();
   }
 
   // Returns the size in bytes of the buffers in this set.
   uint32_t buffer_size() const {
     std::lock_guard<std::mutex> locker(mutex_);
-    return settings_.per_packet_buffer_bytes;
+    FXL_DCHECK(settings_.has_per_packet_buffer_bytes());
+    return *settings_.per_packet_buffer_bytes();
   }
 
   // Returns the number of buffers in the set.
@@ -195,7 +197,9 @@ class BufferSetManager {
   // will be used for all the new buffers. Otherwise, each new buffer will have
   // its own vmo. The resulting set's |single_vmo| method with return true in
   // former case, false in the latter.
-  void ApplyConstraints(
+  //
+  // Returns whether the constraints were successfully applied.
+  bool ApplyConstraints(
       const fuchsia::media::StreamBufferConstraints& constraints,
       bool single_vmo_preferred);
 

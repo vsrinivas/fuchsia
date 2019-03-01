@@ -181,13 +181,22 @@ void LocalCodecFactory::Bind(zx::channel server_endpoint) {
 void LocalCodecFactory::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params video_decoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> video_decoder) {
+  if (!video_decoder_params.has_input_details()) {
+    return;
+  }
+
+  if (!video_decoder_params.input_details()->has_mime_type()) {
+    // Without mime_type we cannot search for a decoder.
+    return;
+  }
+
   const CodecAdapterFactory* factory = nullptr;
   for (const CodecAdapterFactory& candidate_factory : kCodecFactories) {
     if (!candidate_factory.is_enabled) {
       continue;
     }
     if (candidate_factory.description.mime_type ==
-        video_decoder_params.input_details.mime_type) {
+        *video_decoder_params.input_details()->mime_type()) {
       factory = &candidate_factory;
       break;
     }

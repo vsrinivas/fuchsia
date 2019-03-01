@@ -17,11 +17,10 @@ class FidlDecoder : public Decoder {
  public:
   // Creates a fidl decoder factory. Calls the callback with the initalized
   // decoder on success. Calls the callback with nullptr on failure.
-  static void Create(
-      const StreamType& stream_type,
-      fuchsia::media::FormatDetails input_format_details,
-      fuchsia::media::StreamProcessorPtr decoder,
-      fit::function<void(std::shared_ptr<Decoder>)> callback);
+  static void Create(const StreamType& stream_type,
+                     fuchsia::media::FormatDetails input_format_details,
+                     fuchsia::media::StreamProcessorPtr decoder,
+                     fit::function<void(std::shared_ptr<Decoder>)> callback);
 
   FidlDecoder(const StreamType& stream_type,
               fuchsia::media::FormatDetails input_format_details);
@@ -99,8 +98,7 @@ class FidlDecoder : public Decoder {
 
   // Handles the |OnInputConstraints| event from the outboard decoder after
   // |ConfigureConnectors| is called.
-  void OnInputConstraints(
-      fuchsia::media::StreamBufferConstraints constraints);
+  void OnInputConstraints(fuchsia::media::StreamBufferConstraints constraints);
 
   // Handles the |OnOutputConfig| event from the outboard decoder.
   void OnOutputConfig(fuchsia::media::StreamOutputConfig config);

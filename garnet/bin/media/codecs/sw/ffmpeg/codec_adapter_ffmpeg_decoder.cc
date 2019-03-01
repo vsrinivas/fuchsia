@@ -89,13 +89,12 @@ CodecAdapterFfmpegDecoder::OutputFormatDetails() {
 
   fuchsia::media::FormatDetails format_details;
 
-  format_details.mime_type = "video/raw";
+  format_details.set_mime_type("video/raw");
 
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(fidl::Clone(uncompressed_format));
 
-  format_details.domain = std::make_unique<fuchsia::media::DomainFormat>();
-  format_details.domain->set_video(std::move(video_format));
+  format_details.mutable_domain()->set_video(std::move(video_format));
 
   return {std::move(format_details), per_packet_buffer_bytes};
 }

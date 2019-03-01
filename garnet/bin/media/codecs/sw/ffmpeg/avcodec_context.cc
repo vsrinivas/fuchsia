@@ -27,7 +27,10 @@ std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
     const fuchsia::media::FormatDetails& format_details,
     GetBufferCallback get_buffer_callback) {
   avcodec_register_all();
-  auto codec_id = codec_ids.find(format_details.mime_type);
+  if (!format_details.has_mime_type()) {
+    return std::nullopt;
+  }
+  auto codec_id = codec_ids.find(*format_details.mime_type());
   if (codec_id == codec_ids.end()) {
     return std::nullopt;
   }
@@ -54,15 +57,14 @@ std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
   std::unique_ptr<AvCodecContext> decoder(new AvCodecContext(
       std::move(avcodec_context), std::move(get_buffer_callback)));
 
-  const std::vector<uint8_t>& oob = format_details.oob_bytes.get();
-  ZX_DEBUG_ASSERT(oob.empty() || format_details.oob_bytes);
-  if (!oob.empty()) {
+  const std::vector<uint8_t>* oob = format_details.oob_bytes();
+  if (oob && !oob->empty()) {
     // Freed in AVCodecContext deleter in avcodec_free.
-    auto* extradata = reinterpret_cast<uint8_t*>(av_malloc(oob.size()));
+    auto* extradata = reinterpret_cast<uint8_t*>(av_malloc(oob->size()));
     ZX_ASSERT(extradata);
-    std::memcpy(extradata, oob.data(), oob.size());
+    std::memcpy(extradata, oob->data(), oob->size());
     decoder->avcodec_context_->extradata = extradata;
-    decoder->avcodec_context_->extradata_size = oob.size();
+    decoder->avcodec_context_->extradata_size = oob->size();
   }
 
   int open_error =

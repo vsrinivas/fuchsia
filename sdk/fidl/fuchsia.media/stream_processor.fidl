@@ -51,9 +51,10 @@ library fuchsia.media;
 // The secondary purpose of this struct is to help ensure that packet count and
 // buffer space are sufficient to achieve reasonably performant operation.
 //
+
 // There are separate instances of this struct for stream input and stream
 // output.
-struct StreamBufferConstraints {
+table StreamBufferConstraints {
     // This is a version number the server sets on the constraints to allow the
     // server to determine when the client has caught up with the latest
     // constraints sent by the server.  The server won't emit output data until
@@ -68,7 +69,7 @@ struct StreamBufferConstraints {
     // are allowed (in contrast to the stream_lifetime_ordinal, neither the
     // client nor server ever has a reason to consider the latest version to be
     // stale, so there would be no benefit to disallowing even values).
-    uint64 buffer_constraints_version_ordinal;
+    1: uint64 buffer_constraints_version_ordinal;
 
     // default_settings
     //
@@ -101,7 +102,7 @@ struct StreamBufferConstraints {
     // before sending back to the server.  The 0 initially in this field will
     // be rejected by the server if sent back as-is.  See comments on
     // StreamBufferSettings.buffer_lifetime_ordinal.
-    StreamBufferSettings default_settings;
+    2: StreamBufferSettings default_settings;
 
     // For uncompressed video, separate and complete frames, each in its own
     // separate buffer (buffer-per-packet mode), is always a requirement.
@@ -120,14 +121,14 @@ struct StreamBufferConstraints {
     // this large.  If a client is using single-buffer mode, the one buffer must
     // be at least per_packet_buffer_bytes_min * packet_count_for_server_min in
     // size.
-    uint32 per_packet_buffer_bytes_min;
+    3: uint32 per_packet_buffer_bytes_min;
     // Must be >= per_packet_buffer_bytes_min.  Delivering more than
     // this per input packet might not perform any better, and in fact might
     // perform worse.
-    uint32 per_packet_buffer_bytes_recommended;
+    4: uint32 per_packet_buffer_bytes_recommended;
     // Must be >= per_packet_buffer_bytes_recommended.  Can be 0xFFFFFFFF if
     // there is no explicitly-enforced limit.
-    uint32 per_packet_buffer_bytes_max;
+    5: uint32 per_packet_buffer_bytes_max;
 
     // Minimum number of packet_count_for_server.
     //
@@ -161,7 +162,7 @@ struct StreamBufferConstraints {
     // packet_count_for_server_min.
     //
     // See stream_processor.md for more on packet_count_for_server_min.
-    uint32 packet_count_for_server_min;
+    6: uint32 packet_count_for_server_min;
 
     // This must be at least packet_count_for_server_min and at most
     // packet_count_for_server_recommended_max.
@@ -170,25 +171,25 @@ struct StreamBufferConstraints {
     // additional packet is a big performance win in a large percentage of
     // scenarios, it can be good for the server to include that additional
     // packet in this value.
-    uint32 packet_count_for_server_recommended;
+    7: uint32 packet_count_for_server_recommended;
 
     // This can be the same as packet_count_for_server_max or can be lower.
     // Values above this value and <= packet_count_for_server_max are not
     // recommended by the stream processor, but should still work given
     // sufficient resources available to both the client and the stream
     // processor.
-    uint32 packet_count_for_server_recommended_max;
+    8: uint32 packet_count_for_server_recommended_max;
 
     // This can be 0xFFFFFFFF if there's no stream processor-enforced max, but
     // stream processors are encouraged to set a large but still
     // plausibly-workable max, and clients are encouraged to request a number
     // of packets that isn't excessively large for the client's scenario.
-    uint32 packet_count_for_server_max;
+    9: uint32 packet_count_for_server_max;
 
     // Normally this would be an implicit 0, but for now we have a min so we can
     // force the total number of packets to be a specific number that we know
     // works for the moment.
-    uint32 packet_count_for_client_min;
+    10: uint32 packet_count_for_client_min;
 
     // packet_count_for_client_max
     //
@@ -199,7 +200,7 @@ struct StreamBufferConstraints {
     // stream-processor-enforced max.  Clients are encouraged to request a
     // number of packets that isn't excessively large for the client's
     // scenario.
-    uint32 packet_count_for_client_max;
+    11: uint32 packet_count_for_client_max;
 
     // single_buffer_mode_allowed false allows a stream processor that's not
     // required to support single-buffer mode for a given input or output the
@@ -226,11 +227,11 @@ struct StreamBufferConstraints {
     //
     // Support for buffer-per-packet mode is always required on both input and
     // output, regardless of stream processor type.
-    bool single_buffer_mode_allowed;
+    12: bool single_buffer_mode_allowed;
 
     // If true, the buffers need to be physically contiguous pages, such as can
     // be allocated using zx_vmo_create_contiguous().
-    bool is_physically_contiguous_required;
+    13: bool is_physically_contiguous_required;
     // VERY TEMPORARY HACK / KLUDGE - we want the BufferAllocator (or one of
     // the participant drivers that needs physically contiguous buffers) to
     // call zx_vmo_create_contiguous(), definitely not the StreamProcessor
@@ -241,7 +242,7 @@ struct StreamBufferConstraints {
     // allocates buffers in the StreamProcessor interface to avoid this hack
     // even before BufferAllocator, but the overall path seems shorter if we
     // jump directly from this to using BufferAllocator.
-    handle? very_temp_kludge_bti_handle;
+    14: handle very_temp_kludge_bti_handle;
 };
 
 // StreamOutputConfig
@@ -249,16 +250,17 @@ struct StreamBufferConstraints {
 // The stream-processor-controlled output configuration, including both
 // StreamBufferConstraints for the output and FormatDetails for the output.
 //
+
 // TODO(dustingreen): Need a better name for this struct, but still short
 // hopefully.  It's stuff the stream processor gets to control, not the client.
 // It's different than output buffer settings, which the client does get to
 // control to some extent.  It's different than any configurable output
 // settings the client might specify for output of an encoder.
-struct StreamOutputConfig {
+table StreamOutputConfig {
     // A client which always immediately re-configures output buffers on
     // receipt of OnOutputConfig() with buffer_constraints_action_required true
     // can safely ignore this field.
-    
+
     // A client is permitted to ignore an OnOutputConfig() message even with
     // buffer_constraints_action_required true if the client knows the server
     // has already been told to discard the remainder of the stream with the
@@ -268,7 +270,7 @@ struct StreamOutputConfig {
     // buffer_constraints_action_required true, if the most recent completed
     // server-side output config isn't what the server wants/needs yet for the
     // new stream.
-    uint64 stream_lifetime_ordinal;
+    1: uint64 stream_lifetime_ordinal;
 
     // buffer_constraints_action_required
     //
@@ -302,8 +304,8 @@ struct StreamOutputConfig {
     // (or re-configured) by the client.
     //
     // See stream_processor.md for more on buffer_constraints_action_required.
-    bool buffer_constraints_action_required;
-    StreamBufferConstraints buffer_constraints;
+    2: bool buffer_constraints_action_required;
+    3: StreamBufferConstraints buffer_constraints;
 
     // format_details
     //
@@ -364,7 +366,7 @@ struct StreamOutputConfig {
     // technically supports mid-stream format change, but the client happens to
     // know that none of the streams the client intends to process will ever
     // have a mid-stream format change.
-    FormatDetails format_details;
+    4: FormatDetails format_details;
 };
 
 // Default values for input and output
@@ -413,9 +415,10 @@ const bool kDefaultOutputIsSingleBufferMode = false;
 // See relevant corresponding constraints in StreamBufferConstraints.  The
 // settings must satisfy the constraints.
 //
+
 // The client informs the stream processor of these settings and then
 // separately informs the stream processor of each buffer.
-struct StreamBufferSettings {
+table StreamBufferSettings {
     // buffer_lifetime_ordinal
     //
     // The containing message starts a new buffer_lifetime_ordinal.
@@ -432,7 +435,7 @@ struct StreamBufferSettings {
     // case of mid-stream output config change.
     //
     // See stream_processor.md for more on buffer_lifetime_ordinal.
-    uint64 buffer_lifetime_ordinal;
+    1: uint64 buffer_lifetime_ordinal;
 
     // buffer_constraints_version_ordinal
     //
@@ -450,7 +453,7 @@ struct StreamBufferSettings {
     // buffers again using the same buffer_constraints_version_ordinal.
     //
     // See stream_processor.md for more on buffer_constraints_version_ordinal.
-    uint64 buffer_constraints_version_ordinal;
+    2: uint64 buffer_constraints_version_ordinal;
 
     // The total packet count is split into two pieces to disambiguate how many
     // packets are allocated for the client to hold onto for whatever reason,
@@ -477,7 +480,7 @@ struct StreamBufferSettings {
     // StreamBufferConstraints.packet_count_for_server_recommended.
     //
     // See stream_processor.md for more on packet_count_for_server.
-    uint32 packet_count_for_server;
+    3: uint32 packet_count_for_server;
 
     // packet_count_for_client
     //
@@ -507,7 +510,7 @@ struct StreamBufferSettings {
     // client unable to recycle any more packets to the stream processor.  That
     // situation can be difficult to diagnose, while excessively-large values
     // here are wasteful, so care is warranted to set this value properly.
-    uint32 packet_count_for_client;
+    4: uint32 packet_count_for_client;
 
     // per_packet_buffer_bytes
     //
@@ -524,7 +527,7 @@ struct StreamBufferSettings {
     //
     // TODO(dustingreen): determine if we need to relax these restrictions a bit
     // for convenience when using gralloc video buffers.
-    uint32 per_packet_buffer_bytes;
+    5: uint32 per_packet_buffer_bytes;
 
     // If true, there is only one buffer with index 0 which all packets
     // implicitly refer to.  If false, the packet_index and buffer_index are
@@ -533,7 +536,7 @@ struct StreamBufferSettings {
     // While it's possible to set up single_buffer_mode false with each buffer
     // referring to the same underlying VMO, single_buffer_mode true is more
     // efficient for that case since only one mapping is created.
-    bool single_buffer_mode;
+    6: bool single_buffer_mode;
 };
 
 // StreamBuffer
@@ -549,21 +552,22 @@ struct StreamBufferSettings {
 // The client uses SetOutputBufferSettings() + AddOutputBuffer() * N to inform
 // the stream processor about all the output buffers.
 //
+
 // When single_buffer_mode is true, there is only buffer_index 0 shared by all
 // Packet(s) of the relevant input or output.  When single_buffer_mode is
 // false, the buffer_index equals the packet_index.
-struct StreamBuffer {
+table StreamBuffer {
     // When using AddOutputBuffer()/AddInputBuffer(), this must match the
     // buffer_lifetime_ordinal of the most recent
     // SetOutputBufferSettings()/SetInputBufferSettings().
-    uint64 buffer_lifetime_ordinal;
+    1: uint64 buffer_lifetime_ordinal;
 
     // Buffers must be added via AddOutputBuffer() / AddInputBuffer() in order
     // by buffer_index, and the buffer_index is always equal to 0 or equal to
     // the packet_index (depending on single_buffer_mode true or false), but
     // it's still nice to have StreamBuffer include the buffer_index if only
     // for easier debugging.
-    uint32 buffer_index;
+    2: uint32 buffer_index;
 
     // For each new buffer_lifetime_ordinal, a client must use new low-level
     // buffers.  This rule exists for multiple very good reasons, and is
@@ -584,13 +588,14 @@ struct StreamBuffer {
     // See stream_processor.md for more on StreamBufferData, and more on why we
     // never re-use the same low-level buffers for different
     // buffer_lifetime_ordinal(s).
-    StreamBufferData data;
+    3: StreamBufferData data;
 };
 
 // StreamBufferData
 //
 // For the moment, a VMO per buffer is the only type of buffer.
 //
+
 // This is extremely likely to change significantly when adding gralloc stuff,
 // but the idea with this union is to have a struct per logical way of storing
 // the data.  Any multi-domain storage within a gralloc buffer will likely be
@@ -603,22 +608,23 @@ union StreamBufferData {
 
 // StreamBufferDataVmo
 //
+
 // Details for a buffer backed by a VMO.
-struct StreamBufferDataVmo {
+table StreamBufferDataVmo {
     // The same VMO can be used by more than one StreamBuffer (only of the same
     // buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
-    handle<vmo> vmo_handle;
+    1: handle<vmo> vmo_handle;
 
     // Offset within the VMO of the first usable byte.  Must be < the VMO's size
     // in bytes.
-    uint64 vmo_usable_start;
+    2: uint64 vmo_usable_start;
 
     // VMO-relative offset that's one past the last usable byte.  This can point
     // one byte beyond the end of the VMO if desired.  In other words, this can
     // be equal to the VMO's size, to indicate that the last byte of the VMO is
     // usable (and possibly many byte before that, depending on
     // vmo_usable_start).
-    uint64 vmo_usable_size;
+    3: uint64 vmo_usable_size;
 };
 
 // PacketHeader
@@ -627,8 +633,9 @@ struct StreamBufferDataVmo {
 // Packet, since while a packet is free it doesn't really have meaningful
 // offset or length etc.
 //
+
 // A populated Packet also has a PacketHeader.
-struct PacketHeader {
+table PacketHeader {
     // This is which buffer configuration lifetime this header is referring to.
     //
     // A packet_index is only really meaningful with respect to a particular
@@ -641,7 +648,7 @@ struct PacketHeader {
     //
     // For OnFreeInputPacket() and RecycleOutputPacket(), the receiver (client
     // or server) must ignore a message with stale buffer_lifetime_ordinal.
-    uint64 buffer_lifetime_ordinal;
+    1: uint64 buffer_lifetime_ordinal;
 
     // The overall set of packet_index values is densely packed from 0..count-1
     // for input and output separately.  They can be queued in any order.
@@ -664,7 +671,7 @@ struct PacketHeader {
     // should validate that a client isn't double-using a packet and clients
     // should validate as necessary to avoid undefined or unexpected client
     // behavior.
-    uint32 packet_index;
+    2: uint32 packet_index;
 };
 
 // Packet
@@ -681,12 +688,13 @@ struct PacketHeader {
 //
 // stream processor input:
 //
+
 // The client initially has all packet_index(es) available to fill, and later
 // gets packet_index(s) that are again ready to fill via OnFreeInputPacket().
 // The client must not modify the referenced data in between QueueInputPacket()
 // and OnFreeInputPacket().
-struct Packet {
-    PacketHeader header;
+table Packet {
+    1: PacketHeader header;
 
     // Which buffer this packet refers to.  For single-buffer mode this will
     // always be 0, but for multi-buffer mode, a given in-flight interval of a
@@ -697,7 +705,7 @@ struct Packet {
     // likely (will tend to complain in an obvious way if not filled out
     // instead of a non-obvious data corruption when decoding buffer 0
     // repeatedly instead of the correct buffers).
-    uint32 buffer_index = 0x80000000;
+    2: uint32 buffer_index = 0x80000000;
 
     // stream_lifetime_ordinal
     //
@@ -711,7 +719,7 @@ struct Packet {
     // stream.
     //
     // See stream_processor.md for more on stream_lifetime_ordinal.
-    uint64 stream_lifetime_ordinal;
+    3: uint64 stream_lifetime_ordinal;
 
     // start_offset and valid_length_bytes
     //
@@ -741,7 +749,7 @@ struct Packet {
     // Or more likely, it may just be that these tend to refer to the whole
     // size of an uncompressed buffer, with format_details taking care of
     // specifying which bytes are actually relevant.
-    uint32 start_offset;
+    4: uint32 start_offset;
 
     // valid_length_bytes
     //
@@ -767,7 +775,7 @@ struct Packet {
     //
     // compressed data output - The stream processor is not required to fully
     // fill each output packet's buffer.
-    uint32 valid_length_bytes;
+    5: uint32 valid_length_bytes;
 
     // This value is not strictly speaking a timestamp.  It is an arbitrary
     // unsigned 64-bit number that, under some circumstances, will be passed by
@@ -790,8 +798,7 @@ struct Packet {
     //    (not crashing, not treating as an error).
     //
     // See stream_processor.md for more on timestamp_ish.
-    bool has_timestamp_ish;
-    uint64 timestamp_ish;
+    6: uint64 timestamp_ish;
 
     // start_access_unit
     //
@@ -805,7 +812,7 @@ struct Packet {
     //
     // If promise_separate_access_units_on_input is false, this boolean is
     // ignored.
-    bool start_access_unit;
+    7: bool start_access_unit;
 
     // known_end_access_unit
     //
@@ -820,7 +827,7 @@ struct Packet {
     //
     // If promise_separate_access_units_on_input is false, this boolean is
     // ignored.
-    bool known_end_access_unit;
+    8: bool known_end_access_unit;
 };
 
 // StreamProcessor
@@ -854,6 +861,7 @@ struct Packet {
 // hasn't gotten stuck.  Calling Sync() is entirely optional and never required
 // for correctness - only potentially required to de-overlap resource usage.
 //
+
 // Semi-trusted StreamProcessor server - SW decoders run in an isolate (with
 // very few capabilities) just in case the decoding SW has a vulnerability
 // which could be used to take over the StreamProcessor server.  Clients of the

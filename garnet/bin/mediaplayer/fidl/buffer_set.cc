@@ -12,19 +12,35 @@ namespace media_player {
 fbl::RefPtr<BufferSet> BufferSet::Create(
     const fuchsia::media::StreamBufferSettings& settings,
     uint64_t buffer_lifetime_ordinal, bool single_vmo) {
+  if (!settings.has_packet_count_for_client()) {
+    FXL_LOG(ERROR) << "Settings missing packet count for client.";
+    return nullptr;
+  }
+
+  if (!settings.has_packet_count_for_server()) {
+    FXL_LOG(ERROR) << "Settings missing packet count for server.";
+    return nullptr;
+  }
+
+  if (!settings.has_per_packet_buffer_bytes()) {
+    FXL_LOG(ERROR) << "Settings missing per packet buffer bytes.";
+    return nullptr;
+  }
+
   return fbl::MakeRefCounted<BufferSet>(settings, buffer_lifetime_ordinal,
                                         single_vmo);
 }
 
-BufferSet::BufferSet(
-    const fuchsia::media::StreamBufferSettings& settings,
-    uint64_t buffer_lifetime_ordinal, bool single_vmo)
-    : settings_(settings),
+BufferSet::BufferSet(const fuchsia::media::StreamBufferSettings& settings,
+                     uint64_t buffer_lifetime_ordinal, bool single_vmo)
+    : settings_(fidl::Clone(settings)),
       single_vmo_(single_vmo),
-      buffers_(settings_.packet_count_for_server +
-               settings_.packet_count_for_client) {
+      // has_packet_count_for_server() checked in BufferSet::Create
+      // has_packet_count_for_client() checked in BufferSet::Create
+      buffers_(*settings.packet_count_for_server() +
+               *settings.packet_count_for_client()) {
   free_buffer_count_ = buffers_.size();
-  settings_.buffer_lifetime_ordinal = buffer_lifetime_ordinal;
+  settings_.set_buffer_lifetime_ordinal(buffer_lifetime_ordinal);
 }
 
 BufferSet::~BufferSet() {
@@ -37,23 +53,27 @@ fuchsia::media::StreamBuffer BufferSet::GetBufferDescriptor(
     const PayloadVmos& payload_vmos) const {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(buffer_index < buffers_.size());
+  FXL_DCHECK(settings_.has_buffer_lifetime_ordinal());
+  FXL_DCHECK(settings_.has_per_packet_buffer_bytes());
 
   fuchsia::media::StreamBuffer buffer;
-  buffer.buffer_lifetime_ordinal = settings_.buffer_lifetime_ordinal;
-  buffer.buffer_index = buffer_index;
+  buffer.set_buffer_lifetime_ordinal(*settings_.buffer_lifetime_ordinal());
+  buffer.set_buffer_index(buffer_index);
 
   fbl::RefPtr<PayloadVmo> payload_vmo = BufferVmo(buffer_index, payload_vmos);
   FXL_DCHECK(payload_vmo);
 
   fuchsia::media::StreamBufferDataVmo buffer_data_vmo;
-  buffer_data_vmo.vmo_handle = payload_vmo->Duplicate(
+  buffer_data_vmo.set_vmo_handle(payload_vmo->Duplicate(
       ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |
-      (writeable ? ZX_RIGHT_WRITE : 0));
-  buffer_data_vmo.vmo_usable_start =
-      single_vmo_ ? (buffer_index * settings_.per_packet_buffer_bytes) : 0;
-  buffer_data_vmo.vmo_usable_size = settings_.per_packet_buffer_bytes;
+      (writeable ? ZX_RIGHT_WRITE : 0)));
+  FXL_DCHECK(settings_.has_per_packet_buffer_bytes())
+      << "per_packet_buffer_bytes should be checked in BufferSet::Create";
+  buffer_data_vmo.set_vmo_usable_start(
+      single_vmo_ ? (buffer_index * *settings_.per_packet_buffer_bytes()) : 0);
+  buffer_data_vmo.set_vmo_usable_size(*settings_.per_packet_buffer_bytes());
 
-  buffer.data.set_vmo(std::move(buffer_data_vmo));
+  buffer.mutable_data()->set_vmo(std::move(buffer_data_vmo));
 
   return buffer;
 }
@@ -61,7 +81,8 @@ fuchsia::media::StreamBuffer BufferSet::GetBufferDescriptor(
 fbl::RefPtr<PayloadBuffer> BufferSet::AllocateBuffer(
     uint64_t size, const PayloadVmos& payload_vmos) {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(size <= settings_.per_packet_buffer_bytes);
+  FXL_DCHECK(settings_.has_per_packet_buffer_bytes());
+  FXL_DCHECK(size <= *settings_.per_packet_buffer_bytes());
   FXL_DCHECK(free_buffer_count_ != 0);
   FXL_DCHECK(suggest_next_to_allocate_ < buffers_.size());
 
@@ -203,16 +224,19 @@ fbl::RefPtr<PayloadVmo> BufferSet::BufferVmo(
 fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
     uint32_t buffer_index,
     const std::vector<fbl::RefPtr<PayloadVmo>>& payload_vmos) {
+  FXL_DCHECK(settings_.has_per_packet_buffer_bytes());
+  FXL_DCHECK(settings_.has_buffer_lifetime_ordinal());
+
   fbl::RefPtr<PayloadVmo> payload_vmo =
       (single_vmo_ ? payload_vmos[0] : payload_vmos[buffer_index]);
   uint64_t offset_in_vmo =
-      single_vmo_ ? buffer_index * settings_.per_packet_buffer_bytes : 0;
+      single_vmo_ ? buffer_index * *settings_.per_packet_buffer_bytes() : 0;
 
   // The recycler used here captures an |fbl::RefPtr| to |this| in case this
   // buffer set is no longer current when the buffer is recycled.
   fbl::RefPtr<PayloadBuffer> payload_buffer = PayloadBuffer::Create(
-      settings_.per_packet_buffer_bytes, payload_vmo->at_offset(offset_in_vmo),
-      payload_vmo, offset_in_vmo,
+      *settings_.per_packet_buffer_bytes(),
+      payload_vmo->at_offset(offset_in_vmo), payload_vmo, offset_in_vmo,
       [this, buffer_index,
        this_ref = fbl::WrapRefPtr(this)](PayloadBuffer* payload_buffer) {
         fit::closure free_buffer_callback;
@@ -235,16 +259,21 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
       });
 
   payload_buffer->SetId(buffer_index);
-  payload_buffer->SetBufferConfig(settings_.buffer_lifetime_ordinal);
+  payload_buffer->SetBufferConfig(*settings_.buffer_lifetime_ordinal());
   --free_buffer_count_;
 
   return payload_buffer;
 }
 
-void BufferSetManager::ApplyConstraints(
+bool BufferSetManager::ApplyConstraints(
     const fuchsia::media::StreamBufferConstraints& constraints,
     bool prefer_single_vmo) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+
+  if (!constraints.has_default_settings()) {
+    FXL_LOG(ERROR) << "FIDL buffer constraints do not have default settings.";
+    return false;
+  }
 
   uint64_t lifetime_ordinal = 1;
 
@@ -254,8 +283,16 @@ void BufferSetManager::ApplyConstraints(
   }
 
   current_set_ = BufferSet::Create(
-      constraints.default_settings, lifetime_ordinal,
-      prefer_single_vmo && constraints.single_buffer_mode_allowed);
+      *constraints.default_settings(), lifetime_ordinal,
+      prefer_single_vmo && (constraints.single_buffer_mode_allowed() &&
+                            *constraints.single_buffer_mode_allowed()));
+
+  if (current_set_ == nullptr) {
+    FXL_LOG(ERROR) << "Could not create bufferset from FIDL buffer settings.";
+    return false;
+  }
+
+  return true;
 }
 
 void BufferSetManager::ReleaseBufferForDecoder(uint64_t lifetime_ordinal,

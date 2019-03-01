@@ -61,9 +61,20 @@ LocalCodecFactory::LocalCodecFactory(async_dispatcher_t* fidl_dispatcher,
 void LocalCodecFactory::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params decoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) {
+  if (!decoder_params.has_input_details()) {
+    FXL_LOG(WARNING) << "missing input_details";
+    return;
+  }
+
+  if (!decoder_params.input_details()->has_mime_type()) {
+    FXL_LOG(WARNING) << "input details missing mime type";
+    // Without mime_type we cannot search for a decoder.
+    return;
+  }
+
   CreateCommon(std::move(decoder_request),
                fuchsia::mediacodec::CodecType::DECODER,
-               decoder_params.input_details.mime_type,
+               *decoder_params.input_details()->mime_type(),
                [this, decoder_params = std::move(decoder_params)](
                    codec_runner::CodecRunner* codec_runner) mutable {
                  codec_runner->SetDecoderParams(std::move(decoder_params));

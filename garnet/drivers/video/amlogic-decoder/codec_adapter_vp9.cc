@@ -412,58 +412,54 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
 
   auto config = std::make_unique<fuchsia::media::StreamOutputConfig>();
 
-  config->stream_lifetime_ordinal = stream_lifetime_ordinal;
+  config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
+
+  auto* constraints = config->mutable_buffer_constraints();
+  auto* default_settings = constraints->mutable_default_settings();
+
   // For the moment, there will be only one StreamOutputConfig, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
-  config->buffer_constraints_action_required =
-      buffer_constraints_action_required;
-  config->buffer_constraints.buffer_constraints_version_ordinal =
-      new_output_buffer_constraints_version_ordinal;
+  config->set_buffer_constraints_action_required(
+      buffer_constraints_action_required);
+  constraints->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
 
   // 0 is intentionally invalid - the client must fill out this field.
-  config->buffer_constraints.default_settings.buffer_lifetime_ordinal = 0;
-  config->buffer_constraints.default_settings
-      .buffer_constraints_version_ordinal =
-      new_output_buffer_constraints_version_ordinal;
-  config->buffer_constraints.default_settings.packet_count_for_server =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.default_settings.packet_count_for_client =
-      kDefaultPacketCountForClient;
+  default_settings->set_buffer_lifetime_ordinal(0);
+  default_settings->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
+  default_settings->set_packet_count_for_server(packet_count_total_ -
+                                                kPacketCountForClientForced);
+  default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
   // Packed NV12 (no extra padding, min UV offset, min stride).
-  config->buffer_constraints.default_settings.per_packet_buffer_bytes =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.default_settings.single_buffer_mode = false;
+  default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
+  default_settings->set_single_buffer_mode(false);
 
   // For the moment, let's just force the client to allocate this exact size.
-  config->buffer_constraints.per_packet_buffer_bytes_min =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.per_packet_buffer_bytes_recommended =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.per_packet_buffer_bytes_max =
-      per_packet_buffer_bytes;
+  constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  config->buffer_constraints.packet_count_for_server_min =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_recommended =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_recommended_max =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_max =
-      packet_count_total_ - kPacketCountForClientForced;
+  constraints->set_packet_count_for_server_min(packet_count_total_ -
+                                               kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended(
+      packet_count_total_ - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended_max(
+      packet_count_total_ - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_max(packet_count_total_ -
+                                               kPacketCountForClientForced);
 
-  config->buffer_constraints.packet_count_for_client_min =
-      kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_client_max =
-      kPacketCountForClientForced;
+  constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
+  constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
 
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
-  config->buffer_constraints.single_buffer_mode_allowed = false;
+  constraints->set_single_buffer_mode_allowed(false);
 
-  config->buffer_constraints.is_physically_contiguous_required = true;
+  constraints->set_is_physically_contiguous_required(true);
   ::zx::bti very_temp_kludge_bti;
   zx_status_t dup_status =
       ::zx::unowned<::zx::bti>(video_->bti())
@@ -475,12 +471,11 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   }
   // This is very temporary.  The BufferAllocator should handle this directly,
   // not the client.
-  config->buffer_constraints.very_temp_kludge_bti_handle =
-      std::move(very_temp_kludge_bti);
+  constraints->set_very_temp_kludge_bti_handle(std::move(very_temp_kludge_bti));
 
-  config->format_details.format_details_version_ordinal =
-      new_output_format_details_version_ordinal;
-  config->format_details.mime_type = "video/raw";
+  config->mutable_format_details()->set_format_details_version_ordinal(
+      new_output_format_details_version_ordinal);
+  config->mutable_format_details()->set_mime_type("video/raw");
 
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::media::VideoUncompressedFormat video_uncompressed;
@@ -513,9 +508,8 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
-  config->format_details.domain =
-      std::make_unique<fuchsia::media::DomainFormat>();
-  config->format_details.domain->set_video(std::move(video_format));
+  config->mutable_format_details()->mutable_domain()->set_video(
+      std::move(video_format));
 
   return config;
 }
@@ -540,7 +534,8 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index == i);
+      ZX_DEBUG_ASSERT(*all_output_buffers_[i]->codec_buffer().buffer_index() ==
+                      i);
       frames.emplace_back(CodecFrame{
           .codec_buffer_spec =
               fidl::Clone(all_output_buffers_[i]->codec_buffer()),

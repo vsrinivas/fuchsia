@@ -408,27 +408,32 @@ fuchsia::media::FormatDetailsPtr TypeConverter<
   }
 
   auto result = fuchsia::media::FormatDetails::New();
-  result->format_details_version_ordinal = 0;
-  result->mime_type = mime_type;
+  result->set_format_details_version_ordinal(0);
+  result->set_mime_type(mime_type);
   if (input.encoding_parameters()) {
-    result->oob_bytes =
-        fxl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
+    result->set_oob_bytes(
+        fxl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()));
   }
 
   return result;
 }
 
-std::unique_ptr<media_player::StreamType>
-TypeConverter<std::unique_ptr<media_player::StreamType>,
-              fuchsia::media::FormatDetails>::
-    Convert(const fuchsia::media::FormatDetails& input) {
-  if (input.mime_type == kAudioMimeTypeLpcm) {
-    if (!input.domain->is_audio() || !input.domain->audio().is_uncompressed() ||
-        !input.domain->audio().uncompressed().is_pcm()) {
+std::unique_ptr<media_player::StreamType> TypeConverter<
+    std::unique_ptr<media_player::StreamType>,
+    fuchsia::media::FormatDetails>::Convert(const fuchsia::media::FormatDetails&
+                                                input) {
+  if (!input.has_mime_type() || !input.has_domain()) {
+    return nullptr;
+  }
+
+  if (*input.mime_type() == kAudioMimeTypeLpcm) {
+    if (!input.domain()->is_audio() ||
+        !input.domain()->audio().is_uncompressed() ||
+        !input.domain()->audio().uncompressed().is_pcm()) {
       return nullptr;
     }
 
-    auto& format = input.domain->audio().uncompressed().pcm();
+    auto& format = input.domain()->audio().uncompressed().pcm();
     if (format.pcm_mode != fuchsia::media::AudioPcmMode::LINEAR) {
       return nullptr;
     }
@@ -450,12 +455,13 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
         format.channel_map.size(), format.frames_per_second);
   }
 
-  if (input.mime_type == kVideoMimeTypeUncompressed) {
-    if (!input.domain->is_video() || !input.domain->video().is_uncompressed()) {
+  if (*input.mime_type() == kVideoMimeTypeUncompressed) {
+    if (!input.domain()->is_video() ||
+        !input.domain()->video().is_uncompressed()) {
       return nullptr;
     }
 
-    auto& format = input.domain->video().uncompressed();
+    auto& format = input.domain()->video().uncompressed();
 
     media_player::VideoStreamType::PixelFormat pixel_format;
     switch (format.fourcc) {

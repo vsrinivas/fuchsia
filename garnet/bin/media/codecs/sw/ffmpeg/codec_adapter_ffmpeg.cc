@@ -42,9 +42,15 @@ bool CodecAdapterFfmpeg::IsCoreCodecRequiringOutputConfigForFormatDetection() {
 
 void CodecAdapterFfmpeg::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
+  if (!initial_input_format_details.has_format_details_version_ordinal()) {
+    events_->onCoreCodecFailCodec(
+        "CoreCodecInit(): Initial input format details missing version "
+        "ordinal.");
+    return;
+  }
   // Will always be 0 for now.
   input_format_details_version_ordinal_ =
-      initial_input_format_details.format_details_version_ordinal;
+      *initial_input_format_details.format_details_version_ordinal();
   zx_status_t result = input_processing_loop_.StartThread(
       "input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -77,8 +83,10 @@ void CodecAdapterFfmpeg::CoreCodecQueueInputFormatDetails(
     const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   // TODO(turnage): Accept midstream and interstream input format changes.
   // For now these should always be 0, so assert to notice if anything changes.
-  ZX_ASSERT(per_stream_override_format_details.format_details_version_ordinal ==
-            input_format_details_version_ordinal_);
+  ZX_ASSERT(
+      per_stream_override_format_details.has_format_details_version_ordinal() &&
+      *per_stream_override_format_details.format_details_version_ordinal() ==
+          input_format_details_version_ordinal_);
   input_queue_.Push(
       CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
@@ -162,58 +170,52 @@ CodecAdapterFfmpeg::CoreCodecBuildNewOutputConfig(
 
   auto config = std::make_unique<fuchsia::media::StreamOutputConfig>();
 
-  config->stream_lifetime_ordinal = stream_lifetime_ordinal;
+  config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
+
   // For the moment, there will be only one StreamOutputConfig, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
-  config->buffer_constraints_action_required =
-      buffer_constraints_action_required;
-  config->buffer_constraints.buffer_constraints_version_ordinal =
-      new_output_buffer_constraints_version_ordinal;
-
-  // 0 is intentionally invalid - the client must fill out this field.
-  config->buffer_constraints.default_settings.buffer_lifetime_ordinal = 0;
-  config->buffer_constraints.default_settings
-      .buffer_constraints_version_ordinal =
-      new_output_buffer_constraints_version_ordinal;
-  config->buffer_constraints.default_settings.packet_count_for_server =
-      kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.default_settings.packet_count_for_client =
-      kDefaultPacketCountForClient;
-  config->buffer_constraints.default_settings.per_packet_buffer_bytes =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.default_settings.single_buffer_mode = false;
-
+  config->set_buffer_constraints_action_required(
+      buffer_constraints_action_required);
+  auto* constraints = config->mutable_buffer_constraints();
+  constraints->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
   // For the moment, let's just force the client to allocate this exact size.
-  config->buffer_constraints.per_packet_buffer_bytes_min =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.per_packet_buffer_bytes_recommended =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.per_packet_buffer_bytes_max =
-      per_packet_buffer_bytes;
+  constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  config->buffer_constraints.packet_count_for_server_min =
-      kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_recommended =
-      kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_recommended_max =
-      kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_max =
-      kPacketCount - kPacketCountForClientForced;
+  constraints->set_packet_count_for_server_min(kPacketCount -
+                                               kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended(
+      kPacketCount - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended_max(
+      kPacketCount - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_max(kPacketCount -
+                                               kPacketCountForClientForced);
 
-  config->buffer_constraints.packet_count_for_client_min =
-      kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_client_max =
-      kPacketCountForClientForced;
+  constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
+  constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
 
-  config->buffer_constraints.single_buffer_mode_allowed = false;
-  config->buffer_constraints.is_physically_contiguous_required = false;
+  constraints->set_single_buffer_mode_allowed(false);
+  constraints->set_is_physically_contiguous_required(false);
 
-  config->format_details = std::move(format_details);
-  config->format_details.format_details_version_ordinal =
-      new_output_format_details_version_ordinal;
+  // 0 is intentionally invalid - the client must fill out this field.
+  auto* default_settings = constraints->mutable_default_settings();
+  default_settings->set_buffer_lifetime_ordinal(0);
+  default_settings->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
+  default_settings->set_packet_count_for_server(kPacketCount -
+                                                kPacketCountForClientForced);
+  default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
+  default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
+  default_settings->set_single_buffer_mode(false);
+
+  *config->mutable_format_details() = std::move(format_details);
+  config->mutable_format_details()->set_format_details_version_ordinal(
+      new_output_format_details_version_ordinal);
 
   return config;
 }

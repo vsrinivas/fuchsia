@@ -66,8 +66,7 @@ class CodecClient {
   // To return eventually, this call relies on output being accepted on an
   // ongoing basis from the Codec using some other thread(s), processed, and
   // those output packets freed back to the codec.
-  std::unique_ptr<fuchsia::media::Packet>
-  BlockingGetFreeInputPacket();
+  std::unique_ptr<fuchsia::media::Packet> BlockingGetFreeInputPacket();
 
   const CodecBuffer& GetInputBufferByIndex(uint32_t packet_index);
   const CodecBuffer& GetOutputBufferByIndex(uint32_t packet_index);
@@ -77,8 +76,7 @@ class CodecClient {
       fuchsia::media::FormatDetails input_format_details);
 
   // Queue an input packet to the codec.
-  void QueueInputPacket(
-      std::unique_ptr<fuchsia::media::Packet> packet);
+  void QueueInputPacket(std::unique_ptr<fuchsia::media::Packet> packet);
 
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal);
 
@@ -125,8 +123,7 @@ class CodecClient {
 
   void OnInputConstraints(
       fuchsia::media::StreamBufferConstraints input_constraints);
-  void OnFreeInputPacket(
-      fuchsia::media::PacketHeader free_input_packet);
+  void OnFreeInputPacket(fuchsia::media::PacketHeader free_input_packet);
 
   // This example ignores any buffer constraints with
   // buffer_constraints_action_required false.
@@ -158,8 +155,7 @@ class CodecClient {
   fidl::InterfaceRequest<fuchsia::media::StreamProcessor> temp_codec_request_;
 
   // We're use unique_ptr<> here only for it's optional-ness.
-  std::unique_ptr<fuchsia::media::StreamBufferConstraints>
-      input_constraints_;
+  std::unique_ptr<fuchsia::media::StreamBufferConstraints> input_constraints_;
   std::condition_variable input_constraints_exist_condition_;
 
   // In this example, we use buffer-per-packet mode, but for input buffers it
@@ -227,8 +223,7 @@ class CodecClient {
   // Note that stream_lifetime_ordinal is nearly entirely orthogonal from which
   // config applies.  The only interaction is that sometimes a new stream will
   // happen to have a different format so will cause format_details to update.
-  std::shared_ptr<const fuchsia::media::StreamOutputConfig>
-      last_output_config_;
+  std::shared_ptr<const fuchsia::media::StreamOutputConfig> last_output_config_;
   std::shared_ptr<const fuchsia::media::StreamOutputConfig>
       last_required_output_config_;
   // Becomes true when we get a new last_output_config_ with action required,

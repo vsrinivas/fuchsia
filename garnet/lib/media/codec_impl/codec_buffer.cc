@@ -35,12 +35,17 @@ bool CodecBuffer::Init(bool input_require_write) {
   if (port_ == kOutputPort || input_require_write) {
     flags |= ZX_VM_PERM_WRITE;
   }
+  ZX_ASSERT(buffer_.has_data());
+  ZX_ASSERT(buffer_.data()->is_vmo());
+  ZX_ASSERT(buffer_.data()->vmo().has_vmo_handle());
+  ZX_ASSERT(buffer_.data()->vmo().has_vmo_usable_size());
   zx_status_t res = zx::vmar::root_self()->map(
-      0, buffer_.data.vmo().vmo_handle, buffer_.data.vmo().vmo_usable_start,
-      buffer_.data.vmo().vmo_usable_size, flags, &tmp);
+      0, *buffer_.data()->vmo().vmo_handle(),
+      *buffer_.data()->vmo().vmo_usable_start(),
+      *buffer_.data()->vmo().vmo_usable_size(), flags, &tmp);
   if (res != ZX_OK) {
     printf("Failed to map %zu byte buffer vmo (res %d)\n",
-           buffer_.data.vmo().vmo_usable_size, res);
+           *buffer_.data()->vmo().vmo_usable_size(), res);
     return false;
   }
   buffer_base_ = reinterpret_cast<uint8_t*>(tmp);
@@ -48,10 +53,14 @@ bool CodecBuffer::Init(bool input_require_write) {
 }
 
 uint64_t CodecBuffer::buffer_lifetime_ordinal() const {
-  return buffer_.buffer_lifetime_ordinal;
+  ZX_ASSERT(buffer_.has_buffer_lifetime_ordinal());
+  return *buffer_.buffer_lifetime_ordinal();
 }
 
-uint32_t CodecBuffer::buffer_index() const { return buffer_.buffer_index; }
+uint32_t CodecBuffer::buffer_index() const {
+  ZX_ASSERT(buffer_.has_buffer_index());
+  return *buffer_.buffer_index();
+}
 
 uint8_t* CodecBuffer::buffer_base() const {
   ZX_DEBUG_ASSERT(buffer_base_ && "Shouldn't be using if Init() didn't work.");
@@ -59,7 +68,10 @@ uint8_t* CodecBuffer::buffer_base() const {
 }
 
 size_t CodecBuffer::buffer_size() const {
-  return buffer_.data.vmo().vmo_usable_size;
+  ZX_ASSERT(buffer_.has_data());
+  ZX_ASSERT(buffer_.data()->is_vmo());
+  ZX_ASSERT(buffer_.data()->vmo().has_vmo_usable_size());
+  return *buffer_.data()->vmo().vmo_usable_size();
 }
 
 const fuchsia::media::StreamBuffer& CodecBuffer::codec_buffer() const {

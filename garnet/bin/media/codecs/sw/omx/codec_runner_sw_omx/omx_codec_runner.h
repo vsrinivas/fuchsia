@@ -83,8 +83,8 @@ namespace codec_runner {
 //     responsiveness benefits to queueing state change work to a separate
 //     state-driving thread, to do with being able to notice that
 //     previously-dequeued messages can be safely ignored/skipped, but at the
-//     moment any such benefits seem unlikely to be significant enough to justify
-//     the complexity increase that would imply.
+//     moment any such benefits seem unlikely to be significant enough to
+//     justify the complexity increase that would imply.
 //   * "OMX thread" - The OMX codec has its own primary thread.  Calls to
 //     EventHandler() method of this class can come from the OMX thread or from
 //     the FIDL thread (during calls into the OMX codec from the FIDL thread).
@@ -155,21 +155,21 @@ namespace codec_runner {
 // EventHandler() - there is no other valid option.
 //
 // As with emitted output packets, the StreamOutputConfig has a
-// stream_lifetime_ordinal, and the client is free to ignore a StreamOutputConfig
-// with stale stream_lifetime_ordinal (though this can increase latency to
-// emitted output data in some cases).  We rely on the OMX codec resetting its
-// "mOutputPortSettingsChange AWAITING_DISABLED / AWAITING_ENABLED" state when
-// the codec runs onReset() on dropping to OMX loaded state between streams, and
-// we put the output port back to enabled state (despite it having no buffers at
-// the time, which OMX is ok with when in OMX loaded state), but we need to give
-// the OMX codec output buffers before we can put the codec back to OMX
-// executing state and feed input.  This means we have to generate a new
-// OnConfigChange() for the new stream without any triggering
-// OMX_EventPortSettingsChanged if we get input data for a new stream without a
-// complete output config yet.  This is very similar to the situation we're in
-// when the Codec has just been created and we see input data before the client
-// has finished configuring the output, so we treat the two situations the same
-// way.
+// stream_lifetime_ordinal, and the client is free to ignore a
+// StreamOutputConfig with stale stream_lifetime_ordinal (though this can
+// increase latency to emitted output data in some cases).  We rely on the OMX
+// codec resetting its "mOutputPortSettingsChange AWAITING_DISABLED /
+// AWAITING_ENABLED" state when the codec runs onReset() on dropping to OMX
+// loaded state between streams, and we put the output port back to enabled
+// state (despite it having no buffers at the time, which OMX is ok with when in
+// OMX loaded state), but we need to give the OMX codec output buffers before we
+// can put the codec back to OMX executing state and feed input.  This means we
+// have to generate a new OnConfigChange() for the new stream without any
+// triggering OMX_EventPortSettingsChanged if we get input data for a new stream
+// without a complete output config yet.  This is very similar to the situation
+// we're in when the Codec has just been created and we see input data before
+// the client has finished configuring the output, so we treat the two
+// situations the same way.
 //
 // As with emitted output packets, we don't necessarily need to generate or send
 // a config if we know that the StreamControl ordering domain has already begun
@@ -389,6 +389,7 @@ class OmxCodecRunner : public CodecRunner {
     // SetInputFormatDetails() or when the stream is deleted, whichever comes
     // first.  This is only meant to be called on stream_control_thread_.
     const fuchsia::media::FormatDetails* input_format_details();
+    bool has_input_format_details() const { return !!input_format_details_; }
     // We send oob_bytes (if any) to the OMX codec just before sending a
     // packet to the OMX codec, but only when the stream has OOB data pending.
     // A new stream has OOB data initially pending, and it becomes pending again
@@ -407,8 +408,8 @@ class OmxCodecRunner : public CodecRunner {
     bool future_discarded_ = false;
     bool future_flush_end_of_stream_ = false;
     // Starts as nullptr for each new stream with implicit fallback to
-    // initial_input_format_details_, but can be overridden on a per-stream basis
-    // with QueueInputFormatDetails().
+    // initial_input_format_details_, but can be overridden on a per-stream
+    // basis with QueueInputFormatDetails().
     std::unique_ptr<fuchsia::media::FormatDetails> input_format_details_;
     // This defaults to _true_, so that we send a OMX_BUFFERFLAG_CODECCONFIG
     // buffer to OMX for each stream, if we have any oob_bytes to send.
@@ -526,7 +527,7 @@ class OmxCodecRunner : public CodecRunner {
   // Some common handling for SetOutputBufferSettings() and
   // SetInputBufferSettings()
   void SetBufferSettingsCommonLocked(
-      Port port, const fuchsia::media::StreamBufferSettings& settings,
+      Port port, fuchsia::media::StreamBufferSettings settings,
       const fuchsia::media::StreamBufferConstraints& constraints);
 
   // Returns true if adding this buffer completed the input or output
@@ -630,9 +631,9 @@ class OmxCodecRunner : public CodecRunner {
 
   uint64_t last_required_buffer_constraints_version_ordinal_[kPortCount] = {0};
 
-  // For OmxCodecRunner, the initial StreamOutputConfig is sent immediately after
-  // the input StreamBufferConstraints.  The StreamOutputConfig is likely to
-  // change again before any output data is emitted, but it _may not_.
+  // For OmxCodecRunner, the initial StreamOutputConfig is sent immediately
+  // after the input StreamBufferConstraints.  The StreamOutputConfig is likely
+  // to change again before any output data is emitted, but it _may not_.
   std::unique_ptr<const fuchsia::media::StreamOutputConfig> output_config_;
 
   // We ignore the part of the OMX spec where it says we should free the

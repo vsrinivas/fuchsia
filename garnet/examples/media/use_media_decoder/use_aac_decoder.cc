@@ -223,16 +223,16 @@ void use_aac_decoder(async::Loop* main_loop,
   // TODO(dustingreen): Remove need for ADTS to specify any codec config since
   // it's in-band, and maybe switch this program over to using .mp4 with
   // AudioSpecificConfig() from the .mp4 file.
-  create_params.input_details.format_details_version_ordinal = 0;
-  create_params.input_details.mime_type = "audio/aac-adts";
+  create_params.mutable_input_details()->set_format_details_version_ordinal(0);
+  create_params.mutable_input_details()->set_mime_type("audio/aac-adts");
   // We don't do this here for now, because we want to cover what happens when
   // CreateDecoder() doesn't specify oob_bytes, but
   // QueueInputFormatDetails() does.
   // create_params.input_details.oob_bytes.reset(std::move(asc_vector));
 
   fuchsia::media::FormatDetails full_input_details =
-      fidl::Clone(create_params.input_details);
-  full_input_details.oob_bytes.reset(std::move(asc_vector));
+      fidl::Clone(*create_params.input_details());
+  *full_input_details.mutable_oob_bytes() = std::move(asc_vector);
 
   // We're using CodecPtr here rather than CodecSyncPtr partly to have this
   // example program be slightly more realistic (with respect to client programs
@@ -321,16 +321,24 @@ void use_aac_decoder(async::Loop* main_loop,
           while (bytes_so_far != byte_count) {
             std::unique_ptr<fuchsia::media::Packet> packet =
                 codec_client.BlockingGetFreeInputPacket();
-            const CodecBuffer& buffer =
-                codec_client.GetInputBufferByIndex(packet->header.packet_index);
+
+            if (!packet->has_header()) {
+              Exit("broken server sent packet without header");
+            }
+
+            if (!packet->header()->has_packet_index()) {
+              Exit("broken server sent packet without packet index");
+            }
+
+            const CodecBuffer& buffer = codec_client.GetInputBufferByIndex(
+                *packet->header()->packet_index());
             size_t bytes_to_copy =
                 std::min(byte_count - bytes_so_far, buffer.size_bytes());
-            packet->stream_lifetime_ordinal = kStreamLifetimeOrdinal;
-            packet->start_offset = 0;
-            packet->valid_length_bytes = bytes_to_copy;
-            packet->timestamp_ish = 0;
-            packet->start_access_unit = true;
-            packet->known_end_access_unit = true;
+            packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
+            packet->set_start_offset(0);
+            packet->set_valid_length_bytes(bytes_to_copy);
+            packet->set_start_access_unit(true);
+            packet->set_known_end_access_unit(true);
             memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
             codec_client.QueueInputPacket(std::move(packet));
             bytes_so_far += bytes_to_copy;
@@ -406,6 +414,12 @@ void use_aac_decoder(async::Loop* main_loop,
       }
 
       const fuchsia::media::Packet& packet = output->packet();
+
+      if (!packet.has_header()) {
+        // The server should not generate any empty packets.
+        Exit("broken server sent packet without header");
+      }
+
       // "packet" will live long enough because ~cleanup runs before ~output.
       auto cleanup = fit::defer([&codec_client, &packet] {
         // Using an auto call for this helps avoid losing track of the
@@ -415,26 +429,42 @@ void use_aac_decoder(async::Loop* main_loop,
         // UseOutputBuffer() will fail.  The only way that can happen here is
         // if the OMX codec transitioned states unilaterally without any set
         // state command, so if that occurs, exit.
-        codec_client.RecycleOutputPacket(packet.header);
+        codec_client.RecycleOutputPacket(fidl::Clone(*packet.header()));
       });
+
+      if (!packet.header()->has_packet_index()) {
+        // The server should not generate any empty packets.
+        Exit("broken server sent packet without buffer index");
+      }
+
       std::shared_ptr<const fuchsia::media::StreamOutputConfig> config =
           output->config();
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
       const CodecBuffer& buffer =
-          codec_client.GetOutputBufferByIndex(packet.header.packet_index);
+          codec_client.GetOutputBufferByIndex(*packet.header()->packet_index());
 
+      ZX_ASSERT(!stream_config || stream_config->format_details());
       if (stream_config &&
-          (config->format_details.format_details_version_ordinal !=
-           stream_config->format_details.format_details_version_ordinal)) {
+          (!config->has_format_details() ||
+           !config->format_details()->has_format_details_version_ordinal() ||
+           *config->format_details()->format_details_version_ordinal() !=
+               *stream_config->format_details()
+                    ->format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
             "unexpected for this stream");
       }
 
-      if (packet.valid_length_bytes == 0) {
+      if (!packet.has_valid_length_bytes() ||
+          *packet.valid_length_bytes() == 0) {
         // The server should not generate any empty packets.
         Exit("broken server sent empty packet");
+      }
+
+      if (!packet.has_start_offset()) {
+        // The server should not generate any empty packets.
+        Exit("broken server sent packet without start offset");
       }
 
       // We have a non-empty packet of the stream.
@@ -442,12 +472,21 @@ void use_aac_decoder(async::Loop* main_loop,
       if (!stream_config) {
         // Every output has a config.  This happens exactly once.
         stream_config = config;
+
+        if (!stream_config->has_format_details()) {
+          Exit("!format_details");
+        }
+
         const fuchsia::media::FormatDetails& format =
-            stream_config->format_details;
-        if (!format.domain->is_audio()) {
+            *stream_config->format_details();
+        if (!format.has_domain()) {
+          Exit("!format.domain");
+        }
+
+        if (!format.domain()->is_audio()) {
           Exit("!format.domain.is_audio() - unexpected");
         }
-        const fuchsia::media::AudioFormat& audio = format.domain->audio();
+        const fuchsia::media::AudioFormat& audio = format.domain()->audio();
         if (!audio.is_uncompressed()) {
           Exit("!audio.is_uncompressed() - unexpected");
         }
@@ -475,16 +514,14 @@ void use_aac_decoder(async::Loop* main_loop,
               "actual: %zu\n",
               pcm.channel_map.size());
         }
-        if (static_cast<fuchsia::media::AudioChannelId>(
-                pcm.channel_map[0]) !=
+        if (static_cast<fuchsia::media::AudioChannelId>(pcm.channel_map[0]) !=
             fuchsia::media::AudioChannelId::LF) {
           Exit(
               "pcm.channel_map[0] is unexpected given the input data used in "
               "this example");
         }
         if (pcm.channel_map.size() >= 2 &&
-            static_cast<fuchsia::media::AudioChannelId>(
-                pcm.channel_map[1]) !=
+            static_cast<fuchsia::media::AudioChannelId>(pcm.channel_map[1]) !=
                 fuchsia::media::AudioChannelId::RF) {
           Exit(
               "pcm.channel_map[1] is unexpected given the input data used in "
@@ -514,15 +551,15 @@ void use_aac_decoder(async::Loop* main_loop,
       // We have a non-empty buffer (EOS or not), so write the audio data to the
       // WAV file.
       if (is_wav_initialized) {
-        if (!wav_writer.Write(buffer.base() + packet.start_offset,
-                              packet.valid_length_bytes)) {
+        if (!wav_writer.Write(buffer.base() + *packet.start_offset(),
+                              *packet.valid_length_bytes())) {
           Exit("wav_writer.Write() failed");
         }
       }
       int16_t* int16_base =
-          reinterpret_cast<int16_t*>(buffer.base() + packet.start_offset);
-      for (size_t iter = 0; iter < packet.valid_length_bytes / sizeof(int16_t);
-           iter++) {
+          reinterpret_cast<int16_t*>(buffer.base() + *packet.start_offset());
+      for (size_t iter = 0;
+           iter < *packet.valid_length_bytes() / sizeof(int16_t); iter++) {
         int16_t data_le = htole16(int16_base[iter]);
         SHA256_Update(&sha256_ctx, &data_le, sizeof(data_le));
       }

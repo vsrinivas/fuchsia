@@ -384,7 +384,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT bool IsStreamActiveLocked();
   void SetBufferSettingsCommon(
       std::unique_lock<std::mutex>& lock, CodecPort port,
-      const fuchsia::media::StreamBufferSettings& settings,
+      fuchsia::media::StreamBufferSettings settings,
       const fuchsia::media::StreamBufferConstraints& constraints);
   void EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
                                   CodecPort port);

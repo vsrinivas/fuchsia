@@ -399,9 +399,12 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames,
     // if it's a non-contiguous VMO, then validate that the VMO is actually
     // contiguous later in aml_canvas_config() called by
     // owner_->ConfigureCanvas() below.
+    assert(frames[i].codec_buffer_spec.has_data());
+    assert(frames[i].codec_buffer_spec.data()->is_vmo());
+    assert(frames[i].codec_buffer_spec.data()->vmo().has_vmo_handle());
     zx_status_t status = io_buffer_init_vmo(
         &frame->buffer, owner_->bti(),
-        frames[i].codec_buffer_spec.data.vmo().vmo_handle.get(), 0,
+        frames[i].codec_buffer_spec.data()->vmo().vmo_handle()->get(), 0,
         IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",
@@ -501,19 +504,18 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t width,
         return vmo_create_result;
       }
       fuchsia::media::StreamBufferData codec_buffer_data;
-      codec_buffer_data.set_vmo(fuchsia::media::StreamBufferDataVmo{
-          .vmo_handle = std::move(frame_vmo),
-          .vmo_usable_start = 0,
-          .vmo_usable_size = frame_vmo_bytes,
-      });
+      fuchsia::media::StreamBufferDataVmo data_vmo;
+      data_vmo.set_vmo_handle(std::move(frame_vmo));
+      data_vmo.set_vmo_usable_start(0);
+      data_vmo.set_vmo_usable_size(frame_vmo_bytes);
+      codec_buffer_data.set_vmo(std::move(data_vmo));
+      fuchsia::media::StreamBuffer buffer;
+      buffer.set_buffer_lifetime_ordinal(
+          next_non_codec_buffer_lifetime_ordinal_);
+      buffer.set_buffer_index(i);
+      buffer.set_data(std::move(codec_buffer_data));
       frames.emplace_back(CodecFrame{
-          .codec_buffer_spec =
-              fuchsia::media::StreamBuffer{
-                  .buffer_lifetime_ordinal =
-                      next_non_codec_buffer_lifetime_ordinal_,
-                  .buffer_index = i,
-                  .data = std::move(codec_buffer_data),
-              },
+          .codec_buffer_spec = std::move(buffer),
           .codec_buffer_ptr = nullptr,
       });
     }

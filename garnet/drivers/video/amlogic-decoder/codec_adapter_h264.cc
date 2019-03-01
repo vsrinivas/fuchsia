@@ -434,58 +434,54 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   std::unique_ptr<fuchsia::media::StreamOutputConfig> config =
       std::make_unique<fuchsia::media::StreamOutputConfig>();
 
-  config->stream_lifetime_ordinal = stream_lifetime_ordinal;
+  config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
+
+  auto* constraints = config->mutable_buffer_constraints();
+  auto* default_settings = constraints->mutable_default_settings();
+
   // For the moment, there will be only one StreamOutputConfig, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
-  config->buffer_constraints_action_required =
-      buffer_constraints_action_required;
-  config->buffer_constraints.buffer_constraints_version_ordinal =
-      new_output_buffer_constraints_version_ordinal;
+  config->set_buffer_constraints_action_required(
+      buffer_constraints_action_required);
+  constraints->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
 
   // 0 is intentionally invalid - the client must fill out this field.
-  config->buffer_constraints.default_settings.buffer_lifetime_ordinal = 0;
-  config->buffer_constraints.default_settings
-      .buffer_constraints_version_ordinal =
-      new_output_buffer_constraints_version_ordinal;
-  config->buffer_constraints.default_settings.packet_count_for_server =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.default_settings.packet_count_for_client =
-      kDefaultPacketCountForClient;
+  default_settings->set_buffer_lifetime_ordinal(0);
+  default_settings->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
+  default_settings->set_packet_count_for_server(packet_count_total_ -
+                                                kPacketCountForClientForced);
+  default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
   // Packed NV12 (no extra padding, min UV offset, min stride).
-  config->buffer_constraints.default_settings.per_packet_buffer_bytes =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.default_settings.single_buffer_mode = false;
+  default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
+  default_settings->set_single_buffer_mode(false);
 
   // For the moment, let's just force the client to allocate this exact size.
-  config->buffer_constraints.per_packet_buffer_bytes_min =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.per_packet_buffer_bytes_recommended =
-      per_packet_buffer_bytes;
-  config->buffer_constraints.per_packet_buffer_bytes_max =
-      per_packet_buffer_bytes;
+  constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  config->buffer_constraints.packet_count_for_server_min =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_recommended =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_recommended_max =
-      packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_server_max =
-      packet_count_total_ - kPacketCountForClientForced;
+  constraints->set_packet_count_for_server_min(packet_count_total_ -
+                                               kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended(
+      packet_count_total_ - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_recommended_max(
+      packet_count_total_ - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_max(packet_count_total_ -
+                                               kPacketCountForClientForced);
 
-  config->buffer_constraints.packet_count_for_client_min =
-      kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_client_max =
-      kPacketCountForClientForced;
+  constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
+  constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
 
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
-  config->buffer_constraints.single_buffer_mode_allowed = false;
+  constraints->set_single_buffer_mode_allowed(false);
 
-  config->buffer_constraints.is_physically_contiguous_required = true;
+  constraints->set_is_physically_contiguous_required(true);
   ::zx::bti very_temp_kludge_bti;
   zx_status_t dup_status =
       ::zx::unowned<::zx::bti>(video_->bti())
@@ -497,12 +493,11 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   }
   // This is very temporary.  The BufferAllocator should handle this directly,
   // not the client.
-  config->buffer_constraints.very_temp_kludge_bti_handle =
-      std::move(very_temp_kludge_bti);
+  constraints->set_very_temp_kludge_bti_handle(std::move(very_temp_kludge_bti));
 
-  config->format_details.format_details_version_ordinal =
-      new_output_format_details_version_ordinal;
-  config->format_details.mime_type = "video/raw";
+  config->mutable_format_details()->set_format_details_version_ordinal(
+      new_output_format_details_version_ordinal);
+  config->mutable_format_details()->set_mime_type("video/raw");
 
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::media::VideoUncompressedFormat video_uncompressed;
@@ -535,9 +530,8 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
-  config->format_details.domain =
-      std::make_unique<fuchsia::media::DomainFormat>();
-  config->format_details.domain->set_video(std::move(video_format));
+  config->mutable_format_details()->mutable_domain()->set_video(
+      std::move(video_format));
 
   return config;
 }
@@ -562,7 +556,8 @@ void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index == i);
+      ZX_DEBUG_ASSERT(*all_output_buffers_[i]->codec_buffer().buffer_index() ==
+                      i);
       frames.emplace_back(CodecFrame{
           .codec_buffer_spec =
               fidl::Clone(all_output_buffers_[i]->codec_buffer()),
@@ -716,15 +711,12 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
   // Our latest oob_bytes may contain SPS/PPS info.  If we have any
   // such info, the core codec needs it (possibly converted first).
 
-  // We check oob.empty() below, which covers when !oob_bytes as well.
-  const std::vector<uint8_t>& oob =
-      latest_input_format_details_.oob_bytes.get();
-  ZX_DEBUG_ASSERT(oob.empty() || latest_input_format_details_.oob_bytes);
+  const std::vector<uint8_t>* oob = latest_input_format_details_.oob_bytes();
 
   // If there's no OOB info, then there's nothing to do, as all such info will
   // be in-band in normal packet-based AnnexB NALs (including start codes and
   // start code emulation prevention bytes).
-  if (oob.empty()) {
+  if (!oob || oob->empty()) {
     // success
     return true;
   }
@@ -746,14 +738,14 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
   // each input NAL.
 
   // We already checked empty() above.
-  ZX_DEBUG_ASSERT(oob.size() >= 1);
-  switch (oob[0]) {
+  ZX_DEBUG_ASSERT(oob->size() >= 1);
+  switch ((*oob)[0]) {
     case 0:
       is_avcc_ = false;
       // This ParseVideo() consumes AnnexB oob data directly.  We don't
       // presently check if the oob data has only SPS/PPS.  This data is just
       // logically pre-pended to the stream.
-      if (!ParseVideo(oob.data(), oob.size())) {
+      if (!ParseVideo(oob->data(), oob->size())) {
         return false;
       }
       return true;
@@ -782,47 +774,47 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       // We accept 0 SPS and/or 0 PPS, but typically there's one of each.  At
       // minimum the oob buffer needs to be large enough to contain both the
       // sps_count and pps_count fields, which is a min of 7 bytes.
-      if (oob.size() < 7) {
+      if (oob->size() < 7) {
         OnCoreCodecFailStream();
         return false;
       }
-      uint32_t stashed_pseudo_nal_length_bytes = (oob[4] & 0x3) + 1;
+      uint32_t stashed_pseudo_nal_length_bytes = ((*oob)[4] & 0x3) + 1;
       // Temporarily, the pseudo_nal_length_field_bytes_ is 2 so we can
       // ParseVideo() directly out of "oob".
       pseudo_nal_length_field_bytes_ = 2;
-      uint32_t sps_count = oob[5] & 0x1F;
+      uint32_t sps_count = (*oob)[5] & 0x1F;
       uint32_t offset = 6;
       for (uint32_t i = 0; i < sps_count; ++i) {
-        if (offset + 2 > oob.size()) {
+        if (offset + 2 > oob->size()) {
           OnCoreCodecFailStream();
           return false;
         }
-        uint32_t sps_length = oob[offset] * 256 + oob[offset + 1];
-        if (offset + 2 + sps_length > oob.size()) {
+        uint32_t sps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
+        if (offset + 2 + sps_length > oob->size()) {
           OnCoreCodecFailStream();
           return false;
         }
-        if (!ParseVideo(&oob.data()[offset], 2 + sps_length)) {
+        if (!ParseVideo(&oob->data()[offset], 2 + sps_length)) {
           return false;
         }
         offset += 2 + sps_length;
       }
-      if (offset + 1 > oob.size()) {
+      if (offset + 1 > oob->size()) {
         OnCoreCodecFailStream();
         return false;
       }
-      uint32_t pps_count = oob[offset++];
+      uint32_t pps_count = (*oob)[offset++];
       for (uint32_t i = 0; i < pps_count; ++i) {
-        if (offset + 2 > oob.size()) {
+        if (offset + 2 > oob->size()) {
           OnCoreCodecFailStream();
           return false;
         }
-        uint32_t pps_length = oob[offset] * 256 + oob[offset + 1];
-        if (offset + 2 + pps_length > oob.size()) {
+        uint32_t pps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
+        if (offset + 2 + pps_length > oob->size()) {
           OnCoreCodecFailStream();
           return false;
         }
-        if (!ParseVideo(&oob.data()[offset], 2 + pps_length)) {
+        if (!ParseVideo(&oob->data()[offset], 2 + pps_length)) {
           return false;
         }
         offset += 2 + pps_length;

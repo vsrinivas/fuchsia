@@ -10,8 +10,9 @@ using fuchsia.media;
 //
 // Input parameters for creating a decoder (audio or video).
 //
+
 // TODO(dustingreen): Switch this to a FIDL table instead when possible.
-struct CreateDecoder_Params {
+table CreateDecoder_Params {
     // Input mime type for a decoder.
     //
     // The recognized mime types for now:
@@ -30,7 +31,7 @@ struct CreateDecoder_Params {
     //   TODO(dustingreen): fix this up server side and make most of this
     //   paragraph go away, possibly by also parsing ADTS before it hits OMX
     //   since the parsing code there doesn't tolerate split ADTS headers.
-    fuchsia.media.FormatDetails input_details;
+    1: fuchsia.media.FormatDetails input_details;
 
     // The settings below nail down more details.
 
@@ -44,7 +45,7 @@ struct CreateDecoder_Params {
     //
     // This must be true when creating a video encoder, or the CodecFactory
     // channel will close.
-    bool promise_separate_access_units_on_input = false;
+    2: bool promise_separate_access_units_on_input = false;
 
     // "require" fields:
     //
@@ -74,7 +75,7 @@ struct CreateDecoder_Params {
     // (require_can_stream_bytes_input true), the client must feed a decoder
     // separate AUs.  This means the client cannot have parts of two separate AUs
     // in the same packet, unless require_can_stream_bytes_input is true.
-    bool require_can_stream_bytes_input = false;
+    3: bool require_can_stream_bytes_input = false;
 
     // A decoder is allowed to be capable of streaming bytes but not capable of
     // searching for the start of the first usable AU.  To require both, set both
@@ -84,7 +85,7 @@ struct CreateDecoder_Params {
     // With require_can_stream_bytes_input true but require_can_find_start false,
     // the client must start the first packet with the start of an AU, but can
     // send a stream of bytes after that.
-    bool require_can_find_start = false;
+    4: bool require_can_find_start = false;
 
     // On problematic input data, all decoders are expected to at least be able to
     // close the channel rather than getting stuck in a failed and/or broken
@@ -94,7 +95,7 @@ struct CreateDecoder_Params {
     // able to handle damaged input without closing the Codec channel.  Such a
     // Codec is encouraged, but not required, to also satisfy requirements of
     // require_report_all_detected_errors.
-    bool require_can_re_sync = false;
+    5: bool require_can_re_sync = false;
 
     // Sometimes a client would rather fail an overall use of a decoder than fail
     // to notice data corruption.  For such scenarios, the client can specify
@@ -126,10 +127,10 @@ struct CreateDecoder_Params {
     //
     // Regardless of this setting, not all timestamp_ish values provided on input
     // are guaranteed to show up on output.
-    bool require_report_all_detected_errors = false;
+    6: bool require_report_all_detected_errors = false;
 
     // If true, require that the returned codec is HW-accelerated.
-    bool require_hw = false;
+    7: bool require_hw = false;
 
     // permit_lack_of_split_header_handling
     //
@@ -165,27 +166,27 @@ struct CreateDecoder_Params {
     // no other suitable codec.  In the long term, fix or work around the header
     // handling behavior of SoftAAC2 when used in ADTS mode (and any other
     // similar issues in other codecs) and remove this field.
-    bool permit_lack_of_split_header_handling = false;
+    8: bool permit_lack_of_split_header_handling = false;
 };
 
 /// Parameters used to request an encoder.
-struct CreateEncoder_Params {
+table CreateEncoder_Params {
     /// The format of the uncompressed input data.
     ///
     /// This field should be a raw mime_type (e.g. 'video/raw') and uncompressed
     /// format details for the encoder to use when reading buffers.
     ///
     /// To be elibigible an encoder must support the input format.
-    fuchsia.media.FormatDetails input_format;
+    1: fuchsia.media.FormatDetails input_format;
 
     /// The desired format of the encoded output data.
     ///
     /// To be eligible an encoder must support the output mime_type and any
     /// compressed format details.
-    fuchsia.media.FormatDetails output_format;
+    2: fuchsia.media.FormatDetails output_format;
 
     /// If true, require that the returned codec is HW-accelerated.
-    bool require_hw = false;
+    3: bool require_hw = false;
 };
 
 enum CodecType {
@@ -224,6 +225,7 @@ struct CodecDescription {
 // to have a separate dedicated message for decoders.  TBD whether calls for
 // creating encoders will split up audio vs. video encoders, or be combined.
 //
+
 // Each create request is self-contained, in the sense that the interface is not
 // stateful between create requests.
 [Discoverable]
