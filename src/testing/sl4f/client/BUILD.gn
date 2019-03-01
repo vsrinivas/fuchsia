@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+
+dart_library("client") {
+  package_name = "sl4f"
+
+  sources = [
+    "sl4f.dart",
+    "src/audio.dart",
+    "src/scenic.dart",
+    "src/sl4f_client.dart",
+  ]
+
+  deps = [
+    "//third_party/dart-pkg/pub/http",
+    "//third_party/dart-pkg/pub/image",
+  ]
+}
