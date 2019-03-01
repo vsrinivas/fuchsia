@@ -525,12 +525,18 @@ config("integer-paranoia") {
 }
 
 config("static-libc++") {
-  ldflags = [ "-static-libstdc++" ]
   if (current_os == "linux") {
+    ldflags = [ "-static-libstdc++" ]
     # TODO(TC-74): The implicitly linked static libc++.a depends on these.
     libs = [
       "dl",
       "pthread",
+    ]
+  } else if (current_os == "mac") {
+    ldflags = [ "-nostdlib++" ]
+    libs = [
+      "${toolchain.tool_dir}/../lib/libc++abi.a",
+      "${toolchain.tool_dir}/../lib/libc++.a",
     ]
   }
 }
