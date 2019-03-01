@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{stats_scheduler::StatsRequest, Never},
+    crate::{stats_scheduler::StatsRequest},
     failure::bail,
     fidl_fuchsia_wlan_mesh as fidl_mesh, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy},
@@ -22,6 +22,7 @@ use {
         sync::{Arc, Mutex},
     },
     wlan_sme::{mesh as mesh_sme, timer::TimeEntry, DeviceInfo},
+    void::Void,
 };
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
@@ -53,7 +54,7 @@ where
     pin_mut!(sme_fidl);
     select! {
         mlme_sme = mlme_sme.fuse() => mlme_sme?,
-        sme_fidl = sme_fidl.fuse() => sme_fidl?.into_any(),
+        sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
     }
     Ok(())
 }
@@ -62,7 +63,7 @@ async fn serve_fidl<'a>(
     sme: &'a Mutex<Sme>,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     proxy: &'a MlmeProxy,
-) -> Result<Never, failure::Error> {
+) -> Result<Void, failure::Error> {
     let mut fidl_clients = FuturesUnordered::new();
     let mut new_fidl_clients = new_fidl_clients.fuse();
     loop {

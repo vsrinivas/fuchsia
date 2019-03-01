@@ -59,6 +59,7 @@ use {
         sync::Arc,
         task::{Waker, Poll},
     },
+    void::Void,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -146,8 +147,6 @@ fn send_result<T>(
     }
 }
 
-pub enum Never {}
-
 struct State {
     device: DeviceProxy,
     events: HashMap<Event, oneshot::Sender<()>>,
@@ -176,7 +175,7 @@ impl Vsock {
     /// a fatal error occurs the future will never yield a result and will execute infinitely.
     pub async fn new(
         device: DeviceProxy,
-    ) -> Result<(Self, impl Future<Output = Result<Never, failure::Error>>), failure::Error> {
+    ) -> Result<(Self, impl Future<Output = Result<Void, failure::Error>>), failure::Error> {
         let (callbacks_client, callbacks_server) =
             endpoints::create_endpoints::<CallbacksMarker>()?;
         let server_stream = callbacks_server.into_stream()?;
@@ -206,7 +205,7 @@ impl Vsock {
     }
     async fn run_callbacks(
         self, mut callbacks: CallbacksRequestStream,
-    ) -> Result<Never, failure::Error> {
+    ) -> Result<Void, failure::Error> {
         while let Some(Ok(cb)) = await!(callbacks.next()) {
             self.lock().do_callback(cb);
         }

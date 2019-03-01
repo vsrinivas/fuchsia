@@ -30,8 +30,6 @@ use crate::server::sl4f_executor::run_fidl_loop;
 const SERVER_IP: &str = "0.0.0.0";
 const SERVER_PORT: &str = "80";
 
-pub enum Never {}
-
 // HTTP Server using Rouille
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["sl4f"]).expect("Can't init logger");

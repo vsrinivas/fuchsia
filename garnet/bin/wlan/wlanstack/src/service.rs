@@ -18,13 +18,13 @@ use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::Arc;
+use void::Void;
 
 use crate::device::{self, IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::station;
 use crate::stats_scheduler::StatsRef;
 use crate::watchable_map::MapEvent;
 use crate::watcher_service::{self, WatcherService};
-use crate::Never;
 
 const CONCURRENT_LIMIT: usize = 1000;
 
@@ -34,7 +34,7 @@ pub async fn device_service<S>(
     phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
     iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
     new_clients: S,
-) -> Result<Never, failure::Error>
+) -> Result<Void, failure::Error>
 where
     S: Stream<Item = fasync::Channel> + Unpin,
 {
@@ -46,8 +46,8 @@ where
     let mut new_clients = new_clients.fuse();
     loop {
         select! {
-            watcher_res = watcher_fut => watcher_res
-                .map_err(|e| format_err!("watcher service has failed: {}", e))?.into_any(),
+            watcher_res = watcher_fut => match watcher_res
+                .map_err(|e| format_err!("watcher service has failed: {}", e))? {},
             () = active_clients.select_next_some() => {},
             new_client = new_clients.next() => match new_client {
                 Some(channel) => {

@@ -19,11 +19,11 @@ use wlan_sme::client::{
     InfoEvent, ScanTxnId,
 };
 use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
+use void::Void;
 
 use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;
 use crate::telemetry;
-use crate::Never;
 use fuchsia_cobalt::CobaltSender;
 
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
@@ -64,7 +64,7 @@ where
     pin_mut!(sme_fidl);
     Ok(select! {
         mlme_sme = mlme_sme.fuse() => mlme_sme?,
-        sme_fidl = sme_fidl.fuse() => sme_fidl?.into_any(),
+        sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
     })
 }
 
@@ -73,7 +73,7 @@ async fn serve_fidl(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     info_stream: InfoStream,
     mut cobalt_sender: CobaltSender,
-) -> Result<Never, failure::Error> {
+) -> Result<Void, failure::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut info_stream = info_stream.fuse();
     let mut fidl_clients = FuturesUnordered::new();

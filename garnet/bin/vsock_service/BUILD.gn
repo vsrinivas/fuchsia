@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-hardware-vsock:fuchsia-hardware-vsock-rustc",
   ]
 }
@@ -42,6 +43,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-hardware-vsock:fuchsia-hardware-vsock-rustc",
   ]
 }

@@ -8,9 +8,9 @@ use futures::channel::{mpsc, oneshot};
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
+use void::Void;
 
 use crate::future_util::GroupAvailableExt;
-use crate::Never;
 
 // TODO(gbonik): get rid of the Mutex when FIDL APIs make it possible
 // Mutex is a workaround for the fact that Responder.send() takes a &mut.
@@ -29,7 +29,7 @@ pub fn create_scheduler() -> (StatsScheduler, impl Stream<Item = StatsRequest>) 
         .map(Ok)
         .group_available()
         .map_ok(StatsRequest)
-        .map(|x| x.unwrap_or_else(Never::into_any));
+        .map(|x| x.unwrap_or_else(|void: Void| match void {}));
     (scheduler, req_stream)
 }
 

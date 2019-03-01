@@ -22,6 +22,7 @@ use {
         net::{IpAddr, Ipv4Addr, SocketAddr},
         sync::Mutex,
     },
+    void::Void,
 };
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
@@ -74,12 +75,9 @@ fn get_server_config_file_path() -> Result<String, Error> {
     }
 }
 
-#[allow(unused)] // https://github.com/rust-lang/rust/issues/55124
-enum Never {}
 async fn define_msg_handling_loop_future<F: Fn() -> i64>(
-    sock: UdpSocket,
-    server: &Mutex<Server<F>>,
-) -> Result<Never, Error> {
+    sock: UdpSocket, server: &Mutex<Server<F>>,
+) -> Result<Void, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {
         let (received, mut sender) = await!(sock.recv_from(&mut *buf))

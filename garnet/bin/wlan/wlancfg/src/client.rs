@@ -20,6 +20,7 @@ use futures::{
 };
 use pin_utils::pin_mut;
 use std::sync::Arc;
+use void::ResultVoidErrExt;
 
 const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
@@ -89,14 +90,12 @@ async fn serve(
     let state_machine = auto_connect_state(services, req_stream.into_future()).into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
-        state_machine = state_machine.fuse() => match state_machine {
-            Ok(never) => never.into_any(),
-            Err(e) => println!("wlancfg: Client station state machine \
-                                for iface #{} terminated with an error: {}", iface_id, e)
-        },
+        state_machine = state_machine.fuse() =>
+            println!("wlancfg: Client station state machine for iface #{} terminated with an error: {}",
+                iface_id, state_machine.void_unwrap_err()),
         removal_watcher = removal_watcher.fuse() => if let Err(e) = removal_watcher {
             println!("wlancfg: Error reading from Client SME channel of iface #{}: {}",
-                     iface_id, e);
+                iface_id, e);
         },
     }
     println!("wlancfg: Removed client station for iface #{}", iface_id);

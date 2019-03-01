@@ -23,19 +23,12 @@ use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use std::sync::Arc;
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Never {}
-impl Never {
-    pub fn into_any<T>(self) -> T {
-        match self {}
-    }
-}
+use void::Void;
 
 fn serve_fidl(
     _client_ref: shim::ClientRef,
     ess_store: Arc<KnownEssStore>,
-) -> impl Future<Output = Result<Never, Error>> {
+) -> impl Future<Output = Result<Void, Error>> {
     future::ready(
         ServicesServer::new()
             .add_service((legacy::WlanMarker::NAME, move |channel| {
@@ -70,5 +63,5 @@ fn main() -> Result<(), Error> {
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
-    executor.run_singlethreaded(fidl_fut.try_join(fut)).map(|_: (Never, Never)| ())
+    executor.run_singlethreaded(fidl_fut.try_join(fut)).map(|_: (Void, Void)| ())
 }

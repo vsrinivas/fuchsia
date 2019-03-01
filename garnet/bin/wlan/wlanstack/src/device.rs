@@ -17,6 +17,7 @@ use {
     log::{error, info},
     std::{marker::Unpin, sync::Arc},
     wlan_sme::{self, clone_utils},
+    void::Void,
 };
 
 use crate::{
@@ -25,7 +26,6 @@ use crate::{
     station,
     stats_scheduler::{self, StatsScheduler},
     watchable_map::WatchableMap,
-    Never,
 };
 
 pub struct PhyDevice {
@@ -54,7 +54,7 @@ pub struct IfaceDevice {
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
 pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
-pub async fn serve_phys(phys: Arc<PhyMap>) -> Result<Never, Error> {
+pub async fn serve_phys(phys: Arc<PhyMap>) -> Result<Void, Error> {
     let mut new_phys = device_watch::watch_phy_devices()?;
     let mut active_phys = FuturesUnordered::new();
     loop {
@@ -90,7 +90,7 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
 pub async fn serve_ifaces(
     ifaces: Arc<IfaceMap>,
     cobalt_sender: CobaltSender,
-) -> Result<Never, Error> {
+) -> Result<Void, Error> {
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = FuturesUnordered::new();
     loop {

@@ -15,9 +15,9 @@ use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_common::RadioConfig;
 use wlan_sme::{ap as ap_sme, DeviceInfo};
+use void::Void;
 
 use crate::stats_scheduler::StatsRequest;
-use crate::Never;
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme;
@@ -47,7 +47,7 @@ where
     pin_mut!(sme_fidl);
     select! {
         mlme_sme = mlme_sme.fuse() => mlme_sme?,
-        sme_fidl = sme_fidl.fuse() => sme_fidl?.into_any(),
+        sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
     }
     Ok(())
 }
@@ -55,7 +55,7 @@ where
 async fn serve_fidl(
     sme: &Mutex<Sme>,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-) -> Result<Never, failure::Error> {
+) -> Result<Void, failure::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut fidl_clients = FuturesUnordered::new();
     loop {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Never;
+use void::Void;
 
 use futures::{
     future::{Future, FutureExt, FutureObj},
@@ -20,7 +20,7 @@ pub struct StateMachine<E> {
 impl<E> Unpin for StateMachine<E> {}
 
 impl<E> Future for StateMachine<E> {
-    type Output = Result<Never, E>;
+    type Output = Result<Void, E>;
 
     fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         loop {

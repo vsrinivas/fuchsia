@@ -32,6 +32,7 @@ use futures::channel::mpsc::{self, UnboundedReceiver};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
+use void::Void;
 
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watchable_map::MapEvent;
@@ -41,17 +42,6 @@ const COBALT_BUFFER_SIZE: usize = 100;
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 static LOGGER: logger::Logger = logger::Logger;
-
-#[allow(missing_docs)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Never {}
-
-impl Never {
-    #[allow(missing_docs)]
-    pub fn into_any<T>(self) -> T {
-        match self {}
-    }
-}
 
 fn main() -> Result<(), Error> {
     log::set_logger(&LOGGER)?;
@@ -66,14 +56,14 @@ fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let ifaces = Arc::new(ifaces);
 
-    let phy_server = device::serve_phys(phys.clone()).map_ok(|x| x.into_any());
+    let phy_server = device::serve_phys(phys.clone()).map_ok(|x| match x {});
     let (cobalt_sender, cobalt_reporter) =
         fuchsia_cobalt::serve(COBALT_BUFFER_SIZE, COBALT_CONFIG_PATH);
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
-    let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender).map_ok(|x| x.into_any());
+    let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender).map_ok(|x| match x {});
     let services_server =
-        serve_fidl(phys, ifaces, phy_events, iface_events)?.map_ok(Never::into_any);
+        serve_fidl(phys, ifaces, phy_events, iface_events)?.map_ok(|void| match void {});
 
     exec.run_singlethreaded(services_server.try_join5(
         phy_server,
@@ -89,7 +79,7 @@ fn serve_fidl(
     ifaces: Arc<IfaceMap>,
     phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
     iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
-) -> Result<impl Future<Output = Result<Never, Error>>, Error> {
+) -> Result<impl Future<Output = Result<Void, Error>>, Error> {
     let (sender, receiver) = mpsc::unbounded();
     let fdio_server = ServicesServer::new()
         .add_service((DeviceServiceMarker::NAME, move |channel| {
@@ -102,5 +92,5 @@ fn serve_fidl(
         .and_then(|()| future::ready(Err(format_err!("fdio server future exited unexpectedly"))))
         .map_err(|e| e.context("fdio server terminated with error").into());
     let device_service = service::device_service(phys, ifaces, phy_events, iface_events, receiver);
-    Ok(fdio_server.try_join(device_service).map_ok(|x: (Never, Never)| x.0))
+    Ok(fdio_server.try_join(device_service).map_ok(|x: (Void, Void)| x.0))
 }

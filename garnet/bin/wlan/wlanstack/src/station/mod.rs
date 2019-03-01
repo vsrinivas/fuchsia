@@ -21,10 +21,10 @@ use wlan_sme::{
     timer::{TimeEntry, TimedEvent},
     MlmeRequest, MlmeStream, Station,
 };
+use void::Void;
 
 use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;
-use crate::Never;
 
 // The returned future successfully terminates when MLME closes the channel
 async fn serve_mlme_sme<STA, SRS, TS>(
@@ -72,7 +72,7 @@ where
                 Some(timed_event) => station.lock().unwrap().on_timeout(timed_event),
                 None => bail!("SME timer stream has ended unexpectedly"),
             },
-            stats = stats_fut => stats?.into_any(),
+            stats = stats_fut => match stats? {},
         }
     }
 }
@@ -125,7 +125,7 @@ async fn serve_stats<S>(
     proxy: MlmeProxy,
     mut stats_requests: S,
     mut responses: mpsc::Receiver<IfaceStats>,
-) -> Result<Never, failure::Error>
+) -> Result<Void, failure::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
