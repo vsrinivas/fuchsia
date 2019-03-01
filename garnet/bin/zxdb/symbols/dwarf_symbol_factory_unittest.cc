@@ -174,6 +174,13 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   // we care that the enclosing namespace is correct because of the different
   // ways these inlined routines are declared.
   EXPECT_EQ("my_ns::InlinedFunction", inline_func->GetFullName());
+
+  // The containing block of the inline function should be the calling
+  // function. Note that the objects may not be the same.
+  ASSERT_TRUE(inline_func->containing_block());
+  auto containing_func = inline_func->containing_block().Get()->AsFunction();
+  ASSERT_TRUE(containing_func);
+  EXPECT_EQ(kCallInlineName, containing_func->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, ModifiedBaseType) {

@@ -342,23 +342,24 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   function->set_inner_blocks(std::move(inner_blocks));
   function->set_variables(std::move(variables));
 
-  if (parent) {
-    if (!function->parent()) {
-      // Set the parent symbol when it hasn't already been set. We always want
-      // the specification's parent instead of the implementation block's
-      // parent (if they're different) because the namespace and enclosing
-      // class information comes from the declaration.
-      //
-      // If this is already set, it means we recursively followed the
-      // specification which already set it.
-      function->set_parent(MakeLazy(parent));
-    }
+  if (parent && !function->parent()) {
+    // Set the parent symbol when it hasn't already been set. We always want
+    // the specification's parent instead of the implementation block's
+    // parent (if they're different) because the namespace and enclosing
+    // class information comes from the declaration.
+    //
+    // If this is already set, it means we recursively followed the
+    // specification which already set it.
+    function->set_parent(MakeLazy(parent));
+  }
 
-    if (tag == Symbol::kTagInlinedSubroutine) {
-      // In contrast to the logic for parent() above, the containing block
-      // will save the CodeBlock inlined functions are embedded in.
-      function->set_containing_block(MakeLazy(parent));
-    }
+  if (tag == Symbol::kTagInlinedSubroutine) {
+    // In contrast to the logic for parent() above, the direct containing block
+    // of the inlined subroutine will save the CodeBlock inlined functions are
+    // embedded in.
+    llvm::DWARFDie direct_parent = die.getParent();
+    if (direct_parent)
+      function->set_containing_block(MakeLazy(direct_parent));
   }
 
   return function;
