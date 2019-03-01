@@ -36,16 +36,13 @@ int main(int argc, const char** argv) {
   AddGraphicsBenchmarks(&benchmarks_runner);
 
   // Test storage performance.
-  // TODO(INTK-858): Re-enable these tests.  These invocations were broken
-  // by Zircon's switch to using GN to build.
-#if 0
   std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
   if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
     constexpr const char* block_device =
         "/dev/sys/pci/00:17.0/ahci/sata2/block";
 
     benchmarks_runner.AddTask([=]() {
-      int status = benchmarking::Spawn({"/system/bin/waitfor", "class=block",
+      int status = benchmarking::Spawn({"/boot/bin/waitfor", "class=block",
                                         std::string("topo=") + block_device,
                                         "timeout=30000"});
       FXL_CHECK(status == 0);
@@ -56,19 +53,20 @@ int main(int argc, const char** argv) {
       std::string out_file = benchmarks_runner.MakeTempFile();
       benchmarks_runner.AddCustomBenchmark(
           "block_device_throughput",
-          {"/pkgfs/system/bin/biotime", "-output-file", out_file, block_device},
+          {"/boot/bin/biotime", "-output-file", out_file, block_device},
           out_file);
     }
 
     // Test filesystem performance.
     benchmarks_runner.AddLibPerfTestBenchmark(
-        "fs_bench", "/system/test/fs/fs-bench-test",
+        "fs_bench", "/pkgfs/packages/garnet_benchmarks/0/test/fs/fs-bench-test",
         {"--fs", "minfs", "--block_device", block_device,
          "--print_statistics"});
 
     // Test BlobFs performance.
     benchmarks_runner.AddLibPerfTestBenchmark(
-        "blobfs_bench", "/system/test/sys/blobfs-bench-test",
+        "blobfs_bench",
+        "/pkgfs/packages/garnet_benchmarks/0/test/sys/blobfs-bench-test",
         {"--fs", "blobfs", "--block_device", block_device,
          "--print_statistics"});
   } else if (benchmarks_bot_name == "garnet-arm64-perf-vim2") {
@@ -81,7 +79,6 @@ int main(int argc, const char** argv) {
                    << "' not recognized: please update benchmarks.cc in garnet";
     exit(1);
   }
-#endif
 
   // List block devices.  This is for debugging purposes and to help with
   // enabling the storage tests above on new devices.  We do this at the end
