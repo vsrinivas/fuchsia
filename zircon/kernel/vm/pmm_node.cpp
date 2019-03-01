@@ -266,7 +266,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
     return ZX_ERR_NOT_FOUND;
 }
 
-void PmmNode::FreePageLocked(vm_page* page) {
+void PmmNode::FreePageHelperLocked(vm_page* page) {
     LTRACEF("page %p state %u paddr %#" PRIxPTR "\n", page, page->state, page->paddr());
 
     DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
@@ -276,13 +276,17 @@ void PmmNode::FreePageLocked(vm_page* page) {
     FreeFill(page);
 #endif
 
-    // remove it from its old queue
-    if (list_in_list(&page->queue_node)) {
-        list_delete(&page->queue_node);
-    }
-
     // mark it free
     page->state = VM_PAGE_STATE_FREE;
+}
+
+void PmmNode::FreePage(vm_page* page) {
+    Guard<fbl::Mutex> guard{&lock_};
+
+    // pages freed individually shouldn't be in a queue
+    DEBUG_ASSERT(!list_in_list(&page->queue_node));
+
+    FreePageHelperLocked(page);
 
     // add it to the free queue
     list_add_head(&free_list_, &page->queue_node);
@@ -290,20 +294,21 @@ void PmmNode::FreePageLocked(vm_page* page) {
     free_count_++;
 }
 
-void PmmNode::FreePage(vm_page* page) {
-    Guard<fbl::Mutex> guard{&lock_};
-
-    FreePageLocked(page);
-}
-
 void PmmNode::FreeListLocked(list_node* list) {
     DEBUG_ASSERT(list);
 
-    while (!list_is_empty(list)) {
-        vm_page* page = list_remove_head_type(list, vm_page, queue_node);
-
-        FreePageLocked(page);
+    // process list backwards so the head is as hot as possible
+    uint64_t count = 0;
+    for (vm_page* page = list_peek_tail_type(list, vm_page, queue_node); page != nullptr;
+            page = list_prev_type(list, &page->queue_node, vm_page, queue_node)) {
+        FreePageHelperLocked(page);
+        count++;
     }
+
+    // splice list at the head of free_list_
+    list_splice_after(list, &free_list_);
+
+    free_count_ += count;
 }
 
 void PmmNode::FreeList(list_node* list) {

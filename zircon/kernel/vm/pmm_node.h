@@ -56,7 +56,7 @@ public:
     void AddFreePages(list_node* list);
 
 private:
-    void FreePageLocked(vm_page* page) TA_REQ(lock_);
+    void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
     void FreeListLocked(list_node* list) TA_REQ(lock_);
 
     fbl::Canary<fbl::magic("PNOD")> canary_;
