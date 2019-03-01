@@ -59,6 +59,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
     fprintf(stderr,
             "\noptions:                                            \n"
             "   -h: See this message                               \n"
+            "   -d: dry run, just print test file names and exit.  \n"
             "   -v: Verbose output                                 \n"
             "   -q: Quiet output                                   \n"
             "   -S: Turn ON  Small tests         (on by default)   \n"
@@ -110,6 +111,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     signed char verbosity = -1;
     int watchdog_timeout_seconds = -1;
     const char* test_list_path = nullptr;
+    bool dry_run = false;
 
     int optind = 1;
     while (optind < argc) {
@@ -208,6 +210,10 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
             watchdog_timeout_seconds = static_cast<int>(timeout);
             break;
         }
+        case 'd': {
+            dry_run = true;
+            break;
+        }
         default:
             return Usage(argv[0], default_test_dirs);
         }
@@ -278,6 +284,14 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     if (output_dir != nullptr && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
         fprintf(stderr, "Error: Could not open %s\n", output_dir);
         return EXIT_FAILURE;
+    }
+
+    if (dry_run) {
+      printf("Would run the following tests:\n");
+      for (const auto& test_path : test_paths) {
+        printf("\t%s\n", test_path.c_str());
+      }
+      return EXIT_SUCCESS;
     }
 
     // TODO(mknyszek): Sort test_paths for deterministic behavior. Should be easy after ZX-1751.
