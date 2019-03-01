@@ -477,6 +477,12 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
   auto symtab = reinterpret_cast<const Elf64_Sym*>(dynsym_mem.ptr);
   auto sym_count = dynsym_mem.size / sizeof(Elf64_Sym);
 
+  ElfLib::MemoryRegion dynstr_mem = GetSectionData(".dynstr");
+
+  if (!dynstr_mem.ptr) {
+    return {};
+  }
+
   auto pos = plt + 1;  // First PLT entry is special. Ignore it.
   uint64_t idx = 1;
 
@@ -500,14 +506,15 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
       continue;
     }
 
-    auto name = GetString(symtab[sym_idx].st_name);
+    auto name = GetNullTerminatedStringAt(dynstr_mem.ptr, dynstr_mem.size,
+                                          symtab[sym_idx].st_name);
 
-    if (!name) {
+    if (!name.size()) {
       FXL_LOG(WARNING) << "PLT symbol name could not be retrieved.";
       continue;
     }
 
-    ret[*name] = idx * sizeof(PltEntry) + plt_load_addr;
+    ret[name] = idx * sizeof(PltEntry) + plt_load_addr;
   }
 
   return ret;
