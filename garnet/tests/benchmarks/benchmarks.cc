@@ -22,19 +22,16 @@ int main(int argc, const char** argv) {
       "benchmark_example",
       "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
 
-  // TODO(INTK-858): Re-enable these tests.  These invocations were broken
-  // by Zircon's switch to using GN to build.
-#if 0
   // Performance tests implemented in the Zircon repo.
-  benchmarks_runner.AddLibPerfTestBenchmark("zircon.perf_test",
-                                            "/system/test/sys/perf-test");
+  benchmarks_runner.AddLibPerfTestBenchmark(
+      "zircon.perf_test",
+      "/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test");
 
   // Performance tests implemented in the Garnet repo (the name
   // "zircon_benchmarks" is now misleading).
   benchmarks_runner.AddLibPerfTestBenchmark(
       "zircon_benchmarks",
       "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
-#endif
 
   AddGraphicsBenchmarks(&benchmarks_runner);
 

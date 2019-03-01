@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 test("perftest") {
+  output_name = "perf-test"
   sources = [
     "clock-test.cpp",
     "handle-creation-test.cpp",
