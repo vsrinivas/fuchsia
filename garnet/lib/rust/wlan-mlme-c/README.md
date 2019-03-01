@@ -8,17 +8,11 @@ Install the tool via:
 cargo install cbindgen
 ```
 
-## Generate Cargo.toml files
+## Generate Cargo.toml file
 
-Generate `wlan-common`, `wlan-mlme` and `wlan-mlme-c` Cargo.toml files by running the following command from each directory:
+Generate a Cargo.toml for `wlan-mlme-c` by running the following command:
 ```
-cd $FUCHSIA_DIR/garnet/lib/rust/wlan-common
-rm Cargo.lock Cargo.toml
-fx gen-cargo .
-cd ../wlan-mlme
-rm Cargo.lock Cargo.toml
-fx gen-cargo .
-cd ../wlan-mlme-c
+cd $FUCHSIA_DIR/garnet/lib/rust/wlan-mlme-c
 rm Cargo.lock Cargo.toml
 fx gen-cargo .
 ```
