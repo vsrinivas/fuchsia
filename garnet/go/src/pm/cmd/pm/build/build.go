@@ -31,6 +31,7 @@ func Run(cfg *build.Config, args []string) error {
 	var depfile = fs.Bool("depfile", true, "Produce a depfile")
 	var sizesfile = fs.Bool("sizesfile", false, "Produce blobs.sizes file")
 	var blobsfile = fs.Bool("blobsfile", false, "Produce blobs.json file")
+	var blobsmani = fs.Bool("blobs-manifest", false, "Produce blobs.manifest file")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
@@ -86,11 +87,21 @@ func Run(cfg *build.Config, args []string) error {
 		}
 
 		if *blobsfile {
-			content, err := buildContentsManifest(blobs)
+			content, err := json.Marshal(blobs)
 			if err != nil {
 				return err
 			}
 			if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.json"), content, 0644); err != nil {
+				return err
+			}
+		}
+
+		if *blobsmani {
+			var buf bytes.Buffer
+			for _, blob := range blobs {
+				fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle.String(), blob.SourcePath)
+			}
+			if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
 				return err
 			}
 		}
@@ -200,12 +211,8 @@ func buildSizesFile(blobs []build.PackageBlobInfo) []byte {
 	var buf bytes.Buffer
 
 	for _, member := range blobs {
-		fmt.Fprintf(&buf, "%s=%d\n", member.Merkle, member.Size)
+		fmt.Fprintf(&buf, "%x=%d\n", member.Merkle, member.Size)
 	}
 
 	return buf.Bytes()
-}
-
-func buildContentsManifest(blobs []build.PackageBlobInfo) ([]byte, error) {
-	return json.Marshal(blobs)
 }
