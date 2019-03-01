@@ -100,8 +100,6 @@ type ifState struct {
 			enabled bool
 		}
 	}
-	ctx    context.Context
-	cancel context.CancelFunc
 
 	// The "outermost" LinkEndpoint implementation (the composition of link
 	// endpoint functionality happens by wrapping other link endpoints).
@@ -449,7 +447,6 @@ func (ifs *ifState) stateChange(s link.State) {
 
 	case link.StateStarted:
 		logger.Infof("NIC %s: starting", ifs.mu.nic.Name)
-		ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
 		// Re-enable static routes out this interface.
 		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.mu.nic.ID, routes.ActionEnableStatic)
 		if ifs.mu.dhcp.enabled {
