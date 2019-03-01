@@ -33,7 +33,6 @@ rls*.log
 Session.vim
 tags
 Thumbs.db
-/tools/
 tools/cipd.gni
 topaz/
 vendor/
@@ -60,7 +59,6 @@ tmp/
 /third_party/*
 !/third_party/rust_crates
 /tmp/
-/tools/
 /topaz/
 /vendor/
 # All files in vendor need to be delivered as is, as they use
