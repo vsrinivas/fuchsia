@@ -256,8 +256,8 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     uint16_t ext_offset_ = 0;
 };
 
-rust_mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet);
-fbl::unique_ptr<Packet> FromRustOutBuf(rust_mlme_out_buf_t buf);
+mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet);
+fbl::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf);
 bool IsBodyAligned(const Packet& pkt);
 
 class PacketQueue {
@@ -304,7 +304,7 @@ fbl::unique_ptr<Packet> GetEthPacket(size_t len);
 fbl::unique_ptr<Packet> GetWlanPacket(size_t len);
 fbl::unique_ptr<Packet> GetSvcPacket(size_t len);
 
-extern rust_mlme_buffer_provider_ops_t rust_buffer_provider;
+extern mlme_buffer_provider_ops_t rust_buffer_provider;
 
 }  // namespace wlan
 

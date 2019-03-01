@@ -46,7 +46,7 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
       timer_mgr_(std::move(timer_mgr)),
       chan_sched_(chan_sched),
       join_ctx_(join_ctx),
-      seq_mgr_(rust_mlme_sequence_manager_new(), rust_mlme_sequence_manager_delete) {
+      seq_mgr_(mlme_sequence_manager_new(), mlme_sequence_manager_delete) {
     Reset();
 }
 
@@ -155,10 +155,9 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
 
     debugjoin("authenticating to %s\n", join_ctx_->bssid().ToString().c_str());
 
-    rust_mlme_out_buf_t out_buf;
-    auto status =
-        rust_mlme_write_open_auth_frame(rust_buffer_provider, seq_mgr_.get(),
-                                        &join_ctx_->bssid().byte, &self_addr().byte, &out_buf);
+    mlme_out_buf_t out_buf;
+    auto status = mlme_write_open_auth_frame(rust_buffer_provider, seq_mgr_.get(),
+                                             &join_ctx_->bssid().byte, &self_addr().byte, &out_buf);
     if (status != ZX_OK) {
         errorf("could not write open auth frame: %d\n", status);
         service::SendAuthConfirm(device_, join_ctx_->bssid(),
@@ -248,7 +247,7 @@ zx_status_t Station::Associate(Span<const uint8_t> rsne) {
     mgmt_hdr->addr1 = join_ctx_->bssid();
     mgmt_hdr->addr2 = self_addr();
     mgmt_hdr->addr3 = join_ctx_->bssid();
-    auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
     mgmt_hdr->sc.set_seq(seq_num);
 
     auto ifc_info = device_->GetWlanInfo().ifc_info;
@@ -373,7 +372,7 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     timer_mgr_.Cancel(auth_timeout_);
 
     auto auth_hdr = frame.body_data();
-    zx_status_t status = rust_mlme_is_valid_open_auth_resp(auth_hdr.data(), auth_hdr.size());
+    zx_status_t status = mlme_is_valid_open_auth_resp(auth_hdr.data(), auth_hdr.size());
     if (status == ZX_OK) {
         state_ = WlanState::kAuthenticated;
         debugjoin("authenticated to %s\n", join_ctx_->bssid().ToString().c_str());
@@ -541,7 +540,7 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
     mgmt_hdr->addr1 = join_ctx_->bssid();
     mgmt_hdr->addr2 = self_addr();
     mgmt_hdr->addr3 = join_ctx_->bssid();
-    auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
     mgmt_hdr->sc.set_seq(seq_num);
 
     w.Write<ActionFrame>()->category = ActionFrameBlockAck::ActionCategory();
@@ -732,11 +731,11 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
         qos_ctrl->set_amsdu_present(0);
         qos_ctrl->set_byte(0);
 
-        auto seq_num = rust_mlme_sequence_manager_next_sns2(seq_mgr_.get(), &data_hdr->addr1.byte,
-                                                            qos_ctrl->tid());
+        auto seq_num =
+            mlme_sequence_manager_next_sns2(seq_mgr_.get(), &data_hdr->addr1.byte, qos_ctrl->tid());
         data_hdr->sc.set_seq(seq_num);
     } else {
-        auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
+        auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
         data_hdr->sc.set_seq(seq_num);
     }
 
@@ -823,10 +822,10 @@ zx_status_t Station::SendKeepAliveResponse() {
         return ZX_OK;
     }
 
-    rust_mlme_out_buf_t out_buf;
-    auto status = rust_mlme_write_keep_alive_resp_frame(rust_buffer_provider, seq_mgr_.get(),
-                                                        &join_ctx_->bssid().byte, &self_addr().byte,
-                                                        &out_buf);
+    mlme_out_buf_t out_buf;
+    auto status =
+        mlme_write_keep_alive_resp_frame(rust_buffer_provider, seq_mgr_.get(),
+                                         &join_ctx_->bssid().byte, &self_addr().byte, &out_buf);
     if (status != ZX_OK) {
         errorf("could not write keep alive frame: %d\n", status);
         return status;
@@ -861,7 +860,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     mgmt_hdr->addr1 = join_ctx_->bssid();
     mgmt_hdr->addr2 = self_addr();
     mgmt_hdr->addr3 = join_ctx_->bssid();
-    auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
     mgmt_hdr->sc.set_seq(seq_num);
 
     auto action_hdr = w.Write<ActionFrame>();
@@ -924,7 +923,7 @@ zx_status_t Station::SendEapolFrame(Span<const uint8_t> eapol_frame, const commo
     data_hdr->addr1 = dst;
     data_hdr->addr2 = src;
     data_hdr->addr3 = dst;
-    auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
+    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
     data_hdr->sc.set_seq(seq_num);
 
     auto llc_hdr = w.Write<LlcHeader>();
@@ -1057,7 +1056,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     data_hdr->addr1 = join_ctx_->bssid();
     data_hdr->addr2 = self_addr();
     data_hdr->addr3 = join_ctx_->bssid();
-    auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
+    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
     data_hdr->sc.set_seq(seq_num);
 
     packet->set_len(w.WrittenBytes());
@@ -1116,7 +1115,7 @@ zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
     mgmt_hdr->addr1 = join_ctx_->bssid();
     mgmt_hdr->addr2 = self_addr();
     mgmt_hdr->addr3 = join_ctx_->bssid();
-    auto seq_num = rust_mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
     mgmt_hdr->sc.set_seq(seq_num);
 
     auto deauth = w.Write<Deauthentication>();

@@ -5,19 +5,19 @@
 use {crate::utils, fuchsia_zircon::sys as zx, wlan_mlme::common::sequence::SequenceManager};
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_sequence_manager_new() -> *mut SequenceManager {
+pub extern "C" fn mlme_sequence_manager_new() -> *mut SequenceManager {
     Box::into_raw(Box::new(SequenceManager::new()))
 }
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_sequence_manager_delete(mgr: *mut SequenceManager) {
+pub extern "C" fn mlme_sequence_manager_delete(mgr: *mut SequenceManager) {
     if !mgr.is_null() {
         unsafe { Box::from_raw(mgr) };
     }
 }
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_sequence_manager_next_sns1(
+pub extern "C" fn mlme_sequence_manager_next_sns1(
     mgr: &mut SequenceManager,
     sta_addr: &[u8; 6],
 ) -> u32 {
@@ -25,7 +25,7 @@ pub extern "C" fn rust_mlme_sequence_manager_next_sns1(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_sequence_manager_next_sns2(
+pub extern "C" fn mlme_sequence_manager_next_sns2(
     mgr: &mut SequenceManager,
     sta_addr: &[u8; 6],
     tid: u16,

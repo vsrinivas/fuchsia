@@ -68,7 +68,7 @@ class Station : public ClientInterface {
 
    private:
     using SequenceManager =
-        std::unique_ptr<rust_mlme_sequence_manager_t, void (*)(rust_mlme_sequence_manager_t*)>;
+        std::unique_ptr<mlme_sequence_manager_t, void (*)(mlme_sequence_manager_t*)>;
 
     static constexpr size_t kAssocBcnCountTimeout = 20;
     static constexpr size_t kSignalReportBcnCountTimeout = 10;

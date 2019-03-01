@@ -185,7 +185,7 @@ typedef enum {
 /**
  * Manages all SNS for a STA.
  */
-typedef struct rust_mlme_sequence_manager_t rust_mlme_sequence_manager_t;
+typedef struct mlme_sequence_manager_t mlme_sequence_manager_t;
 
 /**
  * An input buffer will always be returned to its original owner when no longer
@@ -205,7 +205,7 @@ typedef struct {
    */
   uint8_t *data;
   uintptr_t len;
-} rust_mlme_in_buf_t;
+} mlme_in_buf_t;
 
 typedef struct {
   /**
@@ -214,8 +214,8 @@ typedef struct {
    * to this crate. The buffer will be returned via the `free_buffer` callback
    * when it's no longer used.
    */
-  rust_mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
-} rust_mlme_buffer_provider_ops_t;
+  mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
+} mlme_buffer_provider_ops_t;
 
 /**
  * An output buffer requires its owner to manage the underlying buffer's memory
@@ -233,36 +233,34 @@ typedef struct {
    */
   uint8_t *data;
   uintptr_t written_bytes;
-} rust_mlme_out_buf_t;
+} mlme_out_buf_t;
 
-extern "C" int32_t rust_mlme_is_valid_open_auth_resp(const uint8_t *data,
-                                                     uintptr_t len);
+extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data,
+                                                uintptr_t len);
 
-extern "C" void rust_mlme_sequence_manager_delete(
-    rust_mlme_sequence_manager_t *mgr);
+extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
 
-extern "C" rust_mlme_sequence_manager_t *rust_mlme_sequence_manager_new(void);
+extern "C" mlme_sequence_manager_t *mlme_sequence_manager_new(void);
 
-extern "C" uint32_t rust_mlme_sequence_manager_next_sns1(
-    rust_mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6]);
+extern "C" uint32_t mlme_sequence_manager_next_sns1(
+    mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6]);
 
-extern "C" uint32_t rust_mlme_sequence_manager_next_sns2(
-    rust_mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6],
-    uint16_t tid);
+extern "C" uint32_t mlme_sequence_manager_next_sns2(
+    mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6], uint16_t tid);
 
-extern "C" int32_t rust_mlme_write_eth_frame(
-    rust_mlme_buffer_provider_ops_t provider, const uint8_t (*dst_addr)[6],
+extern "C" int32_t mlme_write_eth_frame(
+    mlme_buffer_provider_ops_t provider, const uint8_t (*dst_addr)[6],
     const uint8_t (*src_addr)[6], uint16_t protocol_id, const uint8_t *payload,
-    uintptr_t payload_len, rust_mlme_out_buf_t *out_buf);
+    uintptr_t payload_len, mlme_out_buf_t *out_buf);
 
-extern "C" int32_t rust_mlme_write_keep_alive_resp_frame(
-    rust_mlme_buffer_provider_ops_t provider,
-    rust_mlme_sequence_manager_t *seq_mgr, const uint8_t (*bssid)[6],
-    const uint8_t (*client_addr)[6], rust_mlme_out_buf_t *out_buf);
+extern "C" int32_t mlme_write_keep_alive_resp_frame(
+    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
+    const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
+    mlme_out_buf_t *out_buf);
 
-extern "C" int32_t rust_mlme_write_open_auth_frame(
-    rust_mlme_buffer_provider_ops_t provider,
-    rust_mlme_sequence_manager_t *seq_mgr, const uint8_t (*bssid)[6],
-    const uint8_t (*client_addr)[6], rust_mlme_out_buf_t *out_buf);
+extern "C" int32_t mlme_write_open_auth_frame(
+    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
+    const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
+    mlme_out_buf_t *out_buf);
 
 #endif /* GARNET_LIB_RUST_WLAN_MLME_ABI_H_ */

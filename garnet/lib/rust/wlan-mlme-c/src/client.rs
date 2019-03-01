@@ -13,7 +13,7 @@ use {
 };
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_write_open_auth_frame(
+pub extern "C" fn mlme_write_open_auth_frame(
     provider: BufferProvider,
     seq_mgr: &mut SequenceManager,
     bssid: &[u8; 6],
@@ -30,7 +30,7 @@ pub extern "C" fn rust_mlme_write_open_auth_frame(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_write_keep_alive_resp_frame(
+pub extern "C" fn mlme_write_keep_alive_resp_frame(
     provider: BufferProvider,
     seq_mgr: &mut SequenceManager,
     bssid: &[u8; 6],
@@ -48,7 +48,7 @@ pub extern "C" fn rust_mlme_write_keep_alive_resp_frame(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_write_eth_frame(
+pub extern "C" fn mlme_write_eth_frame(
     provider: BufferProvider,
     dst_addr: &[u8; 6],
     src_addr: &[u8; 6],

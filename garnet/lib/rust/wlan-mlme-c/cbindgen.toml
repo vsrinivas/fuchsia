@@ -25,10 +25,10 @@ include = ["BufferProvider", "InBuf", "OutBuf", "ReasonCode", "StatusCode"]
 # Unfortunately cbindgen's rename machinery is rather simple
 # and doesn't accomodate our needs. As a result we have to
 # explicitly declare the items which should get renamed
-"BufferProvider" = "rust_mlme_buffer_provider_ops_t"
-"InBuf" = "rust_mlme_in_buf_t"
-"OutBuf" = "rust_mlme_out_buf_t"
-"SequenceManager" = "rust_mlme_sequence_manager_t"
+"BufferProvider" = "mlme_buffer_provider_ops_t"
+"InBuf" = "mlme_in_buf_t"
+"OutBuf" = "mlme_out_buf_t"
+"SequenceManager" = "mlme_sequence_manager_t"
 "ReasonCode" = "wlan_reason_code"
 "StatusCode" = "wlan_status_code"
 

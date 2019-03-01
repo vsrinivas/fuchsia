@@ -44,9 +44,9 @@ bool IsBodyAligned(const Packet& pkt) {
     return rx != nullptr && rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
 }
 
-rust_mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
+mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
     auto* pkt = packet.release();
-    return rust_mlme_in_buf_t{
+    return mlme_in_buf_t{
         .data = pkt->data(),
         .len = pkt->len(),
         .raw = pkt,
@@ -55,7 +55,7 @@ rust_mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
     };
 }
 
-fbl::unique_ptr<Packet> FromRustOutBuf(rust_mlme_out_buf_t buf) {
+fbl::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf) {
     if (!buf.raw) { return {}; }
     auto pkt = fbl::unique_ptr<Packet>(static_cast<Packet*>(buf.raw));
     pkt->set_len(buf.written_bytes);
@@ -120,8 +120,8 @@ fbl::unique_ptr<Packet> GetSvcPacket(size_t len) {
     return GetPacket(len, Packet::Peer::kService);
 }
 
-rust_mlme_buffer_provider_ops_t rust_buffer_provider {
-    .get_buffer = [](size_t min_len) -> rust_mlme_in_buf_t {
+mlme_buffer_provider_ops_t rust_buffer_provider{
+    .get_buffer = [](size_t min_len) -> mlme_in_buf_t {
         // Note: Once Rust MLME supports more than sending WLAN frames this needs to change.
         auto pkt = GetWlanPacket(min_len);
         ZX_DEBUG_ASSERT(pkt != nullptr);
