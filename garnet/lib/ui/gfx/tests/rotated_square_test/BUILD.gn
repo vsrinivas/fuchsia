@@ -1,0 +1,14 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_tool.gni")
+
+# TODO(rosswang): Migrate to dart_test once it's ready.
+dart_tool("rotated_square_test") {
+  main_dart = "lib/rotated_square_test.dart"
+
+  deps = [
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
