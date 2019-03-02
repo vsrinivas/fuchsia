@@ -766,7 +766,7 @@ template("package") {
 
       # Merge all component and package manifests in single file
       action(final_manifest) {
-        script = "//build/cat.py"
+        script = "//build/cat.sh"
         output_name = "${target_out_dir}/${final_manifest}"
         outputs = [
           output_name,
@@ -775,9 +775,7 @@ template("package") {
 
         pmx = "$target_out_dir/${pkg_target_name}.manifest"
         args = [
-          "-o",
           rebase_path(output_name),
-          "-i",
           rebase_path("$target_out_dir/${pkg_target_name}.manifest"),
         ]
         inputs = [
@@ -795,7 +793,6 @@ template("package") {
           manifest_file = "${dir}/${component_name}.manifest"
           inputs += [ manifest_file ]
           args += [
-            "-i",
             rebase_path(manifest_file),
           ]
         }
