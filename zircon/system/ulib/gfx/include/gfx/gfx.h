@@ -108,7 +108,9 @@ void gfx_surface_destroy(struct gfx_surface* surface);
 // utility routine to fill the display with a little moire pattern
 void gfx_draw_pattern(void);
 
+#if defined(GFX_HAVE_FONT)
 extern const gfx_font font9x16;
 extern const gfx_font font18x32;
+#endif
 
 __END_CDECLS

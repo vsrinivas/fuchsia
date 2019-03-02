@@ -716,6 +716,7 @@ void gfx_surface_destroy(struct gfx_surface* surface) {
     free(surface);
 }
 
+#if defined(GFX_HAVE_FONT)
 #include <zircon/font/font-9x16.h>
 #include <zircon/font/font-18x32.h>
 
@@ -730,3 +731,4 @@ const gfx_font font18x32 = {
     .width = FONT18X32_WIDTH,
     .height = FONT18X32_HEIGHT,
 };
+#endif

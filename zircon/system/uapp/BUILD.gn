@@ -32,7 +32,6 @@ group("uapp") {
     "fuzz",
     "fvm-check",
     "gfxfractal",
-    "gfxlatency",
     "gfxtest",
     "gpt",
     "hid",
