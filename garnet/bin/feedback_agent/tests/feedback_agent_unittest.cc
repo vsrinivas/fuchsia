@@ -5,6 +5,11 @@
 #include "garnet/bin/feedback_agent/feedback_agent.h"
 
 #include <stdint.h>
+
+#include <memory>
+#include <ostream>
+#include <vector>
+
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -21,14 +26,9 @@
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 
-#include <memory>
-#include <ostream>
-#include <vector>
-
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
 #include "src/lib/files/file.h"
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace feedback {

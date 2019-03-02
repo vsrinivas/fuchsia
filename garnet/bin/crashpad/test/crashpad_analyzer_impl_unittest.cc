@@ -11,13 +11,8 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
@@ -27,6 +22,11 @@
 #include <zircon/errors.h>
 
 #include "garnet/bin/crashpad/config.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/scoped_temp_dir.h"
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace crash {

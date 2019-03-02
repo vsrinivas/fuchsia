@@ -4,11 +4,12 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <gtest/gtest.h>
-#include <lib/sys/cpp/service_directory.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
+
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace crash {

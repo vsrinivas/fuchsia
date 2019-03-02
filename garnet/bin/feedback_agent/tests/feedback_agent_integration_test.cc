@@ -5,10 +5,11 @@
 #include <ostream>
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/component/cpp/environment_services_helper.h>
 #include <lib/escher/test/gtest_vulkan.h>
 #include <zircon/errors.h>
+
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace feedback {

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "config.h"
+#include "garnet/bin/crashpad/config.h"
+
+#include <lib/syslog/cpp/logger.h>
+#include <zircon/errors.h>
 
 #include "src/lib/files/file.h"
-#include <lib/syslog/cpp/logger.h>
-#include <rapidjson/document.h>
-#include <rapidjson/error/en.h>
-#include <rapidjson/schema.h>
-#include <rapidjson/stringbuffer.h>
-#include <zircon/errors.h>
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/error/en.h"
+#include "third_party/rapidjson/include/rapidjson/schema.h"
+#include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
 namespace fuchsia {
 namespace crash {

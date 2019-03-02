@@ -2,43 +2,44 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "crashpad_analyzer_impl.h"
+#include "garnet/bin/crashpad/crashpad_analyzer_impl.h"
+
+#include <stdio.h>
 
 #include <map>
 #include <string>
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 #include <lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
-#include <stdio.h>
-#include <third_party/crashpad/client/crash_report_database.h>
-#include <third_party/crashpad/client/settings.h>
-#include <third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h>
-#include <third_party/crashpad/handler/minidump_to_upload_parameters.h>
-#include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
-#include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.h>
-#include <third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h>
-#include <third_party/crashpad/util/file/file_io.h>
-#include <third_party/crashpad/util/file/file_reader.h>
-#include <third_party/crashpad/util/misc/metrics.h>
-#include <third_party/crashpad/util/misc/uuid.h>
-#include <third_party/crashpad/util/net/http_body.h>
-#include <third_party/crashpad/util/net/http_headers.h>
-#include <third_party/crashpad/util/net/http_multipart_builder.h>
-#include <third_party/crashpad/util/net/http_transport.h>
-#include <third_party/crashpad/util/net/url.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "config.h"
-#include "report_annotations.h"
-#include "report_attachments.h"
-#include "scoped_unlink.h"
+#include "garnet/bin/crashpad/config.h"
+#include "garnet/bin/crashpad/report_annotations.h"
+#include "garnet/bin/crashpad/report_attachments.h"
+#include "garnet/bin/crashpad/scoped_unlink.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "third_party/crashpad/client/crash_report_database.h"
+#include "third_party/crashpad/client/settings.h"
+#include "third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h"
+#include "third_party/crashpad/handler/minidump_to_upload_parameters.h"
+#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
+#include "third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/file_path.h"
+#include "third_party/crashpad/third_party/mini_chromium/mini_chromium/base/files/scoped_file.h"
+#include "third_party/crashpad/util/file/file_io.h"
+#include "third_party/crashpad/util/file/file_reader.h"
+#include "third_party/crashpad/util/misc/metrics.h"
+#include "third_party/crashpad/util/misc/uuid.h"
+#include "third_party/crashpad/util/net/http_body.h"
+#include "third_party/crashpad/util/net/http_headers.h"
+#include "third_party/crashpad/util/net/http_multipart_builder.h"
+#include "third_party/crashpad/util/net/http_transport.h"
+#include "third_party/crashpad/util/net/url.h"
 
 namespace fuchsia {
 namespace crash {

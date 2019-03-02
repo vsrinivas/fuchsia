@@ -11,8 +11,9 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <third_party/crashpad/client/crash_report_database.h>
 #include <zircon/types.h>
+
+#include "third_party/crashpad/client/crash_report_database.h"
 
 namespace fuchsia {
 namespace crash {

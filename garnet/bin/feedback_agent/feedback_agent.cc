@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "feedback_agent.h"
+#include "garnet/bin/feedback_agent/feedback_agent.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
-#include "image_conversion.h"
+#include "garnet/bin/feedback_agent/image_conversion.h"
 
 namespace fuchsia {
 namespace feedback {

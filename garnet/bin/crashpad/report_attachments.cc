@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "report_attachments.h"
+#include "garnet/bin/crashpad/report_attachments.h"
 
 #include <memory>
 #include <string>
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/debuglog.h>
-#include <third_party/crashpad/minidump/minidump_file_writer.h>
-#include <third_party/crashpad/util/file/file_writer.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
+
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "third_party/crashpad/minidump/minidump_file_writer.h"
+#include "third_party/crashpad/util/file/file_writer.h"
 
 namespace fuchsia {
 namespace crash {

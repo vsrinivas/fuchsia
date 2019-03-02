@@ -4,9 +4,10 @@
 
 #include "garnet/bin/crashpad/config.h"
 
-#include <gtest/gtest.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
+
+#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace crash {

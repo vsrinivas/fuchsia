@@ -13,14 +13,12 @@
 #include <fuchsia/net/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/strings.h>
-#include "src/lib/files/file.h"
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/vmo.h>
@@ -28,6 +26,9 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include "src/lib/files/file.h"
+#include "src/lib/files/unique_fd.h"
 
 class CrashAnalyzer {
  public:

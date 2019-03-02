@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "report_annotations.h"
+#include "garnet/bin/crashpad/report_annotations.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #include <string>
 
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
+
+#include "src/lib/files/file.h"
 
 namespace fuchsia {
 namespace crash {

@@ -7,7 +7,8 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <png.h>
+
+#include "third_party/libpng/png.h"
 
 namespace fuchsia {
 namespace feedback {

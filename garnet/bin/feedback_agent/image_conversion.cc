@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "image_conversion.h"
+#include "garnet/bin/feedback_agent/image_conversion.h"
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <garnet/public/lib/fostr/fidl/fuchsia/images/formatting.h>
+#include <lib/fostr/fidl/fuchsia/images/formatting.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/syslog/cpp/logger.h>
-#include <png.h>
+
+#include "third_party/libpng/png.h"
 
 namespace fuchsia {
 namespace feedback {
