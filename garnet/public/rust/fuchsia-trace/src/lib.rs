@@ -240,61 +240,44 @@ pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, ar
 }
 
 /// The scope of a duration event, returned by the `duration` function and the `duration!` macro.
-/// This type should be `end`ed when the duration completes.
-#[derive(Copy, Clone)]
+/// The duration will be `end'ed` when this object is dropped.
 #[must_use = "DurationScope must be `end`ed to be recorded"]
-pub struct DurationScope {
+pub struct DurationScope<'a> {
     category: &'static CStr,
     name: &'static CStr,
+    args: &'a [Arg<'a>],
+    start_time: sys::trace_ticks_t,
 }
 
-/// The scope of a duration event which completes when it goes out of scope or is `drop`ped.
-/// Objects of this type can be created from the `end_on_drop` method on `DurationScope`.
-pub struct DurationDropScope(DurationScope);
+impl<'a> DurationScope<'a> {
+    /// Starts a new duration scope that starts now and will be end'ed when
+    /// this object is dropped.
+    pub fn begin(category: &'static CStr, name: &'static CStr, args: &'a [Arg]) -> Self {
+        let start_time = zx::ticks_get();
+        Self { category, name, args, start_time }
+    }
+}
 
-impl Drop for DurationDropScope {
+impl<'a> Drop for DurationScope<'a> {
     fn drop(&mut self) {
-        self.0.end();
-    }
-}
-
-impl DurationScope {
-    /// Creates a new `DurationDropScope` object which will end the duration
-    /// when it goes out of scope or is `drop`ped.
-    ///
-    /// Example:
-    ///
-    /// ```rust
-    /// {
-    ///     let _scope = duration!("foo", "bar").end_on_drop();
-    ///     ...
-    ///     // `_scope` will be dropped here and the duration will end.
-    /// }
-    /// ```
-    pub fn end_on_drop(self) -> DurationDropScope {
-        DurationDropScope(self)
-    }
-
-    /// Ends the duration and records the result.
-    /// This function is equivalent to `drop`ping the `DurationScope`.
-    pub fn end(self) {
         // See unsafety justification in `instant`
         unsafe {
-            let DurationScope { category, name } = self;
+            let DurationScope { category, name, args, start_time } = self;
             let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
             let context =
                 sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
             if context != ptr::null() {
                 let helper = EventHelper::new(context, name);
 
-                sys::trace_context_write_duration_end_event_record(
+                sys::trace_context_write_duration_event_record(
                     context,
+                    *start_time,
                     helper.ticks,
                     &helper.thread_ref,
                     &category_ref,
                     &helper.name_ref,
-                    ptr::null(),
-                    0,
+                    args.as_ptr() as *const sys::trace_arg_t,
+                    args.len(),
                 );
                 sys::trace_release_context(context);
             }
@@ -302,62 +285,150 @@ impl DurationScope {
     }
 }
 
-/// Convenience macro for the `duration` function.
+/// Convenience macro for the `duration` function that can be used to trace
+/// the duration of a scope. If you need finer grained control over when a
+/// duration starts and stops, see `duration_begin` and `duration_end`.
 ///
 /// Example:
 ///
 /// ```rust
-/// let dur_scope = duration!("foo", "bar", "x" => 5, "y" => 10);
-/// ...
-/// ...
-/// dur_scope.end();
+///   {
+///       duration!("foo", "bar", "x" => 5, "y" => 10);
+///       ...
+///       ...
+///       // event will be recorded on drop.
+///   }
 /// ```
 ///
 /// is equivalent to
 ///
 /// ```rust
-/// let dur_scope = duration(cstr!("foo"), cstr!("bar"),
-///                     &[ArgValue::of("x", 5), ArgValue::of("y", 10)]);
-/// ...
-/// ...
-/// dur_scope.end();
+///   {
+///       let args = [ArgValue::of("x", 5), ArgValue::of("y", 10)];
+///       let _scope = duration(cstr!("foo"), cstr!("bar"), &args);
+///       ...
+///       ...
+///       // event will be recorded on drop.
+///   }
 /// ```
 #[macro_export]
 macro_rules! duration {
     ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
-        $crate::duration($crate::cstr!($category), $crate::cstr!($name),
+        let args = [$($crate::ArgValue::of($key, $val)),*];
+        let _scope = $crate::duration($crate::cstr!($category), $crate::cstr!($name), &args);
+    }
+}
+
+/// Writes a duration event which ends when the current scope exits, or the
+/// `end` method is manually called.
+///
+/// Durations describe work which is happening synchronously on one thread.
+/// They can be nested to represent a control flow stack.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used
+/// to annotate the duration with additional information.
+pub fn duration<'a>(
+    category: &'static CStr,
+    name: &'static CStr,
+    args: &'a [Arg],
+) -> DurationScope<'a> {
+    assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
+    DurationScope::begin(category, name, args)
+}
+
+/// Convenience macro for the `duration_begin` function.
+///
+/// Example:
+///
+/// ```rust
+/// duration_begin!("foo", "bar", "x" => 5, "y" => "boo");
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// duration_begin(cstr!("foo"), cstr!("bar"),
+///     &[ArgValue::of("x", 5), ArgValue::of("y", "boo")]);
+/// ```
+#[macro_export]
+macro_rules! duration_begin {
+    ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
+        $crate::duration_begin($crate::cstr!($category), $crate::cstr!($name),
             &[$($crate::ArgValue::of($key, $val)),*])
     }
 }
 
-// Starts a duration event which ends and is recorded when the resulting `DurationScope` is
-// dropped.
-//
-// 0 to 15 arguments can be associated with this duration.
-pub fn duration(category: &'static CStr, name: &'static CStr, args: &[Arg]) -> DurationScope {
-    assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
-    // See justification in `instant`
-    unsafe {
-        let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
-        let context = sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
-        if context != ptr::null() {
-            let helper = EventHelper::new(context, name);
-
-            sys::trace_context_write_duration_begin_event_record(
-                context,
-                helper.ticks,
-                &helper.thread_ref,
-                &category_ref,
-                &helper.name_ref,
-                args.as_ptr() as *const sys::trace_arg_t,
-                args.len(),
-            );
-            sys::trace_release_context(context);
-        }
+/// Convenience macro for the `duration_end` function.
+///
+/// Example:
+///
+/// ```rust
+/// duration_end!("foo", "bar", "x" => 5, "y" => "boo");
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// duration_end(cstr!("foo"), cstr!("bar"),
+///     &[ArgValue::of("x", 5), ArgValue::of("y", "boo")]);
+/// ```
+#[macro_export]
+macro_rules! duration_end {
+    ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
+        $crate::duration_end($crate::cstr!($category), $crate::cstr!($name),
+            &[$($crate::ArgValue::of($key, $val)),*])
     }
-
-    DurationScope { category, name }
 }
+
+macro_rules! duration_event {
+    ($name:ident, $sys_method:path) => {
+        pub fn $name(category: &'static CStr, name: &'static CStr, args: &[Arg]) {
+            assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
+            // See justification in `instant`
+            unsafe {
+                let mut category_ref: sys::trace_string_ref_t = mem::uninitialized();
+                let context =
+                    sys::trace_acquire_context_for_category(category.as_ptr(), &mut category_ref);
+                if context != ptr::null() {
+                    let helper = EventHelper::new(context, name);
+                    $sys_method(
+                        context,
+                        helper.ticks,
+                        &helper.thread_ref,
+                        &category_ref,
+                        &helper.name_ref,
+                        args.as_ptr() as *const sys::trace_arg_t,
+                        args.len(),
+                    );
+                    sys::trace_release_context(context);
+                }
+            }
+        }
+    };
+}
+
+/// Writes a duration begin event only.
+/// This event must be matched by a duration end event with the same category and name.
+///
+/// Durations describe work which is happening synchronously on one thread.
+/// They can be nested to represent a control flow stack.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used
+/// to annotate the duration with additional information.  The arguments provided
+/// to matching duration begin and duration end events are combined together in
+/// the trace; it is not necessary to repeat them.
+duration_event!(duration_begin, sys::trace_context_write_duration_begin_event_record);
+
+/// Writes a duration end event only.
+///
+/// Durations describe work which is happening synchronously on one thread.
+/// They can be nested to represent a control flow stack.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used
+/// to annotate the duration with additional information.  The arguments provided
+/// to matching duration begin and duration end events are combined together in
+/// the trace; it is not necessary to repeat them.
+duration_event!(duration_end, sys::trace_context_write_duration_end_event_record);
 
 /// Convenience macro for the `flow_begin` function.
 ///
@@ -978,8 +1049,14 @@ mod test {
 
     #[test]
     fn duration() {
-        let dur_scope = duration!("foo", "bar", "x" => 5, "y" => 10);
+        duration!("foo", "bar", "x" => 5, "y" => 10);
         println!("Between duration creation and duration ending");
-        dur_scope.end();
+    }
+
+    #[test]
+    fn duration_begin_end() {
+        duration_begin!("foo", "bar", "x" => 5);
+        println!("Between duration creation and duration ending");
+        duration_end!("foo", "bar", "y" => 10);
     }
 }
