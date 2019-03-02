@@ -43,6 +43,7 @@ class Importer {
                         const TagInfo& tag_info);
   bool ImportProbeRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportDurationRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportFlowRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
   bool HandleKernelThreadName(KernelThread kernel_thread,
@@ -131,6 +132,12 @@ class Importer {
   bool HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread,
                          uint32_t event_name_id, uint32_t group, bool cpu_trace,
                          uint64_t arg0, uint64_t arg1);
+  bool HandleFlowBegin(trace_ticks_t event_time, zx_koid_t thread,
+                       uint32_t event_name_id, uint32_t group, bool cpu_trace,
+                       trace_flow_id_t flow_id);
+  bool HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread,
+                     uint32_t event_name_id, uint32_t group, bool cpu_trace,
+                     trace_flow_id_t flow_id);
   bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);
   bool HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32_t exit,
                       uint64_t exit_address);

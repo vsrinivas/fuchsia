@@ -133,13 +133,22 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
     }
   }
 
+  // TODO(eieio): Using this combination of bits and groups to select the record
+  // type is a bit hacky due to how the kernel trace record is defined. Fixing
+  // this requires a re-design or replacement with the same strategy used in the
+  // rest of the system.
   const bool is_probe_group = KTRACE_GROUP(record->tag) & KTRACE_GRP_PROBE;
-  const bool is_duration =
-      KTRACE_FLAGS(record->tag) & (KTRACE_FLAGS_BEGIN | KTRACE_FLAGS_END);
+  const bool is_flow = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_FLOW;
+  const bool is_begin = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_BEGIN;
+  const bool is_end = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_END;
+  const bool is_duration = !is_flow && (is_begin | is_end);
+
   if (is_probe_group)
     return ImportProbeRecord(record, record_size);
   else if (is_duration)
     return ImportDurationRecord(record, record_size);
+  else if (is_flow)
+    return ImportFlowRecord(record, record_size);
 
   return ImportUnknownRecord(record, record_size);
 }
@@ -352,6 +361,36 @@ bool Importer::ImportDurationRecord(const ktrace_header_t* record,
     } else if (is_end) {
       return HandleDurationEnd(record->ts, record->tid, event_name_id, group,
                                cpu_trace);
+    }
+  }
+
+  return false;
+}
+
+bool Importer::ImportFlowRecord(const ktrace_header_t* record,
+                                size_t record_size) {
+  FXL_DCHECK(KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_FLOW);
+
+  if (!(KTRACE_EVENT(record->tag) & KTRACE_NAMED_EVENT_BIT)) {
+    return ImportUnknownRecord(record, record_size);
+  }
+
+  const uint32_t event_name_id = KTRACE_EVENT_NAME_ID(record->tag);
+  const uint32_t group = KTRACE_GROUP(record->tag);
+  const bool cpu_trace = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_CPU;
+  const bool is_begin = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_BEGIN;
+  const bool is_end = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_END;
+
+  if (record_size == 32) {
+    const auto flow_id = reinterpret_cast<const uint64_t*>(record + 1)[0];
+    if (is_begin) {
+      return HandleFlowBegin(record->ts, record->tid, event_name_id, group,
+                             cpu_trace, flow_id);
+    } else if (is_end) {
+      return HandleFlowEnd(record->ts, record->tid, event_name_id, group,
+                           cpu_trace, flow_id);
+    } else {
+      return ImportUnknownRecord(record, record_size);
     }
   }
 
@@ -825,6 +864,36 @@ bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread,
   trace_context_write_duration_end_event_record(
       context_, event_time, &thread_ref, &category_ref, &name_ref, args,
       fbl::count_of(args));
+
+  return true;
+}
+
+bool Importer::HandleFlowBegin(trace_ticks_t event_time, zx_koid_t thread,
+                               uint32_t event_name_id, uint32_t group,
+                               bool cpu_trace, trace_flow_id_t flow_id) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_flow_begin_event_record(context_, event_time, &thread_ref,
+                                              &category_ref, &name_ref, flow_id,
+                                              nullptr, 0u);
+
+  return true;
+}
+
+bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread,
+                             uint32_t event_name_id, uint32_t group,
+                             bool cpu_trace, trace_flow_id_t flow_id) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_flow_end_event_record(context_, event_time, &thread_ref,
+                                            &category_ref, &name_ref, flow_id,
+                                            nullptr, 0u);
 
   return true;
 }

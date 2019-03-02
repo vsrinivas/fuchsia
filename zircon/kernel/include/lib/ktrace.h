@@ -43,7 +43,7 @@ constexpr auto TraceNever = TraceEnabled<false>{};
 //     ktrace_probe(LocalTrace<LOCAL_KTRACE_ENABLE>, TraceContext::Cpu,
 //                  KTRACE_STRING_REF(string), ##args)
 //
-#define KTRACE_STRING_REF_CAT(a, b) a ## b
+#define KTRACE_STRING_REF_CAT(a, b) a##b
 #define KTRACE_STRING_REF(string) KTRACE_STRING_REF_CAT(string, _stringref)
 
 // Allocates a new trace record in the trace buffer. Returns a pointer to the
@@ -69,12 +69,12 @@ inline void ktrace(TraceEnabled<enabled>, TraceContext context, uint32_t tag,
             data[3] = d;
         }
     } else {
-      (void)context;
-      (void)tag;
-      (void)a;
-      (void)b;
-      (void)c;
-      (void)d;
+        (void)context;
+        (void)tag;
+        (void)a;
+        (void)b;
+        (void)c;
+        (void)d;
     }
 }
 
@@ -103,8 +103,8 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context,
 
         ktrace_open(effective_tag);
     } else {
-      (void)context;
-      (void)string_ref;
+        (void)context;
+        (void)string_ref;
     }
 }
 
@@ -123,10 +123,10 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context,
             args[1] = b;
         }
     } else {
-      (void)context;
-      (void)string_ref;
-      (void)a;
-      (void)b;
+        (void)context;
+        (void)string_ref;
+        (void)a;
+        (void)b;
     }
 }
 
@@ -144,9 +144,9 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context,
             args[0] = a;
         }
     } else {
-      (void)context;
-      (void)string_ref;
-      (void)a;
+        (void)context;
+        (void)string_ref;
+        (void)a;
     }
 }
 
@@ -165,10 +165,10 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context,
             args[1] = b;
         }
     } else {
-      (void)context;
-      (void)string_ref;
-      (void)a;
-      (void)b;
+        (void)context;
+        (void)string_ref;
+        (void)a;
+        (void)b;
     }
 }
 
@@ -182,9 +182,9 @@ inline void ktrace_begin_duration(TraceEnabled<enabled>, TraceContext context,
 
         ktrace_open(effective_tag);
     } else {
-      (void)context;
-      (void)group;
-      (void)string_ref;
+        (void)context;
+        (void)group;
+        (void)string_ref;
     }
 }
 
@@ -198,9 +198,9 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context,
 
         ktrace_open(effective_tag);
     } else {
-      (void)context;
-      (void)group;
-      (void)string_ref;
+        (void)context;
+        (void)group;
+        (void)string_ref;
     }
 }
 
@@ -220,11 +220,11 @@ inline void ktrace_begin_duration(TraceEnabled<enabled>, TraceContext context,
             args[1] = b;
         }
     } else {
-      (void)context;
-      (void)group;
-      (void)string_ref;
-      (void)a;
-      (void)b;
+        (void)context;
+        (void)group;
+        (void)string_ref;
+        (void)a;
+        (void)b;
     }
 }
 
@@ -244,11 +244,55 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context,
             args[1] = b;
         }
     } else {
-      (void)context;
-      (void)group;
-      (void)string_ref;
-      (void)a;
-      (void)b;
+        (void)context;
+        (void)group;
+        (void)string_ref;
+        (void)a;
+        (void)b;
+    }
+}
+
+template <bool enabled>
+inline void ktrace_flow_begin(TraceEnabled<enabled>, TraceContext context,
+                              uint32_t group, StringRef* string_ref,
+                              uint64_t flow_id) {
+    if constexpr (enabled) {
+        const uint32_t tag = TAG_FLOW_BEGIN(string_ref->GetId(), group);
+        const uint32_t effective_tag = KTRACE_TAG_FLAGS(
+            tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
+
+        void* const payload = ktrace_open(effective_tag);
+        uint64_t* const args = static_cast<uint64_t*>(payload);
+        if (args) {
+            args[0] = flow_id;
+        }
+    } else {
+        (void)context;
+        (void)group;
+        (void)string_ref;
+        (void)flow_id;
+    }
+}
+
+template <bool enabled>
+inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context,
+                            uint32_t group, StringRef* string_ref,
+                            uint64_t flow_id) {
+    if constexpr (enabled) {
+        const uint32_t tag = TAG_FLOW_END(string_ref->GetId(), group);
+        const uint32_t effective_tag = KTRACE_TAG_FLAGS(
+            tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
+
+        void* const payload = ktrace_open(effective_tag);
+        uint64_t* const args = static_cast<uint64_t*>(payload);
+        if (args) {
+            args[0] = flow_id;
+        }
+    } else {
+        (void)context;
+        (void)group;
+        (void)string_ref;
+        (void)flow_id;
     }
 }
 
