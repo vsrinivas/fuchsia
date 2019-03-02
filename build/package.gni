@@ -41,6 +41,10 @@ declare_args() {
 #         manifests to publish to repositories and to produce manifests to write
 #         into blobfs images.
 #
+#       meta_far_index_entries
+#         The metafar index entries are aggregated in image builds to produce
+#         manifests of packages to publish to a repository.
+#
 #   data_deps (optional)
 #   deps (optional)
 #   metadata (optional)
@@ -170,6 +174,10 @@ template("pm_build_package") {
 
       blob_manifests = [
         rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir),
+      ]
+
+      meta_far_index_entries = [
+        "$package_name/$package_variant=" + rebase_path("$pkg_out_dir/meta.far", root_build_dir),
       ]
     }
 
@@ -850,10 +858,6 @@ template("package") {
               {
                 name = "pkgsvr_index"
                 file = "meta.far.merkle"
-              },
-              {
-                name = "amber_index"
-                file = "meta.far"
               },
             ]) {
       generate_index("${pkg_target_name}.${index.name}.rsp") {

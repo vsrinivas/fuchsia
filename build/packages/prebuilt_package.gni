@@ -103,6 +103,10 @@ template("prebuilt_package") {
       blob_manifests = [
         rebase_path(blobs_manifest, root_build_dir),
       ]
+
+      meta_far_index_entries = [
+        "${pkg.package_name}/${pkg.package_version}=" + rebase_path("$meta_dir/meta.far", root_build_dir),
+      ]
     }
   }
 
