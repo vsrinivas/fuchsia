@@ -21,56 +21,6 @@ using elflib::Elf64_Phdr;
 using elflib::Elf64_Shdr;
 using elflib::ElfLib;
 
-class Accessor : public ElfLib::MemoryAccessorForAddressSpace {
- public:
-  Accessor(
-      std::function<bool(uint64_t offset, void* buffer, size_t length)> read_fn)
-      : read_fn_(std::move(read_fn)) {}
-
-  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
-    auto& out = data_.emplace_back();
-    out.resize(size);
-
-    if (read_fn_(offset, out.data(), size)) {
-      return out.data();
-    }
-
-    return nullptr;
-  }
-
-  std::optional<Elf64_Ehdr> GetHeader() override {
-    auto data = GetLoadedMemory(0, sizeof(Elf64_Ehdr));
-
-    if (!data) {
-      return std::nullopt;
-    }
-
-    return *reinterpret_cast<const Elf64_Ehdr*>(data);
-  }
-
-  std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
-      uint64_t offset, size_t count) override {
-    auto data = GetLoadedMemory(offset, sizeof(Elf64_Phdr) * count);
-
-    if (!data) {
-      return std::nullopt;
-    }
-
-    auto array = reinterpret_cast<const Elf64_Phdr*>(data);
-
-    return std::vector<Elf64_Phdr>(array, array + count);
-  }
-
-  std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
-      uint64_t offset, size_t count) override {
-    return std::nullopt;
-  }
-
- private:
-  std::vector<std::vector<uint8_t>> data_;
-  std::function<bool(uint64_t offset, void* buffer, size_t length)> read_fn_;
-};
-
 std::string ExtractBuildID(
     std::function<bool(uint64_t offset, void* buffer, size_t length)> read_fn) {
   // The buffer will hold a hex version of the build ID (2 chars per byte)
@@ -78,7 +28,10 @@ std::string ExtractBuildID(
   constexpr size_t buf_size = kMaxBuildIDSize * 2 + 1;
   char buf[buf_size];
 
-  auto elf = ElfLib::Create(std::make_unique<Accessor>(read_fn));
+  auto elf =
+      ElfLib::Create([read_fn](uint64_t offset, std::vector<uint8_t>* buf) {
+        return read_fn(offset, buf->data(), buf->size());
+      });
 
   if (!elf) {
     return std::string();

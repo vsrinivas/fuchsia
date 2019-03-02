@@ -34,53 +34,6 @@ namespace zxdb {
 
 namespace {
 
-// IO Callbacks for Elflib.
-class FileAccessor : public elflib::ElfLib::MemoryAccessorForFile {
- public:
-  FileAccessor(const std::string& filename)
-      : file_(fopen(filename.c_str(), "r")) {}
-
-  ~FileAccessor() {
-    if (file_) {
-      fclose(file_);
-    }
-  }
-
-  const uint8_t* GetMemory(uint64_t offset, size_t size) override {
-    if (!file_) {
-      return nullptr;
-    }
-
-    auto& ret = data_[std::make_pair(offset, size)];
-    if (ret.size() == size) {
-      return ret.data();
-    }
-
-    ret.resize(size);
-
-    fseek(file_, offset, SEEK_SET);
-    if (fread(ret.data(), 1, size, file_) != size) {
-      return nullptr;
-    }
-
-    return ret.data();
-  }
-
-  // Addresses will still point us to the right location in the file when we do
-  // symbol table lookups.
-  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
-    return GetMemory(offset, size);
-  }
-
- private:
-  FILE* file_ = nullptr;
-
-  // Elflib treats our read functions like they're random-access, so we cache
-  // the results of reads. We could end up with overlaps in this map, though in
-  // practice we don't in today's code.
-  std::map<std::pair<uint64_t, size_t>, std::vector<uint8_t>> data_;
-};
-
 // Implementation of SymbolDataProvider that returns no memory or registers.
 // This is used when evaluating global variables' location expressions which
 // normally just declare an address. See LocationForVariable().
@@ -152,8 +105,7 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 }
 
 Err ModuleSymbolsImpl::Load() {
-  if (auto elf =
-          elflib::ElfLib::Create(std::make_unique<FileAccessor>(name_))) {
+  if (auto elf = elflib::ElfLib::Create(name_)) {
     plt_locations_ = elf->GetPLTOffsets();
   }
 

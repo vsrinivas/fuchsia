@@ -76,54 +76,28 @@ std::optional<std::map<std::string, Elf64_Sym>> SymtabToMap(
 
 }  // namespace
 
-std::optional<Elf64_Ehdr> ElfLib::MemoryAccessorForFile::GetHeader() {
-  auto data = GetMemory(0, sizeof(Elf64_Ehdr));
+// Proxy object for whatever address space we're exploring.
+class ElfLib::MemoryAccessor {
+ public:
+  virtual ~MemoryAccessor() = default;
 
-  if (!data) {
-    return std::nullopt;
-  }
+  virtual const uint8_t* GetMemory(uint64_t mapped_address,
+                                   size_t mapped_size) = 0;
+};
 
-  return *reinterpret_cast<const Elf64_Ehdr*>(data);
-}
-
-std::optional<std::vector<Elf64_Shdr>>
-ElfLib::MemoryAccessorForFile::GetSectionHeaders(uint64_t offset,
-                                                 size_t count) {
-  auto data = GetMemory(offset, sizeof(Elf64_Shdr) * count);
-
-  if (!data) {
-    return std::nullopt;
-  }
-
-  auto array = reinterpret_cast<const Elf64_Shdr*>(data);
-
-  return std::vector<Elf64_Shdr>(array, array + count);
-}
-
-std::optional<std::vector<Elf64_Phdr>>
-ElfLib::MemoryAccessorForFile::GetProgramHeaders(uint64_t offset,
-                                                 size_t count) {
-  auto data = GetMemory(offset, sizeof(Elf64_Phdr) * count);
-
-  if (!data) {
-    return std::nullopt;
-  }
-
-  auto array = reinterpret_cast<const Elf64_Phdr*>(data);
-
-  return std::vector<Elf64_Phdr>(array, array + count);
-}
-
-ElfLib::ElfLib(std::unique_ptr<MemoryAccessor>&& memory)
-    : memory_(std::move(memory)) {}
+ElfLib::ElfLib(std::unique_ptr<MemoryAccessor>&& memory,
+               ElfLib::AddressMode address_mode)
+    : address_mode_(address_mode), memory_(std::move(memory)) {}
 
 ElfLib::~ElfLib() = default;
 
-std::unique_ptr<ElfLib> ElfLib::Create(
-    std::unique_ptr<MemoryAccessor>&& memory) {
-  std::unique_ptr<ElfLib> out = std::make_unique<ElfLib>(std::move(memory));
+std::unique_ptr<ElfLib> ElfLib::Create(std::unique_ptr<MemoryAccessor>&& memory,
+                                       ElfLib::AddressMode address_mode) {
+  std::unique_ptr<ElfLib> out =
+      std::make_unique<ElfLib>(std::move(memory), address_mode);
 
-  auto header = out->memory_->GetHeader();
+  auto header = reinterpret_cast<const Elf64_Ehdr*>(
+      out->memory_->GetMemory(0, sizeof(Elf64_Ehdr)));
 
   if (!header) {
     return std::unique_ptr<ElfLib>();
@@ -181,16 +155,136 @@ std::unique_ptr<ElfLib> ElfLib::Create(
   return out;
 }
 
+std::unique_ptr<ElfLib> ElfLib::Create(FILE* fp, ElfLib::Ownership owned) {
+  class FileAccessor : public MemoryAccessor {
+   public:
+    FileAccessor(FILE* fp, bool take_ownership)
+        : file_(fp), take_ownership_(take_ownership) {}
+
+    ~FileAccessor() {
+      if (file_ && take_ownership_) {
+        fclose(file_);
+      }
+    }
+
+    const uint8_t* GetMemory(uint64_t offset, size_t size) override {
+      if (!file_) {
+        return nullptr;
+      }
+
+      auto& ret = data_[std::make_pair(offset, size)];
+      if (ret.size() == size) {
+        return ret.data();
+      }
+
+      ret.resize(size);
+
+      fseek(file_, offset, SEEK_SET);
+      if (fread(ret.data(), 1, size, file_) != size) {
+        return nullptr;
+      }
+
+      return ret.data();
+    }
+
+   private:
+    FILE* file_ = nullptr;
+    bool take_ownership_;
+
+    // Elflib treats our read functions like they're random-access, so we cache
+    // the results of reads. We could end up with overlaps in this map, though
+    // in practice we don't in today's code.
+    std::map<std::pair<uint64_t, size_t>, std::vector<uint8_t>> data_;
+  };
+
+  return Create(std::make_unique<FileAccessor>(
+                    fp, owned == ElfLib::Ownership::kTakeOwnership),
+                AddressMode::kFile);
+}
+
+std::unique_ptr<ElfLib> ElfLib::Create(const uint8_t* mem, size_t size) {
+  class DataAccessor : public MemoryAccessor {
+   public:
+    DataAccessor(const uint8_t* mem, size_t size) : mem_(mem), size_(size) {}
+
+    const uint8_t* GetMemory(uint64_t offset, size_t size) override {
+      if (size + offset > size_) {
+        return nullptr;
+      }
+
+      return mem_ + offset;
+    }
+
+   private:
+    const uint8_t* mem_;
+    size_t size_;
+  };
+
+  return Create(std::make_unique<DataAccessor>(mem, size), AddressMode::kFile);
+}
+
+std::unique_ptr<ElfLib> ElfLib::Create(
+    std::function<bool(uint64_t, std::vector<uint8_t>*)> fetch,
+    ElfLib::AddressMode address_mode) {
+  class CallbackAccessor : public MemoryAccessor {
+   public:
+    CallbackAccessor(std::function<bool(uint64_t, std::vector<uint8_t>*)> fetch)
+        : fetch_(fetch) {}
+
+    const uint8_t* GetMemory(uint64_t offset, size_t size) override {
+#ifndef NDEBUG
+      auto iter = data_.upper_bound(offset);
+
+      if (iter != data_.begin()) {
+        --iter;
+      }
+
+      if (iter != data_.end() && iter->first <= offset &&
+          iter->first + iter->second.size() > offset) {
+        FXL_DCHECK(iter->first == offset && iter->second.size() == size);
+      }
+#endif  // NDEBUG
+      for (const auto& range : data_[offset]) {
+        if (range.size() >= size) {
+          return range.data();
+        }
+      }
+
+      auto& vec = data_[offset].emplace_back(size, 0);
+
+      if (!fetch_(offset, &vec)) {
+        return nullptr;
+      }
+
+      return vec.data();
+    }
+
+   private:
+    std::function<bool(uint64_t, std::vector<uint8_t>*)> fetch_;
+    std::map<uint64_t, std::vector<std::vector<uint8_t>>> data_;
+  };
+
+  return Create(std::make_unique<CallbackAccessor>(std::move(fetch)),
+                address_mode);
+}
+
+std::unique_ptr<ElfLib> ElfLib::Create(const std::string& path) {
+  return Create(fopen(path.c_str(), "r"), ElfLib::Ownership::kTakeOwnership);
+}
+
 const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
-  if (sections_.empty()) {
-    auto sections =
-        memory_->GetSectionHeaders(header_.e_shoff, header_.e_shnum);
+  // Processes may not map the section headers at all, so we don't look for
+  // section headers unless we're in file mode.
+  if (address_mode_ == AddressMode::kFile && sections_.empty()) {
+    auto sections = reinterpret_cast<const Elf64_Shdr*>(memory_->GetMemory(
+        header_.e_shoff, sizeof(Elf64_Shdr) * header_.e_shnum));
 
     if (!sections) {
       return nullptr;
     }
 
-    sections_ = *sections;
+    std::copy(sections, sections + header_.e_shnum,
+              std::back_inserter(sections_));
   }
 
   if (section >= sections_.size()) {
@@ -205,13 +299,15 @@ bool ElfLib::LoadProgramHeaders() {
     return true;
   }
 
-  auto segments = memory_->GetProgramHeaders(header_.e_phoff, header_.e_phnum);
+  auto segments = reinterpret_cast<const Elf64_Phdr*>(memory_->GetMemory(
+      header_.e_phoff, sizeof(Elf64_Phdr) * header_.e_phnum));
 
   if (!segments) {
     return false;
   }
 
-  segments_ = *segments;
+  std::copy(segments, segments + header_.e_phnum,
+            std::back_inserter(segments_));
   return true;
 }
 
@@ -223,9 +319,17 @@ ElfLib::MemoryRegion ElfLib::GetSegmentData(size_t segment) {
   }
 
   const Elf64_Phdr* header = &segments_[segment];
+  ElfLib::MemoryRegion result;
 
-  return memory_->GetLoadableMemory(header->p_offset, header->p_vaddr,
-                                    header->p_filesz, header->p_memsz);
+  if (address_mode_ == AddressMode::kFile) {
+    result.ptr = memory_->GetMemory(header->p_offset, header->p_filesz);
+    result.size = header->p_filesz;
+  } else {
+    result.ptr = memory_->GetMemory(header->p_vaddr, header->p_memsz);
+    result.size = header->p_memsz;
+  }
+
+  return result;
 }
 
 std::optional<std::vector<uint8_t>> ElfLib::GetNote(const std::string& name,
@@ -275,8 +379,16 @@ ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {
     return {};
   }
 
-  return memory_->GetLoadableMemory(header->sh_offset, header->sh_addr,
-                                    header->sh_size, header->sh_size);
+  ElfLib::MemoryRegion result;
+  result.size = header->sh_size;
+
+  if (address_mode_ == AddressMode::kFile) {
+    result.ptr = memory_->GetMemory(header->sh_offset, header->sh_size);
+  } else {
+    result.ptr = memory_->GetMemory(header->sh_addr, header->sh_size);
+  }
+
+  return result;
 }
 
 bool ElfLib::LoadSectionNames() {
@@ -385,7 +497,7 @@ bool ElfLib::LoadDynamicSymbols() {
 
         static_assert(sizeof(Header) == 16);
 
-        auto data = memory_->GetLoadedMemory(addr, sizeof(header));
+        auto data = memory_->GetMemory(addr, sizeof(header));
 
         if (!data) {
           continue;
@@ -397,7 +509,7 @@ bool ElfLib::LoadDynamicSymbols() {
         addr += 8 * header.bloom_size;
 
         size_t bucket_bytes = 4 * header.nbuckets;
-        auto bucket_data = memory_->GetLoadedMemory(addr, bucket_bytes);
+        auto bucket_data = memory_->GetMemory(addr, bucket_bytes);
 
         if (!bucket_data) {
           continue;
@@ -417,7 +529,7 @@ bool ElfLib::LoadDynamicSymbols() {
         addr += (max_bucket - header.symoffset) * 4;
 
         for (uint32_t nsyms = max_bucket + 1;; nsyms++, addr += 4) {
-          auto chain_entry_data = memory_->GetLoadedMemory(addr, 4);
+          auto chain_entry_data = memory_->GetMemory(addr, 4);
 
           if (!chain_entry_data) {
             break;
@@ -567,28 +679,28 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
   return ret;
 }
 
-std::optional<std::string> ElfLib::GetDynamicString(size_t index) {
+std::optional<std::string> ElfLib::GetDynamicString(size_t offset) {
   if (!LoadDynamicSymbols() || !dynstr_.IsValid()) {
     return std::nullopt;
   }
 
-  auto data = memory_->GetLoadedMemory(*dynstr_.offset, *dynstr_.size);
+  auto data = memory_->GetMemory(*dynstr_.offset, *dynstr_.size);
 
   if (!data) {
     return std::nullopt;
   }
 
-  return GetNullTerminatedStringAt(data, *dynstr_.size, index);
+  return GetNullTerminatedStringAt(data, *dynstr_.size, offset);
 }
 
-std::optional<std::string> ElfLib::GetString(size_t index) {
+std::optional<std::string> ElfLib::GetString(size_t offset) {
   auto string_data = GetSectionData(".strtab");
 
   if (!string_data.ptr) {
     return std::nullopt;
   }
 
-  return GetNullTerminatedStringAt(string_data.ptr, string_data.size, index);
+  return GetNullTerminatedStringAt(string_data.ptr, string_data.size, offset);
 }
 
 std::pair<const Elf64_Sym*, size_t> ElfLib::GetSymtab() {
@@ -612,8 +724,8 @@ std::pair<const Elf64_Sym*, size_t> ElfLib::GetDynamicSymtab() {
     return std::make_pair(nullptr, 0);
   }
 
-  auto memory = memory_->GetLoadedMemory(*dynsym_.offset,
-                                         *dynsym_.size * sizeof(Elf64_Sym));
+  auto memory =
+      memory_->GetMemory(*dynsym_.offset, *dynsym_.size * sizeof(Elf64_Sym));
 
   return std::make_pair(reinterpret_cast<const Elf64_Sym*>(memory),
                         *dynsym_.size);
@@ -640,7 +752,7 @@ std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllDynamicSymbols() {
   }
 
   return SymtabToMap(GetDynamicSymtab(),
-                     ElfLib::MemoryRegion{.ptr = memory_->GetLoadedMemory(
+                     ElfLib::MemoryRegion{.ptr = memory_->GetMemory(
                                               *dynstr_.offset, *dynstr_.size),
                                           .size = *dynstr_.size});
 }

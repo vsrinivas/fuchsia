@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_ELFLIB_ELFLIB_H_
 #define GARNET_LIB_ELFLIB_ELFLIB_H_
 
+#include <stdio.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -20,94 +22,25 @@ using namespace llvm::ELF;
 
 class ElfLib {
  public:
+  class MemoryAccessor;
+
   // Essentially just a pointer with a bound.
   struct MemoryRegion {
     const uint8_t* ptr;
     size_t size;
   };
 
-  // Proxy object for whatever address space we're exploring.
-  class MemoryAccessor {
-   public:
-    virtual ~MemoryAccessor() = default;
+  // How do we expect the ELF structures to be mapped? Are they packed in a
+  // file or mapped as they would be in a running process?
+  enum class AddressMode { kFile, kProcess };
 
-    // Retrieve the header for this ELF object. Create() will fail if this
-    // returns an empty optional.
-    virtual std::optional<Elf64_Ehdr> GetHeader() = 0;
-
-    // Retrieve the section header table. The recorded offset and size are
-    // passed. The callee just has to derference.
-    virtual std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
-        uint64_t offset, size_t count) = 0;
-
-    // Retrieve the program header table. The recorded offset and size are
-    // passed. The callee just has to dereference.
-    virtual std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
-        uint64_t offset, size_t count) = 0;
-
-    // Get memory for a mapped area as specified by a section or segment. We're
-    // given the dimensions both as we'd find them in the file and as we'd find
-    // them in address space. The returned pointer can be nullptr on error, and
-    // is otherwise expected to be valid for the lifetime of the MemoryAccessor
-    // object. The size_t in the returned pair should be the size of the
-    // addressable range at the returned pointer, and should be equal to either
-    // mapped_address or file_size when the pointer is not nullptr. It is
-    // otherwise undefined.
-    virtual MemoryRegion GetLoadableMemory(uint64_t offset,
-                                           uint64_t mapped_address,
-                                           size_t file_size,
-                                           size_t mapped_size) = 0;
-
-    // Get memory for a mapped area specified by a segment. The memory is
-    // assumed to only be accessible at the desired address after loading and
-    // you should return std::nullopt if this isn't a loaded ELF object.
-    // The returned pointer can be nullptr on error, and is otherwise expected
-    // to be valid for the lifetime of the address space.
-    virtual const uint8_t* GetLoadedMemory(uint64_t mapped_address,
-                                           size_t mapped_size) = 0;
-  };
-
-  class MemoryAccessorForFile : public MemoryAccessor {
-   public:
-    // Get memory from the file based on its offset.
-    virtual const uint8_t* GetMemory(uint64_t offset, size_t size) = 0;
-
-    const uint8_t* GetLoadedMemory(uint64_t mapped_address,
-                                   size_t mapped_size) override {
-      return nullptr;
-    }
-
-    MemoryRegion GetLoadableMemory(uint64_t offset, uint64_t mapped_address,
-                                   size_t file_size,
-                                   size_t mapped_size) override {
-      return MemoryRegion{.ptr = GetMemory(offset, file_size),
-                          .size = file_size};
-    }
-
-    std::optional<Elf64_Ehdr> GetHeader() override;
-    std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
-        uint64_t offset, size_t count) override;
-    std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
-        uint64_t offset, size_t count) override;
-  };
-
-  class MemoryAccessorForAddressSpace : public MemoryAccessor {
-   public:
-    MemoryRegion GetLoadableMemory(uint64_t offset, uint64_t mapped_address,
-                                   size_t file_size,
-                                   size_t mapped_size) override {
-      return MemoryRegion{.ptr = GetLoadedMemory(mapped_address, mapped_size),
-                          .size = file_size};
-    }
-
-    std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
-        uint64_t offset, size_t count) override {
-      return std::nullopt;
-    }
-  };
+  // Whether we should take ownership of the FILE handle given to our Create
+  // method.
+  enum class Ownership { kTakeOwnership, kDontTakeOwnership };
 
   // Do not use. See Create.
-  explicit ElfLib(std::unique_ptr<MemoryAccessor>&& memory);
+  explicit ElfLib(std::unique_ptr<MemoryAccessor>&& memory,
+                  AddressMode address_mode);
 
   virtual ~ElfLib();
 
@@ -135,9 +68,25 @@ class ElfLib {
   // symbols could not be loaded.
   std::optional<std::map<std::string, Elf64_Sym>> GetAllDynamicSymbols();
 
-  // Create a new ElfLib object.
+  // Create a new ElfLib object for reading a file. If take_ownership is set to
+  // true, the given handle will be closed when the ElfLib object is destroyed.
+  static std::unique_ptr<ElfLib> Create(FILE* fp, Ownership owned);
+
+  // Create a new ElfLib object for reading a file. ElfLib will attempt to open
+  // the file and retain a handle to it until the object is destroyed.
+  static std::unique_ptr<ElfLib> Create(const std::string& path);
+
+  // Create a new ElfLib object for accessing an ELF file mapped into memory.
+  // This is expected to be a file, not an address space, and will be addressed
+  // accordingly.
+  static std::unique_ptr<ElfLib> Create(const uint8_t* mem, size_t size);
+
+  // Create an ElfLib object for reading ELF structures via a read callback.
+  // The offsets will assume either an ELF file or an ELF mapped address space
+  // depending on the value of the address_mode argument.
   static std::unique_ptr<ElfLib> Create(
-      std::unique_ptr<MemoryAccessor>&& memory);
+      std::function<bool(uint64_t, std::vector<uint8_t>*)> fetch,
+      AddressMode address_mode = AddressMode::kProcess);
 
   // Returns a map from symbol names to the locations of their PLT entries.
   // Returns an empty map if the data is inaccessible.
@@ -156,6 +105,10 @@ class ElfLib {
 
     bool IsValid() { return offset && size; }
   };
+
+  // Create a new ElfLib object.
+  static std::unique_ptr<ElfLib> Create(
+      std::unique_ptr<MemoryAccessor>&& memory, AddressMode address_mode);
 
   // x64-specific implementation of GetPLTOffsets
   std::map<std::string, uint64_t> GetPLTOffsetsX64();
@@ -179,6 +132,8 @@ class ElfLib {
   // invalid.
   MemoryRegion GetSegmentData(size_t segment);
 
+  const AddressMode address_mode_;
+
   // Get the contents of the symbol table. Return nullptr if it is not present
   // or we do not have the means to locate it. Size is number of structs, not
   // number of bytes.
@@ -189,13 +144,13 @@ class ElfLib {
   // structs, not number of bytes.
   std::pair<const Elf64_Sym*, size_t> GetDynamicSymtab();
 
-  // Get a string from the .strtab section. Return nullptr if the index is
+  // Get a string from the .strtab section. Return nullptr if the offset is
   // invalid.
-  std::optional<std::string> GetString(size_t index);
+  std::optional<std::string> GetString(size_t offset);
 
-  // Get a string from the .dynstr section. Return nullptr if the index is
+  // Get a string from the .dynstr section. Return nullptr if the offset is
   // invalid.
-  std::optional<std::string> GetDynamicString(size_t index);
+  std::optional<std::string> GetDynamicString(size_t offset);
 
   // Load symbols from the dynamic segment of the target. We only do this when
   // the section data isn't available and we can't use the regular .symtab

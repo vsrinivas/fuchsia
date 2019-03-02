@@ -57,58 +57,17 @@ inline std::string GetTestFilePath(const std::string& rel_path) {
 }
 
 // The test files will be copied over to this specific location at build time.
-const char kRelativeTestDataPath[] = "test_data/elflib/";
-
-class FileExampleAccessor : public ElfLib::MemoryAccessorForFile {
- public:
-  FileExampleAccessor(const std::string& filename) {
-    file_ =
-        fopen((GetTestFilePath(kRelativeTestDataPath) + filename).c_str(), "r");
-
-    if (!file_) {
-      abort();
-    }
-  }
-
-  const uint8_t* GetMemory(uint64_t offset, size_t size) override {
-    auto& ret = data_[std::make_pair(offset, size)];
-    if (ret.size() == size) {
-      return ret.data();
-    }
-
-    ret.resize(size);
-
-    fseek(file_, offset, SEEK_SET);
-    if (fread(ret.data(), size, 1, file_) != 1) {
-      return nullptr;
-    }
-
-    return ret.data();
-  }
-
-  // Addresses will still point us to the right location in the file when we do
-  // symbol table lookups.
-  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
-    return GetMemory(offset, size);
-  }
-
-  ~FileExampleAccessor() {
-    if (file_) {
-      fclose(file_);
-    }
-  }
-
- private:
-  FILE* file_ = nullptr;
-  std::map<std::pair<uint64_t, size_t>, std::vector<uint8_t>> data_;
-};
-
+constexpr char kRelativeTestDataPath[] = "test_data/elflib/";
 constexpr char kStrippedExampleFile[] = "stripped_example.elf";
 constexpr char kUnstrippedExampleFile[] = "unstripped_example.elf";
 
-class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
+inline std::string GetTestBinaryPath(const std::string& bin) {
+  return GetTestFilePath(kRelativeTestDataPath) + bin;
+}
+
+class TestData {
  public:
-  TestMemoryAccessor() {
+  TestData() {
     PushData(Elf64_Ehdr{
         .e_ident = {0, 0, 0, 0, ELFCLASS64, ELFDATA2LSB, EV_CURRENT},
         .e_version = EV_CURRENT,
@@ -220,13 +179,19 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
   }
 
   size_t Pos() { return content_.size(); }
+  size_t Size() { return content_.size(); }
+  const uint8_t* Data() { return content_.data(); }
 
-  const uint8_t* GetMemory(uint64_t offset, size_t size) {
-    if (offset + size > content_.size()) {
-      return nullptr;
-    }
+  std::function<bool(uint64_t, std::vector<uint8_t>*)> GetFetcher() {
+    return [this](uint64_t offset, std::vector<uint8_t>* out) {
+      if (offset + out->size() > content_.size()) {
+        return false;
+      }
 
-    return content_.data() + offset;
+      std::copy(content_.begin() + offset,
+                content_.begin() + offset + out->size(), out->begin());
+      return true;
+    };
   }
 
  private:
@@ -236,15 +201,15 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
 }  // namespace
 
 TEST(ElfLib, Create) {
+  TestData t;
   std::unique_ptr<ElfLib> got;
 
-  EXPECT_NE(ElfLib::Create(std::make_unique<TestMemoryAccessor>()).get(),
-            nullptr);
+  EXPECT_NE(ElfLib::Create(t.Data(), t.Size()).get(), nullptr);
 }
 
 TEST(ElfLib, GetSection) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+  TestData t;
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(t.Data(), t.Size());
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -261,8 +226,8 @@ TEST(ElfLib, GetSection) {
 }
 
 TEST(ElfLib, GetSymbolValue) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+  TestData t;
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(t.Data(), t.Size());
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -272,8 +237,8 @@ TEST(ElfLib, GetSymbolValue) {
 }
 
 TEST(ElfLib, GetAllSymbols) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+  TestData t;
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(t.Data(), t.Size());
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -289,8 +254,8 @@ TEST(ElfLib, GetAllSymbols) {
 }
 
 TEST(ElfLib, GetNote) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+  TestData t;
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(t.Data(), t.Size());
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -307,8 +272,8 @@ TEST(ElfLib, GetNote) {
 }
 
 TEST(ElfLib, GetIrregularNote) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+  TestData t;
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(t.Data(), t.Size());
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -323,8 +288,8 @@ TEST(ElfLib, GetIrregularNote) {
 }
 
 TEST(ElfLib, GetSymbolsFromStripped) {
-  std::unique_ptr<ElfLib> elf = ElfLib::Create(
-      std::make_unique<FileExampleAccessor>(kStrippedExampleFile));
+  std::unique_ptr<ElfLib> elf =
+      ElfLib::Create(GetTestBinaryPath(kStrippedExampleFile));
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -356,8 +321,8 @@ TEST(ElfLib, GetSymbolsFromStripped) {
 }
 
 TEST(ElfLib, GetPLTFromUnstripped) {
-  std::unique_ptr<ElfLib> elf = ElfLib::Create(
-      std::make_unique<FileExampleAccessor>(kUnstrippedExampleFile));
+  std::unique_ptr<ElfLib> elf =
+      ElfLib::Create(GetTestBinaryPath(kUnstrippedExampleFile));
 
   ASSERT_NE(elf.get(), nullptr);
 
