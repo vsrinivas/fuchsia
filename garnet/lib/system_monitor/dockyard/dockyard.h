@@ -45,6 +45,12 @@ constexpr SampleValue NORMALIZATION_RANGE = 1000000ULL;
 // For compatibility check with the Harvester.
 constexpr uint32_t DOCKYARD_VERSION = 1;
 
+enum KoidType : SampleValue {
+  JOB = 100ULL,
+  PROCESS = 101ULL,
+  THREAD = 102ULL,
+};
+
 // A Sample.
 struct Sample {
   Sample(SampleTimeNs t, SampleValue v) : time(t), value(v) {}

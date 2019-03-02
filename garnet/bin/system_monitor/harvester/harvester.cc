@@ -8,6 +8,7 @@
 #include <string>
 
 #include <fuchsia/memory/cpp/fidl.h>
+#include <task-utils/walker.h>
 #include <zircon/status.h>
 
 #include "lib/fxl/logging.h"
@@ -25,6 +26,62 @@ void AddCpuValue(SampleList* list, size_t cpu, const std::string name,
   label << "cpu:" << cpu << ":" << name;
   list->emplace_back(label.str(), value);
 }
+
+class TaskHarvester final : public TaskEnumerator {
+ public:
+  TaskHarvester() {}
+
+  // After gathering the data, upload it to |harvester|.
+  void UploadTaskInfo(const std::unique_ptr<Harvester>& harvester) {
+    // TODO(dschuyler): Send data to dockyard.
+    for (auto iter = list_.begin(); iter != list_.end(); ++iter) {
+      FXL_LOG(INFO) << iter->first << ": " << iter->second;
+    }
+  }
+
+ private:
+  SampleList list_;
+
+  // Helper to add a value to the sample |list|.
+  void AddKoidValue(zx_koid_t koid, const std::string name,
+                    dockyard::SampleValue value) {
+    std::ostringstream label;
+    label << "koid:" << koid << ":" << name;
+    list_.emplace_back(label.str(), value);
+  }
+
+  // |TaskEnumerator| Callback for a job.
+  zx_status_t OnJob(int depth, zx_handle_t job, zx_koid_t koid,
+                    zx_koid_t parent_koid) override {
+    AddKoidValue(koid, "type", dockyard::KoidType::JOB);
+    AddKoidValue(koid, "parent_koid", parent_koid);
+    // TODO(dschuyler): gather more info.
+    return ZX_OK;
+  }
+
+  // |TaskEnumerator| Callback for a process.
+  zx_status_t OnProcess(int depth, zx_handle_t process, zx_koid_t koid,
+                        zx_koid_t parent_koid) override {
+    AddKoidValue(koid, "type", dockyard::KoidType::PROCESS);
+    AddKoidValue(koid, "parent_koid", parent_koid);
+    // TODO(dschuyler): gather more info.
+    return ZX_OK;
+  }
+
+  // |TaskEnumerator| Callback for a thread.
+  zx_status_t OnThread(int depth, zx_handle_t thread, zx_koid_t koid,
+                       zx_koid_t parent_koid) override {
+    AddKoidValue(koid, "type", dockyard::KoidType::THREAD);
+    AddKoidValue(koid, "parent_koid", parent_koid);
+    // TODO(dschuyler): gather more info.
+    return ZX_OK;
+  }
+
+  // |TaskEnumerator| Enable On*() calls.
+  bool has_on_job() const final { return true; }
+  bool has_on_process() const final { return true; }
+  bool has_on_thread() const final { return true; }
+};
 
 }  // namespace
 
@@ -123,7 +180,8 @@ void GatherMemorySamples(
 void GatherThreadSamples(
     zx_handle_t root_resource,
     const std::unique_ptr<harvester::Harvester>& harvester) {
-  // TODO(dschuyler): Actually gather the thread samples.
+  TaskHarvester task_harvester;
+  task_harvester.UploadTaskInfo(harvester);
 }
 
 }  // namespace harvester

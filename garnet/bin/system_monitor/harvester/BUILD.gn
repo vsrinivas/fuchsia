@@ -24,6 +24,7 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//third_party/grpc:grpc++",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/task-utils",
   ]
 }
 
