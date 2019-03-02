@@ -93,6 +93,10 @@ public:
         return was_active;
     }
 
+    // Returns the generation count from the last time the thread was enqueued
+    // in the runnable tree.
+    uint64_t generation() const { return generation_; }
+
 private:
     friend class FairScheduler;
 
@@ -123,5 +127,4 @@ private:
     // Takes the value of FairScheduler::generation_count_ + 1 at the time this
     // node is added to the run queue.
     uint64_t generation_{0};
-
 };

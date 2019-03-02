@@ -41,6 +41,16 @@ using ffl::Round;
     ktrace_probe(LocalTrace<LOCAL_KTRACE_ENABLE>, TraceContext::Cpu, \
                  KTRACE_STRING_REF(string), ##args)
 
+#define LOCAL_KTRACE_FLOW_BEGIN(string, flow_id)                          \
+    ktrace_flow_begin(LocalTrace<LOCAL_KTRACE_ENABLE>, TraceContext::Cpu, \
+                      KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string),    \
+                      flow_id)
+
+#define LOCAL_KTRACE_FLOW_END(string, flow_id)                          \
+    ktrace_flow_end(LocalTrace<LOCAL_KTRACE_ENABLE>, TraceContext::Cpu, \
+                    KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string),    \
+                    flow_id)
+
 #define LOCAL_KTRACE_DURATION                        \
     TraceDuration<TraceEnabled<LOCAL_KTRACE_ENABLE>, \
                   KTRACE_GRP_SCHEDULER, TraceContext::Cpu>
@@ -79,6 +89,16 @@ inline void TraceContextSwitch(const thread_t* current_thread,
                              (next_thread->base_priority << 24);
 
     ktrace(TAG_CONTEXT_SWITCH, user_tid, context, current, next);
+}
+
+// Returns a sufficiently unique flow id for a thread based on the thread id and
+// queue generation count. This flow id cannot be used across enqueues because
+// the generation count changes during enqueue.
+inline uint64_t FlowIdFromThreadGeneration(const thread_t* thread) {
+    const int kRotationBits = 32;
+    const uint64_t rotated_tid = (thread->user_tid << kRotationBits) |
+                                 (thread->user_tid >> kRotationBits);
+    return rotated_tid ^ thread->fair_task_state.generation();
 }
 
 } // anonymous namespace
@@ -358,6 +378,11 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
         timer_preempt_reset(absolute_deadline_ns.raw_value());
 
         trace.End(Round<uint64_t>(now), Round<uint64_t>(absolute_deadline_ns));
+
+        // Emit a flow end event to match the flow begin event emitted when the
+        // thread was enqueued. Emitting in this scope ensures that thread just
+        // came from the run queue (and is not the idle thread).
+        LOCAL_KTRACE_FLOW_END("sched_latency", FlowIdFromThreadGeneration(next_thread));
     }
 
     if (next_thread != current_thread) {
@@ -488,6 +513,7 @@ void FairScheduler::QueueThread(thread_t* thread) {
     thread->fair_task_state.generation_ = ++generation_count_;
     run_queue_.insert(thread);
     LOCAL_KTRACE("queue_thread");
+    LOCAL_KTRACE_FLOW_BEGIN("sched_latency", FlowIdFromThreadGeneration(thread));
 }
 
 void FairScheduler::Insert(SchedTime now, thread_t* thread) {
