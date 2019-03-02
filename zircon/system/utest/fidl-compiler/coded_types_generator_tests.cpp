@@ -122,9 +122,9 @@ bool CodedTypesOfInterface() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface SomeInterface {};
+protocol SomeInterface {};
 
-interface UseOfInterface {
+protocol UseOfInterface {
     Call(SomeInterface arg);
 };
 )FIDL");
@@ -164,9 +164,9 @@ bool CodedTypesOfRequestOfInterface() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface SomeInterface {};
+protocol SomeInterface {};
 
-interface UseOfRequestOfInterface {
+protocol UseOfRequestOfInterface {
     Call(request<SomeInterface> arg);
 };
 )FIDL");

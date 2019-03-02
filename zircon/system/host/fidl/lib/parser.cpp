@@ -604,104 +604,6 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     return std::make_unique<raw::ParameterList>(scope.GetSourceElement(), std::move(parameter_list));
 }
 
-std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-    auto ordinal = MaybeParseOrdinal();
-    if (!Ok())
-        return Fail();
-    if (ordinal != nullptr) {
-        // Ordinals are currently an error.  At some point, we should remove the
-        // check for ordinals here. See FIDL-372.
-        error_reporter_->ReportError(scope.GetSourceElement().location(),
-                                     "\nExplicit ordinals are disallowed in Interfaces.");
-    }
-
-    switch (Peek().kind()) {
-        case Token::Kind::kArrow:
-            return ParseProtocolEvent(std::move(attributes), scope, std::move(ordinal));
-        case Token::Kind::kIdentifier: {
-            auto method_name = ParseIdentifier();
-            if (!Ok())
-                return Fail();
-            return ParseProtocolMethod(
-                std::move(attributes), scope, std::move(ordinal), std::move(method_name));
-        }
-        default:
-            return Fail();
-    }
-}
-
-std::unique_ptr<raw::InterfaceDeclaration>
-Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-    std::vector<std::unique_ptr<raw::ComposeProtocol>> superinterfaces;
-    std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
-
-    error_reporter_->ReportWarning(last_token_.location(),
-                                   "The interface syntax is deprecated and will "
-                                   "be discontinued on Monday March 4th, 2019. At that time, this "
-                                   "warning will turn into a parse error. Please use protocol "
-                                   "syntax instead, see https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-023.md#syntactic-changes");
-
-    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kInterface));
-    if (!Ok())
-        return Fail();
-
-    auto identifier = ParseIdentifier();
-    if (!Ok())
-        return Fail();
-
-    if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
-        for (;;) {
-            auto protocol_name = ParseCompoundIdentifier();
-            superinterfaces.emplace_back(std::make_unique<raw::ComposeProtocol>(
-                raw::SourceElement(protocol_name->start_, protocol_name->end_),
-                std::move(protocol_name)));
-            if (!Ok())
-                return Fail();
-            if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
-                break;
-        }
-    }
-
-    ConsumeToken(OfKind(Token::Kind::kLeftCurly));
-    if (!Ok())
-        return Fail();
-
-    auto parse_member = [&methods, this]() {
-        ASTScope scope(this);
-        std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
-        if (!Ok())
-            return More;
-
-        switch (Peek().kind()) {
-        default:
-            ConsumeToken(OfKind(Token::Kind::kRightCurly));
-            return Done;
-
-        case Token::Kind::kNumericLiteral:
-        case Token::Kind::kArrow:
-        case Token::Kind::kIdentifier:
-            methods.emplace_back(ParseInterfaceMethod(std::move(attributes), scope));
-            return More;
-        }
-    };
-
-    while (parse_member() == More) {
-        if (!Ok())
-            Fail();
-        ConsumeToken(OfKind(Token::Kind::kSemicolon));
-        if (!Ok())
-            return Fail();
-    }
-    if (!Ok())
-        Fail();
-
-    auto interface_decl = std::make_unique<raw::InterfaceDeclaration>(
-        scope.GetSourceElement(), std::move(attributes), std::move(identifier),
-        std::move(superinterfaces), std::move(methods));
-    interface_decl->is_interface = true;
-    return interface_decl;
-}
-
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
     std::unique_ptr<raw::Ordinal> ordinal) {
@@ -1229,11 +1131,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
             enum_declaration_list.emplace_back(ParseEnumDeclaration(std::move(attributes), scope));
-            return More;
-
-        case CASE_IDENTIFIER(Token::Subkind::kInterface):
-            interface_declaration_list.emplace_back(
-                ParseInterfaceDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kProtocol):

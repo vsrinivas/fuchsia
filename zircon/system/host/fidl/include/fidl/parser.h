@@ -207,10 +207,6 @@ private:
 
     std::unique_ptr<raw::Parameter> ParseParameter();
     std::unique_ptr<raw::ParameterList> ParseParameterList();
-    std::unique_ptr<raw::InterfaceMethod> ParseInterfaceMethod(
-        std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope);
-    std::unique_ptr<raw::InterfaceDeclaration>
-    ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
     std::unique_ptr<raw::InterfaceMethod> ParseProtocolEvent(
         std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
         std::unique_ptr<raw::Ordinal> ordinal);

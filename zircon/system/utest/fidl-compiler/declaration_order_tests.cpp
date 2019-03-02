@@ -28,7 +28,7 @@ struct TheRequestStruct_02 {
 
 struct TheElementStruct_03 {};
 
-interface TheInterface_01 {
+protocol TheInterface_01 {
   SomeMethod(TheRequestStruct_02 req);
 };
 
@@ -56,7 +56,7 @@ struct TheRequestStruct_02 {
 
 struct TheElementStruct_03 {};
 
-interface TheInterface_01 {
+protocol TheInterface_01 {
   SomeMethod(TheRequestStruct_02 req);
 };
 
@@ -82,7 +82,7 @@ struct TheRequestStruct_02 {
   request<TheInterface_01> req;
 };
 
-interface TheInterface_01 {
+protocol TheInterface_01 {
   SomeMethod(TheRequestStruct_02 req);
 };
 

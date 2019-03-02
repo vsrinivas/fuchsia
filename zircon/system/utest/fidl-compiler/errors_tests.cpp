@@ -14,7 +14,7 @@ bool GoodError() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface Example {
+protocol Example {
     Method() -> (string foo) error int32;
 };
 
@@ -56,7 +56,7 @@ bool GoodErrorUnsigned() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface Example {
+protocol Example {
     Method() -> (string foo) error uint32;
 };
 
@@ -78,7 +78,7 @@ enum ErrorType : int32 {
     UGLY = 3;
 };
 
-interface Example {
+protocol Example {
     Method() -> (string foo) error ErrorType;
 };
 
@@ -94,7 +94,7 @@ bool GoodErrorEnumAfter() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface Example {
+protocol Example {
     Method() -> (string foo) error ErrorType;
 };
 
@@ -116,7 +116,7 @@ bool BadErrorUnknownIdentifier() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface Example {
+protocol Example {
     Method() -> (string foo) error ErrorType;
 };
 )FIDL");
@@ -134,7 +134,7 @@ bool BadErrorWrongPrimitive() {
     TestLibrary library(R"FIDL(
 library example;
 
-interface Example {
+protocol Example {
     Method() -> (string foo) error float32;
 };
 )FIDL");
@@ -151,7 +151,7 @@ bool BadErrorMissingType() {
 
     TestLibrary library(R"FIDL(
 library example;
-interface Example {
+protocol Example {
     Method() -> (int32 flub) error;
 };
 )FIDL");
@@ -167,7 +167,7 @@ bool BadErrorNotAType() {
 
     TestLibrary library(R"FIDL(
 library example;
-interface Example {
+protocol Example {
     Method() -> (int32 flub) error "hello";
 };
 )FIDL");
@@ -183,7 +183,7 @@ bool BadErrorNoResponse() {
 
     TestLibrary library(R"FIDL(
 library example;
-interface Example {
+protocol Example {
     Method() -> error int32;
 };
 )FIDL");

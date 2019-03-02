@@ -69,7 +69,7 @@ bool ordinal_cannot_be_zero() {
 library a;
 
 // The first 32 bits of the SHA256 hash of a.b/fcuvhse are 0.
-interface b {
+protocol b {
     fcuvhse() -> (int64 i);
 };
 
@@ -89,7 +89,7 @@ library a;
 
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
 // the same.  This will trigger an error when ordinals are generated.
-interface b {
+protocol b {
     ljz(string s, bool b) -> (int32 i);
     clgn(string s) -> (handle<channel> r);
 };
@@ -116,7 +116,7 @@ library a;
 
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
 // the same.  This will trigger an error when ordinals are generated.
-interface b {
+protocol b {
     [Selector = "ljz"]
     foo(string s, bool b) -> (int32 i);
     [Selector = "clgn"]
@@ -145,7 +145,7 @@ library a;
 
 // The first 32 bits of the SHA256 hash of a.b/ljz and a.b/clgn are
 // the same.  This will trigger an error when ordinals are generated.
-interface b {
+protocol b {
     [Selector = "ljz_"]
     ljz(string s, bool b) -> (int32 i);
     clgn(string s) -> (handle<channel> r);
@@ -162,7 +162,7 @@ bool test_ordinal_value_is_sha256() {
     TestLibrary library(R"FIDL(
 library a;
 
-interface b {
+protocol b {
     potato(string s, bool b) -> (int32 i);
 };
 )FIDL");

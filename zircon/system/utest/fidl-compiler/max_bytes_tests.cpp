@@ -211,22 +211,22 @@ struct StructWithOptionalEmptyXUnion {
   EmptyXUnion? opt_empty;
 };
 
-interface SomeInterface {};
+protocol SomeProtocol {};
 
-struct UsingSomeInterface {
-  SomeInterface value;
+struct UsingSomeProtocol {
+  SomeProtocol value;
 };
 
-struct UsingOptSomeInterface {
-  SomeInterface? value;
+struct UsingOptSomeProtocol {
+  SomeProtocol? value;
 };
 
-struct UsingRequestSomeInterface {
-  request<SomeInterface> value;
+struct UsingRequestSomeProtocol {
+  request<SomeProtocol> value;
 };
 
-struct UsingOptRequestSomeInterface {
-  request<SomeInterface>? value;
+struct UsingOptRequestSomeProtocol {
+  request<SomeProtocol>? value;
 };
 
 )FIDL") {}
@@ -513,35 +513,35 @@ static bool xunions() {
     END_TEST;
 }
 
-bool interfaces_and_request_of_interfaces() {
+bool protocols_and_request_of_protocols() {
     BEGIN_TEST;
 
     MaxBytesLibrary test_library;
     EXPECT_TRUE(test_library.Compile());
 
-    auto using_some_interface = test_library.LookupStruct("UsingSomeInterface");
-    EXPECT_NONNULL(using_some_interface);
-    EXPECT_EQ(using_some_interface->typeshape.Size(), 4);
-    EXPECT_EQ(using_some_interface->typeshape.Alignment(), 4);
-    EXPECT_EQ(using_some_interface->typeshape.MaxOutOfLine(), 0);
+    auto using_some_protocol = test_library.LookupStruct("UsingSomeProtocol");
+    EXPECT_NONNULL(using_some_protocol);
+    EXPECT_EQ(using_some_protocol->typeshape.Size(), 4);
+    EXPECT_EQ(using_some_protocol->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_some_protocol->typeshape.MaxOutOfLine(), 0);
 
-    auto using_opt_some_interface = test_library.LookupStruct("UsingOptSomeInterface");
-    EXPECT_NONNULL(using_opt_some_interface);
-    EXPECT_EQ(using_opt_some_interface->typeshape.Size(), 4);
-    EXPECT_EQ(using_opt_some_interface->typeshape.Alignment(), 4);
-    EXPECT_EQ(using_opt_some_interface->typeshape.MaxOutOfLine(), 0);
+    auto using_opt_some_protocol = test_library.LookupStruct("UsingOptSomeProtocol");
+    EXPECT_NONNULL(using_opt_some_protocol);
+    EXPECT_EQ(using_opt_some_protocol->typeshape.Size(), 4);
+    EXPECT_EQ(using_opt_some_protocol->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_opt_some_protocol->typeshape.MaxOutOfLine(), 0);
 
-    auto using_request_some_interface = test_library.LookupStruct("UsingRequestSomeInterface");
-    EXPECT_NONNULL(using_request_some_interface);
-    EXPECT_EQ(using_request_some_interface->typeshape.Size(), 4);
-    EXPECT_EQ(using_request_some_interface->typeshape.Alignment(), 4);
-    EXPECT_EQ(using_request_some_interface->typeshape.MaxOutOfLine(), 0);
+    auto using_request_some_protocol = test_library.LookupStruct("UsingRequestSomeProtocol");
+    EXPECT_NONNULL(using_request_some_protocol);
+    EXPECT_EQ(using_request_some_protocol->typeshape.Size(), 4);
+    EXPECT_EQ(using_request_some_protocol->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_request_some_protocol->typeshape.MaxOutOfLine(), 0);
 
-    auto using_opt_request_some_interface = test_library.LookupStruct("UsingOptRequestSomeInterface");
-    EXPECT_NONNULL(using_opt_request_some_interface);
-    EXPECT_EQ(using_opt_request_some_interface->typeshape.Size(), 4);
-    EXPECT_EQ(using_opt_request_some_interface->typeshape.Alignment(), 4);
-    EXPECT_EQ(using_opt_request_some_interface->typeshape.MaxOutOfLine(), 0);
+    auto using_opt_request_some_protocol = test_library.LookupStruct("UsingOptRequestSomeProtocol");
+    EXPECT_NONNULL(using_opt_request_some_protocol);
+    EXPECT_EQ(using_opt_request_some_protocol->typeshape.Size(), 4);
+    EXPECT_EQ(using_opt_request_some_protocol->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_opt_request_some_protocol->typeshape.MaxOutOfLine(), 0);
 
     END_TEST;
 }
@@ -556,7 +556,7 @@ struct WebMessage {
   request<MessagePort>? opt_message_port_req;
 };
 
-interface MessagePort {
+protocol MessagePort {
   PostMessage(WebMessage message) -> (bool success);
 };
 )FIDL");
@@ -585,7 +585,7 @@ interface MessagePort {
   END_TEST;
 }
 
-bool recursive_opt_interface() {
+bool recursive_opt_protocol() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
@@ -595,7 +595,7 @@ struct WebMessage {
   MessagePort? opt_message_port;
 };
 
-interface MessagePort {
+protocol MessagePort {
   PostMessage(WebMessage message) -> (bool success);
 };
 )FIDL");
@@ -850,7 +850,7 @@ enum Priority {
   END_TEST;
 }
 
-bool interface_child_and_parent() {
+bool protocol_child_and_parent() {
   BEGIN_TEST;
 
   SharedAmongstLibraries shared;
@@ -858,7 +858,7 @@ bool interface_child_and_parent() {
 library parent;
 
 [FragileBase]
-interface Parent {
+protocol Parent {
   Sync() -> ();
 };
 )FIDL", &shared);
@@ -869,7 +869,8 @@ library child;
 
 using parent;
 
-interface Child : parent.Parent {
+protocol Child {
+  compose parent.Parent;
 };
 )FIDL", &shared);
   ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
@@ -902,14 +903,14 @@ RUN_TEST(vectors);
 RUN_TEST(strings);
 RUN_TEST(arrays);
 RUN_TEST(xunions);
-RUN_TEST(interfaces_and_request_of_interfaces);
+RUN_TEST(protocols_and_request_of_protocols);
 RUN_TEST(recursive_opt_request);
-RUN_TEST(recursive_opt_interface);
+RUN_TEST(recursive_opt_protocol);
 RUN_TEST(recursive_struct);
 RUN_TEST(recursive_struct_with_handles);
 RUN_TEST(co_recursive_struct);
 RUN_TEST(co_recursive_struct_with_handles);
 RUN_TEST(co_recursive_struct2);
 RUN_TEST(struct_two_deep);
-RUN_TEST(interface_child_and_parent);
+RUN_TEST(protocol_child_and_parent);
 END_TEST_CASE(max_bytes_tests);

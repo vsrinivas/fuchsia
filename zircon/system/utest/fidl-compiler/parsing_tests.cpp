@@ -141,8 +141,7 @@ struct struct {
     bool field;
 };
 
-
-interface InInterface {
+protocol InProtocol {
     as(bool as);
     library(bool library);
     using(bool using);
@@ -232,24 +231,7 @@ struct test_ {
     END_TEST;
 }
 
-bool ordinal_present_test() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library test;
-
-interface Test {
-    1: foo();
-};
-)FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].data(), "\nExplicit ordinals are disallowed in Interfaces.");
-    END_TEST;
-}
-
-    class LocaleSwapper {
+class LocaleSwapper {
 public:
     explicit LocaleSwapper(const char* new_locale) {
         old_locale_ = setlocale(LC_ALL, new_locale);
@@ -309,7 +291,7 @@ struct Empty {
 
 } // namespace
 
-BEGIN_TEST_CASE(parser_tests);
+BEGIN_TEST_CASE(parsing_tests);
 RUN_TEST(bad_compound_identifier_test);
 RUN_TEST(parsing_reserved_words_in_struct_test);
 RUN_TEST(parsing_reserved_words_in_union_test);
@@ -317,7 +299,6 @@ RUN_TEST(parsing_reserved_words_in_interface_test);
 RUN_TEST(bad_char_at_sign_test);
 RUN_TEST(bad_char_slash_test);
 RUN_TEST(bad_identifier_test);
-RUN_TEST(ordinal_present_test);
 RUN_TEST(invalid_character_test);
 RUN_TEST(empty_struct_test);
-END_TEST_CASE(parser_tests);
+END_TEST_CASE(parsing_tests);

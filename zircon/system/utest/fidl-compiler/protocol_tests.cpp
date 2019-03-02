@@ -118,61 +118,6 @@ protocol D {
     END_TEST;
 }
 
-// TODO(FIDL-460): Cleanup.
-bool valid_mix_and_match_protocols_and_interfaces() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library example;
-
-[FragileBase]
-interface A {
-    MethodA();
-};
-
-[FragileBase]
-protocol B {
-    compose A;
-    MethodB();
-};
-
-[FragileBase]
-interface C : A {
-    MethodC();
-};
-
-protocol D {
-    compose B;
-    compose C;
-    MethodD();
-};
-
-)FIDL");
-    ASSERT_TRUE(library.Compile());
-
-    auto protocol_a = library.LookupInterface("A");
-    ASSERT_NONNULL(protocol_a);
-    EXPECT_EQ(protocol_a->methods.size(), 1);
-    EXPECT_EQ(protocol_a->all_methods.size(), 1);
-
-    auto protocol_b = library.LookupInterface("B");
-    ASSERT_NONNULL(protocol_b);
-    EXPECT_EQ(protocol_b->methods.size(), 1);
-    EXPECT_EQ(protocol_b->all_methods.size(), 2);
-
-    auto protocol_c = library.LookupInterface("C");
-    ASSERT_NONNULL(protocol_c);
-    EXPECT_EQ(protocol_c->methods.size(), 1);
-    EXPECT_EQ(protocol_c->all_methods.size(), 2);
-
-    auto protocol_d = library.LookupInterface("D");
-    ASSERT_NONNULL(protocol_d);
-    EXPECT_EQ(protocol_d->methods.size(), 1);
-    EXPECT_EQ(protocol_d->all_methods.size(), 4);
-
-    END_TEST;
-}
-
 bool invalid_colon_syntax_is_not_supported() {
     BEGIN_TEST;
 
@@ -251,27 +196,6 @@ protocol Child {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(), "protocol composed multiple times");
-
-    END_TEST;
-}
-
-bool invalid_cannot_use_compose_in_interface_declaration() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library example;
-
-protocol Parent {};
-interface Child {
-    compose Parent;
-}
-
-)FIDL");
-    ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    // compose could be the start of a method, hence expecting a left paren.
-    ASSERT_STR_STR(errors[0].c_str(), "unexpected token Identifier, was expecting LeftParen");
 
     END_TEST;
 }
@@ -440,12 +364,10 @@ BEGIN_TEST_CASE(protocol_tests);
 RUN_TEST(valid_empty_protocol);
 RUN_TEST(valid_compose_method);
 RUN_TEST(valid_protocol_composition);
-RUN_TEST(valid_mix_and_match_protocols_and_interfaces);
 RUN_TEST(invalid_colon_syntax_is_not_supported);
 RUN_TEST(invalid_cannot_attach_attributes_to_compose);
 RUN_TEST(invalid_cannot_compose_yourself);
 RUN_TEST(invalid_cannot_compose_twice_the_same_protocol);
-RUN_TEST(invalid_cannot_use_compose_in_interface_declaration);
 RUN_TEST(invalid_cannot_use_ordinals_in_protocol_declaration);
 RUN_TEST(invalid_no_other_pragma_than_compose);
 RUN_TEST(invalid_composed_protocols_have_clashing_names);

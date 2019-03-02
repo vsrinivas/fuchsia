@@ -408,9 +408,6 @@ public:
 
     void Accept(TreeVisitor& visitor);
 
-    // TODO(FIDL-460): Remove.
-    bool is_interface = false;
-
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<ComposeProtocol>> superinterfaces;

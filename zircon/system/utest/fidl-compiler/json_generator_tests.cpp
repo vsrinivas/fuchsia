@@ -159,7 +159,7 @@ library fidl.test.json;
 struct Empty {
 };
 
-interface EmptyInterface {
+protocol EmptyInterface {
   Send(Empty e);
   -> Receive (Empty e);
   SendAndReceive(Empty e) -> (Empty e);
@@ -179,7 +179,7 @@ interface EmptyInterface {
       "location": {
         "filename": "json.fidl",
         "line": 7,
-        "column": 10
+        "column": 9
       },
       "methods": [
         {
@@ -707,11 +707,12 @@ bool json_generator_test_inheritance() {
 library fidl.test.json;
 
 [FragileBase]
-interface super {
+protocol super {
    foo(string s) -> (int64 y);
 };
 
-interface sub : super {
+protocol sub {
+  compose super;
 };
 
 )FIDL",
@@ -728,7 +729,7 @@ interface sub : super {
       "location": {
         "filename": "json.fidl",
         "line": 5,
-        "column": 10
+        "column": 9
       },
       "maybe_attributes": [
         {
@@ -798,7 +799,7 @@ interface sub : super {
       "location": {
         "filename": "json.fidl",
         "line": 9,
-        "column": 10
+        "column": 9
       },
       "methods": [
         {
@@ -884,11 +885,12 @@ bool json_generator_test_inheritance_with_recursive_decl() {
 library fidl.test.json;
 
 [FragileBase]
-interface Parent {
+protocol Parent {
   First(request<Parent> request);
 };
 
-interface Child : Parent {
+protocol Child {
+  compose Parent;
   Second(request<Parent> request);
 };
 
@@ -906,7 +908,7 @@ interface Child : Parent {
       "location": {
         "filename": "json.fidl",
         "line": 5,
-        "column": 10
+        "column": 9
       },
       "maybe_attributes": [
         {
@@ -956,7 +958,7 @@ interface Child : Parent {
       "location": {
         "filename": "json.fidl",
         "line": 9,
-        "column": 10
+        "column": 9
       },
       "methods": [
         {
@@ -999,7 +1001,7 @@ interface Child : Parent {
           "name": "Second",
           "location": {
             "filename": "json.fidl",
-            "line": 10,
+            "line": 11,
             "column": 2
           },
           "has_request": true,
@@ -1013,7 +1015,7 @@ interface Child : Parent {
               "name": "request",
               "location": {
                 "filename": "json.fidl",
-                "line": 10,
+                "line": 11,
                 "column": 25
               },
               "size": 4,
@@ -1055,7 +1057,7 @@ bool json_generator_test_error() {
         EXPECT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
-interface Example {
+protocol Example {
    foo(string s) -> (int64 y) error uint32;
 };
 
@@ -1073,7 +1075,7 @@ interface Example {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 10
+        "column": 9
       },
       "methods": [
         {
