@@ -127,6 +127,14 @@ class ElfLib {
   // symbols could not be loaded.
   std::optional<std::map<std::string, Elf64_Sym>> GetAllSymbols();
 
+  // Get a symbol from the symbol table. Return nullptr if there is no such
+  // symbol. Pointer should live as long as the memory accessor.
+  const Elf64_Sym* GetDynamicSymbol(const std::string& name);
+
+  // Get a map of all symbols and their string names. Returns nullopt if the
+  // symbols could not be loaded.
+  std::optional<std::map<std::string, Elf64_Sym>> GetAllDynamicSymbols();
+
   // Create a new ElfLib object.
   static std::unique_ptr<ElfLib> Create(
       std::unique_ptr<MemoryAccessor>&& memory);
@@ -141,6 +149,14 @@ class ElfLib {
   std::map<std::string, uint64_t> GetPLTOffsets();
 
  private:
+  // Location of a section specified by data gleaned from the dynamic segment.
+  struct DynamicSection {
+    std::optional<uint64_t> offset;
+    std::optional<size_t> size;
+
+    bool IsValid() { return offset && size; }
+  };
+
   // x64-specific implementation of GetPLTOffsets
   std::map<std::string, uint64_t> GetPLTOffsetsX64();
 
@@ -164,26 +180,36 @@ class ElfLib {
   MemoryRegion GetSegmentData(size_t segment);
 
   // Get the contents of the symbol table. Return nullptr if it is not present
-  // or we do not have the means to locate it. Size is in elements.
+  // or we do not have the means to locate it. Size is number of structs, not
+  // number of bytes.
   std::pair<const Elf64_Sym*, size_t> GetSymtab();
+
+  // Get the contents of the dynamic symbol table. Return nullptr if it is not
+  // present or we do not have the means to locate it. Size is number of
+  // structs, not number of bytes.
+  std::pair<const Elf64_Sym*, size_t> GetDynamicSymtab();
 
   // Get a string from the .strtab section. Return nullptr if the index is
   // invalid.
   std::optional<std::string> GetString(size_t index);
+
+  // Get a string from the .dynstr section. Return nullptr if the index is
+  // invalid.
+  std::optional<std::string> GetDynamicString(size_t index);
 
   // Load symbols from the dynamic segment of the target. We only do this when
   // the section data isn't available and we can't use the regular .symtab
   // information. Returns true unless an error occurred.
   bool LoadDynamicSymbols();
 
+  bool did_load_dynamic_symbols_ = false;
+
   std::unique_ptr<MemoryAccessor> memory_;
   Elf64_Ehdr header_;
-  size_t dynamic_strtab_size_;
-  size_t dynamic_symtab_size_;
-  std::optional<uint64_t> dynamic_strtab_offset_;
-  std::optional<uint64_t> dynamic_symtab_offset_;
   std::optional<bool> dynamic_plt_use_rela_;
 
+  DynamicSection dynsym_;
+  DynamicSection dynstr_;
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
   std::map<size_t, std::vector<uint8_t>> section_data_;

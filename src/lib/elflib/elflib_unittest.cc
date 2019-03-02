@@ -328,7 +328,10 @@ TEST(ElfLib, GetSymbolsFromStripped) {
 
   ASSERT_NE(elf.get(), nullptr);
 
-  auto syms = elf->GetAllSymbols();
+  auto missing_syms = elf->GetAllSymbols();
+  EXPECT_FALSE(missing_syms);
+
+  auto syms = elf->GetAllDynamicSymbols();
   ASSERT_TRUE(syms);
   EXPECT_EQ(8U, syms->size());
 

@@ -31,6 +31,49 @@ std::string GetNullTerminatedStringAt(const uint8_t* data, size_t data_length,
   return std::string(start);
 }
 
+// Given a name, a symbol table (sized array of Elf64_Sym), and an accessor for
+// a corresponding string table, find the symbol with the given name.
+const Elf64_Sym* GetSymbolFromTable(
+    const std::string& name, const std::pair<const Elf64_Sym*, size_t>& symtab,
+    std::function<std::optional<std::string>(uint64_t)> get_string) {
+  if (!symtab.first) {
+    return nullptr;
+  }
+
+  const Elf64_Sym* symbols = symtab.first;
+  const Elf64_Sym* end = symtab.first + symtab.second;
+
+  for (auto symbol = symbols; symbol <= end; symbol++) {
+    auto got_name = get_string(symbol->st_name);
+
+    if (got_name && *got_name == name) {
+      return symbol;
+    }
+  }
+
+  return nullptr;
+}
+
+std::optional<std::map<std::string, Elf64_Sym>> SymtabToMap(
+    const std::pair<const Elf64_Sym*, size_t>& symtab,
+    const ElfLib::MemoryRegion& strtab) {
+  auto [symtab_ptr, symtab_size] = symtab;
+  if (!symtab_ptr)
+    return std::nullopt;
+
+  std::map<std::string, Elf64_Sym> out;
+
+  const Elf64_Sym* symbols = symtab_ptr;
+  const Elf64_Sym* end = symtab_ptr + symtab_size;
+  for (auto symbol = symbols; symbol != end; symbol++) {
+    auto sym_name =
+        GetNullTerminatedStringAt(strtab.ptr, strtab.size, symbol->st_name);
+    out[sym_name] = *symbol;
+  }
+
+  return out;
+}
+
 }  // namespace
 
 std::optional<Elf64_Ehdr> ElfLib::MemoryAccessorForFile::GetHeader() {
@@ -275,9 +318,11 @@ ElfLib::MemoryRegion ElfLib::GetSectionData(const std::string& name) {
 }
 
 bool ElfLib::LoadDynamicSymbols() {
-  if (dynamic_symtab_offset_ || dynamic_strtab_offset_) {
+  if (did_load_dynamic_symbols_) {
     return true;
   }
+
+  did_load_dynamic_symbols_ = true;
 
   LoadProgramHeaders();
 
@@ -295,30 +340,28 @@ bool ElfLib::LoadDynamicSymbols() {
     const Elf64_Dyn* start = reinterpret_cast<const Elf64_Dyn*>(data.ptr);
     const Elf64_Dyn* end = start + (data.size / sizeof(Elf64_Dyn));
 
-    dynamic_strtab_size_ = 0;
-    dynamic_symtab_size_ = 0;
-
     for (auto dyn = start; dyn != end; dyn++) {
       if (dyn->d_tag == DT_STRTAB) {
-        if (dynamic_strtab_offset_) {
-          // We have more than one entry specifying the strtab location. Not
-          // clear what to do there so just ignore all but the first.
+        if (dynstr_.offset) {
+          FXL_LOG(WARNING) << "Multiple DT_STRTAB entries found.";
           continue;
         }
 
-        dynamic_strtab_offset_ = dyn->d_un.d_ptr;
+        dynstr_.offset = dyn->d_un.d_ptr;
       } else if (dyn->d_tag == DT_SYMTAB) {
-        if (dynamic_symtab_offset_) {
+        if (dynsym_.offset) {
+          FXL_LOG(WARNING) << "Multiple DT_SYMTAB entries found.";
           continue;
         }
 
-        dynamic_symtab_offset_ = dyn->d_un.d_ptr;
+        dynsym_.offset = dyn->d_un.d_ptr;
       } else if (dyn->d_tag == DT_STRSZ) {
-        if (dynamic_strtab_size_) {
+        if (dynstr_.size) {
+          FXL_LOG(WARNING) << "Multiple DT_STRSZ entries found.";
           continue;
         }
 
-        dynamic_strtab_size_ = dyn->d_un.d_val;
+        dynstr_.size = dyn->d_un.d_val;
       } else if (dyn->d_tag == DT_HASH) {
         // A note: The old DT_HASH style of hash table is considered legacy on
         // Fuchsia. Technically a binary could provide both styles of hash
@@ -326,6 +369,10 @@ bool ElfLib::LoadDynamicSymbols() {
         // ignores DT_HASH.
         FXL_LOG(WARNING) << "Old style DT_HASH table found.";
       } else if (dyn->d_tag == DT_GNU_HASH) {
+        if (dynsym_.size) {
+          FXL_LOG(WARNING) << "Multiple DT_GNU_HASH entries found.";
+          continue;
+        }
         auto addr = dyn->d_un.d_ptr;
 
         // Our elf header doesn't provide the DT_GNU_HASH header structure.
@@ -362,7 +409,7 @@ bool ElfLib::LoadDynamicSymbols() {
             *std::max_element(buckets, buckets + header.nbuckets);
 
         if (max_bucket < header.symoffset) {
-          dynamic_symtab_size_ = max_bucket;
+          dynsym_.size = max_bucket;
           continue;
         }
 
@@ -380,7 +427,7 @@ bool ElfLib::LoadDynamicSymbols() {
               *reinterpret_cast<const uint32_t*>(chain_entry_data);
 
           if (chain_entry & 1) {
-            dynamic_symtab_size_ = nsyms;
+            dynsym_.size = nsyms;
             break;
           }
         }
@@ -520,23 +567,25 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
   return ret;
 }
 
+std::optional<std::string> ElfLib::GetDynamicString(size_t index) {
+  if (!LoadDynamicSymbols() || !dynstr_.IsValid()) {
+    return std::nullopt;
+  }
+
+  auto data = memory_->GetLoadedMemory(*dynstr_.offset, *dynstr_.size);
+
+  if (!data) {
+    return std::nullopt;
+  }
+
+  return GetNullTerminatedStringAt(data, *dynstr_.size, index);
+}
+
 std::optional<std::string> ElfLib::GetString(size_t index) {
   auto string_data = GetSectionData(".strtab");
 
   if (!string_data.ptr) {
-    if (!LoadDynamicSymbols()) {
-      return std::nullopt;
-    }
-
-    auto data =
-        memory_->GetLoadedMemory(*dynamic_strtab_offset_, dynamic_strtab_size_);
-
-    if (!data) {
-      return std::nullopt;
-    }
-
-    string_data =
-        ElfLib::MemoryRegion{.ptr = data, .size = dynamic_strtab_size_};
+    return std::nullopt;
   }
 
   return GetNullTerminatedStringAt(string_data.ptr, string_data.size, index);
@@ -551,70 +600,49 @@ std::pair<const Elf64_Sym*, size_t> ElfLib::GetSymtab() {
     return std::make_pair(symbols, symtab.size / sizeof(Elf64_Sym));
   }
 
+  return std::make_pair(nullptr, 0);
+}
+
+std::pair<const Elf64_Sym*, size_t> ElfLib::GetDynamicSymtab() {
   if (!LoadDynamicSymbols()) {
     return std::make_pair(nullptr, 0);
   }
 
-  if (!dynamic_symtab_offset_) {
+  if (!dynsym_.IsValid()) {
     return std::make_pair(nullptr, 0);
   }
-  auto memory = memory_->GetLoadedMemory(
-      *dynamic_symtab_offset_, dynamic_symtab_size_ * sizeof(Elf64_Sym));
+
+  auto memory = memory_->GetLoadedMemory(*dynsym_.offset,
+                                         *dynsym_.size * sizeof(Elf64_Sym));
 
   return std::make_pair(reinterpret_cast<const Elf64_Sym*>(memory),
-                        dynamic_symtab_size_);
+                        *dynsym_.size);
 }
 
 const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
-  auto symtab = GetSymtab();
+  return GetSymbolFromTable(name, GetSymtab(),
+                            [this](uint64_t idx) { return GetString(idx); });
+}
 
-  if (!symtab.first) {
-    return nullptr;
-  }
-
-  const Elf64_Sym* symbols = symtab.first;
-  const Elf64_Sym* end = symtab.first + symtab.second;
-
-  for (auto symbol = symbols; symbol <= end; symbol++) {
-    auto got_name = GetString(symbol->st_name);
-
-    if (got_name && *got_name == name) {
-      return symbol;
-    }
-  }
-
-  return nullptr;
+const Elf64_Sym* ElfLib::GetDynamicSymbol(const std::string& name) {
+  return GetSymbolFromTable(name, GetDynamicSymtab(), [this](uint64_t idx) {
+    return GetDynamicString(idx);
+  });
 }
 
 std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllSymbols() {
-  auto [symtab_ptr, symtab_size] = GetSymtab();
-  if (!symtab_ptr)
+  return SymtabToMap(GetSymtab(), GetSectionData(".strtab"));
+}
+
+std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllDynamicSymbols() {
+  if (!LoadDynamicSymbols() || !dynstr_.IsValid()) {
     return std::nullopt;
-
-  std::map<std::string, Elf64_Sym> out;
-
-  // We front-load the sym data, as it's the same memory section for each symbol
-  // within the section.
-  auto string_data = GetSectionData(".strtab");
-  if (!string_data.ptr) {
-    if (!LoadDynamicSymbols())
-      return std::nullopt;
-
-    auto data =
-        memory_->GetLoadedMemory(*dynamic_strtab_offset_, dynamic_strtab_size_);
-    string_data.ptr = data;
-    string_data.size = dynamic_strtab_size_;
   }
 
-  const Elf64_Sym* symbols = symtab_ptr;
-  const Elf64_Sym* end = symtab_ptr + symtab_size;
-  for (auto symbol = symbols; symbol != end; symbol++) {
-    auto sym_name = GetNullTerminatedStringAt(string_data.ptr, string_data.size,
-                                              symbol->st_name);
-    out[sym_name] = *symbol;
-  }
-
-  return out;
+  return SymtabToMap(GetDynamicSymtab(),
+                     ElfLib::MemoryRegion{.ptr = memory_->GetLoadedMemory(
+                                              *dynstr_.offset, *dynstr_.size),
+                                          .size = *dynstr_.size});
 }
 
 }  // namespace elflib
