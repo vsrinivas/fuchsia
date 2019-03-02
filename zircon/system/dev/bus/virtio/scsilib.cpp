@@ -113,7 +113,7 @@ void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_c
             /*data_in=*/{data, op->rw.length * block_size_});
         // TODO(ZX-2314): Pass VMO directly to ExecuteCommandSync to skip this copy.
         if (status == ZX_OK) {
-            status = zx_vmo_write(op->rw.vmo, data, op->rw.offset_vmo,
+            status = zx_vmo_write(op->rw.vmo, data, op->rw.offset_vmo * block_size_,
                                   op->rw.length * block_size_);
         }
         free(data);
@@ -128,7 +128,7 @@ void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_c
         cdb.transfer_length = htonl(op->rw.length);
         // Copy data from VMO to temporary buffer for writing.
         // TODO(ZX-2314): Eliminate this copy by passing the VMO/offset to the controller.
-        auto status = zx_vmo_read(op->rw.vmo, data, op->rw.offset_vmo,
+        auto status = zx_vmo_read(op->rw.vmo, data, op->rw.offset_vmo * block_size_,
                                   op->rw.length * block_size_);
         if (status == ZX_OK) {
             status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
