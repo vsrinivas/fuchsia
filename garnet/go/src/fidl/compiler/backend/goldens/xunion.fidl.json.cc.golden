@@ -182,9 +182,11 @@ NewerSimpleUnion::NewerSimpleUnion(NewerSimpleUnion&& other) : tag_(other.tag_) 
     i_ = std::move(other.i_);
     break;
    case Tag::kS:
+    new (&s_) ::std::string();
     s_ = std::move(other.s_);
     break;
    case Tag::kV:
+    new (&v_) ::std::vector<::std::string>();
     v_ = std::move(other.v_);
     break;
    default:
@@ -201,9 +203,11 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
       i_ = std::move(other.i_);
       break;
      case Tag::kS:
+      new (&s_) ::std::string();
       s_ = std::move(other.s_);
       break;
      case Tag::kV:
+      new (&v_) ::std::vector<::std::string>();
       v_ = std::move(other.v_);
       break;
      default:
@@ -269,9 +273,11 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
     ::fidl::Decode(decoder, &value->i_, envelope_offset);
     break;
    case Tag::kS:
+    new (&value->s_) ::std::string();
     ::fidl::Decode(decoder, &value->s_, envelope_offset);
     break;
    case Tag::kV:
+    new (&value->v_) ::std::vector<::std::string>();
     ::fidl::Decode(decoder, &value->v_, envelope_offset);
     break;
    default:
@@ -287,8 +293,10 @@ zx_status_t NewerSimpleUnion::Clone(NewerSimpleUnion* result) const {
     case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
     case Tag::kS:
+      new (&result->s_) ::std::string();
       return ::fidl::Clone(s_, &result->s_);
     case Tag::kV:
+      new (&result->v_) ::std::vector<::std::string>();
       return ::fidl::Clone(v_, &result->v_);
     default:
       return ZX_OK;
@@ -334,8 +342,10 @@ void NewerSimpleUnion::Destroy() {
    case Tag::kI:
     break;
    case Tag::kS:
+    s_.~basic_string();
     break;
    case Tag::kV:
+    v_.~vector();
     break;
    default:
     break;
@@ -348,6 +358,12 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
+      case Tag::kS:
+        new (&s_) ::std::string();
+        break;
+      case Tag::kV:
+        new (&v_) ::std::vector<::std::string>();
+        break;
       default:
         break;
     }

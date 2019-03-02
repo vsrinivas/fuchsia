@@ -519,6 +519,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Dtor = fmt.Sprintf("~VectorPtr")
 		} else {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
+			r.Dtor = fmt.Sprintf("~vector")
 		}
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
@@ -527,6 +528,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Dtor = "~StringPtr"
 		} else {
 			r.Decl = "::std::string"
+			r.Dtor = "~basic_string"
 		}
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = true
@@ -688,8 +690,8 @@ func (m Method) NewLLProps(r Interface) LLProps {
 		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
 		LinearizeRequest:   len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
 		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
-		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize + m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
-		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize + m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
 		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0,
 		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0,
 	}
