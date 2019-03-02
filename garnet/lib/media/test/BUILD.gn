@@ -39,6 +39,7 @@ source_set("frame_sink") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.mediacodec",
   ]
 }
 
@@ -62,9 +63,9 @@ source_set("codec_client") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
