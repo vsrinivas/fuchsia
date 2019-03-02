@@ -8,7 +8,6 @@
 #include <cstdint>
 
 #include "fuchsia/hardware/display/cpp/fidl.h"
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "lib/async/cpp/wait.h"
@@ -34,6 +33,10 @@ class DisplayManager {
   // callback.
   void WaitForDefaultDisplay(fit::closure callback);
 
+  zx::vmo AllocateDisplayMemory(int32_t size);
+  // Fetches the necessary linear stride (in px) from the display controller.
+  uint32_t FetchLinearStride(uint32_t width, zx_pixel_format_t format);
+
   // Generates or releases an event ID that can be used with the display
   // interface. The event can be signaled even after ReleaseEvent if it was
   // referenced in a Flip that's pending.
@@ -43,20 +46,7 @@ class DisplayManager {
   // Sets the config which will be used for all imported images.
   void SetImageConfig(int32_t width, int32_t height, zx_pixel_format_t format);
 
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr CreateBufferCollection();
-  fuchsia::sysmem::BufferCollectionSyncPtr GetCollectionFromToken(
-      fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
-
-  // Import a buffer collection token into the display controller so the
-  // contraints will be set on it. Returns an id that can be used to refer to
-  // the collection.
-  uint64_t ImportBufferCollection(
-      fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
-  void ReleaseBufferCollection(uint64_t id);
-
-  uint64_t ImportImage(
-      const fuchsia::sysmem::BufferCollectionSyncPtr& collection,
-      uint64_t collection_id, uint32_t index);
+  uint64_t ImportImage(const zx::vmo& vmo);
   void ReleaseImage(uint64_t id);
 
   // Displays |buffer| on |display|. Will wait for |render_finished_event_id|
@@ -80,8 +70,6 @@ class DisplayManager {
   // Enables display vsync events and sets the callback which handles them.
   bool EnableVsync(VsyncCallback vsync_cb);
 
-  bool is_initialized() { return sysmem_allocator_.is_bound(); }
-
  private:
   void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
                zx_status_t status, const zx_packet_signal_t* signal);
@@ -96,11 +84,7 @@ class DisplayManager {
   fidl::InterfacePtr<fuchsia::hardware::display::Controller> event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 
-  fuchsia::sysmem::Allocator2SyncPtr sysmem_allocator_;
-
   uint64_t next_event_id_ = fuchsia::hardware::display::invalidId + 1;
-  uint64_t next_buffer_collection_id_ =
-      fuchsia::hardware::display::invalidId + 1;
 
   DisplayWatcher display_watcher_;
   fit::closure display_available_cb_;

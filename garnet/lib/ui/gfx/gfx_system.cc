@@ -69,11 +69,6 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
     return nullptr;
   }
 
-  if (!display_manager_->is_initialized()) {
-    FXL_LOG(ERROR) << "No sysmem allocator available";
-    return nullptr;
-  }
-
   // Initialize Vulkan.
 #if SCENIC_VULKAN_SWAPCHAIN
   constexpr bool kRequiresSurface = true;
@@ -111,15 +106,10 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   // the display manager API to present frames directly, instead of using
   // Vulkan swapchains.
   escher::VulkanDeviceQueues::Params device_queues_params(
-      {{
-           VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-           VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
-           VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-           VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
-#if !SCENIC_VULKAN_SWAPCHAIN
-           VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
-#endif
-       },
+      {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME},
        surface_,
        escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
   vulkan_device_queues_ =

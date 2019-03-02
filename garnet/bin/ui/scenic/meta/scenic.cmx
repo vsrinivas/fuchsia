@@ -3,18 +3,12 @@
         "binary": "bin/scenic"
     },
     "sandbox": {
-        "dev": [
-            "class/display-controller"
-        ],
-        "features": [
-            "vulkan",
-            "system-temp"
-        ],
+        "features": [ "vulkan", "system-temp" ],
+        "dev": [ "class/display-controller" ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.sysmem.Allocator2",
             "fuchsia.vulkan.loader.Loader"
         ]
     }

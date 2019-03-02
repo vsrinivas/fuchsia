@@ -46,9 +46,7 @@ const std::map<std::string, std::string> kServices = {
     {"fuchsia.ui.scenic.Scenic",
      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.vulkan.loader.Loader",
-     "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"},
-    {"fuchsia.sysmem.Allocator2",
-     "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"}};
+     "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"}};
 
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and

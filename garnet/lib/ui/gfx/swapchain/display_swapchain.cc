@@ -6,8 +6,6 @@
 
 #include <trace/event.h>
 
-#include <fbl/auto_call.h>
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
@@ -15,7 +13,6 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/impl/naive_image.h"
-#include "lib/escher/util/bit_ops.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
@@ -103,29 +100,6 @@ DisplaySwapchain::DisplaySwapchain(DisplayManager* display_manager,
   }
 }
 
-// Create a number of synced tokens that can be imported into collections.
-static std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>
-DuplicateToken(const fuchsia::sysmem::BufferCollectionTokenSyncPtr& input,
-               uint32_t count) {
-  std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> output;
-  for (uint32_t i = 0; i < count; i++) {
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr new_token;
-    zx_status_t status = input->Duplicate(std::numeric_limits<uint32_t>::max(),
-                                          new_token.NewRequest());
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to duplicate token:" << status;
-      return std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
-    }
-    output.push_back(std::move(new_token));
-  }
-  zx_status_t status = input->Sync();
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to sync token:" << status;
-    return std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
-  }
-  return output;
-}
-
 bool DisplaySwapchain::InitializeFramebuffers(
     escher::ResourceRecycler* resource_recycler) {
   FXL_CHECK(escher_);
@@ -155,112 +129,27 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
   display_manager_->SetImageConfig(width_in_px, height_in_px, pixel_format);
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
-    // Create all the tokens.
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token =
-        display_manager_->CreateBufferCollection();
-    if (!local_token) {
-      return false;
-    }
-    zx_status_t status;
+    // Allocate a framebuffer.
 
-    auto tokens = DuplicateToken(local_token, 2);
-
-    if (tokens.empty())
-      return false;
-
-    // Set display buffer constraints.
-    uint64_t display_collection_id =
-        display_manager_->ImportBufferCollection(std::move(tokens[1]));
-    if (!display_collection_id) {
-      FXL_LOG(ERROR) << "Setting buffer collection constraints failed.";
-      return false;
-    }
-
-    auto collection_closer = fbl::MakeAutoCall([this, display_collection_id]() {
-      display_manager_->ReleaseBufferCollection(display_collection_id);
-    });
-
-    // Set Vulkan buffer constraints.
+    // Start by creating a VkImage.
+    // TODO(ES-42): Create this using Escher APIs.
     vk::ImageCreateInfo create_info;
     create_info.imageType = vk::ImageType::e2D, create_info.format = format_;
     create_info.extent = vk::Extent3D{width_in_px, height_in_px, 1};
     create_info.mipLevels = 1;
     create_info.arrayLayers = 1;
     create_info.samples = vk::SampleCountFlagBits::e1;
+#if defined(__x86_64__)
     create_info.tiling = vk::ImageTiling::eOptimal;
+#else
+    create_info.tiling = vk::ImageTiling::eLinear;
+    // TODO(SCN-79): Use vulkan extension to allocate with correct stride.
+    create_info.extent.width =
+        display_manager_->FetchLinearStride(width_in_px, pixel_format);
+#endif
     create_info.usage = image_usage;
     create_info.sharingMode = vk::SharingMode::eExclusive;
     create_info.initialLayout = vk::ImageLayout::eUndefined;
-
-    vk::BufferCollectionCreateInfoFUCHSIA import_collection;
-    import_collection.collectionToken =
-        tokens[0].Unbind().TakeChannel().release();
-    auto import_result = device_.createBufferCollectionFUCHSIA(
-        import_collection, nullptr, escher_->device()->dispatch_loader());
-    if (import_result.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "VkImportBufferCollectionFUCHSIA failed: "
-                     << vk::to_string(import_result.result);
-      return false;
-    }
-
-    auto vulkan_collection_closer = fbl::MakeAutoCall([this, import_result]() {
-      device_.destroyBufferCollectionFUCHSIA(
-          import_result.value, nullptr, escher_->device()->dispatch_loader());
-    });
-
-    auto constraints_result = device_.setBufferCollectionConstraintsFUCHSIA(
-        import_result.value, create_info, escher_->device()->dispatch_loader());
-    if (constraints_result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "VkSetBufferCollectionConstraints failed: "
-                     << vk::to_string(constraints_result);
-      return false;
-    }
-
-    // Set local buffer constraints (used so we can get a VMO out).
-    fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection =
-        display_manager_->GetCollectionFromToken(std::move(local_token));
-    if (!sysmem_collection) {
-      return false;
-    }
-    fuchsia::sysmem::BufferCollectionConstraints constraints = {};
-    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
-    status = sysmem_collection->SetConstraints(true, constraints);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to set constraints:" << status;
-      return false;
-    }
-
-    fuchsia::sysmem::BufferCollectionInfo_2 info;
-
-    zx_status_t allocation_status = ZX_OK;
-
-    // Wait for the buffers to be allocated.
-    status =
-        sysmem_collection->WaitForBuffersAllocated(&allocation_status, &info);
-    if (status != ZX_OK || allocation_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Waiting for buffers failed:" << status << " "
-                     << allocation_status;
-      return false;
-    }
-
-    // Import the VMO (from sysmem collection) into vulkan.
-    if (info.buffer_count != 1) {
-      FXL_LOG(ERROR) << "Incorrect buffer collection count: "
-                     << info.buffer_count;
-      return false;
-    }
-
-    fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(fidl::CodingTraits<
-                  fuchsia::sysmem::SingleBufferSettings>::encoded_size);
-    info.settings.Encode(&encoder, 0);
-    std::vector<uint8_t> encoded_data = encoder.TakeBytes();
-
-    vk::FuchsiaImageFormatFUCHSIA image_format_fuchsia;
-    image_format_fuchsia.imageFormat = encoded_data.data(),
-    image_format_fuchsia.imageFormatSize =
-        static_cast<uint32_t>(encoded_data.size());
-    create_info.setPNext(&image_format_fuchsia);
 
     auto image_result = device_.createImage(create_info);
     if (image_result.result != vk::Result::eSuccess) {
@@ -269,16 +158,18 @@ bool DisplaySwapchain::InitializeFramebuffers(
       return false;
     }
 
-    zx::vmo memory = std::move(info.buffers[0].vmo);
-    if (!memory) {
-      FXL_LOG(ERROR) << "No vmo found";
-      return false;
-    }
-
+    // Allocate memory to get a VkDeviceMemory.
     auto memory_requirements =
         device_.getImageMemoryRequirements(image_result.value);
-    uint32_t memory_type_index =
-        escher::CountTrailingZeros(memory_requirements.memoryTypeBits);
+
+    uint32_t memory_type_index = 0;
+
+    zx::vmo memory =
+        display_manager_->AllocateDisplayMemory(memory_requirements.size);
+    if (!memory) {
+      FXL_LOG(ERROR) << "allocating vmo failed";
+      return false;
+    }
     vk::ImportMemoryFuchsiaHandleInfoKHR import_info;
     import_info.setHandle(memory.release());
     import_info.setHandleType(
@@ -332,14 +223,26 @@ bool DisplaySwapchain::InitializeFramebuffers(
     escher::image_utils::BytesPerPixel(format_));
     */
 
-    buffer.fb_id = display_manager_->ImportImage(sysmem_collection,
-                                                 display_collection_id, 0);
+    // Export the vkDeviceMemory to a VMO.
+    vk::MemoryGetFuchsiaHandleInfoKHR export_memory_info(
+        buffer.device_memory->base(),
+        vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
+
+    auto export_result = device_.getMemoryFuchsiaHandleKHR(
+        export_memory_info, escher_->device()->dispatch_loader());
+
+    if (export_result.result != vk::Result::eSuccess) {
+      FXL_LOG(ERROR) << "VkGetMemoryFuchsiaHandleKHR failed: "
+                     << vk::to_string(export_result.result);
+      return false;
+    }
+
+    buffer.vmo = zx::vmo(export_result.value);
+    buffer.fb_id = display_manager_->ImportImage(buffer.vmo);
     if (buffer.fb_id == fuchsia::hardware::display::invalidId) {
       FXL_LOG(ERROR) << "Importing image failed.";
       return false;
     }
-
-    sysmem_collection->Close();
 
     swapchain_buffers_.push_back(std::move(buffer));
   }
