@@ -28,7 +28,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     cpp_test_header_name=${json_name}_test_base.h
     cpp_source_name=${json_name}.cc
     llcpp_header_name=${json_name}.llcpp.h
-    llcpp_source_name=${json_name}.llcpp.cpp
+    llcpp_source_name=${json_name}.llcpp.cc
     overnet_internal_header_name=${json_name}.overnet_internal.h
     overnet_internal_source_name=${json_name}.overnet_internal.cc
     go_impl_name=${json_name}.go

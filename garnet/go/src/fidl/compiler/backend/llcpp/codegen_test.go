@@ -20,7 +20,7 @@ func (s example) header() string {
 }
 
 func (s example) source() string {
-	return fmt.Sprintf("%s.llcpp.cpp.golden", s)
+	return fmt.Sprintf("%s.llcpp.cc.golden", s)
 }
 
 var excludedCases = map[string]bool{

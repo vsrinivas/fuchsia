@@ -2,7 +2,7 @@ doc_comments.fidl.json
 doc_comments.fidl.json.cc.golden
 doc_comments.fidl.json.go.golden
 doc_comments.fidl.json.h.golden
-doc_comments.fidl.json.llcpp.cpp.golden
+doc_comments.fidl.json.llcpp.cc.golden
 doc_comments.fidl.json.llcpp.h.golden
 doc_comments.fidl.json.overnet_internal.cc.golden
 doc_comments.fidl.json.overnet_internal.h.golden
@@ -12,7 +12,7 @@ empty_struct.fidl.json
 empty_struct.fidl.json.cc.golden
 empty_struct.fidl.json.go.golden
 empty_struct.fidl.json.h.golden
-empty_struct.fidl.json.llcpp.cpp.golden
+empty_struct.fidl.json.llcpp.cc.golden
 empty_struct.fidl.json.llcpp.h.golden
 empty_struct.fidl.json.overnet_internal.cc.golden
 empty_struct.fidl.json.overnet_internal.h.golden
@@ -22,7 +22,7 @@ ordinal_switch.fidl.json
 ordinal_switch.fidl.json.cc.golden
 ordinal_switch.fidl.json.go.golden
 ordinal_switch.fidl.json.h.golden
-ordinal_switch.fidl.json.llcpp.cpp.golden
+ordinal_switch.fidl.json.llcpp.cc.golden
 ordinal_switch.fidl.json.llcpp.h.golden
 ordinal_switch.fidl.json.overnet_internal.cc.golden
 ordinal_switch.fidl.json.overnet_internal.h.golden
@@ -32,7 +32,7 @@ protocols.fidl.json
 protocols.fidl.json.cc.golden
 protocols.fidl.json.go.golden
 protocols.fidl.json.h.golden
-protocols.fidl.json.llcpp.cpp.golden
+protocols.fidl.json.llcpp.cc.golden
 protocols.fidl.json.llcpp.h.golden
 protocols.fidl.json.overnet_internal.cc.golden
 protocols.fidl.json.overnet_internal.h.golden
@@ -42,7 +42,7 @@ tables.fidl.json
 tables.fidl.json.cc.golden
 tables.fidl.json.go.golden
 tables.fidl.json.h.golden
-tables.fidl.json.llcpp.cpp.golden
+tables.fidl.json.llcpp.cc.golden
 tables.fidl.json.llcpp.h.golden
 tables.fidl.json.overnet_internal.cc.golden
 tables.fidl.json.overnet_internal.h.golden
@@ -52,7 +52,7 @@ union.fidl.json
 union.fidl.json.cc.golden
 union.fidl.json.go.golden
 union.fidl.json.h.golden
-union.fidl.json.llcpp.cpp.golden
+union.fidl.json.llcpp.cc.golden
 union.fidl.json.llcpp.h.golden
 union.fidl.json.overnet_internal.cc.golden
 union.fidl.json.overnet_internal.h.golden
@@ -62,7 +62,7 @@ xunion.fidl.json
 xunion.fidl.json.cc.golden
 xunion.fidl.json.go.golden
 xunion.fidl.json.h.golden
-xunion.fidl.json.llcpp.cpp.golden
+xunion.fidl.json.llcpp.cc.golden
 xunion.fidl.json.llcpp.h.golden
 xunion.fidl.json.overnet_internal.cc.golden
 xunion.fidl.json.overnet_internal.h.golden

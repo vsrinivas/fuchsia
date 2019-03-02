@@ -38,7 +38,7 @@ for src_path in `find "${LLCPP_TEST_DIR}" -name '*.fidl'`; do
 
   # move bindings to the `generated` directory
   mv fidl_llcpp_${src_name}.h ${LLCPP_TEST_DIR}/generated
-  mv fidl_llcpp_${src_name}.cpp ${LLCPP_TEST_DIR}/generated
+  mv fidl_llcpp_${src_name}.cc ${LLCPP_TEST_DIR}/generated
 
   # cleanup
   rm /tmp/${json_name}

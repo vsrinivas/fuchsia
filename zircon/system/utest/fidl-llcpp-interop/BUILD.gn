@@ -13,9 +13,9 @@ if (current_toolchain != default_toolchain) {
       "basictypes_tests.cpp",
       "controlflow_tests.cpp",
       "dirent_tests.cpp",
-      "generated/fidl_llcpp_basictypes.cpp",
-      "generated/fidl_llcpp_controlflow.cpp",
-      "generated/fidl_llcpp_dirent.cpp",
+      "generated/fidl_llcpp_basictypes.cc",
+      "generated/fidl_llcpp_controlflow.cc",
+      "generated/fidl_llcpp_dirent.cc",
     ]
     include_dirs = [ "generated" ]
     deps = [

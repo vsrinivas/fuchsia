@@ -5,6 +5,7 @@
     "packages": [
         "//garnet/examples/fidl/echo_client_cpp",
         "//garnet/examples/fidl/echo_client_go",
+        "//garnet/examples/fidl/echo_client_llcpp",
         "//garnet/examples/fidl/echo_client_rust",
         "//garnet/examples/fidl/echo_client_rust_synchronous",
         "//garnet/examples/fidl/echo_server_c",

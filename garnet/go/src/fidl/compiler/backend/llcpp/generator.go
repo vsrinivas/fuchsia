@@ -74,7 +74,7 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 	tree.PrimaryHeader = relStem + ".h"
 
 	headerPath := config.OutputBase + ".h"
-	sourcePath := config.OutputBase + ".cpp"
+	sourcePath := config.OutputBase + ".cc"
 
 	if err := os.MkdirAll(filepath.Dir(config.OutputBase), os.ModePerm); err != nil {
 		return err

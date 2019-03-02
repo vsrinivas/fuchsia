@@ -102,7 +102,6 @@ template("fidl_cpp_library") {
   include_stem = string_replace(library_name, ".", "/") + "/" +
                  invoker.generated_source_base
   file_stem = "$fidl_root_gen_dir/$include_stem"
-
   source_set(main_target_name) {
     forward_variables_from(invoker,
                            [
@@ -125,14 +124,8 @@ template("fidl_cpp_library") {
       ":${invoker.root_target}_tables",
     ]
 
-    if (is_fuchsia) {
-      public_deps += [ "//sdk/lib/fidl/cpp" ]
-    } else {
-      public_deps += [ "//sdk/lib/fidl/cpp:cpp_base" ]
-    }
-
-    if (defined(invoker.public_deps)) {
-      public_deps += invoker.public_deps
+    if (defined(invoker.library_public_deps)) {
+      public_deps += invoker.library_public_deps
     }
   }
 }
@@ -178,10 +171,10 @@ template("fidl_cpp") {
     }
 
     foreach(generator_settings, invoker.generators) {
-      public_deps = []
-      public_deps += generator_settings.additional_public_deps
+      library_public_deps = []
+      library_public_deps += generator_settings.additional_public_deps
       if (defined(invoker.public_deps)) {
-        public_deps += invoker.public_deps
+        library_public_deps += invoker.public_deps
       }
 
       if (defined(generator_settings.target_suffix)) {

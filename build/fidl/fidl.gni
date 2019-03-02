@@ -81,22 +81,42 @@ template("fidl") {
       }
     }
 
+    if (is_fuchsia) {
+      hlcpp_public_deps = [ "//sdk/lib/fidl/cpp" ]
+      llcpp_generators = [
+        {
+          target_suffix = "llcpp"
+          fidlgen_generator = "llcpp"
+          output_stem = "llcpp/fidl"
+          additional_public_deps = [
+            "//zircon/public/lib/fidl",
+            "//zircon/public/lib/fidl-llcpp",
+          ]
+        },
+      ]
+    } else {
+      hlcpp_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+      llcpp_generators = []
+    }
+
     fidl_cpp(target_name) {
       forward_variables_from(invoker, "*")
       generators = [
         {
           fidlgen_generator = "cpp"
           output_stem = "cpp/fidl"
-          additional_public_deps = []
+          additional_public_deps = hlcpp_public_deps
         },
         {
           target_suffix = "overnet_internal"
           fidlgen_generator = "overnet_internal"
           output_stem = "cpp/overnet_internal"
           additional_public_deps =
+              hlcpp_public_deps +
               [ "//garnet/lib/overnet/protocol:fidl_stream" ]
         },
       ]
+      generators += llcpp_generators
     }
 
     fidl_tables(target_name) {
