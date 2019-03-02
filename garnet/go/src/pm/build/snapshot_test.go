@@ -324,8 +324,27 @@ func TestSnapshotAddPackage_duplicatePackage(t *testing.T) {
 		Package("foo/0").
 		Build()
 
-	if err := s.AddPackage("foo/0", nil, nil); err == nil {
-		t.Errorf("expected err, got nil")
+	if err := s.AddPackage("foo/0", nil, []string{"b"}); err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	if err := s.AddPackage("foo/0", nil, []string{"a"}); err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	if err := s.AddPackage("foo/0", nil, []string{"a"}); err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	tags := s.Packages["foo/0"].Tags
+	if len(tags) != 2 || tags[0] != "a" || tags[1] != "b" {
+		t.Fatalf("expected tags a,b, got %v", s.Packages["foo"].Tags)
+	}
+
+	if err := s.AddPackage("foo/0", []PackageBlobInfo{
+		PackageBlobInfo{
+			Path: "differentFileA",
+			Size: 1234,
+		},
+	}, nil); err == nil {
+		t.Error("expected error, got nil")
 	}
 }
 

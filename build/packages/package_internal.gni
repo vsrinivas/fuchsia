@@ -6,33 +6,6 @@ import("//build/images/manifest.gni")
 
 # This contains templates and implementation details for package rules.
 
-template("generate_system_index") {
-  generate_response_file(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-
-    if (invoker.deprecated_system_image) {
-      # A system_image package will be included directly in the system package.
-      response_file_contents = []
-      not_needed(invoker, "*")
-    } else {
-      forward_variables_from(invoker,
-                             [
-                               "blobs_json",
-                               "meta_target",
-                               "package_name",
-                               "package_version",
-                             ])
-
-      deps = [
-        "${meta_target}",
-      ]
-      response_file_contents =
-          [ "--entry=${package_name}/${package_version}=" +
-            rebase_path(blobs_json, root_build_dir, target_out_dir) ]
-    }
-  }
-}
-
 template("generate_index") {
   generate_response_file(target_name) {
     forward_variables_from(invoker,

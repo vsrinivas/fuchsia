@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -106,7 +107,28 @@ func (s *Snapshot) AddPackage(name string, blobs []PackageBlobInfo, tags []strin
 	}
 
 	if dup, ok := s.Packages[name]; ok {
-		return fmt.Errorf("snapshot contains more than one package called %q (%v, %v)", name, dup, pkg)
+		allSame := true
+		for name, merkle := range dup.Files {
+			if pkg.Files[name] != merkle {
+				allSame = false
+				break
+			}
+		}
+		if len(dup.Files) != len(pkg.Files) || !allSame {
+			return fmt.Errorf("snapshot contains more than one package called %q (%v, %v)", name, dup, pkg)
+		}
+		allTags := make(map[string]struct{})
+		for _, tag := range pkg.Tags {
+			allTags[tag] = struct{}{}
+		}
+		for _, tag := range dup.Tags {
+			allTags[tag] = struct{}{}
+		}
+		pkg.Tags = make([]string, 0, len(allTags))
+		for tag := range allTags {
+			pkg.Tags = append(pkg.Tags, tag)
+		}
+		sort.Strings(pkg.Tags)
 	}
 
 	s.Packages[name] = pkg

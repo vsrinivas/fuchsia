@@ -86,6 +86,7 @@ template("_compiled_action_target") {
                              "depfile",
                              "deps",
                              "inputs",
+                             "metadata",
                              "outputs",
                              "public_deps",
                              "sources",

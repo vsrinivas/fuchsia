@@ -85,6 +85,7 @@ pm_build_package("guest.meta") {
   visibility = [ ":*" ]
   testonly = true
   manifest = ":guest.manifest"
+  package_name = "guest_image"
 }
 
 guest_blob_manifest = "$root_build_dir/guest_blob.manifest"

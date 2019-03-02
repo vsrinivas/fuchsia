@@ -303,6 +303,7 @@ system_build_id_map = system_manifest_outputs[1]
 
 # Generate, sign, and seal the system_image package file.
 pm_build_package("system_image.meta") {
+  package_name = "system_image"
   visibility = [ ":*" ]
   testonly = true
   manifest = ":system_image.manifest"
@@ -1236,6 +1237,7 @@ pm_build_package("update.meta") {
   visibility = [ ":*" ]
   testonly = true
   manifest = ":update.manifest"
+  package_name = "update"
 }
 
 # XXX(raggi): The following manifests retain the "meta/" files, resulting in
@@ -1314,47 +1316,63 @@ action("amber_index") {
 # system_index has the system package itself, and the system update package.
 system_index = "$target_out_dir/system_index"
 
+tagged_snapshot_manifests = [
+  {
+    tag = "monolith"
+    deps = monolith_packages + [ ":system_image.meta", ":update.meta" ]
+  },
+  {
+    tag = "preinstall"
+    deps = preinstall_packages
+  },
+  {
+    tag = "available"
+    deps = available_packages
+  },
+]
+
+all_snapshot_entries = []
+foreach(manifest, tagged_snapshot_manifests) {
+  untagged_entries = "${manifest.tag}.snapshot_entries.untagged"
+  generated_file(untagged_entries) {
+    testonly = true
+    outputs = [root_build_dir + "/" + target_name]
+    deps = manifest.deps
+    data_keys = ["snapshot_entries"]
+  }
+
+  tagged_entries = "${manifest.tag}.snapshot_entries"
+  action(tagged_entries) {
+    testonly = true
+    deps = [":" + untagged_entries]
+    script = "add_tag_to_manifest.sh"
+    inputs = [root_build_dir + "/" + untagged_entries]
+    outputs = [root_build_dir + "/" + target_name]
+    args = [
+      manifest.tag,
+      rebase_path(inputs[0], root_build_dir),
+      rebase_path(outputs[0], root_build_dir),
+    ]
+  }
+  all_snapshot_entries += [tagged_entries]
+}
+
 action("system_index") {
   visibility = [ ":system_snapshot" ]
   testonly = true
 
-  script = "manifest.py"
-  args = [ "--absolute" ]
+  script = "//build/cat.sh"
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  sources = []
+  args = [
+    rebase_path(outputs[0], root_build_dir),
+  ]
   deps = []
-  foreach(pkg_label, available_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.system_index.rsp"
-    deps += [ "${pkg_label}.system_index.rsp" ]
-    sources += [ pkg_rspfile ]
-    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  foreach(entry, all_snapshot_entries) {
+    args += [entry]
+    deps += [":" + entry]
   }
-
-  system_image_meta_dir =
-      get_label_info(":system_image.meta", "target_out_dir") +
-      "/system_image.meta"
-  system_image_blobs_json = system_image_meta_dir + "/blobs.json"
-  args += [
-    "--entry",
-    "system_image/0#monolith=" +
-        rebase_path(system_image_blobs_json, root_build_dir),
-  ]
-  deps += [ ":system_image.meta" ]
-
-  update_meta_dir =
-      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
-  update_blobs_json = update_meta_dir + "/blobs.json"
-  args += [
-    "--entry",
-    "update/0#monolith=" + rebase_path(update_blobs_json, root_build_dir),
-  ]
-  deps += [ ":update.meta" ]
 }
 
 compiled_action("system_snapshot") {

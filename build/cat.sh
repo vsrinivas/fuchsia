@@ -14,8 +14,10 @@ readonly output="$1"
 shift 1
 for file in "$@"
 do
-  val="$(<"${file}")"
-  if [ -n "${val}" ]; then
-    echo "${val}"
-  fi
+  while read line
+  do
+    if [ -n "${line}" ]; then
+      echo "${line}"
+    fi
+  done < "${file}"
 done > "${output}"
