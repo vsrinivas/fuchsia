@@ -244,6 +244,7 @@ static zx_status_t aml_sd_emmc_set_bus_width(void* ctx, sdmmc_bus_width_t bw) {
 
     regs->sd_emmc_cfg = config;
     mtx_unlock(&dev->mtx);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     return ZX_OK;
 }
 
