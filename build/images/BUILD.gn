@@ -181,6 +181,14 @@ action("system_package_key_check") {
       [ clang_prefix ] + rebase_path(inputs + outputs + [ system_package_key ])
 }
 
+monolith_meta_far_merkle_index = "$target_out_dir/monolith_meta_far_merkle_index"
+package_metadata_list("monolith_meta_far_merkle_index") {
+  testonly = true
+  outputs = [monolith_meta_far_merkle_index]
+  data_keys = ["meta_far_merkle_index_entries"]
+  deps = monolith_packages
+}
+
 # The pkgsvr index is a manifest mapping `package_name/package_version` to
 # the merkleroot of the package's meta.far file.
 pkgsvr_index = "$target_out_dir/pkgsvr_index"
@@ -191,26 +199,26 @@ action("pkgsvr_index") {
     ":update_packages.manifest",
   ]
   testonly = true
-
-  script = "manifest.py"
-  args = [ "--contents" ]
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  sources = []
-  deps = []
-  foreach(pkg_label, monolith_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
-    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
-    sources += [ pkg_rspfile ]
-    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
-  }
+  deps = [":monolith_meta_far_merkle_index"]
+  inputs = [monolith_meta_far_merkle_index]
+
+  script = "//build/images/manifest_content_expand.sh"
+  args = [
+    rebase_path(monolith_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir)
+  ]
 }
 
+preinstall_meta_far_merkle_index = "$target_out_dir/preinstall_meta_far_merkle_index"
+package_metadata_list("preinstall_meta_far_merkle_index") {
+  testonly = true
+  outputs = [preinstall_meta_far_merkle_index]
+  data_keys = ["meta_far_merkle_index_entries"]
+  deps = preinstall_packages + [":update.meta"]
+}
 # preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
 # populated inside /pkgfs/packages that are {name}/{version} containing the
 # merkleroot of the meta.far of that package.
@@ -218,35 +226,21 @@ action("preinstall.manifest") {
   visibility = [ ":data.blk" ]
   testonly = true
 
-  script = "manifest.py"
-  args = [ "--rewrite=*=pkgfs_index/packages/{target}={source}" ]
+  deps = [":preinstall_meta_far_merkle_index"]
+  inputs = [preinstall_meta_far_merkle_index]
+
+  script = "manifest_add_dest_prefix.sh"
+  args = [ "pkgfs_index/packages/" ]
   outputs = [
     # The output is in the root build dir in order to avoid a complex rewrite
     # of the source path. The minfs tool this is passed to interprets source
     # locations relative to the manifest.
     "$root_build_dir/$target_name",
   ]
-  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  sources = []
-  deps = []
-  foreach(pkg_label, preinstall_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
-    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
-    sources += [ pkg_rspfile ]
-    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
-  }
-
-  update_meta_dir =
-      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
-  update_meta_far_merkle = update_meta_dir + "/meta.far.merkle"
   args += [
-    "--entry",
-    "update/0=" + rebase_path(update_meta_far_merkle, root_build_dir),
+    rebase_path(preinstall_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
   ]
-  deps += [ ":update.meta" ]
 }
 
 # The /boot and /system manifests have to be generated in concert.  Things
@@ -1086,36 +1080,30 @@ foreach(target, paver_targets) {
 
 # update_packages.manifest contains the same entries as the pkgsvr_index but
 # additionally includes the system_image package.
+
+update_meta_far_merkle_index = "$target_out_dir/update_meta_far_merkle_index"
+package_metadata_list("update_meta_far_merkle_index") {
+  testonly = true
+  outputs = [update_meta_far_merkle_index]
+  data_keys = ["meta_far_merkle_index_entries"]
+  deps = monolith_packages + [":system_image.meta"]
+}
+
 action("update_packages.manifest") {
   visibility = [ ":update.manifest" ]
   testonly = true
 
-  script = "manifest.py"
   outputs = [
     "$target_out_dir/$target_name",
   ]
+  deps = [":update_meta_far_merkle_index"]
+  inputs = [update_meta_far_merkle_index]
+
+  script = "manifest_content_expand.sh"
   args = [
-    "--contents",
-    "--output",
-    rebase_path(outputs[0], root_build_dir),
+    rebase_path(update_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir)
   ]
-  deps = []
-  sources = []
-
-  deps += [ ":system_image.meta" ]
-  args += [ "--entry=system_image/0=" +
-            rebase_path("$target_out_dir/system_image.meta/meta.far.merkle",
-                        root_build_dir) ]
-
-  foreach(pkg_label, monolith_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
-    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
-    sources += [ pkg_rspfile ]
-    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
-  }
 }
 
 # The update package manifest contains the pkgsvr_index and the target

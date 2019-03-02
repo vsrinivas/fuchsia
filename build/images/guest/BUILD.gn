@@ -24,28 +24,30 @@ guest_packages = [
   get_label_info(pkgfs_package_label, "label_no_toolchain"),
 ]
 
+guest_meta_far_merkle_index = "$target_out_dir/guest_meta_far_merkle_index"
+package_metadata_list("guest_meta_far_merkle_index") {
+  testonly = true
+  outputs = [guest_meta_far_merkle_index]
+  data_keys = ["meta_far_merkle_index_entries"]
+  deps = guest_packages
+}
+
 # The pkgsvr index is a manifest mapping `package_name/package_version` to
 # the merkleroot of the package's meta.far file.
 action("pkgsvr_index") {
   visibility = [ ":*" ]
   testonly = true
-  script = "//build/images/manifest.py"
-  args = [ "--contents" ]
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  sources = []
-  deps = []
-  foreach(pkg_label, guest_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
-    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
-    sources += [ pkg_rspfile ]
-    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
-  }
+  deps = [":guest_meta_far_merkle_index"]
+  inputs = [guest_meta_far_merkle_index]
+
+  script = "//build/images/manifest_content_expand.sh"
+  args = [
+    rebase_path(guest_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir)
+  ]
 }
 
 boot_manifest = "$target_out_dir/boot.manifest"
