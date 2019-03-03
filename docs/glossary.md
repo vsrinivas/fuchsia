@@ -42,6 +42,16 @@ ABI for drivers to use to call into each other, rather than an IPC protocol.
 The platform-guaranteed set of software functionality which provides a basic user-facing interface
 for boot, first-use, authentication, escape from and selection of session shells, and device recovery.
 
+#### **BOOTFS**
+
+The BOOTFS RAM disk contains the files needed early in the boot process when no other filesystems are available. It is part of the [ZBI](#ZBI), and is decompressed and served by [bootsvc](#bootsvc). After the early boot process is complete, the BOOTFS is mounted at `/boot`.
+- [Documentation](../zircon/docs/userboot.md#BOOTFS)
+
+#### **bootsvc**
+
+bootsvc is the second process started in Fuchsia. It provides a filesystem service for the [BOOTFS](#BOOTFS) and a loader service that loads programs from the same BOOTFS. After starting those services, it loads the third program, which defaults to `devmgr`.
+- [Documentation](../zircon/docs/bootsvc.md)
+
 ### **Bus Driver**
 
 A [driver](#Driver) for a device that has multiple children.  For example,
@@ -361,6 +371,11 @@ terminals.
 
 The replaceable set of software functionality that works in conjunction with devices to create an environment in which people can interact with mods, agents and suggestions.
 
+#### **userboot**
+
+userboot is the first process started by the Zircon kernel. It is loaded from the kernel image in the same way as the [vDSO](#vDSO), instead of being loaded from a filesystem. Its primary purpose is to load the second process, [bootsvc](#bootsvc), from the [BOOTFS](#BOOTFS).
+- [Documentation](../zircon/docs/userboot.md)
+
 #### **vDSO**
 
 The vDSO is a Virtual Shared Library -- it is provided by the [Zircon](#Zircon) kernel and does not
@@ -381,6 +396,11 @@ A Virtual Memory Object is a Zircon [kernel object](#Kernel-Object) that represe
 pages (or the potential for pages) which may be read, written, mapped into the address space of a
 process, or shared with another process by passing a [Handle](#Handle) over a [Channel](#Channel).
 - [VMO Overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md)
+
+#### **ZBI**
+
+A Zircon Boot Image contains everything needed during the boot process before any drivers are working. This includes the kernel image and a [RAM disk for the boot filesystem](#BOOTFS).
+- [ZBI header file](../zircon/system/public/boot/image.h)
 
 #### **Zedboot** ####
 
