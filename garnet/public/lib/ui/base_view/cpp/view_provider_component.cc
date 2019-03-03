@@ -5,6 +5,7 @@
 #include "garnet/public/lib/ui/base_view/cpp/view_provider_component.h"
 
 #include "lib/fxl/logging.h"
+#include "lib/ui/scenic/cpp/view_token_pair.h"
 
 namespace scenic {
 
@@ -72,7 +73,7 @@ void ViewProviderComponent::ViewImpl::Attach(zx::eventpair view_token) {
   ViewContext context = {
       .session_and_listener_request =
           CreateScenicSessionPtrAndListenerRequest(scenic_),
-      .view_token = std::move(view_token),
+      .view_token2 = scenic::ToViewToken(std::move(view_token)),
       .incoming_services = {},
       .outgoing_services = {},
       .startup_context = startup_context_,

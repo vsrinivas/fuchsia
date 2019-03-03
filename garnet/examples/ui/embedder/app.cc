@@ -95,20 +95,20 @@ App::App(async::Loop* loop, AppType type)
   });
 
   if (type_ == AppType::CONTAINER) {
-    auto view_tokens = scenic::NewViewTokenPair();
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     // Create the subview and bind the ServiceProviders.
     FXL_LOG(INFO) << AppTypeString(type_) << "Creating view.";
     fuchsia::sys::ServiceProviderPtr outgoing_services;
     outgoing_services.Bind(service_bindings_.AddBinding(this));
-    view_provider_->CreateView(std::move(view_tokens.first.value),
+    view_provider_->CreateView(std::move(view_token.value),
                                incoming_services_.NewRequest(),
                                std::move(outgoing_services));
 
     // Create the ViewHolder resource that will proxy the view.
     view_id_ = session_->AllocResourceId();
     session_->Enqueue(scenic::NewCreateViewHolderCmd(
-        view_id_, std::move(view_tokens.second), "Subview-Holder"));
+        view_id_, std::move(view_holder_token), "Subview-Holder"));
   }
 
   // Close the session and quit after several seconds.

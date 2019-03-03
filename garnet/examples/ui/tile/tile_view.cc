@@ -13,6 +13,7 @@
 #include <lib/fxl/strings/split_string.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace examples {
 
@@ -27,11 +28,19 @@ TileView::TileView(scenic::ViewContext context, TileParams params)
   ConnectViews();
 }
 
-void TileView::Present2(
-    zx::eventpair view_holder_token,
+void TileView::PresentView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
   AddChildView("tile_view child(Presented view)", std::move(view_holder_token),
                nullptr);
+}
+
+void TileView::Present2(
+    zx::eventpair view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request) {
+  PresentView(scenic::ToViewHolderToken(std::move(view_holder_token)),
+              std::move(presentation_request));
 }
 
 void TileView::ConnectViews() {
@@ -60,12 +69,11 @@ void TileView::ConnectViews() {
                                    controller.NewRequest());
 
     // Create a View from the launched component.
-    zx::eventpair view_token, view_holder_token;
-    if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
-      FXL_NOTREACHED() << "Failed to create view tokens";
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
     auto view_provider =
         services.ConnectToService<fuchsia::ui::app::ViewProvider>();
-    view_provider->CreateView(std::move(view_token), nullptr, nullptr);
+    view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
     // Add the view.
     AddChildView("tile_view child(" + split_url[0] + ")",
@@ -133,8 +141,9 @@ void TileView::OnScenicEvent(fuchsia::ui::scenic::Event event) {
   }
 }
 
-void TileView::AddChildView(std::string label, zx::eventpair view_holder_token,
-                            fuchsia::sys::ComponentControllerPtr controller) {
+void TileView::AddChildView(
+    std::string label, fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fuchsia::sys::ComponentControllerPtr controller) {
   auto view_data = std::make_unique<ViewData>(
       label, std::move(view_holder_token), std::move(controller), session());
 
@@ -142,7 +151,6 @@ void TileView::AddChildView(std::string label, zx::eventpair view_holder_token,
 
   view_data->host_node.AddPart(view_data->clip_shape_node);
   view_data->host_node.SetClip(0, true);
-
   view_data->host_node.Attach(view_data->view_holder);
 
   views_.emplace(view_data->view_holder.id(), std::move(view_data));
@@ -220,9 +228,9 @@ void TileView::OnSceneInvalidated(
   }
 }
 
-TileView::ViewData::ViewData(std::string label, zx::eventpair view_holder_token,
-                             fuchsia::sys::ComponentControllerPtr controller,
-                             scenic::Session* session)
+TileView::ViewData::ViewData(
+    std::string label, fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fuchsia::sys::ComponentControllerPtr controller, scenic::Session* session)
     : controller(std::move(controller)),
       host_node(session),
       clip_shape_node(session),

@@ -45,6 +45,7 @@ executable("test_views_app") {
     ":views",
     "//garnet/public/lib/fxl",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop",
   ]
 }

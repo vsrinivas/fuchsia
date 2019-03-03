@@ -9,6 +9,7 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -16,8 +17,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
-#include <zx/eventpair.h>
-
+#include <lib/zx/eventpair.h>
 #include <map>
 #include <memory>
 
@@ -34,7 +34,8 @@ class TileView : public scenic::BaseView,
 
  private:
   struct ViewData {
-    explicit ViewData(std::string label, zx::eventpair view_holder_token,
+    explicit ViewData(std::string label,
+                      fuchsia::ui::views::ViewHolderToken view_holder_token,
                       fuchsia::sys::ComponentControllerPtr controller,
                       scenic::Session* session);
     ~ViewData() = default;
@@ -65,7 +66,10 @@ class TileView : public scenic::BaseView,
   void OnScenicEvent(fuchsia::ui::scenic::Event event) override;
 
   // |fuchsia::ui::policy::Presenter|
-  void Present2(zx::eventpair view_owner_token,
+  void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation) final;
+  void Present2(zx::eventpair view_holder_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                     presentation) final;
 
@@ -82,7 +86,8 @@ class TileView : public scenic::BaseView,
 
   zx::channel OpenAsDirectory();
 
-  void AddChildView(std::string label, zx::eventpair view_owner_token,
+  void AddChildView(std::string label,
+                    fuchsia::ui::views::ViewHolderToken view_holder_token,
                     fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 

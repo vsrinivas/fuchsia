@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 
 #include "garnet/testing/views/background_view.h"
@@ -52,7 +53,7 @@ class App : public fuchsia::ui::app::View {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token = std::move(view_token),
+        .view_token2 = scenic::ToViewToken(std::move(view_token)),
     };
 
     view_ = view_factory_(std::move(view_context));

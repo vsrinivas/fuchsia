@@ -8,7 +8,6 @@
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.policy.Presenter2",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.viewsv1.ViewManager"
         ]

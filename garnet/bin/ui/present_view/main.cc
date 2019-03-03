@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/channel.h>
-
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/svc/cpp/services.h"
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 using fuchsia::ui::app::ViewConfig;
 
@@ -84,12 +83,7 @@ int main(int argc, const char** argv) {
     loop.Quit();
   });
 
-  // Create the tokens.
-  zx::eventpair view_holder_token, view_token;
-  if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
-    FXL_LOG(ERROR) << "present_view: failed to create tokens.";
-    return 1;
-  }
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   // Note: This instance must be retained for the lifetime of the UI, so it has
   // to be declared in the outer scope of |main| rather than inside the relevant
@@ -105,18 +99,18 @@ int main(int argc, const char** argv) {
     // Create a view using the |fuchsia::ui::app::View| interface.
     services.ConnectToService<fuchsia::ui::app::View>(view.NewRequest());
     view->SetConfig(std::move(view_config));
-    view->Attach(std::move(view_token));
+    view->Attach(std::move(view_token.value));
   } else {
     // Create the view using the |fuchsia::ui::app::ViewProvider| interface.
     fidl::InterfacePtr<::fuchsia::ui::app::ViewProvider> view_provider;
     services.ConnectToService(view_provider.NewRequest());
-    view_provider->CreateView(std::move(view_token), nullptr, nullptr);
+    view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
   }
 
   // Ask the presenter to display it.
   auto presenter =
       startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
+          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   presenter->PresentView(std::move(view_holder_token), nullptr);
 
   // Done!

@@ -9,6 +9,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/system/ulib/zircon/include/zircon/status.h>
 
 #include "garnet/examples/ui/simplest_embedder/example_presenter.h"
@@ -47,11 +48,7 @@ int main(int argc, const char** argv) {
     // device shell, and connects it to the root presenter.  Here, we create
     // two eventpair handles, one of which will be passed to the root presenter
     // and the other to the View.
-    zx::eventpair view_holder_token, view_token;
-    if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
-      FXL_LOG(ERROR) << "simplest_embedder: parent failed to create tokens.";
-      return 1;
-    }
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     // Create a startup context for ourselves and use it to connect to
     // environment services.
@@ -71,7 +68,7 @@ int main(int argc, const char** argv) {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token = std::move(view_token),
+        .view_token2 = std::move(view_token),
         .incoming_services = nullptr,
         .outgoing_services = nullptr,
         .startup_context = startup_context.get(),
@@ -82,9 +79,9 @@ int main(int argc, const char** argv) {
 
     // Display the newly-created view using root_presenter.
     fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation;
-    fuchsia::ui::policy::Presenter2Ptr root_presenter =
+    fuchsia::ui::policy::PresenterPtr root_presenter =
         startup_context
-            ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
+            ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
     root_presenter->PresentView(std::move(view_holder_token),
                                 presentation.NewRequest());
 
@@ -114,11 +111,7 @@ int main(int argc, const char** argv) {
     // as well if the presenter/view lived in two other processes, and we
     // passed the tokens to them via FIDL messages.  In Peridot, this is
     // exactly what the device_runner does.
-    zx::eventpair view_holder_token, view_token;
-    if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
-      FXL_LOG(ERROR) << "simplest_embedder: parent failed to create tokens.";
-      return 1;
-    }
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     // Create a startup context for ourselves and use it to connect to
     // environment services.
@@ -138,7 +131,7 @@ int main(int argc, const char** argv) {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token = std::move(view_token),
+        .view_token2 = std::move(view_token),
         .incoming_services = nullptr,
         .outgoing_services = nullptr,
         .startup_context = startup_context.get(),

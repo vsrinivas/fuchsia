@@ -4,8 +4,8 @@
 
 #include "garnet/examples/ui/simplest_embedder/example_presenter.h"
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/fxl/logging.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace simplest_embedder {
 
@@ -30,8 +30,9 @@ void ExamplePresenter::Init(float width, float height) {
 }
 
 void ExamplePresenter::PresentView(
-    zx::eventpair view_holder_token,
-    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> ignored) {
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<
+        fuchsia::ui::policy::Presentation> /*presentation_request*/) {
   FXL_CHECK(!presentation_)
       << "simplest_embedder: only a single Presentation is supported.";
 
@@ -43,6 +44,14 @@ void ExamplePresenter::PresentView(
 
   MaybeSetPresentationSize();
   ScenicSessionPresent();
+}
+
+void ExamplePresenter::Present2(
+    zx::eventpair view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request) {
+  PresentView(scenic::ToViewHolderToken(std::move(view_holder_token)),
+              std::move(presentation_request));
 }
 
 void ExamplePresenter::MaybeSetPresentationSize() {
@@ -57,8 +66,9 @@ void ExamplePresenter::ScenicSessionPresent() {
   });
 }
 
-ExamplePresenter::Presentation::Presentation(scenic::Session* session,
-                                             zx::eventpair view_holder_token)
+ExamplePresenter::Presentation::Presentation(
+    scenic::Session* session,
+    fuchsia::ui::views::ViewHolderToken view_holder_token)
     : layer_(session),
       view_holder_node_(session),
       view_holder_(session, std::move(view_holder_token),

@@ -10,6 +10,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <trace-provider/provider.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -44,11 +45,7 @@ int main(int argc, const char** argv) {
   // device shell, and connects it to the root presenter.  Here, we create
   // two eventpair handles, one of which will be passed to the root presenter
   // and the other to the View.
-  zx::eventpair view_holder_token, view_token;
-  if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
-    FXL_LOG(ERROR) << "simplest_app: parent failed to create tokens.";
-    return 1;
-  }
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   // Create a startup context for ourselves and use it to connect to
   // environment services.
@@ -67,7 +64,7 @@ int main(int argc, const char** argv) {
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = std::move(view_token),
+      .view_token2 = std::move(view_token),
       .incoming_services = nullptr,
       .outgoing_services = nullptr,
       .startup_context = startup_context.get(),
@@ -75,9 +72,9 @@ int main(int argc, const char** argv) {
   auto view = std::make_unique<SimplestAppView>(std::move(view_context), &loop);
 
   // Display the newly-created view using root_presenter.
-  fuchsia::ui::policy::Presenter2Ptr root_presenter =
+  fuchsia::ui::policy::PresenterPtr root_presenter =
       startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
+          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   root_presenter->PresentView(std::move(view_holder_token), nullptr);
 
   loop.Run();

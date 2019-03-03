@@ -9,5 +9,7 @@ fostr_fidl("fuchsia.ui.policy") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.views",
   ]
 }

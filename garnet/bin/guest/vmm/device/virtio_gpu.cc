@@ -4,9 +4,11 @@
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <trace-provider/provider.h>
 #include <virtio/gpu.h>
 
@@ -343,10 +345,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     PrepStart(std::move(start_info));
 
     if (view_listener) {
-      zx::eventpair view_owner_token, view_token;
-      zx_status_t status =
-          zx::eventpair::create(0u, &view_owner_token, &view_token);
-      FXL_CHECK(status == ZX_OK) << "Failed to create view tokens";
+      auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
       // Create view.
       auto scenic =
@@ -354,7 +353,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
       scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-          .view_token = std::move(view_token),
+          .view_token2 = std::move(view_token),
           .startup_context = &context_,
       };
       view_ = std::make_unique<GuestView>(std::move(view_context),
@@ -364,8 +363,8 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
       // Present view.
       auto presenter =
           context_
-              .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
-      presenter->PresentView(std::move(view_owner_token), nullptr);
+              .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      presenter->PresentView(std::move(view_holder_token), nullptr);
     }
 
     // Initialize streams.

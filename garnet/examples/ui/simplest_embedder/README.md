@@ -8,7 +8,7 @@ and children in the Scenic view tree.
 ## Note on `ExamplePresenter`
 
 Includes a simple implementation of
-[`fuchsia.ui.policy.Presenter2`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
+[`fuchsia.ui.policy.Presenter`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
 which it uses instead of connecting to `root_presenter`; the topology is
 analogous to how Peridot's `basemgr` connects the `base_shell` to
 `root_presenter`.

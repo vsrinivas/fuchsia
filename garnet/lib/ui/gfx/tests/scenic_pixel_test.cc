@@ -9,13 +9,14 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
 #include "garnet/testing/views/background_view.h"
@@ -41,7 +42,7 @@ constexpr zx::duration kTimeout = zx::sec(15);
 const std::map<std::string, std::string> kServices = {
     {"fuchsia.tracelink.Registry",
      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
-    {"fuchsia.ui.policy.Presenter2",
+    {"fuchsia.ui.policy.Presenter",
      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
     {"fuchsia.ui.scenic.Scenic",
      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
@@ -94,19 +95,15 @@ class ScenicPixelTest : public component::testing::TestWithEnvironment {
   // Create a |ViewContext| that allows us to present a view via
   // |RootPresenter|. See also examples/ui/hello_base_view
   scenic::ViewContext CreatePresentationContext() {
-    zx::eventpair view_holder_token, view_token;
-    zx_status_t status =
-        zx::eventpair::create(0u, &view_holder_token, &view_token);
-    FXL_CHECK(status == ZX_OK)
-        << "zx::eventpair::create: " << zx_status_get_string(status);
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token = std::move(view_token),
+        .view_token2 = std::move(view_token),
     };
 
-    fuchsia::ui::policy::Presenter2Ptr presenter;
+    fuchsia::ui::policy::PresenterPtr presenter;
     environment_->ConnectToService(presenter.NewRequest());
     presenter->PresentView(std::move(view_holder_token), nullptr);
 

@@ -4,16 +4,13 @@
 
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/svc/cpp/services.h"
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -68,19 +65,18 @@ int main(int argc, const char** argv) {
     loop.Quit();
   });
 
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
   // Create a View from the launched component.
-  zx::eventpair view_token, view_holder_token;
-  if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
-    FXL_NOTREACHED() << "Failed to create view tokens";
   auto view_provider =
       services.ConnectToService<fuchsia::ui::app::ViewProvider>();
-  view_provider->CreateView(std::move(view_token), nullptr, nullptr);
+  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
   // Ask the presenter to display it.
   auto presenter =
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
-  presenter->Present2(std::move(view_holder_token), nullptr);
+  presenter->PresentView(std::move(view_holder_token), nullptr);
 
   // Done!
   loop.Run();

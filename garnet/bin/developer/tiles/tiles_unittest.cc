@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/developer/tiles/tiles.h"
+
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl_test_base.h>
 #include <gtest/gtest.h>
-#include <zx/eventpair.h>
-
-#include "garnet/bin/developer/tiles/tiles.h"
-#include "lib/fxl/logging.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/sys/cpp/startup_context.h"
-#include "lib/sys/cpp/testing/startup_context_for_test.h"
+#include <lib/fxl/logging.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/testing/startup_context_for_test.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace {
 
@@ -38,9 +39,7 @@ class TilesTest : public gtest::TestLoopFixture {
   TilesTest() : context_(sys::testing::StartupContextForTest::Create()) {}
 
   void SetUp() final {
-    zx::eventpair view_token;
-    if (zx::eventpair::create(0u, &view_owner_token_, &view_token) != ZX_OK)
-      FXL_NOTREACHED() << "failed to create tokens.";
+    auto [view_token, view_holder_token_] = scenic::NewViewTokenPair();
 
     tiles_impl_ = std::make_unique<tiles::Tiles>(
         context_.get(), std::move(view_token), std::vector<std::string>(), 10);
@@ -56,10 +55,10 @@ class TilesTest : public gtest::TestLoopFixture {
 
  private:
   FakeViewManager view_manager_;
+  fuchsia::ui::views::ViewHolderToken view_holder_token_;
   std::unique_ptr<sys::testing::StartupContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Controller* tiles_;
-  zx::eventpair view_owner_token_;
 };
 
 TEST_F(TilesTest, Trivial) {}

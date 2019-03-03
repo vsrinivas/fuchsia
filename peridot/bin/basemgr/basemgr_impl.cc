@@ -20,6 +20,7 @@
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/session_provider.h"

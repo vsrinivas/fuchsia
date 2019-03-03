@@ -4,6 +4,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <queue>
 #include "garnet/bin/mediaplayer/test/command_queue.h"
 #include "garnet/bin/mediaplayer/test/fakes/fake_audio.h"
@@ -16,6 +18,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/type_converters.h"
+#include "lib/ui/scenic/cpp/view_token_pair.h"
 
 namespace media_player {
 namespace test {
@@ -82,10 +85,8 @@ class MediaPlayerTests : public component::testing::TestWithEnvironment {
 
   // Creates a view.
   void CreateView() {
-    zx::eventpair view_token;
-    if (zx::eventpair::create(0u, &view_token, &view_holder_token_) != ZX_OK)
-      FXL_NOTREACHED() << "Failed to create view tokens";
-    player_->CreateView2(std::move(view_token));
+    auto [view_token, view_holder_token_] = scenic::NewViewTokenPair();
+    player_->CreateView2(std::move(view_token.value));
   }
 
   fuchsia::mediaplayer::PlayerPtr player_;
@@ -94,7 +95,7 @@ class MediaPlayerTests : public component::testing::TestWithEnvironment {
   FakeWavReader fake_reader_;
   FakeAudio fake_audio_;
   FakeScenic fake_scenic_;
-  zx::eventpair view_holder_token_;
+  fuchsia::ui::views::ViewHolderToken view_holder_token_;
   std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;

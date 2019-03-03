@@ -16,6 +16,6 @@ fidl("fuchsia.ui.policy") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//sdk/fidl/fuchsia.ui.views",
   ]
 }

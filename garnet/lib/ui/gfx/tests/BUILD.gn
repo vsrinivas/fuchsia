@@ -134,6 +134,7 @@ executable("pixeltests") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-cpp",

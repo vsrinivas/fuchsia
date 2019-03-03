@@ -21,7 +21,7 @@
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
-#include <lib/zx/eventpair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
 namespace {
@@ -109,20 +109,7 @@ class MinimalInputTest : public gtest::RealLoopFixture {
       g_context = component::StartupContext::CreateFromStartupInfo().release();
     }
 
-    zx::eventpair view_holder_token, view_token;
-    if (ZX_OK != zx::eventpair::create(0u, &view_holder_token, &view_token)) {
-      FXL_LOG(FATAL) << "Failed to create view/view_holder tokens.";
-    }
-
-    // Connect to RootPresenter, create a ViewHolder.
-    root_presenter_ =
-        g_context
-            ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter2>();
-    root_presenter_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to RootPresenter: "
-                     << zx_status_get_string(status);
-    });
-    root_presenter_->PresentView(std::move(view_holder_token), nullptr);
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     // Connect to Scenic, create a View.
     scenic_ =
@@ -134,13 +121,23 @@ class MinimalInputTest : public gtest::RealLoopFixture {
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token = std::move(view_token),
+        .view_token2 = std::move(view_token),
         .incoming_services = nullptr,
         .outgoing_services = nullptr,
         .startup_context = g_context,
     };
     view_ = std::make_unique<MinimalClientView>(std::move(view_context),
                                                 dispatcher());
+
+    // Connect to RootPresenter, create a ViewHolder.
+    root_presenter_ =
+        g_context
+            ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+    root_presenter_.set_error_handler([](zx_status_t status) {
+      FXL_LOG(FATAL) << "Lost connection to RootPresenter: "
+                     << zx_status_get_string(status);
+    });
+    root_presenter_->PresentView(std::move(view_holder_token), nullptr);
 
     // When display is available, create content and drive input to touchscreen.
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -206,7 +203,7 @@ class MinimalInputTest : public gtest::RealLoopFixture {
     inject_input_ = std::move(inject_input);
   }
 
-  fuchsia::ui::policy::Presenter2Ptr root_presenter_;
+  fuchsia::ui::policy::PresenterPtr root_presenter_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::unique_ptr<MinimalClientView> view_;

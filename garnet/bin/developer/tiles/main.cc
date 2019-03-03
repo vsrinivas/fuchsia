@@ -4,13 +4,13 @@
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_number_conversions.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <trace-provider/provider.h>
-#include <zx/eventpair.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
 
 void Usage() {
   printf(
@@ -44,9 +44,7 @@ int main(int argc, const char** argv) {
         << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
-  zx::eventpair view_owner_token, view_token;
-  if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
-    FXL_NOTREACHED() << "failed to create tokens.";
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   // Create tiles with a token for its root view.
   auto startup_context = sys::StartupContext::CreateFromStartupInfo();
@@ -56,7 +54,7 @@ int main(int argc, const char** argv) {
   // Ask the presenter to display it.
   auto presenter =
       startup_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
-  presenter->Present2(std::move(view_owner_token), nullptr);
+  presenter->PresentView(std::move(view_holder_token), nullptr);
 
   loop.Run();
   return 0;

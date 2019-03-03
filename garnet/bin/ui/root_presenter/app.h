@@ -5,24 +5,23 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_APP_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_APP_H_
 
-#include <limits>
-#include <memory>
-#include <vector>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/macros.h>
+#include <lib/ui/input/input_device_impl.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/zx/eventpair.h>
+#include <limits>
+#include <memory>
+#include <vector>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
-#include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/zx/eventpair.h"
 
 namespace root_presenter {
 
@@ -33,7 +32,6 @@ namespace root_presenter {
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
 class App : public fuchsia::ui::policy::Presenter,
-            public fuchsia::ui::policy::Presenter2,
             public fuchsia::ui::input::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
@@ -46,22 +44,16 @@ class App : public fuchsia::ui::policy::Presenter,
                 fuchsia::ui::input::InputReport report) override;
 
  private:
-  void Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
-               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                   presentation_request);
-
   // |Presenter|
+  void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation_request) override;
   void Present2(zx::eventpair view_holder_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                    presentation_request) final;
+                    presentation_request) override;
   void HACK_SetRendererParams(
       bool enable_clipping,
       std::vector<fuchsia::ui::gfx::RendererParam> params) override;
-
-  // |Presenter2|
-  void PresentView(zx::eventpair view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation_request) override;
 
   // |InputDeviceRegistry|
   void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
@@ -83,7 +75,6 @@ class App : public fuchsia::ui::policy::Presenter,
 
   std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
-  fidl::BindingSet<fuchsia::ui::policy::Presenter2> presenter2_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;
   mozart::InputReader input_reader_;

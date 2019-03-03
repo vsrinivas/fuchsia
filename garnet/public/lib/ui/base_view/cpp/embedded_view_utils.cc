@@ -14,7 +14,7 @@ EmbeddedViewInfo LaunchComponentAndCreateView(
     const std::vector<std::string>& component_args) {
   FXL_DCHECK(launcher);
 
-  auto view_tokens = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   EmbeddedViewInfo info;
 
@@ -30,10 +30,11 @@ EmbeddedViewInfo LaunchComponentAndCreateView(
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> services_to_child_view;
   info.services_to_child_view = services_to_child_view.NewRequest();
 
-  info.view_holder_token = std::move(view_tokens.second);
-  info.view_provider->CreateView(std::move(view_tokens.first.value),
+  info.view_provider->CreateView(std::move(view_token.value),
                                  info.services_from_child_view.NewRequest(),
                                  std::move(services_to_child_view));
+
+  info.view_holder_token = std::move(view_holder_token);
 
   return info;
 }

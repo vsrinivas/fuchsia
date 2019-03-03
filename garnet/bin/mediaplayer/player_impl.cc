@@ -12,6 +12,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include "garnet/bin/mediaplayer/core/demux_source_segment.h"
 #include "garnet/bin/mediaplayer/core/renderer_sink_segment.h"
 #include "garnet/bin/mediaplayer/demux/file_reader.h"
@@ -509,7 +511,7 @@ void PlayerImpl::CreateView2(zx::eventpair view_token) {
     return;
   }
 
-  video_renderer_->CreateView(std::move(view_token));
+  video_renderer_->CreateView(scenic::ToViewToken(std::move(view_token)));
 }
 
 void PlayerImpl::BindGainControl(

@@ -14,6 +14,7 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
+#include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "lib/url/gurl.h"
 
 namespace media_player {
@@ -84,14 +85,13 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
                 ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
 
   // Create the video view.
-  zx::eventpair view_owner_token, view_token;
-  if (zx::eventpair::create(0u, &view_owner_token, &view_token) != ZX_OK)
-    FXL_NOTREACHED() << "failed to create tokens.";
-  player_->CreateView2(std::move(view_token));
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
+  player_->CreateView2(std::move(view_token.value));
 
   video_host_node_.reset(new scenic::EntityNode(session()));
   video_view_holder_.reset(new scenic::ViewHolder(
-      session(), std::move(view_owner_token), "video view"));
+      session(), std::move(view_holder_token), "video view"));
   video_host_node_->Attach(*video_view_holder_);
 
   root_node().AddChild(*video_host_node_);

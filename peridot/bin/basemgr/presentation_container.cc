@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/logging.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
@@ -31,8 +32,9 @@ PresentationContainer::PresentationContainer(
     fit::function<void()> on_swap_session_shell)
     : presenter_(presenter),
       on_swap_session_shell_(std::move(on_swap_session_shell)) {
-  presenter_->Present2(zx::eventpair(view_owner.TakeChannel().release()),
-                       presentation_state_.presentation.NewRequest());
+  presenter_->PresentView(scenic::ToViewHolderToken(zx::eventpair(
+                              view_owner.TakeChannel().release())),
+                          presentation_state_.presentation.NewRequest());
 
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
 

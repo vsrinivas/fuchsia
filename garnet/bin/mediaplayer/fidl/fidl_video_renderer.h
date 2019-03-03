@@ -8,11 +8,13 @@
 #include <fbl/array.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <queue>
 #include <unordered_map>
+
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
 #include "garnet/bin/mediaplayer/render/video_renderer.h"
 
@@ -60,7 +62,7 @@ class FidlVideoRenderer : public VideoRenderer {
   void SetGeometryUpdateCallback(fit::closure callback);
 
   // Creates a view.
-  void CreateView(zx::eventpair view_token);
+  void CreateView(fuchsia::ui::views::ViewToken view_token);
 
  protected:
   // Renderer overrides.

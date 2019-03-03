@@ -14,6 +14,7 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
 
@@ -314,12 +315,7 @@ void App::CreateScene(float display_width, float display_height) {
 
   // Create View/ViewHolder. Attach ViewHolder to root node.
   {
-    zx::eventpair view_token;
-    zx::eventpair view_holder_token;
-    zx_status_t status =
-        zx::eventpair::create(/*flags*/ 0u, &view_holder_token, &view_token);
-    FXL_CHECK(status == ZX_OK)
-        << "Failed to create eventpair for view/viewholder.";
+    auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
     view_holder_ = std::make_unique<scenic::ViewHolder>(
         session, std::move(view_holder_token), "view_holder");

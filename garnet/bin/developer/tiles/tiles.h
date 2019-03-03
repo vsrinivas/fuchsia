@@ -8,10 +8,8 @@
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-
-#include <zx/eventpair.h>
-
 #include "lib/async/cpp/task.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/sys/cpp/startup_context.h"
@@ -24,8 +22,9 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
               public fuchsia::ui::viewsv1::ViewContainerListener,
               public fuchsia::developer::tiles::Controller {
  public:
-  Tiles(sys::StartupContext* startup_context, zx::eventpair root_view_token,
-        std::vector<std::string> urls, int border);
+  Tiles(sys::StartupContext* startup_context,
+        fuchsia::ui::views::ViewToken view_token, std::vector<std::string> urls,
+        int border);
   ~Tiles() final = default;
 
  private:
@@ -70,7 +69,8 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
 
   // Launches initial list of views, passed as command line parameters.
 
-  void AddChildView(uint32_t child_key, zx::eventpair view_holder_token,
+  void AddChildView(uint32_t child_key,
+                    fuchsia::ui::views::ViewHolderToken view_holder_token,
                     const std::string& url,
                     fuchsia::sys::ComponentControllerPtr, bool allow_focus);
 

@@ -5,11 +5,11 @@
 #include "garnet/bin/developer/tiles/tiles.h"
 
 #include <lib/async/default.h>
-
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/logging.h"
-#include "lib/svc/cpp/services.h"
-
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/logging.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
 #include <cmath>
 
 constexpr float kTileElevation = 5.f;
@@ -17,8 +17,8 @@ constexpr float kTileElevation = 5.f;
 namespace tiles {
 
 Tiles::Tiles(sys::StartupContext* startup_context,
-             zx::eventpair root_view_token, std::vector<std::string> urls,
-             int border)
+             fuchsia::ui::views::ViewToken view_token,
+             std::vector<std::string> urls, int border)
     : startup_context_(startup_context),
       root_view_listener_binding_(this),
       root_view_container_listener_binding_(this),
@@ -44,7 +44,8 @@ Tiles::Tiles(sys::StartupContext* startup_context,
   // Create a View and export our scene from it.
   auto view_manager =
       startup_context_->svc()->Connect<fuchsia::ui::viewsv1::ViewManager>();
-  view_manager->CreateView2(root_view_.NewRequest(), std::move(root_view_token),
+  view_manager->CreateView2(root_view_.NewRequest(),
+                            std::move(view_token.value),
                             root_view_listener_binding_.NewBinding(),
                             std::move(root_export_token), "Tiles Root");
 
@@ -76,13 +77,12 @@ void Tiles::AddTileFromURL(std::string url, bool allow_focus,
 
   launcher_->CreateComponent(std::move(launch_info), controller.NewRequest());
 
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
   // Create a View from the launched component.
-  zx::eventpair view_token, view_holder_token;
-  if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
-    FXL_NOTREACHED() << "Failed to create view tokens";
   auto view_provider =
       services.ConnectToService<fuchsia::ui::app::ViewProvider>();
-  view_provider->CreateView(std::move(view_token), nullptr, nullptr);
+  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
   uint32_t child_key = next_child_view_key_++;
   AddChildView(child_key, std::move(view_holder_token), url,
@@ -98,12 +98,11 @@ void Tiles::AddTileFromViewProvider(
     AddTileFromViewProviderCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
 
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
   // Create a View from the ViewProvider.
-  zx::eventpair view_token, view_holder_token;
-  if (zx::eventpair::create(0u, &view_token, &view_holder_token) != ZX_OK)
-    FXL_NOTREACHED() << "Failed to create view tokens";
   auto view_provider = provider.Bind();
-  view_provider->CreateView(std::move(view_token), nullptr, nullptr);
+  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
   uint32_t child_key = next_child_view_key_++;
   AddChildView(child_key, std::move(view_holder_token), url,
@@ -183,7 +182,8 @@ void Tiles::OnChildUnavailable(uint32_t child_key,
   InvalidateScene();
 }
 
-void Tiles::AddChildView(uint32_t child_key, zx::eventpair view_holder_token,
+void Tiles::AddChildView(uint32_t child_key,
+                         fuchsia::ui::views::ViewHolderToken view_holder_token,
                          const std::string& url,
                          fuchsia::sys::ComponentControllerPtr controller,
                          bool allow_focus) {
@@ -195,7 +195,7 @@ void Tiles::AddChildView(uint32_t child_key, zx::eventpair view_holder_token,
   container_node_.AddChild(view_data->host_node);
   views_.emplace(child_key, std::move(view_data));
 
-  root_view_container_->AddChild2(child_key, std::move(view_holder_token),
+  root_view_container_->AddChild2(child_key, std::move(view_holder_token.value),
                                   std::move(host_import_token));
   InvalidateScene();
 }

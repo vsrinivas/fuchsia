@@ -4,17 +4,18 @@
 
 #include "garnet/bin/ui/root_presenter/app.h"
 
+#include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/logging.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <trace/event.h>
 #include <algorithm>
 #include <cstdlib>
 #include <string>
 
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/component/cpp/connect.h>
-#include <lib/fidl/cpp/clone.h>
 #include "src/lib/files/file.h"
-#include <lib/fxl/logging.h>
-#include <lib/ui/input/cpp/formatting.h>
-#include <trace/event.h>
 
 namespace root_presenter {
 
@@ -28,16 +29,14 @@ App::App(const fxl::CommandLine& command_line)
   startup_context_->outgoing().AddPublicService(
       presenter_bindings_.GetHandler(this));
   startup_context_->outgoing().AddPublicService(
-      presenter2_bindings_.GetHandler(this));
-  startup_context_->outgoing().AddPublicService(
       input_receiver_bindings_.GetHandler(this));
 }
 
 App::~App() {}
 
-void App::Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                  fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                      presentation_request) {
+void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                          presentation_request) {
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;
@@ -69,20 +68,8 @@ void App::Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
 void App::Present2(zx::eventpair view_holder_token,
                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                        presentation_request) {
-  Present(fuchsia::ui::views::ViewHolderToken({
-              .value = std::move(view_holder_token),
-          }),
-          std::move(presentation_request));
-}
-
-void App::PresentView(
-    zx::eventpair view_holder_token,
-    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request) {
-  Present(fuchsia::ui::views::ViewHolderToken({
-              .value = std::move(view_holder_token),
-          }),
-          std::move(presentation_request));
+  PresentView(scenic::ToViewHolderToken(std::move(view_holder_token)),
+              std::move(presentation_request));
 }
 
 void App::AddPresentation(std::unique_ptr<Presentation> presentation) {

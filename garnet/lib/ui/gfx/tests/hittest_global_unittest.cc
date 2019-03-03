@@ -79,8 +79,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
                                       /*release fence signaller*/ nullptr);
 
   // Create our tokens for View/ViewHolder creation.
-  auto tokens_1 = scenic::NewViewTokenPair();
-  auto tokens_2 = scenic::NewViewTokenPair();
+  auto [view_token_1, view_holder_token_1] = scenic::NewViewTokenPair();
+  auto [view_token_2, view_holder_token_2] = scenic::NewViewTokenPair();
 
   // Root session sets up the scene and two view holders.
   CustomSession s_r(0, engine->session_context());
@@ -112,12 +112,12 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kViewHolder1Id = 1008;  // Hit
     s_r.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     s_r.Apply(scenic::NewCreateViewHolderCmd(
-        kViewHolder1Id, std::move(tokens_1.second), "viewholder_1"));
+        kViewHolder1Id, std::move(view_holder_token_1), "viewholder_1"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder1Id));
 
     const uint32_t kViewHolder2Id = 1009;  // Hit
     s_r.Apply(scenic::NewCreateViewHolderCmd(
-        kViewHolder2Id, std::move(tokens_2.second), "viewholder_2"));
+        kViewHolder2Id, std::move(view_holder_token_2), "viewholder_2"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder2Id));
   }
 
@@ -126,7 +126,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   {
     const uint32_t kViewId = 2001;  // Hit
     s_1.Apply(
-        scenic::NewCreateViewCmd(kViewId, std::move(tokens_1.first), "view_1"));
+        scenic::NewCreateViewCmd(kViewId, std::move(view_token_1), "view_1"));
 
     const uint32_t kRootNodeId = 2002;  // Hit
     s_1.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -148,7 +148,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   {
     const uint32_t kViewId = 3001;  // Hit
     s_2.Apply(
-        scenic::NewCreateViewCmd(kViewId, std::move(tokens_2.first), "view_2"));
+        scenic::NewCreateViewCmd(kViewId, std::move(view_token_2), "view_2"));
 
     const uint32_t kRootNodeId = 3002;  // Hit
     s_2.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));

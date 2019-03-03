@@ -14,15 +14,18 @@ executable("tile") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
   ]
 }
