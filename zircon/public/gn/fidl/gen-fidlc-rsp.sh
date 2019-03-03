@@ -28,10 +28,11 @@ handle_args() {
 }
 
 read_rspfile() {
-  local arg
+  local arg args=()
   while read arg; do
-    handle_args "$arg"
+    args+=("$arg")
   done
+  handle_args "${args[@]}"
 }
 
 write_output() {
