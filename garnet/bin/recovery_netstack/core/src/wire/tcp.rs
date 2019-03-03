@@ -260,6 +260,7 @@ impl<B: ByteSlice> TcpSegment<B> {
 // always has a valid checksum.
 
 /// A builder for TCP segments.
+#[derive(Debug)]
 pub(crate) struct TcpSegmentBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
@@ -328,6 +329,10 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
 
     fn min_body_len(&self) -> usize {
         0
+    }
+
+    fn max_body_len(&self) -> usize {
+        std::usize::MAX
     }
 
     fn footer_len(&self) -> usize {
@@ -511,7 +516,7 @@ mod tests {
         //     .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
         //     .encapsulate(packet.builder())
         //     .encapsulate(frame.builder())
-        //     .serialize_outer();
+        //     .serialize_outer().unwrap();
         // assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
@@ -603,7 +608,8 @@ mod tests {
         builder.rst(true);
         builder.syn(true);
 
-        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer();
+        let mut buf =
+            (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer().unwrap();
         // assert that we get the literal bytes we expected
         assert_eq!(
             buf.as_ref(),
@@ -632,11 +638,13 @@ mod tests {
         let mut buf_0 = [0; HDR_PREFIX_LEN];
         BufferSerializer::new_vec(Buf::new(&mut buf_0[..], HDR_PREFIX_LEN..))
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         let mut buf_1 = [0xFF; HDR_PREFIX_LEN];
         BufferSerializer::new_vec(Buf::new(&mut buf_1[..], HDR_PREFIX_LEN..))
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 
@@ -647,7 +655,8 @@ mod tests {
         // can't fit in the length field in the IPv4 pseudo-header.
         BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 16) - HDR_PREFIX_LEN][..], ..))
             .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
     }
 
     #[test]
@@ -659,6 +668,7 @@ mod tests {
         // can't fit in the length field in the IPv4 pseudo-header.
         BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 32) - HDR_PREFIX_LEN][..], ..))
             .encapsulate(new_builder(TEST_SRC_IPV6, TEST_DST_IPV6))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
     }
 }

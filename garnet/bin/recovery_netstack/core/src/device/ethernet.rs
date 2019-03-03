@@ -7,7 +7,7 @@
 use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
-use packet::{Buf, ParseBuffer, Serializer};
+use packet::{Buf, MtuError, ParseBuffer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
@@ -213,7 +213,8 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     local_addr: A,
     body: S,
 ) {
-    let local_mac = get_device_state(ctx, device_id).mac;
+    let state = get_device_state(ctx, device_id);
+    let (local_mac, mtu) = (state.mac, state.mtu);
 
     #[ipv4addr]
     let dst_mac = {
@@ -235,7 +236,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     if let Some(dst_mac) = dst_mac {
         if let Ok(buffer) = body
             .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
-            .serialize_mtu_outer(get_device_state(ctx, device_id).mtu)
+            .serialize_mtu_outer(mtu)
         {
             ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         }
@@ -342,11 +343,14 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         device_id: u64,
         dst: Self::HardwareAddr,
         body: S,
-    ) {
+    ) -> Result<(), MtuError<S::InnerError>> {
         let src = get_device_state(ctx, device_id).mac;
-        let buffer =
-            body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp)).serialize_outer();
+        let buffer = body
+            .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp))
+            .serialize_outer()
+            .map_err(|(err, _)| err)?;
         ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        Ok(())
     }
 
     fn get_arp_state<D: EventDispatcher>(

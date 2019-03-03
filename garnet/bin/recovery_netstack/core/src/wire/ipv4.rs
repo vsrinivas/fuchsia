@@ -270,6 +270,7 @@ where
 }
 
 /// A builder for IPv4 packets.
+#[derive(Debug)]
 pub(crate) struct Ipv4PacketBuilder {
     dscp: u8,
     ecn: u8,
@@ -366,6 +367,10 @@ impl PacketBuilder for Ipv4PacketBuilder {
         0
     }
 
+    fn max_body_len(&self) -> usize {
+        (1 << 16) - 1 - self.header_len()
+    }
+
     fn footer_len(&self) -> usize {
         0
     }
@@ -387,11 +392,12 @@ impl PacketBuilder for Ipv4PacketBuilder {
 
         packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
         packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
-        let total_len = packet.total_packet_len();
-        if total_len >= 1 << 16 {
-            panic!("packet length of {} exceeds maximum of {}", total_len, 1 << 16 - 1);
-        }
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len as u16);
+        // This conversion is valid because the caller promises to supply a body
+        // whose length does not exceed max_body_len. If they uphold that
+        // contract, then the conversion won't be lossy, and if they break the
+        // contract, writing an incorrect header value is OK.
+        let total_len = packet.total_packet_len() as u16;
+        NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len);
         NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
         NetworkEndian::write_u16(
             &mut packet.hdr_prefix.flags_frag_off,
@@ -492,7 +498,8 @@ mod tests {
             .body()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
@@ -523,7 +530,8 @@ mod tests {
             .body()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
@@ -577,7 +585,8 @@ mod tests {
                 DEFAULT_DST_MAC,
                 EtherType::Ipv4,
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         buffer.parse::<EthernetFrame<_>>().unwrap();
         // Test that the Ethernet body is the minimum length, which far exceeds
         // the IPv4 packet header size of 20 bytes (without options).
@@ -636,7 +645,8 @@ mod tests {
         builder.mf_flag(true);
         builder.fragment_offset(0x0607);
 
-        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer();
+        let mut buf =
+            (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer().unwrap();
         assert_eq!(
             buf.as_ref(),
             [
@@ -660,11 +670,13 @@ mod tests {
         let mut buf_0 = [0; IPV4_MIN_HDR_LEN];
         BufferSerializer::new_vec(Buf::new(&mut buf_0[..], IPV4_MIN_HDR_LEN..))
             .encapsulate(new_builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         let mut buf_1 = [0xFF; IPV4_MIN_HDR_LEN];
         BufferSerializer::new_vec(Buf::new(&mut buf_1[..], IPV4_MIN_HDR_LEN..))
             .encapsulate(new_builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(buf_0, buf_1);
     }
 
@@ -674,6 +686,7 @@ mod tests {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
         BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..))
             .encapsulate(new_builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
     }
 }

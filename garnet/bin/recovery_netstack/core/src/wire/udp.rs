@@ -225,6 +225,7 @@ impl<B: ByteSlice> UdpPacket<B> {
 // has a valid checksum.
 
 /// A builder for UDP packets.
+#[derive(Debug)]
 pub(crate) struct UdpPacketBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
@@ -253,6 +254,19 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         0
     }
 
+    fn max_body_len(&self) -> usize {
+        if A::Version::VERSION.is_v4() {
+            (1 << 16) - 1
+        } else {
+            // IPv6 supports jumbograms, so a UDP packet may be greater than
+            // 2^16 bytes. In this case, the size doesn't fit in the 16-bit
+            // length field in the header, and so the length field is set to
+            // zero. That means that, from this packet's perspective, there's no
+            // effective limit on the body size.
+            std::usize::MAX
+        }
+    }
+
     fn footer_len(&self) -> usize {
         0
     }
@@ -275,10 +289,7 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         let len_field = if fits_in_u16(total_len) {
             total_len as u16
         } else if A::Version::VERSION.is_v6() {
-            // IPv6 supports jumbograms, so a UDP packet may be greater than
-            // 2^16 bytes in size. In this case, the size doesn't fit in the
-            // 16-bit length field in the header, and so the length field is set
-            // to zero to indicate this.
+            // See comment in max_body_len
             0u16
         } else {
             panic!(
@@ -370,7 +381,8 @@ mod tests {
             .encapsulate(udp_packet.builder(ip_packet.src_ip(), ip_packet.dst_ip()))
             .encapsulate(ip_packet.builder())
             .encapsulate(frame.builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
     }
 
@@ -406,7 +418,8 @@ mod tests {
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(buf.as_ref(), [0, 1, 0, 2, 0, 8, 239, 199]);
         let packet = buf
             .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4))
@@ -430,7 +443,8 @@ mod tests {
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         let mut buf_1 = [0xFF; HEADER_BYTES];
         BufferSerializer::new_vec(Buf::new(&mut buf_1[..], HEADER_BYTES..))
             .encapsulate(UdpPacketBuilder::new(
@@ -439,7 +453,8 @@ mod tests {
                 NonZeroU16::new(1),
                 NonZeroU16::new(2).unwrap(),
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(buf_0, buf_1);
     }
 
@@ -512,7 +527,8 @@ mod tests {
                 None,
                 NonZeroU16::new(1).unwrap(),
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
     }
 
     // TODO(joshlf): Figure out why compiling this test (yes, just compiling!)
@@ -533,6 +549,7 @@ mod tests {
     //             None,
     //             NonZeroU16::new(1).unwrap(),
     //         ))
-    //         .serialize_outer();
+    //         .serialize_outer()
+    //         .unwrap();
     // }
 }

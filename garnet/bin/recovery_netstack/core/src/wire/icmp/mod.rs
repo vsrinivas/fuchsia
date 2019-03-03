@@ -20,7 +20,7 @@ pub(crate) use self::icmpv6::*;
 
 use std::cmp;
 use std::convert::TryFrom;
-use std::fmt;
+use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::Deref;
@@ -272,7 +272,7 @@ pub(crate) trait IcmpMessage<I: IcmpIpExt, B>:
     /// type, different values of this field carry different meanings. Not all
     /// code values are used - some may be invalid. This type representents a
     /// parsed code. For example, for TODO, it is the TODO type.
-    type Code: Into<u8> + Copy;
+    type Code: Into<u8> + Copy + Debug;
 
     type Body: MessageBody<B>;
 
@@ -459,6 +459,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>> I
 }
 
 /// A builder for ICMP packets.
+#[derive(Debug)]
 pub(crate) struct IcmpPacketBuilder<I: IcmpIpExt, B, M: IcmpMessage<I, B>> {
     src_ip: I::Addr,
     dst_ip: I::Addr,
@@ -488,6 +489,21 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketBuilder for IcmpPacketBuilder<
 
     fn min_body_len(&self) -> usize {
         0
+    }
+
+    fn max_body_len(&self) -> usize {
+        // This is to make sure the body length doesn't overflow the 32-bit
+        // length field in the pseudo-header used for calculating the checksum.
+        //
+        // Note that, for messages that don't take bodies, it's important that
+        // we don't just set this to 0. Trying to serialize a body in a message
+        // type which doesn't take bodies is a programmer error, so we should
+        // panic in that case. Setting the max_body_len to 0 would surface the
+        // issue as an MTU error, which would hide the underlying problem.
+        // Instead, we assert in serialize. Eventually, we will hopefully figure
+        // out a way to implement InnerPacketBuilder (rather than PacketBuilder)
+        // for these message types, and this won't be an issue anymore.
+        std::u32::MAX as usize
     }
 
     fn footer_len(&self) -> usize {

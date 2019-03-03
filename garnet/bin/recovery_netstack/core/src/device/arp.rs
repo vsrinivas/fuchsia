@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::Duration;
 
-use packet::{BufferMut, InnerSerializer, Serializer};
+use packet::{BufferMut, InnerSerializer, MtuError, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
@@ -96,7 +96,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
         device_id: u64,
         dst: Self::HardwareAddr,
         body: S,
-    );
+    ) -> Result<(), MtuError<S::InnerError>>;
 
     /// Get a mutable reference to a device's ARP state.
     fn get_arp_state<D: EventDispatcher>(
@@ -209,6 +209,7 @@ pub(crate) fn receive_arp_packet<
         }
         if addressed_to_me && packet.operation() == ArpOp::Request {
             let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+            // TODO(joshlf): Do something if send_arp_frame returns an error?
             AD::send_arp_frame(
                 ctx,
                 device_id,
@@ -270,6 +271,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
 ) {
     if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx, device_id) {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+        // TODO(joshlf): Do something if send_arp_frame returns an error?
         AD::send_arp_frame(
             ctx,
             device_id,
@@ -440,7 +442,8 @@ mod tests {
             TEST_LOCAL_MAC,
             TEST_LOCAL_IPV4,
         )
-        .serialize_outer();
+        .serialize_outer()
+        .unwrap();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);

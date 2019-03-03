@@ -201,12 +201,13 @@ impl_icmp_message!(
 #[cfg(test)]
 mod tests {
     use packet::{ParseBuffer, Serializer};
+    use std::fmt::Debug;
 
     use super::*;
     use crate::wire::icmp::{IcmpMessage, IcmpPacket, MessageBody};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
-    fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6, B>>(
+    fn serialize_to_bytes<B: ByteSlice + Debug, M: IcmpMessage<Ipv6, B> + Debug>(
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
         icmp: &IcmpPacket<Ipv6, B, M>,
@@ -217,12 +218,13 @@ mod tests {
             .encapsulate(icmp.builder(src_ip, dst_ip))
             .encapsulate(builder)
             .serialize_outer()
+            .unwrap()
             .as_ref()
             .to_vec()
     }
 
     fn test_parse_and_serialize<
-        M: for<'a> IcmpMessage<Ipv6, &'a [u8]>,
+        M: for<'a> IcmpMessage<Ipv6, &'a [u8]> + Debug,
         F: for<'a> FnOnce(&IcmpPacket<Ipv6, &'a [u8], M>),
     >(
         mut req: &[u8],

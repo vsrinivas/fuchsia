@@ -317,6 +317,7 @@ where
 }
 
 /// A builder for ARP packets.
+#[derive(Debug)]
 pub(crate) struct ArpPacketBuilder<HwAddr, ProtoAddr> {
     op: ArpOp,
     sha: HwAddr,
@@ -408,7 +409,7 @@ mod tests {
         assert_eq!(arp.operation(), ArpOp::Request);
         assert_eq!(frame.src_mac(), arp.sender_hardware_address());
 
-        let frame_bytes = arp.builder().encapsulate(frame.builder()).serialize_outer();
+        let frame_bytes = arp.builder().encapsulate(frame.builder()).serialize_outer().unwrap();
         assert_eq!(frame_bytes.as_ref(), ARP_REQUEST);
     }
 
@@ -474,7 +475,8 @@ mod tests {
             TEST_TARGET_MAC,
             TEST_TARGET_IPV4,
         ))
-        .serialize_outer();
+        .serialize_outer()
+        .unwrap();
         assert_eq!(
             AsRef::<[u8]>::as_ref(&buf),
             &[0, 1, 8, 0, 6, 4, 0, 1, 0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8,]

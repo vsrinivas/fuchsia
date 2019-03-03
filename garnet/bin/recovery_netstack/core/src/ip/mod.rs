@@ -343,7 +343,8 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
     dst_ip: A,
     proto: IpProto,
     get_body: F,
-) where
+) -> Result<(), (S::Error, S)>
+where
     A: IpAddress,
     S: Serializer,
     F: FnOnce(A) -> S,
@@ -359,7 +360,7 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
         // TODO(joshlf): Currently, we serialize using the normal Serializer
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
-        let mut buffer = get_body(A::Version::LOOPBACK_ADDRESS).serialize_outer();
+        let mut buffer = get_body(A::Version::LOOPBACK_ADDRESS).serialize_outer()?;
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
@@ -402,6 +403,8 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
         debug!("No route to host");
         // TODO(joshlf): No route to host
     }
+
+    Ok(())
 }
 
 /// Send an IP packet to a remote host from a specific source address.

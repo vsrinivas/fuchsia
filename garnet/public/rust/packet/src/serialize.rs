@@ -4,6 +4,7 @@
 
 ///! Serialization.
 use std::cmp;
+use std::fmt::{self, Debug, Formatter};
 use std::ops::{Range, RangeBounds};
 
 use crate::{
@@ -16,6 +17,7 @@ use crate::{
 /// An `Either` wraps one of two different buffer types. It implements all of
 /// the relevant traits by calling the corresponding methods on the wrapped
 /// buffer.
+#[derive(Debug)]
 pub enum Either<A, B> {
     A(A),
     B(B),
@@ -159,6 +161,7 @@ impl<A, B> AsMut<Either<A, B>> for Either<A, B> {
 /// A `Buf` wraps a byte slice (a type which implements `AsRef<[u8]>` or
 /// `AsMut<[u8]>`) and implements `Buffer` and `BufferMut` by keeping track of
 /// prefix, body, and suffix offsets within the byte slice.
+#[derive(Debug)]
 pub struct Buf<B> {
     buf: B,
     range: Range<usize>,
@@ -356,10 +359,43 @@ impl<'a> AsMut<[u8]> for BufViewMut<'a> {
 /// its header and footer before and after the existing packet.
 pub trait PacketBuilder {
     /// The number of bytes in this packet's header.
+    ///
+    /// # Panics
+    ///
+    /// Code which operates on a `PacketBuilder` may assume that `header_len() +
+    /// footer_len()` will not overflow `usize`. If it does, that code is
+    /// allowed to panic or produce incorrect results. That code may NOT produce
+    /// memory unsafety.
     fn header_len(&self) -> usize;
+
     /// The minimum size of body required by this packet.
+    ///
+    /// # Panics
+    ///
+    /// Code which operates on a `PacketBuilder` may assume that `max_body_len()
+    /// >= min_body_len()`. If that doesn't hold, that code is allowed to panic
+    /// or produce incorrect results. That code may NOT produce memory unsafety.
     fn min_body_len(&self) -> usize;
+
+    /// The maximum size of a body allowed by this packet.
+    ///
+    /// If there is no maximum body len, this returns `std::usize::MAX`.
+    ///
+    /// # Panics
+    ///
+    /// Code which operates on a `PacketBuilder` may assume that `max_body_len()
+    /// >= min_body_len()`. If that doesn't hold, that code is allowed to panic
+    /// or produce incorrect results. That code may NOT produce memory unsafety.
+    fn max_body_len(&self) -> usize;
+
     /// The number of bytes in this packet's footer.
+    ///
+    /// # Panics
+    ///
+    /// Code which operates on a `PacketBuilder` may assume that `header_len() +
+    /// footer_len()` will not overflow `usize`. If it does, that code is
+    /// allowed to panic or produce incorrect results. That code may NOT produce
+    /// memory unsafety.
     fn footer_len(&self) -> usize;
 
     /// Serializes this packet into an existing buffer.
@@ -370,9 +406,10 @@ pub trait PacketBuilder {
     /// will have the number of bytes specified by the `header_len` and
     /// `footer_len` methods. The body will be initialized with the contents of
     /// the packet to be encapsulated, and will have at least `min_body_len`
-    /// bytes (padding may have been added in order to satisfy this minimum).
-    /// `serialize` is responsible for serializing the header and footer into
-    /// the appropriate sections of the buffer.
+    /// bytes (padding may have been added in order to satisfy this minimum) and
+    /// no more than `max_body_len` bytes. `serialize` is responsible for
+    /// serializing the header and footer into the appropriate sections of the
+    /// buffer.
     ///
     /// # Security
     ///
@@ -437,11 +474,27 @@ impl<'a> InnerPacketBuilder for Vec<u8> {
     }
 }
 
+/// An error that could be due to an exceeded maximum transmission unit (MTU).
+///
+/// `MtuError<E>` is an error that can either be the error `E` or an MTU-related
+/// error.
+#[derive(Debug)]
+pub enum MtuError<E> {
+    Err(E),
+    Mtu,
+}
+
+impl<E> From<E> for MtuError<E> {
+    fn from(err: E) -> MtuError<E> {
+        MtuError::Err(err)
+    }
+}
+
 /// Constraints passed to [`Serializer::serialize`].
 ///
 /// `SerializeConstraints` describes the prefix length, minimum body length, and
 /// suffix length required of the buffer returned from a call to `serialize`.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SerializeConstraints {
     pub prefix_len: usize,
     pub min_body_len: usize,
@@ -449,8 +502,23 @@ pub struct SerializeConstraints {
 }
 
 pub trait Serializer: Sized {
-    /// The type of buffers returned from a call to `serialize`.
+    /// The type of buffers returned from serialization methods on this trait.
     type Buffer: BufferMut;
+
+    /// The type of errors returned from the `serialize` and `serialize_outer`
+    /// methods on this trait.
+    type Error;
+
+    /// The inner error type of `Self::Error`.
+    ///
+    /// If `Self::Error` is `MtuError<E>`, then `InnerError` is `E`. Otherwise,
+    /// `InnerError` is equal to `Self::Error`. `serialize_mtu` and
+    /// `serialize_mtu_outer` return an error type of `MtuError<InnerError>`. This
+    /// allows us to return `MtuError` errors from these methods while avoiding
+    /// unnecessarily nested error types like `MtuError<MtuError<MtuError<E>>>`, which
+    /// is what we'd get if we naively used a single associated error type and
+    /// had the MTU methods return `MtuError<Self::Error>`.
+    type InnerError;
 
     /// Serialize this `Serializer`, producing a buffer.
     ///
@@ -460,7 +528,7 @@ pub trait Serializer: Sized {
     /// - Have at least `c.min_body_len` bytes of body, initialized to the
     ///   contents of the packet described by this `Serializer`
     /// - Have at least `c.suffix_len` bytes of suffix
-    fn serialize(self, c: SerializeConstraints) -> Self::Buffer;
+    fn serialize(self, c: SerializeConstraints) -> Result<Self::Buffer, (Self::Error, Self)>;
 
     /// Serialize this `Serializer` as the outermost packet.
     ///
@@ -468,7 +536,7 @@ pub trait Serializer: Sized {
     /// this `Serializer` describes the outermost packet, not encapsulated in
     /// any other packets. It is equivalent to calling `serialize` with a
     /// `SerializationConstraints` of all zeros.
-    fn serialize_outer(self) -> Self::Buffer {
+    fn serialize_outer(self) -> Result<Self::Buffer, (Self::Error, Self)> {
         self.serialize(SerializeConstraints { prefix_len: 0, min_body_len: 0, suffix_len: 0 })
     }
 
@@ -479,7 +547,11 @@ pub trait Serializer: Sized {
     /// constraint. If the total length of the buffer that would be produced
     /// (including prefix and suffix length) would exceed the MTU, then an error
     /// is returned instead of a buffer.
-    fn serialize_mtu(self, mtu: usize, c: SerializeConstraints) -> Result<Self::Buffer, Self>;
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<Self::InnerError>, Self)>;
 
     /// Serialize this `Serializer` with a maximum transmission unit (MTU)
     /// constraint as the outermost packet.
@@ -488,7 +560,10 @@ pub trait Serializer: Sized {
     /// when this `Serializer` describes the outermost packet, not encapsulated
     /// in any other packets. It is equivalent to calling `serialize_mtu` with a
     /// `SerializationConstraints` of all zeros.
-    fn serialize_mtu_outer(self, mtu: usize) -> Result<Self::Buffer, Self> {
+    fn serialize_mtu_outer(
+        self,
+        mtu: usize,
+    ) -> Result<Self::Buffer, (MtuError<Self::InnerError>, Self)> {
         self.serialize_mtu(
             mtu,
             SerializeConstraints { prefix_len: 0, min_body_len: 0, suffix_len: 0 },
@@ -525,8 +600,14 @@ fn inner_packet_builder_serializer_total_len_body_range<B: InnerPacketBuilder>(
 
 impl<B: InnerPacketBuilder> Serializer for B {
     type Buffer = Buf<Vec<u8>>;
+    type Error = !;
+    type InnerError = !;
 
-    fn serialize_mtu(self, mtu: usize, c: SerializeConstraints) -> Result<Self::Buffer, B> {
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<!>, B)> {
         let (total_len, body_range) =
             inner_packet_builder_serializer_total_len_body_range(&self, c);
 
@@ -535,17 +616,17 @@ impl<B: InnerPacketBuilder> Serializer for B {
             <Self as InnerPacketBuilder>::serialize(self, &mut buf[body_range.clone()]);
             Ok(Buf::new(buf, body_range))
         } else {
-            Err(self)
+            Err((MtuError::Mtu, self))
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Buf<Vec<u8>> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Buf<Vec<u8>>, (Self::Error, B)> {
         let (total_len, body_range) =
             inner_packet_builder_serializer_total_len_body_range(&self, c);
 
         let mut buf = vec![0; total_len];
         <Self as InnerPacketBuilder>::serialize(self, &mut buf[body_range.clone()]);
-        Buf::new(buf, body_range)
+        Ok(Buf::new(buf, body_range))
     }
 }
 
@@ -649,22 +730,37 @@ where
     F: FnOnce(usize) -> O,
 {
     type Buffer = Either<Buf, O>;
+    type Error = !;
+    type InnerError = !;
 
-    fn serialize_mtu(self, mtu: usize, c: SerializeConstraints) -> Result<Self::Buffer, Self> {
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<!>, Self)> {
         let InnerSerializer { builder, buf, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
 
         if total_len <= mtu {
             Ok(Self::serialize_inner(builder, buf, get_buf, c.prefix_len, total_len))
         } else {
-            Err(InnerSerializer { builder, buf, get_buf })
+            Err((MtuError::Mtu, InnerSerializer { builder, buf, get_buf }))
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Either<Buf, O> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Either<Buf, O>, (!, Self)> {
         let InnerSerializer { builder, buf, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
-        Self::serialize_inner(builder, buf, get_buf, c.prefix_len, total_len)
+        Ok(Self::serialize_inner(builder, buf, get_buf, c.prefix_len, total_len))
+    }
+}
+
+impl<B: Debug, Buf: Debug, F> Debug for InnerSerializer<B, Buf, F> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct("FnSerializer")
+            .field("builder", &self.builder)
+            .field("buf", &self.buf)
+            .finish()
     }
 }
 
@@ -711,8 +807,14 @@ where
     F: FnOnce(usize) -> O,
 {
     type Buffer = O;
+    type Error = !;
+    type InnerError = !;
 
-    fn serialize_mtu(self, mtu: usize, c: SerializeConstraints) -> Result<Self::Buffer, Self> {
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<!>, Self)> {
         let FnSerializer { builder, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
 
@@ -722,18 +824,24 @@ where
             builder.serialize(buf.as_mut());
             Ok(buf)
         } else {
-            Err(FnSerializer { builder, get_buf })
+            Err((MtuError::Mtu, FnSerializer { builder, get_buf }))
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> O {
+    fn serialize(self, c: SerializeConstraints) -> Result<O, (!, Self)> {
         let FnSerializer { builder, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
 
         let mut buf = get_buf(total_len);
         buf.shrink(c.prefix_len..(c.prefix_len + builder.bytes_len()));
         builder.serialize(buf.as_mut());
-        buf
+        Ok(buf)
+    }
+}
+
+impl<B: Debug, F> Debug for FnSerializer<B, F> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct("FnSerializer").field("builder", &self.builder).finish()
     }
 }
 
@@ -814,10 +922,22 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> BufferSerializer<B, F> {
     }
 }
 
+impl<B: Debug, F> Debug for BufferSerializer<B, F> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct("BufferSerializer").field("buf", &self.buf).finish()
+    }
+}
+
 impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSerializer<B, F> {
     type Buffer = Either<B, O>;
+    type Error = !;
+    type InnerError = !;
 
-    fn serialize_mtu(self, mtu: usize, c: SerializeConstraints) -> Result<Self::Buffer, Self> {
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<!>, Self)> {
         let BufferSerializer { buf, get_buf } = self;
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
@@ -825,15 +945,15 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSer
         if total_len <= mtu {
             Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
         } else {
-            Err(BufferSerializer { buf, get_buf })
+            Err((MtuError::Mtu, BufferSerializer { buf, get_buf }))
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Either<B, O> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Either<B, O>, (!, Self)> {
         let BufferSerializer { buf, get_buf } = self;
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
-        Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len)
+        Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
     }
 }
 
@@ -847,32 +967,54 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSer
 ///
 /// `EncapsulatingSerializer`s are produced by the [`Serializer::encapsulate`]
 /// method.
+#[derive(Debug)]
 pub struct EncapsulatingSerializer<B: PacketBuilder, S: Serializer> {
     builder: B,
     inner: S,
 }
 
 impl<B: PacketBuilder, S: Serializer> EncapsulatingSerializer<B, S> {
-    // The minimum body required of the encapsulated serializer.
-    fn min_body(&self, min_body: usize) -> usize {
+    // The minimum body and MTU required of the encapsulated serializer.
+    fn min_body_mtu(&self, min_body: usize, mtu: usize) -> (usize, usize) {
+        // The number of bytes consumed by the header and footer of this layer.
+        //
+        // Note that the implementer of PacketBuilder promises that this
+        // addition will not overflow. In debug mode, an overflow here panics,
+        // which is consistent with them violating that contract. In release
+        // mode, an overflow here will likely produce incorrect buffer results,
+        // and that's also consistent with them violating that contract. In
+        // neither case is it a safety concern.
+        let header_footer_total = self.builder.header_len() + self.builder.footer_len();
         // The number required by this layer.
         let this_min_body = self.builder.min_body_len();
-        // The number required by the next outer layer, taking into account that
-        // header_len + footer_len will be consumed by this layer.
-        let next_min_body = min_body
-            .checked_sub(self.builder.header_len() + self.builder.footer_len())
-            .unwrap_or(0);
-        cmp::max(this_min_body, next_min_body)
+        // The number required by the next outer layer, taking into account the
+        // number of header and footer bytes consumed by this layer.
+        let next_min_body = min_body.saturating_sub(header_footer_total);
+        let min_body = cmp::max(this_min_body, next_min_body);
+
+        // The MTU required by this layer, taking into account the number of
+        // header and footer bytes consumed by this layer.
+        let this_mtu = self.builder.max_body_len().saturating_add(header_footer_total);
+        let mtu = cmp::min(mtu, this_mtu);
+
+        (min_body, mtu)
     }
 }
 
 impl<B: PacketBuilder, S: Serializer> Serializer for EncapsulatingSerializer<B, S> {
     type Buffer = S::Buffer;
+    type Error = MtuError<S::InnerError>;
+    type InnerError = S::InnerError;
 
-    fn serialize_mtu(self, mtu: usize, mut c: SerializeConstraints) -> Result<Self::Buffer, Self> {
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        mut c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
         c.prefix_len += self.builder.header_len();
         c.suffix_len += self.builder.footer_len();
-        c.min_body_len = self.min_body(c.min_body_len);
+        let (min_body_len, mtu) = self.min_body_mtu(c.min_body_len, mtu);
+        c.min_body_len = min_body_len;
 
         let EncapsulatingSerializer { builder, inner } = self;
         match inner.serialize_mtu(mtu, c) {
@@ -880,19 +1022,15 @@ impl<B: PacketBuilder, S: Serializer> Serializer for EncapsulatingSerializer<B, 
                 buffer.serialize(builder);
                 Ok(buffer)
             }
-            Err(inner) => Err(EncapsulatingSerializer { builder, inner }),
+            Err((err, inner)) => Err((err, EncapsulatingSerializer { builder, inner })),
         }
     }
 
-    fn serialize(self, mut c: SerializeConstraints) -> Self::Buffer {
-        c.prefix_len += self.builder.header_len();
-        c.suffix_len += self.builder.footer_len();
-        c.min_body_len = self.min_body(c.min_body_len);
-
-        let EncapsulatingSerializer { builder, inner } = self;
-        let mut buffer = inner.serialize(c);
-        buffer.serialize(builder);
-        buffer
+    fn serialize(
+        self,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+        self.serialize_mtu(std::usize::MAX, c)
     }
 }
 
@@ -902,7 +1040,7 @@ mod tests {
 
     #[test]
     fn test_buffer_serializer_and_inner_serializer() {
-        fn verify_buffer_serializer<B: BufferMut>(
+        fn verify_buffer_serializer<B: BufferMut + Debug>(
             buffer: B,
             prefix_len: usize,
             suffix_len: usize,
@@ -912,11 +1050,9 @@ mod tests {
             let mut old_body = Vec::with_capacity(old_len);
             old_body.extend_from_slice(buffer.as_ref());
 
-            let buffer = BufferSerializer::new_vec(buffer).serialize(SerializeConstraints {
-                prefix_len,
-                suffix_len,
-                min_body_len,
-            });
+            let buffer = BufferSerializer::new_vec(buffer)
+                .serialize(SerializeConstraints { prefix_len, suffix_len, min_body_len })
+                .unwrap();
             verify(buffer, &old_body, prefix_len, suffix_len, min_body_len);
         }
 
@@ -928,7 +1064,8 @@ mod tests {
             min_body_len: usize,
         ) {
             let buffer = InnerSerializer::new_vec(body, Buf::new(vec![0; buf_len], ..))
-                .serialize(SerializeConstraints { prefix_len, suffix_len, min_body_len });
+                .serialize(SerializeConstraints { prefix_len, suffix_len, min_body_len })
+                .unwrap();
             verify(buffer, body, prefix_len, suffix_len, min_body_len);
         }
 

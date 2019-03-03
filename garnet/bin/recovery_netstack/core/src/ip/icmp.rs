@@ -51,6 +51,8 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 
                 // we're responding to the sender, so these are flipped
                 let (src_ip, dst_ip) = (dst_ip, src_ip);
+                // TODO(joshlf): Do something if send_ip_packet returns an
+                // error?
                 send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
                     BufferSerializer::new_vec(buffer).encapsulate(
                         IcmpPacketBuilder::<Ipv4, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
@@ -87,6 +89,8 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 
                 // we're responding to the sender, so these are flipped
                 let (src_ip, dst_ip) = (dst_ip, src_ip);
+                // TODO(joshlf): Do something if send_ip_packet returns an
+                // error?
                 send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
                     BufferSerializer::new_vec(buffer).encapsulate(
                         IcmpPacketBuilder::<Ipv6, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
@@ -149,8 +153,7 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
         // possible without exceeding IPv6 minimum MTU.
         let mut original_packet = original_packet;
         original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
-        // TODO(joshlf): The source address should probably be fixed rather than
-        // looked up in the routing table.
+        // TODO(joshlf): Do something if send_icmp_response returns an error?
         send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
                 Ipv6,
@@ -305,8 +308,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
         // original body.
         let mut original_packet = original_packet;
         original_packet.shrink_back_to(ipv4_header_len + 64);
-        // TODO(joshlf): The source address should probably be fixed rather than
-        // looked up in the routing table.
+        // TODO(joshlf): Do something if send_icmp_response returns an error?
         send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmp, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
                 Ipv4,
@@ -326,8 +328,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
         // possible without exceeding IPv6 minimum MTU.
         let mut original_packet = original_packet;
         original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
-        // TODO(joshlf): The source address should probably be fixed rather than
-        // looked up in the routing table.
+        // TODO(joshlf): Do something if send_icmp_response returns an error?
         send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
                 Ipv6,
@@ -356,6 +357,7 @@ fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     // body.
     let mut original_packet = original_packet;
     original_packet.shrink_back_to(header_len + 64);
+    // TODO(joshlf): Do something if send_icmp_response returns an error?
     send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmp, |local_ip| {
         BufferSerializer::new_vec(original_packet).encapsulate(
             IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
@@ -380,6 +382,7 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     // without exceeding IPv6 minimum MTU.
     let mut original_packet = original_packet;
     original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+    // TODO(joshlf): Do something if send_icmp_response returns an error?
     send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
         BufferSerializer::new_vec(original_packet).encapsulate(
             IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -442,7 +445,8 @@ mod tests {
                 ttl,
                 proto,
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG).build();
         // currently only used by test_ttl_exceeded
@@ -482,7 +486,8 @@ mod tests {
                 IcmpUnusedCode,
                 req,
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         test_receive_ip_packet(
             buffer.as_mut(),
             DUMMY_CONFIG.local_ip,

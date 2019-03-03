@@ -164,6 +164,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
 }
 
 /// A builder for Ethernet frames.
+#[derive(Debug)]
 pub(crate) struct EthernetFrameBuilder {
     src_mac: Mac,
     dst_mac: Mac,
@@ -189,6 +190,10 @@ impl PacketBuilder for EthernetFrameBuilder {
 
     fn min_body_len(&self) -> usize {
         ETHERNET_MIN_BODY_LEN_NO_TAG
+    }
+
+    fn max_body_len(&self) -> usize {
+        std::usize::MAX
     }
 
     fn footer_len(&self) -> usize {
@@ -332,7 +337,8 @@ mod tests {
                 DEFAULT_SRC_MAC,
                 EtherType::Arp,
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(
             &buf.as_ref()[..ETHERNET_HDR_LEN_NO_TAG],
             [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 0x08, 0x06]
@@ -351,7 +357,8 @@ mod tests {
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         let mut buf_1 = [0; ETHERNET_MIN_FRAME_LEN];
         (&mut buf_1[..ETHERNET_HDR_LEN_NO_TAG]).copy_from_slice(&[0xFF; ETHERNET_HDR_LEN_NO_TAG]);
         BufferSerializer::new_vec(Buf::new(&mut buf_1[..], ETHERNET_HDR_LEN_NO_TAG..))
@@ -360,7 +367,8 @@ mod tests {
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 

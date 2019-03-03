@@ -15,6 +15,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv6Addr};
+use crate::wire::util::fits_in_u16;
 
 pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
 
@@ -187,6 +188,7 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
 }
 
 /// A builder for IPv6 packets.
+#[derive(Debug)]
 pub(crate) struct Ipv6PacketBuilder {
     ds: u8,
     ecn: u8,
@@ -257,6 +259,10 @@ impl PacketBuilder for Ipv6PacketBuilder {
         0
     }
 
+    fn max_body_len(&self) -> usize {
+        (1 << 16) - 1
+    }
+
     fn footer_len(&self) -> usize {
         0
     }
@@ -278,12 +284,14 @@ impl PacketBuilder for Ipv6PacketBuilder {
             ((self.flowlabel >> 8) & 0xFF) as u8,
             (self.flowlabel & 0xFF) as u8,
         ];
-        let payload_len = packet.payload_len();
-        debug!("serialize: payload_len={}", payload_len);
-        if payload_len >= 1 << 16 {
-            panic!("packet length of {} exceeds maximum of {}", payload_len, 1 << 16 - 1,);
-        }
-        NetworkEndian::write_u16(&mut packet.fixed_hdr.payload_len, payload_len as u16);
+        // The caller promises to supply a body whose length does not exceed
+        // max_body_len. Doing this as a debug_assert (rather than an assert) is
+        // fine because, with debug assertions disabled, we'll just write an
+        // incorrect header value, which is acceptable if the caller has
+        // violated their contract.
+        debug_assert!(fits_in_u16(packet.payload_len()));
+        let payload_len = packet.payload_len() as u16;
+        NetworkEndian::write_u16(&mut packet.fixed_hdr.payload_len, payload_len);
         packet.fixed_hdr.next_hdr = self.next_hdr;
         packet.fixed_hdr.hop_limit = self.hop_limit;
         packet.fixed_hdr.src_ip = self.src_ip.ipv6_bytes();
@@ -369,7 +377,8 @@ mod tests {
         builder.ds(0x12);
         builder.ecn(3);
         builder.flowlabel(0x10405);
-        let mut buf = (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).encapsulate(builder).serialize_outer();
+        let mut buf =
+            (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).encapsulate(builder).serialize_outer().unwrap();
         // assert that we get the literal bytes we expected
         assert_eq!(
             buf.as_ref(),
@@ -395,11 +404,13 @@ mod tests {
         let mut buf_0 = [0; IPV6_FIXED_HDR_LEN];
         BufferSerializer::new_vec(Buf::new(&mut buf_0[..], IPV6_FIXED_HDR_LEN..))
             .encapsulate(new_builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         let mut buf_1 = [0xFF; IPV6_FIXED_HDR_LEN];
         BufferSerializer::new_vec(Buf::new(&mut buf_1[..], IPV6_FIXED_HDR_LEN..))
             .encapsulate(new_builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
         assert_eq!(&buf_0[..], &buf_1[..]);
     }
 
@@ -410,6 +421,7 @@ mod tests {
         // rejected.
         BufferSerializer::new_vec(Buf::new(&mut [0; 1 << 16][..], ..))
             .encapsulate(new_builder())
-            .serialize_outer();
+            .serialize_outer()
+            .unwrap();
     }
 }
