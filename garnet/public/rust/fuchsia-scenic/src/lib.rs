@@ -6,17 +6,31 @@
 
 mod cmd;
 
+use failure::Error;
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
 use fidl_fuchsia_ui_gfx::{
     CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec, MaterialArgs, MemoryArgs,
-    RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value,
+    RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value, ViewArgs2,
+    ViewHolderArgs2, ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
+use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
 use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmo};
 use mapped_vmo::Mapping;
 use parking_lot::Mutex;
 use std::ops::Deref;
 use std::sync::Arc;
+
+pub fn new_view_token_pair() -> Result<(ViewToken, ViewHolderToken), Error> {
+    // Failure can occur for example, if the job creation policy governing
+    // this process forbids eventpair creation.
+    //
+    // However, it is unlikely that a well-behaved Scenic client would fail
+    // here; if you hit this, it means something is very abnormal.
+    let (raw_view_token, raw_view_holder_token) = EventPair::create()?;
+
+    Ok((ViewToken { value: raw_view_token }, ViewHolderToken { value: raw_view_holder_token }))
+}
 
 pub struct Session {
     session: SessionProxy,
@@ -70,6 +84,10 @@ impl Session {
             &mut self.acquire_fences.drain(..),
             &mut self.release_fences.drain(..),
         )
+    }
+
+    pub fn next_resource_id(&self) -> u32 {
+        self.next_resource_id
     }
 
     fn alloc_resource_id(&mut self) -> u32 {
@@ -172,7 +190,7 @@ impl Image {
         }
     }
 
-    fn id(&self) -> u32 {
+    pub fn id(&self) -> u32 {
         self.resource.id
     }
 }
@@ -186,7 +204,7 @@ impl Shape {
         Shape { resource }
     }
 
-    fn id(&self) -> u32 {
+    pub fn id(&self) -> u32 {
         self.resource.id
     }
 }
@@ -267,7 +285,7 @@ impl Material {
         Material { resource: Resource::new(session, ResourceArgs::Material(args)) }
     }
 
-    fn id(&self) -> u32 {
+    pub fn id(&self) -> u32 {
         self.resource.id
     }
 
@@ -289,7 +307,7 @@ impl Node {
         Node { resource }
     }
 
-    fn id(&self) -> u32 {
+    pub fn id(&self) -> u32 {
         self.resource.id
     }
 
@@ -319,6 +337,52 @@ impl Node {
 
     fn enqueue(&self, command: Command) {
         self.resource.enqueue(command);
+    }
+}
+
+pub struct View {
+    resource: Resource,
+}
+
+impl View {
+    pub fn new(session: SessionPtr, token: ViewToken, debug_name: Option<String>) -> View {
+        let args = ViewArgs2 { token: token, debug_name: debug_name };
+        View { resource: Resource::new(session, ResourceArgs::View2(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn add_child(&self, child: &Node) {
+        self.resource.enqueue(cmd::add_child(self.id(), child.id()))
+    }
+
+    pub fn detach_child(&self, child: &Node) {
+        self.resource.enqueue(cmd::detach(child.id()))
+    }
+}
+
+pub struct ViewHolder {
+    resource: Resource,
+}
+
+impl ViewHolder {
+    pub fn new(
+        session: SessionPtr,
+        token: ViewHolderToken,
+        debug_name: Option<String>,
+    ) -> ViewHolder {
+        let args = ViewHolderArgs2 { token: token, debug_name: debug_name };
+        ViewHolder { resource: Resource::new(session, ResourceArgs::ViewHolder2(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+
+    pub fn set_view_properties(&self, view_properties: ViewProperties) {
+        self.resource.enqueue(cmd::set_view_properties(self.id(), view_properties))
     }
 }
 
@@ -397,6 +461,10 @@ impl EntityNode {
 
     pub fn set_clip(&self, clip_id: u32, clip_to_self: bool) {
         self.enqueue(cmd::set_clip(self.id(), clip_id, clip_to_self));
+    }
+
+    pub fn attach(&self, view_holder: &ViewHolder) {
+        self.enqueue(cmd::add_child(self.id(), view_holder.id()))
     }
 
     pub fn export_as_request(&self) -> EventPair {

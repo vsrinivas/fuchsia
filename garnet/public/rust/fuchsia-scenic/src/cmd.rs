@@ -8,7 +8,7 @@ use fidl_fuchsia_ui_gfx::{
     ExportResourceCmd, ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue,
     ReleaseResourceCmd, ResourceArgs, SetAnchorCmd, SetClipCmd, SetColorCmd, SetEventMaskCmd,
     SetMaterialCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd, SetTextureCmd, SetTranslationCmd,
-    Vec3, Vector3Value,
+    SetViewPropertiesCmd, Vec3, Vector3Value, ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::Command;
 use fuchsia_zircon::EventPair;
@@ -100,4 +100,9 @@ pub fn add_part(node_id: u32, part_id: u32) -> Command {
 pub fn detach(id: u32) -> Command {
     let cmd = DetachCmd { id };
     Command::Gfx(GfxCommand::Detach(cmd))
+}
+
+pub fn set_view_properties(view_holder_id: u32, properties: ViewProperties) -> Command {
+    let cmd = SetViewPropertiesCmd { view_holder_id, properties };
+    Command::Gfx(GfxCommand::SetViewProperties(cmd))
 }
