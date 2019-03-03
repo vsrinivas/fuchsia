@@ -10,7 +10,7 @@
 namespace id_allocator {
 namespace {
 
-// Allocate and check if the the id is in fact busy
+// Allocate and check if the id is in fact busy
 bool AllocHelper(std::unique_ptr<IdAllocator>& ida, size_t* ret_id, const char* cmsg) {
     size_t id;
     char msg[80];
@@ -26,7 +26,7 @@ bool AllocHelper(std::unique_ptr<IdAllocator>& ida, size_t* ret_id, const char* 
     END_HELPER;
 }
 
-// MarkAllocated a given id and check if the the id is in fact busy
+// MarkAllocated a given id and check if the id is in fact busy
 bool MarkAllocatedHelper(std::unique_ptr<IdAllocator>& ida, size_t id, const char* cmsg) {
     char msg[80];
 

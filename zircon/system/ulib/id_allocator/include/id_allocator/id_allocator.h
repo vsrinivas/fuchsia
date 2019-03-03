@@ -62,7 +62,7 @@ public:
     // Marks given *id* as busy. Returns ZX_OK if the id was free
     zx_status_t MarkAllocated(size_t id);
 
-    // Frees an allocated id. Retruns non-ZX_OK value on error
+    // Frees an allocated id. Returns non-ZX_OK value on error
     zx_status_t Free(size_t id);
 
     // Returns true if the given id is busy. All ids>=id_count_ are considered
@@ -138,7 +138,7 @@ private:
     // Grows each RawBitmap. Returns ZX_OK on success.
     zx_status_t GrowInternal(size_t id_count);
 
-    // This is 64-nary tree. 11 levels give 2^66 addrassability which is
+    // This is 64-nary tree. 11 levels give 2^66 addressability which is
     // sufficient on 64-bit arch.
     static const int8_t kMaxLevels = 11;
 
