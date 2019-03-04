@@ -60,7 +60,7 @@ zx_status_t connect_to_sysmem_service(zx::channel* allocator2_client_param) {
     status = zx::channel::create(0, &allocator2_client, &allocator2_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator2", allocator2_server.release());
+    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator2_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     *allocator2_client_param = std::move(allocator2_client);
@@ -83,7 +83,7 @@ zx_status_t verify_connectivity(zx::channel& allocator2_client) {
     status = zx::channel::create(0, &collection_client, &collection_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(),
+    status = fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator2_client.get(),
                                                                   collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -136,7 +136,7 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     status = zx::channel::create(0, &token_client, &token_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client.get(),
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client.get(),
                                                                token_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -146,7 +146,7 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client.get(), token_client.release(), collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -209,7 +209,7 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     status = zx::channel::create(0, &token_client, &token_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client.get(),
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client.get(),
                                                                token_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -219,7 +219,7 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client.get(), token_client.release(), collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -319,7 +319,7 @@ extern "C" bool test_sysmem_no_token(void) {
     status = zx::channel::create(0, &collection_client, &collection_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(),
+    status = fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator2_client.get(),
                                                                   collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -384,7 +384,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
 
     // Client 1 creates a token and new LogicalBufferCollection using
     // AllocateSharedCollection().
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client_1.get(),
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
                                                                token_server_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -418,7 +418,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -493,7 +493,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -503,7 +503,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_3.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client_2.get(), token_client_3.release(), collection_server_3.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -679,7 +679,7 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
 
     // Client 1 creates a token and new LogicalBufferCollection using
     // AllocateSharedCollection().
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client_1.get(),
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
                                                                token_server_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -702,7 +702,7 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
@@ -764,7 +764,7 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 

@@ -8,7 +8,7 @@ using zx;
 
 // Once a channel with this interface is established to a driver (typically in
 // advance), this interface allows asynchronously sending the server end of an
-// Allocator2 channel which will be served by the driver.
+// Allocator channel which will be served by the driver.
 //
 // For now, the only FIDL interface directly served via normal devhost FIDL
 // dispatching code by the sysmem driver is this interface.  Other sysmem
@@ -26,11 +26,11 @@ using zx;
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
 [Discoverable, Layout = "Simple"]
 protocol DriverConnector {
-    // This one-way message sends in the server end of an Allocator2 channel.
+    // This one-way message sends in the server end of an Allocator channel.
     //
     // |allocator_request| will be served by the sysmem driver (or the channel
     // will close).
-    Connect(request<Allocator2> allocator_request);
+    Connect(request<Allocator> allocator_request);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
     // TODO(MTWN-231): Connect directly between sysmem and the TEE driver and remove this.

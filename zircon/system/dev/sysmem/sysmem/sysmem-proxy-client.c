@@ -21,7 +21,7 @@
 
 #include "sysmem-proxy.h"
 
-static zx_status_t sysmem_proxy_connect(void* ctx, zx_handle_t allocator2_request) {
+static zx_status_t sysmem_proxy_connect(void* ctx, zx_handle_t allocator_request) {
     sysmem_proxy_t* proxy = ctx;
     rpc_sysmem_req_t req = {
         .header = {
@@ -33,7 +33,7 @@ static zx_status_t sysmem_proxy_connect(void* ctx, zx_handle_t allocator2_reques
 
     size_t size_actual, handle_count_actual;
     zx_status_t status = platform_proxy_proxy(
-        &proxy->proxy, &req, sizeof(req), &allocator2_request, 1,
+        &proxy->proxy, &req, sizeof(req), &allocator_request, 1,
         &resp, sizeof(resp), &size_actual, NULL, 0, &handle_count_actual);
     return status;
 }

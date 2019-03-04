@@ -185,9 +185,9 @@ bool VulkanTest::InitVulkan()
 bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
 {
     VkResult result;
-    fuchsia::sysmem::Allocator2SyncPtr sysmem_allocator;
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     zx_status_t status = fdio_service_connect(
-        "/svc/fuchsia.sysmem.Allocator2", sysmem_allocator.NewRequest().TakeChannel().release());
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
         return DRETF(false, "fdio_service_connect failed: %d", status);
     }

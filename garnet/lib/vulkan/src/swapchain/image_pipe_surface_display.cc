@@ -21,7 +21,7 @@ ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay()
 
 bool ImagePipeSurfaceDisplay::Init() {
   zx_status_t status = fdio_service_connect(
-      "/svc/fuchsia.sysmem.Allocator2",
+      "/svc/fuchsia.sysmem.Allocator",
       sysmem_allocator_.NewRequest().TakeChannel().release());
 
   if (status != ZX_OK) {

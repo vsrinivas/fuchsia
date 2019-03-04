@@ -41,7 +41,7 @@ Image* Image::Create(zx_handle_t dc_handle,
     if (status != ZX_OK) {
         return nullptr;
     }
-    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator2", allocator2_server.release());
+    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator2_server.release());
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to connect to sysmem\n");
         return nullptr;
@@ -54,7 +54,7 @@ Image* Image::Create(zx_handle_t dc_handle,
     if (status != ZX_OK) {
         return nullptr;
     }
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(
         allocator2_client.get(), token_server_1.release());
 
     if (status != ZX_OK) {
@@ -137,7 +137,7 @@ Image* Image::Create(zx_handle_t dc_handle,
     zx::channel collection_server;
     status = zx::channel::create(0, &collection_client, &collection_server);
 
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator2_client.get(), token_client_1.release(), collection_server.release());
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to bind shared collection\n");

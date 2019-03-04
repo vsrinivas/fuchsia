@@ -23,7 +23,7 @@ TEST(SysmemConnectorTest, Connect) {
   std::mutex is_sync_complete_lock;
   bool is_sync_complete = false;
 
-  fuchsia::sysmem::Allocator2Ptr allocator;
+  fuchsia::sysmem::AllocatorPtr allocator;
   allocator.set_error_handler([](zx_status_t status){
     ASSERT_TRUE(false);
   });
@@ -55,7 +55,7 @@ TEST(SysmemConnectorTest, Connect) {
     ASSERT_EQ(status, ZX_OK);
   }
   ASSERT_TRUE(is_sync_complete);
-  // The Sync() working means the Allocator2 connection was established to the
+  // The Sync() working means the Allocator connection was established to the
   // sysmem driver, and the driver responded.
 
   allocator.set_error_handler([](zx_status_t status){

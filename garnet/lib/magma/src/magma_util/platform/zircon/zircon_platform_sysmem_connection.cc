@@ -130,7 +130,7 @@ public:
             collection_->Close();
     }
 
-    Status Bind(const fuchsia::sysmem::Allocator2SyncPtr& allocator, uint32_t handle)
+    Status Bind(const fuchsia::sysmem::AllocatorSyncPtr& allocator, uint32_t handle)
     {
         fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
         token.Bind(zx::channel(handle));
@@ -186,7 +186,7 @@ private:
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
 public:
-    ZirconPlatformSysmemConnection(fuchsia::sysmem::Allocator2SyncPtr allocator)
+    ZirconPlatformSysmemConnection(fuchsia::sysmem::AllocatorSyncPtr allocator)
         : sysmem_allocator_(std::move(allocator))
     {
     }
@@ -395,15 +395,15 @@ private:
         return MAGMA_STATUS_OK;
     }
 
-    fuchsia::sysmem::Allocator2SyncPtr sysmem_allocator_;
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Create()
 {
-    fuchsia::sysmem::Allocator2SyncPtr sysmem_allocator;
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     zx_status_t status = fdio_service_connect(
-        "/svc/fuchsia.sysmem.Allocator2", sysmem_allocator.NewRequest().TakeChannel().release());
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
         return DRETP(nullptr, "Failed to connect to sysmem service, status %d", status);
     }

@@ -324,7 +324,7 @@ void Client::HandleImportBufferCollection(
 
     zx::channel collection_server, collection_client;
     zx::channel::create(0, &collection_server, &collection_client);
-    zx_status_t status = fuchsia_sysmem_Allocator2BindSharedCollection(
+    zx_status_t status = fuchsia_sysmem_AllocatorBindSharedCollection(
         sysmem_allocator_.get(), collection_token.release(), collection_server.release());
 
     if (status != ZX_OK) {

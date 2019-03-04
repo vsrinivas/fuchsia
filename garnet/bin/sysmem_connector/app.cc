@@ -20,8 +20,8 @@ App::App()
     exit(-1);
   }
 
-  startup_context_->outgoing().AddPublicService<fuchsia::sysmem::Allocator2>(
-      [this](fidl::InterfaceRequest<fuchsia::sysmem::Allocator2> request) {
+  startup_context_->outgoing().AddPublicService<fuchsia::sysmem::Allocator>(
+      [this](fidl::InterfaceRequest<fuchsia::sysmem::Allocator> request) {
         // Normally a service would directly serve the server end of the
         // channel, but in this case we forward the service request to the
         // sysmem driver.  We do the forwarding via code we share with a similar

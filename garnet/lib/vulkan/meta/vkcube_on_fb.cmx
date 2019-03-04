@@ -10,7 +10,7 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.sysmem.Allocator2",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.tracelink.Registry"
         ]

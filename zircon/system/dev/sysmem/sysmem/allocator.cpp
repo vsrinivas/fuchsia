@@ -19,7 +19,7 @@ constexpr uint32_t kConcurrencyCap = 64;
 
 } // namespace
 
-const fuchsia_sysmem_Allocator2_ops_t Allocator::kOps = {
+const fuchsia_sysmem_Allocator_ops_t Allocator::kOps = {
     fidl::Binder<Allocator>::BindMember<
         &Allocator::AllocateNonSharedCollection>,
     fidl::Binder<Allocator>::BindMember<&Allocator::AllocateSharedCollection>,

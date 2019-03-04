@@ -7,13 +7,13 @@
         "services": [
             "fuchsia.tracelink.Registry",
             "fuchsia.sys.Environment",
-            "fuchsia.sysmem.Allocator2"
+            "fuchsia.sysmem.Allocator"
         ]
     },
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.sysmem.Allocator2": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
             }
         }
     }

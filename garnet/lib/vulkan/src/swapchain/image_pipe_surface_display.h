@@ -58,7 +58,7 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
   uint64_t display_id_ = 0;
   uint64_t layer_id_ = 0;
   fuchsia::hardware::display::ControllerPtr display_controller_;
-  fuchsia::sysmem::Allocator2SyncPtr sysmem_allocator_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 }  // namespace image_pipe_swapchain

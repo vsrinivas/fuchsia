@@ -23,7 +23,7 @@ static zx_status_t sysmem2_connect(
     zx_handle_t allocator2_request_param) {
     zx::channel allocator2_request(allocator2_request_param);
     sysmem_connector_t* connector = static_cast<sysmem_connector_t*>(ctx);
-    if (!strcmp(service_name, fuchsia_sysmem_Allocator2_Name)) {
+    if (!strcmp(service_name, fuchsia_sysmem_Allocator_Name)) {
         sysmem_connector_queue_connection_request(connector, allocator2_request.release());
     }
     return ZX_ERR_NOT_SUPPORTED;
@@ -33,7 +33,7 @@ static void sysmem2_release(void* ctx) {
 }
 
 static constexpr const char* sysmem2_services[] = {
-    fuchsia_sysmem_Allocator2_Name,
+    fuchsia_sysmem_Allocator_Name,
     nullptr,
 };
 
