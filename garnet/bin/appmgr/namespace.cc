@@ -6,6 +6,7 @@
 
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -66,6 +67,15 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                 std::move(channel)));
         return ZX_OK;
       })));
+  services_->AddService(
+      fuchsia::kernel::DebugBroker::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        realm_->environment_services()->ConnectToService(
+            fidl::InterfaceRequest<fuchsia::kernel::DebugBroker>(
+                std::move(channel)));
+        return ZX_OK;
+      })));
+
 
   if (additional_services) {
     auto& names = additional_services->names;

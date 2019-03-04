@@ -67,6 +67,10 @@ source_set("lib") {
     "//zircon/public/lib/zx",
   ]
 
+  deps = [
+    "//zircon/public/fidl/fuchsia-kernel",
+  ]
+
   defines = [ "_ALL_SOURCE=1" ]
 }
 

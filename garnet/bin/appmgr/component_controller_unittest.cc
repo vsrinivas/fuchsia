@@ -8,6 +8,7 @@
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <fs/synchronous-vfs.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 
@@ -63,6 +64,7 @@ std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
 std::vector<std::string> GetDefaultNamespaceServiceEntries() {
   return std::vector<std::string>{
       ".",
+      fuchsia::kernel::DebugBroker::Name_,
       fuchsia::sys::Environment::Name_,
       Namespace::Launcher::Name_,
       fuchsia::process::Launcher::Name_,
@@ -150,7 +152,7 @@ void AssertHubHasIncomingServices(
   expected_entries.insert(expected_entries.end(), extra_service_names.begin(),
                           extra_service_names.end());
   EXPECT_THAT(GetDirectoryEntries(in_svc_dir),
-              ::testing::ElementsAreArray(expected_entries));
+              ::testing::UnorderedElementsAreArray(expected_entries));
 }
 
 typedef ComponentContainerImpl<ComponentControllerImpl> FakeRealm;
