@@ -29,10 +29,10 @@ public:
         release();
     }
 
-    void reset(fbl::unique_fd fd) {
+    void reset(fbl::unique_fd fd = fbl::unique_fd()) {
         release();
         fd_ = std::move(fd);
-        io_ = fdio_unsafe_fd_to_io(fd_.get());
+        io_ = fd_ ? fdio_unsafe_fd_to_io(fd_.get()) : nullptr;
     }
 
     fbl::unique_fd release() {
@@ -71,6 +71,55 @@ public:
 
 private:
     fbl::unique_fd fd_;
+    fdio_t* io_;
+};
+
+// Helper utility which allows a client to access an fd's underlying channel.
+//
+// Does not take ownership of the fd, but prevents the fdio_t object
+// from being unbound from the fd.
+class UnownedFdioCaller {
+public:
+    UnownedFdioCaller() : io_(nullptr) {}
+
+    explicit UnownedFdioCaller(int fd) : io_(fdio_unsafe_fd_to_io(fd)) {}
+
+    ~UnownedFdioCaller() {
+        release();
+    }
+
+    void reset(int fd = -1) {
+        release();
+        io_ = fd >= 0 ? fdio_unsafe_fd_to_io(fd) : nullptr;
+    }
+
+    explicit operator bool() const {
+        return io_ != nullptr;
+    }
+
+    // This channel is borrowed, but returned as a zx_handle_t for convenience.
+    //
+    // It should not be closed.
+    // It should not be transferred.
+    // It should not be kept alive longer than the UnownedFdioCaller object, nor should
+    // it be kept alive after UnownedFdioCaller.reset() is called.
+    zx_handle_t borrow_channel() const {
+        return fdio_unsafe_borrow_channel(io_);
+    }
+
+    UnownedFdioCaller& operator=(UnownedFdioCaller&& o) = delete;
+    UnownedFdioCaller(UnownedFdioCaller&& o) = delete;
+    UnownedFdioCaller(const UnownedFdioCaller&) = delete;
+    UnownedFdioCaller& operator=(const UnownedFdioCaller&) = delete;
+
+private:
+    void release() {
+        if (io_ != nullptr) {
+            fdio_unsafe_release(io_);
+            io_ = nullptr;
+        }
+    }
+
     fdio_t* io_;
 };
 
