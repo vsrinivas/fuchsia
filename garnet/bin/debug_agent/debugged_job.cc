@@ -19,7 +19,7 @@ DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid,
 
 DebuggedJob::~DebuggedJob() = default;
 
-bool DebuggedJob::Init() {
+zx_status_t DebuggedJob::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 

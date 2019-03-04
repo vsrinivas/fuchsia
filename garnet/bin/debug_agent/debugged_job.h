@@ -37,8 +37,8 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   void SetFilters(std::vector<std::string> filters);
   void AppendFilter(std::string filter);
 
-  // Returns true on success. On failure, the object may not be used further.
-  bool Init();
+  // Returns ZX_OK on success. On failure, the object may not be used further.
+  zx_status_t Init();
 
  private:
   // ZirconExceptionWatcher implementation.

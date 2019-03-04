@@ -103,12 +103,9 @@ const char* ZxStatusToString(zx_status_t status) {
       return "ZX_ERR_CONNECTION_RESET";
     case kZxErrConnectionAborted:
       return "ZX_ERR_CONNECTION_ABORTED";
-    default:
-      break;
   }
 
-  FXL_NOTREACHED();
-  return nullptr;
+  return "<unknown>";
 }
 
 }  // namespace debug_ipc
