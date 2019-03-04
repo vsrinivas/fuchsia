@@ -29,10 +29,11 @@ The process of sending a message via a channel has two steps. The first is to
 atomically write the data into the channel and move ownership of all handles in
 the message into this channel. This operation always consumes the handles: at
 the end of the call, all handles either are all in the channel or are all
-discarded. The second operation is similar: after a channel read, all the
-handles in the next message to read are either atomically moved into the
-process's handle table, all remain in the channel, or are discarded (only when
-the **ZX_CHANNEL_READ_MAY_DISCARD** option is given).
+discarded. The second operation, channel read, is similar: on success
+all the handles in the next message are atomically moved into the
+receiving process' handle table. On failure, the channel retains
+ownership unless the **ZX_CHANNEL_READ_MAY_DISCARD** option
+is specified, then they are dropped.
 
 Unlike many other kernel object types, channels are not duplicatable. Thus there
 is only ever one handle associated to a handle endpoint and the process holding
