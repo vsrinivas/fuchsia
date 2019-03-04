@@ -110,11 +110,11 @@ pub fn write_eth_frame<B: ByteSliceMut>(
     Ok(w)
 }
 
-pub fn write_eapol_frame<B: ByteSliceMut>(
+pub fn write_eapol_data_frame<B: ByteSliceMut>(
     buf: B,
     dest: MacAddr,
     src: MacAddr,
-    seq_num: u16,
+    seq_mgr: &mut SequenceManager,
     protected: bool,
     eapol_frame: &[u8],
 ) -> Result<usize, Error> {
@@ -122,7 +122,7 @@ pub fn write_eapol_frame<B: ByteSliceMut>(
     frame_ctrl.set_frame_subtype(mac::DATA_SUBTYPE_DATA);
     frame_ctrl.set_protected(protected);
     let mut seq_ctrl = mac::SequenceControl(0);
-    seq_ctrl.set_seq_num(seq_num);
+    seq_ctrl.set_seq_num(seq_mgr.next_sns1(&dest) as u16);
     let w = data_writer::write_data_hdr(
         BufferWriter::new(buf),
         data_writer::FixedFields::sent_from_client(frame_ctrl, dest, src, seq_ctrl.value()),
@@ -262,10 +262,12 @@ mod tests {
     }
 
     #[test]
-    fn eapol_frame() {
+    fn eapol_data_frame() {
         let mut buf = [99u8; 35];
-        let written_bytes = write_eapol_frame(&mut buf[..], [1; 6], [2; 6], 42, true, &[4, 5, 6])
-            .expect("failed writing frame");
+        let mut seq_mgr = SequenceManager::new();
+        let written_bytes =
+            write_eapol_data_frame(&mut buf[..], [1; 6], [2; 6], &mut seq_mgr, true, &[4, 5, 6])
+                .expect("failed writing frame");
         assert_eq!(35, written_bytes);
         let expected = [
             // Data header
@@ -274,7 +276,7 @@ mod tests {
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
             1, 1, 1, 1, 1, 1, // addr3
-            0b10100000, 0b10, // Sequence Control
+            0, 0, // Sequence Control
             // LLC header
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI
@@ -286,10 +288,12 @@ mod tests {
     }
 
     #[test]
-    fn eapol_frame_empty_payload() {
+    fn eapol_data_frame_empty_payload() {
         let mut buf = [99u8; 32];
-        let written_bytes = write_eapol_frame(&mut buf[..], [1; 6], [2; 6], 42, true, &[])
-            .expect("failed writing frame");
+        let mut seq_mgr = SequenceManager::new();
+        let written_bytes =
+            write_eapol_data_frame(&mut buf[..], [1; 6], [2; 6], &mut seq_mgr, true, &[])
+                .expect("failed writing frame");
         assert_eq!(32, written_bytes);
         let expected = [
             // Data header
@@ -298,7 +302,7 @@ mod tests {
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
             1, 1, 1, 1, 1, 1, // addr3
-            0b10100000, 0b10, // Sequence Control
+            0, 0, // Sequence Control
             // LLC header
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI
@@ -307,9 +311,11 @@ mod tests {
     }
 
     #[test]
-    fn eapol_frame_buffer_too_small() {
+    fn eapol_data_frame_buffer_too_small() {
         let mut buf = [99u8; 34];
-        let result = write_eapol_frame(&mut buf[..], [1; 6], [2; 6], 42, true, &[4, 5, 6]);
+        let mut seq_mgr = SequenceManager::new();
+        let result =
+            write_eapol_data_frame(&mut buf[..], [1; 6], [2; 6], &mut seq_mgr, true, &[4, 5, 6]);
         assert!(result.is_err(), "expect writing eapol frame to fail");
     }
 }
