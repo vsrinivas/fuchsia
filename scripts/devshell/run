@@ -24,6 +24,24 @@ qimg="${imgdir}/fuchsia.qcow2"
 kernelzbi="${imgdir}/fuchsia-ssh.zbi"
 trap 'rm "${qimg}" "${kernelzbi}" && rmdir "${imgdir}"' EXIT
 
+# First, extend the fvm image. This is technically a build artifact violation,
+# because it modified the build artifact in a way the build is unaware of, but
+# it should be safe enough. The qcow2 wrapping is still important to prevent
+# artifacts that are ephemerally added to the image not persisting across
+# invocations.
+stat_flags=()
+if [[ $(uname) == "Darwin" ]]; then
+  stat_flags+=("-x")
+fi
+stat_output=$(stat "${stat_flags[@]}" "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}")
+if [[ "$stat_output" =~ Size:\ ([0-9]+) ]]; then
+  size="${BASH_REMATCH[1]}"
+  newsize=$(($size * 2))
+  "${ZIRCON_TOOLS_DIR}/fvm" "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" extend --length "${newsize}"
+else
+  fx-error "could not extend fvm, unable to stat fvm image"
+fi
+
 "${qemu_dir}/qemu-img" create -f qcow2 -b "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" \
   "${qimg}"
 
@@ -40,3 +58,4 @@ trap 'rm "${qimg}" "${kernelzbi}" && rmdir "${imgdir}"' EXIT
   -D "${qimg}" \
   --diskfmt="qcow2" \
   "$@"
+
