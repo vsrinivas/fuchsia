@@ -109,6 +109,19 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                                    debug_ipc::ReadMemoryReply* reply) {
   ReadProcessMemoryBlocks(process_, request.address, request.size,
                           &reply->blocks);
+
+  // Remove any breakpoint instructions we've inserted.
+  //
+  // If there are a lot of ProcessBreakpoints this will get slow. If we find
+  // we have 100's of breakpoints an auxiliary data structure could be added
+  // to find overlapping breakpoints faster.
+  for (const auto& [addr, bp] : breakpoints_) {
+    // Generally there will be only one block. If we start reading many
+    // megabytes that cross mapped memory boundaries, a top-level range check
+    // would be a good idea to avoid unnecessary iteration.
+    for (auto& block : reply->blocks)
+      bp->FixupMemoryBlock(&block);
+  }
 }
 
 void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
