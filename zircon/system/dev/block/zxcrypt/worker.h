@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <stdint.h>
 #include <threads.h>
 
@@ -71,6 +72,9 @@ private:
 
     // The executing thread for this worker
     thrd_t thrd_;
+
+    // Indicates if a thread was created for this worker
+    std::atomic_bool started_;
 };
 
 } // namespace zxcrypt

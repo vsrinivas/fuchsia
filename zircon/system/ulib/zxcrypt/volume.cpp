@@ -314,7 +314,7 @@ zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
         return rc;
     }
     path.Resize(path_len);
-    path.Append("/zxcrypt/block");
+    path.Append("/zxcrypt/unsealed/block");
 
     // Early return if already bound
     fbl::unique_fd fd(open(path.c_str(), O_RDWR));

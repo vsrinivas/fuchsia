@@ -26,12 +26,14 @@
 
 namespace zxcrypt {
 
-Worker::Worker() : device_(nullptr) {
+Worker::Worker()
+    : device_(nullptr), started_(false) {
     LOG_ENTRY();
 }
 
 Worker::~Worker() {
     LOG_ENTRY();
+    ZX_DEBUG_ASSERT(!started_.load());
 }
 
 void Worker::MakeRequest(zx_port_packet_t* packet, uint64_t op, void* arg) {
@@ -67,6 +69,7 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port)
         return ZX_ERR_INTERNAL;
     }
 
+    started_.store(true);
     return ZX_OK;
 }
 
@@ -186,6 +189,10 @@ zx_status_t Worker::Stop() {
     LOG_ENTRY();
     zx_status_t rc;
 
+    // Only join once per call to |Start|.
+    if (!started_.exchange(false)) {
+        return ZX_OK;
+    }
     thrd_join(thrd_, &rc);
 
     if (rc != ZX_OK) {

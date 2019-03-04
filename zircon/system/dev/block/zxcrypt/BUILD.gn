@@ -5,6 +5,8 @@
 driver("zxcrypt") {
   sources = [
     "binding.c",
+    "device-info.cpp",
+    "device-manager.cpp",
     "device.cpp",
     "extra.cpp",
     "worker.cpp",

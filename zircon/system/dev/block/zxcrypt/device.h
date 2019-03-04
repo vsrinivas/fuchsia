@@ -4,13 +4,12 @@
 
 #pragma once
 
+#include <atomic>
 #include <stddef.h>
 #include <stdint.h>
-#include <threads.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <crypto/cipher.h>
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
 #include <ddktl/device.h>
@@ -20,16 +19,12 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/zx/port.h>
-#include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/listnode.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-#include <atomic>
-
+#include "device-info.h"
 #include "extra.h"
 #include "worker.h"
 
@@ -42,29 +37,25 @@ using DeviceType = ddk::Device<Device,
                                ddk::GetSizable,
                                ddk::Unbindable>;
 
-// |zxcrypt::Device| is an encrypted block device filter driver.  It binds to a block device and
-// transparently encrypts writes to/decrypts reads from that device.  It shadows incoming requests
-// with its own |zxcrypt::Op| request structure that uses a mapped VMO as working memory for
+// |zxcrypt::Device| is an encrypted block device filter driver.  It is created by
+// |zxcrypt::DeviceManager::Unseal| and transparently encrypts writes to/decrypts reads from a
+// parent block device.  It shadows incoming requests and uses a mapped VMO as working memory for
 // cryptographic transformations.
 class Device final : public DeviceType,
                      public ddk::BlockImplProtocol<Device, ddk::base_protocol>,
                      public ddk::BlockPartitionProtocol<Device>,
                      public ddk::BlockVolumeProtocol<Device> {
 public:
-    explicit Device(zx_device_t* parent);
+    Device(zx_device_t* parent, DeviceInfo&& info);
     ~Device();
 
     // Publish some constants for the workers
-    inline uint32_t block_size() const { return info_->block_size; }
-    inline size_t op_size() const { return info_->op_size; }
+    inline uint32_t block_size() const { return info_.block_size; }
+    inline size_t op_size() const { return info_.op_size; }
 
-    // Called via fuchsia.device.Controller/Bind.  This method sets up the synchronization
-    // primitives and starts the |Init| thread.
-    zx_status_t Bind();
-
-    // The body of the |Init| thread.  This method attempts to cryptographically unseal the device
-    // for normal operation, and adds it to the device tree if successful.
-    zx_status_t Init() __TA_EXCLUDES(mtx_);
+    // The body of the |Init| thread.  This method uses the unsealed |volume| to start cryptographic
+    // workers for normal operation.
+    zx_status_t Init(const Volume& volume) __TA_EXCLUDES(mtx_);
 
     // ddk::Device methods; see ddktl/device.h
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -74,8 +65,8 @@ public:
 
     // ddk::BlockProtocol methods; see ddktl/protocol/block.h
     void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
-    void BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb,
-                        void* cookie) __TA_EXCLUDES(mtx_);
+    void BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb, void* cookie)
+        __TA_EXCLUDES(mtx_);
 
     // ddk::PartitionProtocol methods; see ddktl/protocol/block/partition.h
     zx_status_t BlockPartitionGetGuid(guidtype_t guidtype, guid_t* out_guid);
@@ -130,36 +121,9 @@ private:
     // the number of operations currently "in-flight".
     std::atomic_uint64_t num_ops_;
 
-    // This struct bundles several commonly accessed fields.  The bare pointer IS owned by the
-    // object; it's "constness" prevents it from being an automatic pointer but allows it to be used
-    // without holding the lock.  It is allocated and "constified" in |Init|, and |DdkRelease| must
-    // "deconstify" and free it.  Its nullity is also used as an indicator whether |Init()| has been
-    // called.
-    struct DeviceInfo {
-        // The parent device's block information
-        uint32_t block_size;
-        // The parent device's required block_op_t size.
-        size_t op_size;
-        // Callbacks to the parent's block protocol methods.
-        ddk::BlockProtocolClient block_protocol;
-        // Optional Protocols supported by zxcrypt.
-        ddk::BlockPartitionProtocolClient partition_protocol;
-        ddk::BlockVolumeProtocolClient volume_protocol;
-        // The number of blocks reserved for metadata.
-        uint64_t reserved_blocks;
-        // The number of slices reserved for metadata.
-        uint64_t reserved_slices;
-        // A memory region used when encrypting write transactions.
-        zx::vmo vmo;
-        // Base address of the VMAR backing the VMO.
-        uint8_t* base;
-        // Number of workers actually running.
-        uint32_t num_workers;
-    };
-    const DeviceInfo* info_;
-
-    // The |Init| thread, used to configure and add the device.
-    thrd_t init_;
+    // Device configuration, as provided by the DeviceManager at creation. It's "constness" allows
+    // it to be used without holding the lock.
+    const DeviceInfo info_;
 
     // Threads that performs encryption/decryption.
     Worker workers_[kNumWorkers];

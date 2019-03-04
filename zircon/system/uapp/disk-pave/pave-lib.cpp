@@ -1081,7 +1081,7 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         } else {
             path[path_len] = 0;
         }
-        snprintf(minfs_path, sizeof(minfs_path), "%s/zxcrypt/block", path);
+        snprintf(minfs_path, sizeof(minfs_path), "%s/zxcrypt/unsealed/block", path);
 
         // TODO(security): ZX-1130. We need to bind with channel in order to
         // pass a key here. Where does the key come from? We need to determine
