@@ -164,8 +164,8 @@ separate repositories that are mapped into the directory structure using `jiri`
     * `zircon/kernel/`
     * `zircon/drivers/`
     * `zircon/userspace/`
-    * `vendor/`
-        * **`[closed-source code from various vendors]`**
+ * `vendor/`
+    * **`[closed-source code from various vendors]`**
 
 ## Evolution
 
