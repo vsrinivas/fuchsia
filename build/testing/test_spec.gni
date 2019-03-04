@@ -57,11 +57,7 @@ template("test_spec") {
       environments = [ qemu_env ]
     }
 
-    if (current_cpu == "x64" && !envs_specified) {
-      # TODO(joshuaseaton): This is temporary until we are confident that all
-      # tests that need to specify hardware are doing so.
-      environments += [ nuc_env ]
-    } else if (current_cpu == "arm64") {
+    if (current_cpu == "arm64") {
       # TODO(IN-876): Remove after astros are ready to be targeted.
       environments += [ astro_env ]
       if (!envs_specified) {
