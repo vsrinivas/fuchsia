@@ -245,9 +245,12 @@ class LedgerManager::PageManagerContainer {
   bool page_manager_is_set_ = false;
 
   PageConnectionNotifier connection_notifier_;
-  std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
-                        fit::function<void(Status)>>>
-      requests_;
+  // page_impls_ is only populated before page_manager_ is set. Once the
+  // PageManager is created and assigned to page_manager_, the PageImpls stored
+  // in page_impls_ are handed off to that PageManager and page_impls_ is not
+  // used again.
+  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>>
+      page_impls_;
   std::vector<fit::function<void(Status, ExpiringToken, PageManager*)>>
       internal_request_callbacks_;
   fit::closure on_empty_callback_;
@@ -263,8 +266,8 @@ LedgerManager::PageManagerContainer::PageManagerContainer(
                            page_usage_listener) {}
 
 LedgerManager::PageManagerContainer::~PageManagerContainer() {
-  for (const auto& request : requests_) {
-    request.second(Status::INTERNAL_ERROR);
+  for (const auto& [unused_page_impl, callback] : page_impls_) {
+    callback(Status::INTERNAL_ERROR);
   }
 }
 
@@ -287,14 +290,13 @@ void LedgerManager::PageManagerContainer::BindPage(
     callback(status_);
     return;
   }
-  auto delaying_facade =
-      std::make_unique<PageDelayingFacade>(page_id_, std::move(page_request));
+  auto page_impl =
+      std::make_unique<PageImpl>(page_id_, std::move(page_request));
   if (page_manager_) {
-    page_manager_->AddPageDelayingFacade(std::move(delaying_facade),
-                                         std::move(callback));
+    page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
     return;
   }
-  requests_.emplace_back(std::move(delaying_facade), std::move(callback));
+  page_impls_.emplace_back(std::move(page_impl), std::move(callback));
 }
 
 void LedgerManager::PageManagerContainer::NewInternalRequest(
@@ -324,15 +326,14 @@ void LedgerManager::PageManagerContainer::SetPageManager(
   page_manager_ = std::move(page_manager);
   page_manager_is_set_ = true;
 
-  for (auto& request : requests_) {
+  for (auto& [page_impl, callback] : page_impls_) {
     if (page_manager_) {
-      page_manager_->AddPageDelayingFacade(std::move(request.first),
-                                           std::move(request.second));
+      page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
     } else {
-      request.second(status_);
+      callback(status_);
     }
   }
-  requests_.clear();
+  page_impls_.clear();
 
   for (auto& callback : internal_request_callbacks_) {
     if (!page_manager_) {
@@ -352,7 +353,7 @@ void LedgerManager::PageManagerContainer::SetPageManager(
 }
 
 bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
-  return (page_manager_ && !page_manager_->IsEmpty()) || !requests_.empty();
+  return (page_manager_ && !page_manager_->IsEmpty()) || !page_impls_.empty();
 }
 
 void LedgerManager::PageManagerContainer::CheckEmpty() {

@@ -61,25 +61,23 @@ PageManager::PageManager(Environment* environment,
 }
 
 PageManager::~PageManager() {
-  for (const auto& delaying_facade : delaying_facades_) {
-    delaying_facade.second(Status::INTERNAL_ERROR);
+  for (const auto& [page_impl, on_done] : page_impls_) {
+    on_done(Status::INTERNAL_ERROR);
   }
-  delaying_facades_.clear();
+  page_impls_.clear();
 }
 
-void PageManager::AddPageDelayingFacade(
-    std::unique_ptr<PageDelayingFacade> delaying_facade,
-    fit::function<void(Status)> on_done) {
+void PageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
+                              fit::function<void(Status)> on_done) {
   auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger",
-                                       "page_manager_add_page_delaying_facade");
+                                       "page_manager_add_page_impl");
   if (!sync_backlog_downloaded_) {
-    delaying_facades_.emplace_back(std::move(delaying_facade),
-                                   std::move(traced_on_done));
+    page_impls_.emplace_back(std::move(page_impl), std::move(traced_on_done));
     return;
   }
   page_delegates_
       .emplace(environment_->coroutine_service(), this, page_storage_.get(),
-               merge_resolver_.get(), &watchers_, std::move(delaying_facade))
+               merge_resolver_.get(), &watchers_, std::move(page_impl))
       .Init(std::move(traced_on_done));
 }
 
@@ -137,9 +135,8 @@ void PageManager::IsOfflineAndEmpty(
 }
 
 bool PageManager::IsEmpty() {
-  return page_delegates_.empty() && snapshots_.empty() &&
-         delaying_facades_.empty() && merge_resolver_->IsEmpty() &&
-         (!page_sync_ || page_sync_->IsIdle());
+  return page_delegates_.empty() && snapshots_.empty() && page_impls_.empty() &&
+         merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle());
 }
 
 void PageManager::CheckEmpty() {
@@ -154,11 +151,10 @@ void PageManager::OnSyncBacklogDownloaded() {
                   << "Clients will receive a change notification.";
   }
   sync_backlog_downloaded_ = true;
-  for (auto& delaying_facade : delaying_facades_) {
-    AddPageDelayingFacade(std::move(delaying_facade.first),
-                          std::move(delaying_facade.second));
+  for (auto& [page_impl, on_done] : page_impls_) {
+    AddPageImpl(std::move(page_impl), std::move(on_done));
   }
-  delaying_facades_.clear();
+  page_impls_.clear();
 }
 
 }  // namespace ledger

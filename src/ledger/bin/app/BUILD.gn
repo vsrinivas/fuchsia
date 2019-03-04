@@ -75,8 +75,6 @@ source_set("lib") {
     "merging/merge_resolver.cc",
     "merging/merge_resolver.h",
     "merging/merge_strategy.h",
-    "page_delaying_facade.cc",
-    "page_delaying_facade.h",
     "page_delegate.cc",
     "page_delegate.h",
     "page_eviction_manager.h",

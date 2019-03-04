@@ -5,33 +5,57 @@
 #include "src/ledger/bin/app/page_impl.h"
 
 #include <lib/callback/trace_callback.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <trace/event.h>
 
-#include "src/ledger/bin/app/page_delaying_facade.h"
+#include "src/ledger/bin/app/page_delegate.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
 
-PageImpl::PageImpl(PageDelayingFacade* delaying_facade)
-    : delaying_facade_(delaying_facade) {}
+PageImpl::PageImpl(storage::PageIdView page_id,
+                   fidl::InterfaceRequest<Page> request)
+    : binding_(this) {
+  convert::ToArray(page_id, &page_id_.id);
+  binding_.set_error_handler([this](zx_status_t status) {
+    binding_.Unbind();
+    if (on_binding_unbound_callback_)
+      on_binding_unbound_callback_();
+  });
+  binding_.Bind(std::move(request));
+}
 
 PageImpl::~PageImpl() {}
+
+void PageImpl::SetPageDelegate(PageDelegate* page_delegate) {
+  delaying_facade_.SetTargetObject(page_delegate);
+}
+
+bool PageImpl::IsEmpty() { return !binding_.is_bound(); }
+
+void PageImpl::set_on_binding_unbound(
+    fit::closure on_binding_unbound_callback) {
+  on_binding_unbound_callback_ = std::move(on_binding_unbound_callback);
+}
 
 void PageImpl::GetId(GetIdCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_get_id");
-  delaying_facade_->GetId(std::move(timed_callback));
+  timed_callback(page_id_);
 }
 
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     std::vector<uint8_t> key_prefix, fidl::InterfaceHandle<PageWatcher> watcher,
     GetSnapshotCallback callback) {
-  auto timed_callback =
+  GetSnapshotCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_get_snapshot");
-  delaying_facade_->GetSnapshot(std::move(snapshot_request),
-                                std::move(key_prefix), std::move(watcher),
-                                std::move(timed_callback));
+  delaying_facade_.EnqueueCall(
+      &PageDelegate::GetSnapshot, std::move(snapshot_request),
+      std::move(key_prefix), std::move(watcher), std::move(timed_callback));
 }
 
 void PageImpl::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
@@ -43,82 +67,91 @@ void PageImpl::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
 void PageImpl::PutWithPriority(std::vector<uint8_t> key,
                                std::vector<uint8_t> value, Priority priority,
                                PutWithPriorityCallback callback) {
-  auto timed_callback =
+  PutWithPriorityCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_put_with_priority");
-  delaying_facade_->PutWithPriority(std::move(key), std::move(value), priority,
-                                    std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::PutWithPriority, std::move(key),
+                               std::move(value), priority,
+                               std::move(timed_callback));
 }
 
 void PageImpl::PutReference(std::vector<uint8_t> key, Reference reference,
                             Priority priority, PutReferenceCallback callback) {
-  auto timed_callback =
+  PutReferenceCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_put_reference");
-  delaying_facade_->PutReference(std::move(key), std::move(reference), priority,
-                                 std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::PutReference, std::move(key),
+                               std::move(reference), priority,
+                               std::move(timed_callback));
 }
 
 void PageImpl::Delete(std::vector<uint8_t> key, DeleteCallback callback) {
-  auto timed_callback =
+  DeleteCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_delete");
-  delaying_facade_->Delete(std::move(key), std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::Delete, std::move(key),
+                               std::move(timed_callback));
 }
 
 void PageImpl::Clear(ClearCallback callback) {
-  auto timed_callback =
+  ClearCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_clear");
-  delaying_facade_->Clear(std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::Clear, std::move(timed_callback));
 }
 
 void PageImpl::CreateReferenceFromSocket(
     uint64_t size, zx::socket data,
     CreateReferenceFromSocketCallback callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
-                                       "page_create_reference_from_socket");
-  delaying_facade_->CreateReference(
+  CreateReferenceFromSocketCallback timed_callback = TRACE_CALLBACK(
+      std::move(callback), "ledger", "page_create_reference_from_socket");
+  delaying_facade_.EnqueueCall(
+      &PageDelegate::CreateReference,
       storage::DataSource::Create(std::move(data), size),
       std::move(timed_callback));
 }
 
 void PageImpl::CreateReferenceFromBuffer(
     fuchsia::mem::Buffer data, CreateReferenceFromBufferCallback callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
-                                       "page_create_reference_from_vmo");
+  CreateReferenceFromBufferCallback timed_callback = TRACE_CALLBACK(
+      std::move(callback), "ledger", "page_create_reference_from_vmo");
   fsl::SizedVmo vmo;
   if (!fsl::SizedVmo::FromTransport(std::move(data), &vmo)) {
     callback(Status::INVALID_ARGUMENT, nullptr);
     return;
   }
-  delaying_facade_->CreateReference(storage::DataSource::Create(std::move(vmo)),
-                                    std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::CreateReference,
+                               storage::DataSource::Create(std::move(vmo)),
+                               std::move(timed_callback));
 }
 
 void PageImpl::StartTransaction(StartTransactionCallback callback) {
-  auto timed_callback =
+  StartTransactionCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_start_transaction");
-  delaying_facade_->StartTransaction(std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::StartTransaction,
+                               std::move(timed_callback));
 }
 
 void PageImpl::Commit(CommitCallback callback) {
-  auto timed_callback =
+  CommitCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_commit");
-  delaying_facade_->Commit(std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::Commit,
+                               std::move(timed_callback));
 }
 
 void PageImpl::Rollback(RollbackCallback callback) {
-  auto timed_callback =
+  RollbackCallback timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_rollback");
-  delaying_facade_->Rollback(std::move(timed_callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::Rollback,
+                               std::move(timed_callback));
 }
 
 void PageImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                                    SetSyncStateWatcherCallback callback) {
-  delaying_facade_->SetSyncStateWatcher(std::move(watcher),
-                                        std::move(callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::SetSyncStateWatcher,
+                               std::move(watcher), std::move(callback));
 }
 
 void PageImpl::WaitForConflictResolution(
     WaitForConflictResolutionCallback callback) {
-  delaying_facade_->WaitForConflictResolution(std::move(callback));
+  delaying_facade_.EnqueueCall(&PageDelegate::WaitForConflictResolution,
+                               std::move(callback));
 }
 
 }  // namespace ledger

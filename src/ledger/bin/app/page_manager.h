@@ -17,7 +17,6 @@
 #include <lib/fxl/time/time_delta.h>
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
-#include "src/ledger/bin/app/page_delaying_facade.h"
 #include "src/ledger/bin/app/page_delegate.h"
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/sync_watcher_set.h"
@@ -59,10 +58,9 @@ class PageManager {
   ~PageManager();
 
   // Creates a new PageDelegate managed by this PageManager, and binds it to the
-  // given PageDelayingFacade.
-  void AddPageDelayingFacade(
-      std::unique_ptr<PageDelayingFacade> delaying_facade,
-      fit::function<void(Status)> on_done);
+  // given PageImpl.
+  void AddPageImpl(std::unique_ptr<PageImpl> page_impl,
+                   fit::function<void(Status)> on_done);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
@@ -107,9 +105,8 @@ class PageManager {
   fit::closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
-  std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
-                        fit::function<void(Status)>>>
-      delaying_facades_;
+  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>>
+      page_impls_;
 
   SyncWatcherSet watchers_;
 

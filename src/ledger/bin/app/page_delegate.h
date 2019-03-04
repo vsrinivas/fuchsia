@@ -31,7 +31,7 @@ class PageManager;
 
 // A delegate for the implementation of the |Page| interface.
 //
-// PageDelegate owns PageDelayingFacade and BranchTracker. It makes sure that
+// PageDelegate owns PageImpl and BranchTracker. It makes sure that
 // all operations in progress will terminate, even if the Page is no longer
 // connected. When the page connection is closed and BranchTracker is also
 // empty, the client is notified through |on_empty_callback| (registered by
@@ -41,7 +41,7 @@ class PageDelegate {
   PageDelegate(coroutine::CoroutineService* coroutine_service,
                PageManager* manager, storage::PageStorage* storage,
                MergeResolver* merge_resolver, SyncWatcherSet* watchers,
-               std::unique_ptr<PageDelayingFacade> page_delaying_facade);
+               std::unique_ptr<PageImpl> page_impl);
   ~PageDelegate();
 
   void Init(fit::function<void(Status)> on_done);
@@ -50,7 +50,7 @@ class PageDelegate {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
-  // From Page interface, called by PageDelayingFacade:
+  // From Page interface, called by PageImpl:
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    std::vector<uint8_t> key_prefix,
@@ -122,7 +122,7 @@ class PageDelegate {
   callback::OperationSerializer operation_serializer_;
   SyncWatcherSet* watcher_set_;
 
-  std::unique_ptr<PageDelayingFacade> page_delaying_facade_;
+  std::unique_ptr<PageImpl> page_impl_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<PageDelegate> weak_factory_;

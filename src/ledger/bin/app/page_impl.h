@@ -5,18 +5,30 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_IMPL_H_
 #define SRC_LEDGER_BIN_APP_PAGE_IMPL_H_
 
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
+#include "src/ledger/bin/app/delaying_facade.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
-class PageDelayingFacade;
+class PageDelegate;
 
 // An implementation of the |Page| FIDL interface.
 class PageImpl : public Page {
  public:
-  explicit PageImpl(PageDelayingFacade* delaying_facade);
+  explicit PageImpl(storage::PageIdView page_id,
+                    fidl::InterfaceRequest<Page> request);
   ~PageImpl() override;
+
+  void SetPageDelegate(PageDelegate* page_delegate);
+
+  bool IsEmpty();
+
+  void set_on_binding_unbound(fit::closure on_binding_unbound_callback);
 
  private:
   // Page:
@@ -61,7 +73,12 @@ class PageImpl : public Page {
   void WaitForConflictResolution(
       WaitForConflictResolutionCallback callback) override;
 
-  PageDelayingFacade* delaying_facade_;
+  PageId page_id_;
+  DelayingFacade<PageDelegate> delaying_facade_;
+
+  fit::closure on_binding_unbound_callback_;
+
+  fidl::Binding<Page> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };
