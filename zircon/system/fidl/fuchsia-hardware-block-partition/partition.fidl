@@ -7,7 +7,7 @@ using zx;
 using fuchsia.hardware.block as block;
 
 const uint32 GUID_LENGTH = 16;
-const uint32 NAME_LENGTH = 24;
+const uint32 NAME_LENGTH = 32;
 
 // A Globally Unique IDentifier, which may be utilized to identify
 // a partition.

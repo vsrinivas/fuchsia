@@ -80,7 +80,7 @@ protocol Block {
     GetStats(bool clear) -> (zx.status status, BlockStats? stats);
 
     // Sets up a FIFO-based server on the block device; acquire the handle to it.
-    GetFifo() -> (zx.status status, handle<fifo> fifo);
+    GetFifo() -> (zx.status status, handle<fifo>? fifo);
 
     // Attaches a VMO to the currently running FIFO server.
     AttachVmo(handle<vmo> vmo) -> (zx.status status, VmoID? vmoid);
