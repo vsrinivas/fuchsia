@@ -8,7 +8,7 @@
     {
       "type": "duration",
       "output_test_name": "page_id/get_page_id",
-      "event_name": "get page id",
+      "event_name": "get_page_id",
       "event_category": "benchmark",
       "expected_sample_count": 500,
       "split_first": true

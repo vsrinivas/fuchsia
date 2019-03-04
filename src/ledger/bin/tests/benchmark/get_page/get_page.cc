@@ -6,15 +6,18 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/callback/trace_callback.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
+#include "garnet/public/lib/callback/waiter.h"
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
@@ -81,8 +84,6 @@ class GetPageBenchmark {
   LedgerPtr ledger_;
   PageIdPtr page_id_;
   std::vector<PagePtr> pages_;
-  bool get_page_called_ = false;
-  bool get_page_id_called_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
@@ -125,38 +126,30 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
     // Wait before each page request, so that a pre-cached page is ready.
     zx_nanosleep(zx_deadline_after(kDuration.get()));
   }
-  TRACE_ASYNC_BEGIN("benchmark", "get page", requests_count_ - request_number);
+
+  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   PagePtr page;
 
-  get_page_called_ = false;
-  get_page_id_called_ = false;
+  auto get_page_callback =
+      TRACE_CALLBACK(waiter->NewCallback(), "benchmark", "get_page");
   ledger_->GetPage(
       reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
-      [this, request_number](Status status) {
+      [this, callback = std::move(get_page_callback)](Status status) {
         if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
           return;
         }
-        TRACE_ASYNC_END("benchmark", "get page",
-                        requests_count_ - request_number);
-        get_page_called_ = true;
-        if (get_page_id_called_) {
-          // Wait for both GetPage and GetId to do the following run.
-          RunSingle(request_number - 1);
-        }
+        callback();
       });
 
-  TRACE_ASYNC_BEGIN("benchmark", "get page id",
-                    requests_count_ - request_number);
-  // Request the page id before the GetPage callback is called.
-  page->GetId([this, request_number](PageId found_page_id) {
-    TRACE_ASYNC_END("benchmark", "get page id",
-                    requests_count_ - request_number);
-    get_page_id_called_ = true;
-    if (get_page_called_) {
-      // Wait for both GetPage and GetId to do the following run.
-      RunSingle(request_number - 1);
-    }
+  auto get_id_callback =
+      TRACE_CALLBACK(waiter->NewCallback(), "benchmark", "get_page_id");
+  // Request the page id without waiting for the GetPage callback to be called.
+  page->GetId([callback = std::move(get_id_callback)](PageId found_page_id) {
+    callback();
   });
+
+  // Wait for both GetPage and GetId to finish, before starting the next run.
+  waiter->Finalize([this, request_number]() { RunSingle(request_number - 1); });
 
   pages_.push_back(std::move(page));
 }
