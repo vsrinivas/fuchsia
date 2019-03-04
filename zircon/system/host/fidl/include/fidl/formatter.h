@@ -429,44 +429,6 @@ private:
     }
 };
 
-class OrdinalRemovalVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
-public:
-    OrdinalRemovalVisitor() {}
-    virtual void OnInterfaceMethod(
-        std::unique_ptr<fidl::raw::InterfaceMethod> const& element) override {
-        if (element->ordinal != nullptr) {
-            const char* start = element->ordinal->start_.data().data();
-            const char* end = element->ordinal->end_.data().data() +
-                              element->ordinal->end_.data().size();
-            for (char* ptr = const_cast<char*>(start); ptr < end; ptr++) {
-                // Don't erase comments in the middle of ordinals;
-                if (strncmp("//", ptr, 2) == 0) {
-                    while (*ptr != '\n' && ptr < end) {
-                        ptr++;
-                    }
-                    continue;
-                }
-                *ptr = ' ';
-            }
-
-            // Incorporate the whitespace that came before the ordinal into the
-            // whitespace before the identifier.
-            element->identifier->start_.set_previous_end(
-                element->ordinal->start_.previous_end());
-            element->identifier->end_.set_previous_end(
-                element->ordinal->start_.previous_end());
-
-            // If there are no attributes, the identifier is now the start of
-            // the method.
-            if (element->attributes == nullptr)
-                element->start_ = element->identifier->start_;
-
-            element->ordinal.reset(nullptr);
-        }
-        DeclarationOrderTreeVisitor::OnInterfaceMethod(element);
-    }
-};
-
 } // namespace raw
 } // namespace fidl
 

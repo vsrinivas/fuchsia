@@ -127,64 +127,6 @@ bool golden_file_test() {
     END_TEST;
 }
 
-bool removing_ordinals_is_okay() {
-    BEGIN_TEST;
-
-    for (auto element : formatted_output_) {
-        TestLibrary library(element.first, element.second);
-        std::unique_ptr<fidl::raw::File> ast;
-        EXPECT_TRUE(library.Parse(ast));
-
-        fidl::raw::OrdinalRemovalVisitor ordinal_visitor;
-        ordinal_visitor.OnFile(ast);
-
-        fidl::raw::FormattingTreeVisitor formatting_visitor;
-        formatting_visitor.OnFile(ast);
-
-        TestLibrary post_library("dummy", formatting_visitor.formatted_output()->c_str());
-
-        std::unique_ptr<fidl::raw::File> post_ast;
-        post_library.Parse(post_ast);
-        const auto& errors = post_library.errors();
-        if (errors.size() != 0) {
-            ASSERT_EQ(0, errors.size(), ("Unexpected error: " + errors[0]).c_str());
-        }
-    }
-
-    END_TEST;
-}
-
-// Tests that removing the ordinals, formatting, and then formatting again
-// results in no change.  This ensures that the AST produced by
-// OrdinalRemovalVisitor can be formatted correctly.
-bool remove_ordinals_same_formatting() {
-    BEGIN_TEST;
-
-    for (auto element : formatted_output_) {
-        TestLibrary library(element.first, element.second);
-        std::unique_ptr<fidl::raw::File> ast;
-        EXPECT_TRUE(library.Parse(ast));
-
-        fidl::raw::OrdinalRemovalVisitor ordinal_visitor;
-        ordinal_visitor.OnFile(ast);
-
-        fidl::raw::FormattingTreeVisitor visitor;
-        visitor.OnFile(ast);
-
-        TestLibrary reprocess(element.first, *visitor.formatted_output());
-        EXPECT_TRUE(reprocess.Parse(ast));
-        fidl::raw::FormattingTreeVisitor reformatter;
-        reformatter.OnFile(ast);
-
-        EXPECT_STR_EQ(visitor.formatted_output()->c_str(),
-                      reformatter.formatted_output()->c_str(),
-                      "Removing ordinals and then applying formatting "
-                      "multiple times produces different results");
-    }
-
-    END_TEST;
-}
-
 } // namespace
 
 BEGIN_TEST_CASE(formatter_tests);
@@ -192,6 +134,4 @@ InitializeContents();
 RUN_TEST(idempotence_test);
 RUN_TEST(basic_formatting_rules_test);
 RUN_TEST(golden_file_test);
-RUN_TEST(removing_ordinals_is_okay);
-RUN_TEST(remove_ordinals_same_formatting);
 END_TEST_CASE(formatter_tests);

@@ -24,8 +24,6 @@ void Usage(const std::string& argv0) {
                                  "\n"
                                  " * `-i, --in-place` Formats file in place\n"
                                  "\n"
-                                 " * `--remove-ordinals` Removes ordinal values from interfaces in the FIDL definition\n"
-                                 "\n"
                                  " * `-h, --help` Prints this help, and exit immediately.\n"
                                  "\n";
     std::cout.flush();
@@ -48,17 +46,13 @@ void Usage(const std::string& argv0) {
     exit(1);
 }
 
-bool Format(const fidl::SourceFile& source_file, bool remove_ordinals,
+bool Format(const fidl::SourceFile& source_file,
             fidl::ErrorReporter* error_reporter, std::string& output) {
     fidl::Lexer lexer(source_file, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
     std::unique_ptr<fidl::raw::File> ast = parser.Parse();
     if (!parser.Ok()) {
         return false;
-    }
-    if (remove_ordinals) {
-        fidl::raw::OrdinalRemovalVisitor visitor;
-        visitor.OnFile(ast);
     }
     fidl::raw::FormattingTreeVisitor visitor;
     visitor.OnFile(ast);
@@ -72,14 +66,11 @@ int main(int argc, char* argv[]) {
     // Construct the args vector from the argv array.
     std::vector<std::string> args(argv, argv + argc);
     bool in_place = false;
-    bool remove_ordinals = false;
     size_t pos = 1;
     // Process options
     while (pos < args.size() && args[pos] != "--" && args[pos].find("-") == 0) {
         if (args[pos] == "-i" || args[pos] == "--in-place") {
             in_place = true;
-        } else if (args[pos] == "--remove-ordinals") {
-            remove_ordinals = true;
         } else if (args[pos] == "-h" || args[pos] == "--help") {
             Usage(args[0]);
             exit(0);
@@ -106,7 +97,7 @@ int main(int argc, char* argv[]) {
     fidl::ErrorReporter error_reporter;
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
-        if (!Format(*source_file, remove_ordinals, &error_reporter, output)) {
+        if (!Format(*source_file, &error_reporter, output)) {
             // In the formattter, we do not print the report if there are only
             // warnings.
             error_reporter.PrintReports();
