@@ -468,7 +468,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
         }
 
         fn inline_size(&self) -> usize {
-            self.get(0).map(Encodable::inline_size).unwrap_or(0)
+            self.get(0).map(Encodable::inline_size).unwrap_or(0) * $len
         }
 
         fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
@@ -2789,5 +2789,12 @@ mod test {
         let mut body_out = String::new();
         Decoder::decode_into(out_buf, handles, &mut body_out).expect("Decoding body failed");
         assert_eq!(body, body_out);
+    }
+
+    #[test]
+    fn array_of_arrays() {
+        let mut blah = &mut [&mut [1, 2, 3, 4, 5], &mut [5, 4, 3, 2, 1]];
+        let (bytes, handles) = (&mut vec![], &mut vec![]);
+        assert!(Encoder::encode(bytes, handles, &mut blah).is_ok());
     }
 }
