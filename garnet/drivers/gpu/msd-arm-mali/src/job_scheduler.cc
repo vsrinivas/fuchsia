@@ -95,6 +95,7 @@ static bool HigherPriorityThan(const MsdArmAtom* a, const MsdArmAtom* b)
 
 void JobScheduler::ScheduleRunnableAtoms()
 {
+    TRACE_DURATION("magma", "ScheduleRunnableAtoms");
     // First try to preempt running atoms if necessary.
     for (uint32_t slot = 0; slot < runnable_atoms_.size(); slot++) {
         if (!executing_atoms_[slot]) {
@@ -200,11 +201,21 @@ void JobScheduler::ScheduleRunnableAtoms()
         DASSERT(!atom->soft_stopped());
         executing_atoms_[slot] = atom;
         runnable.erase(runnable.begin());
-        std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
-        [[maybe_unused]] msd_client_id_t id =
-            connection ? connection->client_id() : 0;
-        TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot), executing_atoms_[slot]->trace_nonce(),
-                          "id", id);
+
+        // TODO: Remove this when the trace generated JSON can support 64bit
+        // ints without this hack. (PT-110)
+        [[maybe_unused]] uint64_t slot_id = slot * 2000;
+
+        [[maybe_unused]] const char* vthread_name = AtomRunningString(slot);
+        uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+        TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
+        TRACE_VTHREAD_DURATION_BEGIN("magma", vthread_name, vthread_name,
+                                    slot_id, current_ticks);
+
+        current_ticks = magma::PlatformTrace::GetCurrentTicks();
+        TRACE_VTHREAD_FLOW_STEP("magma", "atom", vthread_name,
+                                 slot_id, atom->trace_nonce(), current_ticks);
+
         owner_->RunAtom(executing_atoms_[slot].get());
     }
 }
@@ -236,9 +247,21 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
 
 void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code, uint64_t tail)
 {
+    TRACE_DURATION("magma", "JobCompleted");
     std::shared_ptr<MsdArmAtom>& atom = executing_atoms_[slot];
     DASSERT(atom);
-    TRACE_ASYNC_END("magma", AtomRunningString(slot), atom->trace_nonce());
+
+    // TODO: Remove this when the trace generated JSON can support 64bit
+    // ints without this hack. (PT-110)
+    [[maybe_unused]] uint64_t slot_id = slot * 2000;
+
+    [[maybe_unused]] uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+    TRACE_VTHREAD_FLOW_STEP("magma", "atom", AtomRunningString(slot),
+                             slot_id, atom->trace_nonce(), current_ticks);
+    TRACE_FLOW_END("magma", "atom", atom->trace_nonce());
+    TRACE_VTHREAD_DURATION_END("magma", AtomRunningString(slot), AtomRunningString(slot),
+                                slot_id, current_ticks);
+
     if (result_code == kArmMaliResultSoftStopped) {
         atom->set_soft_stopped(false);
         // The tail is the first job executed that didn't complete. When continuing execution, skip

@@ -800,8 +800,10 @@ magma::Status MsdArmDevice::ProcessScheduleAtoms()
         std::lock_guard<std::mutex> lock(schedule_mutex_);
         atoms_to_schedule.swap(atoms_to_schedule_);
     }
-    for (auto& atom : atoms_to_schedule)
+    for (auto& atom : atoms_to_schedule) {
+        TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
         scheduler_->EnqueueAtom(std::move(atom));
+    }
     scheduler_->TryToSchedule();
     return MAGMA_STATUS_OK;
 }

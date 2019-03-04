@@ -53,6 +53,8 @@ bool MsdArmConnection::ExecuteAtom(
     volatile magma_arm_mali_atom* atom,
     std::deque<std::shared_ptr<magma::PlatformSemaphore>>* semaphores)
 {
+    TRACE_DURATION("magma", "Connection::ExecuteAtom");
+
     uint8_t atom_number = atom->atom_number;
     if (outstanding_atoms_[atom_number] &&
         outstanding_atoms_[atom_number]->result_code() == kArmMaliResultRunning) {
@@ -140,6 +142,7 @@ bool MsdArmConnection::ExecuteAtom(
 
         outstanding_atoms_[atom_number] = msd_atom;
     }
+    TRACE_FLOW_BEGIN("magma", "atom", msd_atom->trace_nonce());
     owner_->ScheduleAtom(std::move(msd_atom));
     return true;
 }
@@ -149,7 +152,6 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
                                                   msd_semaphore_t** wait_semaphores,
                                                   msd_semaphore_t** signal_semaphores)
 {
-
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                     "msd_context_execute_command_buffer not implemented");
 }
@@ -158,6 +160,7 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
                                                       void* commands, uint64_t semaphore_count,
                                                       msd_semaphore_t** msd_semaphores)
 {
+    TRACE_DURATION("magma", "Connection::ExecuteImmediateCommands");
     auto context = static_cast<MsdArmContext*>(ctx);
     auto connection = context->connection().lock();
     if (!connection)
