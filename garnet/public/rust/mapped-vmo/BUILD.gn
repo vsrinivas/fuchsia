@@ -13,5 +13,6 @@ rustc_library("mapped-vmo") {
   deps = [
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/shared-buffer",
   ]
 }

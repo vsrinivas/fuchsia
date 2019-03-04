@@ -12,10 +12,9 @@ use fidl_fuchsia_ui_gfx::{
     RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
-use fuchsia_runtime::vmar_root_self;
-use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, VmarFlags, Vmo};
+use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmo};
+use mapped_vmo::Mapping;
 use parking_lot::Mutex;
-use shared_buffer::SharedBuffer;
 use std::mem;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -406,71 +405,36 @@ impl Deref for EntityNode {
     }
 }
 
-struct MemoryMapping {
-    addr: usize,
-    len: usize,
-}
-
-impl MemoryMapping {
-    fn allocate(size: usize) -> Result<(Vmo, MemoryMapping), Status> {
-        let vmo = Vmo::create(size as u64)?;
-        let remote = vmo.duplicate_handle(
-            Rights::DUPLICATE
-                | Rights::TRANSFER
-                | Rights::WAIT
-                | Rights::INSPECT
-                | Rights::READ
-                | Rights::MAP,
-        )?;
-        let memory = Self::new(
-            &vmo,
-            0,
-            size,
-            VmarFlags::PERM_READ | VmarFlags::PERM_WRITE | VmarFlags::MAP_RANGE,
-        )?;
-        Ok((remote, memory))
-    }
-
-    fn new(vmo: &Vmo, offset: u64, len: usize, flags: VmarFlags) -> Result<MemoryMapping, Status> {
-        let addr = vmar_root_self().map(0, vmo, offset, len, flags)?;
-        Ok(MemoryMapping { addr, len })
-    }
-
-    pub fn buffer(&self) -> SharedBuffer {
-        unsafe { SharedBuffer::new(self.addr as *mut u8, self.len) }
-    }
-}
-
-impl Drop for MemoryMapping {
-    fn drop(&mut self) {
-        unsafe {
-            vmar_root_self().unmap(self.addr, self.len).unwrap();
-        }
-    }
-}
-
 pub struct HostMemory {
     memory: Memory,
-    mapping: Arc<MemoryMapping>,
+    mapping: Arc<Mapping>,
 }
 
 impl HostMemory {
     pub fn allocate(session: SessionPtr, size: usize) -> Result<HostMemory, Status> {
-        let (vmo, mapping) = MemoryMapping::allocate(size)?;
+        let (mapping, vmo) = Mapping::allocate(size)?;
+        let remote = vmo.duplicate_handle(
+            Rights::DUPLICATE
+            | Rights::TRANSFER
+            | Rights::WAIT
+            | Rights::INSPECT
+            | Rights::READ
+            | Rights::MAP,
+        )?;
         Ok(HostMemory {
-            memory: Memory::new(session, vmo, size as u64, MemoryType::HostMemory),
+            memory: Memory::new(session, remote, size as u64, MemoryType::HostMemory),
             mapping: Arc::new(mapping),
         })
     }
 
-    pub fn size(&self) -> usize {
-        self.mapping.len
+    pub fn len(&self) -> usize {
+        self.mapping.len()
     }
 }
 
 pub struct HostImage {
     image: Image,
-    mapping: Arc<MemoryMapping>,
+    mapping: Arc<Mapping>,
 }
 
 impl HostImage {
@@ -481,8 +445,8 @@ impl HostImage {
         }
     }
 
-    pub fn buffer(&self) -> SharedBuffer {
-        self.mapping.buffer()
+    pub fn mapping(&self) -> &Arc<Mapping> {
+        &self.mapping
     }
 }
 

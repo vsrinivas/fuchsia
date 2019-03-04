@@ -7,7 +7,8 @@ use euclid::rect;
 use failure::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
 use rusttype::{Font, FontCollection, Scale};
-use shared_buffer::SharedBuffer;
+use mapped_vmo::Mapping;
+use std::sync::Arc;
 
 /// Struct representing an RGBA color value
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
@@ -109,19 +110,19 @@ pub trait PixelSink {
 }
 
 /// Pixel sink targetting a shared buffer.
-pub struct SharedBufferPixelSink {
-    buffer: SharedBuffer,
+pub struct MappingPixelSink {
+    mapping: Arc<Mapping>,
     stride: u32,
 }
 
-impl PixelSink for SharedBufferPixelSink {
+impl PixelSink for MappingPixelSink {
     fn write_pixel_at_location(&mut self, x: u32, y: u32, value: &[u8]) {
         let offset = (y * self.stride + x * BYTES_PER_PIXEL) as usize;
         self.write_pixel_at_offset(offset, &value);
     }
 
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.buffer.write_at(offset, &value);
+        self.mapping.write_at(offset, &value);
     }
 }
 
@@ -136,8 +137,8 @@ pub struct Canvas<T: PixelSink> {
 
 impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targetting a shared buffer with stride.
-    pub fn new(buffer: SharedBuffer, stride: u32) -> Canvas<SharedBufferPixelSink> {
-        let sink = SharedBufferPixelSink { buffer, stride };
+    pub fn new(mapping: Arc<Mapping>, stride: u32) -> Canvas<MappingPixelSink> {
+        let sink = MappingPixelSink { mapping, stride };
         Canvas { pixel_sink: sink, stride }
     }
 

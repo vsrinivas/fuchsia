@@ -14,9 +14,8 @@ rustc_library("fuchsia-scenic") {
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/shared-buffer",
+    "//garnet/public/rust/mapped-vmo",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:parking_lot",
   ]

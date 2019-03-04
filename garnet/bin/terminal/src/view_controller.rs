@@ -1,5 +1,5 @@
 use carnelian::{
-    Canvas, Color, FontDescription, FontFace, Paint, Point, SharedBufferPixelSink, Size,
+    Canvas, Color, FontDescription, FontFace, Paint, Point, MappingPixelSink, Size,
 };
 use failure::Error;
 use fidl::endpoints::{create_endpoints, ServerEnd};
@@ -173,7 +173,7 @@ impl ViewController {
         {
             let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
             let mut face = self.face.lock();
-            let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
+            let mut canvas = Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
             let size = Size::new(14.0, 22.0);
             let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
             let parser = &mut self.parser;

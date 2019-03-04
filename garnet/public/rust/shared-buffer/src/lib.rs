@@ -111,6 +111,7 @@ use core::sync::atomic::{fence, Ordering};
 // A buffer with no ownership or reference semantics. It is the caller's
 // responsibility to wrap this type in a type which provides ownership or
 // reference semantics, and to only call methods when apporpriate.
+#[derive(Debug)]
 struct SharedBufferInner {
     // invariant: '(buf as usize) + len' doesn't overflow usize
     buf: *mut u8,
@@ -133,7 +134,7 @@ impl SharedBufferInner {
         }
     }
 
-    fn write_at(&mut self, offset: usize, src: &[u8]) -> usize {
+    fn write_at(&self, offset: usize, src: &[u8]) -> usize {
         if let Some(to_copy) = overlap(offset, src.len(), self.len) {
             // Since overlap returned Some, we're guaranteed that 'offset +
             // to_copy <= self.len'. That in turn means that, so long as the
@@ -240,6 +241,7 @@ fn canonicalize_range_infallible<R: RangeBounds<usize>>(len: usize, range: R) ->
 /// `SharedBuffer`s do nothing when dropped. In order to avoid leaking memory,
 /// use the `consume` method to consume the `SharedBuffer` and get back the
 /// underlying pointer and length, and unmap the memory manually.
+#[derive(Debug)]
 pub struct SharedBuffer {
     inner: SharedBufferInner,
 }
@@ -337,7 +339,7 @@ impl SharedBuffer {
     /// the memory may be read. See the `release_writes` documentation for more
     /// details.
     #[inline]
-    pub fn write(&mut self, src: &[u8]) -> usize {
+    pub fn write(&self, src: &[u8]) -> usize {
         self.inner.write_at(0, src)
     }
 
@@ -362,7 +364,7 @@ impl SharedBuffer {
     ///
     /// `write_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn write_at(&mut self, offset: usize, src: &[u8]) -> usize {
+    pub fn write_at(&self, offset: usize, src: &[u8]) -> usize {
         self.inner.write_at(offset, src)
     }
 
@@ -545,6 +547,7 @@ impl Drop for SharedBuffer {
 ///
 /// A `SharedBufferSlice` is created with `SharedBuffer::slice`,
 /// `SharedBufferSlice::slice`, or `SharedBufferSliceMut::slice`.
+#[derive(Debug)]
 pub struct SharedBufferSlice<'a> {
     inner: SharedBufferInner,
     _marker: PhantomData<&'a ()>,
@@ -667,6 +670,7 @@ impl<'a> SharedBufferSlice<'a> {
 ///
 /// A `SharedBufferSliceMut` is created with `SharedBuffer::slice_mut` or
 /// `SharedBufferSliceMut::slice_mut`.
+#[derive(Debug)]
 pub struct SharedBufferSliceMut<'a> {
     inner: SharedBufferInner,
     _marker: PhantomData<&'a ()>,
@@ -734,7 +738,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// the memory may be read. See the `release_writes` documentation for more
     /// details.
     #[inline]
-    pub fn write(&mut self, src: &[u8]) -> usize {
+    pub fn write(&self, src: &[u8]) -> usize {
         self.inner.write_at(0, src)
     }
 
@@ -759,7 +763,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     ///
     /// `write_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn write_at(&mut self, offset: usize, src: &[u8]) -> usize {
+    pub fn write_at(&self, offset: usize, src: &[u8]) -> usize {
         self.inner.write_at(offset, src)
     }
 
@@ -927,7 +931,7 @@ mod tests {
         // initialize some memory and turn it into a SharedBuffer
         const ONE: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
         let mut buf_memory = ONE;
-        let mut buf = unsafe { buf_from_ref(&mut buf_memory) };
+        let buf = unsafe { buf_from_ref(&mut buf_memory) };
 
         // we read the same initial contents back
         let mut bytes = [0u8; 8];
@@ -1007,7 +1011,7 @@ mod tests {
         assert_eq!(bytes, INIT);
 
         // split in two equal-sized halves
-        let (mut buf1, mut buf2) = buf.split_at_mut(4);
+        let (buf1, buf2) = buf.split_at_mut(4);
 
         // now we read back the halves separately
         bytes = [0; 8];
@@ -1061,7 +1065,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_panic_write_at() {
-        let mut buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
+        let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
         // "byte offset 11 out of range for SharedBuffer of length 10"
         buf.write_at(11, &[][..]);
     }

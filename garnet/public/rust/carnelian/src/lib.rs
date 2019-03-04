@@ -21,7 +21,7 @@ pub use crate::{
     app::{App, AppAssistant},
     canvas::{
         measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink,
-        SharedBufferPixelSink,
+        MappingPixelSink,
     },
     geometry::{Coord, Point, Rect, Size},
     label::Label,

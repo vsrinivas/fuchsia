@@ -2,130 +2,111 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A convenience crate for Zircon vmo objects mapped into vmars.
+//! A convenience crate for Zircon VMO objects mapped into memory.
 
-#![deny(warnings)]
 #![deny(missing_docs)]
 
-use fuchsia_runtime::vmar_root_self;
-use fuchsia_zircon::{self as zx, VmarFlags};
+use {
+    fuchsia_runtime::vmar_root_self,
+    fuchsia_zircon as zx,
+    shared_buffer::SharedBuffer,
+    std::ops::{
+        Deref,
+        DerefMut,
+    },
+};
 
-/// An object representing a mapping into an address space.
+/// A safe wrapper around a mapped region of memory.
+///
+/// Note: this type implements `Deref`/`DerefMut` to the `SharedBuffer`
+/// type, which allows reading/writing from the underlying memory.
+/// Aside from creation and the `Drop` impl, all of the interesting
+/// functionality of this type is offered via `SharedBuffer`.
 #[derive(Debug)]
 pub struct Mapping {
-    addr: usize,
-    size: usize,
+    buffer: SharedBuffer,
+}
+
+impl Deref for Mapping {
+    type Target = SharedBuffer;
+    fn deref(&self) -> &Self::Target {
+        &self.buffer
+    }
+}
+
+impl DerefMut for Mapping {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.buffer
+    }
 }
 
 impl Mapping {
-    /// Create a Mapping and map it in the root address space.
-    pub fn create(size: usize, flags: VmarFlags) -> Result<Self, zx::Status> {
-        let vmo = zx::Vmo::create(size as u64)?;
-        let addr = vmar_root_self().map(0, &vmo, 0, size, flags)?;
-        Ok(Mapping { addr, size })
+    /// Create a `Mapping` and map it in the root address space.
+    /// Returns the VMO that was mapped.
+    ///
+    /// The resulting VMO will not be resizeable.
+    pub fn allocate(size: usize) -> Result<(Self, zx::Vmo), zx::Status> {
+        let vmo = zx::Vmo::create_with_opts(
+            zx::VmoOptions::NON_RESIZABLE,
+            size as u64,
+        )?;
+        let flags = zx::VmarFlags::PERM_READ
+            | zx::VmarFlags::PERM_WRITE
+            | zx::VmarFlags::MAP_RANGE
+            | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
+        let mapping = Self::create_from_vmo(&vmo, size, flags)?;
+        Ok((
+            mapping,
+            vmo
+        ))
     }
 
-    /// Create a Mapping from an existing Vmo and map it in the root
-    /// address space.
-    pub fn create_from_vmo(
-        vmo: &zx::Vmo,
-        size: usize,
-        flags: VmarFlags,
-    ) -> Result<Self, zx::Status> {
-        let addr = vmar_root_self().map(0, vmo, 0, size, flags)?;
-        Ok(Mapping { addr, size })
+    /// Create a `Mapping` from an existing VMO.
+    ///
+    /// Requires that the VMO was created with the `NON_RESIZABLE`
+    /// option, and returns `ZX_ERR_NOT_SUPPORTED` otherwise.
+    pub fn create_from_vmo(vmo: &zx::Vmo, size: usize, flags: zx::VmarFlags)
+        -> Result<Self, zx::Status>
+    {
+        let flags = flags | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
+        let addr = vmar_root_self().map(
+            0, &vmo, 0, size, flags,
+        )?;
+
+        // Safety:
+        //
+        // The memory behind this `SharedBuffer` is only accessible via
+        // methods on `SharedBuffer`.
+        //
+        // The underlying memory is accessible during any accesses to `SharedBuffer`:
+        // - It is only unmapped on `drop`
+        // - `SharedBuffer` is never exposed in a way that would allow it to live longer than
+        //   the `Mapping` itself
+        // - The underlying VMO is non-resizeable.
+        let buffer = unsafe { SharedBuffer::new(addr as *mut u8, size) };
+        Ok(Mapping { buffer })
     }
 
     /// Return the size of the mapping.
-    pub fn size(&self) -> usize {
-        self.size
-    }
-
-    /// Return a raw pointer to the mapping.
-    pub fn as_ptr(&self) -> *const u8 {
-        self.addr as *const u8
-    }
-
-    /// Return a raw mutable pointer to the mapping.
-    pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.addr as *mut u8
-    }
-
-    // Internal helper to release the current mapping.
-    //
-    // Should be used with caution, as "addr" and "size"
-    // will effectively have no meaning after this function
-    // completes.
-    unsafe fn release(&mut self) {
-        vmar_root_self().unmap(self.addr, self.size as usize).ok();
+    pub fn len(&self) -> usize {
+        self.buffer.len()
     }
 }
 
 impl Drop for Mapping {
     fn drop(&mut self) {
-        unsafe { self.release() }
-    }
-}
+        let (addr, size): (*mut u8, usize) = self.buffer.as_ptr_len();
+        let addr = addr as usize;
 
-/// An object representing a Vmo mapped into an address space.
-#[derive(Debug)]
-pub struct MappedVmo {
-    vmo: zx::Vmo,
-    mapping: Mapping,
-}
-
-impl MappedVmo {
-    /// Create a MappedVmo and map it in the root address space.
-    pub fn create(size: usize, flags: VmarFlags) -> Result<Self, zx::Status> {
-        let vmo = zx::Vmo::create(size as u64)?;
-        let mapping = Mapping::create_from_vmo(&vmo, size, flags)?;
-        Ok(MappedVmo { vmo, mapping })
-    }
-
-    /// Create a MappedVmo from an existing Vmo and map it in the root
-    /// address space.
-    pub fn create_from_vmo(
-        vmo: zx::Vmo,
-        size: usize,
-        flags: VmarFlags,
-    ) -> Result<Self, zx::Status> {
-        let mapping = Mapping::create_from_vmo(&vmo, size, flags)?;
-        Ok(MappedVmo { vmo, mapping })
-    }
-
-    /// Resizes the Vmo and initializes a new mapping.
-    ///
-    /// This invalidates all raw pointers previously returned
-    /// from the MappedVmo.
-    pub fn resize(&mut self, size: usize, flags: VmarFlags) -> Result<(), zx::Status> {
-        self.vmo.set_size(size as u64)?;
-        let addr = vmar_root_self().map(0, &self.vmo, 0, size, flags)?;
+        // Safety:
+        //
+        // The memory behind this `SharedBuffer` is only accessible
+        // via references to the internal `SharedBuffer`, which must
+        // have all been invalidated at this point. The memory is
+        // therefore safe to unmap.
         unsafe {
-            self.mapping.release();
+            let _ = vmar_root_self().unmap(addr, size);
         }
-        self.mapping.addr = addr;
-        self.mapping.size = size;
-        Ok(())
-    }
-
-    /// Return the size of the mapping.
-    pub fn size(&self) -> usize {
-        self.mapping.size
-    }
-
-    /// Return an immutable reference to the underlying Vmo.
-    pub fn vmo(&self) -> &zx::Vmo {
-        &self.vmo
-    }
-
-    /// Return a raw pointer to the mapping.
-    pub fn as_ptr(&self) -> *const u8 {
-        self.mapping.as_ptr()
-    }
-
-    /// Return a raw mutable pointer to the mapping.
-    pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.mapping.as_mut_ptr()
     }
 }
 
@@ -133,76 +114,55 @@ impl MappedVmo {
 mod tests {
     use super::*;
     use fuchsia_zircon as zx;
-    use std::slice;
 
     const PAGE_SIZE: usize = 4096;
 
     #[test]
     fn test_create() {
         let size = PAGE_SIZE;
-        let flags = VmarFlags::PERM_READ | VmarFlags::PERM_WRITE;
-        let mapping = Mapping::create(size, flags).unwrap();
-        assert_eq!(size, mapping.size());
+        let (mapping, _vmo) = Mapping::allocate(size).unwrap();
+        assert_eq!(size, mapping.len());
     }
 
     #[test]
     fn test_create_from_vmo() {
         let size = PAGE_SIZE;
-        let flags = VmarFlags::PERM_READ | VmarFlags::PERM_WRITE;
-        let vmo = zx::Vmo::create(size as u64).unwrap();
-        let mapping = Mapping::create_from_vmo(&vmo, size, flags).unwrap();
-        assert_eq!(size, mapping.size());
+        let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
+        {
+            // Requires NON_RESIZEABLE
+            let vmo = zx::Vmo::create(size as u64).unwrap();
+            let status = Mapping::create_from_vmo(&vmo, size, flags).unwrap_err();
+            assert_eq!(status, zx::Status::NOT_SUPPORTED);
+        }
+        {
+            let vmo = zx::Vmo::create_with_opts(
+                zx::VmoOptions::NON_RESIZABLE,
+                size as u64,
+            ).unwrap();
+            let mapping = Mapping::create_from_vmo(&vmo, size, flags).unwrap();
+            assert_eq!(size, mapping.len());
+        }
     }
 
     #[test]
     fn test_mapping_read_write() {
         let size = PAGE_SIZE;
-        let flags = VmarFlags::PERM_READ | VmarFlags::PERM_WRITE;
-        let vmo = zx::Vmo::create(size as u64).unwrap();
-        let mut mapping = Mapping::create_from_vmo(&vmo, size, flags).unwrap();
+        let (mapping, vmo) = Mapping::allocate(size).unwrap();
+
+        let mut buf = [0; 128];
 
         // We can write to the Vmo, and see the results in the mapping.
-        let s = String::from("Hello world");
-        vmo.write(s.as_bytes(), 0).unwrap();
-        let output = unsafe { slice::from_raw_parts(mapping.as_ptr(), s.len()) };
-        assert_eq!(s.as_bytes(), output);
+        let s = b"Hello world";
+        vmo.write(s, 0).unwrap();
+        let slice = &mut buf[0..s.len()];
+        mapping.read(slice);
+        assert_eq!(s, slice);
 
         // We can write to the mapping, and see the results in the Vmo.
-        let s = String::from("Goodbye world");
-        unsafe { mapping.as_mut_ptr().copy_from(s.as_ptr(), s.len()) };
-        let mut output = vec![0; s.len()];
-        vmo.read(output.as_mut_slice(), 0).unwrap();
-        assert_eq!(s.as_bytes(), output.as_slice());
-    }
-
-    #[test]
-    fn test_mapped_vmo() {
-        let size = PAGE_SIZE;
-        let flags = VmarFlags::PERM_READ | VmarFlags::PERM_WRITE;
-        let vmo = zx::Vmo::create(size as u64).unwrap();
-        let mut mvmo = MappedVmo::create_from_vmo(vmo, size, flags).unwrap();
-
-        // We can write to the Vmo, and see the results in the mapping.
-        let s = String::from("Hello world");
-        mvmo.vmo().write(s.as_bytes(), 0).unwrap();
-        let output = unsafe { slice::from_raw_parts(mvmo.as_ptr(), s.len()) };
-        assert_eq!(s.as_bytes(), output);
-
-        // We should still be able to read from the mapping after resizing.
-        mvmo.resize(size * 2, flags).unwrap();
-        let output = unsafe { slice::from_raw_parts(mvmo.as_ptr(), s.len()) };
-        assert_eq!(s.as_bytes(), output);
-
-        // We can write to the mapping, and see the results in the Vmo.
-        let s = String::from("Goodbye world");
-        unsafe { mvmo.as_mut_ptr().copy_from(s.as_ptr(), s.len()) };
-        let mut output = vec![0; s.len()];
-        mvmo.vmo().read(output.as_mut_slice(), 0).unwrap();
-        assert_eq!(s.as_bytes(), output.as_slice());
-
-        // We should still be able to read from the Vmo after resizing.
-        mvmo.resize(size, flags).unwrap();
-        mvmo.vmo().read(output.as_mut_slice(), 0).unwrap();
-        assert_eq!(s.as_bytes(), output.as_slice());
+        let s = b"Goodbye world";
+        mapping.write(s);
+        let slice = &mut buf[0..s.len()];
+        vmo.read(slice, 0).unwrap();
+        assert_eq!(s, slice);
     }
 }
