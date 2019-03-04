@@ -4,7 +4,7 @@
 
 test("pty") {
   sources = [
-    "pty-test.c",
+    "pty-test.cpp",
   ]
   deps = [
     "$zx/system/ulib/fdio",

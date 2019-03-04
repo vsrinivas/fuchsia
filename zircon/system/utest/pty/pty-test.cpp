@@ -21,12 +21,12 @@ static int fd_signals(int fd) {
     return signals;
 }
 
-static int write_full(int fd) {
+static ssize_t write_full(int fd) {
     char tmp[300];
     memset(tmp, 0x33, sizeof(tmp));
-    int total = 0;
+    ssize_t total = 0;
     for (;;) {
-        int r = write(fd, tmp, sizeof(tmp));
+        ssize_t r = write(fd, tmp, sizeof(tmp));
         if (r < 0) {
             if (errno == EAGAIN) {
                 break;
@@ -41,11 +41,11 @@ static int write_full(int fd) {
     return total;
 }
 
-static int read_all(int fd) {
+static ssize_t read_all(int fd) {
     char tmp[700];
-    int total = 0;
+    ssize_t total = 0;
     for (;;) {
-        int r = read(fd, tmp, sizeof(tmp));
+        ssize_t r = read(fd, tmp, sizeof(tmp));
         if (r < 0) {
             if (errno == EAGAIN) {
                 break;
