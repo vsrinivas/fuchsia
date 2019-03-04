@@ -213,6 +213,14 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
     return;
   }
 
+  // If the socket is readable and our peer has buffer space, wait on the
+  // Virtio receive queue. Do this before checking for peer closed so that
+  // we first send any remaining data in the socket.
+  if (signal->observed & ZX_SOCKET_READABLE && PeerFree() > 0) {
+    queue_callback_();
+    return;
+  }
+
   // If the socket has been partially or fully closed, wait on the Virtio
   // receive queue.
   if (signal->observed & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED |
@@ -242,13 +250,6 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
         rx_wait_.set_trigger(signals & ~ZX_SOCKET_WRITE_DISABLED);
       }
     }
-    queue_callback_();
-    return;
-  }
-
-  // If the socket is readable and our peer has buffer space, wait on the
-  // Virtio receive queue.
-  if (signal->observed & ZX_SOCKET_READABLE && PeerFree() > 0) {
     queue_callback_();
     return;
   }
@@ -391,6 +392,14 @@ void VirtioVsock::ChannelConnection::OnReady(zx_status_t status,
     return;
   }
 
+  // If the channel is readable and our peer has buffer space, wait on the
+  // Virtio receive queue. Do this before checking for peer closed so that
+  // we send any remaining data in the channel.
+  if (signal->observed & ZX_CHANNEL_READABLE && PeerFree() > 0) {
+    queue_callback_();
+    return;
+  }
+
   // If the channel has been closed by the peer, move to sending a full
   // connection shutdown and wait on the Virtio receive queue.
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
@@ -399,14 +408,8 @@ void VirtioVsock::ChannelConnection::OnReady(zx_status_t status,
     zx_signals_t signals = rx_wait_.trigger();
     rx_wait_.set_trigger(signals & ~ZX_CHANNEL_PEER_CLOSED);
     queue_callback_();
-    return;
   }
 
-  // If the channel is readable and our peer has buffer space, wait on the
-  // Virtio receive queue.
-  if (signal->observed & ZX_CHANNEL_READABLE && PeerFree() > 0) {
-    queue_callback_();
-  }
 }
 
 zx_status_t VirtioVsock::ChannelConnection::WriteCredit(
