@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/ui/input_reader/buttons.h"
 #include "garnet/bin/ui/input_reader/hardcoded.h"
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
@@ -118,6 +119,7 @@ class InputInterpreter {
   Mouse mouse_ = {};
   Sensor sensor_ = {};
   Hardcoded hardcoded_ = {};
+  Buttons buttons_ = {};
 };
 
 }  // namespace mozart

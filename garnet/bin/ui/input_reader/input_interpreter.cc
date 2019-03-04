@@ -92,10 +92,6 @@ bool InputInterpreter::Initialize() {
   } else if (protocol == Protocol::Buttons) {
     FXL_VLOG(2) << "Device " << name() << " has buttons";
     has_buttons_ = true;
-    buttons_descriptor_ = fuchsia::ui::input::ButtonsDescriptor::New();
-    buttons_descriptor_->buttons |= fuchsia::ui::input::kVolumeUp;
-    buttons_descriptor_->buttons |= fuchsia::ui::input::kVolumeDown;
-    buttons_descriptor_->buttons |= fuchsia::ui::input::kMicMute;
     buttons_report_ = fuchsia::ui::input::InputReport::New();
     buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
   } else if (protocol == Protocol::Mouse) {
@@ -527,14 +523,14 @@ bool InputInterpreter::Read(bool discard) {
   }
 
   if (has_buttons_) {
-    if (!hardcoded_.ParseButtonsReport(report.data(), rc,
-                                       buttons_report_.get()))
-      return false;
-
-    if (!discard) {
-      TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                       buttons_report_->trace_id);
-      input_device_->DispatchReport(CloneReport(*buttons_report_));
+    if (buttons_.ParseReport(report.data(), rc, buttons_report_.get())) {
+      if (!discard) {
+        buttons_report_->event_time = InputEventTimestampNow();
+        buttons_report_->trace_id = TRACE_NONCE();
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                         buttons_report_->trace_id);
+        input_device_->DispatchReport(CloneReport(*buttons_report_));
+      }
     }
   }
 
@@ -1024,10 +1020,17 @@ bool InputInterpreter::ParseProtocol() {
         hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields,
                                                input_desc->input_count);
         break;
-      case Protocol::Buttons:
-        hardcoded_.ParseButtonsDescriptor(input_desc->input_fields,
-                                          input_desc->input_count);
+      case Protocol::Buttons: {
+        Device::Descriptor device_descriptor = {};
+        if (!buttons_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
+          FXL_LOG(ERROR) << "invalid sensor descriptor for " << name();
+          return false;
+        }
+        if (!ConsumeDescriptor(&device_descriptor)) {
+          return false;
+        }
         break;
+      }
       case Protocol::Sensor: {
         Device::Descriptor device_descriptor = {};
         if (!sensor_.ParseReportDescriptor(*input_desc, &device_descriptor)) {

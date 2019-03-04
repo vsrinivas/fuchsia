@@ -62,6 +62,8 @@ source_set("fdio") {
 
 source_set("device") {
   sources = [
+    "buttons.cc",
+    "buttons.h",
     "device_watcher.h",
     "hardcoded.cc",
     "hardcoded.h",

@@ -5,6 +5,7 @@
 #include <set>
 
 #include <hid/boot.h>
+#include <hid/buttons.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 
@@ -242,6 +243,37 @@ TEST_F(ReaderInterpreterInputTest, SensorTest) {
   ASSERT_EQ(1, report_count_);
   ASSERT_TRUE(last_report_.sensor);
   EXPECT_EQ(0x2412, last_report_.sensor->scalar());
+}
+
+TEST_F(ReaderInterpreterInputTest, ButtonsTest) {
+  // Create the paradise report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data;
+  desc_len = get_buttons_report_desc(&desc_data);
+
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the MockHidDecoder with our report descriptor.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
+  RunLoopUntilIdle();
+
+  // Create a single buttons report.
+  uint8_t report_data[] = {
+      0x01,  // Report ID
+      0x01,  // Volume
+      0xFF,  // Mute
+  };
+  std::vector<uint8_t> report(report_data, report_data + sizeof(report_data));
+
+  // Send the touch report.
+  device->Send(report, sizeof(report_data));
+  RunLoopUntilIdle();
+
+  // Check that the report matches.
+  ASSERT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.buttons);
+  EXPECT_EQ(true, last_report_.buttons->mic_mute);
+  EXPECT_EQ(0x1, last_report_.buttons->volume);
 }
 
 }  // namespace mozart
