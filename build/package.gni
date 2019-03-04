@@ -467,7 +467,7 @@ template("package") {
              "$pkg_desc deprecated_system_image incompatible with binary")
 
       # TODO(PKG-46): Both of the following packages have planned moves out of /system. No new entries are allowed.
-      if (pkg.package_name != "crashpad_test" && pkg.package_name != "wlan_tests" && pkg.package_name != "wlan_drivers_tests") {
+      if (pkg.package_name != "wlan_tests" && pkg.package_name != "wlan_drivers_tests") {
         assert(pkg.tests == [], "package ${pkg.package_name} is not whitelisted to contribute tests to /system")
       }
     } else {
