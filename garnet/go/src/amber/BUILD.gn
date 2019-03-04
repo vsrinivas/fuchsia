@@ -176,6 +176,7 @@ package("amber_tests") {
     tests += [
       {
         name = test.name
+        environments = basic_envs
       },
     ]
   }

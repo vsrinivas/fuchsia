@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "setui_service"
@@ -51,6 +52,7 @@ package("setui_service_tests") {
   tests = [
     {
       name = "setui_service_bin_test"
+      environments = basic_envs
     },
   ]
 }

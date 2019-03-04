@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "kms"
@@ -59,6 +60,7 @@ package("kms_tests") {
     {
       name = "kms_bin_test"
       dest = "kms_bin_test"
+      environments = basic_envs
     },
   ]
 }

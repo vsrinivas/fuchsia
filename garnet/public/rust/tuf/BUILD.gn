@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("tuf") {
   edition = "2018"
@@ -38,6 +39,9 @@ test_package("tuf-tests") {
   ]
 
   tests = [
-    { name = "tuf_lib_test" },
+    {
+      name = "tuf_lib_test"
+      environments = basic_envs
+    },
   ]
 }

@@ -17,6 +17,7 @@ test_package("crashpad_analyzer_tests") {
     },
     {
       name = "crashpad_analyzer_integration_test"
+      environments = basic_envs
     },
   ]
 

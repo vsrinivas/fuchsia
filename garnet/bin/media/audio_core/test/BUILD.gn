@@ -67,6 +67,7 @@ test_package("audio_device_tests") {
   tests = [
     {
       name = "audio_device_tests"
+      environments = basic_envs
     },
   ]
 }

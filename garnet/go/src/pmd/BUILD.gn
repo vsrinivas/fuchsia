@@ -6,6 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("pmd") {
   name = "fuchsia.googlesource.com/pmd"
@@ -49,6 +50,7 @@ package("pmd_tests") {
     tests += [
       {
         name = "pmd_${testpkg}_test"
+        environments = basic_envs
       },
     ]
   }
