@@ -78,8 +78,11 @@ pub fn make_data_frame_with_padding() -> Vec<u8> {
         bytes.extend(vec![
         // Padding
         2, 2,
-        // Body
-        7, 7, 7,
+        // LLC Header
+        7, 7, 7, // DSAP, SSAP & control
+        8, 8, 8, // OUI
+        9, 10, //eth type
+        11, 11, 11, 11, 11, // payload
     ]);
     bytes
 }
@@ -109,7 +112,7 @@ pub const MSDU_1_PAYLOAD : &[u8] = &[
 
 #[rustfmt::skip]
 pub const MSDU_2_LLC_HDR : &[u8] = &[
-    0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
+    0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x01,
 ];
 
 #[rustfmt::skip]
@@ -150,8 +153,38 @@ pub fn make_data_frame_amsdu() -> Vec<u8> {
         // Padding
         0x00, 0x00,
         // A-MSDU Subframe #2
+        0x78, 0x8a, 0x20, 0x0d, 0x67, 0x04, // dst_addr
+        0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xac, // src_addr
+        0x00, 0x66, // MSDU length
+    ]);
+    amsdu_data_frame.extend(MSDU_2_LLC_HDR);
+    amsdu_data_frame.extend(MSDU_2_PAYLOAD);
+    amsdu_data_frame
+}
+
+pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {
+    let mut qos_ctrl = QosControl(0);
+    qos_ctrl.set_amsdu_present(true);
+    let mut raw_qos_ctrol = RawQosControl::default();
+    raw_qos_ctrol.set(qos_ctrl.value());
+    let mut amsdu_data_frame = make_data_hdr(None, *raw_qos_ctrol, None);
+    #[rustfmt::skip]
+        amsdu_data_frame.extend(&[
+        // A-MSDU Subframe #1
         0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
         0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
+        0x00, 0x74, // MSDU length
+    ]);
+    amsdu_data_frame.extend(MSDU_1_LLC_HDR);
+    amsdu_data_frame.extend(MSDU_1_PAYLOAD);
+
+    #[rustfmt::skip]
+    amsdu_data_frame.extend(&[
+        // Padding is shorter than needed (1 vs 2)
+        0x00,
+        // A-MSDU Subframe #2
+        0x78, 0x8a, 0x20, 0x0d, 0x67, 0x04, // dst_addr
+        0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xac, // src_addr
         0x00, 0x66, // MSDU length
     ]);
     amsdu_data_frame.extend(MSDU_2_LLC_HDR);

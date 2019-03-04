@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::utils::skip,
+    crate::{buffer_reader::BufferReader, utils::skip},
     bitfield::bitfield,
     byteorder::{BigEndian, ByteOrder, LittleEndian},
     num::{One, Unsigned},
@@ -52,6 +52,8 @@ pub const LLC_SNAP_OUI: [u8; 3] = [0, 0, 0];
 // RFC 704, Appendix B.2
 // https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml
 pub const ETHER_TYPE_EAPOL: u16 = 0x888E;
+
+pub const MAX_ETH_FRAME_LEN: usize = 2048;
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
 bitfield! {
@@ -730,10 +732,15 @@ pub struct LlcFrame<B> {
     pub body: B,
 }
 
+/// An LLC frame is only valid if it contains enough bytes for header AND at least 1 byte for body
 impl<B: ByteSlice> LlcFrame<B> {
     pub fn parse(bytes: B) -> Option<Self> {
         let (hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-        Some(Self { hdr, body })
+        if body.is_empty() {
+            None
+        } else {
+            Some(Self { hdr, body })
+        }
     }
 }
 
@@ -771,59 +778,96 @@ impl AmsduSubframeHdr {
     }
 }
 
+pub struct AmsduSubframe<B> {
+    pub hdr: LayoutVerified<B, AmsduSubframeHdr>,
+    pub body: B,
+}
+
+impl<B: ByteSlice> AmsduSubframe<B> {
+    pub fn parse(buffer_reader: &mut BufferReader<B>) -> Option<Self> {
+        let hdr = buffer_reader.read::<AmsduSubframeHdr>()?;
+        let msdu_len = hdr.msdu_len() as usize;
+        if buffer_reader.bytes_remaining() < msdu_len {
+            None
+        } else {
+            let body = buffer_reader.read_bytes(msdu_len)?;
+            let base_len = std::mem::size_of::<AmsduSubframeHdr>() + msdu_len;
+            let padded_len = round_up(base_len, 4);
+            let padding_len = padded_len - base_len;
+            if buffer_reader.bytes_remaining() == 0 {
+                Some(Self { hdr, body })
+            } else if buffer_reader.bytes_remaining() <= padding_len {
+                // The subframe is invalid if EITHER one of the following is true
+                // a) there are not enough bytes in the buffer for padding
+                // b) the remaining buffer only contains padding bytes
+                // IEEE 802.11-2016 9.3.2.2.2 `The last A-MSDU subframe has no padding.`
+                None
+            } else {
+                buffer_reader.read_bytes(padding_len)?;
+                Some(Self { hdr, body })
+            }
+        }
+    }
+}
+
 /// Iterates through an A-MSDU frame and provides access to
 /// individual MSDUs.
 /// The reader expects the byte stream to start with an
 /// `AmsduSubframeHdr`.
-pub struct AmsduReader<'a>(&'a [u8]);
+/// TODO(WLAN-995): The received AMSDU should not be greater than `max_amsdu_len`, specified in
+/// HtCapabilities IE of Association. Warn or discard if violated.
+pub struct AmsduReader<B>(BufferReader<B>);
 
-impl<'a> AmsduReader<'a> {
-    pub fn has_remaining(&self) -> bool {
-        !self.0.is_empty()
+impl<B: ByteSlice> AmsduReader<B> {
+    pub fn has_remaining_bytes(&self) -> bool {
+        self.0.bytes_remaining() > 0
     }
 
-    pub fn remaining(&self) -> &'a [u8] {
-        self.0
+    pub fn into_remaining(mut self) -> B {
+        self.0.into_remaining()
     }
 }
 
-impl<'a> Iterator for AmsduReader<'a> {
-    type Item = &'a [u8];
+impl<B: ByteSlice> Iterator for AmsduReader<B> {
+    type Item = AmsduSubframe<B>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (amsdu_subframe_hdr, msdu) =
-            LayoutVerified::<_, AmsduSubframeHdr>::new_unaligned_from_prefix(&self.0[..])?;
-        let msdu_len = amsdu_subframe_hdr.msdu_len() as usize;
-        if msdu.len() < msdu_len {
-            // A-MSDU subframe header is valid, but MSDU doesn't fit into the buffer.
-            None
-        } else {
-            let (msdu, next_padded) = msdu.split_at(msdu_len);
-
-            // Padding following the last MSDU is optional.
-            if next_padded.is_empty() {
-                self.0 = next_padded;
-                Some(msdu)
-            } else {
-                let base_len = std::mem::size_of::<AmsduSubframeHdr>() + msdu_len;
-                let padded_len = round_up(base_len, 4);
-                let padding_len = padded_len - base_len;
-                if next_padded.len() < padding_len {
-                    // Corrupted: buffer to short to hold padding.
-                    None
-                } else {
-                    let (_padding, next) = next_padded.split_at(padding_len);
-                    self.0 = next;
-                    Some(msdu)
-                }
-            }
-        }
+        AmsduSubframe::parse(&mut self.0)
     }
 }
 
 pub enum DataFrameBody<B> {
     Llc { llc_frame: B },
     Amsdu { amsdu: B },
+}
+
+pub struct Msdu<B> {
+    pub dst_addr: MacAddr,
+    pub src_addr: MacAddr,
+    pub llc_frame: LlcFrame<B>,
+}
+
+pub enum MsduIterator<B> {
+    Llc { dst_addr: MacAddr, src_addr: MacAddr, buffer_reader: BufferReader<B> },
+    Amsdu(AmsduReader<B>),
+}
+
+impl<B: ByteSlice> Iterator for MsduIterator<B> {
+    type Item = Msdu<B>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            MsduIterator::Llc { dst_addr, src_addr, buffer_reader } => {
+                let body = buffer_reader.read_bytes(buffer_reader.bytes_remaining())?;
+                let llc_frame = LlcFrame::parse(body)?;
+                Some(Msdu { dst_addr: *dst_addr, src_addr: *src_addr, llc_frame })
+            }
+            MsduIterator::Amsdu(reader) => {
+                let AmsduSubframe { hdr, body } = reader.next()?;
+                let llc_frame = LlcFrame::parse(body)?;
+                Some(Msdu { dst_addr: hdr.da, src_addr: hdr.sa, llc_frame })
+            }
+        }
+    }
 }
 
 pub enum DataSubtype<B> {
@@ -854,6 +898,31 @@ impl<B: ByteSlice> DataSubtype<B> {
     }
 }
 
+impl<B: ByteSlice> MsduIterator<B> {
+    /// If `body_aligned` is |true| the frame's body is expected to be 4 byte aligned.
+    pub fn from_raw_data_frame(data_frame: B, body_aligned: bool) -> Option<MsduIterator<B>> {
+        match MacFrame::parse(data_frame, body_aligned)? {
+            MacFrame::Data { data_hdr, addr4, qos_ctrl, body, .. } => {
+                let fc = FrameControl(data_hdr.frame_ctrl());
+                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, body)? {
+                    DataSubtype::Data(DataFrameBody::Llc { llc_frame }) => {
+                        Some(MsduIterator::Llc {
+                            dst_addr: data_dst_addr(&data_hdr),
+                            // Safe to unwrap because data frame parsing has been successful.
+                            src_addr: data_src_addr(&data_hdr, addr4.map(|a| *a)).unwrap(),
+                            buffer_reader: BufferReader::new(llc_frame),
+                        })
+                    }
+                    DataSubtype::Data(DataFrameBody::Amsdu { amsdu }) => {
+                        Some(MsduIterator::Amsdu(AmsduReader(BufferReader::new(amsdu))))
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+}
 /// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 #[allow(unused)] // Some StatusCodes are not used yet.
 #[derive(Debug, PartialOrd, PartialEq, FromPrimitive, ToPrimitive)]
@@ -1068,15 +1137,53 @@ mod tests {
     }
 
     #[test]
+    fn msdu_iterator_single_llc() {
+        let bytes = make_data_frame_single_llc(None, None);
+        let msdus = MsduIterator::from_raw_data_frame(&bytes[..], false);
+        assert!(msdus.is_some());
+        let mut found_msdu = false;
+        for Msdu { dst_addr, src_addr, llc_frame } in msdus.unwrap() {
+            if found_msdu {
+                panic!("unexpected MSDU: {:x?}", llc_frame.body);
+            }
+            assert_eq!(dst_addr, [3; 6]);
+            assert_eq!(src_addr, [4; 6]);
+            assert_eq!(llc_frame.hdr.protocol_id(), 9 << 8 | 10);
+            assert_eq!(llc_frame.body, [11; 3]);
+            found_msdu = true;
+        }
+        assert!(found_msdu);
+    }
+
+    #[test]
     fn parse_data_frame_with_padding() {
         let bytes = make_data_frame_with_padding();
         match MacFrame::parse(&bytes[..], true) {
             Some(MacFrame::Data { qos_ctrl, body, .. }) => {
                 assert_eq!([1, 1], qos_ctrl.expect("qos_ctrl not present").0);
-                assert_eq!(&[7, 7, 7], &body[..]);
+                assert_eq!(&[7, 7, 7, 8, 8, 8, 9, 10, 11, 11, 11, 11, 11], &body[..]);
             }
             _ => panic!("failed parsing data frame"),
         };
+    }
+
+    #[test]
+    fn msdu_iterator_single_llc_padding() {
+        let bytes = make_data_frame_with_padding();
+        let msdus = MsduIterator::from_raw_data_frame(&bytes[..], true);
+        assert!(msdus.is_some());
+        let mut found_msdu = false;
+        for Msdu { dst_addr, src_addr, llc_frame } in msdus.unwrap() {
+            if found_msdu {
+                panic!("unexpected MSDU: {:x?}", llc_frame.body);
+            }
+            assert_eq!(dst_addr, [3; 6]);
+            assert_eq!(src_addr, [4; 6]);
+            assert_eq!(llc_frame.hdr.protocol_id(), 9 << 8 | 10);
+            assert_eq!(llc_frame.body, [11; 5]);
+            found_msdu = true;
+        }
+        assert!(found_msdu);
     }
 
     #[test]
@@ -1087,8 +1194,7 @@ mod tests {
                 let fc = FrameControl(data_hdr.frame_ctrl());
                 match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, &body[..]) {
                     Some(DataSubtype::Data(DataFrameBody::Llc { llc_frame })) => {
-                        let llc =
-                            LlcFrame::parse(llc_frame).expect("frame too short for LLC header");
+                        let llc = LlcFrame::parse(llc_frame).expect("LLC frame too short");
                         assert_eq!(7, llc.hdr.dsap);
                         assert_eq!(7, llc.hdr.ssap);
                         assert_eq!(7, llc.hdr.control);
@@ -1116,39 +1222,47 @@ mod tests {
     fn parse_data_amsdu() {
         let amsdu_data_frame = make_data_frame_amsdu();
 
-        match MacFrame::parse(&amsdu_data_frame[..], false) {
-            Some(MacFrame::Data { data_hdr, qos_ctrl, body, .. }) => {
-                let fc = FrameControl(data_hdr.frame_ctrl());
-                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, &body[..]) {
-                    Some(DataSubtype::Data(DataFrameBody::Amsdu { amsdu })) => {
-                        let mut found_msdus = (false, false);
-                        let mut rdr = AmsduReader(&amsdu[..]);
-                        for msdu in &mut rdr {
-                            match found_msdus {
-                                (false, false) => {
-                                    let mut expected_msdu = vec![];
-                                    expected_msdu.extend_from_slice(MSDU_1_LLC_HDR);
-                                    expected_msdu.extend_from_slice(MSDU_1_PAYLOAD);
-                                    assert_eq!(msdu, &expected_msdu[..]);
-                                    found_msdus = (true, false);
-                                }
-                                (true, false) => {
-                                    let mut expected_msdu = vec![];
-                                    expected_msdu.extend_from_slice(MSDU_2_LLC_HDR);
-                                    expected_msdu.extend_from_slice(MSDU_2_PAYLOAD);
-                                    assert_eq!(msdu, &expected_msdu[..]);
-                                    found_msdus = (true, true);
-                                }
-                                _ => panic!("unexpected MSDU: {:x?}", msdu),
-                            }
-                        }
-                        assert_eq!((true, true), found_msdus);
-                    }
-                    _ => panic!("failed parsing A-MSDU"),
+        let msdus = MsduIterator::from_raw_data_frame(&amsdu_data_frame[..], false);
+        assert!(msdus.is_some());
+        let mut found_msdus = (false, false);
+        for Msdu { dst_addr, src_addr, llc_frame } in msdus.unwrap() {
+            match found_msdus {
+                (false, false) => {
+                    assert_eq!(dst_addr, [0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03]);
+                    assert_eq!(src_addr, [0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab]);
+                    assert_eq!(llc_frame.hdr.protocol_id(), 0x0800);
+                    assert_eq!(llc_frame.body, MSDU_1_PAYLOAD);
+                    found_msdus = (true, false);
                 }
+                (true, false) => {
+                    assert_eq!(dst_addr, [0x78, 0x8a, 0x20, 0x0d, 0x67, 0x04]);
+                    assert_eq!(src_addr, [0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xac]);
+                    assert_eq!(llc_frame.hdr.protocol_id(), 0x0801);
+                    assert_eq!(llc_frame.body, MSDU_2_PAYLOAD);
+                    found_msdus = (true, true);
+                }
+                _ => panic!("unexepcted MSDU: {:x?}", llc_frame.body),
             }
-            _ => panic!("failed parsing data frame"),
         }
+        assert_eq!(found_msdus, (true, true));
+    }
+
+    #[test]
+    fn parse_data_amsdu_padding_too_short() {
+        let amsdu_data_frame = make_data_frame_amsdu_padding_too_short();
+
+        let msdus = MsduIterator::from_raw_data_frame(&amsdu_data_frame[..], false);
+        assert!(msdus.is_some());
+        let mut found_one_msdu = false;
+        for Msdu { dst_addr, src_addr, llc_frame } in msdus.unwrap() {
+            assert!(!found_one_msdu);
+            assert_eq!(dst_addr, [0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03]);
+            assert_eq!(src_addr, [0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab]);
+            assert_eq!(llc_frame.hdr.protocol_id(), 0x0800);
+            assert_eq!(llc_frame.body, MSDU_1_PAYLOAD);
+            found_one_msdu = true;
+        }
+        assert!(found_one_msdu);
     }
 
     #[test]

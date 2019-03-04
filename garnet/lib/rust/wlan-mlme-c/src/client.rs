@@ -77,6 +77,19 @@ pub extern "C" fn mlme_write_keep_alive_resp_frame(
 }
 
 #[no_mangle]
+pub extern "C" fn mlme_handle_data_frame(
+    device: &device::Device,
+    data_frame: *const u8,
+    data_frame_len: usize,
+    has_padding: bool,
+) -> i32 {
+    // Safe here because |data_frame_slice| does not outlive |data_frame|.
+    let data_frame_slice = unsafe { utils::as_slice(data_frame, data_frame_len) };
+    client::handle_data_frame(device, data_frame_slice, has_padding);
+    zx::ZX_OK
+}
+
+#[no_mangle]
 pub extern "C" fn mlme_deliver_eth_frame(
     device: &device::Device,
     provider: &BufferProvider,
@@ -94,7 +107,10 @@ pub extern "C" fn mlme_deliver_eth_frame(
     let write_result =
         client::write_eth_frame(&mut writer, *dst_addr, *src_addr, protocol_id, payload_slice);
     unwrap_or_bail!(write_result, zx::ZX_ERR_IO_OVERRUN);
-    device.deliver_ethernet(writer.into_written())
+    match device.deliver_ethernet(writer.into_written()) {
+        Ok(()) => zx::ZX_OK,
+        Err(e) => e.into_raw(),
+    }
 }
 
 #[no_mangle]

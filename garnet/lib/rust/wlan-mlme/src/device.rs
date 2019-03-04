@@ -11,8 +11,9 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn deliver_ethernet(&self, slice: &[u8]) -> i32 {
-        (self.deliver_ethernet)(self.device, slice.as_ptr(), slice.len())
+    pub fn deliver_ethernet(&self, slice: &[u8]) -> Result<(), zx::Status> {
+        let status = (self.deliver_ethernet)(self.device, slice.as_ptr(), slice.len());
+        zx::ok(status)
     }
 }
 
@@ -59,8 +60,8 @@ mod tests {
         assert_eq!(fake_device.eth_queue.len(), 0);
         let first_frame = [5; 32];
         let second_frame = [6; 32];
-        assert_eq!(fake_device.as_device().deliver_ethernet(&first_frame[..]), zx::sys::ZX_OK);
-        assert_eq!(fake_device.as_device().deliver_ethernet(&second_frame[..]), zx::sys::ZX_OK);
+        assert_eq!(fake_device.as_device().deliver_ethernet(&first_frame[..]), Ok(()));
+        assert_eq!(fake_device.as_device().deliver_ethernet(&second_frame[..]), Ok(()));
         assert_eq!(fake_device.eth_queue.len(), 2);
         assert_eq!(&fake_device.eth_queue[0], &first_frame);
         assert_eq!(&fake_device.eth_queue[1], &second_frame);

@@ -15,6 +15,7 @@ rustc_library("wlan-mlme") {
   deps = [
     "//garnet/lib/rust/wlan-common",
     "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/zerocopy",
     "//third_party/rust_crates:failure",
   ]
 }
