@@ -76,10 +76,14 @@ pub(crate) struct DeviceLayerState {
 
 impl DeviceLayerState {
     /// Add a new ethernet device to the device layer.
+    ///
+    /// `add` adds a new `EthernetDeviceState` with the given MAC address and
+    /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
+    /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: usize) -> DeviceId {
         let id = self.allocate_id();
         self.ethernet.insert(id, EthernetDeviceState::new(mac, mtu));
-        debug!("adding Ethernet device with ID {}", id);
+        debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
 

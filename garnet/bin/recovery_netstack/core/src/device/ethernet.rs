@@ -167,13 +167,15 @@ pub(crate) struct EthernetDeviceState {
 
 impl EthernetDeviceState {
     /// Construct a new `EthernetDeviceState`.
+    ///
+    /// `new` constructs a new `EthernetDeviceState` with the given MAC address
+    /// and MTU. The MTU will be taken as a limit on the size of Ethernet
+    /// payloads - the Ethernet header is not counted towards the MTU.
     pub(crate) fn new(mac: Mac, mtu: usize) -> EthernetDeviceState {
-        // TODO(joshlf): Ensure that the configured MTU meets the minimum IPv6 MTU
-        // requirement. A few questions:
-        // - How much do we have to take into account link-layer headers when
-        //   deciding what MTUs are acceptable?
-        // - How do we wire error information back up the call stack? Should this
-        //   just return a Result or something?
+        // TODO(joshlf): Ensure that the configured MTU meets the minimum IPv6
+        // MTU requirement. A few questions:
+        // - How do we wire error information back up the call stack? Should
+        //   this just return a Result or something?
         EthernetDeviceState {
             mac,
             mtu,
@@ -235,8 +237,9 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
 
     if let Some(dst_mac) = dst_mac {
         if let Ok(buffer) = body
+            .with_mtu(mtu)
             .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
-            .serialize_mtu_outer(mtu)
+            .serialize_outer()
         {
             ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         }
@@ -423,10 +426,8 @@ mod tests {
             assert_eq!(ctx.dispatcher().frames_sent().len(), expect_frames_sent);
         }
 
-        // Since the Ethernet device MTU currently defaults to IPV6_MIN_MTU, an
-        // Ethernet body of IPV6_MIN_MTU will cause the total frame length
-        // (including Ethernet header) to exceed the MTU.
-        test(crate::ip::IPV6_MIN_MTU, 0);
-        test(0, 1);
+        // The Ethernet device MTU currently defaults to IPV6_MIN_MTU.
+        test(crate::ip::IPV6_MIN_MTU, 1);
+        test(crate::ip::IPV6_MIN_MTU + 1, 0);
     }
 }
