@@ -96,7 +96,7 @@ class RegistersX64 final : public Registers {
     auto greg_bytes = reinterpret_cast<const uint8_t*>(&gregs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
-    FXL_VLOG(1) << "Get register " << regno << " = (raw) "
+    FXL_VLOG(2) << "Get register " << regno << " = (raw) "
                 << debugger_utils::EncodeByteArrayString(greg_bytes, buf_size);
     return true;
   }
@@ -115,7 +115,7 @@ class RegistersX64 final : public Registers {
     auto greg_bytes = reinterpret_cast<uint8_t*>(&gregs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
-    FXL_VLOG(1) << "Set register " << regno << " = "
+    FXL_VLOG(2) << "Set register " << regno << " = "
                 << debugger_utils::EncodeByteArrayString(greg_bytes,
                                                          value_size);
     return true;
@@ -126,7 +126,7 @@ class RegistersX64 final : public Registers {
       gregs_.rflags |= X86_EFLAGS_TF_MASK;
     else
       gregs_.rflags &= ~static_cast<uint64_t>(X86_EFLAGS_TF_MASK);
-    FXL_VLOG(2) << "rflags.TF set to " << enable;
+    FXL_VLOG(4) << "rflags.TF set to " << enable;
     return true;
   }
 

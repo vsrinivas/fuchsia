@@ -182,7 +182,7 @@ class LdsoBreakpointTest : public TestServer {
         // Libc and the main executable should be present.
         for (debugger_utils::dsoinfo_t* dso = process->GetDsos(); dso;
              dso = dso->next) {
-          FXL_VLOG(1) << "Have dso " << dso->name;
+          FXL_VLOG(2) << "Have dso " << dso->name;
           // The main executable's name might either be recorded as "" or
           // a potentially clipped version of the path in which case
           // "inferior_control_tests" should still be present.

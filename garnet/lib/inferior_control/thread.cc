@@ -58,7 +58,7 @@ Thread::Thread(Process* process, zx_handle_t handle, zx_koid_t id)
 }
 
 Thread::~Thread() {
-  FXL_VLOG(2) << "Destructing thread " << GetDebugName();
+  FXL_VLOG(4) << "Destructing thread " << GetDebugName();
 
   Clear();
 }
@@ -143,30 +143,30 @@ void Thread::OnException(const zx_excp_type_t type,
       FXL_LOG(ERROR) << "Unable to clear single-step bkpt for thread "
                      << GetName();
     } else {
-      FXL_VLOG(2) << "Single-step bkpt cleared for thread "
+      FXL_VLOG(4) << "Single-step bkpt cleared for thread "
                   << GetDebugName();
     }
   }
 
-  FXL_VLOG(1) << ExceptionToString(type, context);
+  FXL_VLOG(2) << ExceptionToString(type, context);
 }
 
 void Thread::OnTermination() {
   set_state(State::kGone);
   process_->delegate()->OnThreadTermination(this);
-  FXL_VLOG(1) << SignalsToString(ZX_THREAD_TERMINATED);
+  FXL_VLOG(2) << SignalsToString(ZX_THREAD_TERMINATED);
 }
 
 void Thread::OnSuspension() {
   set_state(State::kSuspended);
   process_->delegate()->OnThreadSuspension(this);
-  FXL_VLOG(1) << SignalsToString(ZX_THREAD_SUSPENDED);
+  FXL_VLOG(2) << SignalsToString(ZX_THREAD_SUSPENDED);
 }
 
 void Thread::OnResumption() {
   set_state(State::kRunning);
   process_->delegate()->OnThreadResumption(this);
-  FXL_VLOG(1) << SignalsToString(ZX_THREAD_RUNNING);
+  FXL_VLOG(2) << SignalsToString(ZX_THREAD_RUNNING);
 }
 
 void Thread::OnSignal(zx_signals_t signals) {
@@ -225,7 +225,7 @@ bool Thread::TryNext(zx_handle_t eport) {
     return false;
   }
 
-  FXL_VLOG(2) << "Thread " << GetDebugName()
+  FXL_VLOG(4) << "Thread " << GetDebugName()
               << ": trying next exception handler";
 
   zx_status_t status =
@@ -250,7 +250,7 @@ bool Thread::ResumeFromException(zx_handle_t eport) {
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another
   // thread).
-  FXL_VLOG(2) << "Resuming thread " << GetDebugName() << " after an exception";
+  FXL_VLOG(4) << "Resuming thread " << GetDebugName() << " after an exception";
 
   zx_status_t status =
       zx_task_resume_from_exception(handle_, eport, 0);
@@ -271,7 +271,7 @@ bool Thread::ResumeAfterSoftwareBreakpointInstruction(zx_handle_t eport) {
   }
   zx_vaddr_t pc = registers_->GetPC();
   zx_vaddr_t new_pc = debugger_utils::IncrementPcAfterBreak(pc);
-  FXL_VLOG(2) << "Changing pc 0x" << std::hex << pc << " -> 0x" << new_pc;
+  FXL_VLOG(4) << "Changing pc 0x" << std::hex << pc << " -> 0x" << new_pc;
   int pc_regno = GetPCRegisterNumber();
   if (!registers_->SetRegister(pc_regno, &new_pc, sizeof(new_pc))) {
     return false;
@@ -296,7 +296,7 @@ void Thread::ResumeForExit(zx_handle_t eport) {
       break;
   }
 
-  FXL_VLOG(2) << "Thread " << GetDebugName() << " is exiting";
+  FXL_VLOG(4) << "Thread " << GetDebugName() << " is exiting";
 
   auto status =
       zx_task_resume_from_exception(handle_, eport, 0);
@@ -314,7 +314,7 @@ void Thread::ResumeForExit(zx_handle_t eport) {
                      << debugger_utils::ZxErrorString(info_status);
     }
     if (info_status == ZX_OK && info.exited) {
-      FXL_VLOG(2) << "Process " << process()->GetName() << " exited too";
+      FXL_VLOG(4) << "Process " << process()->GetName() << " exited too";
     } else {
       FXL_LOG(ERROR) << "Failed to resume thread " << GetName()
                      << " for exit: "
@@ -331,7 +331,7 @@ bool Thread::RequestSuspend() {
 
   switch (state_) {
     case State::kGone:
-      FXL_VLOG(1) << "Thread " << GetDebugName() << " is not live";
+      FXL_VLOG(2) << "Thread " << GetDebugName() << " is not live";
       return false;
     default:
       break;

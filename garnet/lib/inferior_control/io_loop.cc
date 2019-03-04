@@ -76,7 +76,7 @@ void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
       ReportError();
       return;
     }
-    FXL_VLOG(2) << "<- " << debugger_utils::EscapeNonPrintableString(bytes);
+    FXL_VLOG(4) << "<- " << debugger_utils::EscapeNonPrintableString(bytes);
   });
 }
 

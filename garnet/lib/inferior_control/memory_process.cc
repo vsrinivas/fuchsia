@@ -52,12 +52,12 @@ bool ProcessMemory::Write(uintptr_t address, const void* buffer,
   // So if the process is gone just return.
   zx_handle_t handle = process_->process().get();
   if (handle == ZX_HANDLE_INVALID) {
-    FXL_VLOG(2) << "No process memory to write to";
+    FXL_VLOG(4) << "No process memory to write to";
     return false;
   }
 
   if (length == 0) {
-    FXL_VLOG(2) << "No data to write";
+    FXL_VLOG(4) << "No data to write";
     return true;
   }
 

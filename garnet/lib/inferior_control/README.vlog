@@ -1,0 +1,16 @@
+This README describes the use of fxl logging in this library, and in
+particular the conventions regarding verbosity levels.
+
+When debugging an app, generally I want --verbose=1 to only contain messages
+from the app. If it also contains messages from various libraries the S/N
+ratio suffers enough to be painful. There is still value in having two levels
+of logging: minimal and super-verbose. [There's also value in having
+super-super-verbose, but that's a separate discussion.]
+So if we split up app-x-lib vs minimal-x-super-verbose we get four levels:
+
+           minimal  super-verbose
+app           1          3
+app+lib       2          4
+
+This convention is employed in this library, and is intended to be
+employed by the apps that use it.

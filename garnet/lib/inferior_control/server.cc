@@ -179,7 +179,7 @@ void Server::OnProcessSignal(const zx_port_packet_t& packet) {
   FXL_DCHECK(packet.type == ZX_PKT_TYPE_SIGNAL_ONE);
 
   uint64_t key = packet.key;
-  FXL_VLOG(2) << "Received ZX_PKT_TYPE_SIGNAL_ONE, observed 0x" << std::hex
+  FXL_VLOG(4) << "Received ZX_PKT_TYPE_SIGNAL_ONE, observed 0x" << std::hex
               << packet.signal.observed << ", key " << std::dec << key;
   // Process exit is sent as a regular signal.
   if (key == process->id()) {

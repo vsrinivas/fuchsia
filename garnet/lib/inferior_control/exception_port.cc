@@ -118,7 +118,7 @@ bool ExceptionPort::Bind(const zx::process& process, Key key) {
     return false;
   }
 
-  FXL_VLOG(1) << "Exception port bound to process " << pid
+  FXL_VLOG(2) << "Exception port bound to process " << pid
               << " with key " << key;
   return true;
 }
@@ -175,7 +175,7 @@ void ExceptionPort::Worker() {
   // Give this thread an identifiable name for debugging purposes.
   fsl::SetCurrentThreadName("exception port reader");
 
-  FXL_VLOG(1) << "Exception port thread started";
+  FXL_VLOG(2) << "Exception port thread started";
 
   while (keep_running_) {
     zx_port_packet_t packet;
@@ -189,7 +189,7 @@ void ExceptionPort::Worker() {
     }
 
     if (ZX_PKT_IS_EXCEPTION(packet.type)) {
-      FXL_VLOG(2) << "Received exception: "
+      FXL_VLOG(4) << "Received exception: "
                   << debugger_utils::ExceptionName(
                          static_cast<const zx_excp_type_t>(packet.type))
                   << " (" << packet.type << "), key=" << packet.key
@@ -200,7 +200,7 @@ void ExceptionPort::Worker() {
         exception_callback_(packet);
       });
     } else if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
-      FXL_VLOG(2) << "Received signal:"
+      FXL_VLOG(4) << "Received signal:"
                   << " key=" << packet.key
                   << " trigger=0x" << std::hex << packet.signal.trigger
                   << " observed=0x" << std::hex << packet.signal.observed;
@@ -210,7 +210,7 @@ void ExceptionPort::Worker() {
       });
     } else if (packet.type == ZX_PKT_TYPE_USER) {
       // Sent to wake up the port wait because we're exiting.
-      FXL_VLOG(2) << "Received user packet";
+      FXL_VLOG(4) << "Received user packet";
       FXL_DCHECK(!keep_running_);
     } else {
       FXL_LOG(WARNING) << "Received unexpected packet: type="

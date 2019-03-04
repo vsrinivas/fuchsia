@@ -46,7 +46,7 @@ GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
       break;
   }
 
-  FXL_VLOG(1) << "ARM64 exception class (" << exception_class
+  FXL_VLOG(2) << "ARM64 exception class (" << exception_class
               << ") mapped to: " << static_cast<int>(sigval);
 
   return sigval;

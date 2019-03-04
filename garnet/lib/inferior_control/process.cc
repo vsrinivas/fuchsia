@@ -168,7 +168,7 @@ bool Process::AttachWorker(zx::process process, bool attach_running) {
     thread_map_stale_ = false;
   }
 
-  FXL_VLOG(2) << "Attach complete, pid " << id_;
+  FXL_VLOG(4) << "Attach complete, pid " << id_;
 
   return true;
 
@@ -186,7 +186,7 @@ bool Process::BindExceptionPort() {
     FXL_LOG(ERROR) << "Unable to bind process " << id_ << " to exception port";
     return false;
   }
-  FXL_VLOG(1) << "Process " << id_ << " bound to exception port";
+  FXL_VLOG(2) << "Process " << id_ << " bound to exception port";
   eport_bound_ = true;
   return true;
 }
@@ -270,7 +270,7 @@ bool Process::Kill() {
   switch (state_) {
     case Process::State::kNew:
     case Process::State::kGone:
-      FXL_VLOG(1) << "Process is not live";
+      FXL_VLOG(2) << "Process is not live";
       return true;
     default:
       break;
@@ -297,7 +297,7 @@ bool Process::RequestSuspend() {
 
   switch (state_) {
     case Process::State::kGone:
-      FXL_VLOG(1) << "Process " << id() << " is not live";
+      FXL_VLOG(2) << "Process " << id() << " is not live";
       return false;
     default:
       break;
@@ -409,7 +409,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 
   // If process is dead all its threads have been removed.
   if (state_ == State::kGone) {
-    FXL_VLOG(1) << "FindThreadById: Process " << id_ << " is gone, thread "
+    FXL_VLOG(2) << "FindThreadById: Process " << id_ << " is gone, thread "
                 << thread_id << " is gone";
     return nullptr;
   }
@@ -421,7 +421,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   if (iter != threads_.end()) {
     Thread* thread = iter->second.get();
     if (thread->state() == Thread::State::kGone) {
-      FXL_VLOG(1) << "FindThreadById: Thread " << thread->GetDebugName()
+      FXL_VLOG(2) << "FindThreadById: Thread " << thread->GetDebugName()
                   << " is gone";
       return nullptr;
     }
@@ -436,7 +436,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   if (status != ZX_OK) {
     // If the process just exited then the thread will be gone. So this is
     // just a debug message, not a warning or error.
-    FXL_VLOG(1) << "Could not obtain a debug handle to thread " << thread_id
+    FXL_VLOG(2) << "Could not obtain a debug handle to thread " << thread_id
                 << ": " << debugger_utils::ZxErrorString(status);
     return nullptr;
   }
@@ -558,7 +558,7 @@ zx_vaddr_t Process::GetDebugAddr() {
   // that far check to see if it has been filled in.
   if (debug_addr == 0 ||
       debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET) {
-    FXL_VLOG(2) << "Ld.so hasn't loaded symbols yet";
+    FXL_VLOG(4) << "Ld.so hasn't loaded symbols yet";
     return 0;
   }
 
@@ -585,7 +585,7 @@ bool Process::CheckLdsoDebugAddrBreak() {
     return false;
   }
   if (debug.r_version == 0) {
-    FXL_VLOG(2) << "debug.r_version is 0";
+    FXL_VLOG(4) << "debug.r_version is 0";
     return false;
   }
 
@@ -594,7 +594,7 @@ bool Process::CheckLdsoDebugAddrBreak() {
     // these were set. Technically, this could also happen due to an
     // incompatible ld.so change or even a bug, but these are rare enough
     // that we don't consider them here.
-    FXL_VLOG(2) << "debug.r_brk or r_map is 0";
+    FXL_VLOG(4) << "debug.r_brk or r_map is 0";
     return false;
   }
 
@@ -609,14 +609,14 @@ void Process::TryBuildLoadedDsosList(Thread* thread) {
   FXL_DCHECK(dsos_ == nullptr);
   FXL_DCHECK(ldso_debug_map_addr_ != 0);
 
-  FXL_VLOG(2) << "Building dso list";
+  FXL_VLOG(4) << "Building dso list";
 
   dsos_ = dso_fetch_list(memory_, ldso_debug_map_addr_, "app");
   // We should have fetched at least one since this is not called until the
   // dl_debug_state (or debug_break) breakpoint is hit.
   if (dsos_ == nullptr) {
     // Don't keep trying.
-    FXL_VLOG(2) << "dso_fetch_list failed";
+    FXL_VLOG(4) << "dso_fetch_list failed";
     dsos_build_failed_ = true;
   } else {
     dso_vlog_list(dsos_);
@@ -658,7 +658,7 @@ bool Process::CheckDsosList(Thread* thread) {
   zx_vaddr_t pc = thread->registers()->GetPC();
   pc = debugger_utils::DecrementPcAfterBreak(pc);
   if (pc != ldso_debug_break_addr_) {
-    FXL_VLOG(2) << "not stopped at dynamic linker debug breakpoint";
+    FXL_VLOG(4) << "not stopped at dynamic linker debug breakpoint";
     return false;
   }
   TryBuildLoadedDsosList(thread);
@@ -697,7 +697,7 @@ void Process::RecordReturnCode() {
                                                             &return_code_);
   if (status == ZX_OK) {
     return_code_is_set_ = true;
-    FXL_VLOG(2) << "Process " << GetName() << " exited with return code "
+    FXL_VLOG(4) << "Process " << GetName() << " exited with return code "
                 << return_code_;
   } else {
     FXL_LOG(ERROR) << "Error getting process exit code: "
