@@ -143,7 +143,7 @@ void BenchmarksRunner::AddCustomBenchmark(
     }
 
     WriteSummaryEntry(name, results_file, SummaryEntryResult::kPass);
-    WriteSummaryEntry(name + ":catapult_json", catapult_file,
+    WriteSummaryEntry(name + ".catapult_json", catapult_file,
                       SummaryEntryResult::kPass);
   });
 }
