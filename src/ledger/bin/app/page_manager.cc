@@ -29,7 +29,7 @@ PageManager::PageManager(Environment* environment,
       merge_resolver_(std::move(merge_resolver)),
       sync_timeout_(sync_timeout),
       task_runner_(environment->dispatcher()) {
-  pages_.set_on_empty([this] { CheckEmpty(); });
+  page_delegates_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
 
   if (page_sync_) {
@@ -77,7 +77,7 @@ void PageManager::AddPageDelayingFacade(
                                    std::move(traced_on_done));
     return;
   }
-  pages_
+  page_delegates_
       .emplace(environment_->coroutine_service(), this, page_storage_.get(),
                merge_resolver_.get(), &watchers_, std::move(delaying_facade))
       .Init(std::move(traced_on_done));
@@ -137,8 +137,9 @@ void PageManager::IsOfflineAndEmpty(
 }
 
 bool PageManager::IsEmpty() {
-  return pages_.empty() && snapshots_.empty() && delaying_facades_.empty() &&
-         merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle());
+  return page_delegates_.empty() && snapshots_.empty() &&
+         delaying_facades_.empty() && merge_resolver_->IsEmpty() &&
+         (!page_sync_ || page_sync_->IsIdle());
 }
 
 void PageManager::CheckEmpty() {

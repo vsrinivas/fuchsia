@@ -103,7 +103,7 @@ class PageManager {
   callback::AutoCleanableSet<
       fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;
-  callback::AutoCleanableSet<PageDelegate> pages_;
+  callback::AutoCleanableSet<PageDelegate> page_delegates_;
   fit::closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
