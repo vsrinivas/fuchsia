@@ -15,7 +15,6 @@ use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmo};
 use mapped_vmo::Mapping;
 use parking_lot::Mutex;
-use std::mem;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -47,8 +46,18 @@ impl Session {
     }
 
     pub fn flush(&mut self) {
-        let mut commands = mem::replace(&mut self.commands, vec![]);
-        self.session.enqueue(&mut commands.iter_mut()).ok();
+        // A single FIDL message can contain only 64k of serialized
+        // data. Chunk the command list into fixed size chunks as a hacky
+        // way to work around this limit. This is imperfect, though, as
+        // there's no strict relationship between the number of commands
+        // and the size of the serialized data.
+        const CHUNK_SIZE: usize = 32;
+        for chunk in self.commands.chunks_mut(CHUNK_SIZE).into_iter() {
+            self.session
+                .enqueue(&mut chunk.into_iter())
+                .expect("Session failed to enqueue commands");
+        }
+        self.commands.truncate(0);
     }
 
     pub fn present(
@@ -415,11 +424,11 @@ impl HostMemory {
         let (mapping, vmo) = Mapping::allocate(size)?;
         let remote = vmo.duplicate_handle(
             Rights::DUPLICATE
-            | Rights::TRANSFER
-            | Rights::WAIT
-            | Rights::INSPECT
-            | Rights::READ
-            | Rights::MAP,
+                | Rights::TRANSFER
+                | Rights::WAIT
+                | Rights::INSPECT
+                | Rights::READ
+                | Rights::MAP,
         )?;
         Ok(HostMemory {
             memory: Memory::new(session, remote, size as u64, MemoryType::HostMemory),

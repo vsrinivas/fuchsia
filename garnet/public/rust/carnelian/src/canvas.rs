@@ -6,8 +6,8 @@ use crate::geometry::{Coord, Point, Rect, Size};
 use euclid::rect;
 use failure::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
-use rusttype::{Font, FontCollection, Scale};
 use mapped_vmo::Mapping;
+use rusttype::{Font, FontCollection, Scale};
 use std::sync::Arc;
 
 /// Struct representing an RGBA color value

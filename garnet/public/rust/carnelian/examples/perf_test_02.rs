@@ -3,22 +3,16 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    App, AppAssistant, Color, Label, Paint, Point, Rect, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, App, AppAssistant, Color, Label, Paint, Point, Rect, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use euclid::Vector2D;
 use failure::Error;
 use fidl_fuchsia_ui_gfx as gfx;
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_scenic::{EntityNode, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::Duration;
 use futures::prelude::*;
-
-fn set_node_color(session: &SessionPtr, node: &ShapeNode, color: &Color) {
-    let material = Material::new(session.clone());
-    material.set_color(color.make_color_rgba());
-    node.set_material(&material);
-}
 
 fn make_bounds(context: &ViewAssistantContext) -> Rect {
     Rect::new(Point::zero(), context.size)
@@ -103,48 +97,47 @@ const STATES: &[&str] = &[
     "Connecticut",
     "Delaware",
     "Florida",
-    // Uncommenting Georgia causes a scenic error that I haven't yet debugged.
-    // "Georgia",
-    // "Hawaii",
-    // "Idaho",
-    // "Illinois",
-    // "Indiana",
-    // "Iowa",
-    // "Kansas",
-    // "Kentucky",
-    // "Louisiana",
-    // "Maine",
-    // "Maryland",
-    // "Massachusetts",
-    // "Michigan",
-    // "Minnesota",
-    // "Mississippi",
-    // "Missouri",
-    // "Montana",
-    // "Nebraska",
-    // "Nevada",
-    // "New Hampshire",
-    // "New Jersey",
-    // "New Mexico",
-    // "New York",
-    // "North Carolina",
-    // "North Dakota",
-    // "Ohio",
-    // "Oklahoma",
-    // "Oregon",
-    // "Pennsylvania",
-    // "Rhode Island",
-    // "South Carolina",
-    // "South Dakota",
-    // "Tennessee",
-    // "Texas",
-    // "Utah",
-    // "Vermont",
-    // "Virginia",
-    // "Washington",
-    // "West Virginia",
-    // "Wisconsin",
-    // "Wyoming",
+    "Georgia",
+    "Hawaii",
+    "Idaho",
+    "Illinois",
+    "Indiana",
+    "Iowa",
+    "Kansas",
+    "Kentucky",
+    "Louisiana",
+    "Maine",
+    "Maryland",
+    "Massachusetts",
+    "Michigan",
+    "Minnesota",
+    "Mississippi",
+    "Missouri",
+    "Montana",
+    "Nebraska",
+    "Nevada",
+    "New Hampshire",
+    "New Jersey",
+    "New Mexico",
+    "New York",
+    "North Carolina",
+    "North Dakota",
+    "Ohio",
+    "Oklahoma",
+    "Oregon",
+    "Pennsylvania",
+    "Rhode Island",
+    "South Carolina",
+    "South Dakota",
+    "Tennessee",
+    "Texas",
+    "Utah",
+    "Vermont",
+    "Virginia",
+    "Washington",
+    "West Virginia",
+    "Wisconsin",
+    "Wyoming",
 ];
 
 impl ViewAssistant for TextScrollViewAssistant {

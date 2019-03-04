@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    App, AppAssistant, Color, Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, App, AppAssistant, Color, Coord, Point, Rect, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use euclid::Vector2D;
 use failure::Error;
@@ -18,12 +18,6 @@ use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
 
 const SHAPE_Z: Coord = -10.0;
-
-fn set_node_color(session: &SessionPtr, node: &ShapeNode, color: &Color) {
-    let material = Material::new(session.clone());
-    material.set_color(color.make_color_rgba());
-    node.set_material(&material);
-}
 
 fn make_bounds(context: &ViewAssistantContext) -> Rect {
     Rect::new(Point::zero(), context.size)

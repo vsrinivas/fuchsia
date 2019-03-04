@@ -15,16 +15,17 @@ mod app;
 mod canvas;
 mod geometry;
 mod label;
+mod scenic_utils;
 mod view;
 
 pub use crate::{
     app::{App, AppAssistant},
     canvas::{
-        measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink,
-        MappingPixelSink,
+        measure_text, Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, PixelSink,
     },
     geometry::{Coord, Point, Rect, Size},
     label::Label,
+    scenic_utils::set_node_color,
     view::{
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey,
         ViewMessages,

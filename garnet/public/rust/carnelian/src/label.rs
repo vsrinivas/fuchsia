@@ -1,9 +1,9 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use crate::{
-    canvas::{measure_text, Canvas, FontDescription, FontFace, Paint, MappingPixelSink},
+    canvas::{measure_text, Canvas, FontDescription, FontFace, MappingPixelSink, Paint},
     geometry::{Coord, Point, Rect, Size},
 };
 use failure::{Error, ResultExt};
@@ -67,7 +67,8 @@ impl Label {
             let guard = self.image_cycler.acquire(info).context("failed to allocate buffer")?;
 
             // Create a canvas to render into the buffer
-            let mut canvas = Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
+            let mut canvas =
+                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
 
             // since the label buffer is sized to fit the text, allways draw at 0,0
             let location = Point::zero();

@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    App, AppAssistant, Color, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-    ViewMessages,
+    set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use chrono::prelude::*;
 use failure::Error;
 use fidl_fuchsia_ui_gfx as gfx;
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_scenic::{Material, Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::Duration;
 use futures::StreamExt;
 use std::f32::consts::PI;
@@ -19,12 +19,6 @@ const MIN_SEC_HAND_ANGLE_RADIANS: f32 = (PI * 2.0) / 60.0;
 const HOUR_HAND_ANGLE_RADIANS: f32 = (PI * 2.0) / 12.0;
 
 struct ClockAppAssistant;
-
-fn set_node_color(session: &SessionPtr, node: &ShapeNode, color: &Color) {
-    let material = Material::new(session.clone());
-    material.set_color(color.make_color_rgba());
-    node.set_material(&material);
-}
 
 impl AppAssistant for ClockAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
