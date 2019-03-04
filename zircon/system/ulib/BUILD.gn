@@ -131,7 +131,6 @@ if (current_cpu != "") {
       "svc",
       "sync",
       "syslog",
-      "sysmem",
       "task-utils",
       "tee-client-api",
       "test-utils",

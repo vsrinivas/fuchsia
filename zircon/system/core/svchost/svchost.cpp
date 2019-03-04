@@ -14,7 +14,6 @@
 #include <lib/process-launcher/launcher.h>
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
-#include <lib/sysmem/sysmem.h>
 #include <lib/kernel-debug/kernel-debug.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
@@ -179,7 +178,6 @@ int main(int argc, char** argv) {
 
     zx_service_provider_instance_t service_providers[] = {
         {.provider = launcher_get_service_provider(), .ctx = nullptr},
-        {.provider = sysmem_get_service_provider(), .ctx = nullptr},
         {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
         {.provider = kernel_debug_get_service_provider(),
          .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},

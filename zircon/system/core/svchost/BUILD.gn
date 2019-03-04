@@ -27,7 +27,6 @@ executable("svchost") {
     "$zx/system/ulib/process-launcher",
     "$zx/system/ulib/profile",
     "$zx/system/ulib/svc",
-    "$zx/system/ulib/sysmem",
     "$zx/system/ulib/sysmem-connector",
     "$zx/system/ulib/zircon",
   ]
