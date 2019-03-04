@@ -47,8 +47,8 @@ constexpr uint32_t kVPartFlagInactive = 0x00000001;
 constexpr uint32_t kVPartAllocateMask = 0x00000001; // All acceptable flags to pass to allocate.
 
 typedef struct {
-    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_,
-              const char* name_, uint32_t flags_) {
+    void init(const uint8_t* type_, const uint8_t* guid_, uint32_t slices_, const char* name_,
+              uint32_t flags_) {
         slices = slices_;
         memcpy(type, type_, FVM_GUID_LEN);
         memcpy(guid, guid_, FVM_GUID_LEN);
@@ -56,9 +56,7 @@ typedef struct {
         flags = flags_;
     }
 
-    void clear() {
-        memset(this, 0, sizeof(*this));
-    }
+    void clear() { memset(this, 0, sizeof(*this)); }
 
     uint8_t type[FVM_GUID_LEN]; // Mirroring GPT value
     uint8_t guid[FVM_GUID_LEN]; // Mirroring GPT value
@@ -68,8 +66,7 @@ typedef struct {
 } vpart_entry_t;
 
 static_assert(sizeof(vpart_entry_t) == 64, "Unexpected VPart entry size");
-static_assert(FVM_BLOCK_SIZE % sizeof(vpart_entry_t) == 0,
-              "VPart entries might cross block");
+static_assert(FVM_BLOCK_SIZE % sizeof(vpart_entry_t) == 0, "VPart entries might cross block");
 static_assert(sizeof(vpart_entry_t) * FVM_MAX_ENTRIES % FVM_BLOCK_SIZE == 0,
               "VPart entries don't cleanly fit within block");
 
@@ -110,16 +107,14 @@ typedef struct slice_entry {
 
 static_assert(FVM_MAX_ENTRIES <= VPART_MAX, "vpart address space too small");
 static_assert(sizeof(slice_entry_t) == 8, "Unexpected FVM slice entry size");
-static_assert(FVM_BLOCK_SIZE % sizeof(slice_entry_t) == 0,
-              "FVM slice entry might cross block");
+static_assert(FVM_BLOCK_SIZE % sizeof(slice_entry_t) == 0, "FVM slice entry might cross block");
 
 constexpr size_t kVPartTableOffset = FVM_BLOCK_SIZE;
 constexpr size_t kVPartTableLength = (sizeof(vpart_entry_t) * FVM_MAX_ENTRIES);
 constexpr size_t kAllocTableOffset = kVPartTableOffset + kVPartTableLength;
 
 constexpr size_t AllocTableLength(size_t total_size, size_t slice_size) {
-    return fbl::round_up(sizeof(slice_entry_t) * (total_size / slice_size),
-                         FVM_BLOCK_SIZE);
+    return fbl::round_up(sizeof(slice_entry_t) * (total_size / slice_size), FVM_BLOCK_SIZE);
 }
 
 constexpr size_t MetadataSize(size_t total_size, size_t slice_size) {
@@ -138,10 +133,6 @@ constexpr size_t UsableSlicesCount(size_t total_size, size_t slice_size) {
     return (total_size - SlicesStart(total_size, slice_size)) / slice_size;
 }
 
-constexpr size_t SliceStart(size_t total_size, size_t slice_size, size_t pslice) {
-    return SlicesStart(total_size, slice_size) + (pslice - 1) * slice_size;
-}
-
 constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t block_count) {
     if (slice_size == 0 || slice_size < block_size) {
         return 0;
@@ -154,6 +145,77 @@ constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t blo
 constexpr size_t SlicesToBlocks(size_t slice_size, size_t block_size, size_t slice_count) {
     return slice_count * slice_size / block_size;
 }
+
+// Defines the type of superblocks of an FVM. The key difference is how the offset from the
+// beginning is calculated. They both share the same format.
+enum class SuperblockType {
+    kPrimary,
+    kSecondary,
+};
+
+// Helper class for obtaining information about the format of a FVM, such as superblock offsets,
+// metadata size, allocated sizes, etc.
+//
+// This class is copyable and moveable.
+class FormatInfo {
+public:
+    // Returns a FormatInfo from a Fvm header and a disk size.
+    static FormatInfo FromSuperBlock(const fvm_t& superblock);
+
+    // Assumes a superblock created from the given disk for the given disk size,
+    // with slice size. (No Preallocated metadata headers for future growth).
+    static FormatInfo FromDiskSize(size_t disk_size, size_t slice_size);
+
+    // Without instantiating a SuperBlock, assumes that an fvm will be formatted initially with
+    // |initial_size| and eventually will grow up to |max_size| with |slice_size|.
+    static FormatInfo FromPreallocatedSize(size_t initial_size, size_t max_size, size_t slice_size);
+
+    FormatInfo() = default;
+    FormatInfo(const FormatInfo&) = default;
+    FormatInfo(FormatInfo&&) = default;
+    FormatInfo& operator=(const FormatInfo&) = default;
+    FormatInfo& operator=(FormatInfo&&) = default;
+    ~FormatInfo() = default;
+
+    // Returns the size of the addressable metadata in a FVM header.
+    size_t metadata_size() const { return metadata_size_; }
+
+    // Returns the size of the allocated metadata SuperBlock. This may be bigger than
+    // |metadata_size_| if there was extra space pre allocated for allowing fvm growing.
+    size_t metadata_allocated_size() const { return metadata_allocated_size_; }
+
+    // Returns the number of addressable slices for the superblock, this is the number
+    // of physical slices.
+    size_t slice_count() const { return slice_count_; }
+
+    // Returns the size of each slice in the described block.
+    size_t slice_size() const { return slice_size_; }
+
+    // Returns the offset of the given superblock. The first superblock is considered primary,
+    // in terms of position.
+    size_t GetSuperblockOffset(SuperblockType type) const {
+        return (type == SuperblockType::kPrimary) ? 0 : metadata_allocated_size();
+    }
+
+    // Returns the offset from the start of the disk to beginning of |pslice| physical slice.
+    // Note: pslice is 1-indexed.
+    size_t GetSliceStart(size_t pslice) const {
+        return 2 * metadata_allocated_size_ + (pslice - 1) * slice_size_;
+    }
+
+private:
+    // Size in bytes of addressable metadata.
+    size_t metadata_size_ = 0;
+
+    // Size in bytes of the allocated size of metadata.
+    size_t metadata_allocated_size_ = 0;
+
+    // Number of addressable slices.
+    size_t slice_count_ = 0;
+
+    // Size of the slices.
+    size_t slice_size_ = 0;
+};
 
 } // namespace fvm
 
@@ -171,7 +233,7 @@ void fvm_update_hash(void* metadata, size_t metadata_size);
 //
 // "out" is an optional output parameter which is equal to a
 // valid copy of either metadata or backup on success.
-zx_status_t fvm_validate_header(const void* metadata, const void* backup,
-                                size_t metadata_size, const void** out);
+zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t metadata_size,
+                                const void** out);
 
 __END_CDECLS

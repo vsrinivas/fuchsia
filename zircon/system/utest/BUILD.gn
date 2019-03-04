@@ -21,8 +21,8 @@ if (current_cpu != "") {
       "$zx/system/dev/block/mtk-sdmmc:mtk-sdmmc-test",
       "$zx/system/dev/block/usb-mass-storage:tests",
       "$zx/system/dev/bus/virtio:virtio-test",
-      "$zx/system/dev/gpio/mt-8167:mtk-gpio",
       "$zx/system/dev/gpio/msm8x53:msm8x53-gpio",
+      "$zx/system/dev/gpio/mt-8167:mtk-gpio",
       "$zx/system/dev/input/bma253:bma253-test",
       "$zx/system/dev/lib/usb:usb-wrapper-test",
       "$zx/system/dev/light-sensor/lite-on:ltr-578als-test",
@@ -39,6 +39,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/bootfs:bootfs-test",
       "$zx/system/ulib/ddk:ddk-unittest",
       "$zx/system/ulib/driver-integration-test/test",
+      "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/id_allocator/test",
       "$zx/system/ulib/kvstore:kvstore-test",
       "$zx/system/ulib/minfs/test",
@@ -181,6 +182,7 @@ if (current_cpu != "") {
   group("host-tests") {
     testonly = true
     deps = [
+      "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/zxtest/test",
       "banjo-compiler",
       "fbl",

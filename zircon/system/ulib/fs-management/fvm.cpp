@@ -4,8 +4,8 @@
 
 #include <fs-management/mount.h>
 
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -15,16 +15,16 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-management/fvm.h>
+#include <fs/client.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fvm/format.h>
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
-#include <fs/client.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
@@ -62,9 +62,9 @@ static bool is_partition(int fd, const uint8_t* uniqueGUID, const uint8_t* typeG
 
 constexpr char kBlockDevPath[] = "/dev/class/block/";
 
-}  // namespace anonymous
+} // namespace
 
-zx_status_t fvm_init(int fd, size_t slice_size) {
+zx_status_t fvm_init_with_size(int fd, uint64_t volume_size, size_t slice_size) {
     if (slice_size % FVM_BLOCK_SIZE != 0) {
         // Alignment
         return ZX_ERR_INVALID_ARGS;
@@ -73,6 +73,57 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
         return ZX_ERR_INVALID_ARGS;
     }
 
+    fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(volume_size, slice_size);
+
+    fbl::unique_ptr<uint8_t[]> mvmo(new uint8_t[format_info.metadata_allocated_size() * 2]);
+    // Clear entire primary copy of metadata
+    memset(mvmo.get(), 0, format_info.metadata_allocated_size());
+
+    // Superblock
+    fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(mvmo.get());
+    sb->magic = FVM_MAGIC;
+    sb->version = FVM_VERSION;
+    sb->pslice_count = format_info.slice_count();
+    sb->slice_size = slice_size;
+    sb->fvm_partition_size = volume_size;
+    sb->vpartition_table_size = fvm::kVPartTableLength;
+    sb->allocation_table_size = fvm::AllocTableLength(volume_size, slice_size);
+    sb->generation = 0;
+
+    if (sb->pslice_count == 0) {
+        return ZX_ERR_NO_SPACE;
+    }
+
+    fvm_update_hash(mvmo.get(), format_info.metadata_size());
+
+    const void* backup =
+        reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo.get()) +
+                                format_info.GetSuperblockOffset(fvm::SuperblockType::kSecondary));
+    zx_status_t status =
+        fvm_validate_header(mvmo.get(), backup, format_info.metadata_size(), nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (lseek(fd, 0, SEEK_SET) < 0) {
+        return ZX_ERR_BAD_STATE;
+    }
+    // Write to primary copy.
+    if (write(fd, mvmo.get(), format_info.metadata_allocated_size()) !=
+        static_cast<ssize_t>(format_info.metadata_allocated_size())) {
+        return ZX_ERR_BAD_STATE;
+    }
+    // Write to secondary copy, to overwrite any previous FVM metadata copy that
+    // could be here.
+    if (write(fd, mvmo.get(), format_info.metadata_allocated_size()) !=
+        static_cast<ssize_t>(format_info.metadata_allocated_size())) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t fvm_init(int fd, size_t slice_size) {
     // The metadata layout of the FVM is dependent on the
     // size of the FVM's underlying partition.
     block_info_t block_info;
@@ -86,51 +137,7 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
         return ZX_ERR_BAD_STATE;
     }
 
-    size_t disk_size = block_info.block_count * block_info.block_size;
-    size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
-
-    fbl::unique_ptr<uint8_t[]> mvmo(new uint8_t[metadata_size * 2]);
-    // Clear entire primary copy of metadata
-    memset(mvmo.get(), 0, metadata_size);
-
-    // Superblock
-    fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(mvmo.get());
-    sb->magic = FVM_MAGIC;
-    sb->version = FVM_VERSION;
-    sb->pslice_count = (disk_size - metadata_size * 2) / slice_size;
-    sb->slice_size = slice_size;
-    sb->fvm_partition_size = disk_size;
-    sb->vpartition_table_size = fvm::kVPartTableLength;
-    sb->allocation_table_size = fvm::AllocTableLength(disk_size, slice_size);
-    sb->generation = 0;
-
-    if (sb->pslice_count == 0) {
-        return ZX_ERR_NO_SPACE;
-    }
-
-    fvm_update_hash(mvmo.get(), metadata_size);
-
-    const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo.get()) +
-                                                 metadata_size);
-    zx_status_t status = fvm_validate_header(mvmo.get(), backup, metadata_size, nullptr);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    if (lseek(fd, 0, SEEK_SET) < 0) {
-        return ZX_ERR_BAD_STATE;
-    }
-    // Write to primary copy.
-    if (write(fd, mvmo.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
-        return ZX_ERR_BAD_STATE;
-    }
-    // Write to secondary copy, to overwrite any previous FVM metadata copy that
-    // could be here.
-    if (write(fd, mvmo.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    return ZX_OK;
+    return fvm_init_with_size(fd, block_info.block_count * block_info.block_size, slice_size);
 }
 
 // Helper function to overwrite FVM given the slice_size
@@ -175,7 +182,7 @@ zx_status_t fvm_overwrite(const char* path, size_t slice_size) {
     // Write to backup copy
     if (write(fd, buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
         fprintf(stderr, "fvm_overwrite: Failed to write metadata (secondary)\n");
-       return -1;
+        return -1;
     }
 
     if (ioctl_block_rr_part(fd) != 0) {
@@ -214,9 +221,7 @@ zx_status_t fvm_destroy(const char* path) {
 // Helper function to allocate, find, and open VPartition.
 int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
     fzl::FdioCaller caller((fbl::unique_fd(fvm_fd)));
-    auto cleanup = fbl::MakeAutoCall([&caller] {
-        caller.release().release();
-    });
+    auto cleanup = fbl::MakeAutoCall([&caller] { caller.release().release(); });
 
     fuchsia_hardware_block_partition_GUID type_guid;
     memcpy(type_guid.value, request->type, GUID_LEN);
@@ -225,8 +230,8 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
 
     zx_status_t status;
     zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-        caller.borrow_channel(), request->slice_count, &type_guid, &instance_guid,
-        request->name, NAME_LEN, request->flags, &status);
+        caller.borrow_channel(), request->slice_count, &type_guid, &instance_guid, request->name,
+        NAME_LEN, request->flags, &status);
     if (io_status != ZX_OK || status != ZX_OK) {
         return -1;
     }
@@ -236,21 +241,19 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
 
 zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out) {
     fzl::FdioCaller caller((fbl::unique_fd(fvm_fd)));
-    auto cleanup = fbl::MakeAutoCall([&caller] {
-        caller.release().release();
-    });
+    auto cleanup = fbl::MakeAutoCall([&caller] { caller.release().release(); });
 
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerQuery(
-        caller.borrow_channel(), &status, out);
+    zx_status_t io_status =
+        fuchsia_hardware_block_volume_VolumeManagerQuery(caller.borrow_channel(), &status, out);
     if (io_status != ZX_OK) {
         return io_status;
     }
     return status;
 }
 
-int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
-                   zx_duration_t timeout, char* out_path) {
+int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, zx_duration_t timeout,
+                   char* out_path) {
     ZX_ASSERT(uniqueGUID || typeGUID);
 
     typedef struct {

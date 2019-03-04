@@ -20,8 +20,8 @@ namespace fvm {
 
 Checker::Checker() = default;
 
-Checker::Checker(fbl::unique_fd fd, uint32_t block_size, bool silent) :
-        fd_(std::move(fd)), block_size_(block_size), logger_(silent) {}
+Checker::Checker(fbl::unique_fd fd, uint32_t block_size, bool silent)
+    : fd_(std::move(fd)), block_size_(block_size), logger_(silent) {}
 
 Checker::~Checker() = default;
 
@@ -68,45 +68,46 @@ bool Checker::LoadFVM(FvmInfo* out) const {
         return false;
     }
     const fvm::fvm_t* superblock = reinterpret_cast<fvm::fvm_t*>(header.get());
-    const size_t slice_size = superblock->slice_size;
-    if (slice_size % block_size_ != 0) {
+    const fvm::FormatInfo format_info = fvm::FormatInfo::FromSuperBlock(*superblock);
+    if (format_info.slice_size() % block_size_ != 0) {
         logger_.Error("Slice size not divisible by block size\n");
         return false;
-    } else if (slice_size == 0) {
+    } else if (format_info.slice_size() == 0) {
         logger_.Error("Slice size cannot be zero\n");
         return false;
     }
-    const size_t metadata_size = fvm::MetadataSize(device_size, slice_size);
-    fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[metadata_size * 2]);
-    if (pread(fd_.get(), metadata.get(), metadata_size * 2, 0) !=
-        static_cast<ssize_t>(metadata_size * 2)) {
+    fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[format_info.metadata_allocated_size() * 2]);
+    if (pread(fd_.get(), metadata.get(), format_info.metadata_allocated_size() * 2, 0) !=
+        static_cast<ssize_t>(format_info.metadata_allocated_size() * 2)) {
         logger_.Error("Could not read metadata\n");
         return false;
     }
 
     const void* metadata1 = metadata.get();
-    const void* metadata2 = reinterpret_cast<const void*>(metadata.get() + metadata_size);
+    const void* metadata2 =
+        reinterpret_cast<const void*>(metadata.get() + format_info.metadata_allocated_size());
 
     const void* valid_metadata;
-    zx_status_t status = fvm_validate_header(metadata1, metadata2, metadata_size,
-                                             &valid_metadata);
+    zx_status_t status =
+        fvm_validate_header(metadata1, metadata2, format_info.metadata_size(), &valid_metadata);
     if (status != ZX_OK) {
         logger_.Error("Invalid FVM metadata\n");
         return false;
     }
 
     const void* invalid_metadata = (metadata1 == valid_metadata) ? metadata2 : metadata1;
-    const size_t valid_metadata_offset = (metadata1 == valid_metadata) ? 0 : metadata_size;
+    const size_t valid_metadata_offset = format_info.GetSuperblockOffset(
+        metadata1 == valid_metadata ? SuperblockType::kPrimary : SuperblockType::kSecondary);
 
     FvmInfo info = {
-        fbl::Array<uint8_t>(metadata.release(), metadata_size * 2),
+        fbl::Array<uint8_t>(metadata.release(), format_info.metadata_allocated_size() * 2),
         valid_metadata_offset,
         static_cast<const uint8_t*>(valid_metadata),
         static_cast<const uint8_t*>(invalid_metadata),
         block_size_,
         block_count,
         static_cast<size_t>(device_size),
-        slice_size,
+        format_info.slice_size(),
     };
 
     *out = std::move(info);
@@ -142,7 +143,7 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::slice_entry_t*
                 valid = false;
             }
 
-            Slice slice = { vpart, slice_table[i].Vslice(), i };
+            Slice slice = {vpart, slice_table[i].Vslice(), i};
 
             slices.push_back(slice);
             partitions[vpart].slices.push_back(std::move(slice));
@@ -188,10 +189,10 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
             logger_.Log("  Allocated as virtual slice %zu\n", run_start->virtual_slice);
             logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
         } else if (run_length > 1) {
-            logger_.Log("Physical Slices [%zu, %zu] allocated\n",
-                run_start->physical_slice, run_start->physical_slice + run_length - 1);
-            logger_.Log("  Allocated as virtual slices [%zu, %zu]\n",
-                run_start->virtual_slice, run_start->virtual_slice + run_length - 1);
+            logger_.Log("Physical Slices [%zu, %zu] allocated\n", run_start->physical_slice,
+                        run_start->physical_slice + run_length - 1);
+            logger_.Log("  Allocated as virtual slices [%zu, %zu]\n", run_start->virtual_slice,
+                        run_start->virtual_slice + run_length - 1);
             logger_.Log("  Allocated to partition %zu\n", run_start->virtual_partition);
         }
         run_start = nullptr;
@@ -205,8 +206,7 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
         const auto& slice = slices[i];
         const size_t expected_pslice = run_start->physical_slice + run_length;
         const size_t expected_vslice = run_start->virtual_slice + run_length;
-        if (slice.physical_slice == expected_pslice &&
-            slice.virtual_slice == expected_vslice &&
+        if (slice.physical_slice == expected_pslice && slice.virtual_slice == expected_vslice &&
             slice.virtual_partition == run_start->virtual_partition) {
             run_length++;
         } else {
@@ -220,13 +220,15 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
 bool Checker::CheckFVM(const FvmInfo& info) const {
     auto superblock = reinterpret_cast<const fvm::fvm_t*>(info.valid_metadata);
     auto invalid_superblock = reinterpret_cast<const fvm::fvm_t*>(info.invalid_metadata);
+    fvm::FormatInfo format_info = fvm::FormatInfo::FromSuperBlock(*superblock);
+
     logger_.Log("[  FVM Info  ]\n");
     logger_.Log("Version: %" PRIu64 "\n", superblock->version);
     logger_.Log("Generation number: %" PRIu64 "\n", superblock->generation);
     logger_.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock->generation);
     logger_.Log("\n");
 
-    const size_t slice_count = fvm::UsableSlicesCount(info.device_size, info.slice_size);
+    const size_t slice_count = format_info.slice_count();
     logger_.Log("[  Size Info  ]\n");
     logger_.Log("%-15s %10zu\n", "Device Length:", info.device_size);
     logger_.Log("%-15s %10zu\n", "Block size:", info.block_size);
@@ -234,7 +236,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
     logger_.Log("%-15s %10zu\n", "Slice count:", slice_count);
     logger_.Log("\n");
 
-    const size_t metadata_size = fvm::MetadataSize(info.device_size, info.slice_size);
+    const size_t metadata_size = format_info.metadata_allocated_size();
     const size_t metadata_count = 2;
     const size_t metadata_end = metadata_size * metadata_count;
     logger_.Log("[  Metadata  ]\n");
@@ -270,10 +272,10 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
     logger_.Log("%-25s 0x%016zx\n", "Slice table end:", slice_table_end);
     logger_.Log("\n");
 
-    const fvm::slice_entry_t* slice_table = reinterpret_cast<const fvm::slice_entry_t*>(
-            info.valid_metadata + slice_table_start);
-    const fvm::vpart_entry_t* vpart_table = reinterpret_cast<const fvm::vpart_entry_t*>(
-            info.valid_metadata + vpart_table_start);
+    const fvm::slice_entry_t* slice_table =
+        reinterpret_cast<const fvm::slice_entry_t*>(info.valid_metadata + slice_table_start);
+    const fvm::vpart_entry_t* vpart_table =
+        reinterpret_cast<const fvm::vpart_entry_t*>(info.valid_metadata + vpart_table_start);
 
     fbl::Vector<Slice> slices;
     fbl::Array<Partition> partitions;
@@ -301,4 +303,4 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
     return valid;
 }
 
-}  // namespace fvm
+} // namespace fvm

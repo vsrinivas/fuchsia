@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,6 +17,10 @@ __BEGIN_CDECLS
 
 // Format a block device to be an empty FVM.
 zx_status_t fvm_init(int fd, size_t slice_size);
+
+// Format a block device to be an empty FVM of |disk_size| size.
+zx_status_t fvm_init_with_size(int fd, uint64_t disk_size, size_t slice_size);
+
 // Queries driver to obtain slice_size, then overwrites and unbinds an FVM
 zx_status_t fvm_destroy(const char* path);
 // Given the slice_size, overwrites and unbinds an FVM
@@ -38,8 +43,8 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out)
 // At least one of the GUIDs must be non-null.
 //
 // Returns an open fd to the partition on success, -1 on error.
-int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
-                   zx_duration_t timeout, char* out_path);
+int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, zx_duration_t timeout,
+                   char* out_path);
 
 // Finds and destroys the partition with the given GUID pair, if it exists.
 zx_status_t destroy_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID);

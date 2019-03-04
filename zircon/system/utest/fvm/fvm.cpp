@@ -72,8 +72,8 @@ static char test_disk_path[PATH_MAX];
 static uint64_t test_block_size;
 static uint64_t test_block_count;
 
-int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size,
-                 char* disk_path_out, char* fvm_driver_out) {
+int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size, char* disk_path_out,
+                 char* fvm_driver_out) {
     zx::channel fvm_channel;
     zx_status_t status, call_status;
     fbl::unique_fd fd;
@@ -104,7 +104,7 @@ int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size,
         exit(-1);
     }
     status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
-                                       STRLEN(FVM_DRIVER_LIB), &call_status);
+                                           STRLEN(FVM_DRIVER_LIB), &call_status);
     if (status == ZX_OK) {
         status = call_status;
     }
@@ -138,8 +138,7 @@ typedef struct {
     size_t number;
 } partition_entry_t;
 
-int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries,
-              size_t entry_count) {
+int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries, size_t entry_count) {
     if (use_real_disk) {
         fbl::unique_fd disk_fd(open(disk_path, O_RDWR));
         if (!disk_fd) {
@@ -191,9 +190,8 @@ int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries,
             return -1;
         }
         zx_status_t call_status;
-        zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
-                                                           FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
-                                                           &call_status);
+        zx_status_t status = fuchsia_device_ControllerBind(
+            fdio_unsafe_borrow_channel(io), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB), &call_status);
         fdio_unsafe_release(io);
         if (status == ZX_OK) {
             status = call_status;
@@ -281,37 +279,39 @@ int EndFVMTest(const char* device_path) {
 
 /////////////////////// Helper functions, definitions
 
-constexpr uint8_t kTestUniqueGUID[] = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
-};
-constexpr uint8_t kTestUniqueGUID2[] = {
-    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
-};
+constexpr uint8_t kTestUniqueGUID[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                       0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+constexpr uint8_t kTestUniqueGUID2[] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                                        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
 
 // Intentionally avoid aligning these GUIDs with
 // the actual system GUIDs; otherwise, limited versions
 // of Fuchsia may attempt to actually mount these
 // partitions automatically.
 
-#define GUID_TEST_DATA_VALUE {                      \
-    0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99, \
-    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17  \
-}
+// clang-format off
+#define GUID_TEST_DATA_VALUE                                                                       \
+    {                                                                                              \
+        0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99,                                            \
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,                                            \
+    }
 
-#define GUID_TEST_BLOB_VALUE {                      \
-    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, \
-    0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99  \
-}
+#define GUID_TEST_BLOB_VALUE                                                                       \
+    {                                                                                              \
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,                                            \
+        0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99,                                            \
+    }
 
-#define GUID_TEST_SYS_VALUE {                       \
-    0xEE, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99, \
-    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17  \
-}
+#define GUID_TEST_SYS_VALUE                                                                        \
+    {                                                                                              \
+        0xEE, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99,                                            \
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,                                            \
+    }
+// clang-format on
 
 constexpr char kTestPartName1[] = "data";
-constexpr uint8_t kTestPartGUIDData[] = GUID_TEST_DATA_VALUE;
+constexpr uint8_t kTestPartGUIDData[] = {0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99,
+                                         0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17};
 
 constexpr char kTestPartName2[] = "blob";
 constexpr uint8_t kTestPartGUIDBlob[] = GUID_TEST_BLOB_VALUE;
@@ -328,14 +328,14 @@ public:
     bool CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool Transaction(block_fifo_request_t* requests, size_t count) {
         BEGIN_HELPER;
-        ASSERT_EQ(block_fifo_txn(client_, &requests[0], count), ZX_OK); END_HELPER;
+        ASSERT_EQ(block_fifo_txn(client_, &requests[0], count), ZX_OK);
+        END_HELPER;
     }
 
     int fd() const { return fd_; }
     groupid_t group() { return 0; }
-    ~VmoClient() {
-        block_fifo_release_client(client_);
-    }
+    ~VmoClient() { block_fifo_release_client(client_); }
+
 private:
     int fd_;
     block_info_t info_;
@@ -344,8 +344,7 @@ private:
 
 class VmoBuf {
 public:
-    static bool Create(fbl::RefPtr<VmoClient> client, size_t size,
-                       fbl::unique_ptr<VmoBuf>* out) {
+    static bool Create(fbl::RefPtr<VmoClient> client, size_t size, fbl::unique_ptr<VmoBuf>* out) {
         BEGIN_HELPER;
 
         fbl::AllocChecker ac;
@@ -356,16 +355,13 @@ public:
         ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
 
         zx_handle_t xfer_vmo;
-        ASSERT_EQ(zx_handle_duplicate(vmo.get(), ZX_RIGHT_SAME_RIGHTS,
-                                      &xfer_vmo), ZX_OK);
+        ASSERT_EQ(zx_handle_duplicate(vmo.get(), ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
 
         vmoid_t vmoid;
         ASSERT_GT(ioctl_block_attach_vmo(client->fd(), &xfer_vmo, &vmoid), 0);
 
-        fbl::unique_ptr<VmoBuf> vb(new (&ac) VmoBuf(std::move(client),
-                                                     std::move(vmo),
-                                                     std::move(buf),
-                                                     vmoid));
+        fbl::unique_ptr<VmoBuf> vb(
+            new (&ac) VmoBuf(std::move(client), std::move(vmo), std::move(buf), vmoid));
         ASSERT_TRUE(ac.check());
         *out = std::move(vb);
         END_HELPER;
@@ -384,10 +380,9 @@ public:
 private:
     friend VmoClient;
 
-    VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo,
-           fbl::unique_ptr<uint8_t[]> buf, vmoid_t vmoid) :
-        client_(std::move(client)), vmo_(std::move(vmo)),
-        buf_(std::move(buf)), vmoid_(vmoid) {}
+    VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo, fbl::unique_ptr<uint8_t[]> buf,
+           vmoid_t vmoid)
+        : client_(std::move(client)), vmo_(std::move(vmo)), buf_(std::move(buf)), vmoid_(vmoid) {}
 
     fbl::RefPtr<VmoClient> client_;
     zx::vmo vmo_;
@@ -622,8 +617,7 @@ bool TestLarge() {
     ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
     zx::channel fvm_channel;
-    ASSERT_EQ(fdio_get_service_handle(fd.release(), fvm_channel.reset_and_get_address()),
-              ZX_OK);
+    ASSERT_EQ(fdio_get_service_handle(fd.release(), fvm_channel.reset_and_get_address()), ZX_OK);
     zx_status_t call_status;
     zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
                                                        STRLEN(FVM_DRIVER_LIB), &call_status);
@@ -1232,11 +1226,11 @@ bool TestVPartitionSplit() {
     end_erequest.offset = 3;
     end_erequest.length = slice_count - 3;
 
-
     auto verifyExtents = [&](bool start, bool mid, bool end) {
         size_t start_block = start_erequest.offset * (slice_size / block_info.block_size);
         size_t mid_block = mid_erequest.offset * (slice_size / block_info.block_size);
         size_t end_block = end_erequest.offset * (slice_size / block_info.block_size);
+
         if (start) {
             ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), start_block, 1));
         } else {
@@ -1524,10 +1518,10 @@ bool TestSliceAccessContiguous() {
         ASSERT_TRUE(VmoClient::Create(vp_fd.get(), &vc));
         fbl::unique_ptr<VmoBuf> vb;
         ASSERT_TRUE(VmoBuf::Create(vc, block_info.block_size * 2, &vb));
-        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block,
-                                   block_info.block_size));
-        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, block_info.block_size * last_block,
-                                  block_info.block_size));
+        ASSERT_TRUE(
+            vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block, block_info.block_size));
+        ASSERT_TRUE(
+            vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size));
 
         // Try writing out of bounds -- check that we don't have access.
         ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2));
@@ -1544,11 +1538,10 @@ bool TestSliceAccessContiguous() {
                                    block_info.block_size * (last_block + 1),
                                    block_info.block_size));
         ASSERT_TRUE(vc->CheckRead(vb.get(), block_info.block_size,
-                                  block_info.block_size * (last_block + 1),
-                                  block_info.block_size));
+                                  block_info.block_size * (last_block + 1), block_info.block_size));
         // ... We can still access the previous slice...
-        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, block_info.block_size * last_block,
-                                  block_info.block_size));
+        ASSERT_TRUE(
+            vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size));
         // ... And we can cross slices
         ASSERT_TRUE(vc->CheckRead(vb.get(), 0, block_info.block_size * last_block,
                                   block_info.block_size * 2));
@@ -1703,10 +1696,10 @@ bool TestSliceAccessNonContiguousPhysical() {
         fbl::unique_ptr<VmoBuf> vb;
         ASSERT_TRUE(VmoBuf::Create(vc, block_info.block_size * 2, &vb));
 
-        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block,
-                                   block_info.block_size));
-        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, block_info.block_size * last_block,
-                                  block_info.block_size));
+        ASSERT_TRUE(
+            vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block, block_info.block_size));
+        ASSERT_TRUE(
+            vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size));
 
         // Try writing out of bounds -- check that we don't have access.
         ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2));
@@ -1723,11 +1716,10 @@ bool TestSliceAccessNonContiguousPhysical() {
                                    block_info.block_size * (last_block + 1),
                                    block_info.block_size));
         ASSERT_TRUE(vc->CheckRead(vb.get(), block_info.block_size,
-                                  block_info.block_size * (last_block + 1),
-                                  block_info.block_size));
+                                  block_info.block_size * (last_block + 1), block_info.block_size));
         // ... We can still access the previous slice...
-        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, block_info.block_size * last_block,
-                                  block_info.block_size));
+        ASSERT_TRUE(
+            vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size));
         // ... And we can cross slices
         ASSERT_TRUE(vc->CheckRead(vb.get(), 0, block_info.block_size * last_block,
                                   block_info.block_size * 2));
@@ -1876,7 +1868,7 @@ bool TestSliceAccessNonContiguousVirtual() {
     }
 
     ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_TRUE(FVMCheckSliceSize(fvm_driver,slice_size));
+    ASSERT_TRUE(FVMCheckSliceSize(fvm_driver, slice_size));
     ASSERT_TRUE(ValidateFVM(ramdisk_path));
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
@@ -1942,10 +1934,10 @@ bool TestPersistenceSimple() {
     // Try extending the vpartition, and checking that the extension persists.
     // This is the last 'accessible' block.
     size_t last_block = (slice_size / block_info.block_size) - 1;
-    ASSERT_TRUE(CheckWrite(vp_fd.get(), block_info.block_size * last_block,
-                           block_info.block_size, &buf[0]));
-    ASSERT_TRUE(CheckRead(vp_fd.get(), block_info.block_size * last_block,
-                          block_info.block_size, &buf[0]));
+    ASSERT_TRUE(CheckWrite(vp_fd.get(), block_info.block_size * last_block, block_info.block_size,
+                           &buf[0]));
+    ASSERT_TRUE(
+        CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, &buf[0]));
 
     // Try writing out of bounds -- check that we don't have access.
     ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2));
@@ -1966,8 +1958,8 @@ bool TestPersistenceSimple() {
     ASSERT_TRUE(CheckRead(vp_fd.get(), block_info.block_size * (last_block + 1),
                           block_info.block_size, &buf[block_info.block_size]));
     // ... We can still access the previous slice...
-    ASSERT_TRUE(CheckRead(vp_fd.get(), block_info.block_size * last_block,
-                          block_info.block_size, &buf[0]));
+    ASSERT_TRUE(
+        CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, &buf[0]));
     // ... And we can cross slices
     ASSERT_TRUE(CheckRead(vp_fd.get(), block_info.block_size * last_block,
                           block_info.block_size * 2, &buf[0]));
@@ -2004,9 +1996,7 @@ bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
     BEGIN_HELPER;
 
     // Format the VPart as |disk_format|.
-    ASSERT_EQ(mkfs(partition_path, disk_format, launch_stdio_sync,
-                   &default_mkfs_options),
-              ZX_OK);
+    ASSERT_EQ(mkfs(partition_path, disk_format, launch_stdio_sync, &default_mkfs_options), ZX_OK);
 
     fbl::unique_fd vp_fd(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd);
@@ -2036,8 +2026,9 @@ bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
               query_request.vslice_start[1] - query_request.vslice_start[0]);
 
     // Try to mount the VPart.
-    ASSERT_NE(mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options,
-                    launch_stdio_async), ZX_OK);
+    ASSERT_NE(
+        mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_async),
+        ZX_OK);
 
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd);
@@ -2072,8 +2063,9 @@ bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
     }
 
     // Try mount again.
-    ASSERT_EQ(mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options,
-                    launch_stdio_async), ZX_OK);
+    ASSERT_EQ(
+        mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_async),
+        ZX_OK);
     ASSERT_EQ(umount(kMountPath), ZX_OK);
 
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
@@ -2119,8 +2111,7 @@ bool TestCorruptMount() {
     ASSERT_EQ(mkdir(kMountPath, 0666), 0);
 
     char partition_path[PATH_MAX];
-    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block",
-             fvm_driver, kTestPartName1);
+    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_driver, kTestPartName1);
 
     size_t kMinfsBlocksPerSlice = slice_size / minfs::kMinfsBlockSize;
     query_request_t query_request;
@@ -2314,10 +2305,8 @@ bool TestMounting() {
 
     // Format the VPart as minfs
     char partition_path[PATH_MAX];
-    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block",
-             fvm_driver, kTestPartName1);
-    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
-                   &default_mkfs_options),
+    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_driver, kTestPartName1);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
 
     // Mount the VPart
@@ -2333,7 +2322,8 @@ bool TestMounting() {
     filesystem_info_t filesystem_info;
     fzl::FdioCaller caller(std::move(rootfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status,
-                                                       &filesystem_info), ZX_OK);
+                                                       &filesystem_info),
+              ZX_OK);
     const char* kFsName = "minfs";
     const char* name = reinterpret_cast<const char*>(filesystem_info.name);
     ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
@@ -2375,39 +2365,41 @@ bool TestMkfs() {
 
     // Format the VPart as minfs.
     char partition_path[PATH_MAX];
-    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block",
-             fvm_driver, kTestPartName1);
-    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
-                   &default_mkfs_options), ZX_OK);
+    snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_driver, kTestPartName1);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
 
     // Format it as MinFS again, even though it is already formatted.
-    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
-                   &default_mkfs_options), ZX_OK);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
 
     // Now try reformatting as blobfs.
-    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_BLOBFS, launch_stdio_sync,
-                   &default_mkfs_options), ZX_OK);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
 
     // Demonstrate that mounting as minfs will fail, but mounting as blobfs
     // is successful.
     ASSERT_EQ(mkdir(kMountPath, 0666), 0);
     ASSERT_NE(mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_sync), ZX_OK);
+                    launch_stdio_sync),
+              ZX_OK);
     vp_fd.reset(open(partition_path, O_RDWR));
     ASSERT_TRUE(vp_fd);
     ASSERT_EQ(mount(vp_fd.release(), kMountPath, DISK_FORMAT_BLOBFS, &default_mount_options,
-                    launch_stdio_async), ZX_OK);
+                    launch_stdio_async),
+              ZX_OK);
     ASSERT_EQ(umount(kMountPath), ZX_OK);
 
     // ... and reformat back to MinFS again.
-    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
-                   &default_mkfs_options), ZX_OK);
+    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
 
     // Mount the VPart.
     vp_fd.reset(open(partition_path, O_RDWR));
     ASSERT_TRUE(vp_fd);
     ASSERT_EQ(mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_async), ZX_OK);
+                    launch_stdio_async),
+              ZX_OK);
 
     // Verify that the mount was successful.
     fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -2416,7 +2408,8 @@ bool TestMkfs() {
     filesystem_info_t filesystem_info;
     fzl::FdioCaller caller(std::move(rootfd));
     ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status,
-                                                       &filesystem_info), ZX_OK);
+                                                       &filesystem_info),
+              ZX_OK);
     const char* kFsName = "minfs";
     const char* name = reinterpret_cast<const char*>(filesystem_info.name);
     ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
@@ -2589,6 +2582,7 @@ bool TestCorruptionUnrecoverable() {
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0);
+
     const size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
     fbl::unique_fd ramdisk_fd(open(ramdisk_path, O_RDWR));
     ASSERT_TRUE(ramdisk_fd);
@@ -2672,8 +2666,7 @@ typedef struct {
     thrd_t thr;
 } fvm_thread_state_t;
 
-template <size_t ThreadCount>
-struct fvm_test_state_t {
+template <size_t ThreadCount> struct fvm_test_state_t {
     size_t block_size;
     size_t slice_size;
     size_t slices_total;
@@ -2683,14 +2676,12 @@ struct fvm_test_state_t {
     size_t slices_left TA_GUARDED(lock);
 };
 
-template <size_t ThreadCount>
-struct thrd_args_t {
+template <size_t ThreadCount> struct thrd_args_t {
     size_t tid;
     fvm_test_state_t<ThreadCount>* st;
 };
 
-template <size_t ThreadCount>
-int random_access_thread(void* arg) {
+template <size_t ThreadCount> int random_access_thread(void* arg) {
     auto ta = static_cast<thrd_args_t<ThreadCount>*>(arg);
     uint8_t color = static_cast<uint8_t>(ta->tid);
     auto st = ta->st;
@@ -2725,8 +2716,8 @@ int random_access_thread(void* arg) {
             erequest.length = extension_length;
             size_t off = erequest.offset * st->slice_size;
             size_t len = extension_length * st->slice_size;
-            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size,
-                                           len / st->block_size));
+            ASSERT_TRUE(
+                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
             ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd.get(), &erequest), 0);
             self->extents[extent_index].len += extension_length;
 
@@ -2753,8 +2744,8 @@ int random_access_thread(void* arg) {
             erequest.length = extent.len;
             size_t off = erequest.offset * st->slice_size;
             size_t len = extent.len * st->slice_size;
-            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size,
-                                           len / st->block_size));
+            ASSERT_TRUE(
+                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
             ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd.get(), &erequest), 0);
             ASSERT_TRUE(CheckWriteColor(self->vp_fd.get(), off, len, color));
             ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
@@ -2772,8 +2763,8 @@ int random_access_thread(void* arg) {
             size_t shrink_length = (rand_r(&seed) % (self->extents[extent_index].len - 1)) + 1;
 
             extend_request_t erequest;
-            erequest.offset = self->extents[extent_index].start +
-                              self->extents[extent_index].len - shrink_length;
+            erequest.offset =
+                self->extents[extent_index].start + self->extents[extent_index].len - shrink_length;
             erequest.length = shrink_length;
             size_t off = self->extents[extent_index].start * st->slice_size;
             size_t len = self->extents[extent_index].len * st->slice_size;
@@ -2813,9 +2804,9 @@ int random_access_thread(void* arg) {
             ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
             // ... but not in the middle.
             off = (self->extents[extent_index].start + 1) * st->slice_size;
-            len = (shrink_length) * st->slice_size;
-            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size,
-                                           len / st->block_size));
+            len = (shrink_length)*st->slice_size;
+            ASSERT_TRUE(
+                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
 
             // To avoid collisions between test extents, let's remove the
             // trailing extent.
@@ -2847,8 +2838,8 @@ int random_access_thread(void* arg) {
             size_t len = self->extents[extent_index].len * st->slice_size;
             ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
             ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd.get(), &erequest), 0);
-            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size,
-                                           len / st->block_size));
+            ASSERT_TRUE(
+                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
             {
                 fbl::AutoLock al(&st->lock);
                 st->slices_left += self->extents[extent_index].len;
@@ -2864,8 +2855,7 @@ int random_access_thread(void* arg) {
     return 0;
 }
 
-template <size_t ThreadCount, bool Persistence>
-bool TestRandomOpMultithreaded() {
+template <size_t ThreadCount, bool Persistence> bool TestRandomOpMultithreaded() {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2927,8 +2917,7 @@ bool TestRandomOpMultithreaded() {
         s.thread_states[i].extents.push_back(std::move(extent), &ac);
         EXPECT_TRUE(ac.check());
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd.get(), 0, kBlocksPerSlice));
-        EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
-                              random_access_thread<ThreadCount>, &ta[i]),
+        EXPECT_EQ(thrd_create(&s.thread_states[i].thr, random_access_thread<ThreadCount>, &ta[i]),
                   thrd_success);
     }
 
@@ -2955,9 +2944,9 @@ bool TestRandomOpMultithreaded() {
             fbl::unique_fd vp_fd(open_partition(request.guid, request.type, 0, nullptr));
             ASSERT_TRUE(vp_fd);
             s.thread_states[i].vp_fd = std::move(vp_fd);
-            EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
-                                  random_access_thread<ThreadCount>, &ta[i]),
-                      thrd_success);
+            EXPECT_EQ(
+                thrd_create(&s.thread_states[i].thr, random_access_thread<ThreadCount>, &ta[i]),
+                thrd_success);
         }
     }
 
@@ -3016,7 +3005,134 @@ bool TestCheckNewFVM() {
     END_TEST;
 }
 
-}  // namespace
+bool TestAbortDriverLoadSmallDevice() {
+    BEGIN_TEST;
+    constexpr uint64_t kBlkSize = 512;
+    constexpr uint64_t kRamdiskBlkCount = 50 * (1 << 20) / kBlkSize;
+    constexpr uint64_t kSliceSize = (1 << 20);
+    constexpr uint64_t kFvmPartitionBlkCount = 4 * (1llu << 30) / kBlkSize;
+
+    // Write metadata to ramdisk.
+    ASSERT_EQ(ramdisk_create(kBlkSize, kRamdiskBlkCount, &test_ramdisk), ZX_OK);
+    char disk_path[PATH_MAX];
+    strlcpy(disk_path, ramdisk_get_path(test_ramdisk), PATH_MAX);
+    fbl::unique_fd ramdisk_fd(open(disk_path, O_RDWR));
+
+    // Init fvm with a partition bigger than the underlying disk.
+    fvm_init_with_size(ramdisk_fd.get(), kBlkSize * kFvmPartitionBlkCount, kSliceSize);
+
+    zx_status_t call_status;
+    zx::channel fvm_channel;
+    // Try to bind an fvm to the disk.
+    ASSERT_EQ(fdio_get_service_handle(ramdisk_fd.get(), fvm_channel.reset_and_get_address()),
+              ZX_OK);
+    ASSERT_EQ(fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
+                                            STRLEN(FVM_DRIVER_LIB), &call_status),
+              ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
+
+    // Ugly way of validating that the driver failed to Load.
+    char fvm_path[PATH_MAX];
+    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", disk_path);
+    ASSERT_EQ(wait_for_device(fvm_path, ZX_SEC(3)), ZX_ERR_TIMED_OUT);
+
+    // Grow the ramdisk to the appropiate size and bind should suceed.
+    ASSERT_EQ(ramdisk_grow(test_ramdisk, kFvmPartitionBlkCount * kBlkSize), ZX_OK);
+
+    ASSERT_EQ(fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
+                                            STRLEN(FVM_DRIVER_LIB), &call_status),
+              ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
+    ASSERT_EQ(wait_for_device(fvm_path, ZX_SEC(3)), ZX_OK);
+
+    END_TEST;
+}
+
+bool TestValidAfterBlockDeviceGrowth() {
+    BEGIN_TEST;
+    constexpr uint32_t kDataSizeInBlocks = 10;
+    constexpr uint64_t kBlkSize = 512;
+    constexpr uint64_t kInitialBlkCount = 50 * (1 << 20) / kBlkSize;
+    constexpr uint64_t kSliceSize = (1 << 20);
+    constexpr uint64_t kMaxBlkCount = 4 * (1llu << 30) / kBlkSize;
+    constexpr uint64_t kDataSizeInBytes = kDataSizeInBlocks * kBlkSize;
+
+    char ramdisk_path[PATH_MAX];
+    char fvm_driver[PATH_MAX];
+
+    ASSERT_EQ(StartFVMTest(kBlkSize, kInitialBlkCount, kSliceSize, ramdisk_path, fvm_driver), 0);
+
+    // Allocate a partition and write to it.
+    fbl::unique_fd driver(open(fvm_driver, O_RDWR));
+    ASSERT_GT(driver.get(), 0);
+    alloc_req_t request;
+    memset(&request, 0, sizeof(request));
+    request.slice_count = 1;
+    memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
+    strcpy(request.name, kTestPartName1);
+    memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+    fbl::unique_fd vp_fd(fvm_allocate_partition(driver.get(), &request));
+    ASSERT_GT(vp_fd.get(), 0);
+
+    // Get FVM info.
+    volume_info_t before_grow_info;
+
+    ASSERT_EQ(fvm_query(driver.get(), &before_grow_info), ZX_OK, "Failed to query fvm\n");
+    ASSERT_EQ(kSliceSize, before_grow_info.slice_size, "Unexpected slice size\n");
+
+    // Write 10 Kb of data and 10 Kb of 0s then verify.
+    fbl::Vector<uint8_t> data;
+    data.reserve(kDataSizeInBytes);
+    for (size_t curr_byte = 0; curr_byte < kDataSizeInBytes; ++curr_byte) {
+        if (curr_byte < 10 << 10) {
+            data.push_back(static_cast<uint8_t>(curr_byte % 256));
+        } else {
+            data.push_back(0);
+        }
+    }
+    ASSERT_EQ(lseek(vp_fd.get(), 0, SEEK_SET), 0);
+    ASSERT_EQ(write(vp_fd.get(), data.get(), data.size()), kDataSizeInBytes);
+
+    // Grow Ramdisk
+    ASSERT_EQ(ramdisk_grow(test_ramdisk, kMaxBlkCount * kBlkSize), ZX_OK);
+
+    // Rebind
+    const partition_entry_t entries[] = {
+        {kTestPartName1, 1},
+    };
+    vp_fd.reset();
+    driver.reset(FVMRebind(driver.release(), ramdisk_path, entries, 1));
+    ASSERT_TRUE(driver);
+
+    // Get the new fvm info.
+    volume_info_t after_grow_info;
+    ASSERT_EQ(fvm_query(driver.get(), &after_grow_info), ZX_OK, "Failed to query fvm\n");
+    ASSERT_EQ(kSliceSize, after_grow_info.slice_size, "Unexpected slice size\n");
+
+    // Get the virtual partition fd.
+    char buffer[PATH_MAX];
+    vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, buffer));
+    ASSERT_TRUE(vp_fd);
+
+    // Check info is the same.
+    ASSERT_EQ(before_grow_info.slice_size, after_grow_info.slice_size);
+    ASSERT_EQ(before_grow_info.vslice_count, after_grow_info.vslice_count);
+    ASSERT_EQ(before_grow_info.pslice_allocated_count, after_grow_info.pslice_allocated_count);
+    ASSERT_EQ(before_grow_info.pslice_total_count, after_grow_info.pslice_total_count);
+
+    // Read data from vp.
+    fbl::Array<uint8_t> read_data(new uint8_t[kDataSizeInBytes], kDataSizeInBytes);
+    ASSERT_EQ(read(vp_fd.get(), read_data.get(), read_data.size()), kDataSizeInBytes,
+              "Failed to read the entire written data.");
+
+    ASSERT_BYTES_EQ(data.get(), read_data.get(), read_data.size(),
+                    "Read data and written data do not match after growth.");
+
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0);
+    END_TEST;
+}
+
+} // namespace
 
 BEGIN_TEST_CASE(fvm_tests)
 RUN_TEST_MEDIUM(TestTooSmall)
@@ -3055,8 +3171,9 @@ RUN_TEST_LARGE((TestRandomOpMultithreaded<5, /* persistent= */ true>))
 RUN_TEST_LARGE((TestRandomOpMultithreaded<10, /* persistent= */ true>))
 RUN_TEST_LARGE((TestRandomOpMultithreaded<25, /* persistent= */ true>))
 RUN_TEST_MEDIUM(TestCorruptMount)
+RUN_TEST_MEDIUM(TestAbortDriverLoadSmallDevice)
+RUN_TEST_MEDIUM(TestValidAfterBlockDeviceGrowth)
 END_TEST_CASE(fvm_tests)
-
 
 BEGIN_TEST_CASE(fvm_check_tests)
 RUN_TEST_SMALL(TestCheckBadArguments);
@@ -3082,8 +3199,8 @@ int main(int argc, char** argv) {
                 zx_status_t call_status;
                 size_t path_len;
                 zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-                        fdio_unsafe_borrow_channel(io), &call_status, test_disk_path,
-                        PATH_MAX - 1, &path_len);
+                    fdio_unsafe_borrow_channel(io), &call_status, test_disk_path, PATH_MAX - 1,
+                    &path_len);
                 fdio_unsafe_release(io);
                 if (status == ZX_OK) {
                     status = call_status;
