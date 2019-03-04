@@ -90,8 +90,6 @@ class DebugAgent : public RemoteAPI,
                    debug_ipc::JobFilterReply* reply) override;
   void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                      debug_ipc::WriteMemoryReply* reply) override;
-  void OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
-                      debug_ipc::SymbolTablesReply* reply) override;
 
   // Breakpoint::ProcessDelegate implementation --------------------------------
 

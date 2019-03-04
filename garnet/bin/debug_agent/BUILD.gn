@@ -70,7 +70,6 @@ static_library("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/third_party/libunwindstack",
-    "//src/lib/elflib",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ngunwind",

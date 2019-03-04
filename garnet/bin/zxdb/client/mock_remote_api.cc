@@ -70,11 +70,4 @@ void MockRemoteAPI::WriteRegisters(
   });
 }
 
-void MockRemoteAPI::SymbolTables(
-    const debug_ipc::SymbolTablesRequest& request,
-    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(Err(), debug_ipc::SymbolTablesReply()); });
-}
-
 }  // namespace zxdb

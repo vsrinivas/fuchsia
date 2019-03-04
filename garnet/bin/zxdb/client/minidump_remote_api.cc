@@ -425,18 +425,6 @@ void MinidumpRemoteAPI::Modules(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::SymbolTables(
-    const debug_ipc::SymbolTablesRequest& request,
-    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
-  if (!minidump_) {
-    ErrNoDump(cb);
-    return;
-  }
-
-  debug_ipc::SymbolTablesReply reply;
-  Succeed(cb, reply);
-}
-
 void MinidumpRemoteAPI::Pause(
     const debug_ipc::PauseRequest& request,
     std::function<void(const Err&, debug_ipc::PauseReply)> cb) {

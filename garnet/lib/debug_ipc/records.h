@@ -223,11 +223,6 @@ struct Module {
   std::string build_id;
 };
 
-struct ElfSymbol {
-  std::string name;
-  uint64_t value = 0;
-};
-
 struct AddressRegion {
   std::string name;
   uint64_t base;

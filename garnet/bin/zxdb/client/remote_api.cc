@@ -44,12 +44,6 @@ void RemoteAPI::Modules(
   FXL_NOTREACHED();
 }
 
-void RemoteAPI::SymbolTables(
-    const debug_ipc::SymbolTablesRequest& request,
-    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
-  FXL_NOTREACHED();
-}
-
 void RemoteAPI::Pause(
     const debug_ipc::PauseRequest& request,
     std::function<void(const Err&, debug_ipc::PauseReply)> cb) {

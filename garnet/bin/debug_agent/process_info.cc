@@ -4,10 +4,6 @@
 
 #include "garnet/bin/debug_agent/process_info.h"
 
-// link.h leaks Elf-related #defines all over the place, so this has to be
-// included early or we don't compile. C++ was a mistake.
-#include "src/lib/elflib/elflib.h"
-
 #include <inttypes.h>
 #include <lib/zx/thread.h>
 #include <link.h>
@@ -27,82 +23,6 @@
 namespace debug_agent {
 
 namespace {
-
-using elflib::Elf64_Ehdr;
-using elflib::Elf64_Phdr;
-using elflib::Elf64_Shdr;
-using elflib::ElfLib;
-
-class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
- public:
-  ProcessMemoryAccessor(const zx::process* process, uint64_t base)
-      : process_(process), base_(base) {}
-  virtual ~ProcessMemoryAccessor() = default;
-
-  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
-#ifndef NDEBUG
-    auto iter = data_.upper_bound(offset);
-
-    if (iter != data_.begin()) {
-      --iter;
-    }
-
-    if (iter != data_.end() && iter->first <= offset &&
-        iter->first + iter->second.size() > offset) {
-      FXL_DCHECK(iter->first == offset && iter->second.size() == size);
-    }
-#endif  // NDEBUG
-    for (const auto& range : data_[offset]) {
-      if (range.size() >= size) {
-        return range.data();
-      }
-    }
-
-    auto& vec = data_[offset].emplace_back(size, 0);
-
-    size_t got;
-    if (process_->read_memory(base_ + offset, vec.data(), size, &got) !=
-            ZX_OK ||
-        got != size) {
-      return nullptr;
-    }
-
-    return vec.data();
-  }
-
-  std::optional<Elf64_Ehdr> GetHeader() override {
-    auto data = GetLoadedMemory(0, sizeof(Elf64_Ehdr));
-
-    if (!data) {
-      return std::nullopt;
-    }
-
-    return *reinterpret_cast<const Elf64_Ehdr*>(data);
-  }
-
-  std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
-      uint64_t offset, size_t count) override {
-    auto data = GetLoadedMemory(offset, sizeof(Elf64_Phdr) * count);
-
-    if (!data) {
-      return std::nullopt;
-    }
-
-    auto array = reinterpret_cast<const Elf64_Phdr*>(data);
-
-    return std::vector<Elf64_Phdr>(array, array + count);
-  }
-
-  std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
-      uint64_t offset, size_t count) override {
-    return std::nullopt;
-  }
-
- private:
-  const zx::process* process_;
-  uint64_t base_;
-  std::map<uint64_t, std::vector<std::vector<uint8_t>>> data_;
-};
 
 zx_status_t WalkModules(
     const zx::process& process, uint64_t dl_debug_addr,
@@ -332,40 +252,6 @@ zx_status_t GetModulesForProcess(const zx::process& process,
         modules->push_back(std::move(module));
         return true;
       });
-}
-
-zx_status_t GetSymbolTableFromProcess(
-    const zx::process& process, uint64_t elf_addr, const std::string& build_id,
-    std::vector<debug_ipc::ElfSymbol>* symbols) {
-  auto elf = ElfLib::Create(
-      std::make_unique<ProcessMemoryAccessor>(&process, elf_addr));
-
-  if (!elf) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  auto got_build_id = debug_ipc::ExtractBuildID(process, elf_addr);
-
-  if (got_build_id != build_id) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  auto syms = elf->GetAllSymbols();
-
-  if (!syms) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  for (const auto& sym : *syms) {
-    debug_ipc::ElfSymbol ipc_sym;
-
-    ipc_sym.name = sym.first;
-    ipc_sym.value = sym.second.st_value;
-
-    symbols->push_back(std::move(ipc_sym));
-  }
-
-  return ZX_OK;
 }
 
 std::vector<zx_info_maps_t> GetProcessMaps(const zx::process& process) {

@@ -443,14 +443,6 @@ void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
     reply->status = ZX_ERR_NOT_FOUND;
 }
 
-void DebugAgent::OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
-                                debug_ipc::SymbolTablesReply* reply) {
-  TIME_BLOCK();
-  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-  if (proc)
-    proc->OnSymbolTables(request, reply);
-}
-
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())

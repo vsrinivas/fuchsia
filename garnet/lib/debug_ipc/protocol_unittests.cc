@@ -442,36 +442,6 @@ TEST(Protocol, ModulesReply) {
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
 }
 
-// Symbol tables ---------------------------------------------------------------
-
-TEST(Protocol, SymbolTablesRequest) {
-  SymbolTablesRequest initial;
-  initial.process_koid = 1234;
-
-  SymbolTablesRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-}
-
-TEST(Protocol, SymbolTablesReply) {
-  SymbolTablesReply initial;
-  initial.symbols.resize(2);
-  initial.symbols[0].name = "somefunc";
-  initial.symbols[0].value = 0xbeefUL;
-  initial.symbols[1].name = "wompwomp";
-  initial.symbols[1].value = 0xb0efUL;
-
-  SymbolTablesReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
-
-  EXPECT_EQ(2u, second.symbols.size());
-  EXPECT_EQ(initial.symbols[0].name, second.symbols[0].name);
-  EXPECT_EQ(initial.symbols[0].value, second.symbols[0].value);
-  EXPECT_EQ(initial.symbols[1].name, second.symbols[1].name);
-  EXPECT_EQ(initial.symbols[1].value, second.symbols[1].value);
-}
-
 // ASpace ----------------------------------------------------------------------
 
 TEST(Protocol, AspaceRequest) {

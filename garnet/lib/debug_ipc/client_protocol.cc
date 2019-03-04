@@ -85,14 +85,6 @@ bool Deserialize(MessageReader* reader, Module* module) {
   return true;
 }
 
-bool Deserialize(MessageReader* reader, ElfSymbol* symbol) {
-  if (!reader->ReadString(&symbol->name))
-    return false;
-  if (!reader->ReadUint64(&symbol->value))
-    return false;
-  return true;
-}
-
 bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {
   if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg_cat->type)))
     return false;
@@ -477,27 +469,6 @@ bool ReadReply(MessageReader* reader, ModulesReply* reply,
   *transaction_id = header.transaction_id;
 
   Deserialize(reader, &reply->modules);
-  return true;
-}
-
-// Symbol tables ---------------------------------------------------------------
-
-void WriteRequest(const SymbolTablesRequest& request, uint32_t transaction_id,
-                  MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kSymbolTables, transaction_id);
-  writer->WriteUint64(request.process_koid);
-  writer->WriteUint64(request.base);
-  writer->WriteString(request.build_id);
-}
-
-bool ReadReply(MessageReader* reader, SymbolTablesReply* reply,
-               uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-
-  Deserialize(reader, &reply->symbols);
   return true;
 }
 

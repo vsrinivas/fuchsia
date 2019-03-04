@@ -55,8 +55,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                       debug_ipc::AddressSpaceReply* reply);
   void OnModules(debug_ipc::ModulesReply* reply);
-  void OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
-                      debug_ipc::SymbolTablesReply* reply);
   void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                      debug_ipc::WriteMemoryReply* reply);
 

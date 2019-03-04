@@ -362,13 +362,6 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
     GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
 }
 
-void DebuggedProcess::OnSymbolTables(
-    const debug_ipc::SymbolTablesRequest& request,
-    debug_ipc::SymbolTablesReply* reply) {
-  GetSymbolTableFromProcess(process_, request.base, request.build_id,
-                            &reply->symbols);
-}
-
 void DebuggedProcess::OnWriteMemory(
     const debug_ipc::WriteMemoryRequest& request,
     debug_ipc::WriteMemoryReply* reply) {

@@ -39,8 +39,6 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "Detach";
     case MsgHeader::Type::kModules:
       return "Modules";
-    case MsgHeader::Type::kSymbolTables:
-      return "SymbolTables";
     case MsgHeader::Type::kPause:
       return "Pause";
     case MsgHeader::Type::kQuitAgent:

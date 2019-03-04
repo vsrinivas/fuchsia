@@ -47,10 +47,6 @@ class MinidumpRemoteAPI : public RemoteAPI {
   void Modules(
       const debug_ipc::ModulesRequest& request,
       std::function<void(const Err&, debug_ipc::ModulesReply)> cb) override;
-  void SymbolTables(
-      const debug_ipc::SymbolTablesRequest& request,
-      std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb)
-      override;
   void Pause(
       const debug_ipc::PauseRequest& request,
       std::function<void(const Err&, debug_ipc::PauseReply)> cb) override;

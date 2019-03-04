@@ -54,12 +54,6 @@ void RemoteAPIImpl::Modules(
   Send(request, std::move(cb));
 }
 
-void RemoteAPIImpl::SymbolTables(
-    const debug_ipc::SymbolTablesRequest& request,
-    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
-  Send(request, std::move(cb));
-}
-
 void RemoteAPIImpl::Pause(
     const debug_ipc::PauseRequest& request,
     std::function<void(const Err&, debug_ipc::PauseReply)> cb) {

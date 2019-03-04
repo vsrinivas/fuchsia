@@ -102,12 +102,6 @@ bool ReadRequest(MessageReader* reader, ModulesRequest* request,
 void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
-// Symbol tables
-bool ReadRequest(MessageReader* reader, SymbolTablesRequest* request,
-                 uint32_t* transaction_id);
-void WriteReply(const SymbolTablesReply& reply, uint32_t transaction_id,
-                MessageWriter* writer);
-
 // ReadRegisters
 bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request,
                  uint32_t* transaction_id);
