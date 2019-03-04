@@ -18,8 +18,8 @@ def main():
                         help='Directory in which to create trampolines')
     parser.add_argument('--output-manifest', required=True,
                         help='Output manifest path')
-    parser.add_argument('--uri', action='append', default=[],
-                        help='A command URI to create an entry for')
+    parser.add_argument('--command-list', required=True,
+                        help='A file containing a list of command URI')
 
     args = parser.parse_args()
 
@@ -28,7 +28,11 @@ def main():
 
     commands = dict()
 
-    for uri in args.uri:
+    with open(args.command_list) as f:
+        uris = f.readlines()
+
+    for uri in uris:
+        uri = uri.rstrip()
         name = uri.split('#')[-1]
         name = os.path.split(name)[-1]
         if name in commands:

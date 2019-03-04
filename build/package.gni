@@ -5,7 +5,6 @@
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/disabled_for_asan.gni")
-import("//build/gn/packages.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
 import("//build/package/component.gni")
@@ -47,6 +46,10 @@ declare_args() {
 #       meta_far_merkle_index_entries
 #         The metafar merkle index entries are aggregated in image builds to
 #         produce package server indices for monolith serving.
+#
+#       package_barrier
+#         [list of labels] This is passed to walk_keys and can be used as a barrier to
+#         control dependency propgatation below a package target.
 #
 #   data_deps (optional)
 #   deps (optional)
@@ -532,8 +535,6 @@ template("package") {
       meta_with_formatted_cmx += [ meta ]
     }
 
-    shell_binaries = []
-
     # Collect the package's primary manifest.  For a system_image package,
     # this is its contributions to the /system manifest.  For an isolated
     # package, this is the manifest for the package's `pkg/` filesystem.
@@ -546,6 +547,7 @@ template("package") {
         },
       ]
     }
+    shell_binaries = []
     foreach(binary, pkg.binaries) {
       if (defined(binary.dest)) {
         dest = binary.dest
@@ -553,8 +555,11 @@ template("package") {
         dest = binary.name
       }
       dest = "bin/${dest}"
+
       if (defined(binary.shell) && binary.shell) {
-        shell_binaries += [ dest ]
+        shell_binaries += [
+          "fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}",
+        ]
       }
 
       pkg_manifest += [
@@ -813,6 +818,7 @@ template("package") {
         }
       }
 
+
       # Next generate a signed, sealed package file.
       pm_build_package("${pkg_target_name}.meta") {
         manifest = ":$final_manifest"
@@ -841,17 +847,24 @@ template("package") {
       public_deps = pkg.public_deps
       output_name = "${pkg_target_name}.system.rsp"
       response_file_contents = manifest_args
-    }
 
-    generate_response_file("${pkg_target_name}.shell_commands.rsp") {
-      response_file_contents = []
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, ["*"])
+        }
+        shell_binary_entries = shell_binaries
 
-      foreach(binary, shell_binaries) {
-        response_file_contents += [
-          # TODO(CF-105): fuchsia-pkg URIs should always have a variant (add /${pkg.package_version}).
-          "--uri",
-          "fuchsia-pkg://fuchsia.com/${pkg.package_name}#${binary}",
-        ]
+        # Subtle: we only want dependency on the package target to consume
+        # package metadata propagation for the package we're building, never
+        # for transitive package dependencies of this package. In the fuchsia
+        # package case, we want to therefore only include our local package
+        # build target. For the system image package case, we don't want to
+        # include anything.
+        if (pkg.deprecated_system_image) {
+          package_barrier = []
+        } else {
+          package_barrier = [ get_label_info(":${pkg_target_name}.meta", "label_with_toolchain") ]
+        }
       }
     }
 

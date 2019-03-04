@@ -13,6 +13,7 @@ import("//build/images/fvm.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
+import("//build/images/shell_commands.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_molecule.gni")
@@ -105,52 +106,15 @@ write_file("$root_build_dir/packages.json",
            },
            "json")
 
-###
-### shell-commands package
-###
-### TODO(CF-223)
-### shell-commands is a Fuchsia package that aggregates all binaries from all
-### "available" Fuchsia packages producing "#!resolve URI" trampolines. This
-### package is a solution to enable the shell to resolve command line
-### programs out of ephemeral packages.
-
-# create-shell-commands performs two actions:
-#   - create trampoline scripts ("#!resolve COMMAND-URI") for each command.
-#   - produce a manifest that contains references to all of the trampolines.
-action("create-shell-commands") {
+shell_commands("shell-commands") {
   testonly = true
-  script = "create-shell-commands.py"
-  outputs = [
-    "$target_out_dir/shell-commands-extra.manifest",
-  ]
-  args = [
-    "--trampoline-dir",
-    rebase_path(target_out_dir + "/commands", root_build_dir),
-    "--output-manifest",
-    rebase_path(outputs[0], root_build_dir),
-  ]
-  deps = []
-  sources = []
-
-  foreach(pkg_label, available_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    if (pkg_target_name != "shell-commands") {
-      pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-      cmd_rspfile = "$pkg_target_out_dir/${pkg_target_name}.shell_commands.rsp"
-      deps += [ "${pkg_label}.shell_commands.rsp" ]
-      sources += [ cmd_rspfile ]
-      args += [ "@" + rebase_path(cmd_rspfile, root_build_dir) ]
-    }
-  }
-}
-
-package("shell-commands") {
-  testonly = true
-  extra = get_target_outputs(":create-shell-commands")
-  deps = [
-    ":create-shell-commands",
-  ]
+  deps = available_packages
+  deps -= ["//build/images:shell-commands"]
+  # Kludge: The guest depends on shell-commands, but shell-commands is an
+  # aggregator that also depends on all targets, so we must explicitly exclude
+  # it here.
+  deps += ["//garnet/bin/guest/pkg/zircon_guest:zircon_guest"]
+  deps -= ["//garnet/bin/guest/pkg/zircon_guest:zircon_guest"]
 }
 
 ###

@@ -39,6 +39,7 @@ foreach(image, zircon_images) {
 #   response_file_contents (required)
 #   data_deps (optional)
 #   deps (optional)
+#   metadata (optional)
 #   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
@@ -50,8 +51,9 @@ template("generate_response_file") {
                            [
                              "data_deps",
                              "deps",
-                             "public_deps",
+                             "metadata",
                              "output_name",
+                             "public_deps",
                              "response_file_contents",
                              "testonly",
                              "visibility",

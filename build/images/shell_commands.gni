@@ -1,0 +1,62 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+###
+### shell-commands package
+###
+### TODO(CF-223)
+### shell-commands is a Fuchsia package that aggregates all binaries from all
+### "available" Fuchsia packages producing "#!resolve URI" trampolines. This
+### package is a solution to enable the shell to resolve command line
+### programs out of ephemeral packages.
+
+template("shell_commands") {
+  shell_commands_list = "shell-commands.list"
+  shell_commands_list_path = target_gen_dir + "/" + shell_commands_list
+
+  generated_file("shell-commands.list") {
+    forward_variables_from(invoker, ["deps", "public_deps", "data_deps", "testonly"])
+    data_keys = ["shell_binary_entries"]
+    walk_keys = ["shell_binary_barrier"]
+    outputs = [shell_commands_list_path]
+  }
+
+  # create-shell-commands performs two actions:
+  #   - create trampoline scripts ("#!resolve COMMAND-URI") for each command.
+  #   - produce a manifest that contains references to all of the trampolines.
+  action("create-shell-commands") {
+    forward_variables_from(invoker, ["testonly"])
+    script = "//build/images/create-shell-commands.py"
+    outputs = [
+      "$target_out_dir/shell-commands-extra.manifest",
+    ]
+    inputs = [
+      shell_commands_list_path,
+    ]
+    args = [
+      "--trampoline-dir",
+      rebase_path(target_out_dir + "/commands", root_build_dir),
+      "--output-manifest",
+      rebase_path(outputs[0], root_build_dir),
+      "--command-list",
+      rebase_path(inputs[0], root_build_dir),
+    ]
+    deps = [
+      ":" + shell_commands_list,
+    ]
+  }
+
+  package(target_name) {
+    metadata = {
+      shell_binary_barrier = []
+    }
+    forward_variables_from(invoker, ["testonly", "visibility"])
+    extra = get_target_outputs(":create-shell-commands")
+    deps = [
+      ":create-shell-commands",
+    ]
+  }
+}
