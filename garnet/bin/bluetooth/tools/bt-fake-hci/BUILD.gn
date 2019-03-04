@@ -11,11 +11,6 @@ rustc_binary("bt-fake-hci") {
 
   deps = [
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
-    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:rand",
   ]
 }

@@ -11,8 +11,8 @@ use {
         AvrcpMarker, ControllerEvent, ControllerEventStream, ControllerMarker,
     },
     fuchsia_app::client::connect_to_service,
-    fuchsia_async::{self as fasync, futures::select},
-    futures::{FutureExt, TryStreamExt},
+    fuchsia_async as fasync,
+    futures::{FutureExt, select, TryStreamExt},
     pin_utils::pin_mut,
     structopt::StructOpt,
 };

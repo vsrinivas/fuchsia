@@ -10,7 +10,6 @@ rustc_binary("bt-pairing-tool") {
 
   deps = [
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",

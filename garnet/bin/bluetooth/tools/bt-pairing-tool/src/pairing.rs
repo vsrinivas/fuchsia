@@ -10,7 +10,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BtError,
-    futures::prelude::*,
+    futures::{future, Future, TryFutureExt, TryStreamExt},
     std::io::{self, Read, Write},
 };
 

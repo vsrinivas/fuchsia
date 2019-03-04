@@ -5,23 +5,17 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("bin") {
+rustc_binary("bt-cli") {
   name = "bt_cli"
   edition = "2018"
 
   deps = [
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:regex",
