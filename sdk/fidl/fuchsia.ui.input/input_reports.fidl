@@ -219,7 +219,7 @@ union SensorReport {
 };
 
 // |ButtonsReport| describes the buttons event delivered from the event stream.
-union ButtonsReport {
+struct ButtonsReport {
     // Volume changes +1/-1 for volume up/down, this is a relative value.
     int8 volume;
     bool mic_mute;
