@@ -20,6 +20,7 @@ int main(int argc, const char** argv) {
   // function properly.
 
   // clang-format off
+  benchmarks_runner.AddTspecBenchmark("ledger.add_new_page_after_clear", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_after_clear.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.add_new_page_precached", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_precached.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.add_new_page", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec");
   benchmarks_runner.AddTspecBenchmark("ledger.get_same_page", "/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec");
