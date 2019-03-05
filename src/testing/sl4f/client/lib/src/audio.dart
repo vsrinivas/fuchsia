@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
 import 'dart:io' show File;
+import 'dart:typed_data' show Uint8List;
 import 'sl4f_client.dart';
 
 class Audio {
@@ -16,21 +18,34 @@ class Audio {
     _sl4f.close();
   }
 
-  // TODO(perley)
-  Future<void> putPlayback(File file) {
-    return Future.value(null);
+  Future<void> putInputAudio(File file) async {
+    final audioBytes = file.readAsBytesSync();
+    await _sl4f.request('audio_facade.PutInputAudio', base64Encode(audioBytes));
   }
 
-  Future<void> startCapture() {
-    return Future.value(null);
+  Future<void> startInputInjection() async {
+    await _sl4f.request('audio_facade.StartInputInjection');
   }
 
-  Future<AudioTrack> getCapture() {
-    return Future.value(AudioTrack());
+  Future<void> startOutputSave() async {
+    await _sl4f.request('audio_facade.StartOutputSave');
+  }
+
+  Future<void> stopOutputSave() async {
+    await _sl4f.request('audio_facade.StopOutputSave');
+  }
+
+  Future<AudioTrack> getOutputAudio() async {
+    // The response body is just base64encoded audio
+    String response = await _sl4f.request('audio_facade.GetOutputAudio');
+    return AudioTrack()
+      ..audioData = base64Decode(response)
+      ..isSilence = response.isEmpty;
   }
 }
 
 class AudioTrack {
-  // TODO: Implement a proper way to test this and a proper audio container.
-  bool get isSilence => false;
+  bool isSilence = true;
+  // This is a wav file
+  Uint8List audioData;
 }
