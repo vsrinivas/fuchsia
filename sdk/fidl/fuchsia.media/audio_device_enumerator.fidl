@@ -19,10 +19,9 @@ struct AudioDeviceInfo {
     uint64 token_id;
     bool is_input;
 
-    // Technically these additional data are not needed (they are queryable),
-    // but it seems useful to send them during device enumeration, to reduce
-    // server round-trip calls, and to eliminate extra states in a user's state
-    // machine when determining current device state during initial enumeration.
+    // We include these during device enumeration to reduce server round-trip
+    // calls, and to simplify a user's state machine when determining current
+    // device state during initial enumeration.
     AudioGainInfo gain_info;
     bool is_default;
 };
