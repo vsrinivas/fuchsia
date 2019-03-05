@@ -8,7 +8,7 @@ from collections import namedtuple
 import mmap
 import os
 import struct
-import uuid
+
 
 # Standard ELF constants.
 ELFMAG = '\x7fELF'
@@ -256,30 +256,6 @@ This ensures that the mmap and file objects are closed at the end of the
             mmapobj.close()
             fileobj.close()
 
-def link(src, dst):
-    """Atomically hard links dst to src and overwrites if needed."""
-    # First we create a name we're sure won't exist. Each names has 128-bits of
-    # entropy. This name will simply never collide with another name. Also
-    # keep in mind that if everything is functioning normally, there are few if
-    # any link jobs we're compeating with. We produce on the order of 10^3
-    # binaries but it would take on the order of 10^19 binaries being linked
-    # into the .build-id directory at the same time in order for it to be more
-    # likely than not that even one link failure would occur. if 10^6 binaries
-    # are linked at the same time there is a 1.4*10^(-11) chance of a collision
-    # occurring (so we'd expect a collision once every 100 trillion builds or so
-    # if we were building 1 million binaries at a time).
-    path = str(uuid.uuid4()) + ".tmp"
-    os.link(os.path.realpath(src), path)
-    os.renames(path, dst)
-    # rename fails to remove `path` if `path` and `dst` already point to the
-    # same underlying file. If this occurs we can just remove the tmp file.
-    # If the file has already been removed then we can catch that error and
-    # ignore it.
-    try:
-        os.remove(path)
-    except OSError as e:
-        if e.errno != os.errno.ENOENT:
-            raise e
 
 # elf_info objects are only created by `get_elf_info` or the `copy` or
 # `rename` methods.
@@ -313,7 +289,7 @@ class elf_info(
     def get_sources(self):
         raise Exception("uninitialized elf_info object!")
 
-    def strip(self, stripped_filename, build_id_dir=None):
+    def strip(self, stripped_filename):
         """Write stripped output to the given file unless it already exists
 with identical contents.  Returns True iff the file was changed."""
         with mmapper(self.filename) as mapped:
@@ -347,11 +323,7 @@ with identical contents.  Returns True iff the file was changed."""
                     return False
                 else:
                     os.remove(stripped_filename)
-            # Link the original and stripped file into the .build-id directory.
-            if build_id_dir is not None:
-                bucket_dir = os.path.join(build_id_dir, self.build_id[:2])
-                build_id_path = os.path.join(bucket_dir, self.build_id[2:])
-                link(self.filename, build_id_path + ".debug")
+
             # Create the new file with the same mode as the original.
             with os.fdopen(os.open(stripped_filename,
                                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
@@ -359,7 +331,6 @@ with identical contents.  Returns True iff the file was changed."""
                            'wb') as stripped_file:
                 stripped_file.write(self.elf.Ehdr.pack(stripped_ehdr))
                 stripped_file.write(file[self.elf.Ehdr.size:stripped_size])
-            link(stripped_filename, build_id_path)
             return True
 
 def get_elf_info(filename, match_notes=False):
