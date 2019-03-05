@@ -9,8 +9,8 @@
 
 namespace debug_ipc {
 
-BufferedFD::BufferedFD() {}
-BufferedFD::~BufferedFD() {}
+BufferedFD::BufferedFD() = default;
+BufferedFD::~BufferedFD() = default;
 
 bool BufferedFD::Init(fxl::UniqueFD fd) {
   FXL_DCHECK(!fd_.is_valid());  // Can't be initialized more than once.
@@ -41,6 +41,7 @@ void BufferedFD::OnFDReadable(int fd) {
       // We asked for data and it had none. Since this assumes async input,
       // that means EOF (otherwise it will return -1 and errno will be EAGAIN).
       OnFDError(fd_.get());
+      return;
     } else if (num_read == -1) {
       if (errno == EAGAIN) {
         // No data now.
@@ -65,6 +66,7 @@ void BufferedFD::OnFDReadable(int fd) {
 
   if (callback_)
     callback_();
+
 }
 
 void BufferedFD::OnFDWritable(int fd) {
@@ -93,6 +95,7 @@ size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
       // We asked for data and it had none. Since this assumes async input,
       // that means EOF (otherwise it will return -1 and errno will be EAGAIN).
       OnFDError(fd_.get());
+      return 0;
     } else if (written == -1) {
       if (errno == EAGAIN) {
         // Can't write data, fall through to partial write case below.

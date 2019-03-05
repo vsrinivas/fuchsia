@@ -46,6 +46,9 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   // Called when poll detects an event. The poll event mask is in |events|.
   void OnHandleSignaled(int fd, short events, int watch_id);
 
+  // Whether the loop is watching a particular id.
+  bool HasWatch(int watch_id);
+
   // This must only be accessed on the same thread as the message loop, so is
   // not protected by the lock.
   using WatchMap = std::map<int, WatchInfo>;

@@ -201,59 +201,57 @@ void MessageLoopPoll::ConstructFDMapping(
   }
 }
 
+bool MessageLoopPoll::HasWatch(int watch_id) {
+  auto it = watches_.find(watch_id);
+  if (it == watches_.end())
+    return false;
+  return true;
+}
+
 void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   // The watches_ vector is not threadsafe.
   FXL_DCHECK(Current() == this);
 
-  auto found = watches_.find(watch_id);
-  if (found == watches_.end()) {
-    // Handle could have been just closed. Since all signaled handles are
-    // notified for one call to poll(), a previous callback could have removed
-    // a watch.
+  // Handle could have been just closed. Since all signaled handles are
+  // notified for one call to poll(), a previous callback could have removed
+  // a watch.
+  if (!HasWatch(watch_id))
     return;
-  }
-  FXL_DCHECK(fd == found->second.fd);
 
-  // Since notifications can cause the watcher to be removed, this flag tracks
-  // if anything has been issued and therefore we should re-check the watcher
-  // registration before dereferencing anything.
-  bool sent_notification = false;
+  // We obtain the watch info and see what kind of signal we received.
+  auto it = watches_.find(watch_id);
+  const auto& watch_info = it->second;
+  FXL_DCHECK(fd == watch_info.fd);
+
+  // Since notifications can cause the watcher to be removed, we need to recheck
+  // everytime if the watch was removed.
 
   if (events & POLLIN) {
-    FXL_DCHECK(found->second.mode == WatchMode::kRead ||
-               found->second.mode == WatchMode::kReadWrite);
-    found->second.watcher->OnFDReadable(fd);
-    sent_notification = true;
+    FXL_DCHECK(watch_info.mode == WatchMode::kRead ||
+               watch_info.mode == WatchMode::kReadWrite);
+    watch_info.watcher->OnFDReadable(fd);
+
+    // A previous notification could have deleted the WatchHandle.
+    if (!HasWatch(watch_id))
+      return;
   }
 
   if (events & POLLOUT) {
-    if (sent_notification) {
-      found = watches_.find(watch_id);
-      if (found == watches_.end())
-        return;
-    }
-    FXL_DCHECK(found->second.mode == WatchMode::kWrite ||
-               found->second.mode == WatchMode::kReadWrite);
-    found->second.watcher->OnFDWritable(fd);
-    sent_notification = true;
+    FXL_DCHECK(watch_info.mode == WatchMode::kWrite ||
+               watch_info.mode == WatchMode::kReadWrite);
+    watch_info.watcher->OnFDWritable(fd);
+
+    // A previous notification could have deleted the notifications
+    if (!HasWatch(watch_id))
+      return;
   }
 
-  if (sent_notification)
-    return;  // ERASEME
-
-  if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL)
+  bool event = (events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL);
 #if defined(POLLRDHUP)  // Mac doesn't have this.
-      || (events & POLLRDHUP)
+  event = event || (events & POLLRDHUP);
 #endif
-  ) {
-    if (sent_notification) {
-      found = watches_.find(watch_id);
-      if (found == watches_.end())
-        return;
-    }
-    found->second.watcher->OnFDError(fd);
-    sent_notification = true;
-  }
+  if (event)
+    watch_info.watcher->OnFDError(fd);
 }
 
 }  // namespace debug_ipc

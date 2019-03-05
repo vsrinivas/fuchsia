@@ -165,19 +165,23 @@ void Session::PendingConnection::ConnectCompleteMainThread(
   buffer_ = std::make_unique<debug_ipc::BufferedFD>();
   buffer_->Init(std::move(socket_));
 
-  // Send "Hello" message. We can't use the Session::Send infrastructure
-  // since the connection hasn't technically been established yet.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteRequest(debug_ipc::HelloRequest(), 1, &writer);
-  std::vector<char> serialized = writer.MessageComplete();
-  buffer_->stream().Write(std::move(serialized));
-
+  // The connection is now established, so we set up the handlers before we send
+  // the first request over to the agent. Even though we're in a message loop
+  // and these handlers won't be called within this stack frame, it's a good
+  // mental model to set up handlers before actually sending the first piece
+  // of data.
   buffer_->set_data_available_callback(
       [owner]() { owner->DataAvailableMainThread(owner); });
   buffer_->set_error_callback([owner]() {
     owner->HelloCompleteMainThread(owner, Err("Connection error."),
                                    debug_ipc::HelloReply());
   });
+
+  // Send "Hello" message. We can't use the Session::Send infrastructure
+  // since the connection hasn't technically been established yet.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteRequest(debug_ipc::HelloRequest(), 1, &writer);
+  buffer_->stream().Write(writer.MessageComplete());
 }
 
 void Session::PendingConnection::DataAvailableMainThread(
@@ -456,8 +460,8 @@ void Session::QuitAgent(std::function<void(const Err&)> cb) {
 
 void Session::ClearConnectionData() {
   stream_ = nullptr;
-  connection_storage_.reset();
   arch_info_.reset();
+  connection_storage_.reset();
   arch_ = debug_ipc::Arch::kUnknown;
   system_.DidDisconnect();
 }
