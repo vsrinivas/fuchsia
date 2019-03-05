@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/sl4f:sl4f_sysmgr_config"
+    ]
+}

@@ -78,3 +78,14 @@ package("sl4f-tests") {
     },
   ]
 }
+
+package("sl4f_sysmgr_config") {
+  deprecated_system_image = true
+
+  resources = [
+    {
+      dest = "sysmgr/sl4f.config"
+      path = rebase_path("config/sl4f_sysmgr.config")
+    },
+  ]
+}
