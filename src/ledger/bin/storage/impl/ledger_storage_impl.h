@@ -64,13 +64,11 @@ class LedgerStorageImpl : public LedgerStorage {
   ledger::DetachedPath GetPathFor(PageIdView page_id);
   ledger::DetachedPath GetDeprecatedPathFor(PageIdView page_id);
 
-  // Returns the staging path for the given |page_id|.
-  ledger::DetachedPath GetStagingPathFor(PageIdView page_id);
-
   ledger::Environment* const environment_;
   encryption::EncryptionService* const encryption_service_;
   storage::DbFactory* const db_factory_;
   ledger::DetachedPath storage_dir_;
+  ledger::DetachedPath staging_dir_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;

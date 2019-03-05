@@ -29,7 +29,7 @@ namespace storage {
 
 namespace {
 
-constexpr fxl::StringView kStagingPathPrefix = "staging";
+constexpr fxl::StringView kStagingDirName = "staging";
 
 // Encodes opaque bytes in a way that is usable as a directory name.
 std::string GetDirectoryName(fxl::StringView bytes) {
@@ -55,6 +55,7 @@ LedgerStorageImpl::LedgerStorageImpl(
       encryption_service_(encryption_service),
       db_factory_(db_factory),
       storage_dir_(std::move(content_dir)),
+      staging_dir_(storage_dir_.SubPath(kStagingDirName)),
       weak_factory_(this) {}
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
@@ -93,7 +94,6 @@ void LedgerStorageImpl::DeletePageStorage(
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_delete_page_storage");
   ledger::DetachedPath path = GetPathFor(page_id);
-  ledger::DetachedPath staging_path = GetStagingPathFor(page_id);
   // |final_callback| will be called from the I/O loop and call the original
   // |callback| in the main one. The main loop outlives the I/O one, so it's
   // safe to capture environment_->dispatcher() here.
@@ -108,16 +108,18 @@ void LedgerStorageImpl::DeletePageStorage(
 
   async::PostTask(
       environment_->io_dispatcher(),
-      [path = std::move(path), staging_path = std::move(staging_path),
+      [path = std::move(path), staging_dir = staging_dir_,
        callback = std::move(final_callback)]() mutable {
         if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
           callback(Status::NOT_FOUND);
           return;
         }
-        files::ScopedTempDirAt tmp_directory(staging_path.root_fd(),
-                                             staging_path.path());
-        std::string destination = tmp_directory.path() + "/content";
+        files::ScopedTempDirAt tmp_directory(staging_dir.root_fd(),
+                                             staging_dir.path());
+        std::string destination = tmp_directory.path() + "/graveyard";
 
+        // <storage_dir_>/<base64(page)> becomes
+        // <storage_dir_>/staging/<random_temporary_name>/graveyard/<base64(page)>
         if (renameat(path.root_fd(), path.path().c_str(),
                      tmp_directory.root_fd(), destination.c_str()) != 0) {
           FXL_LOG(ERROR) << "Unable to move local page storage to "
@@ -185,12 +187,6 @@ void LedgerStorageImpl::GetOrCreateDb(
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FXL_DCHECK(!page_id.empty());
   return storage_dir_.SubPath(GetDirectoryName(page_id));
-}
-
-ledger::DetachedPath LedgerStorageImpl::GetStagingPathFor(PageIdView page_id) {
-  FXL_DCHECK(!page_id.empty());
-  return storage_dir_.SubPath(
-      fxl::Concatenate({kStagingPathPrefix, GetDirectoryName(page_id)}));
 }
 
 }  // namespace storage
