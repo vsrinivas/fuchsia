@@ -23,10 +23,9 @@ void TestWithEnvironment::CreateComponentInCurrentEnvironment(
   real_launcher_.CreateComponent(std::move(launch_info), std::move(request));
 }
 
-bool TestWithEnvironment::RunComponentUntilTerminatedOrTimeout(
+bool TestWithEnvironment::RunComponentUntilTerminated(
     fuchsia::sys::ComponentControllerPtr component_controller,
-    TerminationResult* termination_result, zx::duration timeout,
-    zx::duration step) {
+    TerminationResult* termination_result) {
   bool is_terminated = false;
   component_controller.events().OnTerminated =
       [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
@@ -38,7 +37,7 @@ bool TestWithEnvironment::RunComponentUntilTerminatedOrTimeout(
           };
         }
       };
-  RunLoopWithTimeoutOrUntil([&]() { return is_terminated; }, timeout, step);
+  RunLoopUntil([&]() { return is_terminated; });
   return is_terminated;
 }
 

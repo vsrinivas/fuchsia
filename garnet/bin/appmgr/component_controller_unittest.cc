@@ -315,7 +315,7 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
     wait = true;
   };
   component_ptr->Kill();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -339,8 +339,7 @@ TEST_F(ComponentControllerTest, CreateAndDeleteWithoutKilling) {
   };
   realm_.ExtractComponent(component_to_remove);
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&return_code] { return return_code; },
-                                        zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&return_code] { return return_code; }));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -357,8 +356,7 @@ TEST_F(ComponentControllerTest, ControllerScope) {
 
     ASSERT_EQ(realm_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return realm_.ComponentCount() == 0; }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([this]() { return realm_.ComponentCount() == 0; }));
 }
 
 TEST_F(ComponentControllerTest, DetachController) {
@@ -400,7 +398,7 @@ TEST_F(ComponentControllerTest, Hub) {
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
-  RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
+  RunLoopUntil([&ready] { return ready; });
 
   EXPECT_TRUE(PathExists(component->hub_dir(), "out"));
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
@@ -435,7 +433,7 @@ TEST_F(ComponentControllerTest, HubWithIncomingServices) {
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
-  RunLoopWithTimeoutOrUntil([&ready] { return ready; }, zx::sec(10));
+  RunLoopUntil([&ready] { return ready; });
 
   AssertHubHasIncomingServices(component.get(), {"service_a", "service_b"});
 }
@@ -468,7 +466,7 @@ TEST_F(ComponentBridgeTest, CreateAndKill) {
   SendReady();
   SetReturnCode(expected_retval);
   component_ptr->Kill();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
   EXPECT_TRUE(ready);
   EXPECT_EQ(expected_retval, retval);
   EXPECT_EQ(TerminationReason::EXITED, termination_reason);
@@ -497,8 +495,7 @@ TEST_F(ComponentBridgeTest, CreateAndDeleteWithoutKilling) {
   // Component controller called OnTerminated before the component is destroyed,
   // so we expect the value set above (INTERNAL_ERROR).
   runner_.ExtractComponent(component_to_remove);
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&terminated] { return terminated; },
-                                        zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&terminated] { return terminated; }));
   EXPECT_EQ(-1, retval);
   EXPECT_EQ(TerminationReason::INTERNAL_ERROR, termination_reason);
 
@@ -525,8 +522,7 @@ TEST_F(ComponentBridgeTest, RemoteComponentDied) {
   // Even though the termination reason was set above, unbinding and closing the
   // channel will cause the bridge to return UNKNOWN>.
   binding_.Unbind();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&terminated] { return terminated; },
-                                        zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&terminated] { return terminated; }));
   EXPECT_EQ(-1, retval);
   EXPECT_EQ(TerminationReason::UNKNOWN, termination_reason);
   EXPECT_EQ(0u, runner_.ComponentCount());
@@ -548,7 +544,7 @@ TEST_F(ComponentBridgeTest, ControllerScope) {
     runner_.AddComponent(std::move(component));
     ASSERT_EQ(runner_.ComponentCount(), 1u);
   }
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -584,7 +580,7 @@ TEST_F(ComponentBridgeTest, DetachController) {
         wait = true;
       });
   component_bridge_ptr->Kill();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
@@ -603,9 +599,8 @@ TEST_F(ComponentBridgeTest, Hub) {
       component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
       std::move(export_dir_req));
 
-  RunLoopWithTimeoutOrUntil(
-      [this, &component] { return PathExists(component->hub_dir(), "out"); },
-      zx::sec(10));
+  RunLoopUntil(
+      [this, &component] { return PathExists(component->hub_dir(), "out"); });
 
   EXPECT_STREQ(get_value(component->hub_dir(), "name").c_str(), "test-label");
   EXPECT_STREQ(get_value(component->hub_dir(), "args").c_str(), "test-arg");
@@ -634,9 +629,8 @@ TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
       component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
       std::move(export_dir_req), ns);
 
-  RunLoopWithTimeoutOrUntil(
-      [this, &component] { return PathExists(component->hub_dir(), "out"); },
-      zx::sec(10));
+  RunLoopUntil(
+      [this, &component] { return PathExists(component->hub_dir(), "out"); });
 
   AssertHubHasIncomingServices(component.get(), {"service_a", "service_b"});
 }
@@ -652,8 +646,7 @@ TEST_F(ComponentBridgeTest, BindingErrorHandler) {
         component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
         std::move(export_dir_req));
   }
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this] { return !binding_.is_bound(); },
-                                        zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([this] { return !binding_.is_bound(); }));
   EXPECT_TRUE(binding_error_handler_called_);
 }
 
@@ -670,8 +663,7 @@ TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
     component_ptr->Detach();
     RunLoopUntilIdle();
   }
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this] { return !binding_.is_bound(); },
-                                        zx::sec(5)));
+  EXPECT_TRUE(RunLoopUntil([this] { return !binding_.is_bound(); }));
   EXPECT_TRUE(binding_error_handler_called_);
 }
 

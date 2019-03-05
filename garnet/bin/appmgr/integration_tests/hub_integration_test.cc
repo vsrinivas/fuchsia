@@ -10,14 +10,14 @@
 #include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/glob.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/sys/cpp/file_descriptor.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/glob.h"
 
 namespace component {
 namespace {
@@ -50,8 +50,8 @@ class HubTest : public component::testing::TestWithEnvironment {
         [&return_code](int64_t code, fuchsia::sys::TerminationReason reason) {
           return_code = code;
         };
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&return_code] { return return_code != INT64_MIN; }, zx::sec(10)));
+    ASSERT_TRUE(
+        RunLoopUntil([&return_code] { return return_code != INT64_MIN; }));
     std::string output;
     ASSERT_TRUE(files::ReadFileDescriptorToString(out_fd, &output));
     EXPECT_EQ(expected_return_code, return_code)

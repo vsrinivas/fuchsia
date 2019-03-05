@@ -9,9 +9,9 @@
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace component {
 namespace {
@@ -24,8 +24,9 @@ using testing::MockRunnerRegistry;
 using testing::TestWithEnvironment;
 
 const char kRealm[] = "realmrunnerintegrationtest";
-const auto kTimeout = zx::sec(5);
-const char kComponentForRunner[] = "fuchsia-pkg://fuchsia.com/fake_component_for_runner#meta/fake_component_for_runner.cmx";
+const char kComponentForRunner[] =
+    "fuchsia-pkg://fuchsia.com/fake_component_for_runner#meta/"
+    "fake_component_for_runner.cmx";
 const char kComponentForRunnerProcessName[] = "fake_component_for_runner.cmx";
 
 class RealmRunnerTest : public TestWithEnvironment {
@@ -58,8 +59,7 @@ class RealmRunnerTest : public TestWithEnvironment {
     if (!runner_registry) {
       runner_registry = &runner_registry_;
     }
-    const bool ret = RunLoopWithTimeoutOrUntil(
-        [&] { return runner_registry->runner(); }, kTimeout);
+    const bool ret = RunLoopUntil([&] { return runner_registry->runner(); });
     EXPECT_TRUE(ret) << "Waiting for connection timed out: "
                      << runner_registry->connect_count();
     return ret;
@@ -72,8 +72,7 @@ class RealmRunnerTest : public TestWithEnvironment {
   }
 
   bool WaitForRunnerToDie() {
-    const bool ret = RunLoopWithTimeoutOrUntil(
-        [&] { return !runner_registry_.runner(); }, kTimeout);
+    const bool ret = RunLoopUntil([&] { return !runner_registry_.runner(); });
     EXPECT_TRUE(ret) << "Waiting for connection timed out: "
                      << runner_registry_.dead_runner_count();
     return ret;
@@ -86,11 +85,9 @@ class RealmRunnerTest : public TestWithEnvironment {
   bool WaitForComponentCount(MockRunnerRegistry* runner_registry,
                              size_t expected_components_count) {
     auto runner = runner_registry->runner();
-    const bool ret = RunLoopWithTimeoutOrUntil(
-        [&] {
-          return runner->components().size() == expected_components_count;
-        },
-        kTimeout);
+    const bool ret = RunLoopUntil([&] {
+      return runner->components().size() == expected_components_count;
+    });
     EXPECT_TRUE(ret) << "Waiting for component to start/die timed out, got:"
                      << runner->components().size()
                      << ", expected: " << expected_components_count;
@@ -139,17 +136,14 @@ TEST_F(RealmRunnerTest, RunnerLaunchedAgainWhenKilled) {
   runner_registry_.runner()->runner_ptr()->Crash();
   ASSERT_TRUE(WaitForRunnerToDie());
   // Make sure component is dead.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return return_code != INT64_MIN; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return return_code != INT64_MIN; }));
 
   // Make sure we no longer have runner in hub. This will make sure that appmgr
   // knows that runner died, before we try to launch component again.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [runner_path = runner_path_in_hub.c_str()] {
-        struct stat s;
-        return stat(runner_path, &s) != 0;
-      },
-      kTimeout));
+  ASSERT_TRUE(RunLoopUntil([runner_path = runner_path_in_hub.c_str()] {
+    struct stat s;
+    return stat(runner_path, &s) != 0;
+  }));
 
   // launch again and check that runner was executed again
   component =
@@ -223,8 +217,8 @@ TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {
       components[0].unique_id, component_ptr.NewRequest());
   component_ptr->Kill(ret_code);
   ASSERT_TRUE(WaitForComponentCount(0));
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return reason == TerminationReason::EXITED; }, kTimeout));
+  EXPECT_TRUE(
+      RunLoopUntil([&] { return reason == TerminationReason::EXITED; }));
   EXPECT_EQ(return_code, ret_code);
 }
 
@@ -252,8 +246,8 @@ TEST_F(RealmRunnerTest, KillComponentController) {
   };
   component->Kill();
   ASSERT_TRUE(WaitForComponentCount(0));
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return reason == TerminationReason::EXITED; }, kTimeout));
+  EXPECT_TRUE(
+      RunLoopUntil([&] { return reason == TerminationReason::EXITED; }));
 }
 
 class RealmRunnerServiceTest : public RealmRunnerTest {
@@ -262,9 +256,11 @@ class RealmRunnerServiceTest : public RealmRunnerTest {
     TestWithEnvironment::SetUp();
     auto env_services = CreateServices();
     ASSERT_EQ(ZX_OK, env_services->AddService(runner_registry_.GetHandler()));
-    ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
-                         CreateLaunchInfo("fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx"),
-                         fidl::examples::echo::Echo::Name_));
+    ASSERT_EQ(ZX_OK,
+              env_services->AddServiceWithLaunchInfo(
+                  CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
+                                   "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                  fidl::examples::echo::Echo::Name_));
     enclosing_environment_ =
         CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   }
@@ -288,8 +284,7 @@ TEST_F(RealmRunnerServiceTest, ComponentCanConnectToEnvService) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return ret_msg.get() == message; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return ret_msg.get() == message; }));
 }
 
 TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
@@ -328,13 +323,13 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   fidl::examples::echo::EchoPtr echo;
   services.ConnectToService(echo.NewRequest().TakeChannel(),
                             dummy_service_name);
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return connect_called; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return connect_called; }));
 }
 
 TEST_F(RealmRunnerTest, ProbeHub) {
-  auto glob_str = fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*/c/%s/*",
-                                    kRealm, kComponentForRunnerProcessName);
+  auto glob_str =
+      fxl::StringPrintf("/hub/r/%s/*/c/appmgr_mock_runner.cmx/*/c/%s/*", kRealm,
+                        kComponentForRunnerProcessName);
   // launch two components and make sure both show up in /hub.
   auto component1 =
       enclosing_environment_->CreateComponentFromUrl(kComponentForRunner);

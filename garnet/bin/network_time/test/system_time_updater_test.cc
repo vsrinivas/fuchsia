@@ -7,18 +7,16 @@
 #include <time.h>
 #include <thread>
 
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/timezone.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "gmock/gmock.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include "lib/fsl/io/fd.h"
-#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/sys/cpp/file_descriptor.h"
@@ -26,6 +24,8 @@
 #include "lib/vfs/cpp/service.h"
 #include "lib/zx/time.h"
 #include "local_roughtime_server.h"
+#include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/files/unique_fd.h"
 #include "third_party/roughtime/protocol.h"
 
 namespace time_server {
@@ -254,16 +254,14 @@ TEST_F(SystemTimeUpdaterTest, UpdateTimeFromLocalRoughtimeServer) {
 
   // Back to the past...
   local_roughtime_server_->SetTime(1985, 10, 26, 9, 0, 0);
-  RunComponentUntilTerminatedOrTimeout(
-      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr,
-      zx::sec(20));
+  RunComponentUntilTerminated(
+      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr);
   EXPECT_THAT(fake_rtc_device_->Get(), EqualsGmtDate(1985, 10, 26));
 
   // Back to the future...
   local_roughtime_server_->SetTime(2015, 10, 21, 7, 28, 0);
-  RunComponentUntilTerminatedOrTimeout(
-      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr,
-      zx::sec(20));
+  RunComponentUntilTerminated(
+      LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr);
   EXPECT_THAT(fake_rtc_device_->Get(), EqualsGmtDate(2015, 10, 21));
 
   local_roughtime_server_->Stop();

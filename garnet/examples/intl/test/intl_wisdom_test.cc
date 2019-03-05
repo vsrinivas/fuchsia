@@ -9,16 +9,16 @@
 #include <string>
 #include <vector>
 
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/sys/cpp/file_descriptor.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include <lib/sys/cpp/file_descriptor.h>
 
 namespace intl_wisdom {
 
@@ -94,8 +94,7 @@ TEST_F(IntlWisdomTest, RunWisdomClientAndServer) {
   ReadFile("/pkg/data/golden-output.txt", expected_output);
 
   ComponentControllerPtr controller = LaunchClientWithServer();
-  ASSERT_TRUE(RunComponentUntilTerminatedOrTimeout(std::move(controller),
-                                                   nullptr, zx::sec(5)));
+  ASSERT_TRUE(RunComponentUntilTerminated(std::move(controller), nullptr));
   std::string actual_output;
   ReadStdOutFile(actual_output);
   ASSERT_EQ(actual_output, expected_output);

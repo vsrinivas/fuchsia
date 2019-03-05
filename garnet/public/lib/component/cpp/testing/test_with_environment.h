@@ -110,18 +110,16 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   // You should either use this function to wait or run your own loop if you
   // want CreateComponent* to succed on |enclosing_environment|.
   bool WaitForEnclosingEnvToStart(
-      const EnclosingEnvironment* enclosing_environment,
-      zx::duration timeout = zx::sec(5)) {
-    return RunLoopWithTimeoutOrUntil(
-        [enclosing_environment] { return enclosing_environment->is_running(); },
-        timeout);
+      const EnclosingEnvironment* enclosing_environment) {
+    return RunLoopUntil([enclosing_environment] {
+      return enclosing_environment->is_running();
+    });
   }
 
   // Run a loop until the given component is terminated or |timeout| elapses.
-  bool RunComponentUntilTerminatedOrTimeout(
+  bool RunComponentUntilTerminated(
       fuchsia::sys::ComponentControllerPtr component_controller,
-      TerminationResult* termination_result = nullptr,
-      zx::duration timeout = zx::sec(5), zx::duration step = zx::msec(10));
+      TerminationResult* termination_result = nullptr);
 
  private:
   std::shared_ptr<component::Services> real_services_;
