@@ -61,7 +61,6 @@ struct zx_proc_args {
 // arguments message.
 #define PA_HND(type, arg)          (((type)&0xFF)| (((arg)&0xFFFF)<<16))
 #define PA_HND_TYPE(n)             ((n) & 0xFF)
-#define PA_HND_SUBTYPE(n)          (((n) >> 8) & 0xFF)
 #define PA_HND_ARG(n)              (((n) >> 16) & 0xFFFF)
 
 // --- Core Runtime Handles ---
