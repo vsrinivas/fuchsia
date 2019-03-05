@@ -19,7 +19,7 @@ class HarvesterGrpc : public Harvester {
       : stub_(dockyard_proto::Dockyard::NewStub(channel)) {}
 
   // |Harvester|.
-  virtual bool Init() override;
+  virtual HarvesterStatus Init() override;
 
   // |Harvester|.
   virtual HarvesterStatus SendSample(const std::string& stream_name,

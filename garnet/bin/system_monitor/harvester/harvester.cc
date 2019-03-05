@@ -28,7 +28,19 @@ void AddCpuValue(SampleList* list, size_t cpu, const std::string name,
 
 }  // namespace
 
-void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester) {
+std::ostream& operator<<(std::ostream& out, const HarvesterStatus& status) {
+  switch (status) {
+    case HarvesterStatus::OK:
+      return out << "OK (0)";
+    case HarvesterStatus::ERROR:
+      return out << "ERROR (-1)";
+  }
+  FXL_NOTREACHED();
+  return out;
+}
+
+void GatherCpuSamples(zx_handle_t root_resource,
+                      const std::unique_ptr<harvester::Harvester>& harvester) {
   // TODO(dschuyler): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
@@ -69,12 +81,14 @@ void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester) {
     AddCpuValue(&list, i, "generic_ipis", stats[i].generic_ipis);
   }
   HarvesterStatus status = harvester->SendSampleList(list);
-  if (status != OK) {
+  if (status != HarvesterStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }
 
-void GatherMemorySamples(zx_handle_t root_resource, Harvester* harvester) {
+void GatherMemorySamples(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::Harvester>& harvester) {
   zx_info_kmem_stats_t stats;
   zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
                                        &stats, sizeof(stats), NULL, NULL);
@@ -101,12 +115,14 @@ void GatherMemorySamples(zx_handle_t root_resource, Harvester* harvester) {
   list.push_back(std::make_pair(VMO_BYTES, stats.vmo_bytes));
   list.push_back(std::make_pair(IPC_BYTES, stats.ipc_bytes));
   HarvesterStatus status = harvester->SendSampleList(list);
-  if (status != OK) {
+  if (status != HarvesterStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }
 
-void GatherThreadSamples(zx_handle_t root_resource, Harvester* harvester) {
+void GatherThreadSamples(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::Harvester>& harvester) {
   // TODO(dschuyler): Actually gather the thread samples.
 }
 

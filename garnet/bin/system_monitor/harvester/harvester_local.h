@@ -18,7 +18,7 @@ class HarvesterLocal : public Harvester {
   HarvesterLocal() {}
 
   // |Harvester|.
-  virtual bool Init() override;
+  virtual HarvesterStatus Init() override;
 
   // |Harvester|.
   virtual HarvesterStatus SendSample(const std::string& stream_name,

@@ -7,20 +7,20 @@
 
 namespace harvester {
 
-bool HarvesterLocal::Init() {
+HarvesterStatus HarvesterLocal::Init() {
   FXL_LOG(INFO) << "HarvesterLocal::Init";
-  return true;
+  return HarvesterStatus::OK;
 }
 
 HarvesterStatus HarvesterLocal::SendSample(const std::string& stream_name,
                                            uint64_t value) {
   FXL_LOG(INFO) << "HarvesterLocal::SendSample";
-  return OK;
+  return HarvesterStatus::OK;
 }
 
 HarvesterStatus HarvesterLocal::SendSampleList(const SampleList list) {
   FXL_LOG(INFO) << "HarvesterLocal::SendSampleList";
-  return OK;
+  return HarvesterStatus::OK;
 }
 
 }  // namespace harvester

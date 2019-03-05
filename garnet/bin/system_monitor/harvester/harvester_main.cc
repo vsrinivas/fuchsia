@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "Option: local only, not using transport to Dockyard.";
     use_grpc = false;
   }
-  harvester::Harvester* harvester;
+  std::unique_ptr<harvester::Harvester> harvester;
   if (use_grpc) {
     const auto& positional_args = command_line.positional_args();
     if (positional_args.size() < 1) {
@@ -93,14 +93,14 @@ int main(int argc, char** argv) {
 
     // TODO(dschuyler): This channel isn't authenticated
     // (InsecureChannelCredentials()).
-    harvester = new harvester::HarvesterGrpc(grpc::CreateChannel(
+    harvester = std::make_unique<harvester::HarvesterGrpc>(grpc::CreateChannel(
         positional_args[0], grpc::InsecureChannelCredentials()));
 
-    if (!harvester || !harvester->Init()) {
+    if (!harvester || harvester->Init() != harvester::HarvesterStatus::OK) {
       exit(EXIT_CODE_GENERAL_ERROR);
     }
   } else {
-    harvester = new harvester::HarvesterLocal;
+    harvester = std::make_unique<harvester::HarvesterLocal>();
   }
 
   zx_handle_t root_resource;
@@ -116,7 +116,6 @@ int main(int argc, char** argv) {
     // TODO(dschuyler): Make delay configurable (100 msec is arbitrary).
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-  delete harvester;
   FXL_LOG(INFO) << "System Monitor Harvester - exiting";
   return 0;
 }

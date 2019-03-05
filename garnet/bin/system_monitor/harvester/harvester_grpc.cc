@@ -18,12 +18,12 @@ namespace harvester {
 namespace {
 
 constexpr HarvesterStatus ToHarvesterStatus(const grpc::Status& status) {
-  return status.ok() ? harvester::OK : harvester::ERROR;
+  return status.ok() ? HarvesterStatus::OK : HarvesterStatus::ERROR;
 }
 
 }  // namespace
 
-bool HarvesterGrpc::Init() {
+HarvesterStatus HarvesterGrpc::Init() {
   dockyard_proto::InitRequest request;
   request.set_name("TODO SET DEVICE NAME");
   request.set_version(dockyard::DOCKYARD_VERSION);
@@ -32,11 +32,11 @@ bool HarvesterGrpc::Init() {
   grpc::ClientContext context;
   grpc::Status status = stub_->Init(&context, request, &reply);
   if (status.ok()) {
-    return true;
+    return HarvesterStatus::OK;
   }
   FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
   FXL_LOG(ERROR) << "Unable to send to dockyard.";
-  return false;
+  return HarvesterStatus::ERROR;
 }
 
 HarvesterStatus HarvesterGrpc::SendSample(const std::string& stream_name,

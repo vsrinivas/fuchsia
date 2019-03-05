@@ -6,6 +6,7 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 
 #include <zircon/types.h>
+#include <iostream>
 #include <string>
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
@@ -15,16 +16,19 @@ namespace harvester {
 typedef std::vector<std::pair<const std::string, uint64_t>> SampleList;
 typedef std::vector<std::pair<uint64_t, uint64_t>> SampleListById;
 
-typedef int HarvesterStatus;
-constexpr HarvesterStatus OK = 0;
-constexpr HarvesterStatus ERROR = -1;
+enum class HarvesterStatus : int {
+  OK = 0,
+  ERROR = -1,
+};
+
+std::ostream& operator<<(std::ostream& out, const HarvesterStatus& status);
 
 class Harvester {
  public:
   virtual ~Harvester() {}
 
   // Initialize the Harvester.
-  virtual bool Init() = 0;
+  virtual HarvesterStatus Init() = 0;
 
   // Send a single sample to the Dockyard.
   virtual HarvesterStatus SendSample(const std::string& stream_name,
@@ -34,11 +38,16 @@ class Harvester {
   virtual HarvesterStatus SendSampleList(const SampleList list) = 0;
 };
 
-// Gather*Samples collect samples for a given subject. They are grouped to make
+// Gather Samples collect samples for a given subject. They are grouped to make
 // the code more manageable and for enabling/disabling categories in the future.
-void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester);
-void GatherMemorySamples(zx_handle_t root_resource, Harvester* harvester);
-void GatherThreadSamples(zx_handle_t root_resource, Harvester* harvester);
+void GatherCpuSamples(zx_handle_t root_resource,
+                      const std::unique_ptr<harvester::Harvester>& harvester);
+void GatherMemorySamples(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::Harvester>& harvester);
+void GatherThreadSamples(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::Harvester>& harvester);
 
 }  // namespace harvester
 
