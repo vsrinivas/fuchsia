@@ -44,6 +44,9 @@
 #define MT8167_MSDC0_BASE                                   0x11120000
 #define MT8167_MSDC0_SIZE                                   0x22c
 
+#define MT8167_MSDC1_BASE                                   0x11130000
+#define MT8167_MSDC1_SIZE                                   0x22c
+
 #define MT8167_AUDIO_BASE                                   0x11140000
 #define MT8167_AUDIO_SIZE                                   0x1000
 
@@ -103,6 +106,7 @@
 #define MT8167_IRQ_PWM                                      108
 #define MT8167_IRQ_PTP_THERM                                109
 #define MT8167_IRQ_MSDC0                                    110
+#define MT8167_IRQ_MSDC1                                    111
 #define MT8167_IRQ_I2C0                                     112
 #define MT8167_IRQ_I2C1                                     113
 #define MT8167_IRQ_I2C2                                     114
@@ -132,3 +136,6 @@
 
 #define MT8167_CLEO_GPIO_HUB_PWR_EN                         13
 #define MT8167_CLEO_GPIO_LCM_EN                             22
+
+#define MT8167_EAGLE_GPIO_MT6630_SYSRST                     20
+#define MT8167_EAGLE_GPIO_MT6630_PMU_EN                     48

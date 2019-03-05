@@ -67,10 +67,17 @@ public:
 };
 
 zx_status_t Mt8167::SdioInit() {
-    static const pbus_mmio_t sdio_mmios[] = {
+    static const pbus_mmio_t sdio_ref_mmios[] = {
         {
             .base = MT8167_MSDC2_BASE,
             .length = MT8167_MSDC2_SIZE,
+        },
+    };
+
+    static const pbus_mmio_t sdio_eagle_mmios[] = {
+        {
+            .base = MT8167_MSDC1_BASE,
+            .length = MT8167_MSDC1_SIZE,
         },
     };
 
@@ -94,9 +101,16 @@ zx_status_t Mt8167::SdioInit() {
         }
     };
 
-    static const pbus_irq_t sdio_irqs[] = {
+    static const pbus_irq_t sdio_ref_irqs[] = {
         {
             .irq = MT8167_IRQ_MSDC2,
+            .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+        }
+    };
+
+    static const pbus_irq_t sdio_eagle_irqs[] = {
+        {
+            .irq = MT8167_IRQ_MSDC1,
             .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
         }
     };
@@ -116,12 +130,36 @@ zx_status_t Mt8167::SdioInit() {
         }
     };
 
+    static const pbus_gpio_t sdio_eagle_gpios[] = {
+        {
+            .gpio = MT8167_EAGLE_GPIO_MT6630_SYSRST
+        },
+        {
+            .gpio = MT8167_EAGLE_GPIO_MT6630_PMU_EN
+        }
+    };
+
+    const pbus_mmio_t* sdio_mmios = sdio_ref_mmios;
+    size_t sdio_mmio_count = countof(sdio_ref_mmios);
+
+    const pbus_irq_t* sdio_irqs = sdio_ref_irqs;
+    size_t sdio_irq_count = countof(sdio_ref_irqs);
+
     const pbus_gpio_t* sdio_gpios = sdio_ref_gpios;
     size_t sdio_gpio_count = countof(sdio_ref_gpios);
 
     if (board_info_.pid == PDEV_PID_CLEO) {
         sdio_gpios = sdio_cleo_gpios;
         sdio_gpio_count = countof(sdio_cleo_gpios);
+    } else if (board_info_.pid == PDEV_PID_EAGLE) {
+        sdio_mmios = sdio_eagle_mmios;
+        sdio_mmio_count = countof(sdio_eagle_mmios);
+
+        sdio_irqs = sdio_eagle_irqs;
+        sdio_irq_count = countof(sdio_eagle_irqs);
+
+        sdio_gpios = sdio_eagle_gpios;
+        sdio_gpio_count = countof(sdio_eagle_gpios);
     }
 
     pbus_dev_t sdio_dev = {};
@@ -129,13 +167,13 @@ zx_status_t Mt8167::SdioInit() {
     sdio_dev.vid = PDEV_VID_MEDIATEK;
     sdio_dev.did = PDEV_DID_MEDIATEK_SDIO;
     sdio_dev.mmio_list = sdio_mmios;
-    sdio_dev.mmio_count = countof(sdio_mmios);
+    sdio_dev.mmio_count = sdio_mmio_count;
     sdio_dev.bti_list = sdio_btis;
     sdio_dev.bti_count = countof(sdio_btis);
     sdio_dev.metadata_list = sdio_metadata;
     sdio_dev.metadata_count = countof(sdio_metadata);
     sdio_dev.irq_list = sdio_irqs;
-    sdio_dev.irq_count = countof(sdio_irqs);
+    sdio_dev.irq_count = sdio_irq_count;
     sdio_dev.gpio_list = sdio_gpios;
     sdio_dev.gpio_count = sdio_gpio_count;
 
@@ -144,34 +182,38 @@ zx_status_t Mt8167::SdioInit() {
     zx_status_t status = ddk::MmioBuffer::Create(kGpioBaseAligned, kGpioSizeAligned, *root_resource,
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to set MSDC2 GPIOs: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: Failed to set MSDC%d GPIOS: %d\n", __FUNCTION__,
+               board_info_.pid == PDEV_PID_EAGLE ? 1 : 2, status);
         return status;
     }
 
-    // MSDC2 pins are not configured by the bootloader. Set the clk pin to 50k pull-down, all others
-    // to 10k pull-up to match the device tree settings.
-    PuPdCtrl4::Get()
-        .ReadFrom(&(*gpio_mmio))
-        .set_msdc2_dat2_pupd(kPullUp)
-        .set_msdc2_dat2_pull(kPull10k)
-        .set_msdc2_dat1_pupd(kPullUp)
-        .set_msdc2_dat1_pull(kPull10k)
-        .set_msdc2_dat0_pupd(kPullUp)
-        .set_msdc2_dat0_pull(kPull10k)
-        .WriteTo(&(*gpio_mmio));
+    if (board_info_.pid != PDEV_PID_EAGLE) {
+        // MSDC2 pins are not configured by the bootloader. Set the clk pin to 50k pull-down, all
+        // others to 10k pull-up to match the device tree settings.
+        PuPdCtrl4::Get()
+            .ReadFrom(&(*gpio_mmio))
+            .set_msdc2_dat2_pupd(kPullUp)
+            .set_msdc2_dat2_pull(kPull10k)
+            .set_msdc2_dat1_pupd(kPullUp)
+            .set_msdc2_dat1_pull(kPull10k)
+            .set_msdc2_dat0_pupd(kPullUp)
+            .set_msdc2_dat0_pull(kPull10k)
+            .WriteTo(&(*gpio_mmio));
 
-    PuPdCtrl5::Get()
-        .ReadFrom(&(*gpio_mmio))
-        .set_msdc2_cmd_pupd(kPullUp)
-        .set_msdc2_cmd_pull(kPull10k)
-        .set_msdc2_clk_pupd(kPullDown)
-        .set_msdc2_clk_pull(kPull50k)
-        .set_msdc2_dat3_pupd(kPullUp)
-        .set_msdc2_dat3_pull(kPull10k)
-        .WriteTo(&(*gpio_mmio));
+        PuPdCtrl5::Get()
+            .ReadFrom(&(*gpio_mmio))
+            .set_msdc2_cmd_pupd(kPullUp)
+            .set_msdc2_cmd_pull(kPull10k)
+            .set_msdc2_clk_pupd(kPullDown)
+            .set_msdc2_clk_pull(kPull50k)
+            .set_msdc2_dat3_pupd(kPullUp)
+            .set_msdc2_dat3_pull(kPull10k)
+            .WriteTo(&(*gpio_mmio));
+    }
 
     if ((status = pbus_.DeviceAdd(&sdio_dev)) != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd MSDC2 failed: %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd MSDC%d failed: %d\n", __FUNCTION__,
+               board_info_.pid == PDEV_PID_EAGLE ? 1 : 2, status);
     }
 
     return status;
