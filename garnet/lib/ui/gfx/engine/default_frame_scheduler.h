@@ -23,7 +23,7 @@ class Display;
 
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(Display* display);
+  explicit DefaultFrameScheduler(Display* const display);
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
@@ -109,14 +109,8 @@ class DefaultFrameScheduler : public FrameScheduler {
                                     uint64_t presentation_time,
                                     uint64_t presentation_interval);
 
-  // Apply updates to all sessions who have updates and have acquired all
-  // fences.  Return true if there were any updates applied.
-  bool UpdateSessions(uint64_t presentation_time,
-                      uint64_t presentation_interval,
-                      uint64_t frame_number_for_tracing);
-
   async_dispatcher_t* const dispatcher_;
-  Display* const display_;
+  const Display* const display_;
 
   std::priority_queue<zx_time_t, std::vector<zx_time_t>,
                       std::greater<zx_time_t>>

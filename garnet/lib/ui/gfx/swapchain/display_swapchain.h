@@ -35,10 +35,24 @@ class DisplaySwapchain : public Swapchain {
                    EventTimestamper* timestamper, escher::Escher* escher);
   ~DisplaySwapchain() override;
 
+  // Callback to call on every vsync. Arguments are:
+  // - the timestamp of the vsync.
+  using OnVsyncCallback = fit::function<void(zx_time_t vsync_timestamp)>;
+
   // |Swapchain|
   bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
                            const HardwareLayerAssignment& hla,
                            DrawCallback draw_callback) override;
+
+  // Register a callback to be called on each vsync.
+  // Only allows a single listener at a time.
+  void RegisterVsyncListener(OnVsyncCallback on_vsync) {
+    FXL_CHECK(!on_vsync_);
+    on_vsync_ = std::move(on_vsync);
+  }
+
+  // Remove the registered vsync listener.
+  void UnregisterVsyncListener() { on_vsync_ = nullptr; }
 
  private:
   struct Framebuffer {
@@ -92,6 +106,8 @@ class DisplaySwapchain : public Swapchain {
   vk::Format format_;
   vk::Device device_;
   vk::Queue queue_;
+
+  OnVsyncCallback on_vsync_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };

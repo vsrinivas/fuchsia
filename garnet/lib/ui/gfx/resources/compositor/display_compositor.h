@@ -20,16 +20,14 @@ class DisplayCompositor : public Compositor {
 
   DisplayCompositor(Session* session, ResourceId id,
                     SceneGraphWeakPtr scene_graph, Display* display,
-                    std::unique_ptr<Swapchain> swapchain);
+                    std::unique_ptr<DisplaySwapchain> swapchain);
 
-  ~DisplayCompositor() override;
+  ~DisplayCompositor() override = default;
 
   // | Resource |
   void Accept(class ResourceVisitor* visitor) override;
 
  private:
-  Display* const display_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
 };
 

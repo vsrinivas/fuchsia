@@ -27,7 +27,7 @@ static uint64_t NextFlowId() {
 
 }  // anonymous namespace
 
-DefaultFrameScheduler::DefaultFrameScheduler(Display* display)
+DefaultFrameScheduler::DefaultFrameScheduler(Display* const display)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
       weak_factory_(this) {
@@ -83,9 +83,9 @@ std::pair<zx_time_t, zx_time_t>
 DefaultFrameScheduler::ComputeTargetPresentationAndWakeupTimes(
     const zx_time_t requested_presentation_time) const {
   const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
-  const zx_time_t vsync_interval = display_->GetVsyncInterval();
+  const zx_duration_t vsync_interval = display_->GetVsyncInterval();
   const zx_time_t now = async_now(dispatcher_);
-  const zx_time_t required_render_time = PredictRequiredFrameRenderTime();
+  const zx_duration_t required_render_time = PredictRequiredFrameRenderTime();
 
   // Compute the number of full vsync intervals between the last vsync and the
   // requested presentation time.  Notes:
@@ -238,6 +238,10 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
     requested_presentation_times_.pop();
   }
 
+  // TODO(SCN-124): We should derive an appropriate value from the rendering
+  // targets, in particular giving priority to couple to the display refresh
+  // (vsync).
+  auto presentation_interval = display_->GetVsyncInterval();
   if (delegate_.frame_renderer && delegate_.session_updater) {
     FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
 
@@ -249,9 +253,9 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
                   "Frame number", frame_number_);
 
     // Apply all updates
-    bool any_updates_were_applied = ApplyScheduledSessionUpdates(
-        frame_timings->frame_number(), presentation_time,
-        display_->GetVsyncInterval());
+    bool any_updates_were_applied =
+        ApplyScheduledSessionUpdates(frame_timings->frame_number(),
+                                     presentation_time, presentation_interval);
 
     if (!any_updates_were_applied && !render_continuously_) {
       return;
@@ -264,7 +268,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
     }
     // Render the frame
     if (delegate_.frame_renderer->RenderFrame(frame_timings, presentation_time,
-                                              display_->GetVsyncInterval())) {
+                                              presentation_interval)) {
       outstanding_frames_.push_back(frame_timings);
     }
   }
@@ -325,9 +329,6 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
                   timings.frame_number());
   } else {
-    // TODO(MZ-400): This needs to be generalized for multi-display support.
-    display_->set_last_vsync_time(timings.actual_presentation_time());
-
     // Log trace data.
     // TODO(MZ-400): just pass the whole Frame to a listener.
     int64_t target_vs_actual_usecs =

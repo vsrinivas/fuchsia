@@ -25,11 +25,15 @@ class Display {
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
   virtual ~Display() = default;
 
+  // Should be registered by DisplayCompositor to be called on every received
+  // vsync signal.
+  void OnVsync(zx_time_t timestamp);
+
   // Obtain the time of the last Vsync, in nanoseconds.
-  zx_time_t GetLastVsyncTime();
+  zx_time_t GetLastVsyncTime() const { return last_vsync_time_; }
 
   // Obtain the interval between Vsyncs, in nanoseconds.
-  zx_time_t GetVsyncInterval() const;
+  zx_duration_t GetVsyncInterval() const { return vsync_interval_; };
 
   // Claiming a display means that no other display renderer can use it.
   bool is_claimed() const { return claimed_; }
@@ -50,14 +54,19 @@ class Display {
 
   virtual bool is_test_display() const { return false; }
 
- private:
-  // Temporary friendship to allow FrameScheduler to feed back the Vsync timings
-  // gleaned from EventTimestamper.  This should go away once we receive real
-  // VSync times from the display driver.
-  friend class DefaultFrameScheduler;
-  void set_last_vsync_time(zx_time_t vsync_time);
-
+ protected:
+  // Protected for testing purposes.
+  zx_duration_t vsync_interval_;
   zx_time_t last_vsync_time_;
+
+ private:
+  // The maximum vsync interval we would ever expect.
+  static constexpr zx_duration_t kMaximumVsyncInterval = 100'000'000;  // 100 ms
+
+  // Vsync interval of a 60 Hz screen.
+  // Used as a default value before real timings arrive.
+  static constexpr zx_duration_t kNsecsFor60fps = 16'666'667;
+
   const uint64_t display_id_;
   const uint32_t width_in_px_;
   const uint32_t height_in_px_;

@@ -19,6 +19,8 @@ source_set("testing_deps") {
   sources = [
     "error_reporting_test.cc",
     "error_reporting_test.h",
+    "frame_scheduler_test.cc",
+    "frame_scheduler_test.h",
     "gfx_test.h",
     "mocks.cc",
     "mocks.h",
@@ -67,6 +69,7 @@ executable("unittests") {
 
   testonly = true
   sources = [
+    "default_frame_scheduler_unittest.cc",
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
     "gfx_command_applier_unittest.cc",

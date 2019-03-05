@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 
+#include <trace/event.h>
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/util/time.h"
@@ -14,7 +15,8 @@ namespace gfx {
 
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
                  std::vector<zx_pixel_format_t> pixel_formats)
-    : last_vsync_time_(dispatcher_clock_now()),
+    : vsync_interval_(kNsecsFor60fps),
+      last_vsync_time_(dispatcher_clock_now()),
       display_id_(id),
       width_in_px_(width_in_px),
       height_in_px_(height_in_px),
@@ -24,29 +26,6 @@ Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
     : Display(id, width_in_px, height_in_px, {ZX_PIXEL_FORMAT_ARGB_8888}) {}
 
-zx_time_t Display::GetLastVsyncTime() {
-  // Since listening for frame presentation events is our only way of knowing
-  // when vsyncs have occurred, we often need to make an educated guess.
-  const zx_time_t now = dispatcher_clock_now();
-  const zx_time_t interval_duration = GetVsyncInterval();
-  const uint64_t num_intervals = (now - last_vsync_time_) / interval_duration;
-  return last_vsync_time_ + (num_intervals * interval_duration);
-}
-
-zx_time_t Display::GetVsyncInterval() const {
-  // TODO(MZ-124): We should derive an appropriate value from the rendering
-  // targets, in particular giving priority to couple to the display refresh
-  // (vsync).
-  constexpr zx_time_t kHardcodedPresentationIntervalNanos = 16'666'667;
-  return kHardcodedPresentationIntervalNanos;
-}
-
-void Display::set_last_vsync_time(zx_time_t vsync_time) {
-  FXL_DCHECK(vsync_time >= last_vsync_time_ &&
-             vsync_time <= dispatcher_clock_now());
-  last_vsync_time_ = vsync_time;
-}
-
 void Display::Claim() {
   FXL_DCHECK(!claimed_);
   claimed_ = true;
@@ -55,6 +34,20 @@ void Display::Claim() {
 void Display::Unclaim() {
   FXL_DCHECK(claimed_);
   claimed_ = false;
+}
+
+void Display::OnVsync(zx_time_t timestamp) {
+  zx_duration_t time_since_last_vsync = timestamp - last_vsync_time_;
+  last_vsync_time_ = timestamp;
+
+  // Estimate current vsync interval. Need to include a maximum to mitigate any
+  // potential issues during startup and long breaks.
+  vsync_interval_ = time_since_last_vsync < kMaximumVsyncInterval
+                        ? time_since_last_vsync
+                        : vsync_interval_;
+
+  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp",
+                timestamp, "Vsync interval", vsync_interval_);
 }
 
 }  // namespace gfx

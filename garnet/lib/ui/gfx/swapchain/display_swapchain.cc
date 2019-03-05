@@ -514,6 +514,10 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index,
 
 void DisplaySwapchain::OnVsync(zx_time_t timestamp,
                                const std::vector<uint64_t>& image_ids) {
+  if (on_vsync_) {
+    on_vsync_(timestamp);
+  }
+
   if (image_ids.empty()) {
     return;
   }
