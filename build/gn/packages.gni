@@ -20,6 +20,12 @@ declare_args() {
   # a list of packages only added to the distribution repository)
   available = []
 
+  # Whether the build should attempt to guess what to build based on the
+  # .jiri_manifest file.
+  #
+  # Eventually will be set to false and removed.
+  allow_layer_guesswork = true
+
   # These arguments should be set by the board definition gni file.
 
   # A list of packages included in the monolith from the board definition.
@@ -56,8 +62,8 @@ if (fuchsia_products != [] && current_toolchain == default_toolchain) {
   print("or BLD-240 for more details")
 }
 
-if (monolith == [] && preinstall == [] && available == [] &&
-    fuchsia_packages == []) {
+if (allow_layer_guesswork && monolith == [] && preinstall == [] &&
+    available == [] && fuchsia_packages == []) {
   _jiri_manifest = "//.jiri_manifest"
   _layers = exec_script("//build/gn/guess_layer.py",
                         [ rebase_path(_jiri_manifest) ],
