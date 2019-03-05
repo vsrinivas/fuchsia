@@ -274,11 +274,6 @@ void SetSeqNo(MgmtFrameHeader* hdr, Sequence* seq);
 void SetSeqNo(MgmtFrameHeader* hdr, uint8_t aci, Sequence* seq);
 void SetSeqNo(DataFrameHeader* hdr, Sequence* seq);
 
-using MsduCallback = fit::function<void(FrameView<LlcHeader>, size_t)>;
-
-// Returns a list of all LLC frames carried in an AMSDU data frame.
-zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>&, MsduCallback);
-
 void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id);
 
 }  // namespace wlan

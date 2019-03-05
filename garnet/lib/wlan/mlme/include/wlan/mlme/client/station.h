@@ -92,9 +92,6 @@ class Station : public ClientInterface {
     bool ShouldDropDataFrame(const DataFrameView<>&);
     zx_status_t HandleNullDataFrame(DataFrame<NullDataHdr>&& frame);
     zx_status_t HandleDataFrame(DataFrame<LlcHeader>&& frame);
-    zx_status_t HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_t llc_payload_len,
-                               const common::MacAddr& src, const common::MacAddr& dest);
-    zx_status_t HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&&);
     zx_status_t HandleAddBaRequest(const AddBaRequestFrame&);
 
     zx_status_t SendAddBaRequestFrame();

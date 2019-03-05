@@ -122,6 +122,13 @@ zx_status_t Station::HandleMgmtFrame(MgmtFrame<>&& frame) {
     return ZX_OK;
 }
 
+void HandleDataFrameInRust(mlme_device_ops_t* rust_device, fbl::unique_ptr<Packet> pkt) {
+    const auto rx_info = pkt->ctrl_data<wlan_rx_info>();
+    const bool has_padding =
+        rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
+    mlme_handle_data_frame(rust_device, pkt->data(), pkt->len(), has_padding);
+}
+
 zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
     auto data_frame = frame.View();
     if (kFinspectEnabled) { DumpDataFrame(data_frame); }
@@ -132,8 +139,9 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
     auto rssi_dbm = frame.View().rx_info()->rssi_dbm;
     WLAN_RSSI_HIST_INC(assoc_data_rssi, rssi_dbm);
 
-    if (auto amsdu_frame = data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength()) {
-        HandleAmsduFrame(amsdu_frame.IntoOwned(frame.Take()));
+    if (data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength() &&
+        controlled_port_ == eapol::PortState::kOpen) {
+        HandleDataFrameInRust(&rust_device_, frame.Take());
     } else if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
         HandleDataFrame(llc_frame.IntoOwned(frame.Take()));
     } else if (auto null_frame = data_frame.CheckBodyType<NullDataHdr>().CheckLength()) {
@@ -633,50 +641,7 @@ zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
     // PS-POLL if there are more buffered unicast frames.
     if (data_hdr->fc.more_data() && data_hdr->addr1.IsUcast()) { SendPsPoll(); }
 
-    const auto& src = data_hdr->addr3;
-    const auto& dest = data_hdr->addr1;
-    size_t llc_payload_len = llc_frame.body_len();
-    return HandleLlcFrame(llc_frame, llc_payload_len, src, dest);
-}
-
-zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_t llc_payload_len,
-                                    const common::MacAddr& src, const common::MacAddr& dest) {
-    finspect("Inbound LLC frame: hdr len %zu, payload len: %zu\n", llc_frame.hdr()->len(),
-             llc_payload_len);
-    finspect("  llc hdr: %s\n", debug::Describe(*llc_frame.hdr()).c_str());
-    finspect("  llc payload: %s\n",
-             debug::HexDump(llc_frame.body_data().subspan(0, llc_payload_len)).c_str());
-    if (llc_payload_len == 0) {
-        finspect("  dropping empty LLC frame\n");
-        return ZX_OK;
-    }
-
-    // TODO(WLAN-981): replace |llc_payload_len| with |llc_frame.body_data().len()|
-    auto status = mlme_deliver_eth_frame(&rust_device_, &rust_buffer_provider, &dest.byte,
-                                         &src.byte, htobe16(llc_frame.hdr()->protocol_id),
-                                         llc_frame.body_data().data(), llc_payload_len);
-    if (status != ZX_OK) { errorf("error handling llc frame: %s\n", zx_status_get_string(status)); }
-    return status;
-}
-
-zx_status_t Station::HandleAmsduFrame(DataFrame<AmsduSubframeHeader>&& frame) {
-    // TODO(porce): Define A-MSDU or MSDU signature, and avoid forceful conversion.
-    debugfn();
-    auto data_amsdu_frame = frame.View();
-
-    // Non-DMG stations use basic subframe format only.
-    if (data_amsdu_frame.body_len() == 0) { return ZX_OK; }
-    finspect("Inbound AMSDU: len %zu\n", data_amsdu_frame.body_len());
-
-    // TODO(porce): The received AMSDU should not be greater than max_amsdu_len, specified in
-    // HtCapabilities IE of Association. Warn or discard if violated.
-
-    const auto& src = data_amsdu_frame.hdr()->addr3;
-    const auto& dest = data_amsdu_frame.hdr()->addr1;
-    DeaggregateAmsdu(data_amsdu_frame, [&](FrameView<LlcHeader> llc_frame, size_t payload_len) {
-        HandleLlcFrame(llc_frame, payload_len, src, dest);
-    });
-
+    HandleDataFrameInRust(&rust_device_, frame.Take());
     return ZX_OK;
 }
 

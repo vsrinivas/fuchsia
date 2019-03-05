@@ -67,38 +67,6 @@ void SetSeqNo(DataFrameHeader* hdr, Sequence* seq) {
     hdr->sc.set_seq(seq_no);
 }
 
-zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>& data_amsdu_frame,
-                             MsduCallback cb) {
-    auto amsdu_subframe = data_amsdu_frame.SkipHeader();
-    while (amsdu_subframe) {
-        finspect("amsdu subframe: %s\n", debug::Describe(*amsdu_subframe.hdr()).c_str());
-        finspect("amsdu subframe dump: %s\n",
-                 debug::HexDump(amsdu_subframe.data(), amsdu_subframe.len()).c_str());
-
-        // Note: msdu_len == 0 is valid
-        size_t msdu_len = amsdu_subframe.hdr()->msdu_len();
-        if (msdu_len > 0) {
-            if (auto llc_frame =
-                    amsdu_subframe.CheckBodyType<LlcHeader>().CheckLength().SkipHeader()) {
-                size_t payload_len = msdu_len - llc_frame.hdr()->len();
-                cb(llc_frame, payload_len);
-            } else {
-                errorf("malformed A-MSDU subframe: amsdu_len %zu, msdu_len %zu\n",
-                       amsdu_subframe.len(), msdu_len);
-                return ZX_ERR_IO;
-            }
-        }
-
-        // Advance to next AMSDU subframe by skipping AMSDU header, MSDU and an optional padding.
-        size_t base_len = amsdu_subframe.hdr()->len() + msdu_len;
-        size_t padded_len = fbl::round_up(base_len, 4u);
-        amsdu_subframe =
-            amsdu_subframe.AdvanceBy(padded_len).As<AmsduSubframeHeader>().CheckLength();
-    }
-
-    return ZX_OK;
-}
-
 void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id) {
     llc->dsap = kLlcSnapExtension;
     llc->ssap = kLlcSnapExtension;

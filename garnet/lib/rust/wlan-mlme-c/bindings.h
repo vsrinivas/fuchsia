@@ -240,14 +240,10 @@ typedef struct {
   uintptr_t written_bytes;
 } mlme_out_buf_t;
 
-extern "C" int32_t mlme_deliver_eth_frame(
-    const mlme_device_ops_t *device, const mlme_buffer_provider_ops_t *provider,
-    const uint8_t (*dst_addr)[6], const uint8_t (*src_addr)[6],
-    uint16_t protocol_id, const uint8_t *payload, uintptr_t payload_len);
-
-extern "C" int32_t mlme_handle_data_frame(
-    const mlme_device_ops_t *device, const mlme_buffer_provider_ops_t *provider,
-    const uint8_t *data_frame, uintptr_t data_frame_len, bool has_padding);
+extern "C" int32_t mlme_handle_data_frame(const mlme_device_ops_t *device,
+                                          const uint8_t *data_frame,
+                                          uintptr_t data_frame_len,
+                                          bool has_padding);
 
 extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data,
                                                 uintptr_t len);

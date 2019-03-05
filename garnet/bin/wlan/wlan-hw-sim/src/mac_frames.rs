@@ -341,6 +341,8 @@ impl<W: io::Write> MacFrameWriter<W> {
         frame_control.set_typ(FrameControlType::Data as u16);
         frame_control.set_subtype(subtype as u16);
         frame_control.set_htc_order(header.ht_control.is_some());
+        frame_control.set_to_ds(false);
+        frame_control.set_from_ds(true);
         self.w.write_u16::<LittleEndian>(frame_control.0)?;
         self.w.write_u16::<LittleEndian>(header.duration)?;
         self.w.write_all(&header.addr1)?;
@@ -638,7 +640,7 @@ mod tests {
             .into_writer();
         #[rustfmt::skip]
         let expected_frame: &[u8] = &[
-            8u8, 0,  // FrameControl (overwritten)
+            0x08, 0x02,  // FrameControl (overwritten)
             0x65, 0x87,  // Duration
             1, 2, 3, 4, 5, 6,  // Addr1
             7, 8, 9, 10, 11, 12,  // Addr2

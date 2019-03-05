@@ -90,30 +90,6 @@ pub extern "C" fn mlme_handle_data_frame(
 }
 
 #[no_mangle]
-pub extern "C" fn mlme_deliver_eth_frame(
-    device: &device::Device,
-    provider: &BufferProvider,
-    dst_addr: &[u8; 6],
-    src_addr: &[u8; 6],
-    protocol_id: u16,
-    payload: *const u8,
-    payload_len: usize,
-) -> i32 {
-    let frame_len = frame_len!(mac::EthernetIIHdr) + payload_len;
-    let mut buf = unwrap_or_bail!(provider.get_buffer(frame_len), zx::ZX_ERR_NO_RESOURCES);
-    // It is safe here because `payload_slice` does not outlive `payload`.
-    let payload_slice = unsafe { utils::as_slice(payload, payload_len) };
-    let mut writer = BufferWriter::new(&mut buf[..]);
-    let write_result =
-        client::write_eth_frame(&mut writer, *dst_addr, *src_addr, protocol_id, payload_slice);
-    unwrap_or_bail!(write_result, zx::ZX_ERR_IO_OVERRUN);
-    match device.deliver_ethernet(writer.into_written()) {
-        Ok(()) => zx::ZX_OK,
-        Err(e) => e.into_raw(),
-    }
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn mlme_write_eapol_data_frame(
     provider: BufferProvider,
     seq_mgr: &mut SequenceManager,
