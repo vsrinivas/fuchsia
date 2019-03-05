@@ -159,11 +159,12 @@ void JobContextImpl::Detach(Callback callback) {
 
 void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
                                           bool force_send) {
-  DEBUG_LOG() << "Updating filters for job " << job_->GetName();
   if (!job_.get()) {
     filters_ = std::move(filters);
     return;
   }
+
+  DEBUG_LOG() << "Updating filters for job " << job_->GetName();
   if (!force_send && filters_ == filters) {
     return;
   }
