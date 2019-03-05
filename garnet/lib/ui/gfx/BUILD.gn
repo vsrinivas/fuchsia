@@ -5,10 +5,6 @@
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
-  # 0 - use normal swapchain
-  # 1 - use vulkan swapchain, but wait for real display
-  # 2 - use vulkan swapchain with fixed-size fake display
-  scenic_vulkan_swapchain = 0
   scenic_ignore_vsync = false
 
   # Specifies whether Scenic uses the new "PaperRenderer2" when
@@ -25,7 +21,6 @@ config("common_include_dirs") {
 
 config("swapchain") {
   defines = [
-    "SCENIC_VULKAN_SWAPCHAIN=$scenic_vulkan_swapchain",
     "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
     "SCENIC_USE_PAPERRENDERER2=$scenic_use_new_renderer",
   ]
@@ -198,8 +193,6 @@ source_set("gfx") {
     "swapchain/swapchain.h",
     "swapchain/swapchain_factory.cc",
     "swapchain/swapchain_factory.h",
-    "swapchain/vulkan_display_swapchain.cc",
-    "swapchain/vulkan_display_swapchain.h",
     "util/event_timestamper.cc",
     "util/event_timestamper.h",
     "util/time.h",

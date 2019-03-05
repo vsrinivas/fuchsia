@@ -76,19 +76,11 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   }
 
   // Initialize Vulkan.
-#if SCENIC_VULKAN_SWAPCHAIN
-  constexpr bool kRequiresSurface = true;
-#else
   constexpr bool kRequiresSurface = false;
-#endif
   escher::VulkanInstance::Params instance_params(
       {{},
        {
            VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#if SCENIC_VULKAN_SWAPCHAIN
-           VK_KHR_SURFACE_EXTENSION_NAME,
-           VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
-#endif
            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
            VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
@@ -100,11 +92,6 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
   vulkan_instance_ = escher::VulkanInstance::New(std::move(instance_params));
-#if SCENIC_VULKAN_SWAPCHAIN
-  // When SCENIC_VULKAN_SWAPCHAIN isn't set the Magma surface isn't used to
-  // render, so it isn't needed.
-  surface_ = CreateVulkanMagmaSurface(vulkan_instance_->vk_instance());
-#endif
 
   // Tell Escher not to filter out queues that don't support presentation.
   // The display manager only supports a single connection, so none of the
@@ -117,9 +104,7 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
            VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
-#if !SCENIC_VULKAN_SWAPCHAIN
            VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
-#endif
        },
        surface_,
        escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});

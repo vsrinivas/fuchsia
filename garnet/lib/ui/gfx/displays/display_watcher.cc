@@ -9,8 +9,8 @@
 #include <lib/fidl/cpp/message.h>
 #include <zircon/device/display-controller.h>
 
-#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -23,17 +23,11 @@ DisplayWatcher::~DisplayWatcher() = default;
 
 void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
   FXL_DCHECK(!device_watcher_);
-  // See declare_args() in lib/ui/gfx/BUILD.gn
-#if SCENIC_VULKAN_SWAPCHAIN == 2
-  // This is just for testing, so notify that there's a fake display.
-  callback(fxl::UniqueFD(-1), ZX_HANDLE_INVALID, ZX_HANDLE_INVALID);
-#else
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDisplayDir, [this, callback = std::move(callback)](
                        int dir_fd, std::string filename) mutable {
         HandleDevice(std::move(callback), dir_fd, filename);
       });
-#endif
 }
 
 void DisplayWatcher::HandleDevice(DisplayReadyCallback callback, int dir_fd,

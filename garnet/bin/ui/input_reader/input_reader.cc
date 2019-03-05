@@ -101,16 +101,7 @@ void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher,
   zx_signals_t pending = signal->observed;
   FXL_DCHECK(pending & ZX_USER_SIGNAL_0);
 
-#if SCENIC_VULKAN_SWAPCHAIN == 0
   bool discard = !(display_owned_ || ignore_console_);
-#else
-  // If we are using the Vulkan swapchain (i.e. SCENIC_VULKAN_SWAPCHAIN > 0)
-  // then we don't use the display API to acquire the display, and therefore
-  // display_owned_ will always be false.
-  //
-  // We should only be in this mode for debugging or as a stop-gap solution.
-  bool discard = false;
-#endif
   bool ret = devices_[wait->object()]->interpreter->Read(discard);
   if (!ret) {
     // This will destroy the waiter.

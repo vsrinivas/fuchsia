@@ -5,22 +5,16 @@
 #include "garnet/lib/ui/gfx/swapchain/swapchain_factory.h"
 
 #include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
-#include "garnet/lib/ui/gfx/swapchain/vulkan_display_swapchain.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-std::unique_ptr<Swapchain> SwapchainFactory::CreateDisplaySwapchain(
+std::unique_ptr<DisplaySwapchain> SwapchainFactory::CreateDisplaySwapchain(
     Display* display, DisplayManager* display_manager,
     EventTimestamper* event_timestamper, escher::Escher* escher) {
   FXL_DCHECK(!display->is_claimed());
-#if SCENIC_VULKAN_SWAPCHAIN
-  return std::make_unique<VulkanDisplaySwapchain>(display, event_timestamper,
-                                                  escher);
-#else
   return std::make_unique<DisplaySwapchain>(display_manager, display,
                                             event_timestamper, escher);
-#endif
 }
 
 }  // namespace gfx

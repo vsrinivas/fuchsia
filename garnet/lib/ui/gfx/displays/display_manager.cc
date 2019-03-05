@@ -35,15 +35,6 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
   display_available_cb_ = std::move(callback);
   display_watcher_.WaitForDisplay(
       [this](fxl::UniqueFD fd, zx::channel dc_handle) {
-  // See declare_args() in lib/ui/gfx/BUILD.gn
-#if SCENIC_VULKAN_SWAPCHAIN == 2
-        // This is just for testing, so notify that there's a fake display
-        // that's 800x608. Without a display the scene manager won't try to draw
-        // anything.
-        default_display_ = std::make_unique<Display>(0, 800, 608);
-        display_available_cb_();
-        display_available_cb_ = nullptr;
-#else
         dc_fd_ = std::move(fd);
         dc_channel_ = dc_handle.get();
         display_controller_.Bind(std::move(dc_handle));
@@ -69,7 +60,6 @@ void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
         wait_.set_object(dc_channel_);
         wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
         wait_.Begin(async_get_default_dispatcher());
-#endif
       });
 }
 
@@ -131,15 +121,6 @@ void DisplayManager::DisplaysChanged(
         display.id, mode.horizontal_resolution, mode.vertical_resolution,
         std::move(display.pixel_format));
     ClientOwnershipChange(owns_display_controller_);
-
-    // See declare_args() in lib/ui/gfx/BUILD.gn.
-#if SCENIC_VULKAN_SWAPCHAIN != 0
-    // Vulkan swapchains don't necessarily support the concurrent
-    // connection to the display controller.
-    wait_.Cancel();
-    display_controller_.Bind(zx::channel());
-    dc_fd_.reset();
-#endif
 
     display_available_cb_();
     display_available_cb_ = nullptr;
@@ -259,9 +240,8 @@ uint64_t DisplayManager::ImportBufferCollection(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
   uint64_t buffer_collection_id = next_buffer_collection_id_++;
   zx_status_t status;
-  if (display_controller_->ImportBufferCollection(buffer_collection_id,
-                                                  std::move(token),
-                                                  &status) != ZX_OK ||
+  if (display_controller_->ImportBufferCollection(
+          buffer_collection_id, std::move(token), &status) != ZX_OK ||
       status != ZX_OK) {
     FXL_DLOG(ERROR) << "ImportBufferCollection failed";
     return 0;
