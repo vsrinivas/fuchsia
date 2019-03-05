@@ -55,7 +55,6 @@ void Mutex::Acquire() {
     thread_t* ct = get_current_thread();
     uintptr_t oldval;
 
-retry:
     // fast path: assume its unheld, try to grab it
     oldval = 0;
     if (likely(val_.compare_exchange_strong(oldval, reinterpret_cast<uintptr_t>(ct),
@@ -76,24 +75,33 @@ retry:
         // we contended with someone else, will probably need to block
         Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-        // save the current state and check to see if it wasn't released in the interim
+        // Check if the queued flag is currently set. The queued flag can only be changed
+        // whilst the thread lock is held so we know we aren't racing with anyone here. This
+        // is just an optimization and allows us to avoid redundantly doing the atomic OR.
         oldval = val();
-        if (unlikely(oldval == 0)) {
-            goto retry;
+        thread_t* hold;
+        if (unlikely(!(oldval & FLAG_QUEUED))) {
+            // Set the queued flag to indicate that we're blocking.
+            oldval = val_.fetch_or(FLAG_QUEUED, ktl::memory_order_seq_cst);
+            // We may have raced with the holder as they dropped the mutex.
+            if (unlikely(oldval == 0)) {
+                // Since we set the queued flag we know that there are no waiters and no one
+                // is able to perform fast path acquisition. Therefore we can just
+                // take the mutex, and remove the queued flag.
+                val_.store(reinterpret_cast<uintptr_t>(ct), ktl::memory_order_seq_cst);
+                ct->mutexes_held++;
+                return;
+            }
         }
-
-        // try to exchange again with a flag indicating that we're blocking is set
-        if (unlikely(!val_.compare_exchange_strong(oldval, oldval | FLAG_QUEUED,
-                                                   ktl::memory_order_seq_cst,
-                                                   ktl::memory_order_seq_cst))) {
-            // if we fail, just start over from the top
-            goto retry;
-        }
+        // extract the current holder from oldval, no need to re-read from the mutex
+        // as it cannot change if the queued flag is set without holding the thread lock (which
+        // we currently hold).
+        hold = holder_from_val(oldval);
 
         // have the holder inherit our priority
         // discard the local reschedule flag because we're just about to block anyway
         bool unused;
-        sched_inherit_priority(holder(), ct->effec_priority, &unused);
+        sched_inherit_priority(hold, ct->effec_priority, &unused);
 
         // we have signalled that we're blocking, so drop into the wait queue
         zx_status_t ret = wait_queue_block(&wait_, ZX_TIME_INFINITE);
@@ -146,6 +154,7 @@ void Mutex::ReleaseInternal(bool reschedule) {
         }
         return;
     }
+    DEBUG_ASSERT(oldval & FLAG_QUEUED);
 
     DEBUG_ASSERT(ct->mutexes_held >= 0);
 
@@ -172,15 +181,12 @@ void Mutex::ReleaseInternal(bool reschedule) {
     DEBUG_ASSERT_MSG(t, "Mutex::ReleaseInternal: wait queue didn't have anything, but "
                         "m->val = %#" PRIxPTR "\n", val());
 
-    // we woke up a thread, mark the mutex owned by that thread
-    uintptr_t newval = (uintptr_t)t | (wait_queue_is_empty(&wait_) ? 0 : FLAG_QUEUED);
 
-    oldval = (uintptr_t)ct | FLAG_QUEUED;
-    if (!val_.compare_exchange_strong(oldval, newval,
-                                      ktl::memory_order_seq_cst,
-                                      ktl::memory_order_seq_cst)) {
-        panic("bad state in mutex release %p, current thread %p\n", this, ct);
-    }
+    // we woke up a thread, mark the mutex owned by that thread. As we hold the lock we are
+    // allowed to potentially change the queued flag so we may directly store our new value
+    // without worry of clashing with someone else.
+    uintptr_t newval = (uintptr_t)t | (wait_queue_is_empty(&wait_) ? 0 : FLAG_QUEUED);
+    val_.store(newval, ktl::memory_order_seq_cst);
 
     ktrace_ptr(TAG_KWAIT_WAKE, &wait_, 1, 0);
 

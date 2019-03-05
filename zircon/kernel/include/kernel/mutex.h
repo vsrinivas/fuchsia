@@ -57,8 +57,12 @@ private:
         return val_.load(ktl::memory_order_relaxed);
     }
 
+    static thread_t* holder_from_val(uintptr_t value) {
+        return reinterpret_cast<thread_t*>(value & ~FLAG_QUEUED);
+    }
+
     thread_t* holder() const {
-        return reinterpret_cast<thread_t*>(val() & ~FLAG_QUEUED);
+        return holder_from_val(val());
     }
 
     fbl::Canary<MAGIC> magic_;
