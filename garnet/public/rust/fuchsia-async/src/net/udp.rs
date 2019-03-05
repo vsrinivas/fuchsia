@@ -6,7 +6,7 @@ use {
     crate::net::{set_nonblock, EventedFd},
     futures::{
         future::Future,
-        task::{Waker, Poll},
+        task::{Poll, Waker},
         try_ready,
     },
     std::{
@@ -47,7 +47,9 @@ impl UdpSocket {
     }
 
     pub fn async_recv_from(
-        &self, buf: &mut [u8], lw: &Waker,
+        &self,
+        buf: &mut [u8],
+        lw: &Waker,
     ) -> Poll<io::Result<(usize, SocketAddr)>> {
         try_ready!(EventedFd::poll_readable(&self.0, lw));
         match self.0.as_ref().recv_from(buf) {
@@ -64,16 +66,10 @@ impl UdpSocket {
     }
 
     pub fn send_to<'a>(&'a self, buf: &'a [u8], addr: SocketAddr) -> SendTo<'a> {
-        SendTo {
-            socket: self,
-            buf,
-            addr,
-        }
+        SendTo { socket: self, buf, addr }
     }
 
-    pub fn async_send_to(
-        &self, buf: &[u8], addr: SocketAddr, lw: &Waker,
-    ) -> Poll<io::Result<()>> {
+    pub fn async_send_to(&self, buf: &[u8], addr: SocketAddr, lw: &Waker) -> Poll<io::Result<()>> {
         try_ready!(EventedFd::poll_writable(&self.0, lw));
         match self.0.as_ref().send_to(buf, addr) {
             Err(e) => {
@@ -86,6 +82,14 @@ impl UdpSocket {
             }
             Ok(_) => Poll::Ready(Ok(())),
         }
+    }
+
+    pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
+        self.0.as_ref().set_broadcast(broadcast)
+    }
+
+    pub fn broadcast(&self) -> io::Result<bool> {
+        self.0.as_ref().broadcast()
     }
 }
 
@@ -145,7 +149,19 @@ mod tests {
             Ok::<(), Error>(())
         };
 
-        exec.run_singlethreaded(fut)
-            .expect("failed to run udp socket test");
+        exec.run_singlethreaded(fut).expect("failed to run udp socket test");
+    }
+
+    #[test]
+    fn broadcast() {
+        let mut _exec = Executor::new().expect("could not create executor");
+
+        let addr = "127.0.0.1:12345".parse().unwrap();
+        let socket = UdpSocket::bind(&addr).expect("could not create socket");
+        let initial = socket.broadcast().expect("could not get broadcast");
+        assert!(!initial);
+        socket.set_broadcast(true).expect("could not set broadcast");
+        let set = socket.broadcast().expect("could not get broadcast");
+        assert!(set);
     }
 }
