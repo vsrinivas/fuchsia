@@ -141,6 +141,14 @@ func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumbe
 
 		return int32(v), nil
 
+	case C.SO_BROADCAST:
+		var v tcpip.BroadcastOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return int32(v), nil
+
 	case C.SO_KEEPALIVE:
 		var v tcpip.KeepaliveEnabledOption
 		if err := ep.GetSockOpt(&v); err != nil {
@@ -344,6 +352,14 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.ReusePortOption(v))
+
+	case C.SO_BROADCAST:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		return ep.SetSockOpt(tcpip.BroadcastOption(v))
 
 	case C.SO_PASSCRED:
 		if len(optVal) < sizeOfInt32 {
