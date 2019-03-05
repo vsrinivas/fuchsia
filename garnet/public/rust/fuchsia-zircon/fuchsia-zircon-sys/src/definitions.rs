@@ -595,8 +595,8 @@ extern {
         handle: zx_handle_t,
         data: *mut u8,
         offset: u32,
-        len: usize,
-        actual: *mut u32
+        data_size: usize,
+        actual: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_ktrace_control(
@@ -625,7 +625,7 @@ extern {
     pub fn zx_debug_read(
         handle: zx_handle_t,
         buffer: *mut u8,
-        length: usize,
+        buffer_size: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_debug_write(
