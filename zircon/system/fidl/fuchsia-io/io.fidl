@@ -80,9 +80,40 @@ const uint32 OPEN_FLAG_NO_REMOTE = 0x00200000;
 /// - OPEN_FLAG_DESCRIBE
 /// Are ignored.
 const uint32 OPEN_FLAG_NODE_REFERENCE = 0x00400000;
+/// TODO(ZX-1723): Unimplemented.
+/// Binary OR of OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
+/// OPEN_FLAG_NODE_REFERENCE. Flags used when opening a node reference must fall within this mask.
+const uint32 OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 0x02c80000;
 /// Requests that an "OnOpen" event is sent, with
 /// a non-null NodeInfo (if the open is successful).
 const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
+/// TODO(ZX-1723): Unimplemented.
+/// Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
+/// During Open:
+/// - If the target path is a directory, the rights on the new connection expands to include
+///   OPEN_RIGHT_WRITABLE if and only if the current connection and all intermediate mount points
+///   are writable.
+/// - Otherwise, this flag is ignored. It is an access denied error to request more rights
+///   than those on the current connection, or any intermediate mount points.
+///
+/// If the posix compatibility flag is not specified, opening always uses the requested rights,
+/// failing the operation with access denied error if requested rights exceeds the rights attached
+/// to the current connection.
+///
+/// If the requesting connection is read-only and the requested rights are read-only, the flag
+/// may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
+/// necessary to enforce hierarchical permissions across mount points, and should have no effect
+/// on the expected behavior for clients.
+const uint32 OPEN_FLAG_POSIX = 0x01000000;
+/// TODO(ZX-1723): Unimplemented.
+/// Assert that the object to be opened is not a directory.
+/// Return an error if the target object is a directory.
+const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
+/// TODO(ZX-1723): Unimplemented.
+/// When used during clone, the new connection inherits the rights on the source connection,
+/// regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
+/// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAGS_SAME_RIGHTS.
+const uint32 CLONE_FLAG_SAME_RIGHTS = 0x04000000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
 [Layout="Simple", FragileBase]
