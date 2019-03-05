@@ -10,6 +10,10 @@ executable("bin") {
   sources = [
     "harvester.cc",
     "harvester.h",
+    "harvester_grpc.cc",
+    "harvester_grpc.h",
+    "harvester_local.cc",
+    "harvester_local.h",
     "harvester_main.cc",
   ]
 
