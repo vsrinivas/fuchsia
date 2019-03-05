@@ -47,6 +47,13 @@ using devmgr::internal::DeviceComponentPartDescriptor;
 using devmgr::internal::Match;
 using devmgr::internal::MatchParts;
 
+template <size_t N>
+fbl::Array<const zx_bind_inst_t> MakeBindProgram(const zx_bind_inst_t (&insts)[N]) {
+    fbl::Array<zx_bind_inst_t> array(new zx_bind_inst_t[N], N);
+    memcpy(array.get(), insts, N * sizeof(insts[0]));
+    return array;
+}
+
 bool composite_match_zero_parts() {
     BEGIN_TEST;
 
@@ -64,11 +71,11 @@ bool composite_match_one_part_one_device_fail() {
     constexpr uint32_t kProtocolId = 1;
     MockDevice device(nullptr, nullptr, 0, kProtocolId);
 
-    zx_bind_inst_t part1[] = {
+    auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 2),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
+        { std::move(part) },
     };
 
     Match match = MatchParts(&device, parts, fbl::count_of(parts));
@@ -83,11 +90,11 @@ bool composite_match_one_part_one_device_succeed() {
     constexpr uint32_t kProtocolId = 1;
     MockDevice device(nullptr, nullptr, 0, kProtocolId);
 
-    zx_bind_inst_t part1[] = {
+    auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
+        { std::move(part) },
     };
 
     Match match = MatchParts(&device, parts, fbl::count_of(parts));
@@ -104,12 +111,15 @@ bool composite_match_two_part_one_device() {
 
     // Both parts can match the only device, but only one part is allowed to
     // match to a given device.
-    zx_bind_inst_t part[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
-    };
+    });
+    auto part2 = MakeBindProgram({
+        BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part), part },
-        { fbl::count_of(part), part },
+        { std::move(part1) },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&device, parts, fbl::count_of(parts));
@@ -142,11 +152,11 @@ bool composite_match_one_part_two_devices() {
     };
 
     // This program matches both devices
-    zx_bind_inst_t part[] = {
+    auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part), part },
+        { std::move(part) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -165,17 +175,17 @@ bool composite_match_two_parts_two_devices_fail() {
         MockDevice(&devices[0], nullptr, 0, kProtocolId2),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
         // First entry should match the root, but this rule matches leaf
-        { fbl::count_of(part2), part2 },
+        { std::move(part2) },
         // Last entry should match the leaf, but this rule matches root
-        { fbl::count_of(part1), part1 },
+        { std::move(part1) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -194,15 +204,15 @@ bool composite_match_two_parts_two_devices_succeed() {
         MockDevice(&devices[0], nullptr, 0, kProtocolId2),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
+        { std::move(part1) },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -221,16 +231,19 @@ bool composite_match_three_parts_two_devices() {
         MockDevice(&devices[0], nullptr, 0, kProtocolId2),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
+    });
+    auto part3 = MakeBindProgram({
+        BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part2), part2 },
+        { std::move(part1) },
+        { std::move(part2) },
+        { std::move(part3) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -256,16 +269,16 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail1() {
         MockDevice(&devices[1], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
+        { std::move(part1) },
         // This matches the middle device, not the leaf
-        { fbl::count_of(part2), part2 },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -291,16 +304,16 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail2() {
         MockDevice(&devices[1], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
         // This matches the middle device, not the root
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
+        { std::move(part1) },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -326,15 +339,15 @@ bool composite_match_two_parts_three_devices_no_mid_topo_success() {
         MockDevice(&devices[1], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
+        { std::move(part1) },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -361,17 +374,17 @@ bool composite_match_two_parts_three_devices_mid_topo() {
         MockDevice(&devices[1], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
+        { std::move(part1) },
         // We need to match on the topological node, but we don't have a rule
         // for it.
-        { fbl::count_of(part2), part2 },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -398,19 +411,19 @@ bool composite_match_three_parts_three_devices_mid_topo() {
         MockDevice(&devices[1], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_TOPO_PCI, BIND_TOPO_PCI_PACK(0, 0, 0)),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
+        { std::move(part1) },
+        { std::move(part2) },
+        { std::move(part3) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -439,15 +452,15 @@ bool composite_match_two_parts_four_devices_one_topo() {
         MockDevice(&devices[2], nullptr, 0, kProtocolId4),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
+        { std::move(part1) },
+        { std::move(part2) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -476,19 +489,19 @@ bool composite_match_three_parts_four_devices_one_topo() {
         MockDevice(&devices[2], nullptr, 0, kProtocolId4),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_TOPO_PCI, BIND_TOPO_PCI_PACK(0, 0, 0)),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
+        { std::move(part1) },
+        { std::move(part2) },
+        { std::move(part3) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -517,23 +530,23 @@ bool composite_match_four_parts_four_devices_one_topo() {
         MockDevice(&devices[2], nullptr, 0, kProtocolId4),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_TOPO_PCI, BIND_TOPO_PCI_PACK(0, 0, 0)),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
-    zx_bind_inst_t part4[] = {
+    });
+    auto part4 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
-        { fbl::count_of(part4), part4 },
+        { std::move(part1) },
+        { std::move(part2) },
+        { std::move(part3) },
+        { std::move(part4) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -555,20 +568,20 @@ bool composite_match_three_parts_four_devices_ambiguous() {
         MockDevice(&devices[2], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
+        { std::move(part1) },
         // This matches both of the inner devices.
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
+        { std::move(part2) },
+        { std::move(part3) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -590,21 +603,21 @@ bool composite_match_three_parts_four_devices_ambiguous_against_leaf() {
         MockDevice(&devices[2], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
+        { std::move(part1) },
+        { std::move(part2) },
         // This matches the leaf and its parent, but is not considered ambiguous
         // since we force the match to the leaf
-        { fbl::count_of(part3), part3 },
+        { std::move(part3) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -626,21 +639,21 @@ bool composite_match_three_parts_four_devices_ambiguous_against_root() {
         MockDevice(&devices[2], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
         // This matches the root and its immediate child, but is not considered
         // ambiguous isnce we force the match to the root
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
+        { std::move(part1) },
+        { std::move(part2) },
+        { std::move(part3) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -675,27 +688,27 @@ bool composite_match_complex_topology() {
         MockDevice(&devices[7], nullptr, 0, kProtocolId),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH(),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_TOPO_PCI, BIND_TOPO_PCI_PACK(0, 0, 0)),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_TOPO_PCI, BIND_TOPO_PCI_PACK(1, 0, 0)),
-    };
-    zx_bind_inst_t part4[] = {
+    });
+    auto part4 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_TOPO_I2C, BIND_TOPO_I2C_PACK(0x12)),
-    };
-    zx_bind_inst_t part5[] = {
+    });
+    auto part5 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
-        { fbl::count_of(part4), part4 },
-        { fbl::count_of(part5), part5 },
+        { std::move(part1) },
+        { std::move(part2) },
+        { std::move(part3) },
+        { std::move(part4) },
+        { std::move(part5) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
@@ -718,24 +731,24 @@ bool composite_match_complex_ambiguity() {
         MockDevice(&devices[3], nullptr, 0, kProtocolId3),
     };
 
-    zx_bind_inst_t part1[] = {
+    auto part1 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId1),
-    };
-    zx_bind_inst_t part2[] = {
+    });
+    auto part2 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
-    };
-    zx_bind_inst_t part3[] = {
+    });
+    auto part3 = MakeBindProgram({
         BI_MATCH(),
-    };
-    zx_bind_inst_t part4[] = {
+    });
+    auto part4 = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
-    };
+    });
     DeviceComponentPartDescriptor parts[] = {
-        { fbl::count_of(part1), part1 },
+        { std::move(part1) },
         // parts 2 and 3 can match ancestors 1 and 2 or 2 and 3.
-        { fbl::count_of(part2), part2 },
-        { fbl::count_of(part3), part3 },
-        { fbl::count_of(part4), part4 },
+        { std::move(part2) },
+        { std::move(part3) },
+        { std::move(part4) },
     };
 
     Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));

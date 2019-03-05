@@ -31,13 +31,13 @@ uint32_t LookupBindProperty(BindProgramContext* ctx, uint32_t id);
 bool EvaluateBindProgram(BindProgramContext* ctx);
 
 template <typename T>
-bool EvaluateBindProgram(T* device, const char* drv_name, const zx_bind_inst_t* bind_program,
-                         uint32_t bind_program_count, bool autobind) {
+bool EvaluateBindProgram(T* device, const char* drv_name,
+                         const fbl::Array<const zx_bind_inst_t>& bind_program, bool autobind) {
     BindProgramContext ctx;
     ctx.props = &device->props();
     ctx.protocol_id = device->protocol_id();
-    ctx.binding = bind_program;
-    ctx.binding_size = bind_program_count * sizeof(bind_program[0]);
+    ctx.binding = bind_program.get();
+    ctx.binding_size = bind_program.size() * sizeof(bind_program[0]);
     ctx.name = drv_name;
     ctx.autobind = autobind ? 1 : 0;
     return EvaluateBindProgram(&ctx);
@@ -47,8 +47,7 @@ bool EvaluateBindProgram(T* device, const char* drv_name, const zx_bind_inst_t* 
 // TODO(teisenbe): This structure will move as we integrate it into the
 // libdriver API.
 struct DeviceComponentPartDescriptor {
-    uint32_t instruction_count; // number of entries in |bind_program|
-    const zx_bind_inst_t* bind_program;
+    fbl::Array<const zx_bind_inst_t> match_program;
 };
 
 // Represents the number of match chains found by a run of MatchParts()
@@ -163,8 +162,8 @@ Match MatchParts(T* device, DeviceComponentPartDescriptor* parts, uint32_t parts
     auto& first_part = parts[0];
     auto& last_part = parts[parts_count - 1];
     // The last part must match this device exactly
-    bool match = EvaluateBindProgram(device, "composite_binder", last_part.bind_program,
-                                     last_part.instruction_count, true /* autobind */);
+    bool match = EvaluateBindProgram(device, "composite_binder", last_part.match_program,
+                                     true /* autobind */);
     if (!match) {
         return Match::None;
     }
@@ -187,8 +186,7 @@ Match MatchParts(T* device, DeviceComponentPartDescriptor* parts, uint32_t parts
 
     // The first part must match the final ancestor
     match = EvaluateBindProgram(device_list[device_list.size() - 1], "composite_binder",
-                                first_part.bind_program, first_part.instruction_count,
-                                true /* autobind */);
+                                first_part.match_program, true /* autobind */);
     if (!match) {
         return Match::None;
     }
@@ -242,8 +240,7 @@ Match MatchParts(T* device, DeviceComponentPartDescriptor* parts, uint32_t parts
             }
 
             match = EvaluateBindProgram(device_list[device_idx], "composite_binder",
-                                        part.bind_program, part.instruction_count,
-                                        true /* autobind */);
+                                        part.match_program, true /* autobind */);
             if (match) {
                 // Propagate the current match_count.  Any chain that got here
                 // is being extended by this latest match, so the number of
