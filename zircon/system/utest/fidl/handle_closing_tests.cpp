@@ -126,10 +126,8 @@ bool close_multiple_present_handles_with_some_invalid() {
     EXPECT_TRUE(helper_expect_peer_valid(channels_1[1].get()));
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[2].get()));
 
-    // The handles have been closed; it is now an error to re-close them.
-    EXPECT_EQ(zx_handle_close(channels_0[0]), ZX_ERR_BAD_HANDLE);
+    // Handles 0, 2 have been closed; it is now an error to re-close them.
     EXPECT_EQ(zx_handle_close(channels_0[1]), ZX_OK);
-    EXPECT_EQ(zx_handle_close(channels_0[2]), ZX_ERR_BAD_HANDLE);
 
     EXPECT_EQ(message.inline_struct.data_0, 0u);
     EXPECT_EQ(message.inline_struct.data_1, 0u);
@@ -180,12 +178,6 @@ bool close_array_of_present_handles() {
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[2].get()));
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[3].get()));
 
-    // The handles have been closed; it is an error to re-close them.
-    EXPECT_EQ(zx_handle_close(channels_0[0]), ZX_ERR_BAD_HANDLE);
-    EXPECT_EQ(zx_handle_close(channels_0[1]), ZX_ERR_BAD_HANDLE);
-    EXPECT_EQ(zx_handle_close(channels_0[2]), ZX_ERR_BAD_HANDLE);
-    EXPECT_EQ(zx_handle_close(channels_0[3]), ZX_ERR_BAD_HANDLE);
-
     // Handles in the message struct are released.
     EXPECT_EQ(message.inline_struct.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[1], ZX_HANDLE_INVALID);
@@ -234,12 +226,6 @@ bool close_out_of_line_array_of_nonnullable_handles() {
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[1].get()));
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[2].get()));
     EXPECT_TRUE(helper_expect_peer_invalid(channels_1[3].get()));
-
-    // The handles have been closed; it is an error to re-close them.
-    EXPECT_EQ(zx_handle_close(channels_0[0]), ZX_ERR_BAD_HANDLE);
-    EXPECT_EQ(zx_handle_close(channels_0[1]), ZX_ERR_BAD_HANDLE);
-    EXPECT_EQ(zx_handle_close(channels_0[2]), ZX_ERR_BAD_HANDLE);
-    EXPECT_EQ(zx_handle_close(channels_0[3]), ZX_ERR_BAD_HANDLE);
 
     // Handles in the message struct are released.
     EXPECT_EQ(message.data.handles[0], ZX_HANDLE_INVALID);
@@ -314,7 +300,6 @@ bool close_present_too_large_nullable_vector_of_handles() {
 
     for (int i = 0; i < kTooBigNumHandles; i++) {
         EXPECT_TRUE(helper_expect_peer_invalid(channels_1[i].get()));
-        EXPECT_EQ(zx_handle_close(channels_0[i]), ZX_ERR_BAD_HANDLE);
     }
 
     auto message_handles = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);

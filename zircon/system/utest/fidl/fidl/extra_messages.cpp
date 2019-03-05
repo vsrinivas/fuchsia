@@ -5,6 +5,7 @@
 extern "C" {
 
 extern const fidl_type_t fidl_test_coding_StructWithManyHandlesTable;
+extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_StructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_IntStructTable;
@@ -43,6 +44,11 @@ static const ::fidl::FidlStructField fidl_test_coding_StructWithManyHandlesField
     ::fidl::FidlStructField(&VectorHandlehandlenonnullable2nonnullableTable, 8)
 };
 const fidl_type_t fidl_test_coding_StructWithManyHandlesTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_StructWithManyHandlesFields, 3, 24, "fidl.test.coding/StructWithManyHandles"));
+
+static const ::fidl::FidlTableField fidl_test_coding_SmallerTableOfStructWithHandleFields[] = {
+    ::fidl::FidlTableField(&fidl_test_coding_StructWithManyHandlesTable,2)
+};
+const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_SmallerTableOfStructWithHandleFields, 1, "fidl.test.coding/SmallerTableOfStructWithHandle"));
 
 static const ::fidl::FidlStructField fidl_test_coding_StructWithHandleFields[] = {
     ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0)

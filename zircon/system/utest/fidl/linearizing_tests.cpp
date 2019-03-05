@@ -474,25 +474,6 @@ bool linearize_simple_table() {
 
 namespace {
 
-// Define the memory-layout of the inline object, for the group of tests below
-using TableOfStruct = fidl::VectorView<fidl_envelope_t>;
-struct TableOfStructEnvelopes {
-    alignas(FIDL_ALIGNMENT)
-    fidl_envelope_t a;
-    fidl_envelope_t b;
-};
-struct OrdinalOneStructWithHandle {
-    alignas(FIDL_ALIGNMENT)
-    zx_handle_t h;
-    int32_t foo;
-};
-struct OrdinalTwoStructWithManyHandles {
-    alignas(FIDL_ALIGNMENT)
-    zx_handle_t h1;
-    zx_handle_t h2;
-    fidl::VectorView<zx_handle_t> hs;
-};
-
 bool linearize_table_field_1() {
     BEGIN_TEST;
 
@@ -544,7 +525,7 @@ bool linearize_table_field_2() {
     table.set_data(&envelopes.a);
 
     zx_handle_t dummy_handles[4] = {};
-    auto handle_value_at = [] (int i) ->zx_handle_t { return static_cast<zx_handle_t>(100 + i); };
+    auto handle_value_at = [] (int i) -> zx_handle_t { return static_cast<zx_handle_t>(100 + i); };
     for (int i = 0; i < 4; i++) {
         dummy_handles[i] = handle_value_at(i);
     }

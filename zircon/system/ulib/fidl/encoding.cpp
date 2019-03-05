@@ -248,7 +248,7 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
 #ifdef __Fuchsia__
         if (handles) {
             // Return value intentionally ignored. This is best-effort cleanup.
-            (void)zx_handle_close_many(handles, max_handles);
+            (void)zx_handle_close_many(handles, encoder.handle_idx());
         }
 #endif
     };

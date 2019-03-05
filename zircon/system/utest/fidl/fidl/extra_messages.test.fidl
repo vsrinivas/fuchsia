@@ -57,6 +57,11 @@ table TableOfStructWithHandle {
     2: StructWithManyHandles b;
 };
 
+table SmallerTableOfStructWithHandle {
+    1: reserved;
+    2: StructWithManyHandles b;
+};
+
 xunion SampleXUnion {
     IntStruct i;
     SimpleTable st;

@@ -19,11 +19,19 @@ extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SimpleTableTable;
+extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
+extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
 
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
+
+#if defined(__cplusplus)
+}
+#endif
+
+namespace fidl {
 
 using SimpleTable = fidl::VectorView<fidl_envelope_t>;
 struct SimpleTableEnvelopes {
@@ -37,6 +45,36 @@ struct SimpleTableEnvelopes {
 struct IntStruct {
     alignas(FIDL_ALIGNMENT)
     int64_t v;
+};
+
+using TableOfStruct = fidl::VectorView<fidl_envelope_t>;
+struct TableOfStructEnvelopes {
+    alignas(FIDL_ALIGNMENT)
+    fidl_envelope_t a;
+    fidl_envelope_t b;
+};
+struct OrdinalOneStructWithHandle {
+    alignas(FIDL_ALIGNMENT)
+    zx_handle_t h;
+    int32_t foo;
+};
+struct OrdinalTwoStructWithManyHandles {
+    alignas(FIDL_ALIGNMENT)
+    zx_handle_t h1;
+    zx_handle_t h2;
+    fidl::VectorView<zx_handle_t> hs;
+};
+struct TableOfStructLayout {
+    TableOfStruct envelope_vector;
+    TableOfStructEnvelopes envelopes;
+    OrdinalOneStructWithHandle a;
+    OrdinalTwoStructWithManyHandles b;
+};
+
+using SmallerTableOfStruct = fidl::VectorView<fidl_envelope_t>;
+struct SmallerTableOfStructEnvelopes {
+    alignas(FIDL_ALIGNMENT)
+    fidl_envelope_t b;
 };
 
 struct SampleXUnion {
@@ -59,6 +97,4 @@ struct SampleXUnionStruct {
     SampleXUnion xu;
 };
 
-#if defined(__cplusplus)
-}
-#endif
+} // namespace fidl

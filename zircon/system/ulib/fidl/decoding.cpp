@@ -5,8 +5,9 @@
 #include <lib/fidl/coding.h>
 
 #include <stdalign.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 #include <lib/fidl/internal.h>
 #include <zircon/assert.h>
@@ -114,6 +115,7 @@ public:
             return Status::kConstraintViolationError;
         }
         *handle = handles_[handle_idx_];
+        decoded_handles_[handle_idx_] = handles_[handle_idx_];
         handle_idx_++;
         return Status::kSuccess;
     }
@@ -149,7 +151,8 @@ public:
 #ifdef __Fuchsia__
             zx_handle_close_many(&handles_[handle_idx_], envelope->num_handles);
 #endif
-            handle_idx_ += num_handles_;
+            memset(&decoded_handles_[handle_idx_], 0, envelope->num_handles * sizeof(zx_handle_t));
+            handle_idx_ += envelope->num_handles;
         }
         return Status::kSuccess;
     }
@@ -180,6 +183,10 @@ public:
 
     bool DidConsumeAllHandles() const { return handle_idx_ == num_handles_; }
 
+    uint32_t handle_idx() const { return handle_idx_; }
+
+    const zx_handle_t* decoded_handles() const { return decoded_handles_; }
+
 private:
     void SetError(const char* error) {
         if (status_ != ZX_OK) {
@@ -203,6 +210,7 @@ private:
     // Decoder state
     zx_status_t status_ = ZX_OK;
     uint32_t handle_idx_ = 0;
+    zx_handle_t decoded_handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
     fidl::EnvelopeFrames envelope_frames_;
 };
 
@@ -245,7 +253,11 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
 #ifdef __Fuchsia__
         if (handles) {
             // Return value intentionally ignored. This is best-effort cleanup.
-            (void)zx_handle_close_many(handles, num_handles);
+            (void)zx_handle_close_many(decoder.decoded_handles(), decoder.handle_idx());
+            if (!decoder.DidConsumeAllHandles()) {
+                (void)zx_handle_close_many(&handles[decoder.handle_idx()],
+                                           num_handles - decoder.handle_idx());
+            }
         }
 #endif
     };
