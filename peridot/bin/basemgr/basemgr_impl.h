@@ -42,7 +42,8 @@ namespace modular {
 class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::auth::AuthenticationContextProvider,
                     fuchsia::modular::internal::BasemgrDebug,
-                    fuchsia::ui::policy::KeyboardCaptureListenerHACK {
+                    fuchsia::ui::policy::KeyboardCaptureListenerHACK,
+                    modular::SessionProvider::Delegate {
  public:
   // Initializes as BasemgrImpl instance with the given parameters:
   //
@@ -126,6 +127,14 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |BasemgrDebug|
   void LoginAsGuest() override;
 
+  // |SessionProvider::Delegate|
+  void LogoutUsers(std::function<void()> callback) override;
+
+  // |SessionProvider::Delegate|
+  void AcquirePresentation(
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)
+      override;
+
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
   const std::vector<SessionShellSettings>& session_shell_settings_;
   fuchsia::modular::AppConfig session_shell_config_;
@@ -172,8 +181,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   } presentation_state_;
 
   AsyncHolder<SessionProvider> session_provider_;
-
-  component::ServiceNamespace service_namespace_;
 
   enum class State {
     // normal mode of operation

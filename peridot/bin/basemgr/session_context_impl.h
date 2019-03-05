@@ -39,6 +39,10 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // SessionProvider*, which seems a little specific and overscoped).
   using OnSessionShutdownCallback = std::function<void(bool logout_users)>;
 
+  // Called when sessionmgr requests to acquire the presentation.
+  using AcquirePresentationCallback = std::function<void(
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
+
   SessionContextImpl(
       fuchsia::sys::Launcher* const launcher,
       fuchsia::modular::AppConfig sessionmgr_config,
@@ -50,7 +54,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
       fuchsia::modular::auth::AccountPtr account,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
+      AcquirePresentationCallback acquire_presentation,
       OnSessionShutdownCallback on_session_shutdown);
 
   // This will effectively tear down the entire instance by calling
@@ -81,8 +85,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
 
   std::vector<fit::function<void()>> shutdown_callbacks_;
 
-  fuchsia::sys::ServiceProviderPtr base_shell_services_;
-
+  AcquirePresentationCallback acquire_presentation_;
   OnSessionShutdownCallback on_session_shutdown_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionContextImpl);

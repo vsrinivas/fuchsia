@@ -40,14 +40,6 @@ constexpr bool kAutoLoginToGuest = true;
 constexpr bool kAutoLoginToGuest = false;
 #endif
 
-// The service name of the Presentation service that is routed between
-// BaseShell and SessionShell. The same service exchange between SessionShell
-// and StoryShell uses the SessionShellPresentationProvider service, which is
-// discoverable.
-// NOTE: This is defined in session_context_impl.cc as well.
-// TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
-constexpr char kPresentationService[] = "mozart.Presentation";
-
 // TODO(MF-134): This key is duplicated in
 // topaz/lib/settings/lib/device_info.dart. Remove this key once factory reset
 // is provided to topaz as a service.
@@ -77,12 +69,6 @@ BasemgrImpl::BasemgrImpl(
       authentication_context_provider_binding_(this),
       session_provider_("SessionProvider") {
   UpdateSessionShellConfig();
-
-  // TODO(SCN-595): Presentation is now discoverable, so we don't need
-  // kPresentationService anymore.
-  service_namespace_.AddService(presentation_state_.bindings.GetHandler(
-                                    presentation_state_.presentation.get()),
-                                kPresentationService);
 
   Start();
 }
@@ -255,10 +241,11 @@ void BasemgrImpl::Start() {
 
   // 2. Initialize session provider.
   session_provider_.reset(new SessionProvider(
-      user_provider_impl_.get(), launcher_, settings_.sessionmgr,
+      /* delegate= */ this, launcher_, settings_.sessionmgr,
       session_shell_config_, settings_.story_shell,
       settings_.use_session_shell_for_story_shell_factory,
-      /* on_zero_sessions= */ [this] {
+      /* on_zero_sessions= */
+      [this] {
         if (settings_.test) {
           // TODO(MI4-1117): Integration tests currently
           // expect base shell to always be running. So, if
@@ -335,12 +322,10 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
     session_shell_view_owner_.Unbind();
   }
   auto view_owner = session_shell_view_owner_.NewRequest();
-  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider;
-  service_namespace_.AddBinding(service_provider.NewRequest());
 
-  session_provider_->StartSession(
-      std::move(view_owner), std::move(service_provider), std::move(account),
-      std::move(ledger_token_manager), std::move(agent_token_manager));
+  session_provider_->StartSession(std::move(view_owner), std::move(account),
+                                  std::move(ledger_token_manager),
+                                  std::move(agent_token_manager));
 
   // TODO(MI4-1117): Integration tests currently expect base shell to always be
   // running. So, if we're running under a test, do not shut down the base shell
@@ -550,6 +535,16 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
 void BasemgrImpl::LoginAsGuest() {
   fuchsia::modular::UserLoginParams params;
   user_provider_impl_->Login(std::move(params));
+}
+
+void BasemgrImpl::LogoutUsers(std::function<void()> callback) {
+  user_provider_impl_->RemoveAllUsers(std::move(callback));
+}
+
+void BasemgrImpl::AcquirePresentation(
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
+  presentation_state_.bindings.AddBinding(
+      presentation_state_.presentation.get(), std::move(request));
 }
 
 }  // namespace modular

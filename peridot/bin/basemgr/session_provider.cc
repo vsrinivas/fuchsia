@@ -10,14 +10,13 @@
 namespace modular {
 
 SessionProvider::SessionProvider(
-    UserProviderImpl* const user_provider_impl,
-    fuchsia::sys::Launcher* const launcher,
+    Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
     const fuchsia::modular::AppConfig& sessionmgr,
     const fuchsia::modular::AppConfig& session_shell,
     const fuchsia::modular::AppConfig& story_shell,
     bool use_session_shell_for_story_shell_factory,
     fit::function<void()> on_zero_sessions)
-    : user_provider_impl_(user_provider_impl),
+    : delegate_(delegate),
       launcher_(launcher),
       sessionmgr_(sessionmgr),
       session_shell_(session_shell),
@@ -28,7 +27,6 @@ SessionProvider::SessionProvider(
 
 void SessionProvider::StartSession(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
     fuchsia::modular::auth::AccountPtr account,
     fuchsia::auth::TokenManagerPtr ledger_token_manager,
     fuchsia::auth::TokenManagerPtr agent_token_manager) {
@@ -41,8 +39,8 @@ void SessionProvider::StartSession(
     };
 
     if (logout_users) {
-      user_provider_impl_->RemoveAllUsers(
-          [this, delete_session_context] { delete_session_context(); });
+      delegate_->LogoutUsers(
+          [this, delete_session_context]() { delete_session_context(); });
     } else {
       delete_session_context();
     }
@@ -53,7 +51,12 @@ void SessionProvider::StartSession(
       launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
       CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_,
       std::move(ledger_token_manager), std::move(agent_token_manager),
-      std::move(account), std::move(view_owner), std::move(service_provider),
+      std::move(account), std::move(view_owner),
+      /* acquire_presentation= */
+      [this](
+          fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
+        delegate_->AcquirePresentation(std::move(request));
+      },
       done);
 }
 

@@ -18,11 +18,23 @@ namespace modular {
 
 class SessionProvider {
  public:
-  // TODO(MF-245): Remove UserProviderImpl dependency.
+  // Users of SessionProvider must register a Delegate object, which provides
+  // functionality to SessionProvider that's outside the scope of this class.
+  class Delegate {
+   public:
+    // Called when SessionProvider wants to logout all users.
+    virtual void LogoutUsers(std::function<void()> callback) = 0;
+
+    // Called when a session provided by SessionProvider wants to acquire
+    // presentation.
+    virtual void AcquirePresentation(
+        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
+  };
+
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
   // meant to be a callback for BasemgrImpl to either display a base shell or
   // start a new session.
-  SessionProvider(UserProviderImpl* const user_provider_impl,
+  SessionProvider(Delegate* const delegate,
                   fuchsia::sys::Launcher* const launcher,
                   const fuchsia::modular::AppConfig& sessionmgr,
                   const fuchsia::modular::AppConfig& session_shell,
@@ -34,7 +46,6 @@ class SessionProvider {
   // existing sessionmgr process, it is a no-op.
   void StartSession(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
       fuchsia::modular::auth::AccountPtr account,
       fuchsia::auth::TokenManagerPtr ledger_token_manager,
       fuchsia::auth::TokenManagerPtr agent_token_manager);
@@ -54,7 +65,7 @@ class SessionProvider {
   void RestartSession(const std::function<void()>& on_restart_complete);
 
  private:
-  UserProviderImpl* const user_provider_impl_;     // Not owned.
+  Delegate* const delegate_;                       // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;         // Not owned.
   const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
   const fuchsia::modular::AppConfig&
