@@ -88,8 +88,8 @@ page.
       ID.
     * `add_new_page_precached.tspec`: same as above, but waits for a precached
       Ledger Page to be ready before each request.
-    * `add_pages_cleared.tspec`: same as `add_new_page.tspec` but each previous
-      page is cleared and evicted.
+    * `add_new_page_after_clear.tspec`: same as `add_new_page.tspec` but each
+      previous page is populated with one entry, then cleared and evicted.
     * `get_same_page.tspec`: several connections to the same page
     * `get_page_id.tspec`: how long does the GetId() call takes on a newly
       created page?

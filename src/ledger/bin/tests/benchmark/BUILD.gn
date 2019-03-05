@@ -121,8 +121,8 @@ package("ledger_benchmarks") {
     },
 
     {
-      path = rebase_path("get_page/add_pages_cleared.tspec")
-      dest = "add_pages_cleared.tspec"
+      path = rebase_path("get_page/add_new_page_after_clear.tspec")
+      dest = "add_new_page_after_clear.tspec"
     },
 
     {

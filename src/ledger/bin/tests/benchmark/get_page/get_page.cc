@@ -90,10 +90,6 @@ class GetPageBenchmark {
   LedgerPtr ledger_;
   PageIdPtr page_id_;
   std::vector<PagePtr> pages_;
-  // If |clear_pages_| is true, |key_| and |value_| will be inserted in each
-  // page before it is cleared.
-  std::vector<uint8_t> key_;
-  std::vector<uint8_t> value_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
@@ -114,10 +110,7 @@ GetPageBenchmark::GetPageBenchmark(
       clear_pages_(clear_pages) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(requests_count_ > 0);
-  if (clear_pages_) {
-    key_ = generator_.MakeKey(0, kKeySize);
-    value_ = generator_.MakeValue(kValueSize);
-  }
+  pages_.resize(requests_count_);
 }
 
 void GetPageBenchmark::Run() {
@@ -130,11 +123,11 @@ void GetPageBenchmark::Run() {
   }
 
   page_id_ = fidl::MakeOptional(generator_.MakePageId());
-  RunSingle(requests_count_);
+  RunSingle(0);
 }
 
 void GetPageBenchmark::RunSingle(size_t request_number) {
-  if (request_number == 0) {
+  if (request_number == requests_count_) {
     ShutDown();
     return;
   }
@@ -144,47 +137,47 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   }
 
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
-  PagePtr page;
-
-  size_t page_index = pages_.size();
-  pages_.push_back(std::move(page));
-
-  TRACE_ASYNC_BEGIN("benchmark", "get_page", page_index);
+  TRACE_ASYNC_BEGIN("benchmark", "get_page", request_number);
   ledger_->GetPage(
-      reuse_ ? fidl::Clone(page_id_) : nullptr, pages_[page_index].NewRequest(),
+      reuse_ ? fidl::Clone(page_id_) : nullptr,
+      pages_[request_number].NewRequest(),
       [this, callback = waiter->NewCallback(),
-       page_index](Status status) mutable {
+       request_number](Status status) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "Ledger::GetPage")) {
           return;
         }
-        TRACE_ASYNC_END("benchmark", "get_page", page_index);
+        TRACE_ASYNC_END("benchmark", "get_page", request_number);
         if (!clear_pages_) {
           callback();
           return;
         }
-        PopulateAndClearPage(page_index, std::move(callback));
+        // Make sure there is something written on disk before clearing the
+        // page. This will test the behavior of actually clearing a page (vs.
+        // just closing an always empty page).
+        PopulateAndClearPage(request_number, std::move(callback));
       });
 
   auto get_id_callback =
       TRACE_CALLBACK(waiter->NewCallback(), "benchmark", "get_page_id");
   // Request the page id without waiting for the GetPage callback to be called.
-  pages_[page_index]->GetId([callback = std::move(get_id_callback)](
-                                PageId found_page_id) { callback(); });
+  pages_[request_number]->GetId([callback = std::move(get_id_callback)](
+                                    PageId found_page_id) { callback(); });
 
   // Wait for both GetPage and GetId to finish, before starting the next run.
-  waiter->Finalize([this, page_index, request_number]() {
+  waiter->Finalize([this, request_number]() {
     if (clear_pages_) {
-      // Close the page.
-      pages_[page_index].Unbind();
+      // To evict the cleared pages we need to close them.
+      pages_[request_number].Unbind();
     }
-    RunSingle(request_number - 1);
+    RunSingle(request_number + 1);
   });
 }
 
 void GetPageBenchmark::PopulateAndClearPage(size_t page_index,
                                             fit::closure callback) {
   pages_[page_index]->Put(
-      key_, value_,
+      generator_.MakeKey(page_index, kKeySize),
+      generator_.MakeValue(kValueSize),
       [this, page_index,
        callback = std::move(callback)](Status status) mutable {
         if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
@@ -192,7 +185,7 @@ void GetPageBenchmark::PopulateAndClearPage(size_t page_index,
         }
         pages_[page_index]->Clear(
             [this, callback = std::move(callback)](Status status) {
-              if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
+              if (QuitOnError(QuitLoopClosure(), status, "Page::Clear")) {
                 return;
               }
               callback();
