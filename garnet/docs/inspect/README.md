@@ -11,8 +11,9 @@ that expose information.
 
 # Quick Links
 
-[iquery](iquery.md) &mdash; The userspace tool for inspecting components.
-[Getting started with Inspect](gsw-inspect.md) &mdash; A quick start guide.
+* [iquery](iquery.md) &mdash; The userspace tool for inspecting components.
+* [Getting started with Inspect](gsw-inspect.md) &mdash; A quick start guide.
+* [VMO format](vmo-format/README.md) &mdash; Describes the Inspect VMO File Format.
 
 # Concepts
 
