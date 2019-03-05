@@ -100,6 +100,8 @@ source_set("wait_for_minfs") {
 
 source_set("lib") {
   sources = [
+    "presentation_container.cc",
+    "presentation_container.h",
     "session_context_impl.cc",
     "session_context_impl.h",
     "session_provider.cc",
@@ -113,6 +115,7 @@ source_set("lib") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",

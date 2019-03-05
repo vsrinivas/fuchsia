@@ -80,56 +80,6 @@ void BasemgrImpl::Connect(
   basemgr_bindings_.AddBinding(this, std::move(request));
 }
 
-void BasemgrImpl::InitializePresentation(
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
-  if (settings_.test && !settings_.enable_presenter) {
-    return;
-  }
-
-  auto presentation_request =
-      presentation_state_.presentation.is_bound()
-          ? presentation_state_.presentation.Unbind().NewRequest()
-          : presentation_state_.presentation.NewRequest();
-
-  presenter_->Present2(zx::eventpair(view_owner.TakeChannel().release()),
-                       std::move(presentation_request));
-
-  AddGlobalKeyboardShortcuts(presentation_state_.presentation);
-
-  SetShadowTechnique(presentation_state_.shadow_technique);
-
-  // Set the presentation of the given view to the settings of the active
-  // session shell.
-  if (active_session_shell_settings_index_ >= session_shell_settings_.size()) {
-    FXL_LOG(ERROR) << "Active session shell index is "
-                   << active_session_shell_settings_index_ << ", but only "
-                   << session_shell_settings_.size()
-                   << " session shell settings exist.";
-    return;
-  }
-
-  auto active_session_shell_settings =
-      session_shell_settings_[active_session_shell_settings_index_];
-  if (active_session_shell_settings.display_usage !=
-      fuchsia::ui::policy::DisplayUsage::kUnknown) {
-    FXL_DLOG(INFO) << "Setting display usage: "
-                   << fidl::ToUnderlying(
-                          active_session_shell_settings.display_usage);
-    presentation_state_.presentation->SetDisplayUsage(
-        active_session_shell_settings.display_usage);
-  }
-
-  if (!std::isnan(active_session_shell_settings.screen_width) &&
-      !std::isnan(active_session_shell_settings.screen_height)) {
-    FXL_DLOG(INFO) << "Setting display size: "
-                   << active_session_shell_settings.screen_width << " x "
-                   << active_session_shell_settings.screen_height;
-    presentation_state_.presentation->SetDisplaySizeInMm(
-        active_session_shell_settings.screen_width,
-        active_session_shell_settings.screen_height);
-  }
-}
-
 void BasemgrImpl::StartBaseShell() {
   if (base_shell_running_) {
     FXL_DLOG(INFO) << "StartBaseShell() called when already running";
@@ -151,13 +101,15 @@ void BasemgrImpl::StartBaseShell() {
   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> root_view;
   base_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
 
-  InitializePresentation(std::move(root_view));
+  presentation_container_ = std::make_unique<PresentationContainer>(
+      presenter_.get(), std::move(root_view),
+      /* shell_settings= */ GetActiveSessionShellSettings(),
+      /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
 
-  // Populate parameters and initialize the base shell.
+  // TODO(alexmin): Remove BaseShellParams.
   fuchsia::modular::BaseShellParams params;
-  params.presentation = std::move(presentation_state_.presentation);
   base_shell_->Initialize(base_shell_context_binding_.NewBinding(),
-                          std::move(params));
+                          /* base_shell_params= */ std::move(params));
 
   base_shell_running_ = true;
 }
@@ -311,7 +263,6 @@ void BasemgrImpl::GetAuthenticationUIContext(
   // TODO(MI4-1107): Basemgr needs to implement AuthenticationUIContext
   // itself, and proxy calls for StartOverlay & StopOverlay to BaseShell,
   // starting it if it's not running yet.
-  FXL_CHECK(base_shell_);
   base_shell_->GetAuthenticationUIContext(std::move(request));
 }
 
@@ -338,53 +289,19 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // Ownership of the Presenter should be moved to the session shell for tests
   // that enable presenter, and production code.
   if (!settings_.test || settings_.enable_presenter) {
-    InitializePresentation(session_shell_view_owner_);
+    presentation_container_ = std::make_unique<PresentationContainer>(
+        presenter_.get(), std::move(session_shell_view_owner_),
+        /* shell_settings= */ GetActiveSessionShellSettings(),
+        /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
   }
-}
-
-void BasemgrImpl::OnEvent(fuchsia::ui::input::KeyboardEvent event) {
-  switch (event.code_point) {
-    case ' ': {
-      SwapSessionShell();
-      break;
-    }
-    case 's': {
-      SetNextShadowTechnique();
-      break;
-    }
-    case 'l':
-      ToggleClipping();
-      break;
-    default:
-      FXL_DLOG(INFO) << "Unknown keyboard event: codepoint=" << event.code_point
-                     << ", modifiers=" << event.modifiers;
-      break;
-  }
-}
-
-void BasemgrImpl::AddGlobalKeyboardShortcuts(
-    fuchsia::ui::policy::PresentationPtr& presentation) {
-  presentation->CaptureKeyboardEventHACK(
-      {
-          .code_point = ' ',  // spacebar
-          .modifiers = fuchsia::ui::input::kModifierLeftControl,
-      },
-      keyboard_capture_listener_bindings_.AddBinding(this));
-  presentation->CaptureKeyboardEventHACK(
-      {
-          .code_point = 's',
-          .modifiers = fuchsia::ui::input::kModifierLeftControl,
-      },
-      keyboard_capture_listener_bindings_.AddBinding(this));
-  presentation->CaptureKeyboardEventHACK(
-      {
-          .code_point = 'l',
-          .modifiers = fuchsia::ui::input::kModifierRightAlt,
-      },
-      keyboard_capture_listener_bindings_.AddBinding(this));
 }
 
 void BasemgrImpl::SwapSessionShell() {
+  if (state_ == State::SHUTTING_DOWN) {
+    FXL_DLOG(INFO) << "SwapSessionShell() not supported while shutting down";
+    return;
+  }
+
   if (session_shell_settings_.empty()) {
     FXL_DLOG(INFO) << "No session shells has been defined";
     return;
@@ -404,59 +321,16 @@ void BasemgrImpl::SwapSessionShell() {
       ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
 }
 
-void BasemgrImpl::SetNextShadowTechnique() {
-  using ShadowTechnique = fuchsia::ui::gfx::ShadowTechnique;
+const SessionShellSettings& BasemgrImpl::GetActiveSessionShellSettings() {
+  if (active_session_shell_settings_index_ >= session_shell_settings_.size()) {
+    FXL_LOG(ERROR) << "Active session shell index is "
+                   << active_session_shell_settings_index_ << ", but only "
+                   << session_shell_settings_.size()
+                   << " session shell settings exist.";
+    return default_session_shell_settings_;
+  }
 
-  auto next_shadow_technique =
-      [](ShadowTechnique shadow_technique) -> ShadowTechnique {
-    switch (shadow_technique) {
-      case ShadowTechnique::UNSHADOWED:
-        return ShadowTechnique::SCREEN_SPACE;
-      case ShadowTechnique::SCREEN_SPACE:
-        return ShadowTechnique::SHADOW_MAP;
-      default:
-        FXL_LOG(ERROR) << "Unknown shadow technique: "
-                       << fidl::ToUnderlying(shadow_technique);
-        // Fallthrough
-      case ShadowTechnique::SHADOW_MAP:
-      case ShadowTechnique::MOMENT_SHADOW_MAP:
-        return ShadowTechnique::UNSHADOWED;
-    }
-  };
-
-  SetShadowTechnique(
-      next_shadow_technique(presentation_state_.shadow_technique));
-}
-
-void BasemgrImpl::SetShadowTechnique(
-    fuchsia::ui::gfx::ShadowTechnique shadow_technique) {
-  if (!presentation_state_.presentation)
-    return;
-
-  presentation_state_.shadow_technique = shadow_technique;
-
-  FXL_LOG(INFO) << "Setting shadow technique to "
-                << fidl::ToUnderlying(presentation_state_.shadow_technique);
-
-  fuchsia::ui::gfx::RendererParam param;
-  param.set_shadow_technique(presentation_state_.shadow_technique);
-
-  std::vector<fuchsia::ui::gfx::RendererParam> renderer_params;
-  renderer_params.push_back(std::move(param));
-
-  presentation_state_.presentation->SetRendererParams(
-      std::move(renderer_params));
-}
-
-void BasemgrImpl::ToggleClipping() {
-  if (!presentation_state_.presentation)
-    return;
-
-  FXL_DLOG(INFO) << "Toggling clipping";
-
-  presentation_state_.clipping_enabled = !presentation_state_.clipping_enabled;
-  presentation_state_.presentation->EnableClipping(
-      presentation_state_.clipping_enabled);
+  return session_shell_settings_[active_session_shell_settings_index_];
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
@@ -543,8 +417,7 @@ void BasemgrImpl::LogoutUsers(std::function<void()> callback) {
 
 void BasemgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  presentation_state_.bindings.AddBinding(
-      presentation_state_.presentation.get(), std::move(request));
+  presentation_container_->GetPresentation(std::move(request));
 }
 
 }  // namespace modular

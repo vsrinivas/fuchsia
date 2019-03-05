@@ -25,6 +25,7 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/presentation_container.h"
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
@@ -42,7 +43,6 @@ namespace modular {
 class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::auth::AuthenticationContextProvider,
                     fuchsia::modular::internal::BasemgrDebug,
-                    fuchsia::ui::policy::KeyboardCaptureListenerHACK,
                     modular::SessionProvider::Delegate {
  public:
   // Initializes as BasemgrImpl instance with the given parameters:
@@ -70,9 +70,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
 
  private:
-  void InitializePresentation(
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner);
-
   void StartBaseShell();
 
   FuturePtr<> StopBaseShell();
@@ -88,26 +85,12 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |fuchsia::modular::BaseShellContext|
   void Shutdown() override;
 
-  // |AuthenticationContextProvider|
+  // |fuchsia::auth::AuthenticationContextProvider|
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override;
 
-  // |KeyboardCaptureListenerHACK|
-  void OnEvent(fuchsia::ui::input::KeyboardEvent event) override;
-
-  void AddGlobalKeyboardShortcuts(
-      fuchsia::ui::policy::PresentationPtr& presentation);
-
-  void UpdatePresentation(const SessionShellSettings& settings);
-
   void SwapSessionShell();
-
-  void SetNextShadowTechnique();
-
-  void SetShadowTechnique(fuchsia::ui::gfx::ShadowTechnique shadow_technique);
-
-  void ToggleClipping();
 
   void ShowSetupOrLogin();
 
@@ -116,6 +99,10 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void OnLogin(fuchsia::modular::auth::AccountPtr account,
                fuchsia::auth::TokenManagerPtr ledger_token_manager,
                fuchsia::auth::TokenManagerPtr agent_token_manager);
+
+  // Returns the session shell settings of the active session shell, or returns
+  // the |default_session_shell_settings_| if there is no active one.
+  const SessionShellSettings& GetActiveSessionShellSettings();
 
   // Updates the session shell app config to the active session shell. Done once
   // on initialization and every time the session shells are swapped.
@@ -135,20 +122,30 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
                            request) override;
 
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
-  const std::vector<SessionShellSettings>& session_shell_settings_;
+
+  // Used to configure which session shell component to launch.
   fuchsia::modular::AppConfig session_shell_config_;
-  // Used to indicate which settings in |session_shell_settings_| is currently
-  // active.
+
+  // |session_shell_settings_| contains the session shell's presentation
+  // settings. |active_session_shell_settings_index_| indicates which settings
+  // in |session_shell_settings_| is currently active. If
+  // |session_shell_settings_| is empty, the |default_session_shell_settings_|
+  // is used instead.
+  const std::vector<SessionShellSettings>& session_shell_settings_;
   std::vector<SessionShellSettings>::size_type
       active_session_shell_settings_index_{};
+  const SessionShellSettings default_session_shell_settings_{};
 
   // Used to launch component instances, such as the base shell.
   fuchsia::sys::Launcher* const launcher_;  // Not owned.
-  // Used to initialize the presentation.
+  // Used to connect the |presentation_container_| to scenic.
   fuchsia::ui::policy::PresenterPtr presenter_;
   // Used to look-up whether device needs a factory reset.
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
   std::function<void()> on_shutdown_;
+
+  // Holds the presentation service.
+  std::unique_ptr<PresentationContainer> presentation_container_;
 
   std::unique_ptr<UserProviderImpl> user_provider_impl_;
 
@@ -165,19 +162,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> base_shell_app_;
   fuchsia::modular::BaseShellPtr base_shell_;
 
-  fidl::BindingSet<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
-      keyboard_capture_listener_bindings_;
-
   fuchsia::ui::viewsv1token::ViewOwnerPtr session_shell_view_owner_;
-
-  struct {
-    fuchsia::ui::policy::PresentationPtr presentation;
-    fidl::BindingSet<fuchsia::ui::policy::Presentation> bindings;
-
-    fuchsia::ui::gfx::ShadowTechnique shadow_technique =
-        fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED;
-    bool clipping_enabled{};
-  } presentation_state_;
 
   AsyncHolder<SessionProvider> session_provider_;
 
