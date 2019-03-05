@@ -85,37 +85,51 @@ impl Vmar {
 
 // TODO(smklein): Ideally we would have two separate sets of bitflags,
 // and a union of both of them.
-bitflags! {
-    /// Flags to VMAR routines which are considered safe.
-    #[repr(transparent)]
-    pub struct VmarFlags: sys::zx_vm_option_t {
-        const PERM_READ             = sys::ZX_VM_PERM_READ;
-        const PERM_WRITE            = sys::ZX_VM_PERM_WRITE;
-        const PERM_EXECUTE          = sys::ZX_VM_PERM_EXECUTE;
-        const COMPACT               = sys::ZX_VM_COMPACT;
-        const SPECIFIC              = sys::ZX_VM_SPECIFIC;
-        const CAN_MAP_SPECIFIC      = sys::ZX_VM_CAN_MAP_SPECIFIC;
-        const CAN_MAP_READ          = sys::ZX_VM_CAN_MAP_READ;
-        const CAN_MAP_WRITE         = sys::ZX_VM_CAN_MAP_WRITE;
-        const CAN_MAP_EXECUTE       = sys::ZX_VM_CAN_MAP_EXECUTE;
-        const MAP_RANGE             = sys::ZX_VM_MAP_RANGE;
-        const REQUIRE_NON_RESIZABLE = sys::ZX_VM_REQUIRE_NON_RESIZABLE;
-    }
+macro_rules! vmar_flags {
+    (
+        safe: [$($safe_name:ident : $safe_sys_name:ident,)*],
+        extended: [$($ex_name:ident : $ex_sys_name:ident,)*],
+    ) => {
+        bitflags! {
+            /// Flags to VMAR routines which are considered safe.
+            #[repr(transparent)]
+            pub struct VmarFlags: sys::zx_vm_option_t {
+                $(
+                    const $safe_name = sys::$safe_sys_name;
+                )*
+            }
+        }
+
+        bitflags! {
+            /// Flags to all VMAR routines.
+            #[repr(transparent)]
+            pub struct VmarFlagsExtended: sys::zx_vm_option_t {
+                $(
+                    const $safe_name = sys::$safe_sys_name;
+                )*
+                $(
+                    const $ex_name = sys::$ex_sys_name;
+                )*
+            }
+        }
+    };
 }
 
-bitflags! {
-    /// Flags to all VMAR routines.
-    #[repr(transparent)]
-    pub struct VmarFlagsExtended: sys::zx_vm_option_t {
-        const PERM_READ          = sys::ZX_VM_PERM_READ;
-        const PERM_WRITE         = sys::ZX_VM_PERM_WRITE;
-        const PERM_EXECUTE       = sys::ZX_VM_PERM_EXECUTE;
-        const COMPACT            = sys::ZX_VM_COMPACT;
-        const SPECIFIC           = sys::ZX_VM_SPECIFIC;
-        const SPECIFIC_OVERWRITE = sys::ZX_VM_SPECIFIC_OVERWRITE;
-        const CAN_MAP_SPECIFIC   = sys::ZX_VM_CAN_MAP_SPECIFIC;
-        const CAN_MAP_READ       = sys::ZX_VM_CAN_MAP_READ;
-        const CAN_MAP_WRITE      = sys::ZX_VM_CAN_MAP_WRITE;
-        const CAN_MAP_EXECUTE    = sys::ZX_VM_CAN_MAP_EXECUTE;
-    }
+vmar_flags! {
+    safe: [
+        PERM_READ: ZX_VM_PERM_READ,
+        PERM_WRITE: ZX_VM_PERM_WRITE,
+        PERM_EXECUTE: ZX_VM_PERM_EXECUTE,
+        COMPACT: ZX_VM_COMPACT,
+        SPECIFIC: ZX_VM_SPECIFIC,
+        CAN_MAP_SPECIFIC: ZX_VM_CAN_MAP_SPECIFIC,
+        CAN_MAP_READ: ZX_VM_CAN_MAP_READ,
+        CAN_MAP_WRITE: ZX_VM_CAN_MAP_WRITE,
+        CAN_MAP_EXECUTE: ZX_VM_CAN_MAP_EXECUTE,
+        MAP_RANGE: ZX_VM_MAP_RANGE,
+        REQUIRE_NON_RESIZABLE: ZX_VM_REQUIRE_NON_RESIZABLE,
+    ],
+    extended: [
+        SPECIFIC_OVERWRITE: ZX_VM_SPECIFIC_OVERWRITE,
+    ],
 }
