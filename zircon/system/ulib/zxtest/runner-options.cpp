@@ -43,24 +43,27 @@ char* GetOptArg(int opt, int argc, char** argv) {
     return argv[index];
 }
 
+constexpr char kUsageMsg[] = R"(
+    [OPTIONS]
+    --help[-h]                         Prints this message.
+    --gtest_filter[-f] PATTERN         Runner will consider only registered
+                                       tests that match PATTERN.
+    --gtest_list_tests[-l] BOOL        Runner will list all registed tests
+                                       that would be executed.
+    --gtest_shuffle[-s] BOOL           Runner will shuffle test and test case
+                                       execution order.
+    --gtest_repeat[-i] REPEAT          Runner will run REPEAT iterations of
+                                       each test case. If -1 will run until killed.
+    --gtest_random_seed[-r] SEED       Runner will use SEED for random decisions.
+    --gtest_break_on_failure[-b] BOOL  Runner will break upon encountering the first
+                                       fatal failure.
+)";
+
 } // namespace
 
 void Options::Usage(char* bin, FILE* stream) {
-    fprintf(stream, "    Usage: %s  [OPTIONS]", bin);
-    fprintf(stream,
-            "    [OPTIONS]"
-            "    --help[-h]                         Prints this message."
-            "    --gtest_filter[-f] PATTERN         Runner will consider only registered"
-            "                                       tests that match PATTERN."
-            "    --gtest_list_tests[-l] BOOL        Runner will list all registed tests"
-            "                                       that would be executed."
-            "    --gtest_shuffle[-s] BOOL           Runner will shuffle test and test case"
-            "                                       execution order."
-            "    --gtest_repeat[-i] REPEAT          Runner will run REPEAT iterations of"
-            "                                       each test case. If -1 will run until killed."
-            "    --gtest_random_seed[-r] SEED       Runner will use SEED for random decisions."
-            "    --gtest_break_on_failure[-b] BOOL  Runner will break upon encountering the first"
-            "                                       fatal failure.");
+    fprintf(stream, "    Usage: %s  [OPTIONS]\n", bin);
+    fprintf(stream, kUsageMsg);
 }
 
 Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* errors) {
