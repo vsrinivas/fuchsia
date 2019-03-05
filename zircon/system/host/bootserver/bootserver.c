@@ -75,7 +75,7 @@ char* date_string() {
 char* sockaddr_str(struct sockaddr_in6* addr) {
     static char buf[128];
     char tmp[INET6_ADDRSTRLEN];
-    snprintf(buf, sizeof(buf), "[%s]%d",
+    snprintf(buf, sizeof(buf), "[%s]:%d",
              inet_ntop(AF_INET6, &addr->sin6_addr, tmp, INET6_ADDRSTRLEN),
              ntohs(addr->sin6_port));
     return buf;
@@ -620,6 +620,10 @@ int main(int argc, char** argv) {
                 " Device will not be serviced. Please upgrade Zedboot.%s",
                 ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
             continue;
+        }
+
+        if (adv_nodename) {
+          log("Proceeding with nodename %s", adv_nodename);
         }
 
         log("Transfer starts");
