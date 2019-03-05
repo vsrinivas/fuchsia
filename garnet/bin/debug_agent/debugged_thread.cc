@@ -388,8 +388,11 @@ void DebuggedThread::ResumeForRunMode() {
     }
     suspend_reason_ = SuspendReason::kNone;
 
-    debug_ipc::MessageLoopTarget::Current()->ResumeFromException(koid_, thread_,
-                                                                 0);
+    zx_status_t status =
+        debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
+            koid_, thread_, 0);
+    FXL_DCHECK(status == ZX_OK)
+        << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(status);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.

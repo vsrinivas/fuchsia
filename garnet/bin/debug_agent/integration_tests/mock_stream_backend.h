@@ -29,6 +29,7 @@ class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
  public:
   MockStreamBackend();
   RemoteAPI* remote_api() { return agent_.get(); }
+  DebugAgent* agent() { return agent_.get(); }
 
   // Message dispatcher interface.
   // This should be overriden by every test interested in a particular set of

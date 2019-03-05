@@ -212,6 +212,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   JobStreamBackend backend(message_loop);
   RemoteAPI* remote_api = backend.remote_api();
 
+  FXL_VLOG(1) << "Attaching to root component.";
+
   // Attach to the component root.
   AttachRequest attach_request;
   attach_request.type = TaskType::kComponentRoot;
@@ -224,6 +226,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
       << "Expected ZX_OK, Got: " << ZxStatusToString(attach_reply->status);
   ASSERT_NE(attach_reply->koid, 0u);
 
+  FXL_VLOG(1) << "Setting job filters.";
+
   // Sent the Job filter.
   JobFilterRequest filter_request;
   filter_request.job_koid = attach_reply->koid;
@@ -232,6 +236,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   remote_api->OnJobFilter(filter_request, &filter_reply);
   ASSERT_EQ(filter_reply.status, ZX_OK)
       << "Expected ZX_OK, Got: " << ZxStatusToString(filter_reply.status);
+
+  FXL_VLOG(1) << "Launching jobs.";
 
   // We launch a some processes.
   zx::job job = CreateJob();
@@ -248,6 +254,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   // We resume the processes, which are in the initial waiting state.
   VerifyAllProcessesStarted(backend, {"true", "false"});
 
+  FXL_VLOG(1) << "Starting threads.";
+
   // All threads should start
   for (size_t i = 0; i < processes.size(); i++) {
     message_loop->Run();
@@ -257,11 +265,15 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   // Now that all threads started, we resume them all.
   ResumeAllProcesses(remote_api, backend);
 
+  FXL_VLOG(1) << "Receiving modules.";
+
   // We should receive all the modules notifications.
   for (size_t i = 0; i < processes.size(); i++) {
     message_loop->Run();
     ASSERT_EQ(backend.module_events().size(), i + 1);
   }
+
+  FXL_VLOG(1) << "Resuming proceses.";
 
   // We need to resume the thread again after getting the modules.
   ResumeAllProcesses(remote_api, backend);
@@ -287,11 +299,15 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   processes.clear();
   backend.Reset();
 
+  FXL_VLOG(1) << "Changing filters.";
+
   // We change the filters. A partial match should work.
   filter_request.filters = {"breakpoint"};
   remote_api->OnJobFilter(filter_request, &filter_reply);
   ASSERT_EQ(filter_reply.status, ZX_OK)
       << "Expected ZX_OK, Got: " << ZxStatusToString(filter_reply.status);
+
+  FXL_VLOG(1) << "Launching new processes.";
 
   // We launch two processes.
   processes.push_back(LaunchProcess(job, "breakpoint_test_exe",
@@ -303,6 +319,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   message_loop->Run();
   ASSERT_EQ(backend.process_start_events().size(), 1u);
 
+  // Catch thread start event.
   message_loop->Run();
   ASSERT_EQ(backend.thread_start_events().size(), 1u);
 
@@ -311,6 +328,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   message_loop->Run();
 
   ASSERT_EQ(backend.module_events().size(), 1u);
+
+  FXL_VLOG(1) << "Setting up breakpoint.";
 
   // The test .so we load in order to search the offset of the exported symbol
   // within it.
@@ -352,6 +371,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
 
   message_loop->Run();
 
+  FXL_VLOG(1) << "Hit breakpoint.";
+
   // We should've received a breakpoint event.
   ASSERT_EQ(backend.exceptions().size(), 1u);
   const auto& exception = backend.exceptions().back();
@@ -363,13 +384,13 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   EXPECT_EQ(breakpoint_stat.hit_count, 1u);
   EXPECT_EQ(breakpoint_stat.should_delete, false);  // Non one-shot breakpoint.
 
+  FXL_VLOG(1) << "Resuming process.";
+
   // We resume the thread.
   ResumeAllProcesses(remote_api, backend);
-
   message_loop->Run();
 
   // We should've received the exit event.
-
   // There should be no events except for the process exiting.
   ASSERT_EQ(backend.process_start_events().size(), 1u);
   ASSERT_EQ(backend.thread_start_events().size(), 1u);

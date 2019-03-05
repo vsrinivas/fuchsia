@@ -674,7 +674,8 @@ static zx_status_t async_loop_unbind_exception_port(async_dispatcher_t* async,
 
     uint64_t key = (uintptr_t)(void*) exception;
     zx_status_t status = zx_task_bind_exception_port(exception->task,
-                                                     ZX_HANDLE_INVALID, key, 0);
+                                                     ZX_HANDLE_INVALID, key,
+                                                     exception->options);
 
     if (status == ZX_OK) {
         list_delete(node);

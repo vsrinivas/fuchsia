@@ -67,7 +67,7 @@ zx_status_t MessageLoopAsync::InitTarget() {
   if (status != ZX_OK)
     return status;
 
-  watches_[kTaskSignalKey] = info;
+  watches_[kTaskSignalKey] = std::move(info);
   return ZX_OK;
 }
 
@@ -389,7 +389,6 @@ void MessageLoopAsync::RunUntilTimeout(zx::duration timeout) {
 // tasks before handle events and will get signaled if one of them posted a new
 // task.
 void MessageLoopAsync::RunImpl() {
-  FXL_LOG(INFO) << __FUNCTION__;
   // Init should have been called.
   FXL_DCHECK(Current() == this);
   zx_status_t status;
@@ -565,7 +564,6 @@ void MessageLoopAsync::OnJobException(const ExceptionHandler& handler,
 
 void MessageLoopAsync::OnSocketSignal(int watch_id, const WatchInfo& info,
                                       zx_signals_t observed) {
-  FXL_LOG(INFO) << __FUNCTION__;
   // Dispatch readable signal.
   if (observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);

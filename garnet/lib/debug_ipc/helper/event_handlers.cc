@@ -18,12 +18,12 @@ namespace debug_ipc {
 
 SignalHandler::SignalHandler() = default;
 SignalHandler::~SignalHandler() {
-  if (handle_) {
-    async_wait_t* wait = handle_.get();
+  if (!handle_)
+    return;
 
-    auto status = async_cancel_wait(async_get_default_dispatcher(), wait);
-    FXL_DCHECK(status == ZX_OK) << "Got: " << ZxStatusToString(status);
-  }
+  async_wait_t* wait = handle_.get();
+  auto status = async_cancel_wait(async_get_default_dispatcher(), wait);
+  FXL_DCHECK(status == ZX_OK) << "Got: " << ZxStatusToString(status);
 }
 
 SignalHandler::SignalHandler(SignalHandler&&) = default;
@@ -90,14 +90,21 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
     case WatchType::kJobExceptions:
       FXL_NOTREACHED();
   }
+
+  // "this" might be deleted at this point, so it should never be used.
 }
 
 // ExceptionHandler ------------------------------------------------------------
 
 ExceptionHandler::ExceptionHandler() = default;
 ExceptionHandler::~ExceptionHandler() {
-  if (handle_)
-    async_unbind_exception_port(async_get_default_dispatcher(), handle_.get());
+  if (!handle_)
+    return;
+
+  zx_status_t status = async_unbind_exception_port(
+      async_get_default_dispatcher(), handle_.get());
+  FXL_DCHECK(status == ZX_OK)
+      << "Expected ZX_OK, got " << ZxStatusToString(status);
 }
 
 ExceptionHandler::ExceptionHandler(ExceptionHandler&&) = default;
