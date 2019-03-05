@@ -64,17 +64,17 @@ func TestTester(t *testing.T) {
 // Verifies that SSHTester can execute tests on a remote device. These tests are
 // only meant for local verification.  You can execute them like this:
 //
-//  NODENAME=<my nodename> SSH_KEY=<my key> go test ./...
+//  FUCHSIA_NODENAME=<my nodename> FUCHSIA_SSH_KEY=<my key> go test ./...
 func TestSSHTester(t *testing.T) {
 	t.Skip("ssh tests are meant for local testing only")
 
-	nodename := os.Getenv("NODENAME")
+	nodename := os.Getenv("FUCHSIA_NODENAME")
 	if nodename == "" {
-		t.Fatal("NODENAME not set")
+		t.Fatal("FUCHSIA_NODENAME not set")
 	}
-	sshKey := os.Getenv("SSH_KEY")
+	sshKey := os.Getenv("FUCHSIA_SSH_KEY")
 	if sshKey == "" {
-		t.Fatal("SSH_KEY not set")
+		t.Fatal("FUCHSIA_SSH_KEY not set")
 	}
 
 	cases := []struct {

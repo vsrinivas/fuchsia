@@ -133,8 +133,8 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 
 	env := append(
 		os.Environ(),
-		fmt.Sprintf("NODENAME=%s", nodename),
-		fmt.Sprintf("SSH_KEY=%s", string(privKeys[0])),
+		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
+		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", string(privKeys[0])),
 	)
 
 	// Run command.

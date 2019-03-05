@@ -95,7 +95,7 @@ func usage() {
 Executes all tests found in the JSON [tests-file]
 Fuchsia tests require both the nodename of the fuchsia instance and a private
 SSH key corresponding to a authorized key to be set in the environment under
-NODENAME and SSH_KEY respectively.`)
+FUCHSIA_NODENAME and FUCHSIA_SSH_KEY respectively.`)
 }
 
 func init() {
@@ -136,13 +136,13 @@ func main() {
 		}
 	}
 
-	nodename := os.Getenv("NODENAME")
+	nodename := os.Getenv("FUCHSIA_NODENAME")
 	if nodename == "" {
-		log.Printf("NODENAME not set")
+		log.Printf("FUCHSIA_NODENAME not set")
 	}
-	sshKey := os.Getenv("SSH_KEY")
+	sshKey := os.Getenv("FUCHSIA_SSH_KEY")
 	if sshKey == "" {
-		log.Printf("SSH_KEY not set")
+		log.Printf("FUCHSIA_SSH_KEY not set")
 	}
 
 	// Execute.
@@ -176,13 +176,13 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKe
 	if nodename != "" {
 		localTester.env = append(
 			localTester.env,
-			fmt.Sprintf("NODENAME=%s", nodename),
+			fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
 		)
 	}
 	if sshKey != "" {
 		localTester.env = append(
 			localTester.env,
-			fmt.Sprintf("SSH_KEY=%s", sshKey),
+			fmt.Sprintf("FUCHSIA_SSH_KEY=%s", sshKey),
 		)
 	}
 
@@ -221,9 +221,9 @@ func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, nodenam
 	}
 
 	if nodename == "" {
-		return errors.New("NODENAME must be set")
+		return errors.New("FUCHSIA_NODENAME must be set")
 	} else if sshKey == "" {
-		return errors.New("SSH_KEY must be set")
+		return errors.New("FUCHSIA_SSH_KEY must be set")
 	}
 
 	tester, err := NewFuchsiaTester(nodename, sshKey)
