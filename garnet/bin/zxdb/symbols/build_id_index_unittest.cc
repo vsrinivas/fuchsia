@@ -58,12 +58,13 @@ ff3a9a920026380f8990a27333ed7634b3db89b9 /home/me/fuchsia/out/build-zircon/build
 asdf
 
 ffc2990b78544c1cee5092c3bf040b53f2af10cf /home/me/fuchsia/out/build-zircon/build-x64/system/uapp/channel-perf/channel-perf.elf
+deadb33fbadf00dbaddadbabb relative/path/dummy.elf
 )";
 
   BuildIDIndex::IDMap map;
-  BuildIDIndex::ParseIDs(test_data, &map);
+  BuildIDIndex::ParseIDs(test_data, GetTestDataDir(), &map);
 
-  EXPECT_EQ(3u, map.size());
+  EXPECT_EQ(4u, map.size());
   EXPECT_EQ("/home/me/fuchsia/out/x64/exe.unstripped/false",
             map["ff344c5304043feb"]);
   EXPECT_EQ(
@@ -74,6 +75,8 @@ ffc2990b78544c1cee5092c3bf040b53f2af10cf /home/me/fuchsia/out/build-zircon/build
       "/home/me/fuchsia/out/build-zircon/build-x64/system/uapp/channel-perf/"
       "channel-perf.elf",
       map["ffc2990b78544c1cee5092c3bf040b53f2af10cf"]);
+  EXPECT_EQ(GetTestDataDir() / "relative/path/dummy.elf",
+            map["deadb33fbadf00dbaddadbabb"]);
 }
 
 }  // namespace zxdb

@@ -5,7 +5,6 @@
 #include "garnet/bin/zxdb/symbols/build_id_index.h"
 
 #include <algorithm>
-#include <filesystem>
 
 #include "garnet/lib/debug_ipc/helper/elf.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -20,8 +19,8 @@ std::filesystem::path BuildIdToDebugPath(const std::string& build_id) {
   std::string build_id_clean = build_id;
 
   build_id_clean.erase(
-    std::remove(build_id_clean.begin(), build_id_clean.end(), '-'),
-    build_id_clean.end());
+      std::remove(build_id_clean.begin(), build_id_clean.end(), '-'),
+      build_id_clean.end());
   std::transform(build_id_clean.begin(), build_id_clean.end(),
                  build_id_clean.begin(), ::tolower);
 
@@ -31,7 +30,7 @@ std::filesystem::path BuildIdToDebugPath(const std::string& build_id) {
 
   const std::string& folder = build_id_clean.substr(0, 2);
   const std::string& file =
-    build_id_clean.substr(2, build_id_clean.size() - 2) + ".debug";
+      build_id_clean.substr(2, build_id_clean.size() - 2) + ".debug";
 
   return std::filesystem::path(folder) / file;
 }
@@ -58,8 +57,7 @@ std::string BuildIDIndex::SearchRepoSources(const std::string& build_id) {
   }
 
   for (const auto& source : repo_sources_) {
-    const auto& path =
-      std::filesystem::path(source) / ".build-id" / local_path;
+    const auto& path = std::filesystem::path(source) / ".build-id" / local_path;
 
     if (std::filesystem::exists(path)) {
       return path;
@@ -114,7 +112,9 @@ void BuildIDIndex::ClearCache() {
 }
 
 // static
-int BuildIDIndex::ParseIDs(const std::string& input, IDMap* output) {
+int BuildIDIndex::ParseIDs(const std::string& input,
+                           const std::filesystem::path& containing_dir,
+                           IDMap* output) {
   int added = 0;
   for (size_t line_begin = 0; line_begin < input.size(); line_begin++) {
     size_t newline = input.find('\n', line_begin);
@@ -131,14 +131,20 @@ int BuildIDIndex::ParseIDs(const std::string& input, IDMap* output) {
         fxl::StringView to_trim(" \t\r\n");
         fxl::StringView build_id =
             fxl::TrimString(line.substr(0, first_space), to_trim);
-        fxl::StringView path = fxl::TrimString(
+        fxl::StringView path_data = fxl::TrimString(
             line.substr(first_space + 1, line.size() - first_space - 1),
             to_trim);
+
+        std::filesystem::path path(path_data.ToString());
+
+        if (path.is_relative()) {
+          path = containing_dir / path;
+        }
 
         added++;
         output->emplace(std::piecewise_construct,
                         std::forward_as_tuple(build_id.data(), build_id.size()),
-                        std::forward_as_tuple(path.data(), path.size()));
+                        std::forward_as_tuple(path));
       }
     }
 
@@ -153,9 +159,21 @@ void BuildIDIndex::LogMessage(const std::string& msg) const {
 }
 
 void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
+  std::error_code err;
+
+  auto path = std::filesystem::canonical(file_name, err);
+
+  if (err) {
+    status_.emplace_back(file_name, 0);
+    LogMessage("Can't open build ID file: " + file_name);
+    return;
+  }
+
+  auto containing_dir = path.parent_path();
+
   FILE* id_file = fopen(file_name.c_str(), "r");
   if (!id_file) {
-  status_.emplace_back(file_name, 0);
+    status_.emplace_back(file_name, 0);
     LogMessage("Can't open build ID file: " + file_name);
     return;
   }
@@ -181,7 +199,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 
   fclose(id_file);
 
-  int added = ParseIDs(contents, &build_id_to_file_);
+  int added = ParseIDs(contents, containing_dir, &build_id_to_file_);
   status_.emplace_back(file_name, added);
   if (!added)
     LogMessage("No mappings found in build ID file: " + file_name);

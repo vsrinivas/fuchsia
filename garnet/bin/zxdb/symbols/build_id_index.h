@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <string>
@@ -68,7 +69,9 @@ class BuildIDIndex {
   // Parses a build ID mapping file (ids.txt). This is a separate static
   // function for testing purposes. The results are added to the output.
   // Returns the number of items loaded.
-  static int ParseIDs(const std::string& input, IDMap* output);
+  static int ParseIDs(const std::string& input,
+                      const std::filesystem::path& containing_dir,
+                      IDMap* output);
 
   const std::vector<std::string>& build_id_files() const {
     return build_id_files_;
