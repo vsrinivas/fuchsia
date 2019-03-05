@@ -123,7 +123,7 @@ class StartupContext {
   //  public:
   //   App(std::unique_ptr<StartupContext> context)
   //     : context_(std::move(context) {
-  //     context_.outging().AddPublicService(bindings_.GetHandler(this));
+  //     context_.outgoing().AddPublicService(bindings_.GetHandler(this));
   //   }
   //
   //   // fuchsia::foo::Controller implementation:
@@ -134,6 +134,7 @@ class StartupContext {
   // }
   // ```
   const Outgoing& outgoing() const { return outgoing_; }
+  Outgoing& outgoing() { return outgoing_; }
 
  private:
   std::shared_ptr<ServiceDirectory> svc_;
