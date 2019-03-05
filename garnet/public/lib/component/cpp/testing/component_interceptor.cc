@@ -175,8 +175,45 @@ void ComponentInterceptor::StartComponent(
     handler = it->second.handler;
   }
 
-  handler(std::move(startup_info), std::move(controller));
+  handler(std::make_unique<InterceptedComponent>(
+      std::move(startup_info), std::move(controller), dispatcher_));
 }
+
+InterceptedComponent::InterceptedComponent(
+    fuchsia::sys::StartupInfo startup_info,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+    async_dispatcher_t* dispatcher)
+    : binding_(this),
+      startup_info_(std::move(startup_info)),
+      termination_reason_(TerminationReason::EXITED),
+      exit_code_(ZX_OK) {
+  binding_.Bind(std::move(request), dispatcher);
+  binding_.set_error_handler([this](zx_status_t status) {
+    termination_reason_ = TerminationReason::UNKNOWN;
+    Kill();
+  });
+}
+
+InterceptedComponent::~InterceptedComponent() {
+  on_kill_ = nullptr;
+  Kill();
+}
+
+void InterceptedComponent::Exit(int64_t exit_code, TerminationReason reason) {
+  exit_code_ = exit_code;
+  termination_reason_ = reason;
+  Kill();
+}
+
+void InterceptedComponent::Kill() {
+  if (on_kill_) {
+    on_kill_();
+  }
+  binding_.events().OnTerminated(exit_code_, termination_reason_);
+  binding_.Unbind();
+}
+
+void InterceptedComponent::Detach() { binding_.set_error_handler(nullptr); }
 
 }  // namespace testing
 }  // namespace component

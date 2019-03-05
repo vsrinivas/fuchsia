@@ -19,6 +19,54 @@
 namespace component {
 namespace testing {
 
+using fuchsia::sys::TerminationReason;
+
+// A Wrapper class which implements a basic version of
+// |fuchsia::sys::ComponentController| and gives owner control over lifetime of
+// this component.
+class InterceptedComponent : public fuchsia::sys::ComponentController {
+ public:
+  // Called when this component is killed.
+  using OnKill = std::function<void()>;
+
+  InterceptedComponent(
+      fuchsia::sys::StartupInfo startup_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
+      async_dispatcher_t* dispatcher = nullptr);
+
+  // resets |on_kill_| to nullptr and calls |Kill()|.
+  ~InterceptedComponent() override;
+
+  fuchsia::sys::StartupInfo TakeStartupInfo() {
+    return std::move(startup_info_);
+  }
+
+  void Exit(int64_t exit_code,
+            TerminationReason reason = TerminationReason::EXITED);
+
+  void set_on_kill(OnKill on_kill) { on_kill_ = std::move(on_kill); }
+
+  const fuchsia::sys::StartupInfo& startup_info() const {
+    return startup_info_;
+  };
+
+ private:
+  // |ComponentController|.
+  void Detach() override;
+
+  // |ComponentController|.
+  //
+  // Calls |on_kill_| and call Terminated event on component before clearing the
+  // bindings
+  void Kill() override;
+
+  fidl::Binding<fuchsia::sys::ComponentController> binding_;
+  fuchsia::sys::StartupInfo startup_info_;
+  TerminationReason termination_reason_;
+  int64_t exit_code_;
+  OnKill on_kill_;
+};
+
 // ComponentInterceptor is a utility that helps users construct an
 // EnvironmentService (to be used alongside EnclosingEnvironment) that is able
 // to intercept and mock components launched under the EnclosingEnvironment.
@@ -27,11 +75,8 @@ namespace testing {
 // async dispatcher supplied to this class.
 class ComponentInterceptor : fuchsia::sys::Loader, fuchsia::sys::Runner {
  public:
-  // TODO(CF-608): Provide a utility which implements ComponentController and
-  // gives the user a simpler front-end.
-  using ComponentLaunchHandler = std::function<void(
-      fuchsia::sys::StartupInfo,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController>)>;
+  using ComponentLaunchHandler =
+      std::function<void(std::unique_ptr<InterceptedComponent>)>;
 
   ComponentInterceptor(fuchsia::sys::LoaderPtr fallback_loader,
                        async_dispatcher_t* dispatcher = nullptr);

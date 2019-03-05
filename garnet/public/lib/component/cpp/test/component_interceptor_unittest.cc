@@ -19,6 +19,8 @@
 
 namespace {
 
+using fuchsia::sys::TerminationReason;
+
 // Records |LoadUrl|s, but forwards requests to a fallback loader.
 class TestLoader : fuchsia::sys::Loader {
  public:
@@ -51,8 +53,6 @@ class TestLoader : fuchsia::sys::Loader {
   fuchsia::sys::LoaderPtr fallback_loader_;
 };
 
-}  // namespace
-
 // This fixture gives us a real_env().
 class ComponentInterceptorTest
     : public component::testing::TestWithEnvironment {};
@@ -79,10 +79,10 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
     ASSERT_TRUE(interceptor.InterceptURL(
         kInterceptUrl, "",
         [&actual_url, &intercepted_url](
-            fuchsia::sys::StartupInfo startup_info,
-            fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {
+            std::unique_ptr<component::testing::InterceptedComponent>
+                component) {
           intercepted_url = true;
-          actual_url = startup_info.launch_info.url;
+          actual_url = component->startup_info().launch_info.url;
         }));
 
     fuchsia::sys::ComponentControllerPtr controller;
@@ -111,6 +111,42 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
   }
 }
 
+TEST_F(ComponentInterceptorTest, TestOnKill) {
+  TestLoader test_loader(real_env());
+
+  component::testing::ComponentInterceptor interceptor(
+      test_loader.NewRequest());
+  auto env = component::testing::EnclosingEnvironment::Create(
+      "test_harness", real_env(),
+      interceptor.MakeEnvironmentServices(real_env()));
+
+  constexpr char kInterceptUrl[] = "file://intercept_url";
+
+  // Test the intercepting case.
+  std::string actual_url;
+
+  bool killed = false;
+  std::unique_ptr<component::testing::InterceptedComponent> component;
+  ASSERT_TRUE(interceptor.InterceptURL(
+      kInterceptUrl, "",
+      [&](std::unique_ptr<component::testing::InterceptedComponent> c) {
+        component = std::move(c);
+        component->set_on_kill([&]() { killed = true; });
+      }));
+
+  {
+    fuchsia::sys::ComponentControllerPtr controller;
+    fuchsia::sys::LaunchInfo info;
+    info.url = kInterceptUrl;
+    env->CreateComponent(std::move(info), controller.NewRequest());
+
+    ASSERT_TRUE(RunLoopUntil([&] { return !!component; }));
+    ASSERT_FALSE(killed);
+  }
+  // should be killed
+  ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
+}
+
 TEST_F(ComponentInterceptorTest, ExtraCmx) {
   auto interceptor =
       component::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
@@ -130,9 +166,9 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
           "data": "randomstring"
         }
       })",
-      [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {
+      [&](std::unique_ptr<component::testing::InterceptedComponent> c) {
         intercepted_url = true;
+        auto startup_info = c->TakeStartupInfo();
         for (const auto& metadata : startup_info.program_metadata.get()) {
           program_metadata[metadata.key] = metadata.value;
         }
@@ -151,3 +187,5 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
   EXPECT_TRUE(intercepted_url);
   EXPECT_EQ("randomstring", program_metadata["data"]);
 }
+
+}  // namespace
