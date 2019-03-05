@@ -2,5 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# frank is another name for vim2.
-import("//boards/vim2.gni")
+import("//boards/arm64.gni")
+
+board_packages += [ "garnet/packages/config/vim2_media_config" ]

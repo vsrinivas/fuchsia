@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-package("frank_media_config") {
+package("vim2_media_config") {
   deprecated_system_image = true
   resources = [
     {
