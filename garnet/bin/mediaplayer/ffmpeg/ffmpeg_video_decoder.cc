@@ -61,7 +61,7 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
 
 void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
   FXL_DCHECK(context());
-  FXL_DCHECK(packet->pts() != Packet::kUnknownPts);
+  FXL_DCHECK(packet->pts() != Packet::kNoPts);
 
   if (pts_rate() == media::TimelineRate::Zero) {
     set_pts_rate(packet->pts_rate());

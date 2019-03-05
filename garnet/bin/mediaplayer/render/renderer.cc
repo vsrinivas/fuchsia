@@ -54,9 +54,8 @@ void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,
 
 void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
                                    fit::closure callback) {
-  FXL_DCHECK(timeline_function.subject_time() != fuchsia::media::NO_TIMESTAMP);
-  FXL_DCHECK(timeline_function.reference_time() !=
-             fuchsia::media::NO_TIMESTAMP);
+  FXL_DCHECK(timeline_function.subject_time() != Packet::kNoPts);
+  FXL_DCHECK(timeline_function.reference_time() != Packet::kNoPts);
   FXL_DCHECK(timeline_function.reference_delta() != 0);
 
   bool was_progressing = Progressing();
@@ -76,7 +75,7 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
 }
 
 bool Renderer::end_of_stream() const {
-  return end_of_stream_pts_ != fuchsia::media::NO_TIMESTAMP &&
+  return end_of_stream_pts_ != Packet::kNoPts &&
          current_timeline_function_(media::Timeline::local_now()) >=
              end_of_stream_pts_;
 }
@@ -138,8 +137,7 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
 }
 
 void Renderer::MaybeScheduleEndOfStreamPublication() {
-  if (!end_of_stream_published_ &&
-      end_of_stream_pts_ != fuchsia::media::NO_TIMESTAMP &&
+  if (!end_of_stream_published_ && end_of_stream_pts_ != Packet::kNoPts &&
       current_timeline_function_.invertable()) {
     // Make sure we wake up to signal end-of-stream when the time comes.
     UpdateTimelineAt(
@@ -148,8 +146,8 @@ void Renderer::MaybeScheduleEndOfStreamPublication() {
 }
 
 void Renderer::ClearPendingTimelineFunction() {
-  pending_timeline_function_ = media::TimelineFunction(
-      fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, 0, 1);
+  pending_timeline_function_ =
+      media::TimelineFunction(Packet::kNoPts, Packet::kNoPts, 0, 1);
 
   if (set_timeline_function_callback_) {
     fit::closure callback = std::move(set_timeline_function_callback_);

@@ -4,7 +4,6 @@
 
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 
-#include <fuchsia/media/cpp/fidl.h>
 #include <iomanip>
 #include <iostream>
 #include "lib/fostr/zx_types.h"
@@ -13,15 +12,15 @@ namespace media_player {
 
 // Prints an ns value in 0.123,456,789 format.
 std::ostream& operator<<(std::ostream& os, AsNs value) {
-  if (value.value_ == fuchsia::media::NO_TIMESTAMP) {
-    return os << "<no timestamp>";
+  if (value.value_ == Packet::kNoPts) {
+    return os << "<none>";
   }
 
-  if (value.value_ == std::numeric_limits<int64_t>::min()) {
+  if (value.value_ == Packet::kMinPts) {
     return os << "<min>";
   }
 
-  if (value.value_ == std::numeric_limits<int64_t>::max() - 1) {
+  if (value.value_ == Packet::kMaxPts) {
     return os << "<max>";
   }
 

@@ -73,7 +73,7 @@ std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() const {
 void FfmpegDecoderBase::Flush() {
   FXL_DCHECK(is_worker_thread());
   avcodec_flush_buffers(av_codec_context_.get());
-  next_pts_ = Packet::kUnknownPts;
+  next_pts_ = Packet::kNoPts;
 }
 
 bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,

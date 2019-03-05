@@ -14,15 +14,15 @@ RateTracker::RateTracker() { Reset(); }
 RateTracker::~RateTracker() {}
 
 void RateTracker::Reset() {
-  last_progressing_sample_time_ = Packet::kUnknownPts;
+  last_progressing_sample_time_ = Packet::kNoPts;
   progress_intervals_.Reset();
 }
 
 void RateTracker::AddSample(int64_t now, bool progressing) {
   if (!progressing) {
-    last_progressing_sample_time_ = Packet::kUnknownPts;
+    last_progressing_sample_time_ = Packet::kNoPts;
   } else {
-    if (last_progressing_sample_time_ != Packet::kUnknownPts) {
+    if (last_progressing_sample_time_ != Packet::kNoPts) {
       progress_intervals_.AddSample(now - last_progressing_sample_time_);
     }
 

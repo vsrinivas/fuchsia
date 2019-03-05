@@ -19,7 +19,7 @@ void PacketTimingTracker::AddSample(int64_t now, int64_t presentation_time,
                                     int64_t packet_pts_ns, bool progressing) {
   if (!progressing) {
     ++not_progressing_count_;
-  } else if (packet_pts_ns == Packet::kUnknownPts) {
+  } else if (packet_pts_ns == Packet::kNoPts) {
     ++no_packet_count_;
   } else {
     int64_t earliness = packet_pts_ns - presentation_time;

@@ -48,8 +48,8 @@ void FfmpegAudioDecoder::ConfigureConnectors() {
 void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
   incoming_pts_rate_ = packet->pts_rate();
 
-  if (next_pts() == Packet::kUnknownPts) {
-    if (packet->pts() == Packet::kUnknownPts) {
+  if (next_pts() == Packet::kNoPts) {
+    if (packet->pts() == Packet::kNoPts) {
       FXL_DLOG(WARNING) << "No PTS established, using 0 by default.";
       set_next_pts(0);
     } else {

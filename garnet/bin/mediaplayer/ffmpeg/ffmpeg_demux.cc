@@ -413,7 +413,7 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   FXL_DCHECK(av_packet->side_data_elems == 0);
 
   int64_t pts =
-      (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kUnknownPts : av_packet->pts;
+      (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kNoPts : av_packet->pts;
   bool keyframe = av_packet->flags & AV_PKT_FLAG_KEY;
 
   fbl::RefPtr<PayloadBuffer> payload_buffer;

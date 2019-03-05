@@ -16,7 +16,7 @@ class PacketTimingTracker {
 
   ~PacketTimingTracker();
 
-  // Adds a sample to the tracker. If |packet_pts_ns| is |Packet::kUnknownPts|,
+  // Adds a sample to the tracker. If |packet_pts_ns| is |Packet::kNoPts|,
   // the sample is counted as a 'no packet' case.
   void AddSample(int64_t now, int64_t presentation_time, int64_t packet_pts_ns,
                  bool progressing);
@@ -39,7 +39,7 @@ class PacketTimingTracker {
   // packet PTS.
   size_t late_count() const { return count_late_samples_ ? late_count_ : 0; }
 
-  // Count of samples with |packet_pts_ns| equal to |Packet::kUnknownPts|.
+  // Count of samples with |packet_pts_ns| equal to |Packet::kNoPts|.
   size_t no_packet_count() const { return no_packet_count_; }
 
   // Minimum of packet PTS minus presentation time.

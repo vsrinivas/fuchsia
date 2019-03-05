@@ -109,7 +109,7 @@ PlayerImpl::PlayerImpl(
              << "transitioning to:   " << ToString(target_state_);
         }
 
-        if (target_position_ != fuchsia::media::NO_TIMESTAMP) {
+        if (target_position_ != Packet::kNoPts) {
           os << fostr::NewLine
              << "pending seek to:    " << AsNs(target_position_);
         }
@@ -238,7 +238,7 @@ void PlayerImpl::Update() {
 
         // Presentation time is not progressing, and the pipeline is clear of
         // packets.
-        if (target_position_ != fuchsia::media::NO_TIMESTAMP) {
+        if (target_position_ != Packet::kNoPts) {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
@@ -249,7 +249,7 @@ void PlayerImpl::Update() {
           // seeking the source, we'll notice that and do those things
           // again.
           int64_t target_position = target_position_;
-          target_position_ = fuchsia::media::NO_TIMESTAMP;
+          target_position_ = Packet::kNoPts;
 
           // |program_range_min_pts_| will be delivered in the
           // |SetProgramRange| call, ensuring that the renderers discard
@@ -262,8 +262,8 @@ void PlayerImpl::Update() {
               0.0f, media::Timeline::local_now(), [this, target_position]() {
                 if (target_position_ == target_position) {
                   // We've had a rendundant seek request. Ignore it.
-                  target_position_ = fuchsia::media::NO_TIMESTAMP;
-                } else if (target_position_ != fuchsia::media::NO_TIMESTAMP) {
+                  target_position_ = Packet::kNoPts;
+                } else if (target_position_ != Packet::kNoPts) {
                   // We've had a seek request to a new position. Refrain from
                   // seeking the source and re-enter this sequence.
                   state_ = State::kFlushed;
@@ -299,7 +299,7 @@ void PlayerImpl::Update() {
           // when the operation is complete.
           state_ = State::kWaiting;
           waiting_reason_ = "for priming to complete";
-          core_.SetProgramRange(0, program_range_min_pts_, kMaxTime);
+          core_.SetProgramRange(0, program_range_min_pts_, Packet::kMaxPts);
 
           core_.Prime([this]() {
             state_ = State::kPrimed;
@@ -398,7 +398,7 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
       std::move(callback));
-  transform_subject_time_ = fuchsia::media::NO_TIMESTAMP;
+  transform_subject_time_ = Packet::kNoPts;
   SendStatusUpdates();
 }
 

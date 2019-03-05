@@ -99,7 +99,7 @@ class Renderer : public Node {
 
   // Indicates whether the end of stream packet has been encountered.
   bool end_of_stream_pending() const {
-    return end_of_stream_pts_ != fuchsia::media::NO_TIMESTAMP;
+    return end_of_stream_pts_ != Packet::kNoPts;
   }
 
   // PTS at which end-of-stream is to occur or |kUnspecifiedTime| if an end-
@@ -135,15 +135,14 @@ class Renderer : public Node {
 
   // Determines if an unrealized timeline function is currently pending.
   bool TimelineFunctionPending() {
-    return pending_timeline_function_.reference_time() !=
-           fuchsia::media::NO_TIMESTAMP;
+    return pending_timeline_function_.reference_time() != Packet::kNoPts;
   }
 
   async_dispatcher_t* dispatcher_;
   fit::closure update_callback_;
   media::TimelineFunction current_timeline_function_;
   media::TimelineFunction pending_timeline_function_;
-  int64_t end_of_stream_pts_ = fuchsia::media::NO_TIMESTAMP;
+  int64_t end_of_stream_pts_ = Packet::kNoPts;
   bool end_of_stream_published_ = false;
   fit::closure set_timeline_function_callback_;
   int64_t program_0_min_pts_ = std::numeric_limits<int64_t>::min();

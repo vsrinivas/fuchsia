@@ -26,7 +26,9 @@ typedef std::shared_ptr<Packet> PacketPtr;
 // 2) Remove end_of_stream().
 class Packet {
  public:
-  static const int64_t kUnknownPts = std::numeric_limits<int64_t>::min();
+  static const int64_t kNoPts = std::numeric_limits<int64_t>::max();
+  static const int64_t kMinPts = std::numeric_limits<int64_t>::min();
+  static const int64_t kMaxPts = std::numeric_limits<int64_t>::max() - 1;
 
   // Creates a packet.
   static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,

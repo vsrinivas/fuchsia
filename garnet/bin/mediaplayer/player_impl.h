@@ -24,6 +24,8 @@
 
 namespace media_player {
 
+static_assert(fuchsia::media::NO_TIMESTAMP == Packet::kNoPts);
+
 // Fidl agent that renders streams.
 class PlayerImpl : public fuchsia::mediaplayer::Player {
  public:
@@ -97,8 +99,6 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
  private:
   static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
-  static constexpr int64_t kMinTime = std::numeric_limits<int64_t>::min();
-  static constexpr int64_t kMaxTime = std::numeric_limits<int64_t>::max() - 1;
 
   // Internal state.
   enum class State {
@@ -134,8 +134,7 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   // Determines whether we need to flush.
   bool NeedToFlush() const {
-    return setting_source_ ||
-           target_position_ != fuchsia::media::NO_TIMESTAMP ||
+    return setting_source_ || target_position_ != Packet::kNoPts ||
            target_state_ == State::kFlushed;
   }
 
@@ -188,15 +187,15 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   // The position we want to seek to (because the client called Seek) or
   // kUnspecifiedTime, which indicates there's no desire to seek.
-  int64_t target_position_ = fuchsia::media::NO_TIMESTAMP;
+  int64_t target_position_ = Packet::kNoPts;
 
   // The subject time to be used for SetTimelineFunction. The value is
   // kUnspecifiedTime if there's no need to seek or the position we want
   // to seek to if there is.
-  int64_t transform_subject_time_ = fuchsia::media::NO_TIMESTAMP;
+  int64_t transform_subject_time_ = Packet::kNoPts;
 
   // The minimum program range PTS to be used for SetProgramRange.
-  int64_t program_range_min_pts_ = kMinTime;
+  int64_t program_range_min_pts_ = Packet::kMinPts;
 
   // Whether the player is in the process of setting the source, possibly to
   // nothing. This is set to true when any of the Set*Source methods is called,

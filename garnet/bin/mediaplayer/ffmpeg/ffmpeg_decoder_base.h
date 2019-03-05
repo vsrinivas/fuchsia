@@ -91,7 +91,7 @@ class FfmpegDecoderBase : public SoftwareDecoder {
 
   AvCodecContextPtr av_codec_context_;
   ffmpeg::AvFramePtr av_frame_ptr_;
-  int64_t next_pts_ = Packet::kUnknownPts;
+  int64_t next_pts_ = Packet::kNoPts;
   media::TimelineRate pts_rate_;
 };
 

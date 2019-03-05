@@ -157,12 +157,12 @@ void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
   // TODO(dalesat): Check for pause if this turns out not to be the case.
 
   int64_t reference_time = timeline_function.reference_time();
-  if (reference_time == fuchsia::media::NO_TIMESTAMP) {
+  if (reference_time == Packet::kNoPts) {
     reference_time = media::Timeline::local_now() + kMinimumLeadTime;
   }
 
   int64_t subject_time = timeline_function.subject_time();
-  if (subject_time == fuchsia::media::NO_TIMESTAMP) {
+  if (subject_time == Packet::kNoPts) {
     subject_time = timeline_function_(reference_time);
   }
 

@@ -125,12 +125,12 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   FXL_DCHECK(callback);
 
   flushed_ = true;
-  SetEndOfStreamPts(fuchsia::media::NO_TIMESTAMP);
+  SetEndOfStreamPts(Packet::kNoPts);
   input_packet_request_outstanding_ = false;
 
   audio_renderer_->DiscardAllPackets([this, callback = std::move(callback)]() {
     last_supplied_pts_ns_ = 0;
-    last_departed_pts_ns_ = fuchsia::media::NO_TIMESTAMP;
+    last_departed_pts_ns_ = Packet::kNoPts;
     callback();
   });
 }
@@ -160,7 +160,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
                       Progressing());
 
   last_supplied_pts_ns_ = end_pts_ns;
-  if (last_departed_pts_ns_ == fuchsia::media::NO_TIMESTAMP) {
+  if (last_departed_pts_ns_ == Packet::kNoPts) {
     last_departed_pts_ns_ = start_pts_ns;
   }
 
@@ -313,7 +313,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
 
   if (presentation_time_ns + min_lead_time_ns_ > last_supplied_pts_ns_) {
     // We need more packets to meet lead time commitments.
-    if (last_departed_pts_ns_ != fuchsia::media::NO_TIMESTAMP &&
+    if (last_departed_pts_ns_ != Packet::kNoPts &&
         last_supplied_pts_ns_ - last_departed_pts_ns_ > kWarnThresholdNs) {
       FXL_LOG(WARNING) << "Audio renderer holding too much content:";
       FXL_LOG(WARNING) << "    total content "
