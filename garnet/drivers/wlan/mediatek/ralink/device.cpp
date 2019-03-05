@@ -3846,7 +3846,7 @@ zx_status_t Device::OnTxReportInterruptTimer() {
                 "memory [pending_rerport: %zu, entry.in_use: %d]\n",
                 packet_id, stat_fifo.val(), stat_fifo_ext.val(), tx_status_report_pending_,
                 entry.in_use);
-            return ZX_ERR_NOT_FOUND;
+            continue;
         }
 
         --tx_status_report_pending_;
