@@ -7,10 +7,10 @@ data connection over modern cellular protocols.
 Source code:
 
 - API
-  * [Fuchsia RIL](../../public/fidl/fuchsia.telephony.ril/)
-  * TODO: [Modem Managment](../../public/fidl/fuchsia.telephony.control/)
+  * [Fuchsia RIL](../../../sdk/fidl/fuchsia.telephony.ril/)
+  * TODO: [Modem Managment](../../../sdk/fidl/fuchsia.telephony.control/)
 - Modem Services
-  * [QMI RIL Service](../../bin/telephony/ril-qmi/)
+  * [QMI RIL Service](../ril-qmi/)
 - Drivers
   * [QMI USB Driver](../../drivers/telephony/qmi-usb-transport/)
 - [Tools](tools/)
@@ -39,7 +39,7 @@ The interactive CLI is currently incompatible with the standard `run` command, s
 call the binary from `pkgfs` directly.
 
 ```
-$ /pkgfs/packages/ril-ctl/0/bin/app -d /dev/class/qmi-transport/000
+$ run ril-ctl -d /dev/class/qmi-transport/000
 ```
 
 ### Running Tests
