@@ -109,6 +109,7 @@ write_file("$root_build_dir/packages.json",
 shell_commands("shell-commands") {
   testonly = true
   deps = available_packages
+  deps += ["//build/images:shell-commands"]
   deps -= ["//build/images:shell-commands"]
   # Kludge: The guest depends on shell-commands, but shell-commands is an
   # aggregator that also depends on all targets, so we must explicitly exclude
