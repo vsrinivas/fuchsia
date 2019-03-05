@@ -6,10 +6,12 @@ import("//products/bringup.gni")
 
 enable_netboot = false
 
-monolith += [ "garnet/packages/products/base" ]
+monolith += [
+  "garnet/packages/config/kernel_crash_checker",
+  "garnet/packages/prod/kernel_crash_checker",
+  "garnet/packages/products/base",
+]
 
 preinstall += []
 
-available += [
-  "bundles/tools",
-]
+available += [ "bundles/tools" ]
