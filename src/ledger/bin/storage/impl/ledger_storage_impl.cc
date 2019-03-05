@@ -90,6 +90,8 @@ void LedgerStorageImpl::GetPageStorage(
 
 void LedgerStorageImpl::DeletePageStorage(
     PageIdView page_id, fit::function<void(Status)> callback) {
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
+                                       "ledger_storage_delete_page_storage");
   ledger::DetachedPath path = GetPathFor(page_id);
   ledger::DetachedPath staging_path = GetStagingPathFor(page_id);
   // |final_callback| will be called from the I/O loop and call the original
@@ -97,7 +99,7 @@ void LedgerStorageImpl::DeletePageStorage(
   // safe to capture environment_->dispatcher() here.
   auto final_callback = [dispatcher = environment_->dispatcher(),
                          callback =
-                             std::move(callback)](Status status) mutable {
+                             std::move(timed_callback)](Status status) mutable {
     // Call the callback in the main thread.
     async::PostTask(dispatcher, [status, callback = std::move(callback)] {
       callback(status);

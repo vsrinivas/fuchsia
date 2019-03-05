@@ -12,6 +12,14 @@
       "event_category": "benchmark",
       "expected_sample_count": 500,
       "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "cleared_pages/delete_page_storage",
+      "event_name": "ledger_storage_delete_page_storage",
+      "event_category": "ledger",
+      "expected_sample_count": 500,
+      "split_first": true
     }
   ]
 }

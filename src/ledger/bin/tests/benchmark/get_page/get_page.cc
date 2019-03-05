@@ -39,7 +39,11 @@ constexpr fxl::StringView kReuseFlag = "reuse";
 constexpr fxl::StringView kWaitForCachedPageFlag = "wait-for-cached-page";
 constexpr fxl::StringView kClearPagesFlag = "clear-pages";
 
-constexpr zx::duration kDuration = zx::msec(500);
+// The delay to be used when waiting for a ledger background I/O operation to
+// finish. This is used when it is not possible to wait for a specific event,
+// like in the case of expecting the precached Page to be ready at the time of
+// Page request. 500ms is chosen as a sufficiently long delay to guarantee this.
+constexpr zx::duration kDelay = zx::msec(500);
 constexpr size_t kKeySize = 10;
 constexpr size_t kValueSize = 10;
 
@@ -133,7 +137,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   }
   if (wait_for_cached_page_) {
     // Wait before each page request, so that a pre-cached page is ready.
-    zx_nanosleep(zx_deadline_after(kDuration.get()));
+    zx_nanosleep(zx_deadline_after(kDelay.get()));
   }
 
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
@@ -194,6 +198,10 @@ void GetPageBenchmark::PopulateAndClearPage(size_t page_index,
 }
 
 void GetPageBenchmark::ShutDown() {
+  if (clear_pages_) {
+    // Wait sufficient amount of time so that all cleared pages are evicted.
+    zx_nanosleep(zx_deadline_after(kDelay.get()));
+  }
   KillLedgerProcess(&component_controller_);
   loop_->Quit();
 }
