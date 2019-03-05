@@ -35,9 +35,12 @@ impl FixedHeader {
         self.version_tc_flowlabel[0] >> 4
     }
 
-    // TODO(tkilbourn): split this into DS and ECN
-    fn traffic_class(&self) -> u8 {
-        (self.version_tc_flowlabel[0] & 0xF) << 4 | self.version_tc_flowlabel[1] >> 4
+    fn ds(&self) -> u8 {
+        (self.version_tc_flowlabel[0] & 0xF) << 2 | self.version_tc_flowlabel[1] >> 6
+    }
+
+    fn ecn(&self) -> u8 {
+        (self.version_tc_flowlabel[1] & 0x30) >> 4
     }
 
     fn flowlabel(&self) -> u32 {
@@ -100,12 +103,12 @@ impl<B: ByteSlice> Ipv6Packet<B> {
 
     /// The Differentiated Services (DS) field.
     pub fn ds(&self) -> u8 {
-        self.fixed_hdr.traffic_class() >> 2
+        self.fixed_hdr.ds()
     }
 
     /// The Explicit Congestion Notification (ECN).
     pub fn ecn(&self) -> u8 {
-        self.fixed_hdr.traffic_class() & 0b11
+        self.fixed_hdr.ecn()
     }
 
     /// The flow label.
