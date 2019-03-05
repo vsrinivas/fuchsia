@@ -8,7 +8,6 @@ use carnelian::{
 };
 use chrono::prelude::*;
 use failure::Error;
-use fidl_fuchsia_ui_gfx as gfx;
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::Duration;
@@ -25,8 +24,13 @@ impl AppAssistant for ClockAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(
+        &mut self,
+        key: ViewKey,
+        session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ClockViewAssistant {
+            key,
             background_node: ShapeNode::new(session.clone()),
             hour_hand_node: ShapeNode::new(session.clone()),
             minute_hand_node: ShapeNode::new(session.clone()),
@@ -36,6 +40,7 @@ impl AppAssistant for ClockAppAssistant {
 }
 
 struct ClockViewAssistant {
+    key: ViewKey,
     background_node: ShapeNode,
     hour_hand_node: ShapeNode,
     minute_hand_node: ShapeNode,
@@ -83,22 +88,20 @@ impl ClockViewAssistant {
 
 impl ViewAssistant for ClockViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-
-        context.import_node.add_child(&self.background_node);
+        context.root_node.add_child(&self.background_node);
         set_node_color(context.session, &self.background_node, &Color::from_hash_code("#B31B1B")?);
 
         let hand_color = Color::from_hash_code("#A9A9A9")?;
-        context.import_node.add_child(&self.hour_hand_node);
+        context.root_node.add_child(&self.hour_hand_node);
         set_node_color(context.session, &self.hour_hand_node, &hand_color);
 
-        context.import_node.add_child(&self.minute_hand_node);
+        context.root_node.add_child(&self.minute_hand_node);
         set_node_color(context.session, &self.minute_hand_node, &hand_color);
 
-        context.import_node.add_child(&self.second_hand_node);
+        context.root_node.add_child(&self.second_hand_node);
         set_node_color(context.session, &self.second_hand_node, &hand_color);
 
-        Self::setup_timer(context.key);
+        Self::setup_timer(self.key);
         Ok(())
     }
 

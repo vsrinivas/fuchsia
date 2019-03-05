@@ -3,18 +3,17 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    App, AppAssistant, Coord, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    set_node_color, App, AppAssistant, Color, Coord, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
-use fidl::encoding::OutOfLine;
-use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_math::{InsetF, RectF, SizeF};
-use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
-use fidl_fuchsia_ui_viewsv1::ViewProviderMarker;
-use fidl_fuchsia_ui_viewsv1::{CustomFocusBehavior, ViewLayout, ViewProperties};
-use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
+use fidl_fuchsia_math::RectF;
+use fidl_fuchsia_ui_app::ViewProviderMarker;
+use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
 use fuchsia_app::client::{App as LaunchedApp, Launcher};
-use fuchsia_scenic::{EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{
+    new_view_token_pair, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder,
+};
 use itertools::Itertools;
 use std::collections::BTreeMap;
 
@@ -34,7 +33,11 @@ impl AppAssistant for EmbeddingAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(
+        &mut self,
+        _key: ViewKey,
+        session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
         let app = Launcher::new()?.launch(
             "fuchsia-pkg://fuchsia.com/spinning_square_rs#meta/spinning_square_rs.cmx".to_string(),
             None,
@@ -49,14 +52,14 @@ impl AppAssistant for EmbeddingAppAssistant {
 }
 
 struct ViewData {
-    key: u32,
     bounds: Option<RectF>,
     host_node: EntityNode,
+    host_view_holder: ViewHolder,
 }
 
 impl ViewData {
-    pub fn new(key: u32, host_node: EntityNode) -> ViewData {
-        ViewData { key: key, bounds: None, host_node: host_node }
+    pub fn new(host_node: EntityNode, host_view_holder: ViewHolder) -> ViewData {
+        ViewData { bounds: None, host_node: host_node, host_view_holder: host_view_holder }
     }
 }
 
@@ -69,26 +72,28 @@ struct EmbeddingViewAssistant {
 }
 
 impl EmbeddingViewAssistant {
-    fn create_and_setup_view(
-        &mut self,
-        key: u32,
-        session: &SessionPtr,
-        view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
-        import_node: &ImportNode,
-    ) -> Result<(), Error> {
+    fn create_and_setup_view(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        let (view_token, view_holder_token) = new_view_token_pair()?;
+
         let view_provider = self.app.connect_to_service(ViewProviderMarker)?;
-        let (view_owner_client, view_owner_server) = create_endpoints::<ViewOwnerMarker>()?;
-        view_provider.create_view(view_owner_server, None)?;
-        let host_node = EntityNode::new(session.clone());
-        let host_import_token = host_node.export_as_request();
-        import_node.add_child(&host_node);
-        let view_data = ViewData::new(key, host_node);
-        self.views.insert(key, view_data);
-        view_container.add_child(key, view_owner_client, host_import_token)?;
+        view_provider.create_view(view_token.value, None, None)?;
+
+        let holder_node = EntityNode::new(context.session.clone());
+        let view_holder = ViewHolder::new(
+            context.session.clone(),
+            view_holder_token,
+            Some(String::from("Carnelian Embedded View")),
+        );
+        holder_node.attach(&view_holder);
+        context.root_node.add_child(&holder_node);
+
+        let view_data = ViewData::new(holder_node, view_holder);
+        self.views.insert(view_data.host_view_holder.id(), view_data);
+
         Ok(())
     }
 
-    pub fn layout(&mut self, view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy) {
+    pub fn layout(&mut self) {
         if !self.views.is_empty() {
             let num_tiles = self.views.len();
 
@@ -113,19 +118,18 @@ impl EmbeddingViewAssistant {
                         y: row_index as f32 * tile_height,
                     };
                     inset(&mut tile_bounds, 5.0);
-                    let mut view_properties = ViewProperties {
-                        custom_focus_behavior: Some(Box::new(CustomFocusBehavior {
-                            allow_focus: true,
-                        })),
-                        view_layout: Some(Box::new(ViewLayout {
-                            inset: InsetF { bottom: 0.0, left: 0.0, right: 0.0, top: 0.0 },
-                            size: SizeF { width: tile_bounds.width, height: tile_bounds.height },
-                        })),
+                    let view_properties = ViewProperties {
+                        bounding_box: BoundingBox {
+                            min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+                            max: Vec3 { x: tile_bounds.width, y: tile_bounds.height, z: 0.0 },
+                        },
+                        inset_from_min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+                        inset_from_max: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+                        focus_change: true,
+                        downward_input: false,
                     };
-                    view_container
-                        .set_child_properties(view.key, Some(OutOfLine(&mut view_properties)))
-                        .unwrap();
-                    view.host_node.set_translation(tile_bounds.x, tile_bounds.y, 0.0);
+                    view.host_view_holder.set_view_properties(view_properties);
+                    view.host_node.set_translation(tile_bounds.x, tile_bounds.y, -0.1);
                     view.bounds = Some(tile_bounds);
                 }
             }
@@ -135,19 +139,15 @@ impl EmbeddingViewAssistant {
 
 impl ViewAssistant for EmbeddingViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-        context.import_node.add_child(&self.background_node);
-        let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba { red: 0x00, green: 0xc0, blue: 0x00, alpha: 0xff });
-        self.background_node.set_material(&material);
+        set_node_color(
+            context.session,
+            &self.background_node,
+            &Color { r: 0x00, g: 0xc0, b: 0x00, a: 0xff },
+        );
+        context.root_node.add_child(&self.background_node);
 
-        for n in 1..5 {
-            self.create_and_setup_view(
-                n,
-                context.session,
-                context.view_container,
-                context.import_node,
-            )?;
+        for _ in 1..5 {
+            self.create_and_setup_view(&context)?;
         }
 
         Ok(())
@@ -164,7 +164,7 @@ impl ViewAssistant for EmbeddingViewAssistant {
             self.size.height,
         ));
         self.background_node.set_translation(center_x, center_y, 0.0);
-        self.layout(context.view_container);
+        self.layout();
         Ok(())
     }
 }

@@ -8,10 +8,9 @@ use carnelian::{
 };
 use euclid::Vector2D;
 use failure::Error;
-use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_scenic::{Circle, Material, Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{Circle, Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::Duration;
 use futures::prelude::*;
 use rand::{thread_rng, Rng};
@@ -30,8 +29,12 @@ impl AppAssistant for ShapeDropAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(ShapeDropViewAssistant::new(session)?))
+    fn create_view_assistant(
+        &mut self,
+        key: ViewKey,
+        session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(ShapeDropViewAssistant::new(key, session)?))
     }
 }
 
@@ -83,12 +86,12 @@ fn random_color_element() -> u8 {
     e + 128
 }
 
-fn random_color() -> ColorRgba {
-    ColorRgba {
-        red: random_color_element(),
-        green: random_color_element(),
-        blue: random_color_element(),
-        alpha: 0xff,
+fn random_color() -> Color {
+    Color {
+        r: random_color_element(),
+        g: random_color_element(),
+        b: random_color_element(),
+        a: 0xff,
     }
 }
 
@@ -110,9 +113,7 @@ impl TouchHandler {
     }
 
     fn setup(&mut self, context: &mut ViewAssistantContext) {
-        let material = Material::new(context.session.clone());
-        material.set_color(random_color());
-        self.shape.set_material(&material);
+        set_node_color(context.session, &self.shape, &random_color());
         match self.shape_type {
             ShapeType::Rectangle => {
                 self.shape.set_shape(&Rectangle::new(
@@ -139,7 +140,7 @@ impl TouchHandler {
                 self.shape.set_shape(&Circle::new(context.session.clone(), self.size.width / 2.0));
             }
         }
-        context.import_node.add_child(&self.shape);
+        context.root_node.add_child(&self.shape);
     }
 
     fn update(&mut self, context: &mut ViewAssistantContext, pointer_event: &PointerEvent) {
@@ -151,6 +152,7 @@ impl TouchHandler {
 }
 
 struct ShapeDropViewAssistant {
+    key: ViewKey,
     background_node: ShapeNode,
     touch_handlers: BTreeMap<(u32, u32), TouchHandler>,
     animators: Vec<ShapeAnimator>,
@@ -161,8 +163,9 @@ fn make_pointer_event_key(pointer_event: &PointerEvent) -> (u32, u32) {
 }
 
 impl ShapeDropViewAssistant {
-    fn new(session: &SessionPtr) -> Result<ShapeDropViewAssistant, Error> {
+    fn new(key: ViewKey, session: &SessionPtr) -> Result<ShapeDropViewAssistant, Error> {
         Ok(ShapeDropViewAssistant {
+            key,
             background_node: ShapeNode::new(session.clone()),
             touch_handlers: BTreeMap::new(),
             animators: Vec::new(),
@@ -230,14 +233,11 @@ impl ShapeDropViewAssistant {
 
 impl ViewAssistant for ShapeDropViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        // Let scenic know we're interested in changes to metrics for this node.
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-
-        context.import_node.add_child(&self.background_node);
+        context.root_node.add_child(&self.background_node);
 
         set_node_color(context.session, &self.background_node, &Color::from_hash_code("#2F4F4F")?);
 
-        Self::setup_timer(context.key);
+        Self::setup_timer(self.key);
 
         Ok(())
     }

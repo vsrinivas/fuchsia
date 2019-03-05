@@ -3,32 +3,31 @@
 // found in the LICENSE file.
 
 use carnelian::Size;
-use fidl::encoding::OutOfLine;
-use fidl_fuchsia_math::{InsetF, RectF, SizeF};
-use fidl_fuchsia_ui_viewsv1::{CustomFocusBehavior, ViewLayout, ViewProperties};
-use fuchsia_scenic::EntityNode;
+use fidl_fuchsia_math::RectF;
+use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
+use fuchsia_scenic::{EntityNode, ViewHolder};
 
 /// Container for data related to a single child view displaying an emulated session.
 pub struct ChildViewData {
-    key: u32,
     bounds: Option<RectF>,
     host_node: EntityNode,
+    host_view_holder: ViewHolder,
 }
 
 impl ChildViewData {
-    pub fn new(key: u32, host_node: EntityNode) -> ChildViewData {
-        ChildViewData { key: key, bounds: None, host_node: host_node }
+    pub fn new(host_node: EntityNode, host_view_holder: ViewHolder) -> ChildViewData {
+        ChildViewData { bounds: None, host_node: host_node, host_view_holder: host_view_holder }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.host_view_holder.id()
     }
 }
 
 /// Lays out the given child views using the given container.
 ///
 /// Voila uses a column layout to display 2 or more emulated sessions side by side.
-pub fn layout(
-    child_views: &mut [&mut ChildViewData],
-    view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
-    size: &Size,
-) -> Result<(), failure::Error> {
+pub fn layout(child_views: &mut [&mut ChildViewData], size: &Size) -> Result<(), failure::Error> {
     if child_views.is_empty() {
         return Ok(());
     }
@@ -44,14 +43,17 @@ pub fn layout(
             y: 0.0,
         };
         let tile_bounds = inset(&tile_bounds, 5.0);
-        let mut view_properties = ViewProperties {
-            custom_focus_behavior: Some(Box::new(CustomFocusBehavior { allow_focus: true })),
-            view_layout: Some(Box::new(ViewLayout {
-                inset: InsetF { bottom: 0.0, left: 0.0, right: 0.0, top: 0.0 },
-                size: SizeF { width: tile_bounds.width, height: tile_bounds.height },
-            })),
+        let view_properties = ViewProperties {
+            bounding_box: BoundingBox {
+                min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+                max: Vec3 { x: tile_bounds.width, y: tile_bounds.height, z: 0.0 },
+            },
+            inset_from_min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+            inset_from_max: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+            focus_change: true,
+            downward_input: false,
         };
-        view_container.set_child_properties(view.key, Some(OutOfLine(&mut view_properties)))?;
+        view.host_view_holder.set_view_properties(view_properties);
         view.host_node.set_translation(tile_bounds.x, tile_bounds.y, 0.0);
         view.bounds = Some(tile_bounds);
     }

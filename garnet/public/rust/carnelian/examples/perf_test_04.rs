@@ -7,7 +7,6 @@ use carnelian::{
     ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::Error;
-use fidl_fuchsia_ui_gfx as gfx;
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::Duration;
@@ -28,12 +27,17 @@ impl AppAssistant for RainbowAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, _session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(RainbowViewAssistant { colors: Vec::new(), index: 0 }))
+    fn create_view_assistant(
+        &mut self,
+        key: ViewKey,
+        _session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(RainbowViewAssistant { key: key, colors: Vec::new(), index: 0 }))
     }
 }
 
 struct RainbowViewAssistant {
+    key: ViewKey,
     colors: Vec<ShapeNode>,
     index: usize,
 }
@@ -54,15 +58,13 @@ impl RainbowViewAssistant {
 
 impl ViewAssistant for RainbowViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-
         for _ in 0..BAND_COUNT {
             let node = ShapeNode::new(context.session.clone());
-            context.import_node.add_child(&node);
+            context.root_node.add_child(&node);
             self.colors.push(node);
         }
 
-        Self::setup_timer(context.key);
+        Self::setup_timer(self.key);
         Ok(())
     }
 

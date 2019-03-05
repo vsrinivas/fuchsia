@@ -3,27 +3,18 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    App, AppAssistant, Color, Label, Paint, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr,
+    set_node_color, App, AppAssistant, Color, Label, Paint, Point, Rect, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
-use fidl_fuchsia_ui_gfx as gfx;
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
-use fuchsia_scenic::{EntityNode, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 use std::any::Any;
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the button view assistant will understand and process.
 pub enum ButtonMessages {
     Pressed,
-}
-
-// Utility routine to create the FontDescription structure that
-// canvas wants for filling text.
-fn set_node_color(session: &SessionPtr, node: &ShapeNode, color: &Color) {
-    let material = Material::new(session.clone());
-    material.set_color(color.make_color_rgba());
-    node.set_material(&material);
 }
 
 struct ButtonAppAssistant;
@@ -33,7 +24,11 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(
+        &mut self,
+        _key: ViewKey,
+        session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ButtonViewAssistant::new(session)?))
     }
 }
@@ -192,16 +187,10 @@ impl ViewAssistant for ButtonViewAssistant {
     // Called once by Carnelian when the view is first created. Good for setup
     // that isn't concerned with the size of the view.
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        // Let scenic know we're interested in changes to metrics for this node.
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-
-        context.import_node.add_child(&self.background_node);
-
         set_node_color(context.session, &self.background_node, &Color::from_hash_code("#b7410e")?);
-
-        context.import_node.add_child(&self.indicator);
-
-        context.import_node.add_child(self.button.node());
+        context.root_node.add_child(&self.background_node);
+        context.root_node.add_child(&self.indicator);
+        context.root_node.add_child(self.button.node());
 
         Ok(())
     }

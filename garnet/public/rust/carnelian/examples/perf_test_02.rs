@@ -8,7 +8,6 @@ use carnelian::{
 };
 use euclid::Vector2D;
 use failure::Error;
-use fidl_fuchsia_ui_gfx as gfx;
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::Duration;
@@ -25,8 +24,12 @@ impl AppAssistant for TextScrollAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(TextScrollViewAssistant::new(session)?))
+    fn create_view_assistant(
+        &mut self,
+        key: ViewKey,
+        session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(TextScrollViewAssistant::new(key, session)?))
     }
 }
 
@@ -55,6 +58,7 @@ impl TextLineAnimator {
 }
 
 struct TextScrollViewAssistant {
+    key: ViewKey,
     background_node: ShapeNode,
     container: EntityNode,
     animators: Vec<TextLineAnimator>,
@@ -63,8 +67,9 @@ struct TextScrollViewAssistant {
 }
 
 impl TextScrollViewAssistant {
-    fn new(session: &SessionPtr) -> Result<TextScrollViewAssistant, Error> {
+    fn new(key: ViewKey, session: &SessionPtr) -> Result<TextScrollViewAssistant, Error> {
         Ok(TextScrollViewAssistant {
+            key,
             background_node: ShapeNode::new(session.clone()),
             container: EntityNode::new(session.clone()),
             animators: Vec::new(),
@@ -142,12 +147,11 @@ const STATES: &[&str] = &[
 
 impl ViewAssistant for TextScrollViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-        context.import_node.add_child(&self.container);
+        context.root_node.add_child(&self.container);
         self.container.add_child(&self.background_node);
         set_node_color(context.session, &self.background_node, &self.bg_color);
 
-        Self::setup_timer(context.key);
+        Self::setup_timer(self.key);
 
         const AESTHETICALLY_PLEASING_INITAL_Y: f32 = 10.0;
         let mut y = AESTHETICALLY_PLEASING_INITAL_Y;

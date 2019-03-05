@@ -5,14 +5,14 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use carnelian::{
-    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
-use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_scenic::{Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{ClockId, Duration, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
@@ -24,8 +24,13 @@ impl AppAssistant for SpinningSquareAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(
+        &mut self,
+        key: ViewKey,
+        session: &SessionPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(SpinningSquareViewAssistant {
+            key,
             background_node: ShapeNode::new(session.clone()),
             spinning_square_node: ShapeNode::new(session.clone()),
             start: Time::get(ClockId::Monotonic),
@@ -74,6 +79,7 @@ impl SpinningSquareAppAssistant {
 }
 
 struct SpinningSquareViewAssistant {
+    key: ViewKey,
     background_node: ShapeNode,
     spinning_square_node: ShapeNode,
     start: Time,
@@ -95,17 +101,19 @@ impl SpinningSquareViewAssistant {
 
 impl ViewAssistant for SpinningSquareViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-        context.import_node.add_child(&self.background_node);
-        let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba { red: 0xb7, green: 0x41, blue: 0x0e, alpha: 0xff });
-        self.background_node.set_material(&material);
-
-        context.import_node.add_child(&self.spinning_square_node);
-        let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba { red: 0xff, green: 0x00, blue: 0xff, alpha: 0xff });
-        self.spinning_square_node.set_material(&material);
-        Self::setup_timer(context.key);
+        set_node_color(
+            context.session,
+            &self.background_node,
+            &Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff },
+        );
+        set_node_color(
+            context.session,
+            &self.spinning_square_node,
+            &Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff },
+        );
+        context.root_node.add_child(&self.background_node);
+        context.root_node.add_child(&self.spinning_square_node);
+        Self::setup_timer(self.key);
         Ok(())
     }
 

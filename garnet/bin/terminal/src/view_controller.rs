@@ -1,10 +1,7 @@
-use carnelian::{
-    Canvas, Color, FontDescription, FontFace, Paint, Point, MappingPixelSink, Size,
-};
+use carnelian::{Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, Point, Size};
 use failure::Error;
 use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_images as images;
-use fidl_fuchsia_math::SizeF;
 use fidl_fuchsia_ui_gfx as gfx;
 use fidl_fuchsia_ui_input::{
     ImeServiceMarker, InputEvent, InputMethodAction, InputMethodEditorClientMarker,
@@ -12,11 +9,10 @@ use fidl_fuchsia_ui_input::{
     TextAffinity, TextInputState, TextRange, TextSelection,
 };
 use fidl_fuchsia_ui_scenic::{self as scenic, SessionListenerMarker, SessionListenerRequest};
-use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewProperties, ViewProxy};
+use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
-use fuchsia_scenic::{HostImageCycler, ImportNode, SessionPtr};
-use fuchsia_zircon::EventPair;
+use fuchsia_scenic::{EntityNode, HostImageCycler, SessionPtr, View};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -28,12 +24,12 @@ pub type FontFacePtr = Arc<Mutex<FontFace<'static>>>;
 
 pub struct ViewController {
     face: FontFacePtr,
-    _view: ViewProxy,
     session: SessionPtr,
-    import_node: ImportNode,
+    view: View,
+    root_node: EntityNode,
     image_cycler: HostImageCycler,
     metrics: Option<gfx::Metrics>,
-    logical_size: Option<SizeF>,
+    logical_size: Option<gfx::Vec3>,
     term: Option<Term>,
     parser: Processor,
 }
@@ -43,9 +39,7 @@ pub type ViewControllerPtr = Arc<Mutex<ViewController>>;
 impl ViewController {
     pub fn new(
         face: FontFacePtr,
-        view_listener_request: ServerEnd<ViewListenerMarker>,
-        view: ViewProxy,
-        mine: EventPair,
+        view_token: ViewToken,
         session: SessionPtr,
         session_listener_request: ServerEnd<SessionListenerMarker>,
     ) -> Result<ViewControllerPtr, Error> {
@@ -67,11 +61,15 @@ impl ViewController {
             ime_listener_request,
         )?;
 
+        let view = View::new(session.clone(), view_token, Some(String::from("Terminal")));
+        let root_node = EntityNode::new(session.clone());
+        view.add_child(&root_node);
+
         let view_controller = ViewController {
             face,
-            _view: view,
             session: session.clone(),
-            import_node: ImportNode::new(session.clone(), mine),
+            view: view,
+            root_node: root_node,
             image_cycler: HostImageCycler::new(session.clone()),
             metrics: None,
             logical_size: None,
@@ -122,30 +120,12 @@ impl ViewController {
                     .unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)),
             );
         }
-        {
-            let view_controller = view_controller.clone();
-            fasync::spawn(
-                async move {
-                    let mut stream = view_listener_request.into_stream()?;
-                    while let Some(req) = await!(stream.try_next())? {
-                        let ViewListenerRequest::OnPropertiesChanged { properties, responder } =
-                            req;
-                        view_controller.lock().handle_properties_changed(properties);
-                        responder
-                            .send()
-                            .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
-                    }
-                    Ok(())
-                }
-                    .unwrap_or_else(|e: failure::Error| eprintln!("view listener error: {:?}", e)),
-            );
-        }
         Ok(view_controller)
     }
 
     fn setup_scene(&self) {
-        self.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-        self.import_node.add_child(self.image_cycler.node());
+        self.root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
+        self.root_node.add_child(self.image_cycler.node());
     }
 
     fn invalidate(&mut self) {
@@ -157,8 +137,8 @@ impl ViewController {
             (Some(metrics), Some(logical_size)) => (metrics, logical_size),
             _ => return,
         };
-        let physical_width = (logical_size.width * metrics.scale_x) as u32;
-        let physical_height = (logical_size.height * metrics.scale_y) as u32;
+        let physical_width = (logical_size.x * metrics.scale_x) as u32;
+        let physical_height = (logical_size.y * metrics.scale_y) as u32;
         let stride = physical_width * 4;
         let info = images::ImageInfo {
             transform: images::Transform::Normal,
@@ -173,7 +153,8 @@ impl ViewController {
         {
             let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
             let mut face = self.face.lock();
-            let mut canvas = Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
+            let mut canvas =
+                Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
             let size = Size::new(14.0, 22.0);
             let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
             let parser = &mut self.parser;
@@ -211,7 +192,7 @@ impl ViewController {
 
         let node = self.image_cycler.node();
         node.set_scale(1.0 / metrics.scale_x, 1.0 / metrics.scale_y, 1.0);
-        node.set_translation(logical_size.width / 2.0, logical_size.height / 2.0, 0.0);
+        node.set_translation(logical_size.x / 2.0, logical_size.y / 2.0, 0.0);
         self.present();
     }
 
@@ -221,19 +202,28 @@ impl ViewController {
 
     fn handle_session_events(&mut self, events: Vec<scenic::Event>) {
         events.iter().for_each(|event| match event {
-            scenic::Event::Gfx(gfx::Event::Metrics(event)) => {
-                self.metrics = Some(gfx::Metrics { ..event.metrics });
-                self.invalidate();
-            }
+            scenic::Event::Gfx(event) => match event {
+                gfx::Event::Metrics(event) => {
+                    assert!(event.node_id == self.root_node.id());
+                    self.metrics = Some(gfx::Metrics { ..event.metrics });
+                    self.invalidate();
+                }
+                gfx::Event::ViewPropertiesChanged(event) => {
+                    assert!(event.view_id == self.view.id());
+                    self.logical_size = Some(gfx::Vec3 {
+                        x: event.properties.bounding_box.max.x
+                            - event.properties.bounding_box.min.x,
+                        y: event.properties.bounding_box.max.y
+                            - event.properties.bounding_box.min.y,
+                        z: event.properties.bounding_box.max.z
+                            - event.properties.bounding_box.min.z,
+                    });
+                    self.invalidate();
+                }
+                _ => (),
+            },
             _ => (),
         });
-    }
-
-    fn handle_properties_changed(&mut self, properties: ViewProperties) {
-        if let Some(view_properties) = properties.view_layout {
-            self.logical_size = Some(view_properties.size);
-            self.invalidate();
-        }
     }
 
     fn handle_input_event(&mut self, event: InputEvent) {
