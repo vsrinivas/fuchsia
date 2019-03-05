@@ -44,12 +44,18 @@ for boot, first-use, authentication, escape from and selection of session shells
 
 #### **BOOTFS**
 
-The BOOTFS RAM disk contains the files needed early in the boot process when no other filesystems are available. It is part of the [ZBI](#ZBI), and is decompressed and served by [bootsvc](#bootsvc). After the early boot process is complete, the BOOTFS is mounted at `/boot`.
+The BOOTFS RAM disk contains the files needed early in the boot process when no
+other filesystems are available. It is part of the [ZBI](#ZBI), and is
+decompressed and served by [bootsvc](#bootsvc). After the early boot process is
+complete, the BOOTFS is mounted at `/boot`.
 - [Documentation](../zircon/docs/userboot.md#BOOTFS)
 
 #### **bootsvc**
 
-bootsvc is the second process started in Fuchsia. It provides a filesystem service for the [BOOTFS](#BOOTFS) and a loader service that loads programs from the same BOOTFS. After starting those services, it loads the third program, which defaults to `devmgr`.
+bootsvc is the second process started in Fuchsia. It provides a filesystem
+service for the [BOOTFS](#BOOTFS) and a loader service that loads programs from
+the same BOOTFS. After starting those services, it loads the third program,
+which defaults to `devmgr`.
 - [Documentation](../zircon/docs/bootsvc.md)
 
 ### **Bus Driver**
@@ -142,6 +148,11 @@ have non-realistic or stylized qualities suitable for user interfaces.
 
 The Fuchsia Archive Format is a container for files to be used by Zircon and Fuchsia.
 - [FAR Spec](the-book/archive_format.md)
+
+#### **FBL**
+
+FBL is the Fuchsia Base Library, which is shared between kernel and userspace.
+- [Zircon C++](/zircon/docs/cxx.md)
 
 #### **fdio**
 
@@ -369,11 +380,16 @@ terminals.
 
 #### **Session Shell**
 
-The replaceable set of software functionality that works in conjunction with devices to create an environment in which people can interact with mods, agents and suggestions.
+The replaceable set of software functionality that works in conjunction with
+devices to create an environment in which people can interact with mods, agents
+and suggestions.
 
 #### **userboot**
 
-userboot is the first process started by the Zircon kernel. It is loaded from the kernel image in the same way as the [vDSO](#vDSO), instead of being loaded from a filesystem. Its primary purpose is to load the second process, [bootsvc](#bootsvc), from the [BOOTFS](#BOOTFS).
+userboot is the first process started by the Zircon kernel. It is loaded from
+the kernel image in the same way as the [vDSO](#vDSO), instead of being loaded
+from a filesystem. Its primary purpose is to load the second process,
+[bootsvc](#bootsvc), from the [BOOTFS](#BOOTFS).
 - [Documentation](../zircon/docs/userboot.md)
 
 #### **vDSO**
@@ -399,7 +415,9 @@ process, or shared with another process by passing a [Handle](#Handle) over a [C
 
 #### **ZBI**
 
-A Zircon Boot Image contains everything needed during the boot process before any drivers are working. This includes the kernel image and a [RAM disk for the boot filesystem](#BOOTFS).
+A Zircon Boot Image contains everything needed during the boot process before
+any drivers are working. This includes the kernel image and a [RAM disk for the
+boot filesystem](#BOOTFS).
 - [ZBI header file](../zircon/system/public/boot/image.h)
 
 #### **Zedboot** ####
