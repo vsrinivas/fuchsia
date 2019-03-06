@@ -14,6 +14,14 @@ const std::string kNewLine = "\n";
 const std::string::size_type kIndentSize = 4;
 const int kRootNode = 0;
 
+void SemanticTreeImpl::OnAccessibilityActionRequested(
+    uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+    fuchsia::accessibility::semantics::SemanticActionListener::
+        OnAccessibilityActionRequestedCallback callback) {
+  client_action_listener_->OnAccessibilityActionRequested(node_id, action,
+                                                          std::move(callback));
+}
+
 // Internal helper function to check if a point is within a bounding box.
 bool SemanticTreeImpl::BoxContainsPoint(
     const fuchsia::ui::gfx::BoundingBox& box, const escher::vec2& point) const {

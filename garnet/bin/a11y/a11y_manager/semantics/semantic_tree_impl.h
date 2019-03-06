@@ -9,18 +9,21 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
+#include <garnet/lib/ui/gfx/util/unwrap.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/macros.h>
-
-#include "garnet/lib/ui/gfx/util/unwrap.h"
 
 namespace a11y_manager {
 
 class SemanticTreeImpl
     : public fuchsia::accessibility::semantics::SemanticTree {
  public:
-  explicit SemanticTreeImpl(zx::event view_ref)
-      : view_ref_(std::move(view_ref)) {}
+  explicit SemanticTreeImpl(
+      zx::event view_ref,
+      fuchsia::accessibility::semantics::SemanticActionListenerPtr
+          client_action_listener)
+      : view_ref_(std::move(view_ref)),
+        client_action_listener_(std::move(client_action_listener)) {}
 
   ~SemanticTreeImpl() override = default;
 
@@ -35,7 +38,12 @@ class SemanticTreeImpl
   fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
       uint32_t node_id);
 
-  // TODO(MI4-1736): Implement OnAccessibilityActionRequested().
+  // Asks the semantics provider to perform an accessibility action on the
+  // node with node id in the front-end.
+  void OnAccessibilityActionRequested(
+      uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+      fuchsia::accessibility::semantics::SemanticActionListener::
+          OnAccessibilityActionRequestedCallback callback);
 
  private:
   // Semantic Tree for a particular view. Each client is responsible for
@@ -93,6 +101,8 @@ class SemanticTreeImpl
   std::vector<uint32_t> /*node_ids*/ uncommitted_deletes_;
 
   zx::event view_ref_;
+  fuchsia::accessibility::semantics::SemanticActionListenerPtr
+      client_action_listener_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTreeImpl);
 };
