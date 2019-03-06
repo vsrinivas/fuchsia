@@ -115,6 +115,15 @@ public:
 #endif
     }
 
+    // Set value of counter to |value|. No memory order is implied.
+    void Set(uint64_t value) const {
+#if defined(__aarch64__)
+        atomic_store_64_relaxed(Slot(), value);
+#else
+        *Slot() = value;
+#endif
+    }
+
 protected:
     int64_t* Slot() const {
         return &get_local_percpu()->counters[Index()];

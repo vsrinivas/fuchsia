@@ -138,6 +138,10 @@ static inline void atomic_store_64(volatile int64_t* ptr, int64_t newval) {
     __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);
 }
 
+static inline void atomic_store_64_relaxed(volatile int64_t* ptr, int64_t newval) {
+    __atomic_store_n(ptr, newval, __ATOMIC_RELAXED);
+}
+
 static inline uint64_t atomic_swap_u64(volatile uint64_t* ptr, uint64_t val) {
     return __atomic_exchange_n(ptr, val, __ATOMIC_SEQ_CST);
 }
