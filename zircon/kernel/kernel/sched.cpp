@@ -167,24 +167,22 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
                   last_ran_cpu_mask, curr_cpu_mask, cpu_affinity, t->name);
 
     // get a list of idle cpus and mask off the ones that aren't in our affinity mask
-    cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
+    cpu_mask_t candidate_cpu_mask = mp_get_idle_mask();
     cpu_mask_t active_cpu_mask = mp_get_active_mask();
-    idle_cpu_mask &= cpu_affinity;
-    if (idle_cpu_mask != 0) {
-        if (idle_cpu_mask & curr_cpu_mask) {
+    candidate_cpu_mask &= cpu_affinity & active_cpu_mask;
+    if (candidate_cpu_mask != 0) {
+        if (candidate_cpu_mask & curr_cpu_mask) {
             // the current cpu is idle and within our affinity mask, so run it here
             return curr_cpu_mask;
         }
 
-        if (last_ran_cpu_mask & idle_cpu_mask) {
-            DEBUG_ASSERT(last_ran_cpu_mask & mp_get_active_mask());
-            // the last core it ran on is idle and isn't the current cpu
+        if (last_ran_cpu_mask & candidate_cpu_mask) {
+            // the last core it ran on is idle, active, and isn't the current cpu
             return last_ran_cpu_mask;
         }
 
         // pick an idle_cpu
-        DEBUG_ASSERT((idle_cpu_mask & mp_get_active_mask()) == idle_cpu_mask);
-        return rand_cpu(idle_cpu_mask);
+        return rand_cpu(candidate_cpu_mask);
     }
 
     // no idle cpus in our affinity mask
