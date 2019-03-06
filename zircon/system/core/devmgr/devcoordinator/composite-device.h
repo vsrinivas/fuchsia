@@ -16,6 +16,7 @@ namespace devmgr {
 
 // Forward declaration
 class CompositeDevice;
+class Coordinator;
 struct Device;
 
 // Describes a device on the path to a component of a composite device
@@ -38,8 +39,17 @@ public:
 
     ~CompositeDeviceComponent();
 
+    // Attempt to match this component against |dev|.  Returns true if the match
+    // was successful.
+    bool TryMatch(const fbl::RefPtr<Device>& dev);
+
+    // Bind this component to the given device.
+    zx_status_t Bind(const fbl::RefPtr<Device>& dev);
+
     uint32_t index() const { return index_; }
     CompositeDevice* composite() const { return composite_; }
+    // If not nullptr, this component has been bound to this device
+    const fbl::RefPtr<Device>& bound_device() const { return bound_device_; }
 
     // Used for embedding a component in the CompositeDevice's bound and unbound
     // lists.
@@ -59,7 +69,7 @@ private:
     const fbl::Array<const ComponentPartDescriptor> parts_;
 
     // If this component has been bound to a device, this points to that device.
-    Device* bound_device_ = nullptr;
+    fbl::RefPtr<Device> bound_device_ = nullptr;
 
     fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDeviceComponent>> node_;
 };
@@ -91,6 +101,14 @@ public:
     const fbl::Array<const zx_device_prop_t>& properties() const {
         return properties_;
     }
+
+    // Attempt to match any of the unbound components against |dev|.  Returns true
+    // if a component was match.  |*component_out| will be set to the index of
+    // the matching component.
+    bool TryMatchComponents(const fbl::RefPtr<Device>& dev, size_t* index_out);
+
+    // Bind the component with the given index to the specified device
+    zx_status_t BindComponent(size_t index, const fbl::RefPtr<Device>& dev);
 
     // Node for list of composite devices the coordinator knows about
     struct Node {

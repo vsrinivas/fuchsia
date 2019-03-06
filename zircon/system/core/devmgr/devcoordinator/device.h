@@ -17,6 +17,7 @@
 
 namespace devmgr {
 
+class CompositeDeviceComponent;
 class Coordinator;
 class Devhost;
 struct Devnode;
@@ -145,6 +146,13 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     bool is_bindable() const {
         return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_INVISIBLE));
     }
+
+    CompositeDeviceComponent* component() const { return component_; }
+    void set_component(CompositeDeviceComponent* component) {
+        ZX_ASSERT(component == nullptr || component_ == nullptr);
+        component_ = component;
+    }
+
 private:
     fbl::RefPtr<Device> parent_;
     uint32_t protocol_id_ = 0;
@@ -154,6 +162,10 @@ private:
     const zx_device_prop_t* topo_prop_ = nullptr;
 
     async::TaskClosure publish_task_;
+
+    // If the device is part of a composite device, this points to the component
+    // that matched it.
+    CompositeDeviceComponent* component_ = nullptr;
 };
 
 } // namespace devmgr

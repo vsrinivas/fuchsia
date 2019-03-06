@@ -318,10 +318,13 @@ public:
     const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
     void Suspend(uint32_t flags);
+
     SuspendContext& suspend_context() { return suspend_context_; }
     const SuspendContext& suspend_context() const { return suspend_context_; }
 
     zx_status_t BindFidlServiceProxy(zx::channel listen_on);
+
+    const Driver* component_driver() const { return component_driver_; }
 
 private:
     CoordinatorConfig config_;
@@ -366,6 +369,10 @@ private:
     SuspendContext suspend_context_;
 
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
+
+    // Once the special component driver is loaded, this will refer to it.  This
+    // driver is used for binding against components of composite devices
+    const Driver* component_driver_ = nullptr;
 
     void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
     void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;

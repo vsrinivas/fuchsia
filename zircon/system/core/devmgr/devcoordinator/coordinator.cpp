@@ -881,12 +881,27 @@ zx_status_t Coordinator::AddCompositeDevice(
     if (status != ZX_OK) {
         return status;
     }
+
+    // Try to bind the new composite device specification against existing
+    // devices.
+    for (auto& dev : devices_) {
+        if (!dev.is_bindable()) {
+            continue;
+        }
+
+        auto dev_ref = fbl::WrapRefPtr(&dev);
+        size_t index;
+        if (new_device->TryMatchComponents(dev_ref, &index)) {
+            log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
+                dev.name.data(), index, new_device->name().data());
+            return new_device->BindComponent(index, dev_ref);
+        }
+    }
+
     composite_devices_.push_back(std::move(new_device));
     return ZX_OK;
 
     // TODO:
-    // - Kick off bind attempt against existing devices
-    // - Update BindDevice() to try all composites
     // - Logic for creating the new bindpoint once the bookkeeping finds
     //   everything is ready
     // - Logic for sending an unbind() when some component goes away
@@ -1776,6 +1791,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 
     // Record the special component driver when we see it
     if (!strcmp(driver->libname.data(), "/boot/driver/component.so")) {
+        component_driver_ = driver.get();
         driver->never_autoselect = true;
     }
 
@@ -1873,6 +1889,20 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
     // A libname of "" means a general rebind request
     // instead of a specific request
     bool autobind = drvlibname.size() == 0;
+
+    // Attempt composite device matching first.  This is unnecessary if a
+    // specific driver has been requested.
+    if (autobind) {
+        for (auto& composite : composite_devices_) {
+            size_t index;
+            if (composite.TryMatchComponents(dev, &index)) {
+                log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
+                    dev->name.data(), index, composite.name().data());
+
+                return composite.BindComponent(index, dev);
+            }
+        }
+    }
 
     // TODO: disallow if we're in the middle of enumeration, etc
     for (const auto& drv : drivers_) {
