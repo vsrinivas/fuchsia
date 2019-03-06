@@ -239,6 +239,11 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
       outstanding_frames_.push_back(frame_timings);
     }
   }
+
+  // If necessary, schedule another frame.
+  if (!requested_presentation_times_.empty()) {
+    ScheduleFrame();
+  }
 }
 
 void DefaultFrameScheduler::ScheduleUpdateForSession(
