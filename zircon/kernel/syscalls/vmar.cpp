@@ -141,16 +141,10 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // Hack to allow making progress on SEC-42.
-    // TODO(mdempsky): Fix callers to use MAP_JIT (or zx_vmo_replace_as_executable directly).
-    char name[ZX_MAX_NAME_LEN] = {};
-    vmo->get_name(name);
-    const bool sec42_allow_exec_hack = (vmo_rights & ZX_RIGHT_READ) && strcmp(name, "mmap-anonymous") == 0;
-
     // Permissions allowed by both the VMO and the VMAR
     const bool can_read = (vmo_rights & ZX_RIGHT_READ) && (vmar_rights & ZX_RIGHT_READ);
     const bool can_write = (vmo_rights & ZX_RIGHT_WRITE) && (vmar_rights & ZX_RIGHT_WRITE);
-    const bool can_exec = ((vmo_rights & ZX_RIGHT_EXECUTE) || sec42_allow_exec_hack) && (vmar_rights & ZX_RIGHT_EXECUTE);
+    const bool can_exec = (vmo_rights & ZX_RIGHT_EXECUTE) && (vmar_rights & ZX_RIGHT_EXECUTE);
 
     // test to see if the requested mapping protections are allowed
     if ((options & ZX_VM_PERM_READ) && !can_read)
