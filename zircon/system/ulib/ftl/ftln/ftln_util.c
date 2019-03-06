@@ -4,6 +4,8 @@
 
 #include "ftlnp.h"
 
+#include <strings.h>
+
 // Local Function Definitions
 
 //  format_ftl: Erase all non-free blocks
