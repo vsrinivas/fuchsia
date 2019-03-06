@@ -8,6 +8,7 @@
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <fs/synchronous-vfs.h>
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
@@ -64,6 +65,7 @@ std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
 std::vector<std::string> GetDefaultNamespaceServiceEntries() {
   return std::vector<std::string>{
       ".",
+      fuchsia::device::manager::DebugDumper::Name_,
       fuchsia::kernel::DebugBroker::Name_,
       fuchsia::sys::Environment::Name_,
       Namespace::Launcher::Name_,

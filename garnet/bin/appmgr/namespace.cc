@@ -4,6 +4,7 @@
 
 #include "garnet/bin/appmgr/namespace.h"
 
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
@@ -75,7 +76,14 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                 std::move(channel)));
         return ZX_OK;
       })));
-
+  services_->AddService(
+      fuchsia::device::manager::DebugDumper::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        realm_->environment_services()->ConnectToService(
+            fidl::InterfaceRequest<fuchsia::device::manager::DebugDumper>(
+                std::move(channel)));
+        return ZX_OK;
+      })));
 
   if (additional_services) {
     auto& names = additional_services->names;

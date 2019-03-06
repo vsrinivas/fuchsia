@@ -68,6 +68,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-kernel",
   ]
 
