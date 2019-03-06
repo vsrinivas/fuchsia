@@ -2679,14 +2679,25 @@ public:
 DEF_NAMESPACE_REG(IridixGain_Offset, ping, 0x1ac24)
 DEF_NAMESPACE_REG(IridixGain_Offset, pong, 0x32be4)
 
-class Iridix_IridixOn : public hwreg::RegisterBase<Iridix_IridixOn, uint32_t> {
+class Iridix_Enable : public hwreg::RegisterBase<Iridix_Enable, uint32_t> {
 public:
+    DEF_FIELD(15, 14, stat_mult_write);
     // Iridix enable: 0=off 1=on
-    DEF_BIT(0, value);
+    DEF_BIT(0, iridix_on);
+    // Max Bayer Algorithm Type.
+    DEF_BIT(3, max_alg_type_write);
+    //  1=Ignore Black level (set to zero) in amplificator. 0=Use Black
+    //     level value.
+    DEF_BIT(5, black_level_amp0_write);
+    // Post Gamma application 0=gain 1=data
+    DEF_BIT(6, postgamma_pos_write);
+    DEF_BIT(8, collect_ovl_write);
+    DEF_BIT(9, collect_rnd_write);
+    DEF_BIT(10, stat_norm_write);
 };
 
-DEF_NAMESPACE_REG(Iridix_IridixOn, ping, 0x1ac28)
-DEF_NAMESPACE_REG(Iridix_IridixOn, pong, 0x32be8)
+DEF_NAMESPACE_REG(Iridix_Enable, ping, 0x1ac28)
+DEF_NAMESPACE_REG(Iridix_Enable, pong, 0x32be8)
 
 class Iridix_Config0 : public hwreg::RegisterBase<Iridix_Config0, uint32_t> {
 public:

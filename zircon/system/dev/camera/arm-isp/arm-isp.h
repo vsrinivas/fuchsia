@@ -59,6 +59,7 @@ public:
     void IspLoadSeq_fs_lin_3exp();
     void IspLoadSeq_fs_lin_4exp();
     void IspLoadSeq_settings_context();
+    void IspLoadCustomSequence();
 
 private:
     void ShutDown();

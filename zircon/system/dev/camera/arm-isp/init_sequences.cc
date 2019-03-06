@@ -1241,9 +1241,9 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
         .set_value(0x3)
         .WriteTo(&isp_mmio_);
 
-    ping::Iridix_IridixOn::Get()
+    ping::Iridix_Enable::Get()
         .ReadFrom(&isp_mmio_)
-        .set_value(0x1)
+        .set_iridix_on(0x1)
         .WriteTo(&isp_mmio_);
 
     ping::VideoTestGenCh0_RBackgnd::Get()
@@ -2267,4 +2267,172 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
         .set_value(0x1b29ac)
         .WriteTo(&isp_mmio_);
 }
+
+void ArmIspDevice::IspLoadCustomSequence() {
+    ping::DemosaicRgb_Slope::Get().ReadFrom(&isp_mmio_)
+      .set_vh_slope(175)
+      .set_aa_slope(190)
+      .set_va_slope(170)
+      .set_uu_slope(157)
+      .WriteTo(&isp_mmio_);
+
+    ping::DemosaicRgb_Threshold0::Get().ReadFrom(&isp_mmio_)
+      .set_vh_thresh(90)
+      .set_vh_thresh(50)
+      .set_vh_thresh(90)
+      .set_vh_thresh(90)
+      .WriteTo(&isp_mmio_);
+
+    ping::DemosaicRgb_FalseColor::Get().ReadFrom(&isp_mmio_)
+      .set_fc_slope(150)
+      .set_fc_alias_slope(95)
+      .WriteTo(&isp_mmio_);
+
+    ping::MeshShading_Config::Get().ReadFrom(&isp_mmio_)
+      .set_mesh_scale(2)
+      .WriteTo(&isp_mmio_);
+
+    ping::Top_Bypass2::Get().ReadFrom(&isp_mmio_)
+      .set_bypass_temper(0)
+      .WriteTo(&isp_mmio_);
+
+    ping::FullResolution::Sharpen_Enable::Get().ReadFrom(&isp_mmio_)
+      .set_value(1)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_DeltaFactor::Get().ReadFrom(&isp_mmio_)
+      .set_value(150)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UCenter::Get().ReadFrom(&isp_mmio_)
+      .set_value(2048)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_VCenter::Get().ReadFrom(&isp_mmio_)
+      .set_value(2048)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_GlobalOffset::Get().ReadFrom(&isp_mmio_)
+      .set_value(3276)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_GlobalSlope::Get().ReadFrom(&isp_mmio_)
+      .set_value(819)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvSeg1Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(1000)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvSeg1Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(64535)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Umean1Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(200)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Umean1Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(61000)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Umean2Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(200)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Umean2Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(61000)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Vmean1Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(200)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Vmean1Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(57000)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Vmean2Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(200)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_Vmean2Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(57000)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvVar1Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(4095)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvVar1Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(65280)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvVar2Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(4095)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvVar2Slope::Get().ReadFrom(&isp_mmio_)
+      .set_value(65280)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvDelta1Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(500)
+      .WriteTo(&isp_mmio_);
+
+    ping::ColorNoiseReduction_UvDelta2Offset::Get().ReadFrom(&isp_mmio_)
+      .set_value(500)
+      .WriteTo(&isp_mmio_);
+
+    ping::FullResolution::Sharpen_Misc::Get().ReadFrom(&isp_mmio_)
+      .set_alpha_undershoot(10)
+      .WriteTo(&isp_mmio_);
+
+    ping::FullResolution::Sharpen_Luma1::Get().ReadFrom(&isp_mmio_)
+      .set_luma_thresh_low(300)
+      .WriteTo(&isp_mmio_);
+
+    ping::FullResolution::Sharpen_Luma2::Get().ReadFrom(&isp_mmio_)
+      .set_luma_slope_low(1000)
+      .set_luma_thresh_high(1000)
+      .WriteTo(&isp_mmio_);
+
+    ping::FullResolution::Sharpen_Clip::Get().ReadFrom(&isp_mmio_)
+      .set_clip_str_max(256)
+      .set_clip_str_min(256)
+      .WriteTo(&isp_mmio_);
+
+    ping::MeteringAwb_WhiteLevelAwb::Get().ReadFrom(&isp_mmio_)
+      .set_value(900)
+      .WriteTo(&isp_mmio_);
+
+    ping::PurpleFringeCorrection_Strength2::Get().ReadFrom(&isp_mmio_)
+      .set_saturation_strength(255)
+      .WriteTo(&isp_mmio_);
+
+    ping::Top_Bypass4::Get().ReadFrom(&isp_mmio_)
+      .set_bypass_pf_correction(1)
+      .WriteTo(&isp_mmio_);
+
+    InputPort_Config0::Get().ReadFrom(&isp_mmio_)
+      .set_preset(1)
+      .WriteTo(&isp_mmio_);
+
+    ping::Sqrt_BlackLevelIn::Get().ReadFrom(&isp_mmio_)
+      .set_value(16384)
+      .WriteTo(&isp_mmio_);
+
+    ping::Sqrt_BlackLevelOut::Get().ReadFrom(&isp_mmio_)
+      .set_value(1024)
+      .WriteTo(&isp_mmio_);
+
+    ping::SquareBe_BlackLevelIn::Get().ReadFrom(&isp_mmio_)
+      .set_value(1024)
+      .WriteTo(&isp_mmio_);
+
+    ping::SquareBe_BlackLevelOut::Get().ReadFrom(&isp_mmio_)
+      .set_value(16384)
+      .WriteTo(&isp_mmio_);
+}
+
 } // namespace camera
