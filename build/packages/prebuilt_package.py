@@ -24,16 +24,12 @@ def main():
     parser.add_argument('--archive', help='Path to archive containing prebuilt package')
     parser.add_argument('--workdir', help='Path to working directory')
     parser.add_argument('--system-rsp', help='System response file to generate')
-    parser.add_argument('--ids-txt', help='ids.txt file to generate')
 
     args = parser.parse_args()
 
     extract(args.pm_tool, args.archive, args.workdir)
 
     with open(args.system_rsp, 'w') as f:
-        f.truncate(0)
-
-    with open(args.ids_txt, 'w') as f:
         f.truncate(0)
 
     return 0

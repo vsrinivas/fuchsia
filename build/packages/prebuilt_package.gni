@@ -44,7 +44,6 @@ template("prebuilt_package") {
     script = "//build/packages/prebuilt_package.py"
 
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
-    ids_txt = "$target_out_dir/$pkg_name.final.manifest.ids.txt"
     meta_merkle = "$meta_dir/meta.far.merkle"
     blobs_manifest = "$meta_dir/blobs.manifest"
 
@@ -59,15 +58,12 @@ template("prebuilt_package") {
       rebase_path(meta_dir, root_build_dir),
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
-      "--ids-txt",
-      rebase_path(ids_txt, root_build_dir),
     ]
     inputs = [
       archive,
     ]
     outputs = [
       blobs_manifest,
-      ids_txt,
       system_rsp,
       blobs_json,
       meta_merkle,
@@ -76,7 +72,6 @@ template("prebuilt_package") {
     deps = [
       "//garnet/go/src/pm:pm_bin($host_toolchain)",
     ]
-
 
     blobs_json_path = rebase_path(blobs_json, root_build_dir)
 
@@ -90,31 +85,22 @@ template("prebuilt_package") {
       # walk_keys` for more information on the mechanic.
       package_barrier = []
 
-      snapshot_entries = [
-        "${pkg.package_name}/${pkg.package_version}=$blobs_json_path"
-      ]
+      snapshot_entries =
+          [ "${pkg.package_name}/${pkg.package_version}=$blobs_json_path" ]
 
-      blob_manifests = [
-        rebase_path(blobs_manifest, root_build_dir),
-      ]
+      blob_manifests = [ rebase_path(blobs_manifest, root_build_dir) ]
 
-      meta_far_index_entries = [
-        "${pkg.package_name}/${pkg.package_version}=" + rebase_path("$meta_dir/meta.far", root_build_dir),
-      ]
+      meta_far_index_entries =
+          [ "${pkg.package_name}/${pkg.package_version}=" +
+            rebase_path("$meta_dir/meta.far", root_build_dir) ]
 
-      meta_far_merkle_index_entries = [
-        "${pkg.package_name}/${pkg.package_version}=" + rebase_path("$meta_dir/meta.far.merkle", root_build_dir),
-      ]
+      meta_far_merkle_index_entries =
+          [ "${pkg.package_name}/${pkg.package_version}=" +
+            rebase_path("$meta_dir/meta.far.merkle", root_build_dir) ]
     }
   }
 
   group(target_name + ".manifest") {
-    public_deps = [
-      ":$pkg_target_name",
-    ]
-  }
-
-  group(target_name + ".final.manifest.ids.txt") {
     public_deps = [
       ":$pkg_target_name",
     ]

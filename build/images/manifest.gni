@@ -166,6 +166,12 @@ template("generate_manifest") {
            ]
     response_file_contents = []
 
+    # Collected by //build/images:ids.txt
+    metadata = {
+      build_ids_barrier = []
+      build_ids = [ rebase_path(build_id_file, root_build_dir) ]
+    }
+
     # First the toolchain and Zircon manifests are pure auxiliaries:
     # they just supply libraries that might satisfy dependencies.
     sources += toolchain_manifests

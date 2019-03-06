@@ -62,23 +62,26 @@ declare_args() {
 #     Same as for any GN `generated_file()` target.
 template("package_metadata_list") {
   generated_file(target_name) {
-    forward_variables_from(invoker, [
-      "data_deps",
-      "data_keys",
-      "deps",
-      "metadata",
-      "output_conversion",
-      "outputs",
-      "public_deps",
-      "testonly",
-      "visibility",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "data_keys",
+                             "deps",
+                             "metadata",
+                             "output_conversion",
+                             "outputs",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
 
     if (!defined(outputs)) {
-      outputs = [target_gen_dir + "/" + target_name]
+      outputs = [
+        target_gen_dir + "/" + target_name,
+      ]
     }
 
-    walk_keys = ["package_barrier"]
+    walk_keys = [ "package_barrier" ]
   }
 }
 
@@ -159,7 +162,7 @@ template("pm_build_package") {
       "$pkg_out_dir/blobs.json",
 
       # package blob manifest
-      "$pkg_out_dir/blobs.manifest"
+      "$pkg_out_dir/blobs.manifest",
     ]
 
     blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
@@ -174,21 +177,18 @@ template("pm_build_package") {
       # walk_keys` for more information on the mechanic.
       package_barrier = []
 
-      snapshot_entries = [
-        "$package_name/$package_variant=$blobs_json_path"
-      ]
+      snapshot_entries = [ "$package_name/$package_variant=$blobs_json_path" ]
 
-      blob_manifests = [
-        rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir),
-      ]
+      blob_manifests =
+          [ rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir) ]
 
-      meta_far_index_entries = [
-        "$package_name/$package_variant=" + rebase_path("$pkg_out_dir/meta.far", root_build_dir),
-      ]
+      meta_far_index_entries =
+          [ "$package_name/$package_variant=" +
+            rebase_path("$pkg_out_dir/meta.far", root_build_dir) ]
 
-      meta_far_merkle_index_entries = [
-        "$package_name/$package_variant=" + rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir),
-      ]
+      meta_far_merkle_index_entries =
+          [ "$package_name/$package_variant=" +
+            rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir) ]
     }
 
     args = [
@@ -470,8 +470,11 @@ template("package") {
              "$pkg_desc deprecated_system_image incompatible with binary")
 
       # TODO(PKG-46): Both of the following packages have planned moves out of /system. No new entries are allowed.
-      if (pkg.package_name != "wlan_tests" && pkg.package_name != "wlan_drivers_tests") {
-        assert(pkg.tests == [], "package ${pkg.package_name} is not whitelisted to contribute tests to /system")
+      if (pkg.package_name != "wlan_tests" &&
+          pkg.package_name != "wlan_drivers_tests") {
+        assert(
+            pkg.tests == [],
+            "package ${pkg.package_name} is not whitelisted to contribute tests to /system")
       }
     } else {
       assert(pkg.drivers == [],
@@ -706,27 +709,7 @@ template("package") {
       pkg.deprecated_system_image = true
     }
 
-    if (pkg.deprecated_system_image) {
-      # Dummy target to deposit an empty ids.txt file for
-      # //build/images:ids.txt to collect.
-      action("${pkg_target_name}.final.manifest.ids.txt") {
-        script = "/bin/cp"
-
-        # Add sources and deps so that the package gets rebuilt whenever they
-        # change.
-        sources = manifest_sources
-        data_deps = pkg.data_deps
-        deps = pkg.deps
-        public_deps = pkg.public_deps
-        outputs = [
-          "$target_out_dir/${target_name}",
-        ]
-        args = [
-                 "-f",
-                 "/dev/null",
-               ] + rebase_path(outputs, root_build_dir)
-      }
-    } else {
+    if (!pkg.deprecated_system_image) {
       # Synthesize the meta/package file.
       pkg_meta_package = "${pkg_target_name}_meta_package.json"
       action(pkg_meta_package) {
@@ -754,39 +737,6 @@ template("package") {
       }
 
       final_manifest = "${pkg_target_name}.final.manifest"
-      final_manifest_ids = "${final_manifest}.ids.txt"
-
-      # TODO(CF-224): clean this up when gn has metadata support for templates
-      # merge all package ids and component ids in a single file.
-      action(final_manifest_ids) {
-        script = "/usr/bin/sort"
-        output_name = "${target_out_dir}/${final_manifest_ids}"
-        outputs = [
-          output_name,
-        ]
-        manifest_id = "$target_out_dir/${pkg_target_name}.manifest.ids.txt"
-        args = [
-          "-u",
-          "-o",
-          rebase_path(output_name),
-          rebase_path(manifest_id),
-        ]
-        inputs = [
-          manifest_id,
-        ]
-        deps = [
-          ":${pkg_target_name}.manifest",
-        ]
-
-        foreach(component, pkg.components) {
-          deps += [ component ]
-          component_name = get_label_info(component, "name")
-          dir = get_label_info(component, "target_out_dir")
-          manifest_file = "${dir}/${component_name}.manifest.ids.txt"
-          inputs += [ manifest_file ]
-          args += [ rebase_path(manifest_file) ]
-        }
-      }
 
       # Merge all component and package manifests in single file
       action(final_manifest) {
@@ -806,7 +756,6 @@ template("package") {
           pmx,
         ]
         deps = [
-          ":${final_manifest_ids}",
           ":${pkg_target_name}.manifest",
         ]
 
@@ -816,12 +765,9 @@ template("package") {
           dir = get_label_info(component, "target_out_dir")
           manifest_file = "${dir}/${component_name}.manifest"
           inputs += [ manifest_file ]
-          args += [
-            rebase_path(manifest_file),
-          ]
+          args += [ rebase_path(manifest_file) ]
         }
       }
-
 
       # Next generate a signed, sealed package file.
       pm_build_package("${pkg_target_name}.meta") {
@@ -836,14 +782,14 @@ template("package") {
     generate_response_file(pkg_target_name) {
       if (defined(pkg.visibility)) {
         visibility = pkg.visibility + [
-                      # TODO(raggi): tighten build/images visibility once we've
-                      # finished doing large scale cleanups.
+                       # TODO(raggi): tighten build/images visibility once we've
+                       # finished doing large scale cleanups.
                        "//build/images:*",
                        "//build/gn:packages",
                      ]
       }
       if (pkg.deprecated_system_image) {
-        deps = pkg.deps + [ ":${pkg_target_name}.final.manifest.ids.txt" ]
+        deps = pkg.deps
       } else {
         deps = pkg.deps + [ ":${pkg_target_name}.meta" ]
       }
@@ -854,7 +800,7 @@ template("package") {
 
       metadata = {
         if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, ["*"])
+          forward_variables_from(invoker.metadata, [ "*" ])
         }
         shell_binary_entries = shell_binaries
 
@@ -867,7 +813,8 @@ template("package") {
         if (pkg.deprecated_system_image) {
           package_barrier = []
         } else {
-          package_barrier = [ get_label_info(":${pkg_target_name}.meta", "label_with_toolchain") ]
+          package_barrier = [ get_label_info(":${pkg_target_name}.meta",
+                                             "label_with_toolchain") ]
         }
       }
     }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
@@ -109,8 +110,8 @@ write_file("$root_build_dir/packages.json",
 shell_commands("shell-commands") {
   testonly = true
   deps = available_packages
-  deps += ["//build/images:shell-commands"]
-  deps -= ["//build/images:shell-commands"]
+  deps += [ "//build/images:shell-commands" ]
+  deps -= [ "//build/images:shell-commands" ]
 }
 
 ###
@@ -141,11 +142,14 @@ action("system_package_key_check") {
       [ clang_prefix ] + rebase_path(inputs + outputs + [ system_package_key ])
 }
 
-monolith_meta_far_merkle_index = "$target_out_dir/monolith_meta_far_merkle_index"
+monolith_meta_far_merkle_index =
+    "$target_out_dir/monolith_meta_far_merkle_index"
 package_metadata_list("monolith_meta_far_merkle_index") {
   testonly = true
-  outputs = [monolith_meta_far_merkle_index]
-  data_keys = ["meta_far_merkle_index_entries"]
+  outputs = [
+    monolith_meta_far_merkle_index,
+  ]
+  data_keys = [ "meta_far_merkle_index_entries" ]
   deps = monolith_packages
 }
 
@@ -162,23 +166,31 @@ action("pkgsvr_index") {
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  deps = [":monolith_meta_far_merkle_index"]
-  inputs = [monolith_meta_far_merkle_index]
+  deps = [
+    ":monolith_meta_far_merkle_index",
+  ]
+  inputs = [
+    monolith_meta_far_merkle_index,
+  ]
 
   script = "//build/images/manifest_content_expand.sh"
   args = [
     rebase_path(monolith_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir)
+    rebase_path(outputs[0], root_build_dir),
   ]
 }
 
-preinstall_meta_far_merkle_index = "$target_out_dir/preinstall_meta_far_merkle_index"
+preinstall_meta_far_merkle_index =
+    "$target_out_dir/preinstall_meta_far_merkle_index"
 package_metadata_list("preinstall_meta_far_merkle_index") {
   testonly = true
-  outputs = [preinstall_meta_far_merkle_index]
-  data_keys = ["meta_far_merkle_index_entries"]
-  deps = preinstall_packages + [":update.meta"]
+  outputs = [
+    preinstall_meta_far_merkle_index,
+  ]
+  data_keys = [ "meta_far_merkle_index_entries" ]
+  deps = preinstall_packages + [ ":update.meta" ]
 }
+
 # preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
 # populated inside /pkgfs/packages that are {name}/{version} containing the
 # merkleroot of the meta.far of that package.
@@ -186,8 +198,12 @@ action("preinstall.manifest") {
   visibility = [ ":data.blk" ]
   testonly = true
 
-  deps = [":preinstall_meta_far_merkle_index"]
-  inputs = [preinstall_meta_far_merkle_index]
+  deps = [
+    ":preinstall_meta_far_merkle_index",
+  ]
+  inputs = [
+    preinstall_meta_far_merkle_index,
+  ]
 
   script = "manifest_add_dest_prefix.sh"
   args = [ "pkgfs_index/packages/" ]
@@ -273,8 +289,13 @@ blob_manifest = "$root_build_dir/blob.manifest"
 collect_blob_manifest("blob.manifest") {
   testonly = true
   visibility = [ ":*" ]
-  outputs = [blob_manifest]
-  deps = monolith_packages + preinstall_packages + [ ":system_image.meta", ":update.meta" ]
+  outputs = [
+    blob_manifest,
+  ]
+  deps = monolith_packages + preinstall_packages + [
+           ":system_image.meta",
+           ":update.meta",
+         ]
 }
 
 # Pack up all the blobs!
@@ -1044,9 +1065,11 @@ foreach(target, paver_targets) {
 update_meta_far_merkle_index = "$target_out_dir/update_meta_far_merkle_index"
 package_metadata_list("update_meta_far_merkle_index") {
   testonly = true
-  outputs = [update_meta_far_merkle_index]
-  data_keys = ["meta_far_merkle_index_entries"]
-  deps = monolith_packages + [":system_image.meta"]
+  outputs = [
+    update_meta_far_merkle_index,
+  ]
+  data_keys = [ "meta_far_merkle_index_entries" ]
+  deps = monolith_packages + [ ":system_image.meta" ]
 }
 
 action("update_packages.manifest") {
@@ -1056,13 +1079,17 @@ action("update_packages.manifest") {
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  deps = [":update_meta_far_merkle_index"]
-  inputs = [update_meta_far_merkle_index]
+  deps = [
+    ":update_meta_far_merkle_index",
+  ]
+  inputs = [
+    update_meta_far_merkle_index,
+  ]
 
   script = "manifest_content_expand.sh"
   args = [
     rebase_path(update_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir)
+    rebase_path(outputs[0], root_build_dir),
   ]
 }
 
@@ -1197,8 +1224,11 @@ package_metadata_list("amber_index") {
   outputs = [
     amber_index,
   ]
-  data_keys = ["meta_far_index_entries"]
-  deps = available_packages + [":system_image.meta", ":update.meta"]
+  data_keys = [ "meta_far_index_entries" ]
+  deps = available_packages + [
+           ":system_image.meta",
+           ":update.meta",
+         ]
 }
 
 # The system index is the index of all available packages, naming each blobs.json
@@ -1210,7 +1240,10 @@ system_index = "$target_out_dir/system_index"
 tagged_snapshot_manifests = [
   {
     tag = "monolith"
-    deps = monolith_packages + [ ":system_image.meta", ":update.meta" ]
+    deps = monolith_packages + [
+             ":system_image.meta",
+             ":update.meta",
+           ]
   },
   {
     tag = "preinstall"
@@ -1227,25 +1260,33 @@ foreach(manifest, tagged_snapshot_manifests) {
   untagged_entries = "${manifest.tag}.snapshot_entries.untagged"
   package_metadata_list(untagged_entries) {
     testonly = true
-    outputs = [target_gen_dir + "/" + target_name]
+    outputs = [
+      target_gen_dir + "/" + target_name,
+    ]
     deps = manifest.deps
-    data_keys = ["snapshot_entries"]
+    data_keys = [ "snapshot_entries" ]
   }
 
   tagged_entries = "${manifest.tag}.snapshot_entries"
   action(tagged_entries) {
     testonly = true
-    deps = [":" + untagged_entries]
+    deps = [
+      ":" + untagged_entries,
+    ]
     script = "add_tag_to_manifest.sh"
-    inputs = [target_gen_dir + "/" + untagged_entries]
-    outputs = [root_build_dir + "/" + target_name]
+    inputs = [
+      target_gen_dir + "/" + untagged_entries,
+    ]
+    outputs = [
+      root_build_dir + "/" + target_name,
+    ]
     args = [
       manifest.tag,
       rebase_path(inputs[0], root_build_dir),
       rebase_path(outputs[0], root_build_dir),
     ]
   }
-  all_snapshot_entries += [tagged_entries]
+  all_snapshot_entries += [ tagged_entries ]
 }
 
 action("system_index") {
@@ -1256,13 +1297,11 @@ action("system_index") {
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  args = [
-    rebase_path(outputs[0], root_build_dir),
-  ]
+  args = [ rebase_path(outputs[0], root_build_dir) ]
   deps = []
   foreach(entry, all_snapshot_entries) {
-    args += [entry]
-    deps += [":" + entry]
+    args += [ entry ]
+    deps += [ ":" + entry ]
   }
 }
 
@@ -1305,7 +1344,10 @@ collect_blob_manifest("available_blobs.manifest") {
   outputs = [
     available_blob_manifest,
   ]
-  deps = available_packages + monolith_packages + preinstall_packages + [ ":system_image.meta", ":update.meta" ]
+  deps = available_packages + monolith_packages + preinstall_packages + [
+           ":system_image.meta",
+           ":update.meta",
+         ]
 }
 
 # Populate the repository directory with content ID-named copies.
@@ -1360,6 +1402,42 @@ group("updates") {
 ### The toolchain rules already populate $root_build_dir/.build-id/.
 ###
 
+generated_file("package-build-id-files.list") {
+  testonly = true
+  visibility = [ ":package-ids.txt" ]
+
+  data_keys = [ "build_ids" ]
+  walk_keys = [ "build_ids_barrier" ]
+  outputs = [
+    "$target_gen_dir/package-build-id-files.list",
+  ]
+
+  deps = available_packages
+}
+
+compiled_action("package-ids.txt") {
+  testonly = true
+  visibility = [ ":ids.txt" ]
+
+  deps = [
+    ":package-build-id-files.list",
+  ]
+
+  inputs = [
+    "$target_gen_dir/package-build-id-files.list",
+  ]
+
+  outputs = [
+    "$target_gen_dir/package-ids.txt",
+  ]
+
+  depfile = "$target_gen_dir/package-ids.txt.d"
+
+  tool = "//build/tools/merge_and_sort"
+
+  args = rebase_path(inputs + outputs + [ depfile ], root_build_dir)
+}
+
 # Combine the /boot, /system, and package build ID maps into one.
 # Nothing in the build uses this, but top-level targets always update
 # it so that debugging tools can rely on it.
@@ -1368,22 +1446,14 @@ action("ids.txt") {
 
   deps = [
     ":kernel-ids.txt",
+    ":package-ids.txt",
     ":system_image.manifest",
   ]
   sources = [
+    "$target_gen_dir/package-ids.txt",
     "$target_out_dir/kernel-ids.txt",
     system_build_id_map,
   ]
-
-  foreach(pkg_label, available_packages) {
-    # Find the ids.txt file written by package().
-    manifest = get_label_info(pkg_label, "label_no_toolchain") +
-               ".final.manifest.ids.txt"
-    manifest_target_name = get_label_info(manifest, "name")
-    manifest_target_out_dir = get_label_info(manifest, "target_out_dir")
-    deps += [ manifest ]
-    sources += [ "$manifest_target_out_dir/${manifest_target_name}" ]
-  }
 
   script = "/usr/bin/sort"
   outputs = [
