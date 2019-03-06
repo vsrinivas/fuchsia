@@ -97,7 +97,20 @@ class ElfLib {
   // symbol table mappings.
   std::map<std::string, uint64_t> GetPLTOffsets();
 
+  // ElfLib may notice inconsistencies as it parses the ELF file or address
+  // space, but may be able to continue. In such cases it will log a warning
+  // message internally. This method will retrieve those messages and clear
+  // them from the internal list.
+  std::vector<std::string> GetAndClearWarnings() {
+    auto ret = warnings_;
+    warnings_.clear();
+    return ret;
+  }
+
  private:
+  // Add a warning to this instance. See GetAndClearWarnings.
+  void Warn(const std::string&& m) { warnings_.emplace_back(m); }
+
   // Location of a section specified by data gleaned from the dynamic segment.
   struct DynamicSection {
     std::optional<uint64_t> offset;
@@ -169,6 +182,8 @@ class ElfLib {
   std::vector<Elf64_Phdr> segments_;
   std::map<size_t, std::vector<uint8_t>> section_data_;
   std::map<std::string, size_t> section_names_;
+
+  std::vector<std::string> warnings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ElfLib);
 };

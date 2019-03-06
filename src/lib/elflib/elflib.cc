@@ -455,21 +455,21 @@ bool ElfLib::LoadDynamicSymbols() {
     for (auto dyn = start; dyn != end; dyn++) {
       if (dyn->d_tag == DT_STRTAB) {
         if (dynstr_.offset) {
-          FXL_LOG(WARNING) << "Multiple DT_STRTAB entries found.";
+          Warn("Multiple DT_STRTAB entries found.");
           continue;
         }
 
         dynstr_.offset = dyn->d_un.d_ptr;
       } else if (dyn->d_tag == DT_SYMTAB) {
         if (dynsym_.offset) {
-          FXL_LOG(WARNING) << "Multiple DT_SYMTAB entries found.";
+          Warn("Multiple DT_SYMTAB entries found.");
           continue;
         }
 
         dynsym_.offset = dyn->d_un.d_ptr;
       } else if (dyn->d_tag == DT_STRSZ) {
         if (dynstr_.size) {
-          FXL_LOG(WARNING) << "Multiple DT_STRSZ entries found.";
+          Warn("Multiple DT_STRSZ entries found.");
           continue;
         }
 
@@ -479,10 +479,10 @@ bool ElfLib::LoadDynamicSymbols() {
         // Fuchsia. Technically a binary could provide both styles of hash
         // table and we can produce a sane result in that case, so this code
         // ignores DT_HASH.
-        FXL_LOG(WARNING) << "Old style DT_HASH table found.";
+        Warn("Old style DT_HASH table found.");
       } else if (dyn->d_tag == DT_GNU_HASH) {
         if (dynsym_.size) {
-          FXL_LOG(WARNING) << "Multiple DT_GNU_HASH entries found.";
+          Warn("Multiple DT_GNU_HASH entries found.");
           continue;
         }
         auto addr = dyn->d_un.d_ptr;
@@ -561,7 +561,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsets() {
     case EM_X86_64:
       return GetPLTOffsetsX64();
     default:
-      FXL_LOG(WARNING) << "Architecture doesn't support GetPLTOffsets.";
+      Warn("Architecture doesn't support GetPLTOffsets.");
       return {};
   }
 }
@@ -592,9 +592,9 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
   }
 
   if (!dynamic_plt_use_rela_) {
-    FXL_LOG(WARNING) << "Assuming Elf64_Rela PLT relocation format.";
+    Warn("Assuming Elf64_Rela PLT relocation format.");
   } else if (!*dynamic_plt_use_rela_) {
-    FXL_LOG(WARNING) << "Elf64_Rel style PLT Relocations unsupported.";
+    Warn("Elf64_Rel style PLT Relocations unsupported.");
     return {};
   }
 
@@ -649,19 +649,19 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
 
   for (; pos != plt_end; pos++, idx++) {
     if (pos->push_opcode != 0x68) {
-      FXL_LOG(WARNING) << "Push OpCode not found where expected in PLT.";
+      Warn("Push OpCode not found where expected in PLT.");
       continue;
     }
 
     if (pos->index >= reloc_count) {
-      FXL_LOG(WARNING) << "PLT referenced reloc outside reloc table.";
+      Warn("PLT referenced reloc outside reloc table.");
       continue;
     }
 
     auto sym_idx = reloc[pos->index].getSymbol();
 
     if (sym_idx >= sym_count) {
-      FXL_LOG(WARNING) << "PLT reloc referenced symbol outside symbol table.";
+      Warn("PLT reloc referenced symbol outside symbol table.");
       continue;
     }
 
@@ -669,7 +669,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsX64() {
                                           symtab[sym_idx].st_name);
 
     if (!name.size()) {
-      FXL_LOG(WARNING) << "PLT symbol name could not be retrieved.";
+      Warn("PLT symbol name could not be retrieved.");
       continue;
     }
 
