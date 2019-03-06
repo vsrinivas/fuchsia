@@ -47,9 +47,9 @@ source_set("lib") {
 
   public_deps = [
     ":errors",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]
