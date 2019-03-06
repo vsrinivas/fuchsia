@@ -40,8 +40,7 @@ namespace testapp {
 constexpr char kLegacyConfigBinProtoPath[] =
     "/pkg/data/legacy_cobalt_metrics.pb";
 
-constexpr char kConfigBinProtoPath[] =
-    "/pkg/data/cobalt_metrics.pb";
+constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_metrics.pb";
 
 fuchsia::cobalt::ProjectProfile CobaltTestApp::LoadCobaltConfig(
     CobaltConfigType type) {
@@ -156,12 +155,9 @@ bool CobaltTestApp::RunTestsWithRequestSendSoon() {
 
   // Reconnect using the cobalt 1.0 config.
   Connect(999999999, 0, kCobaltConfig);
-  for (int i = 0; i < 3; i++) {
-    FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon (v1.0 config) iteration "
-                  << i << ".";
-    if (!RequestSendSoonTests()) {
-      return false;
-    }
+  FXL_LOG(INFO) << "\nRunTestsWithRequestSendSoon (v1.0 config) iteration.";
+  if (!RequestSendSoonTests()) {
+    return false;
   }
 
   return true;
@@ -190,7 +186,7 @@ bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   zs = logger_factory->CreateLogger(LoadCobaltConfig(kLegacyCobaltConfig),
-                               logger_.logger_.NewRequest(), &status);
+                                    logger_.logger_.NewRequest(), &status);
   FXL_CHECK(zs == ZX_OK);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
