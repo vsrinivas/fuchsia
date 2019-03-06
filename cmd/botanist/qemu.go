@@ -87,10 +87,12 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		Target:  cmd.targetArch,
 		KVM:     cmd.enableKVM,
 		Network: cmd.enableNetworking,
-		MinFS: &target.MinFS{
+	}
+	if cmd.minFSImage != "" {
+		config.MinFS = &target.MinFS{
 			Image:      cmd.minFSImage,
 			PCIAddress: cmd.minFSBlkDevPCIAddr,
-		},
+		}
 	}
 
 	t := target.NewQEMUTarget(config)
