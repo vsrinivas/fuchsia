@@ -41,9 +41,10 @@ class FrameSymbolDataProvider : public SymbolDataProvider {
   explicit FrameSymbolDataProvider(Frame* frame);
   ~FrameSymbolDataProvider() override;
 
-  // Returns true if the associated frame is the top frame, meaning the thread
-  // registers are be valid for it.
-  bool IsTopFrame() const;
+  // Returns true if the associated frame is the top frame, or it is an inline
+  // frame of the topmost physical frame. This means the thread registers are
+  // be valid for it.
+  bool IsInTopPhysicalFrame() const;
 
   // The associated frame, possibly null if the frame has been disowned.
   Frame* frame_;

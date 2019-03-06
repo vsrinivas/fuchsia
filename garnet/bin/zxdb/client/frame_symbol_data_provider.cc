@@ -74,7 +74,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   // Additionally, some registers can be made available in non-top stack
   // frames. Libunwind should be able to tell us the saved registers for older
   // stack frames.
-  if (!frame_ || !IsTopFrame()) {
+  if (!frame_ || !IsInTopPhysicalFrame()) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [id, cb = std::move(callback)]() {
           cb(Err(fxl::StringPrintf("Register %s unavailable.",
@@ -189,13 +189,22 @@ void FrameSymbolDataProvider::WriteMemory(uint64_t address,
                                                  std::move(cb));
 }
 
-bool FrameSymbolDataProvider::IsTopFrame() const {
+bool FrameSymbolDataProvider::IsInTopPhysicalFrame() const {
   if (!frame_)
     return false;
-  const auto& stack = frame_->GetThread()->GetStack();
+  const Stack& stack = frame_->GetThread()->GetStack();
   if (stack.empty())
     return false;
-  return stack[0] == frame_;
+
+  // Search for the first physical frame, and return true if it or anything
+  // above it matches the current frame.
+  for (size_t i = 0; i < stack.size(); i++) {
+    if (stack[i] == frame_)
+      return true;
+    if (!stack[i]->IsInline())
+      break;
+  }
+  return false;
 }
 
 }  // namespace zxdb
