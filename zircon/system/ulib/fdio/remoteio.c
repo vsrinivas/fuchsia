@@ -9,7 +9,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/util.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
@@ -453,20 +452,6 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
     }
     *out_io = io;
     return ZX_OK;
-}
-
-__EXPORT
-zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
-                           int* fd_out) {
-    if (hcount == 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    // Change hcount != 1 into an error once we update the Go runtime not to
-    // send multiple handles.
-    if (hcount >= 1) {
-        zx_handle_close_many(handles + 1, hcount - 1);
-    }
-    return fdio_fd_create(handles[0], fd_out);
 }
 
 zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flags,

@@ -11,7 +11,7 @@
 #include <vulkan/vulkan.h>
 #endif
 #include "fuchsia/sysmem/cpp/fidl.h"
-#include <lib/fdio/util.h>
+#include <lib/fdio/directory.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fbl/algorithm.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>

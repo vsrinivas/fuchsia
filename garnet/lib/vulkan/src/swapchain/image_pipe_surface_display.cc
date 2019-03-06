@@ -8,7 +8,7 @@
 #include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 #include <cstdio>
-#include "lib/fdio/util.h"
+#include <lib/fdio/directory.h>
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
 

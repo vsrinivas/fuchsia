@@ -12,7 +12,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <fuchsia/hardware/clock/c/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/directory.h>
 
 int usage(const char* cmd) {
     fprintf(
