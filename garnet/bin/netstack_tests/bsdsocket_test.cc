@@ -44,6 +44,43 @@ TEST(LocalhostTest, Accept) {
   ASSERT_GT(connaddrlen, sizeof(connaddr));
 }
 
+TEST(LocalhostTest, ConnectAFMismatchINET) {
+  int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  ASSERT_GE(s, 0) << strerror(errno);
+
+  struct sockaddr_in6 addr = {};
+  addr.sin6_family = AF_INET6;
+  addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
+  addr.sin6_port = htons(1337);
+  EXPECT_EQ(
+      connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+      -1);
+  EXPECT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
+  EXPECT_EQ(close(s), 0) << strerror(errno);
+}
+
+TEST(LocalhostTest, ConnectAFMismatchINET6) {
+  int s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+  ASSERT_GE(s, 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_LOOPBACK;
+  addr.sin_port = htons(1337);
+  // TODO(NET-2125): the behaviour is incorrect on Fuchsia. Fix this upstream
+  // and re-enable the test.
+  EXPECT_EQ(
+      connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+#if defined(__linux__)
+      0)
+      << strerror(errno);
+#else
+      -1);
+  ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
+#endif
+  EXPECT_EQ(close(s), 0) << strerror(errno);
+}
+
 TEST(NetStreamTest, ConnectTwice) {
   int server_fd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(server_fd, 0) << strerror(errno);
@@ -191,10 +228,10 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
 const int32_t kConnections = 100;
 
 // TODO(toshik): figure out why this fails on Linux and macOS and re-enable.
-#if defined(__Fuchsia__)
-TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
-#else
+#if defined(__linux__)
 TEST(NetStreamTest, DISABLED_BlockingAcceptWriteMultiple) {
+#else
+TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
 #endif
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);

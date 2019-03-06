@@ -23,6 +23,7 @@ import (
 	"fidl/fuchsia/net"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/waiter"
@@ -608,6 +609,11 @@ func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 	addr, err := decodeAddr(sockaddr)
 	if err != nil {
 		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
+	}
+	if l := len(addr.Addr); l > 0 {
+		if ios.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+			return C.EAFNOSUPPORT, nil
+		}
 	}
 	if err := ios.ep.Connect(addr); err != nil {
 		return tcpipErrorToCode(err), nil
