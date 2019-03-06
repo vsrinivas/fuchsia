@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_GUEST_CLI_LIST_H_
 #define GARNET_BIN_GUEST_CLI_LIST_H_
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
-void handle_list(component::StartupContext* context);
+void handle_list(sys::StartupContext* context);
 
 #endif  // GARNET_BIN_GUEST_CLI_LIST_H_

@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <zx/socket.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
 class InputReader;
 class OutputWriter;
@@ -31,6 +31,6 @@ class SerialConsole {
 };
 
 void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
-                   component::StartupContext* context);
+                   sys::StartupContext* context);
 
 #endif  // GARNET_BIN_GUEST_CLI_SERIAL_H_

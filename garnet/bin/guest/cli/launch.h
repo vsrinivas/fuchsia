@@ -7,9 +7,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
 void handle_launch(int argc, const char* argv[], async::Loop* loop,
-                   component::StartupContext* context);
+                   sys::StartupContext* context);
 
 #endif  // GARNET_BIN_GUEST_CLI_LAUNCH_H_

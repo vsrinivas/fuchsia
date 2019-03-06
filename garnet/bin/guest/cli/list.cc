@@ -7,9 +7,9 @@
 #include <fuchsia/guest/cpp/fidl.h>
 #include <iostream>
 
-void handle_list(component::StartupContext* context) {
+void handle_list(sys::StartupContext* context) {
   fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
-  context->ConnectToEnvironmentService(environment_manager.NewRequest());
+  context->svc()->Connect(environment_manager.NewRequest());
   std::vector<fuchsia::guest::EnvironmentInfo> env_infos;
   environment_manager->List(&env_infos);
   if (env_infos.empty()) {

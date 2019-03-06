@@ -12,7 +12,7 @@
 #include "garnet/bin/guest/cli/list.h"
 #include "garnet/bin/guest/cli/serial.h"
 #include "garnet/bin/guest/cli/socat.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 
 static void usage() {
@@ -40,7 +40,7 @@ static bool parse_number(const char* arg, const char* name, T* value,
 }
 
 static bool parse_args(int argc, const char** argv, async::Loop* loop,
-                       component::StartupContext* context, fit::closure* func) {
+                       sys::StartupContext* context, fit::closure* func) {
   if (argc < 2) {
     return false;
   }
@@ -114,7 +114,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 int main(int argc, const char** argv) {
   fit::closure func;
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::StartupContext::CreateFromStartupInfo();
   if (!parse_args(argc, argv, &loop, context.get(), &func)) {
     usage();
     return ZX_ERR_INVALID_ARGS;
