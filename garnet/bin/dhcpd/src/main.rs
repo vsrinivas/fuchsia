@@ -42,6 +42,7 @@ fn main() -> Result<(), Error> {
     let server_ip = config.server_ip;
     let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
     let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
+    udp_socket.set_broadcast(true).context("unable to set broadcast")?;
     let server = Mutex::new(Server::from_config(config, || {
         zx::Time::get(zx::ClockId::UTC).nanos() / 1_000_000_000
     }));
@@ -76,7 +77,8 @@ fn get_server_config_file_path() -> Result<String, Error> {
 #[allow(unused)] // https://github.com/rust-lang/rust/issues/55124
 enum Never {}
 async fn define_msg_handling_loop_future<F: Fn() -> i64>(
-    sock: UdpSocket, server: &Mutex<Server<F>>,
+    sock: UdpSocket,
+    server: &Mutex<Server<F>>,
 ) -> Result<Never, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {

@@ -39,8 +39,7 @@ fn main() -> Result<(), Error> {
     };
 
     println!("fake_client: sending messages...");
-    exec.run_singlethreaded(send_msgs)
-        .context("could not run futures")?;
+    exec.run_singlethreaded(send_msgs).context("could not run futures")?;
     println!("fake_client: messages sent...");
 
     Ok(())
@@ -49,9 +48,8 @@ fn main() -> Result<(), Error> {
 fn build_and_bind_socket() -> (UdpSocket, SocketAddr) {
     let addr = SocketAddr::new("127.0.0.1".parse().unwrap(), CLIENT_PORT);
     let server = SocketAddr::new("127.0.0.1".parse().unwrap(), SERVER_PORT);
-    let udp_socket = UdpSocket::bind(&addr)
-        .context("error binding socket")
-        .unwrap();
+    let udp_socket = UdpSocket::bind(&addr).context("error binding socket").unwrap();
+    udp_socket.set_broadcast(true).context("unable to set broadcast").unwrap();
     (udp_socket, server)
 }
 
@@ -75,10 +73,7 @@ fn build_request(offer: Message) -> Message {
         code: OptionCode::DhcpMessageType,
         value: vec![MessageType::DHCPREQUEST.into()],
     });
-    let server_id = offer
-        .get_config_option(OptionCode::ServerId)
-        .unwrap()
-        .clone();
+    let server_id = offer.get_config_option(OptionCode::ServerId).unwrap().clone();
     req.options.push(server_id);
     req
 }
