@@ -134,6 +134,11 @@ def main():
                         help="Whether or not to error on warnings (deny=error, allow=ignore)",
                         choices=["deny", "allow"],
                         required=True)
+    parser.add_argument("--feature",
+                        help="Feature to enable",
+                        action="append",
+                        dest="features",
+                        required=False)
 
     parser.add_argument
     args = parser.parse_args()
@@ -167,6 +172,9 @@ def main():
         "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
     ]
+    if args.features:
+        for feature in args.features:
+            call_args += ["--cfg", "feature=\"%s\"" % feature]
 
     if args.target.endswith("fuchsia"):
         call_args += [

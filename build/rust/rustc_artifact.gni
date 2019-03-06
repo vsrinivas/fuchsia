@@ -124,7 +124,8 @@ template("rustc_artifact") {
   }
 
   third_party_build = "//third_party/rust_crates:build-third-party"
-  third_party_deps_data = "${root_out_dir}/rust_third_party_crates/deps_data.json"
+  third_party_deps_data =
+      "${root_out_dir}/rust_third_party_crates/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
   if (defined(invoker.output_file_override)) {
     output_filename = invoker.output_file_override
@@ -154,15 +155,15 @@ template("rustc_artifact") {
       if (defined(invoker.non_rust_deps)) {
         deps += invoker.non_rust_deps
       }
-if (defined(invoker.test_environments)) {
-environments =invoker.test_environments
-}
+      if (defined(invoker.test_environments)) {
+        environments = invoker.test_environments
+      }
     }
   } else {
     not_needed([ "test_spec_target_name" ])
     if (defined(invoker.test_environments)) {
-assert(with_unit_tests,
-"test_environments may only be set when with_unit_tests is true")
+      assert(with_unit_tests,
+             "test_environments may only be set when with_unit_tests is true")
       not_needed(invoker, [ "test_environments" ])
     }
   }
@@ -248,6 +249,15 @@ assert(with_unit_tests,
       "--warnings",
       rust_warnings,
     ]
+
+    if (defined(invoker.features)) {
+      foreach(feature, invoker.features) {
+        args += [
+          "--feature",
+          feature,
+        ]
+      }
+    }
 
     args += rust_build_args
     deps += rust_build_deps

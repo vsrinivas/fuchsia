@@ -36,6 +36,11 @@ import("//build/rust/rustc_artifact.gni")
 #   output_name (optional)
 #     Name of the output file.
 #
+#   features (optional)
+#     A list of conditional compilation flags to enable. This can be used to set features for crates
+#     built in-tree which are also published to crates.io. This would be passed to rustc as
+#     '--cfg feature=XXX'
+#
 # Example of usage:
 #
 #   rustc_staticlib("foo") {
@@ -68,6 +73,7 @@ template("rustc_staticlib") {
                              "output_name",
                              "source_root",
                              "testonly",
+                             "features",
                            ])
     name = rustc_artifact_name
     type = "staticlib"

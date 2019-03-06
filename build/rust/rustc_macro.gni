@@ -35,6 +35,11 @@ import("//build/rust/rustc_artifact.gni")
 #     "fat". This value takes precedence over GN args or the default value for the
 #     type of build (debug or release).
 #
+#   features (optional)
+#     A list of conditional compilation flags to enable. This can be used to set features for crates
+#     built in-tree which are also published to crates.io. This would be passed to rustc as
+#     '--cfg feature=XXX'
+#
 # Example of usage:
 #
 #   rustc_macro("foo") {
@@ -84,6 +89,7 @@ template("rustc_macro") {
                              "source_root",
                              "testonly",
                              "with_lto",
+                             "features",
                            ])
     name = rustc_artifact_name
     type = "proc-macro"
