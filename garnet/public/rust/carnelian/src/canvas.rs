@@ -77,12 +77,12 @@ struct GlyphDescriptor {
     glyph: Glyph,
 }
 
-/// Struct containing a font and a cache of renderered glyphs.
+/// Struct containing a font and a cache of rendered glyphs.
 pub struct FontFace<'a> {
     font: Font<'a>,
 }
 
-/// Struct containint font, size and baseline.
+/// Struct containing font, size and baseline.
 #[allow(missing_docs)]
 pub struct FontDescription<'a, 'b: 'a> {
     pub face: &'a FontFace<'b>,
@@ -109,7 +109,7 @@ pub trait PixelSink {
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]);
 }
 
-/// Pixel sink targetting a shared buffer.
+/// Pixel sink targeting a shared buffer.
 pub struct MappingPixelSink {
     mapping: Arc<Mapping>,
     stride: u32,
@@ -136,13 +136,13 @@ pub struct Canvas<T: PixelSink> {
 }
 
 impl<T: PixelSink> Canvas<T> {
-    /// Create a canvas targetting a shared buffer with stride.
+    /// Create a canvas targeting a shared buffer with stride.
     pub fn new(mapping: Arc<Mapping>, stride: u32) -> Canvas<MappingPixelSink> {
         let sink = MappingPixelSink { mapping, stride };
         Canvas { pixel_sink: sink, stride }
     }
 
-    /// Create a canvas targetting a particular pixel sink and
+    /// Create a canvas targeting a particular pixel sink and
     /// with a specific row stride in bytes.
     pub fn new_with_sink(pixel_sink: T, stride: u32) -> Canvas<T> {
         Canvas { pixel_sink, stride }
@@ -202,7 +202,7 @@ impl<T: PixelSink> Canvas<T> {
     }
 
     /// Draw line of text `text` at location `point` with foreground and background colors specified
-    /// by `paint` and with the typographic characterists in `font`. This method uses
+    /// by `paint` and with the typographic characteristics in `font`. This method uses
     /// fixed size cells of size `size` for each character.
     pub fn fill_text_cells(
         &mut self,
@@ -241,7 +241,7 @@ impl<T: PixelSink> Canvas<T> {
     }
 
     /// Draw line of text `text` at location `point` with foreground and background colors specified
-    /// by `paint` and with the typographic characterists in `font`.
+    /// by `paint` and with the typographic characteristics in `font`.
     pub fn fill_text(
         &mut self,
         text: &str,
@@ -269,7 +269,7 @@ impl<T: PixelSink> Canvas<T> {
     }
 }
 
-/// Measure a line of text `text` and with the typographic characterists in `font`.
+/// Measure a line of text `text` and with the typographic characteristics in `font`.
 /// Returns a tuple containing the measured width and height.
 pub fn measure_text(text: &str, font: &mut FontDescription) -> Size {
     let scale = Scale::uniform(font.size as f32);

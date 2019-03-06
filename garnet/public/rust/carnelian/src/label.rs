@@ -70,7 +70,7 @@ impl Label {
             let mut canvas =
                 Canvas::<MappingPixelSink>::new(guard.image().mapping().clone(), stride);
 
-            // since the label buffer is sized to fit the text, allways draw at 0,0
+            // since the label buffer is sized to fit the text, always draw at 0,0
             let location = Point::zero();
 
             // fill the buffer with the bg color, since fill_text ignore pixels that

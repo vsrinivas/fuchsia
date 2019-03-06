@@ -54,7 +54,7 @@ pub trait AppAssistant {
 
 pub type AppAssistantPtr = Box<dyn AppAssistant>;
 
-/// Struct that implements module-wide responsibilties, currently limited
+/// Struct that implements module-wide responsibilities, currently limited
 /// to creating views on request.
 pub struct App {
     pub(crate) scenic: ScenicProxy,
