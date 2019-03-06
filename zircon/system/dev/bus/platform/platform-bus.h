@@ -8,6 +8,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpioimpl.h>
+#include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/i2cimpl.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform/bus.h>
@@ -82,6 +83,7 @@ public:
     inline ddk::ClockProtocolClient* clk() { return &*clk_; }
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
     inline ddk::I2cImplProtocolClient* i2c() { return &*i2c_; }
+    inline ddk::PowerImplProtocolClient* power() { return &*power_; }
 
     pbus_sys_suspend_t suspend_cb() { return suspend_cb_; }
 
@@ -136,6 +138,7 @@ private:
     std::optional<ddk::GpioImplProtocolClient> gpio_;
     std::optional<ddk::IommuProtocolClient> iommu_;
     std::optional<ddk::I2cImplProtocolClient> i2c_;
+    std::optional<ddk::PowerImplProtocolClient> power_;
 
     // Completion used by WaitProtocol().
     sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);

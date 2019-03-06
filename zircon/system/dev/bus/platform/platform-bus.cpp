@@ -93,6 +93,13 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
         clk_ = ddk::ClockProtocolClient(static_cast<const clock_protocol_t*>(protocol));
         break;
     }
+    case ZX_PROTOCOL_POWER_IMPL: {
+        if (proxy_cb->callback != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        power_ = ddk::PowerImplProtocolClient(static_cast<const power_impl_protocol_t*>(protocol));
+        break;
+    }
     case ZX_PROTOCOL_IOMMU: {
         if (proxy_cb->callback != nullptr) {
             return ZX_ERR_INVALID_ARGS;
@@ -231,6 +238,12 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_I2C_IMPL:
         if (i2c_) {
             i2c_->GetProto(static_cast<i2c_impl_protocol_t*>(out));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_POWER_IMPL:
+        if (power_) {
+            power_->GetProto(static_cast<power_impl_protocol_t*>(out));
             return ZX_OK;
         }
         break;
