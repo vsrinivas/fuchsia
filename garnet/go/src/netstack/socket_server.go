@@ -173,12 +173,9 @@ func (ios *iostate) loopWrite() error {
 }
 
 // loopRead connects libc read to the network stack.
-func (ios *iostate) loopRead() error {
+func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
-
-	inEntry, inCh := waiter.NewChannelEntry(nil)
-	defer ios.wq.EventUnregister(&inEntry)
 
 	outEntry, outCh := waiter.NewChannelEntry(nil)
 	connected := ios.transProto != tcp.ProtocolNumber
@@ -191,7 +188,6 @@ func (ios *iostate) loopRead() error {
 	for {
 		var v []byte
 
-		ios.wq.EventRegister(&inEntry, waiter.EventIn)
 		for {
 			var err *tcpip.Error
 			v, _, err = ios.ep.Read(&sender)
@@ -266,7 +262,6 @@ func (ios *iostate) loopRead() error {
 			}
 			break
 		}
-		ios.wq.EventUnregister(&inEntry)
 
 		if ios.transProto != tcp.ProtocolNumber {
 			out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
@@ -427,13 +422,18 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		closing:       make(chan struct{}),
 	}
 
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	ios.wq.EventRegister(&inEntry, waiter.EventIn)
+
 	go func() {
 		if err := ios.loopControl(); err != nil {
 			logger.Errorf("%p: loopControl: %s", ios, err)
 		}
 	}()
 	go func() {
-		if err := ios.loopRead(); err != nil {
+		defer ios.wq.EventUnregister(&inEntry)
+
+		if err := ios.loopRead(inCh); err != nil {
 			logger.VLogf(logger.DebugVerbosity, "%p: loopRead: %s", ios, err)
 		}
 		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); mxerror.Status(err) {
