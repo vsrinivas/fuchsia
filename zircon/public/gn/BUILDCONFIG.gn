@@ -1350,6 +1350,12 @@ template("test") {
         output_extension = toolchain.executable_extension
       }
 
+      if (is_host) {
+        # TODO(mcgrathr|joshuaseaton): temporary workaround to support the
+        # legacy execution of host-side tests.
+        output_dir = "$root_out_dir/host_tests"
+      }
+
       if (!is_host && !defined(install_path)) {
         if (defined(invoker.test_group)) {
           test_group = invoker.test_group
