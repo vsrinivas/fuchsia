@@ -54,17 +54,20 @@ the `fx` command should already be in your path. If not, the command is also
 available as `scripts/fx`.
 
 ```
-fx set x64
+fx set x64 --available bundles/kitchen_sink
 fx full-build
 ```
 
 The first command selects the build configuration you wish to build and
-generates the build system itself in an output directory
-(e.g., `out/debug-x64`).
+generates the build system itself in an output directory (e.g., `out/x64`).
+Fuchsia can ephemerally download [packages](development/build/packages.md) over the network;
+here we use the `--available` flag to make the necessary packages covered in this guide
+available for download.
 
 The second command actually executes the build, transforming the source code in
 build products. If you modify the source tree, you can do an incremental build
-by re-running the `fx full-build` command alone.
+by re-running the `fx full-build` command alone. `fx -i full-build` starts a watcher
+and automatically builds whenever a file is changed.
 
 Alternatively, you can use the [underlying build system directly](development/build/README.md).
 
@@ -73,7 +76,7 @@ Alternatively, you can use the [underlying build system directly](development/bu
 By default you will get a x64 debug build. You can skip this section unless
 you want something else.
 
-Run `fset-usage` to see a list of build options. Some examples:
+Run `fx set` to see a list of build options. Some examples:
 
 ```
 fx set x64                 # x64 debug build
@@ -127,6 +130,7 @@ There are various flags for `fx run` to control QEMU's configuration:
 * `-m` sets QEMU's memory size in MB.
 * `-g` enables graphics (see below).
 * `-N` enables networking (see below).
+* `-k` enables KVM acceleration on Linux.
 
 Use `fx run -h` to see all available options.
 
@@ -154,7 +158,7 @@ virtual interface for QEMU's use.
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
 
 ```
-fx run -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
+fx run -N -u scripts/start-dhcp-server.sh
 ```
 
 The `-u` flag runs a script that sets up a local DHCP server and NAT to
@@ -162,6 +166,15 @@ configure the IPv4 interface and routing.
 
 ## Explore Fuchsia
 
+In a separate shell, start the development update server, if it isn't already
+running:
+
+```
+fx serve -v
+```
+
+Boot Fuchsia with networking. This can be done either in QEMU via the `-N` flag,
+or on a paved hardware, both described above.
 When Fuchsia has booted and displays the "$" shell prompt, you can run programs!
 
 For example, to receive deep wisdom, run:
@@ -185,13 +198,6 @@ package. A typical development
 pushing Fuchsia packages to a development device or QEMU virtual device.
 
 Make a change to the rolldice binary in `garnet/bin/rolldice/src/main.rs`.
-
-In a separate shell, start the development update server, if it isn't already
-running:
-
-```
-fx serve -v
-```
 
 Re-build and push the rolldice package to a running Fuchsia device with:
 
@@ -246,11 +252,11 @@ you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/te
 
 ## Running tests
 
-Compiled test binaries are installed in `/pkgfs/packages/`.
+Compiled test binaries are installed in `/pkgfs/packages/`, and are referenced by a URI.
 You can run a test by invoking it in the terminal. E.g.
 
 ```
-/pkgfs/packages/ledger_tests/0/test/ledger_unittests
+run fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_unittests.cmx
 ```
 
 If you want to leave Fuchsia running and recompile and re-run a test, run
