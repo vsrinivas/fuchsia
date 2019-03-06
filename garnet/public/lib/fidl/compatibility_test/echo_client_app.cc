@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
+
 #include <fidl/test/compatibility/cpp/fidl.h>
 
 namespace fidl {
@@ -10,19 +11,21 @@ namespace test {
 namespace compatibility {
 
 EchoClientApp::EchoClientApp()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {}
+    : context_(sys::StartupContext::CreateFromStartupInfo()) {}
 
 EchoPtr& EchoClientApp::echo() { return echo_; }
 
 void EchoClientApp::Start(std::string server_url) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = server_url;
-  launch_info.directory_request = echo_provider_.NewRequest();
-  context_->launcher()->CreateComponent(std::move(launch_info),
-                                        controller_.NewRequest());
+  echo_provider_ = sys::ServiceDirectory::CreateWithRequest(
+      &launch_info.directory_request);
 
-  echo_provider_.ConnectToService(echo_.NewRequest().TakeChannel(),
-                                  Echo::Name_);
+  fuchsia::sys::LauncherPtr launcher;
+  context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+
+  echo_provider_.Connect(echo_.NewRequest());
 }
 }  // namespace compatibility
 }  // namespace test

@@ -18,10 +18,10 @@ source_set("echo_client_app") {
     "echo_client_app.cc",
     "echo_client_app.h",
   ]
+
   deps = [
     ":compatibility_test_service",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/svc/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/zx",
   ]
 }

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdlib>
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <zx/channel.h>
-#include <cstdlib>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/cpp/startup_context.h>
 #include <string>
+#include <zx/channel.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_request.h"
 
 namespace fidl {
 namespace test {
@@ -21,7 +21,7 @@ class EchoServerApp : public Echo {
  public:
   explicit EchoServerApp(async::Loop* loop)
       : loop_(loop),
-        context_(component::StartupContext::CreateFromStartupInfo()) {
+        context_(sys::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 
@@ -81,7 +81,7 @@ class EchoServerApp : public Echo {
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
   async::Loop* loop_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
   std::vector<std::unique_ptr<EchoClientApp>> client_apps_;
 };

@@ -24,13 +24,15 @@ namespace sys {
 // Instances of this class are thread-safe.
 class ServiceDirectory {
  public:
+  // Create an empty directory of services.
+  ServiceDirectory();
+
   // Create an directory of services backed by given |directory|.
   //
   // Requests for services are routed to entries in this directory.
   //
   // The directory is expected to implement the |fuchsia.io.Directory| protocol.
   explicit ServiceDirectory(zx::channel directory);
-
   explicit ServiceDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
@@ -53,6 +55,14 @@ class ServiceDirectory {
   // Uses the "/svc" entry in the namespace as the backing directory for the
   // returned directory of services.
   static std::shared_ptr<ServiceDirectory> CreateFromNamespace();
+
+  // Create a directory of services and return a request for an implementation
+  // of the underlying directory in |out_request|.
+  //
+  // Useful when creating components.
+  static ServiceDirectory CreateWithRequest(zx::channel* out_request);
+  static ServiceDirectory CreateWithRequest(
+      fidl::InterfaceRequest<fuchsia::io::Directory>* out_request);
 
   // Connect to an interface in the directory.
   //

@@ -14,10 +14,12 @@ executable("fidl_compatibility_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
+    "//garnet/public/lib/fxl",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/files",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -32,10 +34,10 @@ executable("compatibility_test_server_cpp_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]
