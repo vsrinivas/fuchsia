@@ -84,7 +84,8 @@ class ScenicPixelTest : public component::testing::TestWithEnvironment {
           screenshot_out = std::move(screenshot);
           QuitLoop();
         });
-    RunLoop();
+    EXPECT_FALSE(RunLoopWithTimeout(kTimeout))
+        << "Timed out waiting for screenshot.";
     return screenshot_out;
   }
 
@@ -150,7 +151,7 @@ class ScenicPixelTest : public component::testing::TestWithEnvironment {
   std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
 };
 
-TEST_F(ScenicPixelTest, SolidColor) {
+TEST_F(ScenicPixelTest, DISABLED_SolidColor) {
   scenic::BackgroundView view(CreatePresentationContext());
   RunUntilPresent(&view);
 
@@ -169,7 +170,7 @@ TEST_F(ScenicPixelTest, SolidColor) {
       << "Unexpected colors";
 }
 
-TEST_F(ScenicPixelTest, ViewCoordinates) {
+TEST_F(ScenicPixelTest, DISABLED_ViewCoordinates) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
@@ -221,7 +222,7 @@ TEST_F(ScenicPixelTest, ViewCoordinates) {
 // |      BLUE      |     MAGENTA    |
 // |________________|________________|
 //
-TEST_F(ScenicPixelTest, GlobalCoordinates) {
+TEST_F(ScenicPixelTest, DISABLED_GlobalCoordinates) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
