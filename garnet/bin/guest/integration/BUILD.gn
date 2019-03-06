@@ -15,6 +15,8 @@ executable("bin") {
     "enclosed_guest.cc",
     "enclosed_guest.h",
     "guest_test.h",
+    "logger.cc",
+    "logger.h",
     "main.cc",
     "mock_netstack.cc",
     "mock_netstack.h",
@@ -29,11 +31,11 @@ executable("bin") {
     "//garnet/bin/guest/vmm/device",
     "//garnet/bin/guest/vmm/device:qcow_test_data",
     "//garnet/lib/inet",
-    "//sdk/fidl/fuchsia.guest",
-    "//sdk/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.netstack",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
@@ -48,7 +50,10 @@ test_package("guest_integration_tests") {
   tests = [
     {
       name = "guest_integration_tests"
-      environments = [nuc_env, vim2_env]
+      environments = [
+        nuc_env,
+        vim2_env,
+      ]
     },
   ]
 }

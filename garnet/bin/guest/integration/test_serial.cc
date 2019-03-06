@@ -10,7 +10,8 @@
 #include <iostream>
 #include <regex>
 
-static constexpr bool kGuestOutput = false;
+#include "logger.h"
+
 static constexpr size_t kSerialBufferSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);
@@ -37,8 +38,9 @@ zx_status_t TestSerial::Start(zx::socket socket) {
   // Wait for output to stabilize
   zx_signals_t pending = 0;
   do {
-    zx_status_t status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                              zx::deadline_after(kSerialStableDelay), &pending);
+    zx_status_t status =
+        socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                         zx::deadline_after(kSerialStableDelay), &pending);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
       FXL_LOG(ERROR) << "Error waiting for socket " << status;
       return status;
@@ -53,7 +55,8 @@ zx_status_t TestSerial::Start(zx::socket socket) {
 // header and footer before and after the command. Then we wait for the command
 // to be written back to the serial, then the header, then finally we capture
 // everything until the footer.
-zx_status_t TestSerial::ExecuteBlocking(const std::string& command, const std::string& prompt,
+zx_status_t TestSerial::ExecuteBlocking(const std::string& command,
+                                        const std::string& prompt,
                                         std::string* result) {
   std::string header = command_hash(command);
   std::string footer = header;
@@ -135,7 +138,6 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
   buffer_.erase();
   zx_status_t status;
   while (true) {
-
     auto marker_loc = output.rfind(marker);
     if (marker_loc != std::string::npos && !output.empty()) {
       // If we have read the socket past the end of the marker, make sure
@@ -167,10 +169,7 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
     } else if (status != ZX_OK) {
       return status;
     }
-    if (kGuestOutput) {
-      std::cout.write(buf, actual);
-      std::cout.flush();
-    }
+    Logger::Get().Write(buf, actual);
     // Strip carriage returns to normalise both guests on newlines only.
     for (size_t i = 0; i != actual; ++i) {
       if (buf[i] == '\r') {
@@ -193,10 +192,7 @@ zx_status_t TestSerial::Drain() {
     if (status != ZX_OK) {
       return status;
     }
-    if (kGuestOutput) {
-      std::cout.write(buf, actual);
-      std::cout.flush();
-    }
+    Logger::Get().Write(buf, actual);
   }
 }
 

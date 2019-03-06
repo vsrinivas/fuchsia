@@ -10,6 +10,7 @@
 #include <lib/fxl/strings/string_printf.h>
 
 #include "guest_test.h"
+#include "logger.h"
 
 using ::testing::HasSubstr;
 
@@ -76,4 +77,28 @@ TYPED_TEST(GuestTest, VirtioConsole) {
   EXPECT_EQ(this->Execute(cmd, &result), ZX_OK);
   test_data.append("\n");
   EXPECT_EQ(result, test_data);
+}
+
+// This test event listener dumps the guest's serial logs when a test fails.
+class LoggerOutputListener : public ::testing::EmptyTestEventListener {
+  void OnTestEnd(const ::testing::TestInfo& info) override {
+    if (!info.result()->Failed()) {
+      return;
+    }
+    std::cout << "[----------] Begin guest output\n";
+    std::cout << Logger::Get().Buffer();
+    std::cout << "\n[----------] End guest output\n";
+    std::cout.flush();
+  }
+};
+
+int main(int argc, char** argv) {
+  LoggerOutputListener listener;
+
+  testing::InitGoogleTest(&argc, argv);
+  testing::UnitTest::GetInstance()->listeners().Append(&listener);
+  int status = RUN_ALL_TESTS();
+  testing::UnitTest::GetInstance()->listeners().Release(&listener);
+
+  return status;
 }
