@@ -216,11 +216,12 @@ impl <'a> OvernetInternalProtocolEventSender<'a> {
 	pub fn send_event_a(&self,
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		OvernetInternalProtocolEncoder::encode_event_a_response(
-			bytes, handles,a,b,)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			OvernetInternalProtocolEncoder::encode_event_a_response(
+				bytes, handles,a,b,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	
 }
@@ -257,7 +258,6 @@ pub trait OvernetInternalProtocol {
 		OvernetInternalProtocolServer {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),method_a_futures: futures::stream::FuturesUnordered::new(),method_b_futures: futures::stream::FuturesUnordered::new(),
 		}
 	}
@@ -267,7 +267,6 @@ pub struct OvernetInternalProtocolServer<T: OvernetInternalProtocol> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,method_a_futures: futures::stream::FuturesUnordered<T::MethodAFut>,method_b_futures: futures::stream::FuturesUnordered<T::MethodBFut>,
 }
 
@@ -330,60 +329,59 @@ impl<T: OvernetInternalProtocol> futures::Future for OvernetInternalProtocolServ
 			_ => {},
 		}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						1993818253 | 1993818253 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = OvernetInternalProtocolControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_a_futures.push(
+								this.server.method_a(req.0,req.1,control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						952134976 | 952134976 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = OvernetInternalProtocolControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_b_futures.push(
+								this.server.method_b(req.0,req.1,OvernetInternalProtocolMethodBResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
 				}
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
+		})?;
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-					1993818253 | 1993818253 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = OvernetInternalProtocolControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_a_futures.push(
-							this.server.method_a(req.0,req.1,control_handle)
-						);
-					}
-					952134976 | 952134976 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = OvernetInternalProtocolControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_b_futures.push(
-							this.server.method_b(req.0,req.1,OvernetInternalProtocolMethodBResponder {
-										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-										tx_id: header.tx_id,
-										ordinal: header.ordinal,
-									})
-						);
-					}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
-			}
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -391,14 +389,14 @@ impl<T: OvernetInternalProtocol> futures::Future for OvernetInternalProtocolServ
 /// A Stream of incoming requests for OvernetInternalProtocol
 pub struct OvernetInternalProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for OvernetInternalProtocolRequestStream {}
 
 impl futures::stream::FusedStream for OvernetInternalProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -407,7 +405,7 @@ impl fidl::endpoints::RequestStream for OvernetInternalProtocolRequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -419,14 +417,14 @@ impl fidl::endpoints::RequestStream for OvernetInternalProtocolRequestStream {
 		OvernetInternalProtocolControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -438,56 +436,57 @@ impl futures::Stream for OvernetInternalProtocolRequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled OvernetInternalProtocolRequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled OvernetInternalProtocolRequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			1993818253 | 1993818253 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = OvernetInternalProtocolControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok(OvernetInternalProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			952134976 | 952134976 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = OvernetInternalProtocolControlHandle {
-					inner: this.inner.clone(),
-				};
 
-				Ok(OvernetInternalProtocolRequest::MethodB {a: req.0,b: req.1,responder:OvernetInternalProtocolMethodBResponder {
-							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-							tx_id: header.tx_id,
-							ordinal: header.ordinal,
-						},})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				1993818253 | 1993818253 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = OvernetInternalProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(OvernetInternalProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+				}
+				952134976 | 952134976 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = OvernetInternalProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(OvernetInternalProtocolRequest::MethodB {a: req.0,b: req.1,responder:OvernetInternalProtocolMethodBResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 pub enum OvernetInternalProtocolRequest {
@@ -674,9 +673,10 @@ impl OvernetInternalProtocolControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	}
@@ -750,11 +750,12 @@ impl OvernetInternalProtocolMethodBResponder {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-			.map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }
 
@@ -954,11 +955,12 @@ impl <'a> SocketControlProtocolEventSender<'a> {
 	pub fn send_event_a(&self,
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		SocketControlProtocolEncoder::encode_event_a_response(
-			bytes, handles,a,b,)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			SocketControlProtocolEncoder::encode_event_a_response(
+				bytes, handles,a,b,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	
 }
@@ -995,7 +997,6 @@ pub trait SocketControlProtocol {
 		SocketControlProtocolServer {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),method_a_futures: futures::stream::FuturesUnordered::new(),method_b_futures: futures::stream::FuturesUnordered::new(),
 		}
 	}
@@ -1005,7 +1006,6 @@ pub struct SocketControlProtocolServer<T: SocketControlProtocol> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,method_a_futures: futures::stream::FuturesUnordered<T::MethodAFut>,method_b_futures: futures::stream::FuturesUnordered<T::MethodBFut>,
 }
 
@@ -1068,60 +1068,59 @@ impl<T: SocketControlProtocol> futures::Future for SocketControlProtocolServer<T
 			_ => {},
 		}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						1007842318 | 1007842318 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = SocketControlProtocolControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_a_futures.push(
+								this.server.method_a(req.0,req.1,control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						677342235 | 677342235 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = SocketControlProtocolControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_b_futures.push(
+								this.server.method_b(req.0,req.1,SocketControlProtocolMethodBResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
 				}
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
+		})?;
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-					1007842318 | 1007842318 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = SocketControlProtocolControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_a_futures.push(
-							this.server.method_a(req.0,req.1,control_handle)
-						);
-					}
-					677342235 | 677342235 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = SocketControlProtocolControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_b_futures.push(
-							this.server.method_b(req.0,req.1,SocketControlProtocolMethodBResponder {
-										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-										tx_id: header.tx_id,
-										ordinal: header.ordinal,
-									})
-						);
-					}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
-			}
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -1129,14 +1128,14 @@ impl<T: SocketControlProtocol> futures::Future for SocketControlProtocolServer<T
 /// A Stream of incoming requests for SocketControlProtocol
 pub struct SocketControlProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for SocketControlProtocolRequestStream {}
 
 impl futures::stream::FusedStream for SocketControlProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -1145,7 +1144,7 @@ impl fidl::endpoints::RequestStream for SocketControlProtocolRequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -1157,14 +1156,14 @@ impl fidl::endpoints::RequestStream for SocketControlProtocolRequestStream {
 		SocketControlProtocolControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -1176,56 +1175,57 @@ impl futures::Stream for SocketControlProtocolRequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled SocketControlProtocolRequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled SocketControlProtocolRequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			1007842318 | 1007842318 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = SocketControlProtocolControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok(SocketControlProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			677342235 | 677342235 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = SocketControlProtocolControlHandle {
-					inner: this.inner.clone(),
-				};
 
-				Ok(SocketControlProtocolRequest::MethodB {a: req.0,b: req.1,responder:SocketControlProtocolMethodBResponder {
-							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-							tx_id: header.tx_id,
-							ordinal: header.ordinal,
-						},})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <SocketControlProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				1007842318 | 1007842318 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = SocketControlProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(SocketControlProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+				}
+				677342235 | 677342235 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = SocketControlProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(SocketControlProtocolRequest::MethodB {a: req.0,b: req.1,responder:SocketControlProtocolMethodBResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <SocketControlProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 pub enum SocketControlProtocolRequest {
@@ -1412,9 +1412,10 @@ impl SocketControlProtocolControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	}
@@ -1488,11 +1489,12 @@ impl SocketControlProtocolMethodBResponder {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-			.map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }
 
@@ -1692,11 +1694,12 @@ impl <'a> ChannelProtocolEventSender<'a> {
 	pub fn send_event_a(&self,
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		ChannelProtocolEncoder::encode_event_a_response(
-			bytes, handles,a,b,)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			ChannelProtocolEncoder::encode_event_a_response(
+				bytes, handles,a,b,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	
 }
@@ -1733,7 +1736,6 @@ pub trait ChannelProtocol {
 		ChannelProtocolServer {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),method_a_futures: futures::stream::FuturesUnordered::new(),method_b_futures: futures::stream::FuturesUnordered::new(),
 		}
 	}
@@ -1743,7 +1745,6 @@ pub struct ChannelProtocolServer<T: ChannelProtocol> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,method_a_futures: futures::stream::FuturesUnordered<T::MethodAFut>,method_b_futures: futures::stream::FuturesUnordered<T::MethodBFut>,
 }
 
@@ -1806,60 +1807,59 @@ impl<T: ChannelProtocol> futures::Future for ChannelProtocolServer<T> {
 			_ => {},
 		}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						1432785874 | 1432785874 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = ChannelProtocolControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_a_futures.push(
+								this.server.method_a(req.0,req.1,control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						180770075 | 180770075 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = ChannelProtocolControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_b_futures.push(
+								this.server.method_b(req.0,req.1,ChannelProtocolMethodBResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
 				}
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
+		})?;
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-					1432785874 | 1432785874 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = ChannelProtocolControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_a_futures.push(
-							this.server.method_a(req.0,req.1,control_handle)
-						);
-					}
-					180770075 | 180770075 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = ChannelProtocolControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_b_futures.push(
-							this.server.method_b(req.0,req.1,ChannelProtocolMethodBResponder {
-										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-										tx_id: header.tx_id,
-										ordinal: header.ordinal,
-									})
-						);
-					}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
-			}
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -1867,14 +1867,14 @@ impl<T: ChannelProtocol> futures::Future for ChannelProtocolServer<T> {
 /// A Stream of incoming requests for ChannelProtocol
 pub struct ChannelProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for ChannelProtocolRequestStream {}
 
 impl futures::stream::FusedStream for ChannelProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -1883,7 +1883,7 @@ impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -1895,14 +1895,14 @@ impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
 		ChannelProtocolControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -1914,56 +1914,57 @@ impl futures::Stream for ChannelProtocolRequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled ChannelProtocolRequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled ChannelProtocolRequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			1432785874 | 1432785874 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = ChannelProtocolControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok(ChannelProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			180770075 | 180770075 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = ChannelProtocolControlHandle {
-					inner: this.inner.clone(),
-				};
 
-				Ok(ChannelProtocolRequest::MethodB {a: req.0,b: req.1,responder:ChannelProtocolMethodBResponder {
-							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-							tx_id: header.tx_id,
-							ordinal: header.ordinal,
-						},})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				1432785874 | 1432785874 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = ChannelProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(ChannelProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+				}
+				180770075 | 180770075 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = ChannelProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(ChannelProtocolRequest::MethodB {a: req.0,b: req.1,responder:ChannelProtocolMethodBResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 pub enum ChannelProtocolRequest {
@@ -2150,9 +2151,10 @@ impl ChannelProtocolControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	}
@@ -2226,11 +2228,12 @@ impl ChannelProtocolMethodBResponder {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-			.map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }
 
@@ -2430,11 +2433,12 @@ impl <'a> KitchenSinkEventSender<'a> {
 	pub fn send_event_a(&self,
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		KitchenSinkEncoder::encode_event_a_response(
-			bytes, handles,a,b,)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			KitchenSinkEncoder::encode_event_a_response(
+				bytes, handles,a,b,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	
 }
@@ -2471,7 +2475,6 @@ pub trait KitchenSink {
 		KitchenSinkServer {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),method_a_futures: futures::stream::FuturesUnordered::new(),method_b_futures: futures::stream::FuturesUnordered::new(),
 		}
 	}
@@ -2481,7 +2484,6 @@ pub struct KitchenSinkServer<T: KitchenSink> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,method_a_futures: futures::stream::FuturesUnordered<T::MethodAFut>,method_b_futures: futures::stream::FuturesUnordered<T::MethodBFut>,
 }
 
@@ -2544,60 +2546,59 @@ impl<T: KitchenSink> futures::Future for KitchenSinkServer<T> {
 			_ => {},
 		}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						450577456 | 450577456 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = KitchenSinkControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_a_futures.push(
+								this.server.method_a(req.0,req.1,control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						1999489700 | 1999489700 => {
+							let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = KitchenSinkControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_b_futures.push(
+								this.server.method_b(req.0,req.1,KitchenSinkMethodBResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
 				}
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
+		})?;
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-					450577456 | 450577456 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = KitchenSinkControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_a_futures.push(
-							this.server.method_a(req.0,req.1,control_handle)
-						);
-					}
-					1999489700 | 1999489700 => {
-						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = KitchenSinkControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_b_futures.push(
-							this.server.method_b(req.0,req.1,KitchenSinkMethodBResponder {
-										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-										tx_id: header.tx_id,
-										ordinal: header.ordinal,
-									})
-						);
-					}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
-			}
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -2605,14 +2606,14 @@ impl<T: KitchenSink> futures::Future for KitchenSinkServer<T> {
 /// A Stream of incoming requests for KitchenSink
 pub struct KitchenSinkRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for KitchenSinkRequestStream {}
 
 impl futures::stream::FusedStream for KitchenSinkRequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -2621,7 +2622,7 @@ impl fidl::endpoints::RequestStream for KitchenSinkRequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -2633,14 +2634,14 @@ impl fidl::endpoints::RequestStream for KitchenSinkRequestStream {
 		KitchenSinkControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -2652,56 +2653,57 @@ impl futures::Stream for KitchenSinkRequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled KitchenSinkRequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled KitchenSinkRequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			450577456 | 450577456 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = KitchenSinkControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok(KitchenSinkRequest::MethodA {a: req.0,b: req.1,control_handle,})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			1999489700 | 1999489700 => {
-				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = KitchenSinkControlHandle {
-					inner: this.inner.clone(),
-				};
 
-				Ok(KitchenSinkRequest::MethodB {a: req.0,b: req.1,responder:KitchenSinkMethodBResponder {
-							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-							tx_id: header.tx_id,
-							ordinal: header.ordinal,
-						},})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <KitchenSinkMarker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				450577456 | 450577456 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = KitchenSinkControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(KitchenSinkRequest::MethodA {a: req.0,b: req.1,control_handle,})
+				}
+				1999489700 | 1999489700 => {
+					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = KitchenSinkControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(KitchenSinkRequest::MethodB {a: req.0,b: req.1,responder:KitchenSinkMethodBResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <KitchenSinkMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 pub enum KitchenSinkRequest {
@@ -2888,9 +2890,10 @@ impl KitchenSinkControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	}
@@ -2964,10 +2967,11 @@ impl KitchenSinkMethodBResponder {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-			.map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }

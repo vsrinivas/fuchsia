@@ -47,10 +47,10 @@ pub trait RequestStream: Sized {
     fn from_channel(inner: fasync::Channel) -> Self;
 
     /// Convert this channel into its underlying components.
-    fn into_inner(self) -> (Arc<ServeInner>, Option<zx::MessageBuf>);
+    fn into_inner(self) -> (Arc<ServeInner>, bool);
 
     /// Create this channel from its underlying components.
-    fn from_inner(inner: Arc<ServeInner>, msg_buf: Option<zx::MessageBuf>) -> Self;
+    fn from_inner(inner: Arc<ServeInner>, is_terminated: bool) -> Self;
 
     /// Convert this FIDL request stream into a request stream of another FIDL protocol.
     fn cast_stream<T: RequestStream>(self) -> T {

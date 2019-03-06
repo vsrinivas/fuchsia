@@ -146,26 +146,25 @@ impl Client {
     }
 
     /// Send an encodable message without expecting a response.
-    pub fn send<T: Encodable>(&self, msg: &mut T, ordinal: u32) -> Result<(), Error> {
-        let (buf, handles) = (&mut vec![], &mut vec![]);
+    pub fn send<T: Encodable>(&self, body: &mut T, ordinal: u32) -> Result<(), Error> {
         let msg = &mut TransactionMessage {
             header: TransactionHeader {
                 tx_id: 0,
                 flags: 0,
                 ordinal,
             },
-            body: msg,
+            body,
         };
-        Encoder::encode(buf, handles, msg)?;
-        self.send_raw_msg(&**buf, handles)
+        crate::encoding::with_tls_encoded(msg, |bytes, handles| {
+            self.send_raw_msg(&**bytes, handles)
+        })
     }
 
     /// Send an encodable query and receive a decodable response.
     pub fn send_query<E: Encodable, D: Decodable>(&self, msg: &mut E, ordinal: u32)
         -> QueryResponseFut<D>
     {
-        let (buf, handles) = (&mut vec![], &mut vec![]);
-        let res_fut = self.send_raw_query(|tx_id| {
+        let res_fut = self.send_raw_query(|tx_id, bytes, handles| {
             let msg = &mut TransactionMessage {
                 header: TransactionHeader {
                     tx_id: tx_id.as_raw_id(),
@@ -174,8 +173,8 @@ impl Client {
                 },
                 body: msg,
             };
-            Encoder::encode(buf, handles, msg)?;
-            Ok((buf, handles))
+            Encoder::encode(bytes, handles, msg)?;
+            Ok(())
         });
 
         res_fut.and_then(decode_transaction_body_fut::<D>)
@@ -187,23 +186,26 @@ impl Client {
     }
 
     /// Send a raw query and receive a response future.
-    pub fn send_raw_query<'a, F>(&'a self, msg_from_id: F)
-            -> RawQueryResponseFut
-            where F: FnOnce(Txid) -> Result<(&'a mut [u8], &'a mut Vec<zx::Handle>), Error>
+    pub fn send_raw_query<F>(&self, msg_from_id: F) -> RawQueryResponseFut
+    where
+        F: for<'a, 'b> FnOnce(Txid, &'a mut Vec<u8>, &'b mut Vec<zx::Handle>) -> Result<(), Error>
     {
         let id = self.inner.register_msg_interest();
-        let (out_buf, handles) = match msg_from_id(Txid::from_interest_id(id)) {
-            Ok(x) => x,
-            Err(e) => return future::ready(Err(e)).left_future(),
-        };
-        if let Err(e) = self.inner.channel.write(out_buf, handles) {
-            return future::ready(Err(Error::ClientWrite(e))).left_future();
-        }
+        let res = crate::encoding::with_tls_coding_bufs(|bytes, handles| {
+            msg_from_id(Txid::from_interest_id(id), bytes, handles)?;
+            self.inner.channel.write(bytes, handles).map_err(Error::ClientWrite)?;
+            Ok::<(), Error>(())
+        });
 
-        MessageResponse {
-            id: Txid::from_interest_id(id),
-            client: Some(self.inner.clone()),
-        }.right_future()
+        match res {
+            Ok(()) => {
+                MessageResponse {
+                    id: Txid::from_interest_id(id),
+                    client: Some(self.inner.clone()),
+                }.right_future()
+            }
+            Err(e) => futures::future::ready(Err(e)).left_future(),
+        }
     }
 }
 

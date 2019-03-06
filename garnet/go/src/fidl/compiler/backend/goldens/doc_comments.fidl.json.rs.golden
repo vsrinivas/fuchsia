@@ -250,7 +250,6 @@ pub trait Interface {
 		InterfaceServer {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),method_futures: futures::stream::FuturesUnordered::new(),
 		}
 	}
@@ -260,7 +259,6 @@ pub struct InterfaceServer<T: Interface> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,method_futures: futures::stream::FuturesUnordered<T::MethodFut>,
 }
 
@@ -318,46 +316,44 @@ impl<T: Interface> futures::Future for InterfaceServer<T> {
 			_ => {},
 		}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						1061382220 | 1061382220 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = InterfaceControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.method_futures.push(
+								this.server.method(control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
 				}
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
+		})?;
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-					1061382220 | 1061382220 => {
-						let mut req: () = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = InterfaceControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.method_futures.push(
-							this.server.method(control_handle)
-						);
-					}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
-			}
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -365,14 +361,14 @@ impl<T: Interface> futures::Future for InterfaceServer<T> {
 /// A Stream of incoming requests for Interface
 pub struct InterfaceRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for InterfaceRequestStream {}
 
 impl futures::stream::FusedStream for InterfaceRequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -381,7 +377,7 @@ impl fidl::endpoints::RequestStream for InterfaceRequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -393,14 +389,14 @@ impl fidl::endpoints::RequestStream for InterfaceRequestStream {
 		InterfaceControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -412,43 +408,44 @@ impl futures::Stream for InterfaceRequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled InterfaceRequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled InterfaceRequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			1061382220 | 1061382220 => {
-				let mut req: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = InterfaceControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok(InterfaceRequest::Method {control_handle,})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				1061382220 | 1061382220 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = InterfaceControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(InterfaceRequest::Method {control_handle,})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 /// interface comment #1

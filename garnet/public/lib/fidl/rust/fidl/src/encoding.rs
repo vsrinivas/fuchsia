@@ -11,8 +11,41 @@ use {
         self as zx,
         HandleBased,
     },
-    std::{mem, ptr, str, u32, u64},
+    std::{
+        cell::RefCell,
+        mem, ptr, str, u32, u64,
+    },
 };
+
+thread_local!(static CODING_BUF: RefCell<zx::MessageBuf> = RefCell::new(zx::MessageBuf::new()));
+
+/// Acquire a mutable reference to the thread-local encoding buffers.
+///
+/// This function may not be called recursively.
+pub fn with_tls_coding_bufs<R>(
+    f: impl FnOnce(&mut Vec<u8>, &mut Vec<zx::Handle>) -> R,
+) -> R {
+    CODING_BUF.with(|buf| {
+        let mut buf = buf.borrow_mut();
+        let (bytes, handles) = buf.split_mut();
+        let res = f(bytes, handles);
+        buf.clear();
+        res
+    })
+}
+
+/// Encodes the provided type into the thread-local encoding buffers.
+///
+/// This function may not be called recursively.
+pub fn with_tls_encoded<T, E: From<Error>> (
+    val: &mut (impl Encodable + ?Sized),
+    f: impl FnOnce(&mut Vec<u8>, &mut Vec<zx::Handle>) -> std::result::Result<T, E>,
+) -> std::result::Result<T, E> {
+    with_tls_coding_bufs(|bytes, handles| {
+        Encoder::encode(bytes, handles, val)?;
+        f(bytes, handles)
+    })
+}
 
 /// Rounds `x` up if necessary so that it is a multiple of `align`.
 pub fn round_up_to_align(x: usize, align: usize) -> usize {

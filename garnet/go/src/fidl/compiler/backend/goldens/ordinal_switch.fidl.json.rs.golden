@@ -200,19 +200,21 @@ impl <'a> SwitchingOrdinalsEventSender<'a> {
 		Self { channel }
 	}
 	pub fn send_event_ordinal_fifteen(&self) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		SwitchingOrdinalsEncoder::encode_event_ordinal_fifteen_response(
-			bytes, handles,)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			SwitchingOrdinalsEncoder::encode_event_ordinal_fifteen_response(
+				bytes, handles,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	
 	pub fn send_event_only_generated_ordinal(&self) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		SwitchingOrdinalsEncoder::encode_event_only_generated_ordinal_response(
-			bytes, handles,)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			SwitchingOrdinalsEncoder::encode_event_only_generated_ordinal_response(
+				bytes, handles,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	
 }
@@ -245,7 +247,6 @@ pub trait SwitchingOrdinals {
 		SwitchingOrdinalsServer {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),ordinal_five_futures: futures::stream::FuturesUnordered::new(),only_generated_ordinal_futures: futures::stream::FuturesUnordered::new(),
 		}
 	}
@@ -255,7 +256,6 @@ pub struct SwitchingOrdinalsServer<T: SwitchingOrdinals> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,ordinal_five_futures: futures::stream::FuturesUnordered<T::OrdinalFiveFut>,only_generated_ordinal_futures: futures::stream::FuturesUnordered<T::OnlyGeneratedOrdinalFut>,
 }
 
@@ -318,56 +318,55 @@ impl<T: SwitchingOrdinals> futures::Future for SwitchingOrdinalsServer<T> {
 			_ => {},
 		}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						2005164903 | 2005164903 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = SwitchingOrdinalsControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.ordinal_five_futures.push(
+								this.server.ordinal_five(control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						667506719 | 667506719 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = SwitchingOrdinalsControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.only_generated_ordinal_futures.push(
+								this.server.only_generated_ordinal(control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
 				}
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
+		})?;
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-					2005164903 | 2005164903 => {
-						let mut req: () = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = SwitchingOrdinalsControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.ordinal_five_futures.push(
-							this.server.ordinal_five(control_handle)
-						);
-					}
-					667506719 | 667506719 => {
-						let mut req: () = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = SwitchingOrdinalsControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.only_generated_ordinal_futures.push(
-							this.server.only_generated_ordinal(control_handle)
-						);
-					}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
-			}
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -375,14 +374,14 @@ impl<T: SwitchingOrdinals> futures::Future for SwitchingOrdinalsServer<T> {
 /// A Stream of incoming requests for SwitchingOrdinals
 pub struct SwitchingOrdinalsRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for SwitchingOrdinalsRequestStream {}
 
 impl futures::stream::FusedStream for SwitchingOrdinalsRequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -391,7 +390,7 @@ impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -403,14 +402,14 @@ impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
 		SwitchingOrdinalsControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -422,52 +421,53 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled SwitchingOrdinalsRequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled SwitchingOrdinalsRequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			2005164903 | 2005164903 => {
-				let mut req: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = SwitchingOrdinalsControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok(SwitchingOrdinalsRequest::OrdinalFive {control_handle,})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			667506719 | 667506719 => {
-				let mut req: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = SwitchingOrdinalsControlHandle {
-					inner: this.inner.clone(),
-				};
 
-				Ok(SwitchingOrdinalsRequest::OnlyGeneratedOrdinal {control_handle,})
-			}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				2005164903 | 2005164903 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = SwitchingOrdinalsControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(SwitchingOrdinalsRequest::OrdinalFive {control_handle,})
+				}
+				667506719 | 667506719 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = SwitchingOrdinalsControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(SwitchingOrdinalsRequest::OnlyGeneratedOrdinal {control_handle,})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 pub enum SwitchingOrdinalsRequest {
@@ -632,9 +632,10 @@ impl SwitchingOrdinalsControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	
@@ -652,9 +653,10 @@ impl SwitchingOrdinalsControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	}

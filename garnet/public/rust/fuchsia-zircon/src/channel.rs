@@ -43,27 +43,28 @@ impl Channel {
     /// [zx_channel_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_read.md)
     /// syscall.
     ///
-    /// If the `MessageBuf` lacks the capacity to hold the pending message,
+    /// If the vectors lack the capacity to hold the pending message,
     /// returns an `Err` with the number of bytes and number of handles needed.
     /// Otherwise returns an `Ok` with the result as usual.
-    pub fn read_raw(&self, buf: &mut MessageBuf)
+    pub fn read_raw(&self, bytes: &mut Vec<u8>, handles: &mut Vec<Handle>)
         -> Result<Result<(), Status>, (usize, usize)>
     {
         let opts = 0;
         unsafe {
-            buf.clear();
+            bytes.clear();
+            handles.clear();
             let raw_handle = self.raw_handle();
-            let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
-            let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
+            let mut num_bytes: u32 = size_to_u32_sat(bytes.capacity());
+            let mut num_handles: u32 = size_to_u32_sat(handles.capacity());
             let status = ok(sys::zx_channel_read(raw_handle, opts,
-                buf.bytes.as_mut_ptr(), buf.handles.as_mut_ptr() as *mut _,
+                bytes.as_mut_ptr(), handles.as_mut_ptr() as *mut _,
                 num_bytes, num_handles, &mut num_bytes, &mut num_handles));
             if status == Err(Status::BUFFER_TOO_SMALL) {
                 Err((num_bytes as usize, num_handles as usize))
             } else {
                 Ok(status.map(|()| {
-                    buf.bytes.set_len(num_bytes as usize);
-                    buf.handles.set_len(num_handles as usize);
+                    bytes.set_len(num_bytes as usize);
+                    handles.set_len(num_handles as usize);
                 }))
             }
         }
@@ -75,12 +76,24 @@ impl Channel {
     /// if it is lacks capacity to hold the full message. If such reallocations
     /// are not desirable, use `read_raw` instead.
     pub fn read(&self, buf: &mut MessageBuf) -> Result<(), Status> {
+        let (bytes, handles) = buf.split_mut();
+        self.read_split(bytes, handles)
+    }
+
+    /// Read a message from a channel into a separate byte vector and handle vector.
+    ///
+    /// Note that this method can cause internal reallocations in the `MessageBuf`
+    /// if it is lacks capacity to hold the full message. If such reallocations
+    /// are not desirable, use `read_raw` instead.
+    pub fn read_split(&self, bytes: &mut Vec<u8>, handles: &mut Vec<Handle>)
+        -> Result<(), Status>
+    {
         loop {
-            match self.read_raw(buf) {
+            match self.read_raw(bytes, handles) {
                 Ok(result) => return result,
                 Err((num_bytes, num_handles)) => {
-                    buf.ensure_capacity_bytes(num_bytes);
-                    buf.ensure_capacity_handles(num_handles);
+                    ensure_capacity(bytes, num_bytes);
+                    ensure_capacity(handles, num_handles);
                 }
             }
         }
@@ -315,10 +328,8 @@ mod tests {
         let mut empty = vec![];
         assert!(p1.write(b"hello", &mut empty).is_ok());
 
-        let mut buf = MessageBuf::new();
-        let result = p2.read_raw(&mut buf);
+        let result = p2.read_raw(&mut vec![], &mut vec![]);
         assert_eq!(result, Err((5, 0)));
-        assert_eq!(buf.bytes(), b"");
     }
 
     #[test]

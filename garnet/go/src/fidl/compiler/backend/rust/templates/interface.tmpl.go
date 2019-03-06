@@ -316,15 +316,16 @@ impl <'a> {{ $interface.Name }}EventSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		{{ $interface.Name }}Encoder::encode_{{ $method.Name }}_response(
-			bytes, handles,
-			{{- range $index, $param := $method.Response -}}
-				{{ $param.Name -}},
-			{{- end -}}
-		)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			{{ $interface.Name }}Encoder::encode_{{ $method.Name }}_response(
+				bytes, handles,
+				{{- range $index, $param := $method.Response -}}
+					{{ $param.Name -}},
+				{{- end -}}
+			)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	{{ end }}
 	{{- end }}
@@ -364,7 +365,6 @@ pub trait {{ $interface.Name }} {
 		{{ $interface.Name }}Server {
 			server: self,
 			inner: inner.clone(),
-			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),
 			{{- range $method := $interface.Methods }}
 			{{- if $method.HasRequest -}}
@@ -379,7 +379,6 @@ pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest -}}
@@ -448,73 +447,71 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 		{{- end -}}
 		{{- end }}
 
-		this.msg_buf.clear();
-		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => {
-				if !made_progress_this_loop_iter {
-					return futures::Poll::Pending;
-				} else {
-					continue;
-				}
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
 			}
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				return futures::Poll::Ready(Ok(()));
-			}
-			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-		}
 
-		{
-			// A message has been received from the channel
-			let (bytes, _handles) = this.msg_buf.split_mut();
-			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			match header.ordinal {
-				{{- range $method := $interface.Methods }}
-					{{- if $method.HasRequest }}
-					{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
-						let mut req: (
-							{{- range $index, $param := $method.Request -}}
-								{{- if ne 0 $index -}}, {{- $param.Type -}}
-								{{- else -}} {{- $param.Type -}}
-								{{- end -}}
-							{{- end -}}
-						) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = {{ $interface.Name }}ControlHandle {
-							inner: this.inner.clone(),
-						};
-						this.{{ $method.Name }}_futures.push(
-							this.server.{{ $method.Name }}(
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+					{{- range $method := $interface.Methods }}
+						{{- if $method.HasRequest }}
+						{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
+							let mut req: (
 								{{- range $index, $param := $method.Request -}}
-									{{- if ne 1 (len $method.Request) -}}
-									req.{{ $index }},
-									{{- else -}}
-									req,
+									{{- if ne 0 $index -}}, {{- $param.Type -}}
+									{{- else -}} {{- $param.Type -}}
 									{{- end -}}
 								{{- end -}}
-								{{- if $method.HasResponse -}}
-									{{- $interface.Name -}}{{- $method.CamelName -}}Responder {
-										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-										tx_id: header.tx_id,
-										ordinal: header.ordinal,
-									}
-									{{- else -}}
-									control_handle
-								{{- end -}}
-							)
-						);
-					}
+							) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = {{ $interface.Name }}ControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.{{ $method.Name }}_futures.push(
+								this.server.{{ $method.Name }}(
+									{{- range $index, $param := $method.Request -}}
+										{{- if ne 1 (len $method.Request) -}}
+										req.{{ $index }},
+										{{- else -}}
+										req,
+										{{- end -}}
+									{{- end -}}
+									{{- if $method.HasResponse -}}
+										{{- $interface.Name -}}{{- $method.CamelName -}}Responder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										}
+										{{- else -}}
+										control_handle
+									{{- end -}}
+								)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						{{- end }}
 					{{- end }}
-				{{- end }}
-				// TODO(cramertj) handle control/fileio messages
-				_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: "unknown fidl", // TODO(cramertj)
-				})),
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
+				}
 			}
+		})?;
+
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
 		}
 	}}
 }
@@ -522,14 +519,14 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 /// A Stream of incoming requests for {{ $interface.Name }}
 pub struct {{ $interface.Name }}RequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
-	msg_buf: Option<zx::MessageBuf>,
+	is_terminated: bool,
 }
 
 impl ::std::marker::Unpin for {{ $interface.Name }}RequestStream {}
 
 impl futures::stream::FusedStream for {{ $interface.Name }}RequestStream {
 	fn is_terminated(&self) -> bool {
-		self.msg_buf.is_none()
+		self.is_terminated
 	}
 }
 
@@ -538,7 +535,7 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
-			msg_buf: Some(zx::MessageBuf::new()),
+			is_terminated: false,
 		}
 	}
 
@@ -550,14 +547,14 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 		{{ $interface.Name }}ControlHandle { inner: self.inner.clone() }
 	}
 
-	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
-		(self.inner, self.msg_buf)
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
-		Self { inner, msg_buf }
+		Self { inner, is_terminated }
 	}
 }
 
@@ -569,70 +566,71 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
-			this.msg_buf = None;
+			this.is_terminated = true;
 			return futures::Poll::Ready(None);
 		}
-		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled {{ $interface.Name }}RequestStream after completion");
-		msg_buf.clear();
-		match this.inner.channel().recv_from(msg_buf, lw) {
-			futures::Poll::Ready(Ok(())) => {},
-			futures::Poll::Pending => return futures::Poll::Pending,
-			futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
-				this.msg_buf = None;
-				return futures::Poll::Ready(None)
-			},
-			futures::Poll::Ready(Err(e)) =>
-			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+		if this.is_terminated {
+			panic!("polled {{ $interface.Name }}RequestStream after completion");
 		}
-
-		// A message has been received from the channel
-		let (bytes, _handles) = msg_buf.split_mut();
-		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match header.ordinal {
-			{{- range $method := $interface.Methods }}
-			{{- if $method.HasRequest }}
-			{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
-				let mut req: (
-					{{- range $index, $param := $method.Request -}}
-						{{- if ne 0 $index -}}, {{- $param.Type -}}
-						{{- else -}} {{- $param.Type -}}
-						{{- end -}}
-					{{- end -}}
-				) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = {{ $interface.Name }}ControlHandle {
-					inner: this.inner.clone(),
-				};
-
-				Ok({{ $interface.Name }}Request::{{ $method.CamelName }} {
-					{{- range $index, $param := $method.Request -}}
-						{{- if ne 1 (len $method.Request) -}}
-						{{ $param.Name }}: req.{{ $index }},
-						{{- else -}}
-						{{ $param.Name }}: req,
-						{{- end -}}
-					{{- end -}}
-					{{- if $method.HasResponse -}}
-						responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
-							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-							tx_id: header.tx_id,
-							ordinal: header.ordinal,
-						},
-						{{- else -}}
-						control_handle,
-					{{- end -}}
-				})
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
-			{{- end }}
-			{{- end }}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
-				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::NAME,
-			}),
-		}))
+
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				{{- range $method := $interface.Methods }}
+				{{- if $method.HasRequest }}
+				{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
+					let mut req: (
+						{{- range $index, $param := $method.Request -}}
+							{{- if ne 0 $index -}}, {{- $param.Type -}}
+							{{- else -}} {{- $param.Type -}}
+							{{- end -}}
+						{{- end -}}
+					) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = {{ $interface.Name }}ControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok({{ $interface.Name }}Request::{{ $method.CamelName }} {
+						{{- range $index, $param := $method.Request -}}
+							{{- if ne 1 (len $method.Request) -}}
+							{{ $param.Name }}: req.{{ $index }},
+							{{- else -}}
+							{{ $param.Name }}: req,
+							{{- end -}}
+						{{- end -}}
+						{{- if $method.HasResponse -}}
+							responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},
+							{{- else -}}
+							control_handle,
+						{{- end -}}
+					})
+				}
+				{{- end }}
+				{{- end }}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
 	}
 }
 
@@ -838,9 +836,10 @@ impl {{ $interface.Name }}ControlHandle {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
 		Ok(())
 	}
 	{{ end -}}
@@ -945,11 +944,12 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 			body: &mut response,
 		};
 
-		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.control_handle.inner.channel().write(&*bytes, &mut *handles)
-			.map_err(fidl::Error::ServerResponseWrite)?;
-		Ok(())
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }
 {{- end -}}

@@ -55,15 +55,30 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, buf: &mut MessageBuf, lw: &Waker) -> Poll<Result<(), zx::Status>> {
-        try_ready!(self.poll_read(lw));
+    ///
+    /// Identical to `recv_from` except takes separate bytes and handles buffers
+    /// rather than a single `MessageBuf`.
+    pub fn read(
+        &self,
+        bytes: &mut Vec<u8>,
+        handles: &mut Vec<zx::Handle>,
+        waker: &Waker,
+    ) -> Poll<Result<(), zx::Status>> {
+        try_ready!(self.poll_read(waker));
 
-        let res = self.0.get_ref().read(buf);
+        let res = self.0.get_ref().read_split(bytes, handles);
         if res == Err(zx::Status::SHOULD_WAIT) {
-            self.0.need_read(lw)?;
+            self.0.need_read(waker)?;
             return Poll::Pending;
         }
         Poll::Ready(res)
+    }
+
+    /// Receives a message on the channel and registers this `Channel` as
+    /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
+    pub fn recv_from(&self, buf: &mut MessageBuf, waker: &Waker) -> Poll<Result<(), zx::Status>> {
+        let (bytes, handles) = buf.split_mut();
+        self.read(bytes, handles, waker)
     }
 
     /// Creates a future that receive a message to be written to the buffer
