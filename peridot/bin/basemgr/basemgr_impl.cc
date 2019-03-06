@@ -541,7 +541,7 @@ void BasemgrImpl::LogoutUsers(std::function<void()> callback) {
   user_provider_impl_->RemoveAllUsers(std::move(callback));
 }
 
-void BasemgrImpl::AcquirePresentation(
+void BasemgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   presentation_state_.bindings.AddBinding(
       presentation_state_.presentation.get(), std::move(request));

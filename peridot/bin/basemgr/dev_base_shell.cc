@@ -111,10 +111,9 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   }
 
   // |fuchsia::modular::BaseShell|
-  void Initialize(
-      fidl::InterfaceHandle<fuchsia::modular::BaseShellContext>
-          base_shell_context,
-      fuchsia::modular::BaseShellParams base_shell_params) override {
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext>
+                      base_shell_context,
+                  fuchsia::modular::BaseShellParams) override {
     base_shell_context_.Bind(std::move(base_shell_context));
     base_shell_context_->GetUserProvider(user_provider_.NewRequest());
 

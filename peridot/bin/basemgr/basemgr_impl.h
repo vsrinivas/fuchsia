@@ -130,10 +130,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |SessionProvider::Delegate|
   void LogoutUsers(std::function<void()> callback) override;
 
-  // |SessionProvider::Delegate|
-  void AcquirePresentation(
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)
-      override;
+  // |SessionProvider::Delegate| and |fuchsia::modular::BaseShellContext|
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                           request) override;
 
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
   const std::vector<SessionShellSettings>& session_shell_settings_;

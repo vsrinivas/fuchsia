@@ -27,7 +27,7 @@ class SessionProvider {
 
     // Called when a session provided by SessionProvider wants to acquire
     // presentation.
-    virtual void AcquirePresentation(
+    virtual void GetPresentation(
         fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
   };
 

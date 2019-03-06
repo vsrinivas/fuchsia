@@ -42,7 +42,7 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
       std::move(ledger_token_manager), std::move(agent_token_manager),
       nullptr /* account */, nullptr /* view_owner_request */,
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {
-      } /* acquire_presentation */,
+      } /* get_presentation */,
       [](bool) {} /* done_callback */);
 
   EXPECT_TRUE(callback_called);
@@ -74,7 +74,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       /* use_session_shell_for_story_shell_factory= */ false,
       std::move(ledger_token_manager), std::move(agent_token_manager),
       /* account= */ nullptr, /* view_owner_request= */ nullptr,
-      /* acquire_presentation= */
+      /* get_presentation= */
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},
       /* done_callback= */
       [&done_callback_called](bool) { done_callback_called = true; });

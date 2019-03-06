@@ -7,10 +7,9 @@ library fuchsia.modular;
 using fuchsia.auth;
 using fuchsia.ui.policy;
 
-// This interface is implemented by a base shell. Dependencies and parameters
-// are passed to it in Initialize() on startup. The base shell is also
-// expected to implement Lifecycle in order to receive a Terminate() call on
-// teardown.
+// This interface is implemented by a base shell. Dependencies are passed to it
+// in Initialize() on startup. The base shell is also expected to implement
+// Lifecycle in order to receive a Terminate() call on teardown.
 //
 // In one component instance there can only be one BaseShell service instance.
 // The ViewOwner request is sent to the separate ViewProvider service. This way,
@@ -34,14 +33,19 @@ protocol BaseShell {
 // |Basemgr| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 protocol BaseShellContext {
+    // Acquires the user provider service, which is used to add/remove/list and
+    // authenticate users.
     GetUserProvider(request<UserProvider> request);
+
+    // Acquires the presentation service, which is assumed to already be
+    // connected to the presenter.
+    GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
 
     // This requests the shutdown of the basemgr.
     Shutdown();
 };
 
-// These params are passed to |BaseShell.Initialize|.
+// TODO(alexmin): Delete BaseShellParams here and from BaseShell.Initialize().
 struct BaseShellParams {
-    // TODO(jjosh): make this non-optional, if feasible.
     fuchsia.ui.policy.Presentation? presentation;
 };

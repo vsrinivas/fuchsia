@@ -52,10 +52,10 @@ void SessionProvider::StartSession(
       CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_,
       std::move(ledger_token_manager), std::move(agent_token_manager),
       std::move(account), std::move(view_owner),
-      /* acquire_presentation= */
+      /* get_presentation= */
       [this](
           fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-        delegate_->AcquirePresentation(std::move(request));
+        delegate_->GetPresentation(std::move(request));
       },
       done);
 }

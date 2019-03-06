@@ -26,12 +26,12 @@ SessionContextImpl::SessionContextImpl(
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
-    AcquirePresentationCallback acquire_presentation,
+    GetPresentationCallback get_presentation,
     OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
-      acquire_presentation_(std::move(acquire_presentation)),
+      get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)) {
-  FXL_CHECK(acquire_presentation_);
+  FXL_CHECK(get_presentation_);
   FXL_CHECK(on_session_shutdown_);
 
   // 0. Generate the path to map '/data' for the sessionmgr we are starting.
@@ -101,7 +101,7 @@ void SessionContextImpl::Shutdown(bool logout_users,
 
 void SessionContextImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  acquire_presentation_(std::move(request));
+  get_presentation_(std::move(request));
 }
 
 FuturePtr<> SessionContextImpl::SwapSessionShell(
