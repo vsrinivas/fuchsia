@@ -60,6 +60,11 @@ TEST_F(OutgoingTest, Control) {
             outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
   TestCanAccessEchoService("public/fidl.examples.echo.Echo");
+
+  // Ensure GetOrCreateDirectory refers to the same "public" directory.
+  outgoing_.GetOrCreateDirectory("public")->RemoveEntry(
+      "fidl.examples.echo.Echo");
+  TestCanAccessEchoService("public/fidl.examples.echo.Echo", false);
 }
 
 TEST_F(OutgoingTest, AddAndRemove) {
@@ -85,12 +90,29 @@ TEST_F(OutgoingTest, DebugDir) {
   AddEchoService(outgoing_.debug_dir());
 
   TestCanAccessEchoService("debug/fidl.examples.echo.Echo");
+  outgoing_.GetOrCreateDirectory("debug")->RemoveEntry(
+      "fidl.examples.echo.Echo");
+  TestCanAccessEchoService("debug/fidl.examples.echo.Echo", false);
 }
 
 TEST_F(OutgoingTest, CtrlDir) {
   AddEchoService(outgoing_.ctrl_dir());
 
   TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo");
+  outgoing_.GetOrCreateDirectory("ctrl")->RemoveEntry(
+      "fidl.examples.echo.Echo");
+  TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo", false);
+}
+
+TEST_F(OutgoingTest, GetOrCreateDirectory) {
+  outgoing_.GetOrCreateDirectory("objects")->AddEntry(
+      "test_svc_a",
+      std::make_unique<vfs::Service>(echo_impl_.GetHandler(dispatcher())));
+  outgoing_.GetOrCreateDirectory("objects")->AddEntry(
+      "test_svc_b",
+      std::make_unique<vfs::Service>(echo_impl_.GetHandler(dispatcher())));
+  TestCanAccessEchoService("objects/test_svc_a");
+  TestCanAccessEchoService("objects/test_svc_b");
 }
 
 TEST_F(OutgoingSetupTest, Invalid) {

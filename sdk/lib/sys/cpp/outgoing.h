@@ -25,9 +25,16 @@ namespace sys {
 //
 //  * public. This directory contains the services offered by this component to
 //    other components.
+//  * debug. This directory contains arbitrary debugging output offered by this
+//    component.
+//  * ctrl. This directory contains read-write files the component exposes for
+//    controlling its behavior.
 //
-// TODO: Add debug and ctrl directories.
-// TODO: Add a mechanism for adding more directories.
+// The root directory may optionally contain other directories constructed using
+// |GetOrCreateDirectory|. Common optional directories include:
+//
+//  * objects. This directory contains Inspect API files and interfaces for use
+//    in component inspection.
 //
 // The root directory is typically used to service the |PA_DIRECTORY_REQUEST|
 // process argument.
@@ -127,6 +134,11 @@ class Outgoing final {
   // Get access to ctrl directory to publish ctrl data.
   // This directory is owned by this class.
   vfs::PseudoDir* ctrl_dir() { return ctrl_; }
+
+  // Get a directory under the output namespace. If the directory was not
+  // previously obtained by this method, it will be created.
+  // The returned directory is owned by this class.
+  vfs::PseudoDir* GetOrCreateDirectory(const std::string& name);
 
  private:
   // Adds a new empty directory to |root_| and returns pointer to new directory.

@@ -13,9 +13,9 @@ namespace sys {
 
 Outgoing::Outgoing()
     : root_(std::make_unique<vfs::PseudoDir>()),
-      public_(AddNewEmptyDirectory("public")),
-      debug_(AddNewEmptyDirectory("debug")),
-      ctrl_(AddNewEmptyDirectory("ctrl")) {}
+      public_(GetOrCreateDirectory("public")),
+      debug_(GetOrCreateDirectory("debug")),
+      ctrl_(GetOrCreateDirectory("ctrl")) {}
 
 Outgoing::~Outgoing() = default;
 
@@ -28,6 +28,15 @@ zx_status_t Outgoing::Serve(zx::channel directory_request,
 zx_status_t Outgoing::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
   return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
                dispatcher);
+}
+
+vfs::PseudoDir* Outgoing::GetOrCreateDirectory(const std::string& name) {
+  vfs::Node* node;
+  zx_status_t status = root_->Lookup(name, &node);
+  if (status != ZX_OK) {
+    return AddNewEmptyDirectory(name);
+  }
+  return static_cast<vfs::PseudoDir*>(node);
 }
 
 vfs::PseudoDir* Outgoing::AddNewEmptyDirectory(std::string name) {
