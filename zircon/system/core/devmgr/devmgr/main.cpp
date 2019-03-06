@@ -15,6 +15,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
 #include <zircon/boot/bootdata.h>
@@ -30,12 +31,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-launcher/processargs.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
@@ -48,10 +49,12 @@
 #include "../shared/fdio.h"
 #include "../shared/log.h"
 #include "coordinator.h"
-#include "devhost-loader-service.h"
 #include "devfs.h"
+#include "devhost-loader-service.h"
 
 namespace {
+
+constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
 struct {
     // The handle used to transmit messages to appmgr.
@@ -61,7 +64,6 @@ struct {
     // If appmgr cannot be launched within a timeout, this handle is closed.
     zx::channel appmgr_server;
 
-    zx::resource root_resource;
     zx::unowned_job root_job;
     zx::job svc_job;
     zx::job fuchsia_job;
@@ -120,25 +122,22 @@ void do_autorun(const char* name, const char* env) {
     }
 }
 
-// Get the root resource from the startup handle.  Not receiving the startup
-// handle is logged, but not fatal.  In test environments, it would not be
-// present.
-zx_status_t fetch_root_resource(zx::resource* root_resource) {
-    // Read the root resource out of its channel
-    zx::channel root_resource_channel(
-        zx_take_startup_handle(DEVMGR_LAUNCHER_ROOT_RESOURCE_CHANNEL_HND));
-    if (!root_resource_channel) {
-        fprintf(stderr, "devmgr: did not receive root resource channel, assuming test "
-                        "environment and continuing\n");
-        return ZX_OK;
-    }
-    uint32_t actual_handles = 0;
-    zx_status_t status = root_resource_channel.read(
-        0, nullptr, 0, nullptr, root_resource->reset_and_get_address(), 1, &actual_handles);
+// Get the root resource from the root resource service. Not receiving the
+// startup handle is logged, but not fatal.  In test environments, it would not
+// be present.
+zx_status_t get_root_resource(zx::resource* root_resource) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
         return status;
     }
-    return actual_handles == 1 ? ZX_OK : ZX_ERR_UNAVAILABLE;
+    status = fdio_service_connect(kRootResourcePath, remote.release());
+    if (status != ZX_OK) {
+        fprintf(stderr, "devmgr: could not open root resource service, assuming test "
+                        "environment and continuing\n");
+        return ZX_OK;
+    }
+    return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
 }
 
 int fuchsia_starter(void* arg) {
@@ -278,16 +277,16 @@ int pwrbtn_monitor_starter(void* arg) {
     }
 
     fdio_spawn_action_t actions[] = {
-        { .action = FDIO_SPAWN_ACTION_SET_NAME, .name = { .data = name } },
-        { .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-          .ns = { .prefix = "/input", .handle = input_handle.release() } },
+        {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}},
+        {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+         .ns = {.prefix = "/input", .handle = input_handle.release()}},
         // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
         // single files
-        { .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-          .ns = { .prefix = "/misc", .handle = misc_handle.release() } },
-        { .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = { .id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0),
-                 .handle = debuglog.release() } },
+        {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+         .ns = {.prefix = "/misc", .handle = misc_handle.release()}},
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+         .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0),
+               .handle = debuglog.release()}},
     };
 
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
@@ -358,7 +357,7 @@ zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
-zx_status_t svchost_start(bool require_system) {
+zx_status_t svchost_start(const zx::resource& root_resource, bool require_system) {
     printf("devmgr: svc init\n");
 
     zx::channel dir_request, svchost_local;
@@ -412,8 +411,8 @@ zx_status_t svchost_start(bool require_system) {
     // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
     // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
     zx::resource root_resource_copy;
-    if (g_handles.root_resource.is_valid()) {
-        status = g_handles.root_resource.duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
+    if (root_resource.is_valid()) {
+        status = root_resource.duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
         if (status != ZX_OK) {
             return status;
         }
@@ -629,7 +628,7 @@ int service_starter(void* arg) {
     bool vruncmd = false;
     if (!devmgr::getenv_bool("netsvc.disable", false)) {
         const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr,
-            nullptr};
+                              nullptr};
         int argc = 1;
 
         if (devmgr::getenv_bool("netsvc.netboot", false)) {
@@ -872,12 +871,6 @@ int main(int argc, char** argv) {
     g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
     bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
 
-    zx_status_t status = fetch_root_resource(&g_handles.root_resource);
-    if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
-        return 1;
-    }
-
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::CoordinatorConfig config;
     config.dispatcher = loop.dispatcher();
@@ -886,12 +879,10 @@ int main(int argc, char** argv) {
     config.suspend_fallback = devmgr::getenv_bool("devmgr.suspend-timeout-fallback", false);
     config.suspend_debug = devmgr::getenv_bool("devmgr.suspend-timeout-debug", false);
 
-    if (g_handles.root_resource.is_valid()) {
-      status = g_handles.root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &config.root_resource);
-      if (status != ZX_OK) {
-          fprintf(stderr, "devmgr: did not duplicate root resource: %d\n", status);
-          return 1;
-      }
+    zx_status_t status = get_root_resource(&config.root_resource);
+    if (status != ZX_OK) {
+        fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
+        return 1;
     }
     // TODO: limit to enumerate rights
     status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);
@@ -955,7 +946,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        status = svchost_start(require_system);
+        status = svchost_start(coordinator.root_resource(), require_system);
         if (status != ZX_OK) {
             fprintf(stderr, "devmgr: failed to start svchost: %d", status);
             return 1;

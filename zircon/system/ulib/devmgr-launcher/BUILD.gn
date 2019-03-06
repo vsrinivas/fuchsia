@@ -12,12 +12,7 @@ library("devmgr-launcher") {
   sources = [
     "launcher.cpp",
   ]
-  public_deps = [
-    # <lib/devmgr-launcher/processargs.h> has  #include <lib/bootsvc-protocol/processargs.h>.
-    "$zx/system/ulib/bootsvc-protocol:headers",
-  ]
   deps = [
-    "$zx/system/ulib/bootsvc-protocol",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

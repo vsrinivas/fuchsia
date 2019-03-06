@@ -64,7 +64,6 @@ if (current_cpu != "") {
       "block-client",
       "bootdata",
       "bootfs",
-      "bootsvc-protocol",
       "c",
       "chromeos-disk-setup",
       "cobalt-client",

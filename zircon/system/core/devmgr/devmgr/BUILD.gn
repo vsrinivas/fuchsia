@@ -9,6 +9,7 @@ executable("devmgr") {
 
   deps = [
     ":common",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/devmgr-launcher",
     "../shared",
   ]

@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("bootsvc-protocol") {
-  sdk = "source"
-  sdk_headers = [ "lib/bootsvc-protocol/processargs.h" ]
-  sources = []
+import("$zx/public/gn/fidl.gni")
+
+fidl_library("fuchsia-boot") {
+  sources = [
+    "root-resource.fidl",
+  ]
 }

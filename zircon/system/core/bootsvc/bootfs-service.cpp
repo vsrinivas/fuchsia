@@ -43,7 +43,7 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
     }
 
     // Load all of the entries in the bootfs into the FS
-    status = parser.Parse([this, &bootfs_vmo](const bootfs_entry_t *entry) -> zx_status_t {
+    status = parser.Parse([this, &bootfs_vmo](const bootfs_entry_t* entry) -> zx_status_t {
         PublishUnownedVmo(entry->name, bootfs_vmo, entry->data_off, entry->data_len);
         return ZX_OK;
     });
@@ -54,20 +54,7 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
 }
 
 zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    auto conn = fbl::make_unique<fs::Connection>(&vfs_, root_, std::move(local),
-                                                 ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE);
-    status = vfs_.ServeConnection(std::move(conn));
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out = std::move(remote);
-    return ZX_OK;
+    return CreateVnodeConnection(&vfs_, root_, out);
 }
 
 zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {

@@ -4,6 +4,7 @@
 
 #include "util.h"
 
+#include <fs/connection.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
@@ -20,6 +21,23 @@ fbl::Vector<zx::vmo> RetrieveBootdata() {
         vmos.push_back(std::move(vmo));
     }
     return vmos;
+}
+
+zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel* out) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    auto conn = fbl::make_unique<fs::Connection>(vfs, vnode, std::move(local),
+                                                 ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE);
+    status = vfs->ServeConnection(std::move(conn));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out = std::move(remote);
+    return ZX_OK;
 }
 
 } // namespace bootsvc

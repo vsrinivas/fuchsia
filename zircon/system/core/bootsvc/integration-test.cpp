@@ -14,7 +14,8 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <lib/bootsvc-protocol/processargs.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -27,6 +28,8 @@
 #include "util.h"
 
 namespace {
+
+constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
 // Check that bootsvc put the boot cmdline in env
 bool TestBootCmdline() {
@@ -119,36 +122,34 @@ bool TestNamespace() {
         zx_handle_close(ns->handle[i]);
     }
 
-    ASSERT_EQ(ns->count, 1);
+    ASSERT_EQ(ns->count, 2);
     ASSERT_STR_EQ(ns->path[0], "/boot");
+    ASSERT_STR_EQ(ns->path[1], "/bootsvc");
 
     free(ns);
     END_TEST;
 }
 
-// Check that bootsvc gave us the expected handles
-bool TestStartupHandles() {
+bool TestRootResource() {
     BEGIN_TEST;
 
-    // Check we were given a channel that when read produces a resource handle (should be the
-    // root one)
-    zx::channel resource_channel(zx_take_startup_handle(BOOTSVC_ROOT_RESOURCE_CHANNEL_HND));
-    ASSERT_TRUE(resource_channel.is_valid());
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    ASSERT_EQ(status, ZX_OK);
 
-    zx::handle root_resource;
-    uint32_t actual = 0;
-    ASSERT_EQ(resource_channel.read(0, nullptr, 0, nullptr, root_resource.reset_and_get_address(),
-                                    1, &actual), ZX_OK);
-    ASSERT_EQ(actual, 1);
+    // Check that we can open the fuchsia.boot.RootResource service.
+    status = fdio_service_connect(kRootResourcePath, remote.release());
+    ASSERT_EQ(status, ZX_OK);
 
+    // Check that we received a resource from the service.
+    zx::resource root_resource;
+    status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(root_resource.is_valid());
-    zx_info_handle_basic_t basic;
-    ASSERT_EQ(root_resource.get_info(ZX_INFO_HANDLE_BASIC, &basic, sizeof(basic), nullptr, nullptr),
-              ZX_OK);
-    ASSERT_EQ(basic.type, ZX_OBJ_TYPE_RESOURCE);
 
-    // Check we were given a job handle (should be the root job)
-    ASSERT_TRUE(zx::job::default_job()->is_valid());
+    // Check that a subsequent call results in a peer closed.
+    status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
+    ASSERT_EQ(status, ZX_ERR_PEER_CLOSED);
 
     END_TEST;
 }
@@ -183,6 +184,6 @@ RUN_TEST(TestBootCmdline)
 RUN_TEST(TestBootdata)
 RUN_TEST(TestLoader)
 RUN_TEST(TestNamespace)
-RUN_TEST(TestStartupHandles)
+RUN_TEST(TestRootResource)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)

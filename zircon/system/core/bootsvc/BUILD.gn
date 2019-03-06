@@ -5,11 +5,17 @@
 executable("bootsvc") {
   sources = [
     "bootfs-loader-service.cpp",
+    "bootfs-loader-service.h",
     "bootfs-service.cpp",
+    "bootfs-service.h",
     "main.cpp",
+    "svcfs-service.cpp",
+    "svcfs-service.h",
     "util.cpp",
+    "util.h",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
@@ -17,10 +23,10 @@ executable("bootsvc") {
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/bootdata",
     "$zx/system/ulib/bootfs",
-    "$zx/system/ulib/bootsvc-protocol",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/loader-service",
@@ -45,9 +51,10 @@ executable("bootsvc-tests") {
     "util.cpp",
   ]
   deps = [
-    "$zx/system/ulib/bootsvc-protocol",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
