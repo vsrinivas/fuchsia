@@ -20,13 +20,10 @@ In a second terminal window run
 ```
 $ killall -r qemu-; fx run -N -u $FUCHSIA_DIR/scripts/start-dhcp-server.sh
 <there will be a lot of output, after it calms down>
-$ system_monitor_harvester 192.168.3.53:50051
-harvester received: Hello world
+$ run fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester.cmx 192.168.3.53:50051
 ```
+
 If the harvester is not able to connect to the dockyard_host, try using your
 host's local IP instead of 192.168.3.53 (see `ifconfig` for your IP addresses).
-
-The message `Hello world` means that a connection and round-trip communication
-was done (which all the dockyard_host and harvester do so far).
 
 See also: ../README.md

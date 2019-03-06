@@ -9,8 +9,15 @@ the Dockyard as soon as reasonable.
 
 ## qemu
 
+When using qemu we need a way to talk with the device through a network
+connection. The `start-dhcp-server.sh` script will set that up for us.
+
 On the host, run
+```
 $ fx run -N -u $FUCHSIA_DIR/scripts/start-dhcp-server.sh
+```
 
 Tip: If you're doing edit-compile-run development, you might prefer this:
-$ killall -r qemu-; fx build && fx run -N -u $FUCHSIA_DIR/scripts/start-dhcp-server.sh
+```
+$ killall -r qemu-; fx full-build && fx run -N -u $FUCHSIA_DIR/scripts/start-dhcp-server.sh
+```
