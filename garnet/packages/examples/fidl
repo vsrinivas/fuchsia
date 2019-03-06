@@ -11,6 +11,7 @@
         "//garnet/examples/fidl/echo_server_c",
         "//garnet/examples/fidl/echo_server_cpp",
         "//garnet/examples/fidl/echo_server_go",
+        "//garnet/examples/fidl/echo_server_llcpp",
         "//garnet/examples/fidl/echo_server_rust",
         "//garnet/examples/fidl/heartbeat_client_go",
         "//garnet/examples/fidl/heartbeat_server_go"
