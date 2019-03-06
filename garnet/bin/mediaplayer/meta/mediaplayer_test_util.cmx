@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-global-persistent-storage",
             "system-temp"
         ],
         "services": [
