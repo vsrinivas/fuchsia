@@ -796,14 +796,13 @@ void Device::AssociateInd(wlanif_assoc_ind_t* ind) {
     // listen_interval
     fidl_ind.listen_interval = ind->listen_interval;
 
-    // TODO(NET-1460): SSID in wlanif_assoc_ind_t is a char[] but should be a uint8_t[] as the
-    // SSID is not a string. Another problem is that wlanif_assoc_ind_t doesn't carry the
-    // SSID's length and thus we cannot determine if the SSID is optional or not.
+    // ssid
+    fidl_ind.ssid->assign(ind->ssid.data, ind->ssid.data + ind->ssid.len);
 
     // rsne
     bool is_protected = ind->rsne_len != 0;
     if (is_protected) {
-        memcpy(fidl_ind.rsn->data(), ind->rsne, ind->rsne_len);
+        fidl_ind.rsn->assign(ind->rsne, ind->rsne + ind->rsne_len);
     }
 
     binding_.events().AssociateInd(std::move(fidl_ind));

@@ -4891,8 +4891,8 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
 
         // Extract the RSN information from the IEs
         if (rsn_ie != NULL) {
-            assoc_ind_params.rsne_len = rsn_ie->len;
-            memcpy(assoc_ind_params.rsne, rsn_ie->data, rsn_ie->len);
+            assoc_ind_params.rsne_len = rsn_ie->len + TLV_HDR_LEN;
+            memcpy(assoc_ind_params.rsne, rsn_ie, assoc_ind_params.rsne_len);
         }
 
         ndev->if_callbacks->assoc_ind(ndev->if_callback_cookie, &assoc_ind_params);
