@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include "garnet/bin/zxdb/client/session_observer.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/public/lib/fxl/memory/ref_ptr.h"
@@ -49,6 +50,9 @@ class Session {
   // The RempteAPI for sending messages to the debug_agent.
   RemoteAPI* remote_api() { return remote_api_.get(); }
 
+  void AddObserver(SessionObserver* observer);
+  void RemoveObserver(SessionObserver* observer);
+
   // Notification about the stream.
   void OnStreamReadable();
   void OnStreamError();
@@ -81,8 +85,8 @@ class Session {
                     std::function<void(const Err&)> callback);
 
   // Frees all connection-related data. A helper for different modes of
-  // cleanup.
-  void ClearConnectionData();
+  // cleanup. Returns true if there was a connection to clear.
+  bool ClearConnectionData();
 
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
@@ -118,6 +122,9 @@ class Session {
                                bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
 
+ protected:
+  fxl::ObserverList<SessionObserver> observers_;
+
  private:
   class PendingConnection;
   friend PendingConnection;
@@ -146,6 +153,12 @@ class Session {
                           const Err& err, const debug_ipc::HelloReply& reply,
                           std::unique_ptr<debug_ipc::BufferedFD> buffer,
                           std::function<void(const Err&)> callback);
+
+  // Sends a notification to all the UI observers.
+  void SendSessionNotification(SessionObserver::NotificationType,
+                               const char* fmt, ...) FXL_PRINTF_FORMAT(3, 4);
+  void SendSessionNotification(SessionObserver::NotificationType,
+                               const std::string& msg);
 
   // Whether we have opened a core dump. Makes much of the connection-related
   // stuff obsolete.

@@ -294,12 +294,12 @@ void Session::OnStreamReadable() {
 
     // Sanity checking on the size to prevent crashes.
     if (header.size > kMaxMessageSize) {
-      fprintf(stderr,
-              "Bad message received of size %u.\n(type = %u, "
-              "transaction = %u)\n",
-              static_cast<unsigned>(header.size),
-              static_cast<unsigned>(header.type),
-              static_cast<unsigned>(header.transaction_id));
+      SendSessionNotification(SessionObserver::NotificationType::kError,
+                              "Bad message received of size %u.\n(type = %u, "
+                              "transaction = %u)\n",
+                              static_cast<unsigned>(header.size),
+                              static_cast<unsigned>(header.type),
+                              static_cast<unsigned>(header.transaction_id));
       // TODO(brettw) close the stream due to this fatal error.
       return;
     }
@@ -323,7 +323,7 @@ void Session::OnStreamReadable() {
     // Find the transaction.
     auto found = pending_.find(header.transaction_id);
     if (found == pending_.end()) {
-      fprintf(stderr,
+      SendSessionNotification(SessionObserver::NotificationType::kError,
               "Received reply for unexpected transaction %u (type = %u).\n",
               static_cast<unsigned>(header.transaction_id),
               static_cast<unsigned>(header.type));
@@ -338,7 +338,15 @@ void Session::OnStreamReadable() {
   }
 }
 
-void Session::OnStreamError() { ClearConnectionData(); }
+void Session::OnStreamError() {
+  if (ClearConnectionData()) {
+    SendSessionNotification(
+        SessionObserver::NotificationType::kError,
+        "The debug agent has disconnected.\nThis is most probably a bug, "
+        "please "
+        "file a bug adding the system crash log (fx syslog) if possible.");
+  }
+}
 
 bool Session::ConnectCanProceed(std::function<void(const Err&)> callback) {
   Err err;
@@ -422,11 +430,8 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
   }
 
   ClearConnectionData();
-
-  if (callback) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback]() { callback(Err()); });
-  }
+  if (callback)
+    callback(Err());
 }
 
 void Session::QuitAgent(std::function<void(const Err&)> cb) {
@@ -458,12 +463,16 @@ void Session::QuitAgent(std::function<void(const Err&)> cb) {
                           });
 }
 
-void Session::ClearConnectionData() {
+bool Session::ClearConnectionData() {
+  if (!connection_storage_)
+    return false;
+
   stream_ = nullptr;
   arch_info_.reset();
   connection_storage_.reset();
   arch_ = debug_ipc::Arch::kUnknown;
   system_.DidDisconnect();
+  return true;
 }
 
 void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
@@ -484,10 +493,10 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
       process->OnThreadExiting(notify.record);
     }
   } else {
-    fprintf(stderr,
-            "Warning: received thread notification for an "
-            "unexpected process %" PRIu64 ".\n",
-            notify.process_koid);
+    SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                            "Received thread notification for an "
+                            "unexpected process %" PRIu64 ".\n",
+                            notify.process_koid);
   }
 }
 
@@ -499,8 +508,9 @@ void Session::DispatchNotifyException(
   ThreadImpl* thread =
       ThreadImplFromKoid(notify.process_koid, notify.thread.koid);
   if (!thread) {
-    fprintf(stderr,
-            "Warning: received thread exception for an unknown thread.\n");
+    SendSessionNotification(
+        SessionObserver::NotificationType::kWarning,
+        "Received thread exception for an unknown thread.\n");
     return;
   }
 
@@ -549,10 +559,10 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   if (process) {
     process->OnModules(notify.modules, notify.stopped_thread_koids);
   } else {
-    fprintf(stderr,
-            "Warning: received modules notification for an "
-            "unexpected process %" PRIu64 ".",
-            notify.process_koid);
+    SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                            "Received modules notification for an "
+                            "unexpected process %" PRIu64 ".",
+                            notify.process_koid);
   }
 }
 
@@ -678,6 +688,30 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   system_.DidConnect();
   if (callback)
     callback(Err());
+}
+
+void Session::AddObserver(SessionObserver* observer) {
+  observers_.AddObserver(observer);
+}
+
+void Session::RemoveObserver(SessionObserver* observer) {
+  observers_.RemoveObserver(observer);
+}
+
+void Session::SendSessionNotification(SessionObserver::NotificationType type,
+                                      const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  std::string msg = fxl::StringPrintf(fmt, ap);
+  va_end(ap);
+
+  SendSessionNotification(type, msg);
+}
+
+void Session::SendSessionNotification(SessionObserver::NotificationType type,
+                                      const std::string& msg) {
+  for (auto& observer : observers_)
+    observer.HandleNotification(type, msg);
 }
 
 fxl::WeakPtr<Session> Session::GetWeakPtr() {

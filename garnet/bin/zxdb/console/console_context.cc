@@ -24,6 +24,7 @@
 namespace zxdb {
 
 ConsoleContext::ConsoleContext(Session* session) : session_(session) {
+  session->AddObserver(this);
   session->system().AddObserver(this);
 
   // Pick up any previously created targets. This will normally just be the
@@ -317,6 +318,20 @@ Err ConsoleContext::FillOutCommand(Command* cmd) const {
     return result;
 
   return Err();
+}
+
+void ConsoleContext::HandleNotification(NotificationType type,
+                                        const std::string& msg) {
+  OutputBuffer out;
+  auto preamble = fxl::StringPrintf("[%s] ", NotificationTypeToString(type));
+  switch (type) {
+    case NotificationType::kError:
+      out.Append(Syntax::kError, std::move(preamble));
+    case NotificationType::kWarning:
+      out.Append(Syntax::kWarning, std::move(preamble));
+  }
+  out.Append(msg);
+  Console::get()->Output(std::move(out));
 }
 
 void ConsoleContext::DidCreateTarget(Target* target) {

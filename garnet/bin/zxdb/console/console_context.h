@@ -7,6 +7,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_observer.h"
 #include "garnet/bin/zxdb/client/process_observer.h"
+#include "garnet/bin/zxdb/client/session_observer.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"
@@ -26,6 +27,7 @@ class Session;
 //
 // This class maintains the mapping between objects and IDs.
 class ConsoleContext : public ProcessObserver,
+                       public SessionObserver,
                        public SystemObserver,
                        public TargetObserver,
                        public ThreadObserver,
@@ -124,6 +126,9 @@ class ConsoleContext : public ProcessObserver,
     int job_context_id = 0;
     JobContext* job_context = nullptr;
   };
+
+  // SessionObserver implementation:
+  void HandleNotification(NotificationType, const std::string&) override;
 
   // SystemObserver implementation:
   void DidCreateTarget(Target* target) override;
