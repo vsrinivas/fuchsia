@@ -209,7 +209,7 @@ bool multiple_transports() {
     TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
-[Transport = "SocketControl, OvernetStream"]
+[Transport = "SocketControl, OvernetInternal"]
 protocol A {
     MethodA();
 };
@@ -228,7 +228,7 @@ bool multiple_transports_with_bogus() {
     TestLibrary library("transport_attribuets.fidl", R"FIDL(
 library fidl.test.transportattributes;
 
-[Transport = "SocketControl,Bogus, OvernetStream"]
+[Transport = "SocketControl,Bogus, OvernetInternal"]
 protocol A {
     MethodA();
 };
