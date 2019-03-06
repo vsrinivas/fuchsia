@@ -1854,6 +1854,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
     if (!driver) {
         return;
     }
+
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
         fallback_drivers_.push_front(driver.release());
@@ -1950,6 +1951,9 @@ zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname, bo
     // TODO: disallow if we're in the middle of enumeration, etc
     for (const auto& drv : drivers_) {
         if (!autobind && drvlibname.compare(drv.libname)) {
+            continue;
+        }
+        if (drv.never_autoselect) {
             continue;
         }
 

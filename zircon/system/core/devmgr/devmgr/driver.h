@@ -30,6 +30,9 @@ struct Driver {
     };
 
     fbl::String libname;
+
+    // If true, this driver never tries to match against new devices.
+    bool never_autoselect = false;
 };
 
 #define DRIVER_NAME_LEN_MAX 64
