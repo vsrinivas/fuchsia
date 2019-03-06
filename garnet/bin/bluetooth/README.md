@@ -152,13 +152,13 @@ TODO(armansito): Describe integration tests
 The most reliable way to enable higher log verbosity is with kernel command line parameters. These can be configured through the `fx set` command:
 
   ```
-  fx set x64 --args="kernel_cmdline_files=[\"//kernel_cmdline.txt\"]"
+  fx set x64 --args="kernel_cmdline_files=[\"//local/kernel_cmdline.txt\"]"
   ```
 
-Add the commands to `$FUCHSIA_DIR/kernel_cmdline.txt`, e.g. to enable full logging for the USB transport, Intel HCI, and host drivers:
+Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full logging for the USB transport, Intel HCI, and host drivers:
 
   ```
-  $ cat $FUCHSIA_DIR/kernel_cmdline.txt
+  $ cat $FUCHSIA_DIR/local/kernel_cmdline.txt
   driver.bt_host.log=+trace,+spew,+info,+error,+warn
   driver.bt_hci_intel.log=+trace,+spew,+info,+error,+warn
   driver.bt_transport_usb.log=+trace,+info,+error,+warn
