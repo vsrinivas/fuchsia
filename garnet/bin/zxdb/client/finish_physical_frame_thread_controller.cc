@@ -33,9 +33,9 @@ FinishPhysicalFrameThreadController::OnThreadStop(
     debug_ipc::NotifyException::Type stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (until_controller_) {
-    if (until_controller_->OnThreadStop(stop_type, hit_breakpoints) ==
-        kContinue)
-      return kContinue;
+    if (auto op = until_controller_->OnThreadStop(stop_type, hit_breakpoints);
+        op != kStopDone)
+      return op;
 
     // The until controller said to stop. The CPU is now at the address
     // immediately following the function call. The tricky part is that this
@@ -55,7 +55,7 @@ FinishPhysicalFrameThreadController::OnThreadStop(
     Stack& stack = thread()->GetStack();
     stack.SetHideAmbiguousInlineFrameCount(
         stack.GetAmbiguousInlineFrameCount());
-    return kStop;
+    return kStopDone;
   }
 
   // When there's no "until" controller, this controller just said "continue"

@@ -67,10 +67,11 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_) {
     // Currently trying to step out of a sub-frame.
-    if (finish_->OnThreadStop(stop_type, hit_breakpoints) == kContinue) {
+    if (auto op = finish_->OnThreadStop(stop_type, hit_breakpoints);
+        op != kStopDone) {
       // Not done stepping out, keep working on it.
       Log("Still not done stepping out of sub-frame.");
-      return kContinue;
+      return op;
     }
 
     // Done stepping out. The "finish" operation is complete, but we may need
@@ -78,9 +79,9 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     Log("Done stepping out of sub-frame.");
     finish_.reset();
   } else {
-    if (step_into_->OnThreadStop(stop_type, {}) == kContinue) {
+    if (auto op = step_into_->OnThreadStop(stop_type, {}); op != kStopDone) {
       Log("Still in range after stepping out.");
-      return kContinue;
+      return op;
     }
   }
 
@@ -96,13 +97,14 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     // Same stack frame and same line number, do "step into" again.
     Log("Same line, doing a new StepController to keep going.");
     step_into_ = std::make_unique<StepThreadController>(StepMode::kSourceLine);
-    step_into_->InitWithThread(thread(), [](const Err&){});
+    step_into_->InitWithThread(thread(), [](const Err&) {});
     // Pass no exception type or breakpoints because we just want the step
     // controller to evaluate the current position regardless of how we got
     // here.
-    if (step_into_->OnThreadStop(debug_ipc::NotifyException::Type::kNone, {}) ==
-        kContinue)
-      return kContinue;
+    if (auto op = step_into_->OnThreadStop(
+            debug_ipc::NotifyException::Type::kNone, {});
+        op != kStopDone)
+      return op;
 
     // The step controller may have tweaked the stack, recompute the current
     // fingerprint.
@@ -113,12 +115,12 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // frame that we need to step out of.
   if (!FrameFingerprint::Newer(current_fingerprint, frame_fingerprint_)) {
     Log("Neither in range nor in a newer frame.");
-    return kStop;
+    return kStopDone;
   }
 
   if (stack.size() < 2) {
     Log("In a newer frame but there are not enough frames to step out.");
-    return kStop;
+    return kStopDone;
   }
 
   // Got into a sub-frame. The calling code may have added a filter to stop
@@ -128,7 +130,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
       // Don't set the ambiguous inline frame in this case because we're in
       // a subframe of the one we were originally stepping in.
       Log("should_stop callback returned true, stopping.");
-      return kStop;
+      return kStopDone;
     } else {
       Log("should_stop callback returned false, continuing.");
     }
@@ -154,15 +156,8 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   finish_->InitWithThread(thread(), [](const Err&) {});
 
   // Pass the "none" exception type here to bypass checking the exception
-  // type.
-  //
-  // TODO(DX-1058): this is wrong. If the program crashes while stepping this
-  // might try to continue it. What we really want is a flag from the finish
-  // controller to differentiate "stop because crazy stuff is happening" and
-  // "stop because I reached my destination." The former implies we should
-  // also stop, the latter implies we should continue with this logic and can
-  // ignore the exception type.
-  //
+  // type. The current exception type may have been for the original "finish"
+  // controller above.
   return finish_->OnThreadStop(debug_ipc::NotifyException::Type::kNone, {});
 }
 

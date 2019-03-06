@@ -42,9 +42,9 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_physical_controller_) {
     Log("Dispatching to physical frame finisher.");
-    if (finish_physical_controller_->OnThreadStop(stop_type, hit_breakpoints) ==
-        kContinue)
-      return kContinue;  // Still stepping out of the physical frame.
+    if (auto op = finish_physical_controller_->OnThreadStop(stop_type, hit_breakpoints);
+        op != kStopDone)
+      return op;  // Still stepping out of the physical frame.
 
     // Physical frame controller said stop.
     finish_physical_controller_.reset();
@@ -55,24 +55,21 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
       Log("  inline frames = %zu, hidden = %zu",
           thread()->GetStack().GetAmbiguousInlineFrameCount(),
           thread()->GetStack().hide_ambiguous_inline_frame_count());
-      return kStop;  // No inline frames to step out of, we're done.
+      return kStopDone;  // No inline frames to step out of, we're done.
     }
 
     // Clear the exception type since it will typically be a software
     // breakpoint from the finish controller which the step controllers don't
     // expect.
-    //
-    // TODO(brettw) DX-1058 This is wrong and can continue from unexpected
-    // exceptions.
     stop_type = debug_ipc::NotifyException::Type::kNone;
   }
 
   if (step_over_controller_) {
     // Have an existing step controller for an inline frame.
     Log("Dispatching to inline frame step over.");
-    if (step_over_controller_->OnThreadStop(stop_type, hit_breakpoints) ==
-        kContinue)
-      return kContinue;
+    if (auto op = step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
+        op != kStopDone)
+      return op;
 
     // Current step controller said stop so it's done.
     step_over_controller_.reset();
@@ -84,7 +81,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
   if (!FrameFingerprint::NewerOrEqual(current_fingerprint,
                                       from_inline_frame_fingerprint_)) {
     Log("Not in a newer frame than the target, stopping.");
-    return kStop;
+    return kStopDone;
   }
 
   // The top frame is newer than the desired destination so we need to
@@ -93,7 +90,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
   // step out of with the "step over" controller.
   Log("Newer stack frame needs stepping out of.");
   if (!CreateInlineStepOverController([](const Err&) {}))
-    return kStop;  // Something unexpected happened.
+    return kStopDone;  // Something unexpected happened.
   return step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
 }
 

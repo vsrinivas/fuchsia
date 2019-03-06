@@ -113,7 +113,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     finish_unsymolized_function_->Log("Reported stop, continuing with step.");
     finish_unsymolized_function_.reset();
   } else {
-    // The only real exception type we care abound (as opposed to synthetic and
+    // The only real exception type we care about (as opposed to synthetic and
     // "none" -- see below) are the single step exceptions. We wouldn't want to
     // try to resume from a crash just because it's in our range, or if there
     // was a hardcoded debug instruction in the range, for example.
@@ -128,13 +128,13 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
         stop_type != debug_ipc::NotifyException::Type::kSynthetic &&
         stop_type != debug_ipc::NotifyException::Type::kSingleStep) {
       Log("Not our exception type, stop is somebody else's.");
-      return kStop;
+      return kUnexpected;
     }
   }
 
   Stack& stack = thread()->GetStack();
   if (stack.empty())
-    return kStop;  // Agent sent bad state, give up trying to step.
+    return kUnexpected;  // Agent sent bad state, give up trying to step.
 
   const Frame* top_frame = stack[0];
   uint64_t ip = top_frame->GetAddress();
@@ -156,7 +156,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       // information.
       if (stop_on_no_symbols_) {
         Log("Stopping because there are no symbols.");
-        return kStop;
+        return kStopDone;
       }
 
       Log("Stepped into code with no symbols.");
@@ -212,7 +212,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
         // Here we jumped (not called, we checked the frames above) to some
         // unsymbolized code. Don't know what this is so stop.
         Log("Jumped to unsymbolized code, giving up and stopping.");
-        return kStop;
+        return kStopDone;
       }
     }
 
@@ -271,19 +271,20 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // On the other hand, this check should happen after the other types of
     // range checking in case the thread is still in range.
     if (TrySteppingIntoInline(StepIntoInline::kCommit))
-      return kStop;
+      return kStopDone;
   } else {
     // When an actual step (not synthetic) has resulted in landing at an
     // ambiguous inline location, always consider the location to be the oldest
     // frame to allow the user to step into the inline frames if desired.
     //
     // We don't want to select the same frame here that we were originally
-    // stepping in because we could have just stepped out of a frame to an inline
-    // function starting immediately after the call. We always want to at the
-    // oldest possible inline call.
-    stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
+    // stepping in because we could have just stepped out of a frame to an
+    // inline function starting immediately after the call. We always want to at
+    // the oldest possible inline call.
+    stack.SetHideAmbiguousInlineFrameCount(
+        stack.GetAmbiguousInlineFrameCount());
   }
-  return kStop;
+  return kStopDone;
 }
 
 bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {

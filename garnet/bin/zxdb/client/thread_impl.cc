@@ -250,36 +250,57 @@ void ThreadImpl::OnException(
       debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
       ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
 #endif
-  bool should_stop;
-  if (controllers_.empty()) {
-    // When there are no controllers, all stops are effective.
-    should_stop = true;
-  } else {
-    // Ask all controllers and continue only if all controllers agree the
-    // thread should continue. Multiple controllers should say "stop" at the
-    // same time and we need to be able to delete all that no longer apply
-    // (say you did "finish", hit a breakpoint, and then "finish" again, both
-    // finish commands would be active and you would want them both to be
-    // completed when the current frame actually finishes).
-    should_stop = false;
-    // Don't use iterators since the map is mutated in the loop.
-    for (int i = 0; i < static_cast<int>(controllers_.size()); i++) {
-      switch (controllers_[i]->OnThreadStop(type, hit_breakpoints)) {
-        case ThreadController::kContinue:
-          // Try the next controller.
-          controllers_[i]->Log("Reported continue on exception.");
-          continue;
-        case ThreadController::kStop:
-          // Once a controller tells us to stop, we assume the controller no
-          // longer applies and delete it.
-          controllers_[i]->Log(
-              "Reported stop on exception, stopping and removing it.");
-          controllers_.erase(controllers_.begin() + i);
-          should_stop = true;
-          i--;
-          break;
-      }
+
+  // When any controller says "stop" it takes precendence and the thread will
+  // stop no matter what any other controllers say.
+  bool should_stop = false;
+
+  // Set when any controller says "continue". If no controller says "stop" we
+  // need to differentiate the case where there are no controllers or all
+  // controllers say "unexpected" (thread should stop), from where one or more
+  // said "continue" (thread should continue, any "unexpected" votes are
+  // ignored).
+  bool have_continue = false;
+
+  auto controller_iter = controllers_.begin();
+  while (controller_iter != controllers_.end()) {
+    ThreadController* controller = controller_iter->get();
+    switch (controller->OnThreadStop(type, hit_breakpoints)) {
+      case ThreadController::kContinue:
+        // Try the next controller.
+        controller->Log("Reported continue on exception.");
+        have_continue = true;
+        controller_iter++;
+        break;
+      case ThreadController::kStopDone:
+        // Once a controller tells us to stop, we assume the controller no
+        // longer applies and delete it.
+        //
+        // Need to continue with checking all controllers even though we know
+        // we should stop at this point. Multiple controllers should say
+        // "stop" at the same time and we need to be able to delete all that
+        // no longer apply (say you did "finish", hit a breakpoint, and then
+        // "finish" again, both finish commands would be active and you would
+        // want them both to be completed when the current frame actually
+        // finishes).
+        controller->Log(
+            "Reported stop on exception, stopping and removing it.");
+        controller_iter = controllers_.erase(controller_iter);
+        should_stop = true;
+        break;
+      case ThreadController::kUnexpected:
+        // An unexpected exception means the controller is still active but
+        // doesn't know what to do with this exception.
+        controller->Log("Reported unexpected exception.");
+        controller_iter++;
+        break;
     }
+  }
+
+  if (!have_continue) {
+    // No controller voted to continue (maybe all active controllers reported
+    // "unexpected") or there was no controller. Such cases should stop.
+    should_stop = true;
   }
 
   // The existence of any non-internal breakpoints being hit means the thread

@@ -37,9 +37,16 @@ class ThreadController {
     // indicates "stop", the "stop" will take precedence.
     kContinue,
 
-    // Keeps the thread stopped and reports the stop to the user. This takes
-    // precedence over any "continue" votes.
-    kStop
+    // Keeps the thread stopped and reports the stop to the user. The
+    // controller is marked done and should be deleted. This takes precedence
+    // over any "continue" votes.
+    kStopDone,
+
+    // Reports that the controller doesn't know what to do with this thread
+    // stop. This is effectively a neutral vote for what should happen in
+    // response to a thread stop. If all active controllers report
+    // "unexpected", the thread will stop.
+    kUnexpected
   };
 
   // How the thread should run when it is executing this controller.

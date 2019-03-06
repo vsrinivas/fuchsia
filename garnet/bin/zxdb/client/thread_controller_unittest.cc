@@ -31,7 +31,7 @@ class DummyThreadController : public ThreadController {
   StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
-    return kStop;
+    return kStopDone;
   }
   const char* GetName() const override { return "Dummy"; }
 

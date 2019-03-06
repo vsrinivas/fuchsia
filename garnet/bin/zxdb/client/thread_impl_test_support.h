@@ -34,6 +34,8 @@ class TestThreadObserver : public ThreadObserver {
   ~TestThreadObserver();
 
   bool got_stopped() const { return got_stopped_; }
+  void set_got_stopped(bool s) { got_stopped_ = s; }
+
   const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints() {
     return hit_breakpoints_;
   }

@@ -43,6 +43,27 @@ class ContinueThreadController : public ThreadController {
   bool* got_stop_;
 };
 
+// This ThreadController always reports "kUnexpected" for stops.
+class UnexpectedThreadController : public ThreadController {
+ public:
+  explicit UnexpectedThreadController() = default;
+  ~UnexpectedThreadController() override = default;
+
+  // ThreadController implementation.
+  void InitWithThread(Thread* thread,
+                      std::function<void(const Err&)> cb) override {
+    set_thread(thread);
+    cb(Err());
+  }
+  ContinueOp GetContinueOp() override { return ContinueOp::Continue(); }
+  StopOp OnThreadStop(
+      debug_ipc::NotifyException::Type stop_type,
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
+    return kUnexpected;
+  }
+  const char* GetName() const override { return "Unexpected"; }
+};
+
 }  // namespace
 
 TEST_F(ThreadImplTest, Frames) {
@@ -157,6 +178,55 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   // a stop notification even though the controller said to continue.
   EXPECT_TRUE(got_stop);
   EXPECT_TRUE(thread_observer.got_stopped());
+}
+
+// Tests conditions where thread controllers report unexpected stop types.
+TEST_F(ThreadImplTest, ControllersUnexpected) {
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+
+  TestThreadObserver thread_observer(thread);
+
+  // Notify of thread stop.
+  constexpr uint64_t kAddress1 = 0x12345678;
+  constexpr uint64_t kStack1 = 0x7890;
+  debug_ipc::NotifyException notification;
+  notification.process_koid = kProcessKoid;
+  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.thread.koid = kThreadKoid;
+  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification.thread.frames.resize(1);
+  notification.thread.frames[0].ip = kAddress1;
+  notification.thread.frames[0].sp = kStack1;
+  InjectException(notification);
+
+  // No controllers means the thread should report "stopped".
+  EXPECT_TRUE(thread_observer.got_stopped());
+  thread_observer.set_got_stopped(false);
+
+  // Add the controller that always reports unexpected.
+  thread->ContinueWith(std::make_unique<UnexpectedThreadController>(),
+                       [](const Err& err) {});
+
+  // Notify on thread stop again (this is the same address as above but it
+  // doesn't matter).
+  notification.type = debug_ipc::NotifyException::Type::kSingleStep;
+  InjectException(notification);
+
+  // When all controllers report unexpected, the thread should stop.
+  EXPECT_TRUE(thread_observer.got_stopped());
+  thread_observer.set_got_stopped(false);
+
+  // Add a continue controller and throw the exception. There should be one
+  // controller voting "continue" and one voting "unexpected" which should
+  // continue the thread.
+  bool continue_got_stop = false;
+  thread->ContinueWith(std::make_unique<ContinueThreadController>(&continue_got_stop),
+                       [](const Err& err) {});
+  InjectException(notification);
+  EXPECT_FALSE(thread_observer.got_stopped());
 }
 
 TEST_F(ThreadImplTest, JumpTo) {

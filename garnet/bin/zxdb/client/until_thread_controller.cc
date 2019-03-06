@@ -79,10 +79,12 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   if (!breakpoint_) {
     // Our internal breakpoint shouldn't be deleted out from under ourselves.
     FXL_NOTREACHED();
-    return kContinue;
+    return kUnexpected;
   }
 
-  // Only care about stops if one of the breakpoints hit was ours.
+  // Only care about stops if one of the breakpoints hit was ours. Don't check
+  // the stop_type since as long as the breakpoint was hit, we don't care how
+  // the program got there (it could have single-stepped to the breakpoint).
   Breakpoint* our_breakpoint = breakpoint_.get();
   bool is_our_breakpoint = true;
   for (auto& hit : hit_breakpoints) {
@@ -93,18 +95,18 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   }
   if (!is_our_breakpoint) {
     Log("Not our breakpoint.");
-    return kContinue;
+    return kUnexpected;
   }
 
   if (!threshold_frame_.is_valid()) {
     Log("No frame check required.");
-    return kStop;
+    return kStopDone;
   }
 
   const Stack& stack = thread()->GetStack();
   if (stack.empty()) {
     FXL_NOTREACHED();  // Should always have a current frame on stop.
-    return kStop;
+    return kUnexpected;
   }
 
   // If inline frames are ambiguous and the one we want is one of the ambiguous
@@ -127,7 +129,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     return kContinue;
   }
   Log("Found target frame (or older).");
-  return kStop;
+  return kStopDone;
 }
 
 System* UntilThreadController::GetSystem() {
