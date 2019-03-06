@@ -14,4 +14,9 @@ rustc_library("mundane") {
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:failure",
   ]
+
+  features = [
+    "insecure",
+    "rand-bytes",
+  ]
 }
