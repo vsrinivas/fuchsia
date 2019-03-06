@@ -268,7 +268,10 @@ def link(src, dst):
     # are linked at the same time there is a 1.4*10^(-11) chance of a collision
     # occurring (so we'd expect a collision once every 100 trillion builds or so
     # if we were building 1 million binaries at a time).
-    path = str(uuid.uuid4()) + ".tmp"
+    # To avoid linking across devices/partitions, we prepend the dst location
+    # to ensure that we're using a temporary file in the same location. This
+    # should also help with debugging.
+    path = dst + " -" + str(uuid.uuid4()) + ".tmp"
     # Sometimes the 'src' is a symlink but if you symlink a hardlink bad things
     # happen. Resolve the symlink before hard linking.
     os.link(os.path.realpath(src), path)
