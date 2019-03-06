@@ -21,7 +21,7 @@ pub use self::on_signals::OnSignals;
 mod rwhandle;
 pub use self::rwhandle::RWHandle;
 mod socket;
-pub use self::socket::Socket;
+pub use self::socket::{Socket, SocketControl};
 mod timer;
 pub use self::timer::{Interval, OnTimeout, TimeoutExt, Timer};
 mod executor;
