@@ -307,7 +307,7 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
             goto fail;
         }
     }
-    zxlogf(INFO, "GPIO Interrupt index %d allocated\n", (int)index);
+    zxlogf(TRACE, "GPIO Interrupt index %d allocated\n", (int)index);
     aml_gpio_block_t* block;
     if ((status = aml_pin_to_block(gpio, pin, &block)) != ZX_OK) {
         zxlogf(ERROR, "aml_gpio_read: pin not found %u\n", pin);
