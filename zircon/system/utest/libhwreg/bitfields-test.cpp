@@ -380,6 +380,92 @@ static bool reg_field_test() {
     END_TEST;
 }
 
+static bool reg_unshifted_field_test() {
+    BEGIN_TEST;
+
+    class TestReg16 : public hwreg::RegisterBase<TestReg16, uint16_t> {
+    public:
+        DEF_UNSHIFTED_FIELD(15, 12, field1);
+        DEF_UNSHIFTED_FIELD(11, 8, field2);
+        DEF_UNSHIFTED_FIELD(7, 4, field3);
+        DEF_UNSHIFTED_FIELD(3, 0, field4);
+
+        static auto Get() { return hwreg::RegisterAddr<TestReg16>(0); }
+    };
+
+    class TestPciBar32 : public hwreg::RegisterBase<TestPciBar32, uint32_t> {
+    public:
+        DEF_UNSHIFTED_FIELD(31, 4, address);
+        DEF_BIT(3, is_prefetchable);
+        DEF_RSVDZ_BIT(2);
+        DEF_BIT(1, is_64bit);
+        DEF_BIT(0, is_io_space);
+
+        static auto Get() { return hwreg::RegisterAddr<TestPciBar32>(0); }
+    };
+
+    // Tests simple field isolation
+    {
+        volatile uint16_t fake_reg = 0xffff;
+        auto test_reg = TestReg16::Get().FromValue(fake_reg);
+        EXPECT_EQ(0xf000, test_reg.field1());
+        EXPECT_EQ(0x0f00, test_reg.field2());
+        EXPECT_EQ(0x00f0, test_reg.field3());
+        EXPECT_EQ(0x000f, test_reg.field4());
+    }
+
+    // Test assignment
+    {
+        volatile uint16_t fake_reg = 0x0000;
+        auto test_reg = TestReg16::Get().FromValue(fake_reg);
+        EXPECT_EQ(test_reg.field1(), 0u);
+        EXPECT_EQ(test_reg.field2(), 0u);
+        EXPECT_EQ(test_reg.field3(), 0u);
+        EXPECT_EQ(test_reg.field4(), 0u);
+
+        test_reg.set_field1(0xf000);
+        EXPECT_EQ(test_reg.field1(), 0xf000);
+        EXPECT_EQ(test_reg.field2(), 0u);
+        EXPECT_EQ(test_reg.field3(), 0u);
+        EXPECT_EQ(test_reg.field4(), 0u);
+
+        test_reg.set_field2(0xf00);
+        EXPECT_EQ(test_reg.field1(), 0xf000);
+        EXPECT_EQ(test_reg.field2(), 0xf00);
+        EXPECT_EQ(test_reg.field3(), 0u);
+        EXPECT_EQ(test_reg.field4(), 0u);
+
+        test_reg.set_field3(0xf0);
+        EXPECT_EQ(test_reg.field1(), 0xf000);
+        EXPECT_EQ(test_reg.field2(), 0xf00);
+        EXPECT_EQ(test_reg.field3(), 0xf0);
+        EXPECT_EQ(test_reg.field4(), 0u);
+
+        test_reg.set_field4(0xf);
+        EXPECT_EQ(test_reg.field1(), 0xf000);
+        EXPECT_EQ(test_reg.field2(), 0xf00);
+        EXPECT_EQ(test_reg.field3(), 0xf0);
+        EXPECT_EQ(test_reg.field4(), 0xf);
+    }
+
+    // Test Writing a Bar size to an address field ala PCI
+    {
+        volatile uint32_t fake_reg = 1 << 20; // A 1 MB size BARr
+        auto test_reg = TestPciBar32::Get().FromValue(fake_reg);
+
+        EXPECT_EQ(test_reg.address(), 1 << 20);
+        test_reg.set_is_prefetchable(1);
+        test_reg.set_is_64bit(1);
+        test_reg.set_is_io_space(1);
+        EXPECT_EQ(test_reg.address(), 1 << 20);
+        EXPECT_EQ(test_reg.is_prefetchable(), 1);
+        EXPECT_EQ(test_reg.is_64bit(), 1);
+        EXPECT_EQ(test_reg.is_io_space(), 1);
+    }
+
+    END_TEST;
+}
+
 static bool print_test() {
     BEGIN_TEST;
 
@@ -475,7 +561,7 @@ static bool set_chaining_test() {
 // Compile-time test that not enabling printing functions provides a size reduction
 static void printer_size_reduction() {
     class TestRegWithPrinter : public hwreg::RegisterBase<TestRegWithPrinter, uint64_t,
-                                      hwreg::EnablePrinter> {
+                                                          hwreg::EnablePrinter> {
     };
     class TestRegWithoutPrinter : public hwreg::RegisterBase<TestRegWithoutPrinter, uint64_t> {
     };
@@ -484,10 +570,10 @@ static void printer_size_reduction() {
 }
 
 #define RUN_TEST_FOR_UINTS(test) \
-        RUN_TEST(test<uint8_t>) \
-        RUN_TEST(test<uint16_t>) \
-        RUN_TEST(test<uint32_t>) \
-        RUN_TEST(test<uint64_t>)
+    RUN_TEST(test<uint8_t>)      \
+    RUN_TEST(test<uint16_t>)     \
+    RUN_TEST(test<uint32_t>)     \
+    RUN_TEST(test<uint64_t>)
 
 BEGIN_TEST_CASE(libhwreg_tests)
 RUN_TEST_FOR_UINTS(struct_sub_bit_test)
@@ -495,6 +581,7 @@ RUN_TEST_FOR_UINTS(struct_sub_field_test)
 RUN_TEST(reg_rsvdz_test)
 RUN_TEST(reg_rsvdz_full_test)
 RUN_TEST(reg_field_test)
+RUN_TEST(reg_unshifted_field_test)
 RUN_TEST(print_test)
 RUN_TEST(set_chaining_test)
 END_TEST_CASE(libhwreg_tests)

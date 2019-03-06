@@ -75,6 +75,11 @@
 // then that translates to:
 //   DEF_FIELD(23, 0, data_m_value)
 // To match up, we put the upper bit first and use an inclusive bit range.
+//
+// For fields whose value is relative to their position in the register you can
+// use DEF_UNSHIFTED_FIELD(high, low, name). This ensures that when you
+// read/write full values they will be applied to the field with the bits
+// overlapping other fields masked off, without shifting anything.
 
 namespace hwreg {
 
@@ -229,6 +234,12 @@ public:
           mask_(internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1)) {
     }
 
+    BitfieldRef(IntType* value_ptr, uint32_t bit_high_incl, uint32_t bit_low, bool unshifted)
+        : value_ptr_(value_ptr), shift_(0),
+          mask_(static_cast<IntType>(internal::ComputeMask<IntType>(bit_high_incl - bit_low + 1)
+                                     << bit_low)) {
+    }
+
     IntType get() const { return static_cast<IntType>((*value_ptr_ >> shift_) & mask_); }
 
     void set(IntType field_val) {
@@ -257,6 +268,20 @@ private:
     }                                                                                             \
     SelfType& set_ ## NAME(ValueType val) {                                                       \
         hwreg::BitfieldRef<ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)).set(val);           \
+        return *this;                                                                             \
+    }
+
+#define DEF_UNSHIFTED_FIELD(BIT_HIGH, BIT_LOW, NAME)                                              \
+    static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
+    static_assert((BIT_HIGH) < sizeof(ValueType) * CHAR_BIT, "Upper bit is out of range");        \
+    hwreg::internal::Field<SelfType> Field ## BIT_HIGH ## _ ## BIT_LOW =                          \
+        hwreg::internal::Field<SelfType>(this, #NAME, (BIT_HIGH), (BIT_LOW));                     \
+    ValueType NAME() const {                                                                      \
+        return hwreg::BitfieldRef<const ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW), true)  \
+                                                   .get();                                        \
+    }                                                                                             \
+    SelfType& set_ ## NAME(ValueType val) {                                                       \
+        hwreg::BitfieldRef<ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW), true).set(val);     \
         return *this;                                                                             \
     }
 
