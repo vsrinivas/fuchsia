@@ -322,7 +322,7 @@ using QcowGuestTypes = ::testing::Types<
                           fuchsia::guest::BlockFormat::QCOW>>;
 TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
-TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
+TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_BlockDeviceExists) {
   std::string args = fxl::StringPrintf("%lu %u check", kBlockSectorSize,
                                        kVirtioQcowBlockCount);
   std::string result;
@@ -330,7 +330,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
+TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_ReadMappedCluster) {
   for (off_t offset = 0; offset != kClusterSize / kBlockSectorSize;
        offset += kVirtioTestStep) {
     std::string args = fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
@@ -342,7 +342,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
   }
 }
 
-TYPED_TEST(QcowVirtioBlockGuestTest, ReadUnmappedCluster) {
+TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_ReadUnmappedCluster) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
@@ -355,7 +355,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, ReadUnmappedCluster) {
   }
 }
 
-TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
+TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_Write) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
