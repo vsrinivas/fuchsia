@@ -246,9 +246,12 @@ public:
         encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
         buffer_settings.Encode(&encoder, 0);
         std::vector<uint8_t> encoded_bytes = encoder.TakeBytes();
+        size_t real_size = encoded_bytes.size();
+        // Add an extra byte to ensure the size is correct.
+        encoded_bytes.push_back(0);
         magma_buffer_format_description_t description;
         ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_description(
-                                       encoded_bytes.data(), encoded_bytes.size(), &description));
+                                       encoded_bytes.data(), real_size, &description));
         magma_image_plane_t planes[4];
         EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_plane_info(description, planes));
 
@@ -259,10 +262,10 @@ public:
         magma_buffer_format_description_release(description);
         EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
                   magma_get_buffer_format_description(encoded_bytes.data(),
-                                                      encoded_bytes.size() + 1, &description));
+                                                      real_size + 1, &description));
         EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
                   magma_get_buffer_format_description(encoded_bytes.data(),
-                                                      encoded_bytes.size() - 1, &description));
+                                                      real_size - 1, &description));
     }
 
 private:
