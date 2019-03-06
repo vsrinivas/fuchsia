@@ -53,9 +53,6 @@
 #define MT8167_MSDC2_BASE                                   0x11170000
 #define MT8167_MSDC2_SIZE                                   0x22c
 
-#define MT8167_MSDC2_GPIO_BASE                              0x10005e40
-#define MT8167_MSDC2_GPIO_SIZE                              0x20
-
 #define MT8167_MFG_BASE                                     0x13000000
 #define MT8167_MFG_SIZE                                     0x80000
 
