@@ -6,56 +6,71 @@
 
 use {
     dhcp::protocol::{ConfigOption, Message, MessageType, OptionCode, CLIENT_PORT, SERVER_PORT},
-    failure::{Error, ResultExt},
+    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr,
     fuchsia_async::{net::UdpSocket, Executor},
-    std::net::SocketAddr,
+    fuchsia_syslog::{self as fx_log, fx_log_info},
+    std::net::{IpAddr, Ipv4Addr, SocketAddr},
 };
 
 const TEST_MAC: [u8; 6] = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+const TEST_XID: u32 = 42;
 
 fn main() -> Result<(), Error> {
-    println!("fake_client: starting...");
-    let mut exec = Executor::new().context("error creating executor")?;
-    let (sock, server) = build_and_bind_socket();
+    fx_log::init_with_tags(&["dhcpd_test_client"])?;
+    let mut exec = Executor::new().context("unable to create executor")?;
 
-    let disc = build_discover();
-    println!("Sending discover message: {:?}", disc);
-    let send_msgs = async move {
-        let serialized = disc.serialize();
-        await!(sock.send_to(&serialized, server))?;
-        let mut buf = vec![0u8; 1024];
-        let (bytes_recvd, _addr) = await!(sock.recv_from(&mut buf))?;
-        let offer = Message::from_buffer(&buf[0..bytes_recvd]).unwrap();
-        println!("fake_client: msg rcvd {:?}", offer);
-        let req = build_request(offer);
-        println!("fake_client: sending request msg {:?}", req);
-        let serialized = req.serialize();
-        await!(sock.send_to(&serialized, server))?;
-        let (bytes_recvd, _addr) = await!(sock.recv_from(&mut buf))?;
-        let ack = Message::from_buffer(&buf[0..bytes_recvd]).unwrap();
-        println!("fake_client: msg rcvd {:?}", ack);
-        Ok::<(), Error>(())
-    };
+    exec.run_singlethreaded(
+        async {
+            let sock = build_and_bind_socket().context("unable to create socket")?;
+            let dst = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), SERVER_PORT);
 
-    println!("fake_client: sending messages...");
-    exec.run_singlethreaded(send_msgs).context("could not run futures")?;
-    println!("fake_client: messages sent...");
+            // Send DHCP Discover.
+            let disc = build_discover();
+            fx_log_info!("preparing to send discover message: {:?}", disc);
+            let serialized = disc.serialize();
+            await!(sock.send_to(&serialized, dst))?;
+            fx_log_info!("discover message sent");
 
-    Ok(())
+            // Receive DHCP Offer.
+            let mut buf = vec![0u8; 1024];
+            let (bytes_recvd, _addr) = await!(sock.recv_from(&mut buf))?;
+            let offer = match Message::from_buffer(&buf[0..bytes_recvd]) {
+                Some(msg) => Ok(msg),
+                None => Err(format_err!("unable to parse offer")),
+            }?;
+            fx_log_info!("message received: {:?}", offer);
+
+            // Send DHCP Request.
+            let req = build_request(offer).context("unable to build request")?;
+            fx_log_info!("preparing to send request message: {:?}", req);
+            let serialized = req.serialize();
+            await!(sock.send_to(&serialized, dst))?;
+            fx_log_info!("request message sent");
+
+            // Receive DHCP Ack.
+            let (bytes_recvd, _addr) = await!(sock.recv_from(&mut buf))?;
+            let ack = match Message::from_buffer(&buf[0..bytes_recvd]) {
+                Some(msg) => Ok(msg),
+                None => Err(format_err!("unable to parse ack")),
+            }?;
+            fx_log_info!("message received: {:?}", ack);
+
+            Ok::<(), Error>(())
+        },
+    )
 }
 
-fn build_and_bind_socket() -> (UdpSocket, SocketAddr) {
-    let addr = SocketAddr::new("127.0.0.1".parse().unwrap(), CLIENT_PORT);
-    let server = SocketAddr::new("127.0.0.1".parse().unwrap(), SERVER_PORT);
-    let udp_socket = UdpSocket::bind(&addr).context("error binding socket").unwrap();
-    udp_socket.set_broadcast(true).context("unable to set broadcast").unwrap();
-    (udp_socket, server)
+fn build_and_bind_socket() -> Result<UdpSocket, Error> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), CLIENT_PORT);
+    let udp_socket = UdpSocket::bind(&addr).context("unable to bind socket")?;
+    udp_socket.set_broadcast(true).context("unable to set broadcast")?;
+    Ok(udp_socket)
 }
 
 fn build_discover() -> Message {
     let mut disc = Message::new();
-    disc.xid = 42;
+    disc.xid = TEST_XID;
     disc.chaddr = MacAddr { octets: TEST_MAC };
     disc.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
@@ -64,16 +79,20 @@ fn build_discover() -> Message {
     disc
 }
 
-fn build_request(offer: Message) -> Message {
+fn build_request(offer: Message) -> Result<Message, Error> {
     let mut req = Message::new();
-    req.xid = 42;
+    req.xid = TEST_XID;
     req.ciaddr = offer.yiaddr;
     req.chaddr = MacAddr { octets: TEST_MAC };
     req.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
         value: vec![MessageType::DHCPREQUEST.into()],
     });
-    let server_id = offer.get_config_option(OptionCode::ServerId).unwrap().clone();
-    req.options.push(server_id);
-    req
+    match offer.get_config_option(OptionCode::ServerId) {
+        Some(id) => {
+            req.options.push(id.clone());
+            Ok(req)
+        }
+        None => Err(failure::err_msg("unable to get server id")),
+    }
 }

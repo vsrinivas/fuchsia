@@ -12,6 +12,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/dhcp",
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//third_party/rust_crates:failure",
   ]
 }
