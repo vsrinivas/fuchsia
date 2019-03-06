@@ -32,6 +32,7 @@
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
+#include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
 
 #include "test-device.h"
@@ -136,7 +137,7 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
 bool TestDevice::Bind(Volume::Version version, bool fvm) {
     BEGIN_HELPER;
     ASSERT_TRUE(Create(kDeviceSize, kBlockSize, fvm));
-    ASSERT_OK(Volume::Create(parent(), key_));
+    ASSERT_OK(FdioVolume::Create(parent(), key_));
     ASSERT_TRUE(Connect());
     END_HELPER;
 }
@@ -259,8 +260,8 @@ bool TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
     ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
     ASSERT_OK(ToStatus(::read(fd.get(), block, block_size_)));
 
-    fbl::unique_ptr<Volume> volume;
-    ASSERT_OK(Volume::Unlock(parent(), key_, 0, &volume));
+    fbl::unique_ptr<FdioVolume> volume;
+    ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume));
 
     zx_off_t off;
     ASSERT_OK(volume->GetSlotOffset(slot, &off));
@@ -367,7 +368,7 @@ bool TestDevice::Connect() {
     BEGIN_HELPER;
     ZX_DEBUG_ASSERT(!zxcrypt_);
 
-    ASSERT_OK(Volume::Unlock(parent(), key_, 0, &volume_));
+    ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume_));
     ASSERT_OK(volume_->Open(kTimeout, &zxcrypt_));
 
     block_info_t blk;

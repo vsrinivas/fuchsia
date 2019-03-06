@@ -55,7 +55,7 @@ public:
 
     // The body of the |Init| thread.  This method uses the unsealed |volume| to start cryptographic
     // workers for normal operation.
-    zx_status_t Init(const Volume& volume) __TA_EXCLUDES(mtx_);
+    zx_status_t Init(const DdkVolume& volume) __TA_EXCLUDES(mtx_);
 
     // ddk::Device methods; see ddktl/device.h
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);

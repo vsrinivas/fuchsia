@@ -14,7 +14,7 @@
 #include <fbl/macros.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
-#include <zxcrypt/volume.h>
+#include <zxcrypt/ddk-volume.h>
 
 namespace zxcrypt {
 
@@ -41,7 +41,7 @@ struct DeviceInfo {
     // Base address of the VMAR backing the VMO.
     uint8_t* base;
 
-    DeviceInfo(zx_device_t* device, const Volume& volume);
+    DeviceInfo(zx_device_t* device, const DdkVolume& volume);
     DeviceInfo(DeviceInfo&& other);
     ~DeviceInfo();
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(DeviceInfo);

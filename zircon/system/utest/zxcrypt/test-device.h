@@ -20,6 +20,7 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+#include <zxcrypt/fdio-volume.h>
 
 #include "crypto/utils.h"
 
@@ -189,7 +190,7 @@ private:
     // File descriptor for the zxcrypt volume.
     fbl::unique_fd zxcrypt_;
     // The zxcrypt volume
-    fbl::unique_ptr<Volume> volume_;
+    fbl::unique_ptr<FdioVolume> volume_;
     // The cached block count.
     size_t block_count_;
     // The cached block size.

@@ -11,6 +11,7 @@
 #include <unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+#include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
 
 #include <utility>
@@ -45,7 +46,7 @@ bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Secret& key, bool fvm,
     }
 
     fbl::unique_fd new_fd(dup(fd.get()));
-    EXPECT_EQ(Volume::Create(std::move(new_fd), key), expected, err);
+    EXPECT_EQ(FdioVolume::Create(std::move(new_fd), key), expected, err);
 
     END_HELPER;
 }
@@ -58,12 +59,12 @@ bool TestInit(Volume::Version version, bool fvm) {
 
     // Invalid arguments
     fbl::unique_fd bad_fd;
-    fbl::unique_ptr<Volume> volume;
-    EXPECT_ZX(Volume::Init(std::move(bad_fd), &volume), ZX_ERR_INVALID_ARGS);
-    EXPECT_ZX(Volume::Init(device.parent(), nullptr), ZX_ERR_INVALID_ARGS);
+    fbl::unique_ptr<FdioVolume> volume;
+    EXPECT_ZX(FdioVolume::Init(std::move(bad_fd), &volume), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(FdioVolume::Init(device.parent(), nullptr), ZX_ERR_INVALID_ARGS);
 
     // Valid
-    EXPECT_ZX(Volume::Init(device.parent(), &volume), ZX_OK);
+    EXPECT_ZX(FdioVolume::Init(device.parent(), &volume), ZX_OK);
     ASSERT_TRUE(!!volume);
     EXPECT_EQ(volume->reserved_blocks(), fvm ? (FVM_BLOCK_SIZE / kBlockSize) : 2u);
     EXPECT_EQ(volume->reserved_slices(), fvm ? 1u : 0u);
@@ -80,7 +81,7 @@ bool TestCreate(Volume::Version version, bool fvm) {
 
     // Invalid file descriptor
     fbl::unique_fd bad_fd;
-    EXPECT_ZX(Volume::Create(std::move(bad_fd), device.key()), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(FdioVolume::Create(std::move(bad_fd), device.key()), ZX_ERR_INVALID_ARGS);
 
     // Weak key
     crypto::Secret short_key;
@@ -101,30 +102,30 @@ bool TestUnlock(Volume::Version version, bool fvm) {
     ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
 
     // Invalid device
-    fbl::unique_ptr<Volume> volume;
-    EXPECT_ZX(Volume::Unlock(device.parent(), device.key(), 0, &volume),
+    fbl::unique_ptr<FdioVolume> volume;
+    EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume),
               ZX_ERR_ACCESS_DENIED);
 
     // Bad file descriptor
     fbl::unique_fd bad_fd;
-    EXPECT_ZX(Volume::Unlock(std::move(bad_fd), device.key(), 0, &volume), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(FdioVolume::Unlock(std::move(bad_fd), device.key(), 0, &volume), ZX_ERR_INVALID_ARGS);
 
     // Bad key
     ASSERT_TRUE(VolumeCreate(device.parent(), device.key(), fvm, ZX_OK));
 
     crypto::Secret bad_key;
     ASSERT_OK(bad_key.Generate(device.key().len()));
-    EXPECT_ZX(Volume::Unlock(device.parent(), bad_key, 0, &volume),
+    EXPECT_ZX(FdioVolume::Unlock(device.parent(), bad_key, 0, &volume),
               ZX_ERR_ACCESS_DENIED);
 
     // Bad slot
-    EXPECT_ZX(Volume::Unlock(device.parent(), device.key(), -1, &volume),
+    EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.key(), -1, &volume),
               ZX_ERR_ACCESS_DENIED);
-    EXPECT_ZX(Volume::Unlock(device.parent(), device.key(), 1, &volume),
+    EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.key(), 1, &volume),
               ZX_ERR_ACCESS_DENIED);
 
     // Valid
-    EXPECT_OK(Volume::Unlock(device.parent(), device.key(), 0, &volume));
+    EXPECT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
 
     // Corrupt the key in each block.
     fbl::unique_fd parent = device.parent();
@@ -143,10 +144,10 @@ bool TestUnlock(Volume::Version version, bool fvm) {
 
         if (i < num_blocks - 1) {
             // Volume should still be unlockable as long as one copy of the key exists
-            EXPECT_OK(Volume::Unlock(device.parent(), device.key(), 0, &volume));
+            EXPECT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
         } else {
             // Key should fail when last copy is corrupted.
-            EXPECT_ZX(Volume::Unlock(device.parent(), device.key(), 0, &volume),
+            EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume),
                       ZX_ERR_ACCESS_DENIED);
         }
 
@@ -166,8 +167,8 @@ bool TestEnroll(Volume::Version version, bool fvm) {
     TestDevice device;
     ASSERT_TRUE(device.Bind(version, fvm));
 
-    fbl::unique_ptr<Volume> volume;
-    ASSERT_OK(Volume::Unlock(device.parent(), device.key(), 0, &volume));
+    fbl::unique_ptr<FdioVolume> volume;
+    ASSERT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
 
     // Bad key
     crypto::Secret bad_key;
@@ -178,11 +179,11 @@ bool TestEnroll(Volume::Version version, bool fvm) {
 
     // Valid; new slot
     EXPECT_OK(volume->Enroll(device.key(), 1));
-    EXPECT_OK(Volume::Unlock(device.parent(), device.key(), 1, &volume));
+    EXPECT_OK(FdioVolume::Unlock(device.parent(), device.key(), 1, &volume));
 
     // Valid; existing slot
     EXPECT_OK(volume->Enroll(device.key(), 0));
-    EXPECT_OK(Volume::Unlock(device.parent(), device.key(), 0, &volume));
+    EXPECT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
 
     END_TEST;
 }
@@ -194,8 +195,8 @@ bool TestRevoke(Volume::Version version, bool fvm) {
     TestDevice device;
     ASSERT_TRUE(device.Bind(version, fvm));
 
-    fbl::unique_ptr<Volume> volume;
-    ASSERT_OK(Volume::Unlock(device.parent(), device.key(), 0, &volume));
+    fbl::unique_ptr<FdioVolume> volume;
+    ASSERT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
 
     // Bad slot
     EXPECT_ZX(volume->Revoke(volume->num_slots()), ZX_ERR_INVALID_ARGS);
@@ -205,7 +206,7 @@ bool TestRevoke(Volume::Version version, bool fvm) {
 
     // Valid, even if last slot
     EXPECT_OK(volume->Revoke(0));
-    EXPECT_ZX(Volume::Unlock(device.parent(), device.key(), 0, &volume),
+    EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume),
               ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
@@ -218,8 +219,8 @@ bool TestShred(Volume::Version version, bool fvm) {
     TestDevice device;
     ASSERT_TRUE(device.Bind(version, fvm));
 
-    fbl::unique_ptr<Volume> volume;
-    ASSERT_OK(Volume::Unlock(device.parent(), device.key(), 0, &volume));
+    fbl::unique_ptr<FdioVolume> volume;
+    ASSERT_OK(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume));
 
     // Valid
     EXPECT_OK(volume->Shred());
@@ -227,7 +228,7 @@ bool TestShred(Volume::Version version, bool fvm) {
     // No further methods work
     EXPECT_ZX(volume->Enroll(device.key(), 0), ZX_ERR_BAD_STATE);
     EXPECT_ZX(volume->Revoke(0), ZX_ERR_BAD_STATE);
-    EXPECT_ZX(Volume::Unlock(device.parent(), device.key(), 0, &volume),
+    EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.key(), 0, &volume),
               ZX_ERR_ACCESS_DENIED);
 
     END_TEST;

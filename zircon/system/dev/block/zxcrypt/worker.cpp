@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+#include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>
 
 #include <utility>
@@ -46,7 +47,7 @@ void Worker::MakeRequest(zx_port_packet_t* packet, uint64_t op, void* arg) {
     packet->user.u64[1] = reinterpret_cast<uint64_t>(arg);
 }
 
-zx_status_t Worker::Start(Device* device, const Volume& volume, zx::port&& port) {
+zx_status_t Worker::Start(Device* device, const DdkVolume& volume, zx::port&& port) {
     LOG_ENTRY_ARGS("device=%p, volume=%p, port=%p", device, &volume, &port);
     zx_status_t rc;
 

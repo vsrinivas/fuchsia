@@ -11,12 +11,13 @@
 #include <fbl/macros.h>
 #include <lib/zx/vmar.h>
 #include <zircon/status.h>
+#include <zxcrypt/volume.h>
 
 #include "extra.h"
 
 namespace zxcrypt {
 
-DeviceInfo::DeviceInfo(zx_device_t* device, const Volume& volume)
+DeviceInfo::DeviceInfo(zx_device_t* device, const DdkVolume& volume)
     : block_protocol(device), partition_protocol(device), volume_protocol(device),
       block_device(device), block_size(0), op_size(0), reserved_blocks(volume.reserved_blocks()),
       reserved_slices(volume.reserved_slices()), base(nullptr) {

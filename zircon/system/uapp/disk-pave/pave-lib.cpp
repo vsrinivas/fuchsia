@@ -35,7 +35,7 @@
 #include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zxcrypt/volume.h>
+#include <zxcrypt/fdio-volume.h>
 
 #include <utility>
 
@@ -517,8 +517,8 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     }
     memset(tmp, 0, key.len());
 
-    fbl::unique_ptr<zxcrypt::Volume> volume;
-    if ((status = zxcrypt::Volume::Create(std::move(part->new_part), key, &volume)) != ZX_OK ||
+    fbl::unique_ptr<zxcrypt::FdioVolume> volume;
+    if ((status = zxcrypt::FdioVolume::Create(std::move(part->new_part), key, &volume)) != ZX_OK ||
         (status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;

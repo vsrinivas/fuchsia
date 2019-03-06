@@ -35,7 +35,7 @@ Device::~Device() {
     LOG_ENTRY();
 }
 
-zx_status_t Device::Init(const Volume& volume) {
+zx_status_t Device::Init(const DdkVolume& volume) {
     LOG_ENTRY();
     zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
