@@ -1,6 +1,7 @@
 {
     "packages": [
         "//garnet/bin/cmc:cmc_integration_test",
+        "//garnet/bin/rolldice:rolldice-tests",
         "//garnet/lib/rust/cm_fidl_translator:cm_fidl_translator_tests",
         "//garnet/lib/rust/cm_fidl_validator:cm_fidl_validator_tests",
         "//garnet/lib/rust/cm_json:cm_json_tests",
