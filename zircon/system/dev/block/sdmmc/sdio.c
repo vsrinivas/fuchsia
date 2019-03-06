@@ -783,7 +783,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
     dev->sdio_dev.hw_info.num_funcs = get_bits(ocr, SDIO_SEND_OP_COND_RESP_NUM_FUNC_MASK,
                                                SDIO_SEND_OP_COND_RESP_NUM_FUNC_LOC);
     uint16_t addr = 0;
-    if ((st = sd_send_relative_addr(dev, &addr)) != ZX_OK) {
+    if ((st = sd_send_relative_addr(dev, &addr, NULL)) != ZX_OK) {
         zxlogf(ERROR, "sdmcc_probe_sdio: SD_SEND_RELATIVE_ADDR failed, retcode = %d\n", st);
         return st;
     }

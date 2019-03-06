@@ -67,6 +67,36 @@ zx_status_t sdmmc_stop_transmission(sdmmc_device_t* dev) {
 
 // SD ops
 
+static zx_status_t sd_send_app_cmd(sdmmc_device_t* dev) {
+    sdmmc_req_t req = {
+        .cmd_idx = SDMMC_APP_CMD,
+        .arg = RCA_ARG(dev),
+        .cmd_flags = SDMMC_APP_CMD_FLAGS,
+        .use_dma = sdmmc_use_dma(dev),
+    };
+    return sdmmc_request(&dev->host, &req);
+}
+
+zx_status_t sd_send_op_cond(sdmmc_device_t* dev, uint32_t flags, uint32_t* ocr) {
+    zx_status_t st = sd_send_app_cmd(dev);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    sdmmc_req_t req = {
+        .cmd_idx = SD_APP_SEND_OP_COND,
+        .arg = flags,
+        .cmd_flags = SD_APP_SEND_OP_COND_FLAGS,
+        .use_dma = sdmmc_use_dma(dev),
+    };
+    if ((st = sdmmc_request(&dev->host, &req)) != ZX_OK) {
+        return st;
+    }
+
+    *ocr = req.response[0];
+    return ZX_OK;
+}
+
 zx_status_t sd_send_if_cond(sdmmc_device_t* dev) {
     // TODO what is this parameter?
     uint32_t arg = 0x1aa;
@@ -91,7 +121,7 @@ zx_status_t sd_send_if_cond(sdmmc_device_t* dev) {
     }
 }
 
-zx_status_t sd_send_relative_addr(sdmmc_device_t* dev, uint16_t *rca) {
+zx_status_t sd_send_relative_addr(sdmmc_device_t* dev, uint16_t* rca, uint16_t* card_status) {
     sdmmc_req_t req = {
         .cmd_idx = SD_SEND_RELATIVE_ADDR,
         .arg = 0,
@@ -108,7 +138,60 @@ zx_status_t sd_send_relative_addr(sdmmc_device_t* dev, uint16_t *rca) {
     if (rca != NULL) {
         *rca = (req.response[0]) >> 16;
     }
+    if (card_status != NULL) {
+        *card_status = req.response[0] & 0xffff;
+    }
+
     return st;
+}
+
+zx_status_t sd_select_card(sdmmc_device_t* dev) {
+    sdmmc_req_t req = {
+        .cmd_idx = SD_SELECT_CARD,
+        .arg = RCA_ARG(dev),
+        .cmd_flags = SD_SELECT_CARD_FLAGS,
+        .use_dma = sdmmc_use_dma(dev),
+    };
+    return sdmmc_request(&dev->host, &req);
+}
+
+zx_status_t sd_send_scr(sdmmc_device_t* dev, uint8_t scr[8]) {
+    zx_status_t st = sd_send_app_cmd(dev);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    sdmmc_req_t req = {
+        .cmd_idx = SD_APP_SEND_SCR,
+        .arg = 0,
+        .cmd_flags = SD_APP_SEND_SCR_FLAGS,
+        .blockcount = 1,
+        .blocksize = 8,
+        .use_dma = false,
+        .virt_buffer = scr,
+        .virt_size = 8,
+        .buf_offset = 0,
+    };
+    return sdmmc_request(&dev->host, &req);
+}
+
+zx_status_t sd_set_bus_width(sdmmc_device_t* dev, sdmmc_bus_width_t width) {
+    if (width != SDMMC_BUS_WIDTH_ONE && width != SDMMC_BUS_WIDTH_FOUR) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t st = sd_send_app_cmd(dev);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    sdmmc_req_t req = {
+        .cmd_idx = SD_APP_SET_BUS_WIDTH,
+        .arg = (width == SDMMC_BUS_WIDTH_FOUR ? 2 : 0),
+        .cmd_flags = SD_APP_SET_BUS_WIDTH_FLAGS,
+        .use_dma = sdmmc_use_dma(dev),
+    };
+    return sdmmc_request(&dev->host, &req);
 }
 
 zx_status_t sd_switch_uhs_voltage(sdmmc_device_t *dev, uint32_t ocr) {

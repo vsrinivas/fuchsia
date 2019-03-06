@@ -71,6 +71,9 @@ __BEGIN_CDECLS
 #define SD_VOLTAGE_SWITCH_FLAGS             SDMMC_RESP_R1
 #define SD_APP_SEND_SCR_FLAGS               SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
                                             SDMMC_CMD_READ
+#define SD_APP_SET_BUS_WIDTH_FLAGS          SDMMC_RESP_R1
+#define SD_APP_SEND_OP_COND_FLAGS           SDMMC_RESP_R3
+
 // MMC Commands
 #define MMC_SEND_OP_COND_FLAGS              SDMMC_RESP_R3
 #define MMC_SET_RELATIVE_ADDR_FLAGS         SDMMC_RESP_R1
@@ -102,6 +105,9 @@ __BEGIN_CDECLS
 #define SD_VOLTAGE_SWITCH             11
 #define SD_APP_SEND_SCR               51
 #define SD_SEND_TUNING_BLOCK          19
+
+#define SD_APP_SET_BUS_WIDTH          6
+#define SD_APP_SEND_OP_COND           41
 
 // MMC Commands
 #define MMC_SEND_OP_COND              1

@@ -103,11 +103,15 @@ zx_status_t sdmmc_stop_transmission(sdmmc_device_t* dev);
 
 // SD ops
 
+zx_status_t sd_send_op_cond(sdmmc_device_t* dev, uint32_t flags, uint32_t* ocr);
 zx_status_t sd_send_if_cond(sdmmc_device_t* dev);
+zx_status_t sd_select_card(sdmmc_device_t* dev);
+zx_status_t sd_send_scr(sdmmc_device_t* dev, uint8_t scr[8]);
+zx_status_t sd_set_bus_width(sdmmc_device_t* dev, sdmmc_bus_width_t width);
 
 // SD/SDIO shared ops
 zx_status_t sd_switch_uhs_voltage(sdmmc_device_t *dev, uint32_t ocr);
-zx_status_t sd_send_relative_addr(sdmmc_device_t* dev, uint16_t *rca);
+zx_status_t sd_send_relative_addr(sdmmc_device_t* dev, uint16_t* rca, uint16_t* card_status);
 
 // SDIO ops
 zx_status_t sdio_send_op_cond(sdmmc_device_t* dev, uint32_t ocr, uint32_t* rocr);
