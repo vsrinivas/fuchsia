@@ -38,6 +38,8 @@ sdk_source_set("cpp") {
     "pseudo_file.h",
     "service.cc",
     "service.h",
+    "vmo_file.cc",
+    "vmo_file.h",
   ]
 
   public_deps = [
@@ -56,6 +58,7 @@ test("vfs_cpp_unittests") {
     "pseudo_dir_unittest.cc",
     "pseudo_file_unittest.cc",
     "service_unittest.cc",
+    "vmo_file_unittest.cc",
   ]
 
   deps = [
