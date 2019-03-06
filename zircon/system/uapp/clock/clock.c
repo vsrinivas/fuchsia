@@ -6,6 +6,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <zircon/syscalls.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -19,11 +20,15 @@
 int usage(const char* cmd) {
     fprintf(
         stderr,
-        "Interact with the real-time clock:\n"
+        "Interact with the real-time or monotonic clocks:\n"
         "   %s                              Print the time\n"
         "   %s --help                       Print this message\n"
         "   %s --set YYYY-mm-ddThh:mm:ss    Set the time\n"
+        "   %s --monotonic                  Print nanoseconds since boot\n"
+        "   %s --uptime                     Print formatted uptime\n"
         "   optionally specify an RTC device with --dev PATH_TO_DEVICE_NODE\n",
+        cmd,
+        cmd,
         cmd,
         cmd,
         cmd);
@@ -118,14 +123,38 @@ int set_rtc(const char *path, const char* time) {
     return set_status;
 }
 
+void print_monotonic(void) {
+    printf("%lu\n", zx_clock_get_monotonic());
+}
+
+void print_uptime(void) {
+    int monotonic_seconds = zx_clock_get_monotonic() / 1000000000;
+    int days = monotonic_seconds / (3600 * 24);
+    char days_str[14] = {};
+
+    if (days) {
+            monotonic_seconds -= days * 3600 * 24;
+            snprintf(days_str, sizeof(days_str),
+                     "%d %s, ", days, days > 1 ? "days" : "day");
+    }
+
+    int hours = monotonic_seconds / 3600;
+    int minutes = monotonic_seconds / 60 % 60;
+    int seconds = monotonic_seconds % 60;
+
+    printf("up %s%02d:%02d:%02d\n", days_str, hours, minutes, seconds);
+}
+
 int main(int argc, char** argv) {
-    int err;
+    int err = 0;
     const char* cmd = basename(argv[0]);
     char *path = NULL;
     char *set = NULL;
     static const struct option opts[] = {
         {"set",  required_argument, NULL, 's'},
         {"dev",  required_argument, NULL, 'd'},
+        {"monotonic", no_argument, NULL, 'm'},
+        {"uptime", no_argument, NULL, 'u'},
         {"help", no_argument,       NULL, 'h'},
         {0},
     };
@@ -137,6 +166,12 @@ int main(int argc, char** argv) {
         case 'd':
             path = strdup(optarg);
             break;
+        case 'm':
+            print_monotonic();
+            goto done;
+        case 'u':
+            print_uptime();
+            goto done;
         case 'h':
             usage(cmd);
             err = 0;
