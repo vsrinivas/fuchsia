@@ -583,6 +583,19 @@ pub trait Serializer: Sized {
     fn encapsulate<B: PacketBuilder>(self, builder: B) -> EncapsulatingSerializer<B, Self> {
         EncapsulatingSerializer { builder, inner: self }
     }
+
+    /// Create a new `Serializer` which will enforce a maximum transmission unit
+    /// (MTU).
+    ///
+    /// `with_mtu` consumes this `Serializer` and an MTU, and produces a new
+    /// `Serializer` which will enforce the given MTU on all serialization
+    /// requests. Note that the given MTU will be enforced at this layer -
+    /// serialization requests will be rejected if the body produced by the
+    /// request at this layer would exceed the MTU. It has no effect on headers
+    /// or footers added by encapsulating layers outside of this one.
+    fn with_mtu(self, mtu: usize) -> MtuSerializer<Self> {
+        MtuSerializer { mtu, inner: self }
+    }
 }
 
 // TODO(joshlf): Once impl specialization is stable, make this a default impl,
@@ -954,6 +967,41 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSer
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
         Ok(Self::serialize_inner(buf, get_buf, c, body_and_padding, total_len))
+    }
+}
+
+/// A [`Serializer`] which adds a maximum transmission unit (MTU) constraint to
+/// an existing `Serializer`.
+///
+/// `MtuSerializer`s are produced by the [`Serializer::with_mtu`] method. See
+/// its documentation for more details.
+#[derive(Copy, Clone, Debug)]
+pub struct MtuSerializer<S: Serializer> {
+    mtu: usize,
+    inner: S,
+}
+
+impl<S: Serializer> Serializer for MtuSerializer<S> {
+    type Buffer = S::Buffer;
+    type Error = MtuError<S::InnerError>;
+    type InnerError = S::InnerError;
+
+    fn serialize_mtu(
+        self,
+        mtu: usize,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+        let self_mtu = self.mtu;
+        self.inner
+            .serialize_mtu(cmp::min(mtu, self_mtu), c)
+            .map_err(|(err, inner)| (err, MtuSerializer { mtu: self_mtu, inner }))
+    }
+
+    fn serialize(
+        self,
+        c: SerializeConstraints,
+    ) -> Result<Self::Buffer, (MtuError<S::InnerError>, Self)> {
+        self.serialize_mtu(std::usize::MAX, c)
     }
 }
 
