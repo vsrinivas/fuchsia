@@ -102,14 +102,14 @@ class ElfLib {
   // message internally. This method will retrieve those messages and clear
   // them from the internal list.
   std::vector<std::string> GetAndClearWarnings() {
-    auto ret = warnings_;
+    auto ret = std::move(warnings_);
     warnings_.clear();
     return ret;
   }
 
  private:
   // Add a warning to this instance. See GetAndClearWarnings.
-  void Warn(const std::string&& m) { warnings_.emplace_back(m); }
+  void Warn(const std::string&& m) { warnings_.push_back(m); }
 
   // Location of a section specified by data gleaned from the dynamic segment.
   struct DynamicSection {
