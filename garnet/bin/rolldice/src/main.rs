@@ -48,7 +48,7 @@ fn main() {
     }
 
     // Format and display them in rows no larger than dice_per_row.
-    for group in rolls.as_slice().chunks(config.dice_per_row as usize) {
+    for group in rolls.chunks(config.dice_per_row as usize) {
         print_row(group);
     }
 }
