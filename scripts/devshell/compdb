@@ -24,7 +24,7 @@ main () {
     fx-config-read
 
     cd ${FUCHSIA_DIR}/zircon
-    "${FUCHSIA_DIR}/buildtools/gn" gen "${ZIRCON_BUILD_DIR}" --export-compile-commands
+    "${FUCHSIA_DIR}/buildtools/gn" gen "${ZIRCON_BUILDROOT}" --export-compile-commands
     cd ..
 
     "${FUCHSIA_DIR}/buildtools/gn" gen "${FUCHSIA_BUILD_DIR}" --export-compile-commands
@@ -32,7 +32,7 @@ main () {
     #concatenate the two files together by making a tmp file and then removing it when done
 
     rm -f "${FUCHSIA_DIR}/compile_commands.json"
-    ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${ZIRCON_BUILD_DIR}/compile_commands.json \
+    ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${ZIRCON_BUILDROOT}/compile_commands.json \
     ${FUCHSIA_BUILD_DIR}/compile_commands.json > ${FUCHSIA_DIR}/compile_commands.json
 }
 
