@@ -1,7 +1,7 @@
 {
   "packages": [
-    "//garnet/drivers/telephony/qmi-fake-transport",
-    "//garnet/drivers/telephony/qmi-usb-transport",
+    "//src/connectivity/telephony/drivers/qmi-fake-transport",
+    "//src/connectivity/telephony/drivers/qmi-usb-transport",
     "//src/connectivity/telephony/modem-mgr",
     "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/ril-qmi:ril-qmi-tests",

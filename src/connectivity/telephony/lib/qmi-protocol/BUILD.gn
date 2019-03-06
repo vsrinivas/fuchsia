@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 
 # Generate the rust sources using the gen.
 compiled_action("gen_qmi_protocol_source") {
-  tool = "//garnet/lib/telephony/qmi-protocol:qmigen"
+  tool = "//src/connectivity/telephony/lib/qmi-protocol:qmigen"
   output = "$target_gen_dir/qmi-protocol.rs"
   sources = [
     "protocol/common.json",
