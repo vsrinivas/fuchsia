@@ -25,6 +25,8 @@ class BuildIDIndex {
   // Lists symbol sources and the number of ELF files indexed at that location.
   using StatusList = std::vector<std::pair<std::string, int>>;
 
+  static constexpr int kStatusIsFolder = -1;
+
   BuildIDIndex();
   ~BuildIDIndex();
 

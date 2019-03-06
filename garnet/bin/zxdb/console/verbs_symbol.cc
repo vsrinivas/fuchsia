@@ -473,7 +473,13 @@ void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
     for (const auto& pair : index_status) {
       auto& row = table.emplace_back();
       auto syntax = pair.second ? Syntax::kNormal : Syntax::kError;
-      row.emplace_back(syntax, fxl::StringPrintf("%d", pair.second));
+
+      if (pair.second != BuildIDIndex::kStatusIsFolder) {
+        row.emplace_back(syntax, fxl::StringPrintf("%d", pair.second));
+      } else {
+        row.emplace_back(syntax, "(folder)");
+      }
+
       row.emplace_back(syntax, pair.first);
     }
     FormatTable({ColSpec(Align::kRight, 0, "Indexed", 2),

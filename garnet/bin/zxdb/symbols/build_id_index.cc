@@ -97,7 +97,7 @@ void BuildIDIndex::AddSymbolSource(const std::string& path) {
 
 void BuildIDIndex::AddRepoSymbolSource(const std::string& path) {
   repo_sources_.emplace_back(path);
-  // No cache clear since Repo sources bypass the cache.
+  EnsureCacheClean();
 }
 
 BuildIDIndex::StatusList BuildIDIndex::GetStatus() {
@@ -252,6 +252,9 @@ void BuildIDIndex::EnsureCacheClean() {
 
   for (const auto& mapping : manual_mappings_)
     build_id_to_file_.insert(mapping);
+
+  for (const auto& path : repo_sources_)
+    status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
 
   cache_dirty_ = false;
 }
