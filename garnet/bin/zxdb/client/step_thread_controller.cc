@@ -149,8 +149,6 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
     LineDetails line_details = process_symbols->LineDetailsForAddress(ip);
 
-    // TODO(brettw) move this "stepping in no symbols" block to a separate
-    // helper routine.
     if (!line_details.is_valid()) {
       // Stepping by line but we ended up in a place where there's no line
       // information.
@@ -158,62 +156,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
         Log("Stopping because there are no symbols.");
         return kStopDone;
       }
-
-      Log("Stepped into code with no symbols.");
-      if (process_symbols->HaveSymbolsLoadedForModuleAt(ip)) {
-        // We ended up in code with no symbols inside a module where we expect
-        // to have symbols. The common cause of this is a shared library thunk:
-        // When there is an imported symbol, all code in a module will jump to
-        // some generated code (no symbols) that in turn does an indirect jump
-        // to the destination. The destination of the indirect jump is what's
-        // filled in by the dynamic loader when imports are resolved.
-        //
-        // LLDB indexes ELF imports in the symbol database (type
-        // eSymbolTypeTrampoline) and can then compare to see if the current
-        // code is a trampoline. See
-        // DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan.
-        //
-        // We should do something similar which will be less prone to errors.
-        // GDB does something similar but also checks that the instruction is
-        // the right type of jump. This involves two memory lookups which make
-        // it difficult for us to implement since they require async calls.
-        // We might be able to just check that the address is inside the
-        // procedure linkage table (see below).
-        //
-        // ELF imports
-        // -----------
-        // ELF imports go through the "procedure linkage table" (see the ELF
-        // spec) which allows lazy resolution. These trampolines have a default
-        // jump address is to the next instruction which then pushes the item
-        // index on the stack and does a dance to jump to the dynamic linker to
-        // resolve this import. Once resolved, the first jump takes the code
-        // directly to the destination.
-        //
-        // Our loader seems to resolve these up-front. In the future we might
-        // need to add logic to step over the dynamic loader when its resolving
-        // the import.
-        Log("In function with no symbols, single-stepping.");
-        current_ranges_ = AddressRanges();  // No range: step by instruction.
-        return kContinue;
-      } else if (FrameFingerprint::Newer(
-                     *thread()->GetStack().GetFrameFingerprint(0),
-                     original_frame_fingerprint_)) {
-        // Called a new stack frame that has no symbols. We need to "finish" to
-        // step over the unsymbolized code to automatically step over the
-        // unsymbolized code.
-        Log("Called unsymbolized function, stepping out.");
-        FXL_DCHECK(original_frame_fingerprint_.is_valid());
-        finish_unsymolized_function_ =
-            std::make_unique<FinishThreadController>(stack, 0);
-        finish_unsymolized_function_->InitWithThread(thread(),
-                                                     [](const Err&) {});
-        return kContinue;
-      } else {
-        // Here we jumped (not called, we checked the frames above) to some
-        // unsymbolized code. Don't know what this is so stop.
-        Log("Jumped to unsymbolized code, giving up and stopping.");
-        return kStopDone;
-      }
+      return OnThreadStopOnUnsymbolizedCode();
     }
 
     // When stepping by source line the current_ranges_ will be the entry for
@@ -324,6 +267,70 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
         FrameFunctionNameForLog(stack[0]).c_str(), new_hide_count);
   }
   return true;
+}
+
+ThreadController::StopOp
+StepThreadController::OnThreadStopOnUnsymbolizedCode() {
+  Log("Stepped into code with no symbols.");
+
+  const Stack& stack = thread()->GetStack();
+  const Frame* top_frame = stack[0];
+
+  ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
+  if (process_symbols->HaveSymbolsLoadedForModuleAt(top_frame->GetAddress())) {
+    // We ended up in code with no symbols inside a module where we expect
+    // to have symbols. The common cause of this is a shared library thunk:
+    // When there is an imported symbol, all code in a module will jump to
+    // some generated code (no symbols) that in turn does an indirect jump
+    // to the destination. The destination of the indirect jump is what's
+    // filled in by the dynamic loader when imports are resolved.
+    //
+    // LLDB indexes ELF imports in the symbol database (type
+    // eSymbolTypeTrampoline) and can then compare to see if the current
+    // code is a trampoline. See
+    // DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan.
+    //
+    // We should do something similar which will be less prone to errors.
+    // GDB does something similar but also checks that the instruction is
+    // the right type of jump. This involves two memory lookups which make
+    // it difficult for us to implement since they require async calls.
+    // We might be able to just check that the address is inside the
+    // procedure linkage table (see below).
+    //
+    // ELF imports
+    // -----------
+    // ELF imports go through the "procedure linkage table" (see the ELF
+    // spec) which allows lazy resolution. These trampolines have a default
+    // jump address is to the next instruction which then pushes the item
+    // index on the stack and does a dance to jump to the dynamic linker to
+    // resolve this import. Once resolved, the first jump takes the code
+    // directly to the destination.
+    //
+    // Our loader seems to resolve these up-front. In the future we might
+    // need to add logic to step over the dynamic loader when its resolving
+    // the import.
+    Log("In function with no symbols, single-stepping.");
+    current_ranges_ = AddressRanges();  // No range: step by instruction.
+    return kContinue;
+  }
+
+  if (FrameFingerprint::Newer(*thread()->GetStack().GetFrameFingerprint(0),
+                              original_frame_fingerprint_)) {
+    // Called a new stack frame that has no symbols. We need to "finish" to
+    // step over the unsymbolized code to automatically step over the
+    // unsymbolized code.
+    Log("Called unsymbolized function, stepping out.");
+    FXL_DCHECK(original_frame_fingerprint_.is_valid());
+    finish_unsymolized_function_ =
+        std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
+    finish_unsymolized_function_->InitWithThread(thread(), [](const Err&) {});
+    return kContinue;
+  }
+
+  // Here we jumped (not called, we checked the frames above) to some
+  // unsymbolized code. Don't know what this is so stop.
+  Log("Jumped to unsymbolized code, giving up and stopping.");
+  return kStopDone;
 }
 
 }  // namespace zxdb

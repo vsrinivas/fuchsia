@@ -73,6 +73,10 @@ class StepThreadController : public ThreadController {
   // means there was not an inline function starting at the current address.
   bool TrySteppingIntoInline(StepIntoInline command);
 
+  // Version of OnThreadStop that handles the case where the current code has
+  // no line information.
+  StopOp OnThreadStopOnUnsymbolizedCode();
+
   StepMode step_mode_;
 
   // When construction_mode_ == kSourceLine, this represents the line
