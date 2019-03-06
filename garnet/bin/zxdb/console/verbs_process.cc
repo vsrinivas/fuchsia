@@ -161,7 +161,9 @@ void LaunchComponent(const Command& cmd) {
   request.argv = cmd.args();
 
   auto launch_cb = [](const Err& err, debug_ipc::LaunchReply reply) {
-    FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent);
+    FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
+        << "Expected Component, Got: "
+        << debug_ipc::InferiorTypeToString(reply.inferior_type);
     if (err.has_error()) {
       Console::get()->Output(err);
       return;

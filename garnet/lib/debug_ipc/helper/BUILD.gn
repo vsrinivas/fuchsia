@@ -10,6 +10,8 @@ static_library("helper") {
     "arch_x86.h",
     "buffered_fd.cc",
     "buffered_fd.h",
+    "component_utils.cc",
+    "component_utils.h",
     "elf.cc",
     "elf.h",
     "message_loop.cc",
@@ -47,22 +49,25 @@ static_library("helper") {
       "buffered_zx_socket.h",
       "event_handlers.cc",
       "event_handlers.h",
+
       # Implementation of message loop using async-loop.
       "message_loop_async.cc",
       "message_loop_async.h",
+
       # New interface to abstract message loop from the debug agent.
       "message_loop_target.cc",
       "message_loop_target.h",
+
       # Original message loop (previously MessageLoopZircon).
       "message_loop_zircon.cc",
       "message_loop_zircon.h",
     ]
 
     public_deps += [
-      "//zircon/public/lib/fdio",
-      "//zircon/public/lib/zx",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
     ]
   }
 }
@@ -105,6 +110,7 @@ if (current_toolchain == host_toolchain) {
 source_set("tests") {
   testonly = true
   sources = [
+    "component_utils_unittest.cc",
     "elf_unittest.cc",
     "message_loop_unittest.cc",
     "regex_unittest.cc",

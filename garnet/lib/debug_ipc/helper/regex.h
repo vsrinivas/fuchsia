@@ -25,7 +25,6 @@ class Regex {
 
   Regex();
   ~Regex();
-
   FXL_DISALLOW_COPY_AND_ASSIGN(Regex);
 
   // We need to define moving because optional doesn't clears the value on move,
@@ -33,11 +32,11 @@ class Regex {
   Regex(Regex&&);
   Regex& operator=(Regex&&);
 
+  bool valid() const { return handle_.has_value(); }
+
   bool Init(const std::string& regexp,
             CompareType = CompareType::kCaseInsensitive);
   bool Match(const std::string&) const;
-
-  bool valid() const { return handle_.has_value(); }
 
  private:
   // Optional so we can mark when a regex is not compiled.

@@ -11,7 +11,7 @@ namespace debug_ipc {
 TEST(Regex, CaseInsensitive) {
   Regex regex;
   // Inser
-  EXPECT_TRUE(regex.Init("test"));
+  ASSERT_TRUE(regex.Init("test"));
 
   // Init again should fail.
   EXPECT_FALSE(regex.Init("test"));
@@ -23,7 +23,7 @@ TEST(Regex, CaseInsensitive) {
 
 TEST(Regex, CaseSensitive) {
   Regex regex;
-  EXPECT_TRUE(regex.Init("TEST.*test", Regex::CompareType::kCaseSensitive));
+  ASSERT_TRUE(regex.Init("TEST.*test", Regex::CompareType::kCaseSensitive));
 
   // Init again should fail.
   EXPECT_FALSE(regex.Init("test"));

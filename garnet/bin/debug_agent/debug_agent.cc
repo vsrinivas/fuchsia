@@ -21,6 +21,7 @@
 #include "garnet/bin/debug_agent/system_info.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/debug/block_timer.h"
+#include "garnet/lib/debug_ipc/debug/logging.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -530,10 +531,9 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
 
 void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
                                  debug_ipc::LaunchReply* reply) {
-  // TODO(DX-953): This assumes a lot. Eventually we would like a way for the
-  //               agent to recognize available components and match the correct
-  //               one.
   const auto& pkg_url = request.argv.front();
+
+  DEBUG_LOG() << "Running url \"" << pkg_url << "\" as component.";
 
   *reply = {};
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
@@ -558,12 +558,6 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   fuchsia::sys::LauncherSyncPtr launcher;
   services_->Connect(launcher.NewRequest());
 
-  // TODO(DX-952): The debug agent currently don't have support on the message
-  //               loop to receive fidl messages. When MessageLoopZircon has
-  //               been implemented in terms of this, we can remove this
-  //               stupid ephemeral message loop.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-
   // Controller is a way to manage the newly created component. We need it in
   // order to receive the terminated events. Sadly, there is no component
   // started event. This also makes us need an async::Loop so that the fidl
@@ -571,21 +565,14 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   fuchsia::sys::ComponentControllerPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
-  bool launched = true;
   controller.events().OnTerminated =
-      [this, &pkg_url, &launched, &loop](
+      [this, &pkg_url](
           int64_t return_code, fuchsia::sys::TerminationReason reason) {
         if (reason != fuchsia::sys::TerminationReason::EXITED) {
           FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
                            << sys::HumanReadableTerminationReason(reason);
-          launched = false;
         }
-        loop.Quit();
       };
-
-  // TODO(DX-952): This is very brittle. This will go away when the message loop
-  //               is implemented in terms of an async loop.
-  loop.Run(zx::deadline_after(zx::msec(500)), true);
 
   // Detaching means that we're no longer controlling the component. This is
   // needed because otherwise the component is removed once the controller is
@@ -596,13 +583,9 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   //                provided by the fidl interface. But this requires to put
   //                it in debug_ipc/helper so that the client can interpret
   //                it and this CL is big enough already.
+  //                For now, we just reply OK.
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
   reply->process_name = pkg_url;
-  if (launched) {
-    reply->status = 0;
-  } else {
-    reply->status = ZX_ERR_NOT_FOUND;
-  }
 }
 
 }  // namespace debug_agent
