@@ -23,6 +23,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const netstackTimeout time.Duration = 1 * time.Minute
+
 // RunCommand is a Command implementation for booting a device and running a
 // given command locally.
 type RunCommand struct {
@@ -131,10 +133,16 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		return err
 	}
 
+	ip, err := botanist.ResolveIPv4(ctx, nodename, netstackTimeout)
+	if err != nil {
+		return fmt.Errorf("could not resolve IP address: %v", err)
+	}
+
 	env := append(
 		os.Environ(),
 		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
-		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", string(privKeys[0])),
+		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%s", ip),
+		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKeys[0]),
 	)
 
 	// Run command.

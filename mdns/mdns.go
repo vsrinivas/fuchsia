@@ -19,6 +19,9 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
+// DefaultPort is the mDNS port required of the spec, though this library is port-agnostic.
+const DefaultPort int = 5353
+
 type Header struct {
 	ID      uint16
 	Flags   uint16
