@@ -145,6 +145,45 @@ bool StreamSetsRequest::HasFlag(StreamSetsRequestFlags flag) const {
   return (flags & flag) != 0;
 }
 
+std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
+  out << "StreamSetsRequest {" << std::endl;
+  out << "  request_id: " << request.request_id << std::endl;
+  out << "  start_time_ns: " << request.start_time_ns << std::endl;
+  out << "  end_time_ns: " << request.end_time_ns << std::endl;
+  out << "  sample_count: " << request.sample_count << std::endl;
+  out << "  min: " << request.min << std::endl;
+  out << "  max: " << request.max << std::endl;
+  out << "  reserved: " << request.reserved << std::endl;
+  out << "  render_style: " << request.render_style << std::endl;
+  out << "  flags: " << request.flags << std::endl;
+  out << "  stream_ids: {";
+  for (auto iter = request.stream_ids.begin(); iter != request.stream_ids.end();
+       ++iter) {
+    out << " " << *iter;
+  }
+  out << " }" << std::endl;
+  out << "}" << std::endl;
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out,
+                         const StreamSetsResponse& response) {
+  out << "StreamSetsResponse {" << std::endl;
+  out << "  request_id: " << response.request_id << std::endl;
+  out << "  lowest_value: " << response.lowest_value << std::endl;
+  out << "  highest_value: " << response.highest_value << std::endl;
+  for (auto list = response.data_sets.begin(); list != response.data_sets.end();
+       ++list) {
+    out << "  data_set: {";
+    for (auto data = list->begin(); data != list->end(); ++data) {
+      out << " " << *data;
+    }
+    out << " }" << std::endl;
+  }
+  out << "}" << std::endl;
+  return out;
+}
+
 Dockyard::Dockyard()
     : server_thread_(nullptr),
       stream_name_handler_(nullptr),

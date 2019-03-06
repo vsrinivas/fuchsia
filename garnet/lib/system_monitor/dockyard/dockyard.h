@@ -6,6 +6,7 @@
 #define GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_H_
 
 #include <stdint.h>
+#include <iostream>
 #include <map>
 #include <mutex>
 #include <string>
@@ -130,6 +131,9 @@ struct StreamSetsRequest {
   std::vector<SampleStreamId> stream_ids;
 
   bool HasFlag(StreamSetsRequestFlags flag) const;
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const StreamSetsRequest& request);
 };
 
 struct StreamSetsResponse {
@@ -149,6 +153,9 @@ struct StreamSetsResponse {
   // value NO_DATA is used. If the StreamSetsRequest::stream_id was not found,
   // the resulting sample will have the value NO_STREAM.
   std::vector<std::vector<SampleValue>> data_sets;
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const StreamSetsResponse& response);
 };
 
 // Lookup for a sample stream name string, given the sample stream ID.
