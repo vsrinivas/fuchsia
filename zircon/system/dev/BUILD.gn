@@ -28,6 +28,7 @@ group("dev") {
     "mlg",
     "nand",
     "pci",
+    "power",
     "rtc",
     "sample",
     "scpi",
