@@ -508,6 +508,8 @@ impl_codable_for_fixed_array!( 0,  1,  2,  3,  4,  5,  6,  7,
                               16, 17, 18, 19, 20, 21, 22, 23,
                               24, 25, 26, 27, 28, 29, 30, 31,
                               32,);
+// HAck for FIDL library fuchsia.sysmem
+impl_codable_for_fixed_array!(64,);
 // Hack for FIDL library fuchsia.net
 impl_codable_for_fixed_array!(256,);
 
