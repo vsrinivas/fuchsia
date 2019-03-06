@@ -125,6 +125,12 @@ if (current_toolchain == default_toolchain) {
       "-fno-unwind-tables",
     ]
 
+    cflags_cc = [
+      # Underlying kernel heap only has default alignment of 8 bytes, so pass
+      # this to the compiler as the default new alignment.
+      "-faligned-new=8",
+    ]
+
     if (current_cpu == "x64") {
       # This only matters in an environment where interrupt handlers might
       # push trap frames in the same privilege level, like the kernel.
@@ -179,14 +185,10 @@ if (current_toolchain == default_toolchain) {
     visibility = [ ":*" ]
     defines = []
     if (enable_fair_scheduler) {
-      defines += [
-        "WITH_FAIR_SCHEDULER=1",
-      ]
+      defines += [ "WITH_FAIR_SCHEDULER=1" ]
     }
     if (detailed_scheduler_tracing) {
-      defines += [
-        "WITH_DETAILED_SCHEDULER_TRACING=1",
-      ]
+      defines += [ "WITH_DETAILED_SCHEDULER_TRACING=1" ]
     }
   }
 

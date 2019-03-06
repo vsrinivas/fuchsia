@@ -87,6 +87,8 @@ void* operator new[](size_t s, std::align_val_t align, const std::nothrow_t&) no
 }
 #else  // _KERNEL
 
+static_assert(HEAP_DEFAULT_ALIGNMENT >= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+
 // kernel versions may pass through the call site to the underlying allocator
 void* operator new(size_t s, void* caller, const std::nothrow_t&) noexcept {
     if (s == 0u) {
