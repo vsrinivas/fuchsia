@@ -111,11 +111,6 @@ shell_commands("shell-commands") {
   deps = available_packages
   deps += ["//build/images:shell-commands"]
   deps -= ["//build/images:shell-commands"]
-  # Kludge: The guest depends on shell-commands, but shell-commands is an
-  # aggregator that also depends on all targets, so we must explicitly exclude
-  # it here.
-  deps += ["//garnet/bin/guest/pkg/zircon_guest:zircon_guest"]
-  deps -= ["//garnet/bin/guest/pkg/zircon_guest:zircon_guest"]
 }
 
 ###
