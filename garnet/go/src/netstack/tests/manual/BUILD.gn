@@ -100,20 +100,6 @@ executable("udptest") {
   ]
 }
 
-executable("connect_twice_test") {
-  testonly = true
-
-  sources = [
-    "connect_twice_test.c",
-  ]
-
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
-
-  libs = [ "zircon" ]
-}
-
 executable("closetest") {
   testonly = true
 

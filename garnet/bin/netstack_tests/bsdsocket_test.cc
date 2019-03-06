@@ -44,6 +44,52 @@ TEST(LocalhostTest, Accept) {
   ASSERT_GT(connaddrlen, sizeof(connaddr));
 }
 
+TEST(NetStreamTest, ConnectTwice) {
+  int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(server_fd, 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  ASSERT_EQ(bind(server_fd, reinterpret_cast<const struct sockaddr*>(&addr),
+                 sizeof(addr)),
+            0)
+      << strerror(errno);
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(server_fd, reinterpret_cast<struct sockaddr*>(&addr),
+                        &addrlen),
+            0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+  ASSERT_EQ(listen(server_fd, 1), 0) << strerror(errno);
+
+  int client_fd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(client_fd, 0);
+
+  addr.sin_port++;
+
+  ASSERT_EQ(connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr),
+                    sizeof(addr)),
+            -1);
+  ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+
+  addr.sin_port--;
+
+  // TODO(tamird): decide if we want to match Linux's behaviour.
+  ASSERT_EQ(connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr),
+                    sizeof(addr)),
+#if defined(__linux__)
+            0)
+      << strerror(errno);
+#else
+            -1);
+  ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+#endif
+
+  ASSERT_EQ(close(server_fd), 0) << strerror(errno);
+  ASSERT_EQ(close(client_fd), 0) << strerror(errno);
+}
+
 TEST(LocalhostTest, GetAddrInfo) {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(struct addrinfo));
