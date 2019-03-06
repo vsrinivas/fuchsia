@@ -270,6 +270,57 @@ TEST_F(ExprParserTest, Identifiers) {
   */
 }
 
+TEST_F(ExprParserTest, FunctionCall) {
+  // Simple call with no args.
+  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n",
+            GetParseString("Call()"));
+
+  // Scoped call with namespaces and templates.
+  EXPECT_EQ(R"(FUNCTIONCALL("ns"; ::,"Foo",<"int">; ::,"GetCurrent"))"
+            "\n",
+            GetParseString("ns::Foo<int>::GetCurrent()"));
+
+  // One arg.
+  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n"
+            " LITERAL(42)\n",
+            GetParseString("Call(42)"));
+
+  // Several complex args and a nested call.
+  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n"
+            " IDENTIFIER(\"a\")\n"
+            " BINARY_OP(=)\n"
+            "  IDENTIFIER(\"b\")\n"
+            "  LITERAL(5)\n"
+            " FUNCTIONCALL(\"OtherCall\")\n",
+            GetParseString("Call(a, b = 5, OtherCall())"));
+
+  // Unmatched "(" error.
+  auto result = Parse("Call(a, ");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected ')' to match. Hit the end of input instead.",
+            parser().err().msg());
+
+  // Arguments not separated by commas.
+  result = Parse("Call(a b)");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected ',' separating expressions.", parser().err().msg());
+
+  // Empty parameter
+  result = Parse("Call(a, , b)");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected token ','.", parser().err().msg());
+
+  // Trailing comma.
+  result = Parse("Call(a,)");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected token ')'.", parser().err().msg());
+
+  // Thing on the left is not an identifier.
+  result = Parse("5()");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected '('.", parser().err().msg());
+}
+
 TEST_F(ExprParserTest, Templates) {
   EXPECT_EQ(R"(IDENTIFIER("foo",<>))"
             "\n",
@@ -303,6 +354,16 @@ TEST_F(ExprParserTest, Templates) {
   result = Parse("Foo<Bar><Baz>");
   ASSERT_FALSE(result);
   EXPECT_EQ("Duplicate template specification.", parser().err().msg());
+
+  // Empty value.
+  result = Parse("Foo<1,,2>");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected template parameter.", parser().err().msg());
+
+  // Trailing comma.
+  result = Parse("Foo<Bar,>");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected template parameter.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, BinaryOp) {

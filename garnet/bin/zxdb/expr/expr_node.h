@@ -22,6 +22,7 @@ class BinaryOpExprNode;
 class DereferenceExprNode;
 class Err;
 class ExprEvalContext;
+class FunctionCallExprNode;
 class IdentifierExprNode;
 class LiteralExprNode;
 class MemberAccessExprNode;
@@ -39,6 +40,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
+  virtual const FunctionCallExprNode* AsFunctionCall() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const LiteralExprNode* AsLiteral() const { return nullptr; }
   virtual const MemberAccessExprNode* AsMemberAccess() const { return nullptr; }
@@ -179,6 +181,30 @@ class DereferenceExprNode : public ExprNode {
   fxl::RefPtr<ExprNode> expr_;
 };
 
+// Function calls include things like: "Foo()", "ns::Foo<int>(6, 5)".
+class FunctionCallExprNode : public ExprNode {
+ public:
+  const FunctionCallExprNode* AsFunctionCall() const override { return this; }
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+  const Identifier& name() const { return name_; }
+  const std::vector<fxl::RefPtr<ExprNode>>& args() const { return args_; }
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(FunctionCallExprNode);
+  FRIEND_MAKE_REF_COUNTED(FunctionCallExprNode);
+
+  FunctionCallExprNode();
+  FunctionCallExprNode(Identifier name, std::vector<fxl::RefPtr<ExprNode>> args)
+      : name_(std::move(name)), args_(std::move(args)) {}
+  ~FunctionCallExprNode() override = default;
+
+  Identifier name_;
+  std::vector<fxl::RefPtr<ExprNode>> args_;
+};
+
 // Implements a bare identifier.
 class IdentifierExprNode : public ExprNode {
  public:
@@ -190,7 +216,10 @@ class IdentifierExprNode : public ExprNode {
   Identifier& ident() { return ident_; }
   const Identifier& ident() const { return ident_; }
 
-  // Destructively moves the identifier out of this class.
+  // Destructively moves the identifier out of this class. This unusual
+  // mutating getter is implemented because the expression parser is also used
+  // to parse identifiers, and this will hold the result which we would prefer
+  // not to copy to get out.
   Identifier TakeIdentifier() { return std::move(ident_); }
 
  private:

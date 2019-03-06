@@ -41,6 +41,11 @@ class ExprParser {
   // the list is expected to end (i.e. ">"). Sets the error on failure.
   std::vector<std::string> ParseTemplateList(ExprToken::Type stop_before);
 
+  // Parses comma-separated lists of expressions. Runs until the given ending
+  // token is found (normally a ')' for a function call).
+  std::vector<fxl::RefPtr<ExprNode>> ParseExpressionList(
+      ExprToken::Type stop_before);
+
   fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> BinaryOpInfix(fxl::RefPtr<ExprNode> left,
                                       const ExprToken& token);
@@ -50,6 +55,8 @@ class ExprParser {
   fxl::RefPtr<ExprNode> DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                         const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> LeftParenInfix(fxl::RefPtr<ExprNode> left,
+                                       const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left,
                                         const ExprToken& token);
   fxl::RefPtr<ExprNode> LessInfix(fxl::RefPtr<ExprNode> left,

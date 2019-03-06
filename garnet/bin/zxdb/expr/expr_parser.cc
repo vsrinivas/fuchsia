@@ -55,7 +55,7 @@ using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
 // The commented-out values are ones we don't currently implement.
 
 // clang-format off
-//constexpr int kPrecedenceComma = 10;                // ,  (lowest precedence)
+constexpr int kPrecedenceComma = 10;                  // ,  (lowest precedence)
 constexpr int kPrecedenceAssignment = 20;             // = += -= *= -= /= %= <<= >>= &= ^= |=
 //constexpr int kPrecedenceLogicalOr = 30;            // ||
 //constexpr int kPrecedenceLogicalAnd = 40;           // &&
@@ -97,7 +97,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
     {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},  // kLeftSquare
     {nullptr,                      nullptr,                      -1},                     // kRightSquare
-    {&ExprParser::LeftParenPrefix, nullptr,                      -1},                     // kLeftParen
+    {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix, kPrecedenceCallAccess},   // kLeftParen
     {nullptr,                      nullptr,                      -1},                     // kRightParen
     {nullptr,                      &ExprParser::LessInfix,       kPrecedenceUnary},       // kLess
     {nullptr,                      nullptr,                      -1},                     // kGreater
@@ -176,23 +176,65 @@ std::vector<std::string> ExprParser::ParseTemplateList(
     ExprToken::Type stop_before) {
   std::vector<std::string> result;
 
+  bool first_time = true;
   while (!at_end() && !LookAhead(stop_before)) {
+    if (first_time) {
+      first_time = false;
+    } else {
+      // Expect comma to separate items.
+      if (LookAhead(ExprToken::kComma)) {
+        Consume();
+      } else {
+        SetError(cur_token(), "Expected ',' separating expressions.");
+        return {};
+      }
+    }
+
     TemplateTypeResult type_result = ExtractTemplateType(tokens_, cur_);
     if (!type_result.success) {
       SetError(tokens_[type_result.unmatched_error_token],
                fxl::StringPrintf(
                    "Unmatched '%s'.",
                    tokens_[type_result.unmatched_error_token].value().c_str()));
-      return std::vector<std::string>();
+      return {};
+    } else if (cur_ == type_result.end_token) {
+      SetError(cur_token(), "Expected template parameter.");
+      return {};
     }
     cur_ = type_result.end_token;
     result.push_back(std::move(type_result.canonical_name));
-
-    // Consume a comma if there is one, but don't consume anything else. The
-    // end token will break out of our loop.
-    if (LookAhead(ExprToken::kComma))
-      Consume();
   }
+  return result;
+}
+
+// This function is called in contexts where we expect a comma-separated list.
+// Currently these are all known in advance so this simple manual parsing will
+// do. A more general approach would implement a comma infix which constructs a
+// new type of ExprNode.
+std::vector<fxl::RefPtr<ExprNode>> ExprParser::ParseExpressionList(
+    ExprToken::Type stop_before) {
+  std::vector<fxl::RefPtr<ExprNode>> result;
+
+  bool first_time = true;
+  while (!at_end() && !LookAhead(stop_before)) {
+    if (first_time) {
+      first_time = false;
+    } else {
+      // Expect comma to separate items.
+      if (LookAhead(ExprToken::kComma)) {
+        Consume();
+      } else {
+        SetError(cur_token(), "Expected ',' separating expressions.");
+        return {};
+      }
+    }
+
+    fxl::RefPtr<ExprNode> cur = ParseExpression(kPrecedenceComma);
+    if (has_error())
+      return {};
+    result.push_back(std::move(cur));
+  }
+
   return result;
 }
 
@@ -209,14 +251,14 @@ fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
                                                 const ExprToken& token) {
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
   if (!has_error() && !right) {
-    SetError(token, fxl::StringPrintf(
-                        "Expected expression after '%s'.",
-                        token.value().c_str()));
+    SetError(token, fxl::StringPrintf("Expected expression after '%s'.",
+                                      token.value().c_str()));
   }
   if (has_error())
     return nullptr;
 
-  return fxl::MakeRefCounted<BinaryOpExprNode>(std::move(left), token, std::move(right));
+  return fxl::MakeRefCounted<BinaryOpExprNode>(std::move(left), token,
+                                               std::move(right));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::ScopeInfix(fxl::RefPtr<ExprNode> left,
@@ -265,6 +307,31 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   if (has_error())
     return nullptr;
   return expr;
+}
+
+fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
+                                                 const ExprToken& token) {
+  // "(" as an infix is a function call. In this case, expect the thing on the
+  // left to be an identifier which is the name of the function.
+  const IdentifierExprNode* left_ident_node = left->AsIdentifier();
+  if (!left_ident_node) {
+    SetError(token, "Unexpected '('.");
+    return nullptr;
+  }
+  // Const cast is required because the type conversions only have const
+  // versions, although our object is not const.
+  Identifier name =
+      const_cast<IdentifierExprNode*>(left_ident_node)->TakeIdentifier();
+
+  // Read the function parameters.
+  std::vector<fxl::RefPtr<ExprNode>> args =
+      ParseExpressionList(ExprToken::Type::kRightParen);
+  if (has_error())
+    return nullptr;
+  Consume(ExprToken::kRightParen, token, "Expected ')' to match.");
+
+  return fxl::MakeRefCounted<FunctionCallExprNode>(std::move(name),
+                                                   std::move(args));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,

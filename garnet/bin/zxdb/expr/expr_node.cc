@@ -240,10 +240,20 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
+void FunctionCallExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+    EvalCallback cb) const {
+  // TODO(brettw) implement this.
+  cb(Err("Function calls aren't implemented."), ExprValue());
+}
+
+void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "FUNCTIONCALL(" << name_.GetDebugName() << ")\n";
+  for (const auto& arg : args_)
+    arg->Print(out, indent + 1);
+}
+
 void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                               EvalCallback cb) const {
-  // For now, pass the stringified identifier. In the future we'll want to pass
-  // the Identifier itself so the namespaces can be resolved.
   context->GetNamedValue(
       ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
                                    ExprValue value) {
