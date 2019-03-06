@@ -57,6 +57,7 @@ static aml_sd_emmc_config_t config = {
 
 static const guid_map_t guid_map[] = {
     { "boot", GUID_ZIRCON_A_VALUE },
+    { "system", GUID_ZIRCON_B_VALUE },
     { "recovery", GUID_ZIRCON_R_VALUE },
     { "cache", GUID_FVM_VALUE }
 };
