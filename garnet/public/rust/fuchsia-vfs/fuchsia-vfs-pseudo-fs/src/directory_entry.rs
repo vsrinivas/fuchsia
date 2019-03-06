@@ -57,7 +57,11 @@ impl EntryInfo {
 ///
 /// [`FusedFuture`] is used to distinguish cases when there is no need to run the entry at all,
 /// like a case when a directory is empty and has no active connections.
-pub trait DirectoryEntry: Future<Output = Void> + Unpin + FusedFuture {
+///
+/// [`Send`] is necessary to be able to run the whole directory tree in a separate thread.  See
+/// #ZX-3593 for details on a `LocalDirectoryEntry` that would allow callbacks that do not need to
+/// be `Send`.
+pub trait DirectoryEntry: Future<Output = Void> + FusedFuture + Unpin + Send {
     /// Opens a connection to this item if the `path` is empty or a connection to an item inside
     /// this one otherwise.  `path` should not contain any "." or ".." components.  Those are not
     /// processed in any special way.

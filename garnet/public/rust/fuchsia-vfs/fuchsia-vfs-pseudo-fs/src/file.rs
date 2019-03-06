@@ -79,7 +79,7 @@ pub const DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
 /// content in chunks.
 pub fn read_only<OnRead>(on_read: OnRead) -> impl PseudoFile
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
 {
     read_only_attr(DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, on_read)
 }
@@ -88,7 +88,7 @@ where
 /// but otherwise behaves identical to #read_only().
 pub fn read_only_str<OnReadStr>(mut on_read: OnReadStr) -> impl PseudoFile
 where
-    OnReadStr: FnMut() -> Result<String, Status>,
+    OnReadStr: FnMut() -> Result<String, Status> + Send,
 {
     PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
         DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
@@ -103,7 +103,7 @@ where
 /// be stored.
 pub fn read_only_attr<OnRead>(protection_attributes: u32, on_read: OnRead) -> impl PseudoFile
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
 {
     PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
         protection_attributes & MODE_PROTECTION_MASK,
@@ -124,7 +124,7 @@ pub const DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IWUSR;
 /// content in chunks.
 pub fn write_only<OnWrite>(capacity: u64, on_write: OnWrite) -> impl PseudoFile
 where
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     write_only_attr(DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES, capacity, on_write)
 }
@@ -134,7 +134,7 @@ where
 /// handler.
 pub fn write_only_str<OnWriteStr>(capacity: u64, mut on_write: OnWriteStr) -> impl PseudoFile
 where
-    OnWriteStr: FnMut(String) -> Result<(), Status>,
+    OnWriteStr: FnMut(String) -> Result<(), Status> + Send,
 {
     PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
         DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
@@ -156,7 +156,7 @@ pub fn write_only_attr<OnWrite>(
     on_write: OnWrite,
 ) -> impl PseudoFile
 where
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
         protection_attributes & MODE_PROTECTION_MASK,
@@ -187,8 +187,8 @@ pub fn read_write<OnRead, OnWrite>(
     on_write: OnWrite,
 ) -> impl PseudoFile
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     read_write_attr(DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, on_read, capacity, on_write)
 }
@@ -204,8 +204,8 @@ pub fn read_write_str<OnReadStr, OnWriteStr>(
     mut on_write: OnWriteStr,
 ) -> impl PseudoFile
 where
-    OnReadStr: FnMut() -> Result<String, Status>,
-    OnWriteStr: FnMut(String) -> Result<(), Status>,
+    OnReadStr: FnMut() -> Result<String, Status> + Send,
+    OnWriteStr: FnMut(String) -> Result<(), Status> + Send,
 {
     PseudoFileImpl::new(
         DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
@@ -228,8 +228,8 @@ pub fn read_write_attr<OnRead, OnWrite>(
     on_write: OnWrite,
 ) -> impl PseudoFile
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     PseudoFileImpl::new(
         protection_attributes & MODE_PROTECTION_MASK,
@@ -289,8 +289,8 @@ impl Stream for FileConnection {
 
 struct PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     /// MODE_PROTECTION_MASK attributes returned by this file through io.fild:Node::GetAttr.  They
     /// have no meaning for the file operation itself, but may have consequences to the POSIX
@@ -336,8 +336,8 @@ macro_rules! assert_eq_size {
 
 impl<OnRead, OnWrite> PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     fn new(
         protection_attributes: u32,
@@ -751,8 +751,8 @@ where
 
 impl<OnRead, OnWrite> DirectoryEntry for PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     fn open(
         &mut self,
@@ -775,22 +775,22 @@ where
 
 impl<OnRead, OnWrite> PseudoFile for PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
 }
 
 impl<OnRead, OnWrite> Unpin for PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
 }
 
 impl<OnRead, OnWrite> FusedFuture for PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     fn is_terminated(&self) -> bool {
         // The `PseudoFileImpl` never completes, but once there are no
@@ -804,8 +804,8 @@ where
 
 impl<OnRead, OnWrite> Future for PseudoFileImpl<OnRead, OnWrite>
 where
-    OnRead: FnMut() -> Result<Vec<u8>, Status>,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
+    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
+    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     type Output = Void;
 
@@ -848,7 +848,7 @@ mod tests {
         futures::{future::LocalFutureObj, select, Future, FutureExt, SinkExt},
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         pin_utils::pin_mut,
-        std::cell::RefCell,
+        std::sync::atomic::{AtomicUsize, Ordering},
     };
 
     fn run_server_client<GetClientRes>(
@@ -1964,16 +1964,15 @@ mod tests {
             )
         };
 
-        let read_count = RefCell::new(0);
+        let read_count = &AtomicUsize::new(0);
         let (get_client1, client1_start, client1_read_and_close) = create_client("Content 1");
         let (get_client2, client2_start, client2_read_and_close) = create_client("Content 2");
 
         run_server_client_with_open_requests_channel_and_executor(
             exec,
             read_only_str(|| {
-                let mut count = read_count.borrow_mut();
-                *count += 1;
-                Ok(format!("Content {}", *count))
+                let count = read_count.fetch_add(1, Ordering::Relaxed) + 1;
+                Ok(format!("Content {}", count))
             }),
             async move |open_sender| {
                 let client1 = get_client1(open_sender.clone());
@@ -1992,7 +1991,7 @@ mod tests {
                             panic!("Future did not complete as expected");
                         }
                     }
-                    assert_eq!(*read_count.borrow(), expected_count);
+                    assert_eq!(read_count.load(Ordering::Relaxed), expected_count);
                 };
 
                 run_and_check_read_count(0, false);

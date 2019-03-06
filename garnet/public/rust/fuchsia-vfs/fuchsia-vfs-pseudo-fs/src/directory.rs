@@ -657,7 +657,10 @@ mod tests {
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         pin_utils::pin_mut,
         proc_macro_hack::proc_macro_hack,
-        std::{cell::RefCell, io::Write},
+        std::{
+            io::Write,
+            sync::atomic::{AtomicUsize, Ordering},
+        },
     };
 
     // Create level import of this macro does not affect nested modules.  And as attributes can
@@ -1000,7 +1003,7 @@ mod tests {
 
     #[test]
     fn open_writable_in_subdir() {
-        let write_count = &RefCell::new(0);
+        let write_count = &AtomicUsize::new(0);
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
                 "ssh" => pseudo_directory! {
@@ -1008,9 +1011,8 @@ mod tests {
                         || Ok(b"# Empty".to_vec()),
                         100,
                         |content| {
-                            let mut count = write_count.borrow_mut();
-                            assert_eq!(*&content, format!("Port {}", 22 + *count).as_bytes());
-                            *count += 1;
+                            let count = write_count.fetch_add(1, Ordering::Relaxed);
+                            assert_eq!(*&content, format!("Port {}", 22 + count).as_bytes());
                             Ok(())
                         }
                     )
@@ -1024,8 +1026,8 @@ mod tests {
                 path: &'a str,
                 expected_content: &'a str,
                 new_content: &'a str,
-                write_count: &'a RefCell<u32>,
-                expected_count: u32,
+                write_count: &'a AtomicUsize,
+                expected_count: usize,
             ) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
@@ -1034,7 +1036,7 @@ mod tests {
                 assert_write!(file, new_content);
                 assert_close!(file);
 
-                assert_eq!(*write_count.borrow(), expected_count);
+                assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
             }
 
             {
@@ -1066,15 +1068,14 @@ mod tests {
 
     #[test]
     fn open_write_only() {
-        let write_count = &RefCell::new(0);
+        let write_count = &AtomicUsize::new(0);
         let root = pseudo_directory! {
             "dev" => pseudo_directory! {
                 "output" => write_only(
                     100,
                     |content| {
-                        let mut count = write_count.borrow_mut();
-                        assert_eq!(*&content, format!("Message {}", 1 + *count).as_bytes());
-                        *count += 1;
+                        let count = write_count.fetch_add(1, Ordering::Relaxed);
+                        assert_eq!(*&content, format!("Message {}", 1 + count).as_bytes());
                         Ok(())
                     }
                 )
@@ -1085,15 +1086,15 @@ mod tests {
             async fn open_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 new_content: &'a str,
-                write_count: &'a RefCell<u32>,
-                expected_count: u32,
+                write_count: &'a AtomicUsize,
+                expected_count: usize,
             ) {
                 let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
                 assert_write!(file, new_content);
                 assert_close!(file);
 
-                assert_eq!(*write_count.borrow(), expected_count);
+                assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
             }
 
             await!(open_write_close(&root, "Message 1", write_count, 1));
