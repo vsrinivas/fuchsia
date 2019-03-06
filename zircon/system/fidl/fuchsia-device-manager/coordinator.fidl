@@ -18,7 +18,8 @@ using DeviceProperty = uint64;
 const uint32 DEVICE_NAME_MAX = 31;
 
 /// Maximum number of bytes in a path
-const uint32 PATH_MAX = 1024;
+// The simple name PATH_MAX collides with a musl #define on c++ bindings.
+const uint32 DEVICE_PATH_MAX = 1024;
 
 /// Maximum number of bytes in a device arguments string.
 const uint32 DEVICE_ARGS_MAX = 1024;
@@ -58,14 +59,14 @@ protocol Controller {
     /// a shadowed device.  The one exception is when this method is used
     /// to create the Platform Bus, in which case it will be a VMO containing
     /// the ZBI.
-    CreateDevice(handle<channel> rpc, string:PATH_MAX driver_path,
+    CreateDevice(handle<channel> rpc, string:DEVICE_PATH_MAX driver_path,
                  handle<vmo> driver, handle? parent_proxy,
                  string:DEVICE_ARGS_MAX? proxy_args);
 
     /// Bind the requested driver to this device.  |driver_path| is informational,
     /// but all calls to BindDriver/CreateDevice should use the same |driver_path|
     /// each time they use a |driver| VMO with the same contents.
-    BindDriver(string:PATH_MAX driver_path, handle<vmo> driver)
+    BindDriver(string:DEVICE_PATH_MAX driver_path, handle<vmo> driver)
         -> (zx.status status);
 
     /// Give this device a channel to its shadow in another process.
@@ -91,7 +92,7 @@ protocol Coordinator {
     AddDevice(handle<channel> rpc,
               vector<DeviceProperty>:PROPERTIES_MAX props,
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
-              string:PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
+              string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
               handle<channel>? client_remote)
         -> (zx.status status);
 
@@ -101,7 +102,7 @@ protocol Coordinator {
     AddDeviceInvisible(handle<channel> rpc,
                        vector<DeviceProperty>:PROPERTIES_MAX props,
                        string:DEVICE_NAME_MAX name, uint32 protocol_id,
-                       string:PATH_MAX? driver_path,
+                       string:DEVICE_PATH_MAX? driver_path,
                        string:DEVICE_ARGS_MAX? args, handle<channel>? client_remote)
         -> (zx.status status);
 
@@ -115,13 +116,13 @@ protocol Coordinator {
     /// this will initiate the driver matching algorithm.
     /// TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
     /// the current behavior is a bug.
-    BindDevice(string:PATH_MAX? driver_path) -> (zx.status status);
+    BindDevice(string:DEVICE_PATH_MAX? driver_path) -> (zx.status status);
 
     /// Returns the topological path of this device.
-    GetTopologicalPath() -> (zx.status status, string:PATH_MAX? path);
+    GetTopologicalPath() -> (zx.status status, string:DEVICE_PATH_MAX? path);
 
     /// Requests that the firmware at the given path be loaded and returned.
-    LoadFirmware(string:PATH_MAX fw_path)
+    LoadFirmware(string:DEVICE_PATH_MAX fw_path)
         -> (zx.status status, handle<vmo>? vmo, uint64 size);
 
     /// Retrieve the metadata blob associated with this device and the given key.
@@ -144,7 +145,7 @@ protocol Coordinator {
     /// the device at |device_path| is not a child of the requesting device AND
     /// the requesting device is not running in the sys devhost, then this will
     /// fail.
-    PublishMetadata(string:PATH_MAX device_path, uint32 key,
+    PublishMetadata(string:DEVICE_PATH_MAX device_path, uint32 key,
                     vector<uint8>:METADATA_MAX? data) -> (zx.status status);
 
     /// Special commands for implementing the dmctl device.

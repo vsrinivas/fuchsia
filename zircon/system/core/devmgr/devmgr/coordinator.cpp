@@ -1025,7 +1025,7 @@ zx_status_t Coordinator::GetMetadata(Device* dev, uint32_t type, void* buffer, s
     }
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
-    char path[fuchsia_device_manager_PATH_MAX];
+    char path[fuchsia_device_manager_DEVICE_PATH_MAX];
     zx_status_t status = GetTopologicalPath(dev, path, sizeof(path));
     if (status != ZX_OK) {
         return status;
@@ -1060,7 +1060,7 @@ zx_status_t Coordinator::GetMetadataSize(Device* dev, uint32_t type, size_t* siz
     }
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
-    char path[fuchsia_device_manager_PATH_MAX];
+    char path[fuchsia_device_manager_DEVICE_PATH_MAX];
     zx_status_t status = GetTopologicalPath(dev, path, sizeof(path));
     if (status != ZX_OK) {
         return status;
@@ -1094,7 +1094,7 @@ zx_status_t Coordinator::AddMetadata(Device* dev, uint32_t type, const void* dat
 
 zx_status_t Coordinator::PublishMetadata(Device* dev, const char* path, uint32_t type,
                                          const void* data, uint32_t length) {
-    char caller_path[fuchsia_device_manager_PATH_MAX];
+    char caller_path[fuchsia_device_manager_DEVICE_PATH_MAX];
     zx_status_t status = GetTopologicalPath(dev, caller_path, sizeof(caller_path));
     if (status != ZX_OK) {
         return status;
@@ -1214,7 +1214,7 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
 }
 
 static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn) {
-    char path[fuchsia_device_manager_PATH_MAX + 1];
+    char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
 
     auto dev = static_cast<Device*>(ctx);
     zx_status_t status;
@@ -1229,7 +1229,7 @@ static zx_status_t fidl_LoadFirmware(void* ctx, const char* fw_path_data, size_t
                                      fidl_txn_t* txn) {
     auto dev = static_cast<Device*>(ctx);
 
-    char fw_path[fuchsia_device_manager_PATH_MAX + 1];
+    char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
     memcpy(fw_path, fw_path_data, fw_path_size);
     fw_path[fw_path_size] = 0;
 
@@ -1282,7 +1282,7 @@ static zx_status_t fidl_PublishMetadata(void* ctx, const char* device_path_data,
                                         fidl_txn_t* txn) {
     auto dev = static_cast<Device*>(ctx);
 
-    char path[fuchsia_device_manager_PATH_MAX + 1];
+    char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
     memcpy(path, device_path_data, device_path_size);
     path[device_path_size] = 0;
 
