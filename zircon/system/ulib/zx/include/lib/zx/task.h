@@ -5,6 +5,7 @@
 #ifndef LIB_ZX_TASK_H_
 #define LIB_ZX_TASK_H_
 
+#include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #include <lib/zx/suspend_token.h>
@@ -40,6 +41,11 @@ public:
 
     zx_status_t resume_from_exception(const object<port>& port, uint32_t options) const {
         return zx_task_resume_from_exception(object<T>::get(), port.get(), options);
+    }
+
+    zx_status_t create_exception_channel(uint32_t options, object<channel>* channel) const {
+        return zx_task_create_exception_channel(object<T>::get(), options,
+                                                channel->reset_and_get_address());
     }
 };
 

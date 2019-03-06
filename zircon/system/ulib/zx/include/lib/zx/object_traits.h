@@ -18,6 +18,7 @@ class guest;
 class fifo;
 class interrupt;
 class pmt;
+class exception;
 
 // The default traits supports:
 // - event
@@ -101,6 +102,13 @@ template <> struct object_traits<interrupt> {
 
 template <> struct object_traits<guest> {
     static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_wait = false;
+    static constexpr bool has_peer_handle = false;
+};
+
+template <> struct object_traits<exception> {
+    static constexpr bool supports_duplication = false;
     static constexpr bool supports_user_signal = false;
     static constexpr bool supports_wait = false;
     static constexpr bool has_peer_handle = false;

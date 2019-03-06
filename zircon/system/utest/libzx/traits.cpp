@@ -13,6 +13,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/handle.h>
@@ -27,6 +28,7 @@
 #include <lib/zx/vmar.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
 
@@ -104,6 +106,12 @@ bool peering(const Handle& handle) {
     ASSERT_EQ(status, expected_status);
 
     END_TEST;
+}
+
+[[noreturn]] void do_segfault(uintptr_t /*arg1*/, uintptr_t /*arg2*/) {
+    volatile int* p = 0;
+    *p = 1;
+    zx_thread_exit();
 }
 
 bool traits_test() {
@@ -286,6 +294,35 @@ bool traits_test() {
         ASSERT_EQ(zx::object_traits<zx::resource>::supports_user_signal, true);
         ASSERT_EQ(zx::object_traits<zx::resource>::supports_wait, true);
         ASSERT_EQ(zx::object_traits<zx::resource>::has_peer_handle, false);
+    }
+
+    {
+        // Create a thread that segfaults so we can catch and analyze the
+        // resulting exception object.
+        alignas(16) static uint8_t thread_stack[1024];
+        zx::thread thread;
+        zx::channel exception_channel;
+        ASSERT_EQ(zx::thread::create(*zx::process::self(), "", 0, 0, &thread), ZX_OK);
+        ASSERT_EQ(thread.create_exception_channel(0, &exception_channel), ZX_OK);
+
+        // Stack grows down, make sure to pass a pointer to the end.
+        ASSERT_EQ(thread.start(&do_segfault, thread_stack + sizeof(thread_stack), 0, 0), ZX_OK);
+
+        zx::exception exception;
+        zx_exception_info_t info;
+        ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr),
+                  ZX_OK);
+        ASSERT_EQ(exception_channel.read(0, &info, sizeof(info), nullptr,
+                                         exception.reset_and_get_address(), 1, nullptr),
+                  ZX_OK);
+
+        duplicating(exception);
+        user_signaling(exception);
+        waiting(exception);
+        peering(exception);
+
+        ASSERT_EQ(thread.kill(), ZX_OK);
+        ASSERT_EQ(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
     }
 
     END_TEST;

@@ -8,6 +8,7 @@
 
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
@@ -331,7 +332,7 @@ static bool TestInvokingPolicyWithException(
     ASSERT_NE(ctrl, ZX_HANDLE_INVALID);
 
     zx_handle_t exc_port = ZX_HANDLE_INVALID;
-    zx_handle_t exc_channel = ZX_HANDLE_INVALID;
+    zx::channel exc_channel;
     if (test_type == ExceptionTestType::kPorts) {
         ASSERT_EQ(zx_port_create(0, &exc_port), ZX_OK);
         ASSERT_EQ(zx_task_bind_exception_port(
@@ -339,9 +340,7 @@ static bool TestInvokingPolicyWithException(
                       ZX_EXCEPTION_PORT_DEBUGGER),
                   ZX_OK);
     } else {
-        ASSERT_EQ(zx_task_create_exception_channel(
-                      proc.get(), ZX_EXCEPTION_PORT_DEBUGGER, &exc_channel),
-                  ZX_OK);
+        ASSERT_EQ(proc.create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER, &exc_channel), ZX_OK);
     }
 
     EXPECT_EQ(mini_process_cmd_send(ctrl, minip_cmd), ZX_OK);
@@ -358,7 +357,7 @@ static bool TestInvokingPolicyWithException(
     ASSERT_TRUE(get_koid(thread.get(), &tid));
 
     // Check that we receive an exception message.
-    zx_handle_t exception = ZX_HANDLE_INVALID;
+    zx::exception exception;
     if (test_type == ExceptionTestType::kPorts) {
         zx_port_packet_t packet;
         ASSERT_EQ(zx_port_wait(exc_port, ZX_TIME_INFINITE, &packet), ZX_OK);
@@ -369,15 +368,10 @@ static bool TestInvokingPolicyWithException(
         ASSERT_EQ(packet.exception.pid, pid);
         ASSERT_EQ(packet.exception.tid, tid);
     } else {
-        ASSERT_EQ(zx_object_wait_one(exc_channel, ZX_CHANNEL_READABLE,
-                                     ZX_TIME_INFINITE, nullptr),
-                  ZX_OK);
-
         zx_exception_info_t info;
-        uint32_t num_handles = 1;
-        uint32_t num_bytes = sizeof(info);
-        ASSERT_EQ(zx_channel_read(exc_channel, 0, &info, &exception,
-                                  num_bytes, num_handles, nullptr, nullptr),
+        ASSERT_EQ(exc_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK);
+        ASSERT_EQ(exc_channel.read(0, &info, sizeof(info), nullptr,
+                                   exception.reset_and_get_address(), 1, nullptr),
                   ZX_OK);
 
         ASSERT_EQ(info.type, ZX_EXCP_POLICY_ERROR);
@@ -385,11 +379,10 @@ static bool TestInvokingPolicyWithException(
         ASSERT_EQ(info.pid, pid);
 
         // Make sure the exception has the correct task handles.
-        zx_handle_t task_handle;
-        ASSERT_EQ(zx_exception_get_thread(exception, &task_handle), ZX_OK, "");
-        zx::thread exception_thread(task_handle);
-        ASSERT_EQ(zx_exception_get_process(exception, &task_handle), ZX_OK, "");
-        zx::process exception_process(task_handle);
+        zx::thread exception_thread;
+        zx::process exception_process;
+        ASSERT_EQ(exception.get_thread(&exception_thread), ZX_OK);
+        ASSERT_EQ(exception.get_process(&exception_process), ZX_OK);
 
         zx_koid_t handle_tid = ZX_KOID_INVALID;
         EXPECT_TRUE(get_koid(exception_thread.get(), &handle_tid));
@@ -417,10 +410,8 @@ static bool TestInvokingPolicyWithException(
         ASSERT_EQ(zx_task_resume_from_exception(thread.get(), exc_port, 0), ZX_OK);
     } else {
         uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-        ASSERT_EQ(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE,
-                                         &state, sizeof(state)),
-                  ZX_OK);
-        ASSERT_EQ(zx_handle_close(exception), ZX_OK);
+        ASSERT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)), ZX_OK);
+        exception.reset();
     }
 
     // Check that the read-ready state of the channel changed compared with
