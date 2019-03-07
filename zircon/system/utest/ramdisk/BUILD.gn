@@ -7,6 +7,8 @@ test("ramdisk") {
     "ramdisk.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/fbl",
