@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/netboot"
 )
@@ -30,7 +31,7 @@ var (
 )
 
 const (
-	healthyState = "healthy"
+	healthyState   = "healthy"
 	unhealthyState = "unhealthy"
 )
 
@@ -116,4 +117,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
