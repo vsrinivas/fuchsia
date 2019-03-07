@@ -36,7 +36,7 @@ purpose, goals, and requirements, as well as links to related documents.
 
 A **message** is a contiguous data structure represented using the FIDL Wire
 Format, consisting of a single **in-line primary object** followed by a sequence
-of **out-of-line secondary objects** stored in **traversal order**.
+of zero or more **out-of-line secondary objects** stored in **traversal order**.
 
 #### Objects
 
@@ -216,39 +216,6 @@ Arrays are denoted:
 
 ![drawing](arrays.png)
 
-### Strings
-
-*   Variable-length sequence of UTF-8 encoded characters representing text.
-*   Nullable; null strings and empty strings are distinct.
-*   Can specify a maximum size, e.g. `string:40` for
-    a maximum 40 byte string.
-*   String content does not have a null-terminator [[1]](#Footnote-1).
-
-*   Stored as a 16 byte record consisting of:
-
-    *   `size`: 64-bit unsigned number of code units (bytes)
-    *   `data`: 64-bit presence indication or pointer to out-of-line string data
-
-*   When encoded for transfer, `data` indicates
-    presence of content:
-
-    *   `0`: string is null
-    *   `UINTPTR_MAX`: string is non-null, data is the next out-of-line object
-
-*   When decoded for consumption, `data` is a
-    pointer to content:
-
-    *   `0`: string is null
-    *   `<valid pointer>`: string is non-null, data is at indicated memory address
-
-Strings are denoted as follows:
-
-*   `string`: non-nullable string (validation error occurs if null `data` is encountered)
-*   `string?`: nullable string
-*   `string:N`, `string:N?`: string with maximum length of **N** bytes
-
-![drawing](strings.png)
-
 ### Vectors
 
 *   Variable-length sequence of homogeneous elements.
@@ -279,6 +246,12 @@ Vectors are denoted as follows:
 **T** can be any FIDL type.
 
 ![drawing](vectors.png)
+
+### Strings
+
+Strings are simply a special case of a vector.
+A string is effectively a `vector<uint8>` with the constraint that the bytes
+MUST be valid UTF8 (encoders and decoders should enforce and validate that).
 
 ### Handles
 
@@ -418,9 +391,11 @@ table Value {
 *   Union is padded so that its size is a multiple of its alignment factor.
     For example:
     1. a union with an **int32** and an **int8** option has an alignment of 4 bytes (due to
-       the **int32**), and a size of 8 bytes including the 4 byte tag (0 to 3 bytes of padding).
+       the **int32**), and a size of 8 bytes including the 4 byte tag (0 or 3 bytes of padding,
+       depending on the option / variant).
     2. a union with a **bool** and a **string** option has an alignment of 8 bytes (due to
-       the **string**), and a size of 24 bytes (4 to 19 bytes of padding).
+       the **string**), and a size of 24 bytes (4 or 19 bytes of padding, depending on the
+       option / variant).
 *   In general, changing the definition of a union will break binary
     compatibility; instead prefer to extend interfaces by adding new methods
     which use new unions.
@@ -466,6 +441,33 @@ When laying out `Pattern`, space is first allotted to the tag (4 bytes), then
 to the selected option.
 
 ![drawing](unions.png)
+
+### Extensible Unions (xunions)
+
+*   Record type consisting of an ordinal and an envelope.
+*   Ordinal indicates member selection, and is represented with a **uint32**.
+*   Ordinals are calculated by hashing the concatenated library name, union
+    name, and member name, and retaining 31 bits.
+    See [ordinal hashing] for further details.
+*   Nullable xunions are represented with a `0` ordinal, and a null envelope.
+*   Empty xunions are not allowed.
+
+xunions are denoted by their declared name (e.g. `Value`) and nullability:
+
+*   `Value`: non-nullable `Value`
+*   `Value?`: nullable `Value`
+
+The following example shows how xunions are laid out according to their fields.
+
+```fidl
+xunion Value {
+    int16 command;
+    Circle data;
+    float64 offset;
+};
+```
+
+![drawing](xunion.png)
 
 ### Transactional Messages
 
@@ -807,4 +809,4 @@ New handle types can easily be added to the language without affecting the wire 
 since all handles are transferred the same way.
 
 [channel call]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_call.md
-
+[ordinal hashing]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-020.md
