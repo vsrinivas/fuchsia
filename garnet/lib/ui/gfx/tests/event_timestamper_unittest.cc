@@ -9,13 +9,14 @@
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "gtest/gtest.h"
+#include "lib/component/cpp/testing/test_with_context.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-using EventTimestamperTest = ::gtest::TestLoopFixture;
+using EventTimestamperTest = ::component::testing::TestWithContext;
 
 TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   constexpr size_t kEventCount = 3;
@@ -27,7 +28,8 @@ TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   watches.reserve(kEventCount);
   target_callback_times.resize(kEventCount);
 
-  auto timestamper = std::make_unique<EventTimestamper>();
+  auto app_context = TakeContext();
+  auto timestamper = std::make_unique<EventTimestamper>(app_context.get());
 
   for (size_t i = 0; i < kEventCount; ++i) {
     ASSERT_EQ(ZX_OK, zx::event::create(0u, &(events[i])));

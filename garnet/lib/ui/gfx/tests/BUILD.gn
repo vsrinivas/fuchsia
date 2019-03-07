@@ -34,6 +34,7 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "//garnet/lib/ui/scenic/util",
+    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_escher",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",

@@ -5,6 +5,7 @@
     "sandbox": {
         "features": [ "vulkan" ],
         "services": [
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.ui.input.ImeService",
             "fuchsia.vulkan.loader.Loader"
         ]

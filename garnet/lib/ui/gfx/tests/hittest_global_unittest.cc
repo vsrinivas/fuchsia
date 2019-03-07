@@ -22,6 +22,7 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "gtest/gtest.h"
+#include "lib/component/cpp/testing/test_with_context.h"
 #include "lib/escher/forward_declarations.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
 #include "lib/fxl/logging.h"
@@ -72,8 +73,10 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
-  std::unique_ptr<Engine> engine = std::make_unique<EngineForTest>(
-      &display_manager, /*release fence signaller*/ nullptr);
+  auto startup_context = component::testing::StartupContextForTest::Create();
+  std::unique_ptr<Engine> engine =
+      std::make_unique<EngineForTest>(startup_context.get(), &display_manager,
+                                      /*release fence signaller*/ nullptr);
 
   // Create our tokens for View/ViewHolder creation.
   auto tokens_1 = scenic::NewViewTokenPair();

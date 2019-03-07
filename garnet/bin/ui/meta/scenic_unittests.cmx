@@ -5,7 +5,8 @@
     "sandbox": {
         "features": [ "vulkan" ],
         "services": [
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.vulkan.loader.Loader",
+            "fuchsia.scheduler.ProfileProvider"
         ]
     }
 }

@@ -10,6 +10,7 @@
 #include <set>
 #include <vector>
 
+#include "lib/component/cpp/startup_context.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/release_fence_signaller.h"
 #include "lib/escher/resources/resource_recycler.h"
@@ -68,7 +69,8 @@ class CommandContext {
 // which belong to different engines to communicate with one another.
 class Engine : public SessionUpdater, public FrameRenderer {
  public:
-  Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
+  Engine(component::StartupContext* startup_context,
+         std::unique_ptr<FrameScheduler> frame_scheduler,
          DisplayManager* display_manager, escher::EscherWeakPtr escher);
 
   ~Engine() override = default;
@@ -136,7 +138,8 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
+  Engine(component::StartupContext* startup_context,
+         std::unique_ptr<FrameScheduler> frame_scheduler,
          DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          std::unique_ptr<SessionManager> session_manager,

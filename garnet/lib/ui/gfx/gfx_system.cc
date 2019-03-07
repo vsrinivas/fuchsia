@@ -55,7 +55,8 @@ CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
-  return std::make_unique<Engine>(std::make_unique<DefaultFrameScheduler>(
+  return std::make_unique<Engine>(context()->app_context(),
+                                  std::make_unique<DefaultFrameScheduler>(
                                       display_manager_->default_display()),
                                   display_manager_.get(),
                                   escher_->GetWeakPtr());

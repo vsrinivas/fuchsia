@@ -4,16 +4,31 @@
 
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 
 namespace scenic_impl {
 namespace gfx {
 
-EventTimestamper::EventTimestamper()
+EventTimestamper::EventTimestamper(component::StartupContext* startup_context)
     : main_dispatcher_(async_get_default_dispatcher()),
       background_loop_(&kAsyncLoopConfigNoAttachToThread),
-      task_([] { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); }) {
+      task_([startup_context] {
+        auto profile_provider = startup_context->ConnectToEnvironmentService<
+            fuchsia::scheduler::ProfileProvider>();
+        profile_provider->GetProfile(
+            24 /* HIGH_PRIORITY in LK */,
+            "garnet/lib/ui/gfx/util/event_timestamper",
+            [](zx_status_t fidl_status, zx::profile profile) {
+              FXL_DCHECK(fidl_status == ZX_OK);
+              if (fidl_status == ZX_OK) {
+                zx_status_t status =
+                    zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+                FXL_DCHECK(status == ZX_OK);
+              }
+            });
+      }) {
   FXL_DCHECK(main_dispatcher_);
   background_loop_.StartThread();
 

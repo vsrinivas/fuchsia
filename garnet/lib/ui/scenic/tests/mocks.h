@@ -29,7 +29,8 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class EngineForTest : public gfx::Engine {
  public:
-  EngineForTest(gfx::DisplayManager* display_manager,
+  EngineForTest(component::StartupContext* startup_context,
+                gfx::DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
                 escher::EscherWeakPtr escher = escher::EscherWeakPtr());
 };
@@ -50,8 +51,9 @@ class GfxSystemForTest : public gfx::GfxSystem {
  private:
   std::unique_ptr<gfx::Engine> InitializeEngine() override {
     return std::make_unique<EngineForTest>(
-        display_manager_.get(), std::make_unique<ReleaseFenceSignallerForTest>(
-                                    command_buffer_sequencer_));
+        context()->app_context(), display_manager_.get(),
+        std::make_unique<ReleaseFenceSignallerForTest>(
+            command_buffer_sequencer_));
   }
 
   std::unique_ptr<escher::Escher> InitializeEscher() override {

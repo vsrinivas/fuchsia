@@ -59,7 +59,8 @@ void SessionHandlerTest::InitializeEngine() {
           command_buffer_sequencer_.get());
 
   engine_ = std::make_unique<EngineForTest>(
-      display_manager_.get(), std::move(mock_release_fence_signaller),
+      app_context_.get(), display_manager_.get(),
+      std::move(mock_release_fence_signaller),
       /*event reporter*/ this, this->error_reporter());
 }
 

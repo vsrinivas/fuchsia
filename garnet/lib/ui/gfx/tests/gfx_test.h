@@ -31,8 +31,9 @@ class GfxSystemForTest : public GfxSystem {
  private:
   std::unique_ptr<Engine> InitializeEngine() override {
     return std::make_unique<EngineForTest>(
-        display_manager_.get(), std::make_unique<ReleaseFenceSignallerForTest>(
-                                    command_buffer_sequencer_));
+        context()->app_context(), display_manager_.get(),
+        std::make_unique<ReleaseFenceSignallerForTest>(
+            command_buffer_sequencer_));
   }
 
   std::unique_ptr<escher::Escher> InitializeEscher() override {
