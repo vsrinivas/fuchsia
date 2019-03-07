@@ -28,7 +28,7 @@ namespace http = ::fuchsia::net::oldhttp;
 
 class ModuleResolverApp {
  public:
-  ModuleResolverApp(component::StartupContext* const context, bool is_test) {
+  ModuleResolverApp(component::StartupContext* const context) {
     resolver_impl_ = std::make_unique<LocalModuleResolver>();
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource("module_package",
@@ -52,7 +52,7 @@ class ModuleResolverApp {
 }  // namespace
 }  // namespace modular
 
-const char kUsage[] = R"USAGE(%s [--test])USAGE";
+const char kUsage[] = R"USAGE(%s)USAGE";
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -61,11 +61,10 @@ int main(int argc, const char** argv) {
     printf(kUsage, argv[0]);
     return 0;
   }
-  auto is_test = command_line.HasOption("test");
   auto context = component::StartupContext::CreateFromStartupInfo();
   modular::AppDriver<modular::ModuleResolverApp> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<modular::ModuleResolverApp>(context.get(), is_test),
+      std::make_unique<modular::ModuleResolverApp>(context.get()),
       [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
