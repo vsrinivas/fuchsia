@@ -24,3 +24,7 @@ fuchsia_internal/firmware/fx3-flash c8whlpMnrQukCMf01_Yyi1F0nHK2g7A5fIwMXcDRyk4C
 # FX3 USB Bootloader Firmware
 @Subdir firmware/fx3-boot
 fuchsia_internal/firmware/fx3-boot pWauzviAyLDgNPkMyKQV-p8N5kCiG5P_QeMVgRZ-pykC
+
+# Mediatek MT7668 Firmware
+@Subdir firmware/bluetooth/mt7668
+fuchsia_internal/firmware/bluetooth/mt7668 git_revision:ed8b2eb6b877e93afb8a9f9281b93a7b91df0f09

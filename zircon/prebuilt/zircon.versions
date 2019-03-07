@@ -57,6 +57,10 @@ fuchsia_internal/firmware/bluetooth/bcm4345c4
 	git_revision:1e41b7d6f96f09558a36a636de2819068cd71ea0
 	470651a089ebdd93c9df43e40bd80bb57a0c7f89
 
+fuchsia_internal/firmware/bluetooth/mt7668
+	git_revision:ed8b2eb6b877e93afb8a9f9281b93a7b91df0f09
+	O-_ROaTk675thCdQAi6es_gv_znD5zYRBul6tqdKc9cC
+
 fuchsia_internal/firmware/intel-adsp-sst
 	git_revision:8fc2d4e55685bf73b6f7752383da9067404a74bb
 	9d21c0035e6212f8ae944166f600e44a3f0cc35d
