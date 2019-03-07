@@ -97,7 +97,7 @@ void CodecClient::Start() {
       input_constraints_exist_condition_.wait(lock);
     }
   }  // ~lock
-  assert(input_constraints_);
+  ZX_ASSERT(input_constraints_);
   FXL_VLOG(3) << "Got OnInputConstraints() from the Codec server.";
 
   // We know input_constraints_ won't change outside the lock because we prevent
@@ -141,7 +141,7 @@ void CodecClient::Start() {
           codec_->SetInputBufferSettings(std::move(input_settings));
         });
   }
-  assert(input_free_bits_.empty());
+  ZX_ASSERT(input_free_bits_.empty());
   input_free_bits_.resize(input_packet_count, true);
   all_input_buffers_.reserve(input_packet_count);
   for (uint32_t i = 0; i < input_packet_count; i++) {
@@ -154,7 +154,7 @@ void CodecClient::Start() {
     if (!local_buffer->GetDupVmo(false, &dup_vmo)) {
       FXL_LOG(FATAL) << "GetDupVmo() failed";
     }
-    assert(all_input_buffers_.size() == i);
+    ZX_ASSERT(all_input_buffers_.size() == i);
     all_input_buffers_.push_back(std::move(local_buffer));
 
     // May as well tell the Codec server about these incrementally.
@@ -223,7 +223,7 @@ void CodecClient::CallSyncAndWaitForResponse() {
     }
   }
   FXL_VLOG(3) << "after calling Sync() - done waiting\n";
-  assert(is_sync_complete);
+  ZX_ASSERT(is_sync_complete);
 }
 
 void CodecClient::OnInputConstraints(
@@ -276,7 +276,7 @@ CodecClient::BlockingGetFreeInputPacket() {
     // We intentionally do not modify input_free_bits_ here, as those bits are
     // tracking the protocol level free-ness, so will get updated when the
     // caller queues the input packet.
-    assert(input_free_bits_[free_index]);
+    ZX_ASSERT(input_free_bits_[free_index]);
   }
   std::unique_ptr<fuchsia::media::Packet> packet =
       fuchsia::media::Packet::New();
@@ -315,7 +315,7 @@ void CodecClient::QueueInputPacket(
     // This packet is already not on the free list, but is still considered free
     // from a protocol point of view, so update that part.
     std::unique_lock<std::mutex> lock(lock_);
-    assert(input_free_bits_[local_packet.header.packet_index]);
+    ZX_ASSERT(input_free_bits_[local_packet.header.packet_index]);
     input_free_bits_[local_packet.header.packet_index] = false;
     // From here it's as if this packet is already in flight with the server.
   }  // ~lock
@@ -361,7 +361,8 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
           output_pending_ = false;
         }
       } else {
-        assert(output_config_action_pending_);
+        ZX_ASSERT(output_config_action_pending_);
+        ZX_ASSERT(last_required_output_config_);
         config = last_required_output_config_;
       }
     }
@@ -409,13 +410,13 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 
       // We know this because the previous OnOutputConfig() set this and because
       // we're only here if it's set.
-      assert(output_config_action_pending_);
+      ZX_ASSERT(output_config_action_pending_);
       // We know this because we reject additional output from the server when
       // output_config_action_pending_ is true, and because we've drained all
       // previous output by this point.
-      assert(emitted_output_.empty());
+      ZX_ASSERT(emitted_output_.empty());
       // We know this because we're only here if we have a pending config.
-      assert(config);
+      ZX_ASSERT(config);
 
       // Not really critical to do this, as we'll just end up setting these
       // back to true under the same lock hold interval as we set
@@ -448,9 +449,13 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     uint64_t new_output_buffer_lifetime_ordinal;
     {  // scope lock
       std::unique_lock<std::mutex> lock(lock_);
+      ZX_ASSERT(output_config_action_pending_);
+      ZX_ASSERT(last_required_output_config_);
+      ZX_ASSERT(last_output_config_);
       // We'll snap the last_output_config_, which is always at least as recent
       // as the last_required_output_config_.
       snapped_config = last_output_config_;
+      ZX_ASSERT(snapped_config);
       new_output_buffer_lifetime_ordinal = next_output_buffer_lifetime_ordinal_;
       next_output_buffer_lifetime_ordinal_ += 2;
     }  // ~lock
@@ -502,7 +507,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
       if (!buffer->GetDupVmo(true, &dup_vmo)) {
         FXL_LOG(FATAL) << "GetDupVmo() failed (output)";
       }
-      assert(all_output_buffers_.size() == i);
+      ZX_ASSERT(all_output_buffers_.size() == i);
       all_output_buffers_.push_back(std::move(buffer));
 
       // The last buffer being added is significant to the protocol.
@@ -563,7 +568,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         output_config_action_pending_ = false;
         // Because this was true for at least pending config reason which we
         // are only just clearing immediately above.
-        assert(output_pending_);
+        ZX_ASSERT(output_pending_);
         // There can be output packets by this point so only clear
         // output_pending_ if there are also no packets.
         if (!ComputeOutputPendingLocked()) {
@@ -577,8 +582,8 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         FXL_VLOG(3)
             << "output_config_action_pending_ remains true because server has "
                "sent yet another action-required output config";
-        assert(output_config_action_pending_);
-        assert(output_pending_);
+        ZX_ASSERT(output_config_action_pending_);
+        ZX_ASSERT(output_pending_);
       }
     }  // ~lock
   }
@@ -714,5 +719,5 @@ void CodecClient::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
 }
 
 void CodecClient::OnStreamFailed(uint64_t stream_lifetime_ordinal) {
-  assert(false && "not implemented");
+  ZX_ASSERT(false && "not implemented");
 }
