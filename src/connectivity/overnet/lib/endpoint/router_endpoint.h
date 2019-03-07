@@ -22,12 +22,12 @@ class RouterEndpoint : public Router {
   class ConnectionStream;
 
  public:
-  class NewStream final {
+  class [[nodiscard]] NewStream final {
    public:
     NewStream(const NewStream&) = delete;
     NewStream& operator=(const NewStream&) = delete;
 
-    NewStream(NewStream&& other)
+    NewStream(NewStream && other)
         : creator_(other.creator_),
           peer_(other.peer_),
           reliability_and_ordering_(other.reliability_and_ordering_),
@@ -56,7 +56,7 @@ class RouterEndpoint : public Router {
 
    private:
     friend class RouterEndpoint;
-    NewStream(RouterEndpoint* creator, NodeId peer,
+    NewStream(RouterEndpoint * creator, NodeId peer,
               fuchsia::overnet::protocol::ReliabilityAndOrdering
                   reliability_and_ordering,
               StreamId stream_id)
