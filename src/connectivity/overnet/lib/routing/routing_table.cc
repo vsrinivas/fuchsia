@@ -203,10 +203,15 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
     for (const auto& lp : links_) {
       publish_link_status.push_back(fidl::Clone(lp.second.status));
     }
+    std::vector<Callback<void>> notify_callbacks;
     std::lock_guard<std::mutex> mutex(shared_table_mu_);
     gossip_version_++;
     shared_node_status_.swap(publish_node_status);
     shared_link_status_.swap(publish_link_status);
+    // Places complete list of notification callbacks into notify_callbacks,
+    // which will be destroyed after mutex is released, forcing all callbacks to
+    // be called.
+    on_node_table_update_.swap(notify_callbacks);
   }
 }
 

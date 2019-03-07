@@ -120,6 +120,17 @@ class RoutingTable {
     }
   }
 
+  // Request notification that the node tables has been updated.
+  // This may be called back on an arbitrary thread (unlike most of overnet).
+  void OnNodeTableUpdate(uint64_t last_seen_version, Callback<void> callback) {
+    std::lock_guard lock{shared_table_mu_};
+    if (gossip_version_ != last_seen_version) {
+      // Forces callback to be called after lock is released.
+      return;
+    }
+    on_node_table_update_.emplace_back(std::move(callback));
+  }
+
  private:
   const NodeId root_node_;
   Timer* const timer_;
@@ -185,6 +196,7 @@ class RoutingTable {
   uint64_t gossip_version_ = 0;
   std::vector<fuchsia::overnet::protocol::NodeStatus> shared_node_status_;
   std::vector<fuchsia::overnet::protocol::LinkStatus> shared_link_status_;
+  std::vector<Callback<void>> on_node_table_update_;
 
   uint64_t selected_links_version_ = 0;
   SelectedLinks selected_links_;

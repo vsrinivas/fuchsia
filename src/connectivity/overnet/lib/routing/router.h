@@ -136,6 +136,12 @@ class Router {
     routing_table_.ForEachNodeMetric(mutator);
   }
 
+  // Request notification that the node tables has been updated.
+  // This may be called back on an arbitrary thread (unlike most of overnet).
+  void OnNodeTableUpdate(uint64_t last_seen_version, Callback<void> callback) {
+    routing_table_.OnNodeTableUpdate(last_seen_version, std::move(callback));
+  }
+
  private:
   Timer* const timer_;
   const NodeId node_id_;
