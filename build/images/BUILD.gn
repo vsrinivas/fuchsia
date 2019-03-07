@@ -83,8 +83,12 @@ group("available_packages") {
 template("package_list") {
   generated_file(target_name) {
     testonly = true
-    visibility = [ ":*"]
-    forward_variables_from(invoker, [ "deps", "public_deps" ])
+    visibility = [ ":*" ]
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                           ])
 
     data_keys = [ "package_names" ]
     walk_keys = [ "package_barrier" ]
@@ -95,25 +99,31 @@ template("package_list") {
 }
 
 package_list("monolith_packages.list") {
-  deps = [ ":monolith_packages" ]
+  deps = [
+    ":monolith_packages",
+  ]
 }
 
 package_list("preinstall_packages.list") {
-  deps = [ ":preinstall_packages" ]
+  deps = [
+    ":preinstall_packages",
+  ]
 }
 
 package_list("available_packages.list") {
-  deps = [ ":available_packages" ]
+  deps = [
+    ":available_packages",
+  ]
 }
 
 group("package_lists") {
   testonly = true
-  visibility = [ ":*"]
+  visibility = [ ":*" ]
 
   deps = [
+    ":available_packages.list",
     ":monolith_packages.list",
     ":preinstall_packages.list",
-    ":available_packages.list",
   ]
 }
 
@@ -160,7 +170,9 @@ package_metadata_list("monolith_meta_far_merkle_index") {
     monolith_meta_far_merkle_index,
   ]
   data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = monolith_packages
+  deps = [
+    ":monolith_packages",
+  ]
 }
 
 # The pkgsvr index is a manifest mapping `package_name/package_version` to
@@ -233,6 +245,21 @@ action("preinstall.manifest") {
 # like drivers going into /system can affect what needs to go into /boot.
 boot_manifest = "$target_out_dir/boot.manifest"
 
+system_image_manifest_args = "system_image.manifest_args"
+system_image_manifest_args_path = target_gen_dir + "/system_image.manifest_args"
+
+generated_file(system_image_manifest_args) {
+  testonly = true
+  outputs = [
+    system_image_manifest_args_path,
+  ]
+  data_keys = [ "system_image_rsps" ]
+  walk_keys = [ "package_barrier" ]
+  deps = [
+    ":monolith_packages",
+  ]
+}
+
 # The system_image "package" manifest is everything that appears in /system.
 generate_manifest("system_image.manifest") {
   visibility = [ ":*" ]
@@ -250,18 +277,13 @@ generate_manifest("system_image.manifest") {
   # Now each package() target in the build contributes manifest entries.
   # For system_image packages, these contain binaries that need their
   # references resolved from the auxiliary manifests or /boot (above).
-  args = []
-  deps = []
-  sources = []
-  foreach(pkg_label, monolith_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_system_rsp = "$pkg_target_out_dir/${pkg_target_name}.system.rsp"
-    deps += [ pkg_label ]
-    sources += [ pkg_system_rsp ]
-    args += [ "@" + rebase_path(pkg_system_rsp, root_build_dir) ]
-  }
+  deps = [
+    ":" + system_image_manifest_args,
+  ]
+  sources = [
+    system_image_manifest_args_path,
+  ]
+  args = [ "@" + rebase_path(system_image_manifest_args_path, root_build_dir) ]
 
   args += [ "--entry-manifest=" +
             get_label_info(":$target_name", "label_no_toolchain") ]
@@ -302,10 +324,12 @@ collect_blob_manifest("blob.manifest") {
   outputs = [
     blob_manifest,
   ]
-  deps = monolith_packages + preinstall_packages + [
-           ":system_image.meta",
-           ":update.meta",
-         ]
+  deps = [
+    ":monolith_packages",
+    ":preinstall_packages",
+    ":system_image.meta",
+    ":update.meta",
+  ]
 }
 
 # Pack up all the blobs!
@@ -423,7 +447,7 @@ action("devmgr_config.txt") {
   ]
 
   pkgfs = "bin/" + pkgfs_binary_name
-  pkgfs_label = pkgfs_package_label + ".meta"
+  pkgfs_label = pkgfs_package_label
   pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
                       get_label_info(pkgfs_label, "name")
   pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
@@ -1080,7 +1104,10 @@ package_metadata_list("update_meta_far_merkle_index") {
     update_meta_far_merkle_index,
   ]
   data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = monolith_packages + [ ":system_image.meta" ]
+  deps = [
+    ":monolith_packages",
+    ":system_image.meta",
+  ]
 }
 
 action("update_packages.manifest") {
@@ -1251,10 +1278,11 @@ system_index = "$target_out_dir/system_index"
 tagged_snapshot_manifests = [
   {
     tag = "monolith"
-    deps = monolith_packages + [
-             ":system_image.meta",
-             ":update.meta",
-           ]
+    deps = [
+      ":monolith_packages",
+      ":system_image.meta",
+      ":update.meta",
+    ]
   },
   {
     tag = "preinstall"
@@ -1355,10 +1383,13 @@ collect_blob_manifest("available_blobs.manifest") {
   outputs = [
     available_blob_manifest,
   ]
-  deps = available_packages + monolith_packages + preinstall_packages + [
-           ":system_image.meta",
-           ":update.meta",
-         ]
+  deps = [
+    ":available_packages",
+    ":monolith_packages",
+    ":preinstall_packages",
+    ":system_image.meta",
+    ":update.meta",
+  ]
 }
 
 # Populate the repository directory with content ID-named copies.
@@ -1404,7 +1435,7 @@ group("updates") {
     ":ids.txt",
     ":package_lists",
     ":system_snapshot",
-  ] 
+  ]
 }
 
 ###

@@ -111,9 +111,9 @@ template("pm_build_package") {
     tool = "//garnet/go/src/pm:pm_bin"
     tool_output_name = "pm"
 
-    deps = []
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "deps",
                              "public_deps",
                              "testonly",
@@ -121,6 +121,9 @@ template("pm_build_package") {
                              "package_name",
                              "package_variant",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
     pkg_manifest_outputs = get_target_outputs(invoker.manifest)
     pkg_manifest_file = pkg_manifest_outputs[0]
     pkg_out_dir = "$target_out_dir/$target_name"
@@ -171,6 +174,10 @@ template("pm_build_package") {
     # prebuilt_package.gni. The template package_metadata_list in package.gni
     # documents the fields required to be implemented by both templates.
     metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
       # We only ever want to collect the following package manifests from
       # packages, not from dependencies of packages, so the barrier prevents us
       # from walking any further in the dependency chain. See `gn help
@@ -704,13 +711,59 @@ template("package") {
       manifest_args += [ "--entry=${entry.dest}=${entry.source}" ]
     }
 
+    pkg.metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      shell_binary_entries = shell_binaries
+
+      # Subtle: we only want dependency on the package target to consume
+      # package metadata propagation for the package we're building, never
+      # for transitive package dependencies of this package. In the fuchsia
+      # package case, we want to therefore only include our local package
+      # build target. For the system image package case, we don't want to
+      # include anything.
+      package_barrier = []
+    }
+
+    if (defined(pkg.visibility)) {
+      pkg.visibility += [
+        # TODO(raggi): tighten build/images visibility once we've
+        # finished doing large scale cleanups.
+        "//build/images:*",
+        "//build/gn:packages",
+      ]
+    }
+
     # An empty package() target doesn't actually generate a package at all.
     # Conveniently, an empty system_image package has exactly that effect.
     if (manifest_sources == [] && pkg.components == []) {
       pkg.deprecated_system_image = true
     }
 
-    if (!pkg.deprecated_system_image) {
+    if (pkg.deprecated_system_image) {
+      # System image packages just donate manifest arguments
+      generate_response_file(pkg_target_name) {
+        if (defined(pkg.visibility)) {
+          visibility = pkg.visibility
+        }
+        deps = pkg.deps
+        data_deps = pkg.data_deps
+        public_deps = pkg.public_deps
+        output_name = "${pkg_target_name}.system.rsp"
+        response_file_contents = manifest_args
+        metadata = {
+          forward_variables_from(pkg.metadata, "*")
+
+          system_image_rsps = [ "@" +
+                                rebase_path(target_out_dir + "/" + output_name,
+                                            root_build_dir) ]
+        }
+      }
+    } else {
+      # Fuchsia package aggregates a manifest from it's arguments and builds a
+      # signed metadata archive.
+
       manifest = "${pkg_target_name}.manifest"
 
       # Synthesize the meta/package file.
@@ -731,6 +784,7 @@ template("package") {
       }
 
       generate_manifest(manifest) {
+        visibility = [ ":" + pkg_target_name ]
         sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
         args = manifest_args +
                [ "--entry=meta/package=" +
@@ -749,54 +803,19 @@ template("package") {
       }
 
       # Next generate a signed, sealed package file.
-      pm_build_package("${pkg_target_name}.meta") {
+      pm_build_package(pkg_target_name) {
+        if (defined(pkg.visibility)) {
+          visibility = pkg.visibility
+        }
         package_name = pkg.package_name
         manifest = ":$manifest"
-      }
+        metadata = {
+          forward_variables_from(pkg.metadata, "*")
+        }
 
-      # Clear it so we don't put anything into the system image.
-      manifest_args = []
-    }
-
-    generate_response_file(pkg_target_name) {
-      if (defined(pkg.visibility)) {
-        visibility = pkg.visibility + [
-                       # TODO(raggi): tighten build/images visibility once we've
-                       # finished doing large scale cleanups.
-                       "//build/images:*",
-                       "//build/gn:packages",
-                     ]
-      }
-      if (pkg.deprecated_system_image) {
         deps = pkg.deps
-      } else {
-        deps = [
-          ":${pkg_target_name}.meta",
-        ]
-      }
-      data_deps = pkg.data_deps
-      public_deps = pkg.public_deps
-      output_name = "${pkg_target_name}.system.rsp"
-      response_file_contents = manifest_args
-
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, [ "*" ])
-        }
-        shell_binary_entries = shell_binaries
-
-        # Subtle: we only want dependency on the package target to consume
-        # package metadata propagation for the package we're building, never
-        # for transitive package dependencies of this package. In the fuchsia
-        # package case, we want to therefore only include our local package
-        # build target. For the system image package case, we don't want to
-        # include anything.
-        if (pkg.deprecated_system_image) {
-          package_barrier = []
-        } else {
-          package_barrier = [ get_label_info(":${pkg_target_name}.meta",
-                                             "label_with_toolchain") ]
-        }
+        data_deps = pkg.data_deps
+        public_deps = pkg.public_deps
       }
     }
 

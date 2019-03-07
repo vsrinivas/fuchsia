@@ -38,8 +38,10 @@ shell_commands("shell-commands") {
 guest_meta_far_merkle_index = "$target_out_dir/guest_meta_far_merkle_index"
 package_metadata_list("guest_meta_far_merkle_index") {
   testonly = true
-  outputs = [guest_meta_far_merkle_index]
-  data_keys = ["meta_far_merkle_index_entries"]
+  outputs = [
+    guest_meta_far_merkle_index,
+  ]
+  data_keys = [ "meta_far_merkle_index_entries" ]
   deps = guest_packages
 }
 
@@ -51,17 +53,35 @@ action("pkgsvr_index") {
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  deps = [":guest_meta_far_merkle_index"]
-  inputs = [guest_meta_far_merkle_index]
+  deps = [
+    ":guest_meta_far_merkle_index",
+  ]
+  inputs = [
+    guest_meta_far_merkle_index,
+  ]
 
   script = "//build/images/manifest_content_expand.sh"
   args = [
     rebase_path(guest_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir)
+    rebase_path(outputs[0], root_build_dir),
   ]
 }
 
 boot_manifest = "$target_out_dir/boot.manifest"
+
+guest_image_manifest_args = "guest_image.manifest_args"
+guest_image_manifest_args_path = target_gen_dir + "/guest_image.manifest_args"
+
+generated_file(guest_image_manifest_args) {
+  testonly = true
+  outputs = [
+    guest_image_manifest_args_path,
+  ]
+  data_keys = [ "system_image_rsps" ]
+  walk_keys = [ "package_barrier" ]
+  deps = guest_packages
+}
+
 generate_manifest("guest.manifest") {
   visibility = [ ":*" ]
   testonly = true
@@ -69,18 +89,13 @@ generate_manifest("guest.manifest") {
   bootfs_manifest = boot_manifest
   bootfs_zircon_groups = "all"
 
-  args = []
-  deps = []
-  sources = []
-  foreach(pkg_label, guest_packages) {
-    # Find the response file written by package().
-    pkg_target_name = get_label_info(pkg_label, "name")
-    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-    pkg_system_rsp = "$pkg_target_out_dir/${pkg_target_name}.system.rsp"
-    deps += [ pkg_label ]
-    sources += [ pkg_system_rsp ]
-    args += [ "@" + rebase_path(pkg_system_rsp, root_build_dir) ]
-  }
+  deps = [
+    ":" + guest_image_manifest_args,
+  ]
+  sources = [
+    guest_image_manifest_args_path,
+  ]
+  args = [ "@" + rebase_path(guest_image_manifest_args_path, root_build_dir) ]
 
   json = "guest_meta_package.json"
   sources += [ json ]
@@ -109,7 +124,7 @@ collect_blob_manifest("guest_blob.manifest") {
   outputs = [
     guest_blob_manifest,
   ]
-  deps = guest_packages + [":guest.meta"]
+  deps = guest_packages + [ ":guest.meta" ]
 }
 
 zircon_tool_action("guest_blob.blk") {
@@ -166,7 +181,7 @@ action("devmgr_config.txt") {
     "$target_out_dir/$target_name",
   ]
   pkgfs = "bin/" + pkgfs_binary_name
-  pkgfs_label = pkgfs_package_label + ".meta"
+  pkgfs_label = pkgfs_package_label
   pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
                       get_label_info(pkgfs_label, "name")
   pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
