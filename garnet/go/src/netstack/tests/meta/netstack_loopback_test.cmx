@@ -1,17 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/netstack_loopback_test"
     },
     "sandbox": {
-        "services" : [
+        "services": [
             "fuchsia.net.SocketProvider"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.net.SocketProvider"
-            ]
-        }
     }
 }
