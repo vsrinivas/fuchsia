@@ -5,7 +5,6 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>

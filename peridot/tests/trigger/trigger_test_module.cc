@@ -65,13 +65,6 @@ class TestModule {
     });
   }
 
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
-
   TestPoint received_trigger_token_{"Received trigger token"};
   TestPoint agent_connected_{"fuchsia::modular::Agent accepted connection"};
   TestPoint agent_stopped_{"fuchsia::modular::Agent stopped"};

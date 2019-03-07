@@ -7,10 +7,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -41,13 +41,6 @@ class TestModule {
     test_driver_url_path_.push_back(modular::testing::kTestDriverPath);
     SetUp();
   }
-
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called via ModuleDriver.
   TestPoint stopped_{"test driver module stopped"};

@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_TESTING_SESSION_SHELL_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -31,7 +32,7 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   fidl::InterfaceRequestHandler<fuchsia::modular::SessionShell> GetHandler();
 
   // Whenever SessionShell.AttachView() is called, the supplied callback is
-  // invoked with the view ID. The ViewOwner is dropped.
+  // invoked with the view ID. The ImportToken is dropped.
   void set_on_attach_view(std::function<void(ViewId view_id)> callback) {
     on_attach_view_ = std::move(callback);
   }

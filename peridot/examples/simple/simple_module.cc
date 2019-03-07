@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/examples/simple/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
@@ -15,11 +17,10 @@ using ::fuchsia::modular::examples::simple::SimplePtr;
 
 namespace simple {
 
-class SimpleModule : public fuchsia::ui::app::ViewProvider,
-                     public fuchsia::ui::viewsv1::ViewProvider {
+class SimpleModule : public fuchsia::ui::app::ViewProvider {
  public:
   SimpleModule(modular::ModuleHost* const module_host)
-      : old_view_provider_binding_(this), view_provider_binding_(this) {
+      : view_provider_binding_(this) {
     // Get the component context from the module context.
     fuchsia::modular::ComponentContextPtr component_context;
     module_host->module_context()->GetComponentContext(
@@ -63,13 +64,6 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider,
     view_provider_binding_.Bind(std::move(view_provider_request));
   }
 
-  SimpleModule(modular::ModuleHost* const module_host,
-               fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-                   view_provider_request)
-      : SimpleModule(module_host) {
-    old_view_provider_binding_.Bind(std::move(view_provider_request));
-  }
-
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) { done(); }
 
@@ -81,15 +75,7 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
       override {}
 
-  // |fuchsia::ui::viewsv1::ViewProvider|
-  void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override {
-  }
-
-  fidl::Binding<fuchsia::ui::viewsv1::ViewProvider> old_view_provider_binding_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
-
   modular::MessageQueueClient message_queue_;
 };
 

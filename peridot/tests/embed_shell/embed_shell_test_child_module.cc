@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 
@@ -23,18 +23,9 @@ class TestModule {
              fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
                  view_provider_request)
       : module_host_(module_host),
-        app_view_provider_(std::move(view_provider_request)) {
+        view_provider_(std::move(view_provider_request)) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     StartChildModule();
-  }
-
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-                 view_provider_request)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {
-    views1_view_provider_ = std::move(view_provider_request);
   }
 
   // Called from ModuleDriver.
@@ -68,9 +59,7 @@ class TestModule {
 
   // We keep the view provider around so that story shell can hold a view for
   // us, but don't do anything with it.
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-      views1_view_provider_;
-  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> app_view_provider_;
+  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> view_provider_;
 
   fuchsia::modular::ModuleControllerPtr child_module_;
 

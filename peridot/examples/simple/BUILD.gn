@@ -44,6 +44,11 @@ executable_package("simple_module") {
     "//garnet/public/lib/component/cpp",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/message_queue/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

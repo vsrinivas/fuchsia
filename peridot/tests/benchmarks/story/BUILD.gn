@@ -21,7 +21,6 @@ executable_package("modular_benchmark_story_module") {
     ":tracing_waiter",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -47,7 +46,6 @@ executable_package("modular_benchmark_story_session_shell") {
     "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
   ]
 

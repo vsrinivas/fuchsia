@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>

@@ -32,7 +32,7 @@ class TestModule : fuchsia::modular::ProposalListener {
              fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
                  view_provider_request)
       : module_host_(module_host),
-        app_view_provider_(std::move(view_provider_request)) {
+        view_provider_(std::move(view_provider_request)) {
     modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
 
@@ -80,15 +80,6 @@ class TestModule : fuchsia::modular::ProposalListener {
         });
   }
 
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-                 view_provider_request)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {
-    views1_view_provider_ = std::move(view_provider_request);
-  }
-
   // Called by ModuleDriver.
   TestPoint stopped_{"Root module stopped"};
   void Terminate(const std::function<void()>& done) {
@@ -111,9 +102,7 @@ class TestModule : fuchsia::modular::ProposalListener {
 
   // We keep the view provider around so that story shell can hold a view for
   // us, but don't do anything with it.
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-      views1_view_provider_;
-  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> app_view_provider_;
+  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> view_provider_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
 

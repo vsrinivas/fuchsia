@@ -40,7 +40,6 @@ executable_package("story_shell_test_story_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
   ]
 }
@@ -74,7 +73,6 @@ executable_package("story_shell_test_session_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
   ]
 }

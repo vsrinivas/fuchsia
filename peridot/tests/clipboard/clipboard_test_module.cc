@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
@@ -43,13 +42,6 @@ class TestModule {
       Signal(modular::testing::kTestShutdown);
     });
   }
-
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   TestPoint stopped_{"fuchsia::modular::Clipboard module stopped"};
   void Terminate(const std::function<void()>& done) {

@@ -32,7 +32,6 @@ executable_package("parent_child_test_child_module1") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -57,7 +56,6 @@ executable_package("parent_child_test_child_module2") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -83,7 +81,6 @@ executable_package("parent_child_test_parent_module") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

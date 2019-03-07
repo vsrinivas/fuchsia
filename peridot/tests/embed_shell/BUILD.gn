@@ -32,7 +32,7 @@ executable_package("embed_shell_test_child_module") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.app",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -59,7 +59,6 @@ executable_package("embed_shell_test_session_shell") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -85,7 +84,8 @@ executable_package("embed_shell_test_parent_module") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -115,7 +115,6 @@ executable_package("embed_shell_test_story_shell") {
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

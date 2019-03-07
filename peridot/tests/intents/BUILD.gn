@@ -32,7 +32,6 @@ executable_package("intent_test_parent_module") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -58,7 +57,6 @@ executable_package("intent_test_child_module") {
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

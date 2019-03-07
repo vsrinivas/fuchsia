@@ -54,7 +54,6 @@ source_set("module_driver") {
     "//peridot/public/lib/lifecycle/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
   ]
 }

@@ -127,13 +127,6 @@ class TestApp {
         }));
   }
 
-  TestApp(modular::ModuleHost* const module_host,
-          fidl::InterfaceRequest<
-              fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
-      : TestApp(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
-
   TestPoint stopped_{"Entity module stopped"};
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();

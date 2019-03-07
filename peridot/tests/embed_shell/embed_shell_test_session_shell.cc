@@ -60,8 +60,6 @@ class TestApp : public modular::testing::SessionShellBase {
         [this](fuchsia::modular::ExecuteResult result) {
           story_provider()->GetController(kStoryName,
                                           story_controller_.NewRequest());
-          fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-              root_module_view;
           story_controller_->RequestStart();
         });
 
@@ -70,8 +68,8 @@ class TestApp : public modular::testing::SessionShellBase {
     });
   }
 
-  TestPoint modules_reinflated_correctly_{"Modules reinfated correctly"};
-  // Test that embedded modules are not reinflated.
+  TestPoint modules_reinflated_correctly_{"Modules re-inflated correctly"};
+  // Test that embedded modules are not re-inflated.
   void TestModuleReinflation() {
     story_controller_->RequestStart();
     story_controller_->GetActiveModules(

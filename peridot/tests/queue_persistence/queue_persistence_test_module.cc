@@ -50,13 +50,6 @@ class TestModule {
           [this] { AgentConnected(); });
   }
 
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
-
   // Called by ModuleDriver.
   TestPoint stopped_{"Root module stopped"};
   void Terminate(const std::function<void()>& done) {

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fsl/vmo/strings.h>
@@ -31,13 +30,6 @@ class TestModule {
     FXL_LOG(INFO) << "Child module 2 initialized";
     Signal(std::string("child_module_2_init"));
   }
-
-  TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
-      : TestModule(
-            module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   // Called from ModuleDriver.
   TestPoint stopped_{"Child module 2 stopped"};
