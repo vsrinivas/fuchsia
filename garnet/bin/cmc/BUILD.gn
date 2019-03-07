@@ -29,7 +29,7 @@ rustc_binary("cmc") {
 
   non_rust_deps = [
     ":cmc_test_schemas",
-    "//garnet/lib/rust/cm_json:cm_schema_json"
+    "//garnet/lib/rust/cm_json:cm_schema_json",
   ]
 }
 
@@ -65,9 +65,9 @@ rustc_binary("cmc_integration_test_bin") {
   edition = "2018"
   source_root = "tests/integration_test.rs"
   deps = [
+    "//garnet/lib/rust/cm_fidl_translator",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//garnet/lib/rust/cm_fidl_translator",
     "//third_party/rust_crates:failure",
   ]
 }
@@ -105,7 +105,9 @@ fuchsia_component("cmc_integration_test_component") {
   ]
 
   binary = "cmc_integration_test"
-  test = true
+
+  # TODO(IN-933): Reenable once fuchsia_test_component is supported.
+  # test = true
 }
 
 package("cmc_integration_test") {

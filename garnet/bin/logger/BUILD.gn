@@ -40,14 +40,16 @@ package("logger") {
   components = [ ":logger_component" ]
 }
 
-fuchsia_test_component("logger_test_component") {
-  deps = [
-    ":bin",
-  ]
-  binary = "logger_bin_test"
-}
+# TODO(IN-933): Reenable once fuchsia_test_component is supported.
+# fuchsia_test_component("logger_test_component") {
+#   deps = [
+#     ":bin",
+#   ]
+#   binary = "logger_bin_test"
+# }
 
 package("logger_tests") {
   testonly = true
-  components = [ ":logger_test_component" ]
+  # TODO(IN-933): Reenable once fuchsia_test_component is supported.
+  # components = [ ":logger_test_component" ]
 }

@@ -23,10 +23,10 @@ go_test("logger_integration_go_tests") {
     ":logger_integration_go_tests_lib",
   ]
 }
-
-fuchsia_test_component("test_component") {
-  binary = "logger_integration_go_tests"
-  deps = [
-    ":logger_integration_go_tests",
-  ]
-}
+# TODO(IN-933): Reenable once fuchsia_test_component is supported.
+# fuchsia_test_component("test_component") {
+#   binary = "logger_integration_go_tests"
+#   deps = [
+#     ":logger_integration_go_tests",
+#   ]
+# }

@@ -43,19 +43,21 @@ test("component_cpp_testing_unittests") {
   ]
 }
 
-fuchsia_test_component("component_cpp_unittests_component") {
-  deps = [
-    ":component_cpp_unittests",
-  ]
-  binary = "component_cpp_unittests"
-}
+# TODO(IN-933): Reenable once fuchsia_test_component is supported.
+# fuchsia_test_component("component_cpp_unittests_component") {
+#   deps = [
+#     ":component_cpp_unittests",
+#   ]
+#   binary = "component_cpp_unittests"
+# }
 
-fuchsia_test_component("component_cpp_testing_unittests_component") {
-  deps = [
-    ":component_cpp_testing_unittests",
-  ]
-  binary = "component_cpp_testing_unittests"
-}
+# TODO(IN-933): Reenable once fuchsia_test_component is supported.
+# fuchsia_test_component("component_cpp_testing_unittests_component") {
+#   deps = [
+#     ":component_cpp_testing_unittests",
+#   ]
+#   binary = "component_cpp_testing_unittests"
+# }
 
 # TODO(IN-933): Convert back to package
 test_package("component_cpp_tests") {
