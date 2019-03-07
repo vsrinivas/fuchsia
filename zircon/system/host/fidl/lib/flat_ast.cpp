@@ -969,6 +969,7 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute* at
     static const std::set<std::string> kValidTransports = {
         "Channel",
         "SocketControl",
+        "OvernetEmbedded",
         "OvernetInternal",
     };
     for (auto transport : transports) {
