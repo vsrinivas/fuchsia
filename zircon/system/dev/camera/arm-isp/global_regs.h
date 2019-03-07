@@ -239,6 +239,34 @@ public:
     DEF_BIT(21, luma_variance_done);
     DEF_BIT(22, dma_error_interrupt);
     DEF_BIT(23, input_port_safely_stopped);
+
+    IspGlobalInterrupt_MaskVector& mask_all() {
+        set_isp_start(1);
+        set_isp_done(1);
+        set_ctx_management_error(1);
+        set_broken_frame_error(1);
+        set_metering_af_done(1);
+        set_metering_aexp_done(1);
+        set_metering_awb_done(1);
+        set_metering_aexp_1024_bin_hist_done(1);
+        set_metering_antifog_hist_done(1);
+        set_lut_init_done(1);
+        set_fr_y_dma_write_done(1);
+        set_fr_uv_dma_write_done(1);
+        set_ds_y_dma_write_done(1);
+        set_linearization_done(1);
+        set_static_dpc_done(1);
+        set_ca_correction_done(1);
+        set_iridix_done(1);
+        set_three_d_liut_done(1);
+        set_wdg_timer_timed_out(1);
+        set_frame_collision_error(1);
+        set_luma_variance_done(1);
+        set_dma_error_interrupt(1);
+        set_input_port_safely_stopped(1);
+        return *this;
+    }
+
     static auto Get() {
         return hwreg::RegisterAddr<IspGlobalInterrupt_MaskVector>(0x30);
     }
@@ -705,7 +733,7 @@ public:
 class InputPort_Config0 : public hwreg::RegisterBase<InputPort_Config0, uint32_t> {
 public:
     //  Allows selection of various input port presets for standard
-    //   sensor inputs.  See ISP Guide for details of available presets. 
+    //   sensor inputs.  See ISP Guide for details of available presets.
     //         2: preset mode 2, check ISP guide for details
     // 6: preset mode 6, check ISP guide for details        others: reserved
     DEF_FIELD(3, 0, preset);

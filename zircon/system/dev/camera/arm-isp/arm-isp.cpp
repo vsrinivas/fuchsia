@@ -10,7 +10,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <hw/reg.h>
 #include <memory>
 #include <stdlib.h>
 #include <threads.h>
@@ -30,6 +29,21 @@ constexpr uint32_t kIsp = 4;
 // CLK Shifts & Masks
 constexpr uint32_t kClkMuxMask = 0xfff;
 constexpr uint32_t kClockEnableShift = 8;
+
+constexpr uint8_t kPing = 0;
+constexpr uint8_t kPong = 1;
+
+constexpr uint8_t kCopyToIsp = 0;
+constexpr uint8_t kCopyFromIsp = 1;
+
+// ISP memory offsets
+constexpr uint32_t kDecompander0PingOffset = 0xAB6C;
+constexpr uint32_t kPingConfigSize = 0x17FC0;
+constexpr uint32_t kAexpHistStatsOffset = 0x24A8;
+constexpr uint32_t kHistSize = 0x2000;
+constexpr uint32_t kPingMeteringStatsOffset = 0x44B0;
+constexpr uint32_t kMeteringSize = 0x8000;
+constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
 
 } // namespace
 
@@ -89,6 +103,108 @@ int ArmIspDevice::IspIrqHandler() {
     return status;
 }
 
+void ArmIspDevice::CopyContextInfo(uint8_t config_space,
+                                   uint8_t direction) {
+    void* local_config_buffer = nullptr;
+    void* device_config_buffer = nullptr;
+    if (config_space == kPing) {
+        // PING Context
+        local_config_buffer = static_cast<uint32_t*>(isp_mmio_local_.get()) +
+                              kDecompander0PingOffset;
+        device_config_buffer = static_cast<uint32_t*>(isp_mmio_.get()) + kDecompander0PingOffset;
+    } else {
+        // PONG Context
+        local_config_buffer = static_cast<uint32_t*>(isp_mmio_local_.get()) +
+                              kDecompander0PingOffset;
+        device_config_buffer = static_cast<uint32_t*>(isp_mmio_.get()) + kDecompander0PingOffset +
+                               kPingConfigSize;
+    }
+
+    void* source = nullptr;
+    void* destination = nullptr;
+
+    if (direction == kCopyToIsp) {
+        // Copy to ISP from Local Config Buffer
+        source = local_config_buffer;
+        destination = device_config_buffer;
+    } else {
+        // Copy from ISP to Local Config Buffer
+        source = device_config_buffer;
+        destination = local_config_buffer;
+    }
+
+    memcpy(destination, source, 0x1231C);
+}
+
+void ArmIspDevice::CopyMeteringInfo(uint8_t config_space,
+                                    uint8_t direction) {
+    void* local_metering_buffer_1 = nullptr;
+    void* device_metering_buffer_1 = nullptr;
+    void* local_metering_buffer_2 = nullptr;
+    void* device_metering_buffer_2 = nullptr;
+    size_t size_1, size_2;
+
+    if (config_space == kPing) {
+        // PING Context
+        local_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
+                                  kAexpHistStatsOffset;
+        device_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_.get()) + kAexpHistStatsOffset;
+        size_1 = kHistSize;
+
+        local_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
+                                  kPingMeteringStatsOffset;
+        device_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_.get()) +
+                                   kPingMeteringStatsOffset;
+        size_2 = kMeteringSize;
+    } else {
+        // PONG Context
+        local_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
+                                  kAexpHistStatsOffset;
+        device_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_.get()) + kAexpHistStatsOffset;
+        size_1 = kHistSize;
+
+        local_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
+                                  kPingMeteringStatsOffset +
+                                  kPingConfigSize;
+        device_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_.get()) +
+                                   kPingMeteringStatsOffset;
+        size_2 = kMeteringSize;
+    }
+
+    if (direction == kCopyToIsp) {
+        // Copy to ISP from Local Config Buffer
+        memcpy(device_metering_buffer_1, local_metering_buffer_1, size_1);
+        memcpy(device_metering_buffer_2, local_metering_buffer_2, size_2);
+    } else {
+        // Copy from ISP to Local Config Buffer
+        memcpy(local_metering_buffer_1, device_metering_buffer_1, size_1);
+        memcpy(local_metering_buffer_2, device_metering_buffer_2, size_2);
+    }
+
+    // OnMeteringComplete();
+}
+
+zx_status_t ArmIspDevice::IspContextInit() {
+    zx_status_t status = ZX_OK;
+    // This is actually writing to the HW
+    IspLoadSeq_settings();
+    // This is being written to the local_config_buffer_
+    IspLoadSeq_settings_context();
+
+    // TODO(braval@) Call StatManagerInit() here
+
+    // Call custom_init()
+    IspLoadCustomSequence();
+
+    // Input port safe start
+    InputPort_Config3::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_mode_request(1)
+        .WriteTo(&isp_mmio_);
+
+    return status;
+}
+
 zx_status_t ArmIspDevice::InitIsp() {
     // The ISP and MIPI module is in same power domain.
     // So if we don't call the power sequence of ISP, the mipi module
@@ -112,6 +228,51 @@ zx_status_t ArmIspDevice::InitIsp() {
     }
 
     IspHWReset(false);
+
+    // validate the ISP product ID
+    if (Id_Product::Get().ReadFrom(&isp_mmio_).value() != PRODUCT_ID_DEFAULT) {
+        zxlogf(ERROR, "%s: Unknown product ID\n", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Mask all IRQs
+    IspGlobalInterrupt_MaskVector::Get().ReadFrom(&isp_mmio_).mask_all().WriteTo(&isp_mmio_);
+
+    // Now copy all ping config settings & metering settings and store it.
+    CopyContextInfo(kPing, kCopyFromIsp);
+
+    zx_status_t status = IspContextInit();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: IspContextInit failed %d\n", __func__, status);
+    }
+
+    // Copy current context to ISP
+    CopyContextInfo(kPing, kCopyToIsp);
+    CopyContextInfo(kPong, kCopyToIsp);
+
+    while (IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_).reg_value()) {
+        // driver is initialized. we can start processing interrupts
+        // wait until irq mask is cleared and start processing
+        IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(0).WriteTo(&isp_mmio_);
+        IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(1).WriteTo(&isp_mmio_);
+    }
+
+    IspGlobalInterrupt_MaskVector::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_isp_start(0)
+        .set_ctx_management_error(0)
+        .set_broken_frame_error(0)
+        .set_wdg_timer_timed_out(0)
+        .set_frame_collision_error(0)
+        .set_dma_error_interrupt(0)
+        .WriteTo(&isp_mmio_);
+
+    // put ping pong in slave mode
+    // SW only mode
+    IspGlobal_Config3::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_mcu_override_config_select(1)
+        .WriteTo(&isp_mmio_);
 
     return ZX_OK;
 }
@@ -137,12 +298,14 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
+
     std::optional<ddk::MmioBuffer> memory_pd_mmio;
     status = pdev.MapMmio(kMemoryDomain, &memory_pd_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
+
     std::optional<ddk::MmioBuffer> reset_mmio;
     status = pdev.MapMmio(kReset, &reset_mmio);
     if (status != ZX_OK) {
@@ -164,7 +327,16 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
         return status;
     }
 
+    // Allocate buffers for ISP SW configuration and metering information.
     fbl::AllocChecker ac;
+    mmio_buffer_t local_mmio_buffer;
+    local_mmio_buffer.vaddr = new (&ac) char[kLocalBufferSize];
+    local_mmio_buffer.size = kLocalBufferSize;
+    local_mmio_buffer.vmo = ZX_HANDLE_INVALID;
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     auto isp_device = std::unique_ptr<ArmIspDevice>(new (&ac) ArmIspDevice(
         parent,
         std::move(*hiu_mmio),
@@ -172,6 +344,7 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
         std::move(*memory_pd_mmio),
         std::move(*reset_mmio),
         std::move(*isp_mmio),
+        local_mmio_buffer,
         std::move(isp_irq)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -194,6 +367,7 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
 }
 
 ArmIspDevice::~ArmIspDevice() {
+    free(isp_mmio_local_.get());
     running_.store(false);
     thrd_join(irq_thread_, NULL);
     isp_irq_.destroy();

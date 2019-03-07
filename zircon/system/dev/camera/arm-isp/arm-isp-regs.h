@@ -23,3 +23,6 @@
 
 // Reset
 #define RESET4_LEVEL 0x90
+
+// Product ID
+#define PRODUCT_ID_DEFAULT (2658)

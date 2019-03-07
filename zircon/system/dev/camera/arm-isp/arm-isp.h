@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "global_regs.h"
+#include "pingpong_regs.h"
+
 #include <atomic>
 #include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
@@ -13,6 +16,7 @@
 #include <ddktl/protocol/isp.h>
 #include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
+#include <hw/reg.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
@@ -36,11 +40,13 @@ public:
                           ddk ::MmioBuffer memory_pd_mmio,
                           ddk ::MmioBuffer reset_mmio,
                           ddk ::MmioBuffer isp_mmio,
+                          mmio_buffer_t local_mmio,
                           zx::interrupt isp_irq)
         : IspDeviceType(parent), pdev_(parent),
           hiu_mmio_(std::move(hiu_mmio)), power_mmio_(std::move(power_mmio)),
           memory_pd_mmio_(std::move(memory_pd_mmio)), reset_mmio_(std::move(reset_mmio)),
-          isp_mmio_(std::move(isp_mmio)), isp_irq_(std::move(isp_irq)) {}
+          isp_mmio_(std::move(isp_mmio)), isp_mmio_local_(local_mmio, 0),
+          isp_irq_(std::move(isp_irq)) {}
 
     ~ArmIspDevice();
 
@@ -53,6 +59,7 @@ public:
     // ZX_PROTOCOL_ISP ops.
     void IspDummyCall(){};
 
+    // ISP Init Sequences (init_sequences.cpp)
     void IspLoadSeq_linear();
     void IspLoadSeq_settings();
     void IspLoadSeq_fs_lin_2exp();
@@ -62,11 +69,16 @@ public:
     void IspLoadCustomSequence();
 
 private:
+    zx_status_t InitIsp();
+    zx_status_t IspContextInit();
     void ShutDown();
     void PowerUpIsp();
     void IspHWReset(bool reset);
-    zx_status_t InitIsp();
     int IspIrqHandler();
+    void CopyContextInfo(uint8_t config_space,
+                         uint8_t direction);
+    void CopyMeteringInfo(uint8_t config_space,
+                          uint8_t direction);
 
     ddk::PDev pdev_;
 
@@ -75,6 +87,11 @@ private:
     ddk::MmioBuffer memory_pd_mmio_;
     ddk::MmioBuffer reset_mmio_;
     ddk::MmioBuffer isp_mmio_;
+    // MmioView is currently used and created using a custom mmio_buffer_t
+    // populated with malloced memory.
+    // We can switch to using the actual mmio_buffer_t
+    // when we plan to use SW-HW context, in order to make a easy switch.
+    ddk::MmioView isp_mmio_local_;
 
     zx::interrupt isp_irq_;
     thrd_t irq_thread_;
