@@ -12,7 +12,9 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/threading/thread.h"
+namespace fxl {
+class Thread;
+}  // namespace fxl.
 
 namespace dockyard {
 

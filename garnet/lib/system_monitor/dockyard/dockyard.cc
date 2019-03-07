@@ -12,6 +12,7 @@
 
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/threading/thread.h"
 
 namespace dockyard {
 
