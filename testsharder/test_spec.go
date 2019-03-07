@@ -39,11 +39,14 @@ type Test struct {
 	// (e.g., //garnet/bin/foo/tests:foo_tests).
 	Name string `json:"name"`
 
-	// (Deprecated. Use `Command` instead)
+	// TODO(joshuaseaton): Remove and replace by `Path`.
 	//
 	// Location is a unique reference to a test: for example, a filesystem
 	// path or a Fuchsia URI.
 	Location string `json:"location"`
+
+	// Path is the path to the test.
+	Path string `json:"path"`
 
 	// OS is the operating system in which this test must be executed.
 	OS OS `json:"os"`
@@ -65,8 +68,8 @@ func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
 	if spec.Test.Name == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty name")
 	}
-	if spec.Test.Location == "" {
-		return fmt.Errorf("A test spec's test must have a non-empty location")
+	if spec.Test.Path == "" && spec.Test.Location == "" {
+		return fmt.Errorf("A test spec's test must have a non-empty path")
 	}
 	if spec.Test.OS == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty OS")
@@ -124,6 +127,10 @@ func LoadTestSpecs(fuchsiaBuildDir string) ([]TestSpec, error) {
 	}
 
 	for i, _ := range specs {
+		if specs[i].Path == "" {
+			specs[i].Path = specs[i].Location
+		}
+
 		if specs[i].DepsFile == "" {
 			continue
 		}

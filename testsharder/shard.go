@@ -45,7 +45,7 @@ func MakeShards(specs []TestSpec, label string) []*Shard {
 	for _, env := range envs {
 		specs := envToSuites[env]
 		sort.Slice(specs, func(i, j int) bool {
-			return specs[i].Test.Location < specs[i].Test.Location
+			return specs[i].Test.Path < specs[i].Test.Path
 		})
 		var tests []Test
 		for _, spec := range specs {

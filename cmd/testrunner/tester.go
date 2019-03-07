@@ -32,8 +32,8 @@ type SubprocessTester struct {
 
 func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
 	var command []string
-	if len(test.Location) > 0 {
-		command = []string{test.Location}
+	if len(test.Path) > 0 {
+		command = []string{test.Path}
 	} else {
 		command = test.Command
 	}
@@ -109,7 +109,7 @@ func NewFuchsiaTester(nodename, sshKey string) (*FuchsiaTester, error) {
 }
 
 func (t *FuchsiaTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
-	name := path.Base(test.Location)
+	name := path.Base(test.Path)
 	test.Command = []string{"runtests", "-t", name, "-o", t.remoteOutputDir + "runtests"}
 	return t.delegate.Test(ctx, test, stdout, stderr)
 }
