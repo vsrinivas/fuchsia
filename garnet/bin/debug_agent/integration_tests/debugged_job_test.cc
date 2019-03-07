@@ -205,7 +205,7 @@ uint64_t FindModuleBaseAddress(const NotifyModules& modules,
 
 }  // namespace
 
-TEST(DebuggedJobIntegrationTest, OneProcess) {
+TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   MessageLoopWrapper message_loop_wrapper;
   MessageLoop* message_loop = message_loop_wrapper.loop();
 
