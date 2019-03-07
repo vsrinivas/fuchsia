@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bt-intel-tool") {
+  output_name = "bt-intel-tool"
+
+  sources = [
+    "command_channel.cc",
+    "command_channel.h",
+    "commands.cc",
+    "commands.h",
+    "intel_firmware_loader.cc",
+    "intel_firmware_loader.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "../lib",
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+}

@@ -1,0 +1,67 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# Package containing command-line developer tools. bt-snoop lives in a separate
+# package defined under the bt-snoop/ directory.
+package("tools") {
+  deps = [
+    "bt-avrcp-controller",
+    "bt-cli",
+    "bt-fake-hci",
+    "bt-hci-tool",
+    "bt-intel-tool",
+    "bt-le-central",
+    "bt-le-peripheral",
+    "bt-pairing-tool",
+    "bt-snoop-cli",
+  ]
+
+  binaries = [
+    {
+      name = "bt_avrcp_controller"
+      dest = "bt-avrcp-controller"
+      shell = true
+    },
+    {
+      name = "bt_cli"
+      dest = "bt-cli"
+      shell = true
+    },
+    {
+      name = "bt_snoop_cli"
+      dest = "bt-snoop-cli"
+      shell = true
+    },
+    {
+      name = "bt_fake_hci"
+      dest = "bt-fake-hci"
+      shell = true
+    },
+    {
+      name = "bt-hci-tool"
+      shell = true
+    },
+    {
+      name = "bt-intel-tool"
+      shell = true
+    },
+    {
+      name = "bt_le_central"
+      dest = "bt-le-central"
+      shell = true
+    },
+    {
+      name = "bt_le_peripheral"
+      dest = "bt-le-peripheral"
+      shell = true
+    },
+    {
+      name = "bt_pairing_tool"
+      dest = "bt-pairing-tool"
+      shell = true
+    },
+  ]
+}

@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/bt-host"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.stash.Store"
+        ]
+    }
+}

@@ -1,0 +1,65 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "bt_a2dp_sink"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/bt-avdtp",
+    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:slab",
+  ]
+}
+
+package("bt-a2dp-sink") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/bt_a2dp_sink"
+
+  meta = [
+    {
+      path = rebase_path("meta/bt-a2dp-sink.cmx")
+      dest = "bt-a2dp-sink.cmx"
+    },
+  ]
+}
+
+test_package("tests") {
+  package_name = "bt-a2dp-sink-tests"
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "bt_a2dp_sink_bin_test"
+      dest = "bt-a2dp-sink-unittests"
+      environments = basic_envs
+    },
+  ]
+}

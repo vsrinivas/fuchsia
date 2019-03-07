@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/bluetooth/profiles/bt-a2dp-sink"
+        "//src/connectivity/bluetooth/profiles/bt-a2dp-sink"
     ]
 }

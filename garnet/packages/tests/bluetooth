@@ -3,8 +3,9 @@
         "garnet/packages/prod/bluetooth_core"
     ],
     "packages": [
-        "//garnet/bin/bluetooth/bt-gap:bt-gap-tests",
-        "//garnet/bin/bluetooth/profiles/bt-a2dp-sink:bt-a2dp-sink-tests",
+        "//src/connectivity/bluetooth/core/bt-gap:tests",
+        "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
+        "//src/connectivity/bluetooth/tools/bt-snoop:tests",
         "//garnet/bin/bluetooth/tests:bluetooth-tests",
         "//garnet/drivers/bluetooth/hci/fake",
         "//garnet/lib/rust/bt-avdtp:bt-avdtp-tests",

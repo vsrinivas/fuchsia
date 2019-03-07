@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_BEACON_READER_BEACONS_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_BEACON_READER_BEACONS_H_
+
 #include <memory>
 
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
@@ -48,3 +51,5 @@ class TiltDetection {
 };
 
 }  // namespace bt_beacon_reader
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_BEACON_READER_BEACONS_H_
