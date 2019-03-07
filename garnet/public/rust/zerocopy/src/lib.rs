@@ -32,18 +32,30 @@ use core::slice;
 
 // implement an unsafe trait for a range of container types
 macro_rules! impl_for_composite_types {
-    ($trait:ident) => (
+    ($trait:ident) => {
         unsafe impl<T> $trait for PhantomData<T> {
-            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+            fn only_derive_is_allowed_to_implement_this_trait()
+            where
+                Self: Sized,
+            {
+            }
         }
         unsafe impl<T: $trait> $trait for [T] {
-            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+            fn only_derive_is_allowed_to_implement_this_trait()
+            where
+                Self: Sized,
+            {
+            }
         }
         unsafe impl $trait for () {
-            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+            fn only_derive_is_allowed_to_implement_this_trait()
+            where
+                Self: Sized,
+            {
+            }
         }
         impl_for_array_sizes!($trait);
-    );
+    };
 }
 
 // implement an unsafe trait for all signed and unsigned primitive types
@@ -116,7 +128,9 @@ pub unsafe trait FromBytes {
     // NOTE: The Self: Sized bound makes it so that FromBytes is still object
     // safe.
     #[doc(hidden)]
-    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized;
+    fn only_derive_is_allowed_to_implement_this_trait()
+    where
+        Self: Sized;
 }
 
 /// Types which are safe to treat as an immutable byte slice.
@@ -154,7 +168,38 @@ pub unsafe trait FromBytes {
 /// [Rust Reference]: https://doc.rust-lang.org/reference/type-layout.html
 pub unsafe trait AsBytes {
     #[doc(hidden)]
-    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized;
+    fn only_derive_is_allowed_to_implement_this_trait()
+    where
+        Self: Sized;
+
+    /// Get the bytes of this value.
+    ///
+    /// `as_bytes` provides access to the bytes of this value as an immutable
+    /// byte slice.
+    fn as_bytes(&self) -> &[u8] {
+        unsafe {
+            // NOTE: This function does not have a Self: Sized bound.
+            // size_of_val works for unsized values too.
+            let len = mem::size_of_val(self);
+            slice::from_raw_parts(self as *const Self as *const u8, len)
+        }
+    }
+
+    /// Get the bytes of this value mutably.
+    ///
+    /// `as_bytes_mut` provides access to the bytes of this value as a mutable
+    /// byte slice.
+    fn as_bytes_mut(&mut self) -> &mut [u8]
+    where
+        Self: FromBytes,
+    {
+        unsafe {
+            // NOTE: This function does not have a Self: Sized bound.
+            // size_of_val works for unsized values too.
+            let len = mem::size_of_val(self);
+            slice::from_raw_parts_mut(self as *mut Self as *mut u8, len)
+        }
+    }
 }
 
 impl_for_primitives!(FromBytes);
@@ -179,14 +224,24 @@ pub unsafe trait Unaligned {
     // NOTE: The Self: Sized bound makes it so that Unaligned is still object
     // safe.
     #[doc(hidden)]
-    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized;
+    fn only_derive_is_allowed_to_implement_this_trait()
+    where
+        Self: Sized;
 }
 
 unsafe impl Unaligned for u8 {
-    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+    fn only_derive_is_allowed_to_implement_this_trait()
+    where
+        Self: Sized,
+    {
+    }
 }
 unsafe impl Unaligned for i8 {
-    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+    fn only_derive_is_allowed_to_implement_this_trait()
+    where
+        Self: Sized,
+    {
+    }
 }
 impl_for_composite_types!(Unaligned);
 
@@ -988,7 +1043,7 @@ mod tests {
     use core::ops::Deref;
     use core::ptr;
 
-    use super::LayoutVerified;
+    use super::*;
 
     // B should be [u8; N]. T will require that the entire structure is aligned
     // to the alignment of T.
@@ -1403,6 +1458,39 @@ mod tests {
     #[should_panic]
     fn test_new_slice_unaligned_zeroed_zst_panics() {
         LayoutVerified::<_, [()]>::new_slice_unaligned_zeroed(&mut [0u8][..]);
+    }
+
+    #[test]
+    fn test_as_bytes_methods() {
+        // This is a hack to get the derives below to work. They assume that
+        // zerocopy is linked as an extern crate, so they access items from it
+        // as `zerocopy::Xxx`. This makes that still work.
+        mod zerocopy {
+            pub use crate::*;
+        }
+
+        #[derive(Debug, Eq, PartialEq, FromBytes, AsBytes)]
+        #[repr(C)]
+        struct Foo {
+            a: u32,
+            b: u32,
+        }
+
+        let mut foo = Foo { a: 1, b: 2 };
+        // Test that we can access the underlying bytes, and that we get the
+        // right bytes and the right number of bytes.
+        assert_eq!(foo.as_bytes(), [1, 0, 0, 0, 2, 0, 0, 0]);
+        // Test that changes to the underlying byte slices are reflected in the
+        // original object.
+        foo.as_bytes_mut()[0] = 3;
+        assert_eq!(foo, Foo { a: 3, b: 2 });
+
+        // Do the same tests for a slice, which ensures that this logic works
+        // for unsized types as well.
+        let foo = &mut [Foo { a: 1, b: 2 }, Foo { a: 3, b: 4 }];
+        assert_eq!(foo.as_bytes(), [1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0]);
+        foo.as_bytes_mut()[8] = 5;
+        assert_eq!(foo, &mut [Foo { a: 1, b: 2 }, Foo { a: 5, b: 4 }]);
     }
 
     #[test]
