@@ -602,6 +602,14 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                                         ptr = if false { "*" } else { "" },
                                         ty = ty_to_c_str(ast, &f.ty)?).as_str());
                                 },
+                            ast::Ty::Array { ref size, .. } => {
+                                accum.push_str(format!(
+                                        "    {ty}{ptr} {c_name}[{size}];",
+                                        c_name = to_c_name(f.ident.to_string().as_str()),
+                                        ptr = if false { "*" } else { "" },
+                                        size = size,
+                                        ty = ty_to_c_str(ast, &f.ty)?).as_str());
+                                },
                             _ => {
                                 accum.push_str(format!(
                                         "    {ty}{ptr} {c_name};",
