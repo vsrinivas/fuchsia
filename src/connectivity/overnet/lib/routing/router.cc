@@ -194,8 +194,9 @@ void Router::UpdateRoutingTable(
 
 void Router::MaybeStartPollingLinkChanges() {
   ScopedModule<Router> scoped_module(this);
-  if (shutting_down_ || poll_link_changes_timeout_)
+  if (shutting_down_ || poll_link_changes_timeout_) {
     return;
+  }
   poll_link_changes_timeout_.Reset(
       timer_, timer_->Now() + kPollLinkChangeTimeout,
       [this](const Status& status) {
@@ -223,8 +224,9 @@ void Router::MaybeStartPollingLinkChanges() {
                 }
                 MaybeStartFlushingOldEntries();
               });
-          if (keep_polling)
+          if (keep_polling) {
             MaybeStartPollingLinkChanges();
+          }
         }
       });
 }
