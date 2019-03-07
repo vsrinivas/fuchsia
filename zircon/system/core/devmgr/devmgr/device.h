@@ -20,6 +20,43 @@ class Devhost;
 struct Devnode;
 class SuspendContext;
 
+// clang-format off
+
+// This device is never destroyed
+#define DEV_CTX_IMMORTAL      0x01
+
+// This device requires that children are created in a
+// new devhost attached to a proxy device
+#define DEV_CTX_MUST_ISOLATE  0x02
+
+// This device may be bound multiple times
+#define DEV_CTX_MULTI_BIND    0x04
+
+// This device is bound and not eligible for binding
+// again until unbound.  Not allowed on MULTI_BIND ctx.
+#define DEV_CTX_BOUND         0x08
+
+// Device has been remove()'d
+#define DEV_CTX_DEAD          0x10
+
+// Device has been removed but its rpc channel is not
+// torn down yet.  The rpc transport will call remove
+// when it notices at which point the device will leave
+// the zombie state and drop the reference associated
+// with the rpc channel, allowing complete destruction.
+#define DEV_CTX_ZOMBIE        0x20
+
+// Device is a proxy -- its "parent" is the device it's
+// a proxy to.
+#define DEV_CTX_PROXY         0x40
+
+// Device is not visible in devfs or bindable.
+// Devices may be created in this state, but may not
+// return to this state once made visible.
+#define DEV_CTX_INVISIBLE     0x80
+
+// clang-format on
+
 struct Device {
     explicit Device(Coordinator* coord);
 
@@ -127,6 +164,10 @@ struct Device {
     // TODO: Remove set_protocol_id once this class is further encapsulated.  It
     // should be unnecessary.
     void set_protocol_id(uint32_t protocol_id) { protocol_id_ = protocol_id; }
+
+    bool is_bindable() const {
+        return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE));
+    }
 private:
     Device* parent_ = nullptr;
     uint32_t protocol_id_ = 0;

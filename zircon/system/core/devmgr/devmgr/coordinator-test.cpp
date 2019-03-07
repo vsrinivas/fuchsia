@@ -172,7 +172,7 @@ bool bind_devices() {
     devmgr::Device* dev = &coordinator.devices().front();
     devmgr::Devhost host;
     dev->host = &host;
-    status = coordinator.BindDevice(dev, kDriverPath);
+    status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
     ASSERT_EQ(ZX_OK, status);
 
     // Wait for the BindDriver request.

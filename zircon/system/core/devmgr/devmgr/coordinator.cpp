@@ -968,39 +968,6 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
     return ZX_OK;
 }
 
-zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname) {
-    log(INFO, "devcoord: dc_bind_device() '%.*s'\n", static_cast<int>(drvlibname.size()),
-        drvlibname.data());
-
-    // shouldn't be possible to get a bind request for a proxy device
-    if (dev->flags & DEV_CTX_PROXY) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // A libname of "" means a general rebind request
-    // instead of a specific request
-    bool autobind = (drvlibname.size() == 0);
-
-    // TODO: disallow if we're in the middle of enumeration, etc
-    for (const auto& drv : drivers_) {
-        if (autobind || !drvlibname.compare(drv.libname)) {
-            if (dc_is_bindable(&drv, dev->protocol_id(), dev->props(), autobind)) {
-                log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(),
-                    dev->name.data());
-                return AttemptBind(&drv, dev);
-            }
-        }
-    }
-
-    // Notify observers that this device is available again
-    // Needed for non-auto-binding drivers like GPT against block, etc
-    if (autobind) {
-        devfs_advertise_modified(dev);
-    }
-
-    return ZX_OK;
-};
-
 zx_status_t Coordinator::LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size) {
     static const char* fwdirs[] = {
         kBootFirmwareDir,
@@ -1242,7 +1209,7 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
         return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, ZX_ERR_BAD_STATE);
     }
     log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name.data());
-    zx_status_t status = dev->coordinator->BindDevice(dev, driver_path);
+    zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
     return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, status);
 }
 
@@ -1729,20 +1696,9 @@ void Coordinator::HandleNewDevice(Device* dev) {
             log(ERROR, "devcoord: devfs_connnect: %d\n", status);
         }
     }
-    for (auto& drv : drivers_) {
-        if (!dc_is_bindable(&drv, dev->protocol_id(), dev->props(), true)) {
-            continue;
-        }
-        log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(), dev->name.data());
-        zx_status_t status = AttemptBind(&drv, dev);
-        if (status != ZX_OK) {
-            log(ERROR, "devcoord: failed to bind drv='%s' to dev='%s': %d\n", drv.name.data(),
-                dev->name.data(), status);
-        }
-        if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
-            break;
-        }
-    }
+    // TODO(tesienbe): We probably should do something with the return value
+    // from this...
+    BindDevice(dev, fbl::StringPiece("") /* autobind */, true /* new device */);
 }
 
 static void append_suspend_list(SuspendContext* ctx, Devhost* dh) {
@@ -1934,6 +1890,27 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     }
 }
 
+zx_status_t Coordinator::BindDriverToDevice(Device* dev, const Driver* drv, bool autobind) {
+    if (!dev->is_bindable()) {
+        return ZX_ERR_NEXT;
+    }
+    if (!driver_is_bindable(drv, dev->protocol_id(), dev->props(), autobind)) {
+        return ZX_ERR_NEXT;
+    }
+
+    log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv->name.data(), dev->name.data());
+    zx_status_t status = AttemptBind(drv, dev);
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: failed to bind drv='%s' to dev='%s': %s\n", drv->name.data(),
+            dev->name.data(), zx_status_get_string(status));
+    }
+    if (status == ZX_ERR_NEXT) {
+        // Convert ERR_NEXT to avoid confusing the caller
+        status = ZX_ERR_INTERNAL;
+    }
+    return status;
+}
+
 // BindDriver is called when a new driver becomes available to
 // the Coordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
@@ -1949,19 +1926,55 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
     }
     printf("devcoord: driver '%s' added\n", drv->name.data());
     for (auto& dev : devices_) {
-        if (dev.flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
-            // If device is already bound or being destroyed or invisible, skip it.
-            continue;
-        } else if (!dc_is_bindable(drv, dev.protocol_id(), dev.props(), true)) {
-            // If the driver is not bindable to the device, skip it.
+        zx_status_t status = BindDriverToDevice(&dev, drv, true /* autobind */);
+        if (status == ZX_ERR_NEXT) {
             continue;
         }
-        log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n", drv->name.data(), dev.name.data());
-        zx_status_t status = AttemptBind(drv, &dev);
         if (status != ZX_OK) {
             return status;
         }
     }
+    return ZX_OK;
+}
+
+zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname, bool new_device) {
+    // shouldn't be possible to get a bind request for a proxy device
+    if (dev->flags & DEV_CTX_PROXY) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // A libname of "" means a general rebind request
+    // instead of a specific request
+    bool autobind = drvlibname.size() == 0;
+
+    // TODO: disallow if we're in the middle of enumeration, etc
+    for (const auto& drv : drivers_) {
+        if (!autobind && drvlibname.compare(drv.libname)) {
+            continue;
+        }
+
+        zx_status_t status = BindDriverToDevice(dev, &drv, autobind);
+        if (status == ZX_ERR_NEXT) {
+            continue;
+        }
+
+        // If the device supports multibind (this is a devmgr-internal setting),
+        // keep trying to match more drivers even if one fails.
+        if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
+            if (status != ZX_OK) {
+                return status;
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Notify observers that this device is available again
+    // Needed for non-auto-binding drivers like GPT against block, etc
+    if (!new_device && autobind) {
+        devfs_advertise_modified(dev);
+    }
+
     return ZX_OK;
 }
 

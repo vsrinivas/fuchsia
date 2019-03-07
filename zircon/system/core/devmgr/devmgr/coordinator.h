@@ -173,43 +173,6 @@ private:
     zx::vmo bootdata_;
 };
 
-// clang-format off
-
-// This device is never destroyed
-#define DEV_CTX_IMMORTAL      0x01
-
-// This device requires that children are created in a
-// new devhost attached to a proxy device
-#define DEV_CTX_MUST_ISOLATE  0x02
-
-// This device may be bound multiple times
-#define DEV_CTX_MULTI_BIND    0x04
-
-// This device is bound and not eligible for binding
-// again until unbound.  Not allowed on MULTI_BIND ctx.
-#define DEV_CTX_BOUND         0x08
-
-// Device has been remove()'d
-#define DEV_CTX_DEAD          0x10
-
-// Device has been removed but its rpc channel is not
-// torn down yet.  The rpc transport will call remove
-// when it notices at which point the device will leave
-// the zombie state and drop the reference associated
-// with the rpc channel, allowing complete destruction.
-#define DEV_CTX_ZOMBIE        0x20
-
-// Device is a proxy -- its "parent" is the device it's
-// a proxy to.
-#define DEV_CTX_PROXY         0x40
-
-// Device is not visible in devfs or bindable.
-// Devices may be created in this state, but may not
-// return to this state once made visible.
-#define DEV_CTX_INVISIBLE     0x80
-
-// clang-format on
-
 // Values parsed out of argv.  All paths described below are absolute paths.
 struct DevmgrArgs {
     // Load drivers from these directories.  If this is empty, the default will
@@ -268,6 +231,11 @@ public:
     void DriverAddedInit(Driver* drv, const char* version);
     zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
 
+    // Attempts to bind the given driver to the given device.  Returns ZX_OK on
+    // success, ZX_ERR_NEXT if the driver is not capable of binding to the device,
+    // and a different error if the driver was capable of binding but failed to bind.
+    zx_status_t BindDriverToDevice(Device* dev, const Driver* drv, bool autobind);
+
     // Used to implement fuchsia::device::manager::Coordinator.
     zx_status_t AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
                           size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
@@ -275,7 +243,7 @@ public:
                           zx::channel client_remote);
     zx_status_t RemoveDevice(Device* dev, bool forced);
     zx_status_t MakeVisible(Device* dev);
-    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname);
+    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname, bool new_device);
     zx_status_t GetTopologicalPath(const Device* dev, char* out, size_t max) const;
     zx_status_t LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size);
 
@@ -393,8 +361,8 @@ private:
     void DriverAddedSys(Driver* drv, const char* version);
 };
 
-bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
-                    const fbl::Array<const zx_device_prop_t>& props, bool autobind);
+bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
+                        const fbl::Array<const zx_device_prop_t>& props, bool autobind);
 
 // Methods for composing FIDL RPCs to the devhosts
 zx_status_t dh_send_remove_device(const Device* dev);

@@ -132,8 +132,8 @@ template Match MatchParts(Device* device, DeviceComponentPartDescriptor* parts,
 
 } // namespace internal
 
-bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
-                    const fbl::Array<const zx_device_prop_t>& props, bool autobind) {
+bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
+                        const fbl::Array<const zx_device_prop_t>& props, bool autobind) {
     internal::BindProgramContext ctx;
     ctx.props = &props;
     ctx.protocol_id = protocol_id;
