@@ -1406,7 +1406,10 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   ObjectIdentifier object_identifier = MakeSplitMap(
       data_str,
       [&sync](ObjectIdentifier object_identifier, std::string content) {
-        sync.AddObject(std::move(object_identifier), std::move(content));
+        if (!GetObjectDigestInfo(object_identifier.object_digest())
+                 .is_inlined()) {
+          sync.AddObject(std::move(object_identifier), std::move(content));
+        }
       });
   ASSERT_EQ(PieceType::INDEX,
             GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
@@ -1429,7 +1432,10 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   ObjectIdentifier object_identifier = MakeSplitMap(
       data_str,
       [&sync](ObjectIdentifier object_identifier, std::string content) {
-        sync.AddObject(std::move(object_identifier), std::move(content));
+        if (!GetObjectDigestInfo(object_identifier.object_digest())
+                 .is_inlined()) {
+          sync.AddObject(std::move(object_identifier), std::move(content));
+        }
       });
   ASSERT_EQ(PieceType::INDEX,
             GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
@@ -1465,7 +1471,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
                Status::NOT_CONNECTED_ERROR);
 }
 
-TEST_F(PageStorageTest, DISABLED_FullDownloadAfterPartial) {
+TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
   int64_t offset = 0;
   int64_t size = 128;
@@ -1474,7 +1480,10 @@ TEST_F(PageStorageTest, DISABLED_FullDownloadAfterPartial) {
   ObjectIdentifier object_identifier = MakeSplitMap(
       data_str,
       [&sync](ObjectIdentifier object_identifier, std::string content) {
-        sync.AddObject(std::move(object_identifier), std::move(content));
+        if (!GetObjectDigestInfo(object_identifier.object_digest())
+                 .is_inlined()) {
+          sync.AddObject(std::move(object_identifier), std::move(content));
+        }
       });
   ASSERT_EQ(PieceType::INDEX,
             GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
