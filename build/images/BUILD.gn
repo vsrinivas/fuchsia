@@ -25,6 +25,16 @@ declare_args() {
   # Path to manifest file containing data to place into the initial /data
   # partition.
   data_partition_manifest = ""
+
+  # arguments to fx flash script
+  zircon_a_partition = ""
+  zircon_b_partition = ""
+  zircon_r_partition = ""
+  vbmeta_a_partition = ""
+  vbmeta_b_partition = ""
+  vbmeta_r_partition = ""
+  active_partition = ""
+  signed_image = false
 }
 
 # This will collect a list of scopes describing each image exported.
@@ -999,8 +1009,28 @@ group("default-images") {
 }
 
 ###
-### Paver script and archives using those images and zedboot's images.
+### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
+
+action("flash_script") {
+  script = "//build/images/generate_flash_script.sh"
+  outputs = [
+    "$root_out_dir/flash.sh",
+  ]
+  image = "$root_out_dir/zedboot.zbi"
+  args = [
+    "--image=" + rebase_path(image, root_build_dir),
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--zircon-a=${zircon_a_partition}",
+    "--zircon-b=${zircon_b_partition}",
+    "--zircon-r=${zircon_r_partition}",
+    "--vbmeta-a=${vbmeta_a_partition}",
+    "--vbmeta-b=${vbmeta_b_partition}",
+    "--vbmeta-r=${vbmeta_r_partition}",
+    "--active=${active_partition}",
+    "--signed=${signed_image}",
+  ]
+}
 
 paver_targets = [
   {
@@ -1071,6 +1101,7 @@ foreach(target, paver_targets) {
   action(target.name) {
     deps = [
       ":default-images",
+      ":flash_script",
       ":netboot",
       "zedboot",
     ]

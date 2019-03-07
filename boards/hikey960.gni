@@ -5,14 +5,11 @@
 import("//boards/arm64.gni")
 
 custom_signing_script =
-    "//zircon/kernel/target/arm64/board/cleo/package-image.sh"
-
-use_vbmeta = true
+    "//zircon/kernel/target/arm64/board/hikey960/package-image.sh"
 
 # partitions for fx flash to flash
-zircon_a_partition = "boot_a"
-zircon_b_partition = "boot_b"
-vbmeta_a_partition = "vbmeta_a"
-vbmeta_b_partition = "vbmeta_b"
-active_partition = "a"
+zircon_a_partition = "boot"
+
+# The hikey960 image is not actually signed, but defining custom_signing_script
+# means we use zedboot.zbi.signed.
 signed_image = true

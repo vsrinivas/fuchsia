@@ -5,7 +5,7 @@
 import("//boards/arm64.gni")
 
 custom_signing_script =
-    "//zircon/kernel/target/arm64/board/cleo/package-image.sh"
+    "//zircon/kernel/target/arm64/board/imx8mmevk/package-image.sh"
 
 use_vbmeta = true
 

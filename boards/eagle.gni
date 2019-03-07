@@ -6,3 +6,11 @@ import("//boards/arm64.gni")
 
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/eagle/package-image.sh"
+
+# partitions for fx flash to flash
+zircon_a_partition = "boot"
+zircon_r_partition = "recovery"
+
+# The eagle image is not actually signed, but defining custom_signing_script
+# means we use zedboot.zbi.signed.
+signed_image = true
