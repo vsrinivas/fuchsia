@@ -631,6 +631,12 @@ func (ios *iostate) Listen(backlog int16) (int16, error) {
 		return tcpipErrorToCode(err), nil
 	}
 
+	addr, err := ios.ep.GetLocalAddress()
+	if err != nil {
+		panic(err)
+	}
+	logger.InfoTf("listen", "%p: local=%+v", ios, addr)
+
 	return 0, nil
 }
 
@@ -654,6 +660,17 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	if err := ios.dataHandle.Share(zx.Handle(newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true))); err != nil {
 		panic(err)
 	}
+
+	localAddr, err := ep.GetLocalAddress()
+	if err != nil {
+		panic(err)
+	}
+	remoteAddr, err := ep.GetRemoteAddress()
+	if err != nil {
+		panic(err)
+	}
+	logger.InfoTf("accept", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
+
 	return 0, nil
 }
 
