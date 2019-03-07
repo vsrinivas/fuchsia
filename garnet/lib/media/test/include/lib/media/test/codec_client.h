@@ -244,7 +244,7 @@ class CodecClient {
   bool ComputeOutputPendingLocked() {
     return !emitted_output_.empty() || output_config_action_pending_;
   }
-  bool output_pending_;
+  bool output_pending_ = false;
   std::condition_variable output_pending_condition_;
 };
 
