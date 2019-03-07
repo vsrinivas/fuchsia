@@ -58,7 +58,8 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       base_shell.args.push_back("--test");
     }
     story_shell.args.push_back("--test");
-    sessionmgr.args.push_back("--test");
+    sessionmgr.args.push_back("--enable_story_shell_preload=false");
+    sessionmgr.args.push_back("--enable_statistics=false");
     session_shell.args.push_back("--test");
     test_name = FindTestName(session_shell.url, session_shell.args);
     disable_statistics = true;

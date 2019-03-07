@@ -262,9 +262,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // every requested StoryShell instance.
   fuchsia::modular::StoryShellFactoryPtr story_shell_factory_;
 
-  // When running in a test, we don't preload story shells, because then the
-  // preloaded next instance of the story doesn't pass its test points.
-  const bool test_;
+  // When running in a test, we don't want to enable preloading of story shells,
+  // because then the preloaded next instance of the story doesn't pass its test
+  // points.
+  const bool enable_story_shell_preload_;
 
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryActivityWatcher>

@@ -60,9 +60,13 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        EntityProviderLauncher {
  public:
   struct Options {
-    // Tells the sessionmgr whether it is running as a part of an integration
-    // test.
-    bool test;
+    // If set to false, StoryShell instances are not warmed up as a startup
+    // latency optimization. Used for testing.
+    bool enable_story_shell_preload;
+
+    // If set to false, disables Cobalt statistics. Used for testing.
+    bool enable_statistics;
+
     // Tells the sessionmgr whether it should host+pass a memfs-backed
     // directory to the ledger for the user's repository, or to use
     // /data/LEDGER.
@@ -71,6 +75,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
     // If set, no cloud provider is configured for Ledger. This overrides any
     // value of |use_cloud_provider_from_environment|.
     bool no_cloud_provider_for_ledger;
+
     // If set, use the cloud provider available in the incoming namespace,
     // rather than initializing an instance within sessionmgr. This can be used
     // by Voila to inject a custom cloud provider.

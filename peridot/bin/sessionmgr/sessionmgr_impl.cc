@@ -620,7 +620,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       presentation_provider_impl_.get(),
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>(),
-      options_.test));
+      options_.enable_story_shell_preload));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(

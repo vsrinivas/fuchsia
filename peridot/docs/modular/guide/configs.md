@@ -69,9 +69,13 @@ modular_config() target in the product's monolith packages.
     - When set to true, a cloud provider is configured for Ledger. This overrides
       any value of `use_cloud_provider_from_environment`.
     - **default**: `true`
-* `test`: **boolean** *(optional)*
-    - Tells sessionmgr whether it is running as a part of an integration test.
-    - **default**: `false`
+* `enable_story_shell_preload`: **boolean** *(optional)*
+    - When set to false, StoryShell instances are not warmed up as a startup
+      latency optimization. This is used for testing.
+    - **default**: `true`
+* `enable_statistics`: **boolean** *(optional)*
+    - When set to true, Cobalt statistics are disabled. This is used for testing.
+    - **default**: `true`
 * `use_cloud_provider_from_environment`: **boolean** *(optional)*
     - When set to true, use the cloud provider available in the incoming namespace,
       rather than initializing an instance within sessionmgr. This can be used

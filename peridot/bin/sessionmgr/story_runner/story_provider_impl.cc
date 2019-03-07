@@ -19,8 +19,8 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
-#include "src/lib/uuid/uuid.h"
 #include <lib/zx/time.h>
+#include "src/lib/uuid/uuid.h"
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/focus.h"
@@ -316,13 +316,14 @@ StoryProviderImpl::StoryProviderImpl(
     EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
-    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, const bool test)
+    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot,
+    const bool enable_story_shell_preload)
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
       story_shell_config_(std::move(story_shell_config)),
       story_shell_factory_(std::move(story_shell_factory)),
-      test_(test),
+      enable_story_shell_preload_(enable_story_shell_preload),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
@@ -471,7 +472,7 @@ void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
   //
   // When using a StoryShellFactory, the |preloaded_story_shell_app_| is never
   // used, so it should not be loaded.
-  if (test_ || story_shell_factory_) {
+  if (!enable_story_shell_preload_ || story_shell_factory_) {
     return;
   }
 

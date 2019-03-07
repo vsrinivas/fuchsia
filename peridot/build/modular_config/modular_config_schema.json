@@ -38,7 +38,8 @@
       "type": "object",
       "properties": {
         "cloud_provider_for_ledger": { "type": "boolean", "default": true },
-        "test": { "type": "boolean", "default": false },
+        "enable_story_shell_preload": { "type": "boolean", "default": true },
+        "enable_statistics": { "type": "boolean", "default": true },
         "use_cloud_provider_from_environment": { "type": "boolean", "default": false },
         "use_memfs_for_ledger": { "type": "boolean", "default": false },
         "use_session_shell_for_story_shell_factory": { "type": "boolean", "default": false },

@@ -18,9 +18,9 @@
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
-    const bool disable_statistics, async_dispatcher_t* dispatcher,
+    const bool enable_statistics, async_dispatcher_t* dispatcher,
     component::StartupContext* const startup_context) {
-  if (disable_statistics) {
+  if (!enable_statistics) {
     return fit::defer<fit::closure>([] {});
   }
   return modular::InitializeCobalt(dispatcher, startup_context);
@@ -30,7 +30,11 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   modular::SessionmgrImpl::Options opts;
-  opts.test = command_line.HasOption("test");
+  opts.enable_statistics = command_line.GetOptionValueWithDefault(
+                               "enable_statistics", "true") == "true";
+  opts.enable_story_shell_preload =
+      command_line.GetOptionValueWithDefault("enable_story_shell_preload",
+                                             "true") == "true";
   opts.use_memfs_for_ledger = command_line.HasOption("use_memfs_for_ledger");
   opts.no_cloud_provider_for_ledger =
       command_line.HasOption("no_cloud_provider_for_ledger");
@@ -42,8 +46,8 @@ int main(int argc, const char** argv) {
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
 
-  auto cobalt_cleanup =
-      SetupCobalt(opts.test, std::move(loop.dispatcher()), context.get());
+  auto cobalt_cleanup = SetupCobalt(
+      opts.enable_statistics, std::move(loop.dispatcher()), context.get());
 
   auto startup_agents = fxl::SplitStringCopy(
       command_line.GetOptionValueWithDefault("startup_agents", ""), ",",

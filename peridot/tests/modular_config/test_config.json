@@ -12,7 +12,8 @@
   "sessionmgr": {
     "use_memfs_for_ledger": true,
     "cloud_provider_for_ledger": false,
-    "test": true,
+    "enable_statistics": false,
+    "enable_story_shell_preload": false,
     "use_session_shell_for_story_shell_factory": true,
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
