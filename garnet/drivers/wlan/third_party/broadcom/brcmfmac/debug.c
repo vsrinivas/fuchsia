@@ -50,7 +50,7 @@ void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
         } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
             msg[--n_printed] = 0;
         }
-        zxlogf(INFO, "brcmfmac (%s): '%s'\n", func, msg);
+        zxlogf(INFO, "brcmfmac (%s): %s\n", func, msg);
     }
 }
 
