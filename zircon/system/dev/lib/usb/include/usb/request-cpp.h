@@ -302,6 +302,8 @@ struct CallbackTraits {
 // Similar to usb::Request, but it doesn't call usb_request_release on delete.
 // This should be used to wrap usb_request_t* objects allocated in other
 // drivers.
+// NOTE: Upon destruction, this UnownedRequest WILL invoke the completion
+// if allow_destruct is not set to false and Complete has not already been called on this request.
 template <typename Storage = void>
 class UnownedRequest : public operation::UnownedOperation<UnownedRequest<Storage>, OperationTraits,
                                                           CallbackTraits, Storage>,

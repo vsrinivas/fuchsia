@@ -229,6 +229,7 @@ public:
 // Similar to operation::Operation, but it doesn't call free on destruction.
 // This should be used to wrap NodeType* objects allocated in other
 // drivers.
+// NOTE: This WILL auto-complete the request on destruction if allow_destruct is set.
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
 class UnownedOperation : public OperationBase<D, OperationTraits, CallbackTraits, Storage> {
 public:
@@ -477,6 +478,13 @@ public:
             return std::move(node->operation());
         }
         return std::nullopt;
+    }
+
+    bool erase(OpType* op) {
+        fbl::AutoLock al(&lock_);
+        auto* node = op->node();
+        bool erased = queue_.erase(*node) != nullptr;
+        return erased;
     }
 
     bool is_empty() {

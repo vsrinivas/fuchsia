@@ -105,6 +105,33 @@ bool MultipleOperationTest() {
     END_TEST;
 }
 
+bool EraseTest() {
+    BEGIN_TEST;
+    OperationQueue queue;
+    TestOpTraits::OperationType* target_ptr = nullptr;
+    for (size_t i = 0; i < 10; i++) {
+        std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
+        if (i == 5) {
+            target_ptr = operation->operation();
+        }
+        ASSERT_TRUE(operation.has_value());
+        queue.push(*std::move(operation));
+    }
+    Operation tmp(target_ptr, kParentOpSize, true);
+    EXPECT_TRUE(queue.erase(&tmp));
+    for (size_t i = 0; i < 10; i++) {
+        auto val = queue.pop();
+        EXPECT_NE(val->operation(), target_ptr);
+        if (i == 9) {
+            EXPECT_TRUE(val == std::nullopt);
+        } else {
+            EXPECT_TRUE(val != std::nullopt);
+        }
+    }
+    EXPECT_TRUE(queue.pop() == std::nullopt);
+    END_TEST;
+}
+
 bool ReleaseTest() {
     BEGIN_TEST;
     OperationQueue queue;
@@ -265,6 +292,7 @@ RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(SingleOperationTest)
 RUN_TEST_SMALL(MultipleOperationTest)
 RUN_TEST_SMALL(ReleaseTest)
+RUN_TEST_SMALL(EraseTest)
 RUN_TEST_SMALL(MultipleLayerTest)
 RUN_TEST_SMALL(MultipleLayerWithStorageTest)
 RUN_TEST_SMALL(MultipleLayerWithCallbackTest)
