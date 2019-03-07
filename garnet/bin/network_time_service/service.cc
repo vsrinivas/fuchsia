@@ -20,7 +20,12 @@ TimeServiceImpl::TimeServiceImpl(
 TimeServiceImpl::~TimeServiceImpl() = default;
 
 void TimeServiceImpl::Update(uint8_t num_retries, UpdateCallback callback) {
-  callback(time_server_.UpdateSystemTime(num_retries));
+  bool succeeded = time_server_.UpdateSystemTime(num_retries);
+  if (!succeeded) {
+    FX_LOGS(ERROR) << "Failed to update system time after " << num_retries
+                   << " attempts";
+  }
+  callback(succeeded);
 }
 
 }  // namespace network_time_service

@@ -10,13 +10,13 @@
 #include <unistd.h>
 #include <string>
 
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
 #include "garnet/bin/network_time/time_util.h"
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include "lib/syslog/cpp/logger.h"
 #include "zircon/system/ulib/zx/include/lib/zx/channel.h"
 
@@ -59,7 +59,8 @@ bool Timezone::UpdateSystemTime(uint32_t tries) {
         FX_VLOGS(1) << "Can't get time, sleeping for 1 sec";
         sleep(1);
       } else {
-        FX_VLOGS(1) << "Can't get time after " << tries << " attempts, abort";
+        FX_LOGS(ERROR) << "Can't get time due to network error after " << tries
+                       << " attempts, abort";
         return false;
       }
       continue;
@@ -69,10 +70,12 @@ bool Timezone::UpdateSystemTime(uint32_t tries) {
       return false;
     }
     if (SetSystemTime(rtc_service_path_, *ret.second)) {
-      break;
+      return true;
     }
   }
-  return true;
+  FX_LOGS(ERROR) << "Inexplicably failed to get time after " << tries
+                 << " attempts, abort";
+  return false;
 }
 
 bool Timezone::SetSystemTime(const std::string& rtc_service_path,
