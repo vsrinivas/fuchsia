@@ -15,43 +15,33 @@
 
 namespace {
 
-template <size_t BufSize, size_t SlabSize>
-class DataBuf;
+template <typename AllocatorTraits>
+class SlabDataBuf;
 
-template <size_t ObjSize,
-          size_t SlabSize = fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
-struct AllocatorTraits
-    : public fbl::StaticSlabAllocatorTraits<
-          fbl::RefPtr<DataBuf<ObjSize, SlabSize>>, SlabSize> {
-  static constexpr size_t UserBufSize = ObjSize;
-};
-
-// Note: DataBuf doesn't really care about the SlabSize. But DataBuf does care
-// about the allocator's type. And the allocator's type depends on the SlabSize.
-template <size_t BufSize, size_t SlabSize>
-class DataBuf : public fbl::SlabAllocated<AllocatorTraits<BufSize, SlabSize>>,
-                public fbl::RefCounted<DataBuf<BufSize, SlabSize>>,
-                public fbl::SinglyLinkedListable<
-                    fbl::RefPtr<DataBuf<BufSize, SlabSize>>> {
+template <typename AllocatorTraits>
+class SlabDataBuf : public fbl::SlabAllocated<AllocatorTraits>,
+                    public fbl::RefCounted<SlabDataBuf<AllocatorTraits>>,
+                    public fbl::SinglyLinkedListable<
+                        fbl::RefPtr<SlabDataBuf<AllocatorTraits>>> {
  public:
-  DataBuf() {
+  SlabDataBuf(){
     // We provide a user-defined default constructor that does nothing, to
     // avoid the cost of zeroing out |data|.
     //
     // Rationale: in the absence of a user-defined constructor, expressions
     // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
-    // which zeros out |data|. For details, see
-    // https://stackoverflow.com/a/2418195
-  }
+    // which zeros out |data|. For details, see: stackoverflow.com/a/2418195
+  };
 
  private:
-  char data[BufSize];
+  char data[AllocatorTraits::kUserBufSize];
 };
 
-template <typename AllocatorTraits>
+/*** Benchmark code ***/
+// Utility function called from RetainAndFreeOldest() and RetainAndFreeRandom().
+template <typename AllocatorT>
 bool RetainAndFree(const std::vector<size_t>& replacement_sequence,
                    perftest::RepeatState* state) {
-  using AllocatorType = fbl::SlabAllocator<AllocatorTraits>;
   const size_t num_bufs_to_retain = replacement_sequence.size();
 
   if (num_bufs_to_retain < 1) {
@@ -60,10 +50,10 @@ bool RetainAndFree(const std::vector<size_t>& replacement_sequence,
   }
 
   // Populate an initial collection of buffers.
-  std::vector<typename AllocatorType::PtrType> retained_bufs(
-      num_bufs_to_retain);
+  AllocatorT allocator;
+  std::vector<decltype(allocator.New())> retained_bufs(num_bufs_to_retain);
   std::generate(retained_bufs.begin(), retained_bufs.end(),
-                [] { return AllocatorType::New(); });
+                [&] { return allocator.New(); });
   for (size_t i = 0; i < retained_bufs.size(); ++i) {
     if (!retained_bufs[i]) {
       std::cerr << "Failed to allocate buf " << i << " before benchmark loop"
@@ -75,9 +65,9 @@ bool RetainAndFree(const std::vector<size_t>& replacement_sequence,
   // The benchmark task: replace a random existing buffer with a new one.
   for (size_t i = 0; state->KeepRunning(); ++i) {
     const size_t old_buf_index = replacement_sequence[i % num_bufs_to_retain];
-    const auto& buf = (retained_bufs[old_buf_index] = AllocatorType::New());
+    const auto& buf = (retained_bufs[old_buf_index] = allocator.New());
     if (!buf) {
-      std::cerr << "Failed to allocate " << AllocatorTraits::UserBufSize
+      std::cerr << "Failed to allocate " << allocator.kUserBufSize
                 << " bytes at benchmark iteration " << i << std::endl;
       return false;
     }
@@ -91,10 +81,13 @@ bool RetainAndFree(const std::vector<size_t>& replacement_sequence,
 // initialized by one of the DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE
 // statements at the end of this file. This benchmark represents (presumed)
 // best-case behavior, as the memory pool should be unfragmented.
-template <typename AllocatorTraits>
+template <typename AllocatorT>
 bool AllocAndFree(perftest::RepeatState* state) {
+  AllocatorT allocator;
   while (state->KeepRunning()) {
-    if (!fbl::SlabAllocator<AllocatorTraits>::New()) {
+    auto buf = allocator.New();
+    perftest::DoNotOptimize(buf);
+    if (!buf) {
       return false;
     }
   }
@@ -106,13 +99,13 @@ bool AllocAndFree(perftest::RepeatState* state) {
 // initialized by one of the DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE statements
 // at the end of this file. This benchmark abstracts a network copy workload,
 // when copying from a fast source, to a slow sink.
-template <typename AllocatorTraits>
+template <typename AllocatorT>
 bool RetainAndFreeOldest(perftest::RepeatState* state,
                          size_t num_bufs_to_retain) {
   // Generate the sequence of indexes of buffers to replace.
   std::vector<size_t> buf_to_free(num_bufs_to_retain);
   std::iota(buf_to_free.begin(), buf_to_free.end(), 0);
-  return RetainAndFree<AllocatorTraits>(buf_to_free, state);
+  return RetainAndFree<AllocatorT>(buf_to_free, state);
 }
 
 // Measure the time taken to free a random allocated block, and allocate a
@@ -120,7 +113,7 @@ bool RetainAndFreeOldest(perftest::RepeatState* state,
 // initialized by one of the DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE statements
 // at the end of this file. This benchmark attempts to quantify the effects of
 // memory fragmentation.
-template <typename AllocatorTraits>
+template <typename AllocatorT>
 bool RetainAndFreeRandom(perftest::RepeatState* state,
                          size_t num_bufs_to_retain) {
   // Generate the sequence of indexes of buffers to replace.
@@ -128,38 +121,54 @@ bool RetainAndFreeRandom(perftest::RepeatState* state,
   std::random_device rand_dev;
   std::iota(buf_to_free.begin(), buf_to_free.end(), 0);
   std::shuffle(buf_to_free.begin(), buf_to_free.end(), rand_dev);
-  return RetainAndFree<AllocatorTraits>(buf_to_free, state);
+  return RetainAndFree<AllocatorT>(buf_to_free, state);
 }
 
-template <typename AllocatorTraits, auto Callable>
-void RegisterRetainedMemTest(const char* name) {
-  constexpr size_t kBlockSizeBytes = AllocatorTraits::UserBufSize;
+/*** Linkage and instantiation ***/
+using RetainedMemPerfTest = bool (*)(perftest::RepeatState* state,
+                                     size_t num_bufs_to_retain);
+template <typename AllocatorTraits, RetainedMemPerfTest PerfTest>
+void RegisterTest(const char* bench_name) {
+  constexpr size_t kBlockSizeBytes = AllocatorTraits::kUserBufSize;
   // The maximum value of 32768KB below was chosen empirically, as the point at
   // which allocators started showing scaling behaviors on Eve.
   for (size_t total_size_kbytes : {8, 32, 128, 512, 2048, 8192, 32768}) {
     const size_t total_size_bytes = total_size_kbytes * 1024;
     perftest::RegisterTest(
-        fbl::StringPrintf("SlabAlloc/Static/%s/%zubytes/%zuKbytes/%zuKbytes",
-                          name, kBlockSizeBytes,
-                          AllocatorTraits::SLAB_SIZE / 1024, total_size_kbytes)
+        fbl::StringPrintf("MemAlloc/%s/%s/%zubytes/%zuKbytes/%zuKbytes",
+                          AllocatorTraits::kName, bench_name, kBlockSizeBytes,
+                          AllocatorTraits::kSlabSizeKbytes, total_size_kbytes)
             .c_str(),
-        Callable, total_size_bytes / kBlockSizeBytes);
+        PerfTest, total_size_bytes / kBlockSizeBytes);
   }
 }
 
-template <typename AllocatorTraits, auto Callable>
-void RegisterNoRetainedMemTest(const char* name) {
-  constexpr size_t kBlockSizeBytes = AllocatorTraits::UserBufSize;
+using NoRetainedMemPerfTest = bool (*)(perftest::RepeatState* state);
+template <typename AllocatorTraits, NoRetainedMemPerfTest PerfTest>
+void RegisterTest(const char* bench_name) {
+  constexpr size_t kBlockSizeBytes = AllocatorTraits::kUserBufSize;
   perftest::RegisterTest(
-      fbl::StringPrintf("SlabAlloc/Static/%s/%zubytes/%zuKbytes", name,
-                        kBlockSizeBytes, AllocatorTraits::SLAB_SIZE / 1024)
+      fbl::StringPrintf("MemAlloc/%s/%s/%zubytes/%zuKbytes",
+                        AllocatorTraits::kName, bench_name, kBlockSizeBytes,
+                        AllocatorTraits::kSlabSizeKbytes)
           .c_str(),
-      Callable);
+      PerfTest);
 }
 
-#define REGISTER_TEST(REGISTRATION_TEMPLATE, NAME, ALLOCATOR_TRAITS) \
-  REGISTRATION_TEMPLATE<ALLOCATOR_TRAITS, NAME<ALLOCATOR_TRAITS>>(#NAME);
+#define REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN, ALLOCATOR_TRAITS) \
+  RegisterTest<ALLOCATOR_TRAITS,                                          \
+               ALLOCATION_PATTERN<ALLOCATOR_TRAITS::AllocT>>(             \
+      #ALLOCATION_PATTERN);
 
+#define REGISTER_PERF_TEST(ALLOCATION_PATTERN)                    \
+  do {                                                            \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,               \
+                                StaticSmallBlockAllocatorTraits); \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,               \
+                                StaticLargeBlockAllocatorTraits); \
+  } while (0)
+
+/*** Common definitions ***/
 // The motivation for multiple sizes is to quantify any scaling behavior with
 // the size of the allocation.
 constexpr size_t kSmallBlockSizeBytes = 64;
@@ -169,32 +178,48 @@ constexpr size_t kLargeBlockSizeBytes = 8192;
 // RegisterRetainedMemTest().
 constexpr size_t kLiveAllocLimitBytes = 32u * 1024 * 1024;
 
-using SmallBlockAllocatorTraits = AllocatorTraits<kSmallBlockSizeBytes>;
-using LargeBlockAllocatorTraits =
-    AllocatorTraits<kLargeBlockSizeBytes, kLargeBlockSizeBytes * 205>;
+/*** Static slab allocator definitions ***/
+template <typename AllocatorTraits>
+class StaticSlabAllocator;
+
+template <size_t ObjSize, size_t SlabSize>
+struct StaticSlabAllocatorTraits
+    : public fbl::StaticSlabAllocatorTraits<
+          fbl::RefPtr<
+              SlabDataBuf<StaticSlabAllocatorTraits<ObjSize, SlabSize>>>,
+          SlabSize> {
+  using AllocT =
+      StaticSlabAllocator<StaticSlabAllocatorTraits<ObjSize, SlabSize>>;
+  static constexpr char kName[] = "SlabStatic";
+  static constexpr size_t kUserBufSize = ObjSize;
+  static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
+};
+
+template <typename AllocatorTraits>
+class StaticSlabAllocator {
+ public:
+  static constexpr size_t kUserBufSize = AllocatorTraits::kUserBufSize;
+  auto New() { return fbl::SlabAllocator<AllocatorTraits>::New(); }
+};
+
+using StaticSmallBlockAllocatorTraits =
+    StaticSlabAllocatorTraits<kSmallBlockSizeBytes,
+                              fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
+using StaticLargeBlockAllocatorTraits =
+    StaticSlabAllocatorTraits<kLargeBlockSizeBytes, kLargeBlockSizeBytes * 205>;
 
 static_assert(
-    fbl::SlabAllocator<LargeBlockAllocatorTraits>::AllocsPerSlab ==
-        fbl::SlabAllocator<SmallBlockAllocatorTraits>::AllocsPerSlab,
-    "Please adjust the SLAB_SIZE parameter for LargeBlockAllocatorTraits, so "
-    "that the LargeBlockAllocator amortizes malloc() calls over as many slab "
-    "objects as the SmallBlockAllocator.");
+    fbl::SlabAllocator<StaticLargeBlockAllocatorTraits>::AllocsPerSlab ==
+        fbl::SlabAllocator<StaticSmallBlockAllocatorTraits>::AllocsPerSlab,
+    "Please adjust the SLAB_SIZE parameter for "
+    "StaticLargeBlockAllocatorTraits, so that the StaticLargeBlockAllocator "
+    "amortizes malloc() calls over as many slab objects as the Static "
+    "SmallBlockAllocator.");
 
 void RegisterTests() {
-  REGISTER_TEST(RegisterNoRetainedMemTest, AllocAndFree,
-                SmallBlockAllocatorTraits);
-  REGISTER_TEST(RegisterNoRetainedMemTest, AllocAndFree,
-                LargeBlockAllocatorTraits);
-
-  REGISTER_TEST(RegisterRetainedMemTest, RetainAndFreeOldest,
-                SmallBlockAllocatorTraits);
-  REGISTER_TEST(RegisterRetainedMemTest, RetainAndFreeOldest,
-                LargeBlockAllocatorTraits);
-
-  REGISTER_TEST(RegisterRetainedMemTest, RetainAndFreeRandom,
-                SmallBlockAllocatorTraits);
-  REGISTER_TEST(RegisterRetainedMemTest, RetainAndFreeRandom,
-                LargeBlockAllocatorTraits);
+  REGISTER_PERF_TEST(AllocAndFree);
+  REGISTER_PERF_TEST(RetainAndFreeOldest);
+  REGISTER_PERF_TEST(RetainAndFreeRandom);
 }
 
 PERFTEST_CTOR(RegisterTests);
@@ -205,8 +230,8 @@ PERFTEST_CTOR(RegisterTests);
   DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(                              \
       SLAB_TRAITS, (kLiveAllocLimitBytes /                            \
                     (fbl::SlabAllocator<SLAB_TRAITS>::AllocsPerSlab * \
-                     SLAB_TRAITS::UserBufSize)) +                     \
+                     SLAB_TRAITS::kUserBufSize)) +                    \
                        1 /* Round up */);
 
-DECLARE_STATIC_STORAGE(SmallBlockAllocatorTraits);
-DECLARE_STATIC_STORAGE(LargeBlockAllocatorTraits);
+DECLARE_STATIC_STORAGE(StaticSmallBlockAllocatorTraits);
+DECLARE_STATIC_STORAGE(StaticLargeBlockAllocatorTraits);
