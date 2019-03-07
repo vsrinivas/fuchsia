@@ -1097,26 +1097,15 @@ zx_status_t Station::SendPsPoll() {
 zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
     debugfn();
 
-    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
-    auto packet = GetWlanPacket(max_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    BufferWriter w(*packet);
-    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
-    mgmt_hdr->fc.set_type(FrameType::kManagement);
-    mgmt_hdr->fc.set_subtype(ManagementSubtype::kDeauthentication);
-    mgmt_hdr->addr1 = join_ctx_->bssid();
-    mgmt_hdr->addr2 = self_addr();
-    mgmt_hdr->addr3 = join_ctx_->bssid();
-    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
-    mgmt_hdr->sc.set_seq(seq_num);
-
-    auto deauth = w.Write<Deauthentication>();
-    deauth->reason_code = static_cast<uint16_t>(reason_code);
-
-    finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*mgmt_hdr).c_str());
-    packet->set_len(w.WrittenBytes());
-    return SendMgmtFrame(std::move(packet));
+    mlme_out_buf_t out_buf;
+    auto status =
+        mlme_write_deauth_frame(rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte,
+                                &self_addr().byte, static_cast<uint16_t>(reason_code), &out_buf);
+    if (status != ZX_OK) {
+        errorf("could not write deauth frame: %d\n", status);
+        return status;
+    }
+    return SendMgmtFrame(FromRustOutBuf(out_buf));
 }
 
 zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) {
