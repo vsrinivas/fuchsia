@@ -91,7 +91,6 @@ sdk_source_set("cpp_base") {
     "array.h",
     "clone.cc",
     "clone.h",
-    "coding_traits.cc",
     "coding_traits.h",
     "comparison.h",
     "decoder.cc",

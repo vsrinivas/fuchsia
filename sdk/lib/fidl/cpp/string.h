@@ -81,8 +81,24 @@ class StringPtr {
   void Encode(Encoder* encoder, size_t offset);
   static void Decode(Decoder* decoder, StringPtr* value, size_t offset);
 
-  static void EncodeString(Encoder* encoder, const std::string& value, size_t offset);
-  static void DecodeString(Decoder* decoder, std::string* value, size_t offset);
+  template <class EncoderImpl>
+  static void EncodeString(EncoderImpl* encoder, const std::string& value,
+                           size_t offset) {
+    fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
+    string->size = value.size();
+    string->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+    size_t base = encoder->Alloc(value.size());
+    char* payload = encoder->template GetPtr<char>(base);
+    memcpy(payload, value.data(), value.size());
+  }
+
+  template <class DecoderImpl>
+  static void DecodeString(DecoderImpl* decoder, std::string* value,
+                           size_t offset) {
+    fidl_string_t* string = decoder->template GetPtr<fidl_string_t>(offset);
+    ZX_ASSERT(string->data != nullptr);
+    *value = std::string(string->data, string->size);
+  }
 
  private:
   std::string str_;
@@ -187,10 +203,12 @@ struct CodingTraits<StringPtr>
 template <>
 struct CodingTraits<::std::string> {
   static constexpr size_t encoded_size = sizeof(fidl_string_t);
-  static void Encode(Encoder* encoder, std::string* value, size_t offset) {
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, std::string* value, size_t offset) {
     ::fidl::StringPtr::EncodeString(encoder, *value, offset);
   }
-  static void Decode(Decoder* decoder, std::string* value, size_t offset) {
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder, std::string* value, size_t offset) {
     ::fidl::StringPtr::DecodeString(decoder, value, offset);
   }
 };
