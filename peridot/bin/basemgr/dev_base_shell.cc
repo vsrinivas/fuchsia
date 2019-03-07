@@ -38,7 +38,7 @@ class Settings {
     user = command_line.GetOptionValueWithDefault("user", "");
 
     // If passed, runs as a test harness.
-    test = command_line.HasOption("test");
+    use_test_runner = command_line.HasOption("use_test_runner");
 
     test_timeout_ms = testing::kTestTimeoutMilliseconds;
 
@@ -56,7 +56,7 @@ class Settings {
   std::string device_name;
   std::string user;
   uint64_t test_timeout_ms;
-  bool test{};
+  bool use_test_runner{};
 };
 
 class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
@@ -66,7 +66,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
-    if (settings_.test) {
+    if (settings_.use_test_runner) {
       testing::Init(this->startup_context(), __FILE__);
       testing::Await(testing::kTestShutdown,
                      [this] { base_shell_context_->Shutdown(); });
@@ -89,7 +89,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
 
   // |SingleServiceApp|
   void Terminate(std::function<void()> done) override {
-    if (settings_.test) {
+    if (settings_.use_test_runner) {
       testing::Teardown(done);
     } else {
       done();

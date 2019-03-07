@@ -55,12 +55,10 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
 
   if (test) {
     if (run_base_shell_with_test_runner) {
-      base_shell.args.push_back("--test");
+      base_shell.args.push_back("--use_test_runner");
     }
-    story_shell.args.push_back("--test");
     sessionmgr.args.push_back("--enable_story_shell_preload=false");
     sessionmgr.args.push_back("--enable_statistics=false");
-    session_shell.args.push_back("--test");
     test_name = FindTestName(session_shell.url, session_shell.args);
     disable_statistics = true;
     no_minfs = true;
