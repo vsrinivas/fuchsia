@@ -661,6 +661,11 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         }
     }
 
+    // Close to ensure grabbing null constraints from a closed collection
+    // doesn't crash
+    zx_status_t close_status = fuchsia_sysmem_BufferCollectionClose(collection_client_3.get());
+    EXPECT_EQ(close_status, ZX_OK, "");
+
     END_TEST;
 }
 

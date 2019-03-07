@@ -106,7 +106,7 @@ class FidlStruct {
 
     // transfer handle ownership, copy the data, invalidate the source
     FidlStruct(FidlStruct&& to_move) {
-        reset(to_move.release());
+        reset(to_move.release_allow_null());
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
         to_move.is_moved_out_ = true;
 #endif
@@ -114,7 +114,7 @@ class FidlStruct {
 
     // transfer handle ownership, copy the data, invalidate the source
     FidlStruct& operator=(FidlStruct&& to_move) {
-        reset(to_move.release());
+        reset(to_move.release_allow_null());
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
         to_move.is_moved_out_ = true;
 #endif
@@ -133,6 +133,15 @@ class FidlStruct {
         } else {
             ptr_ = nullptr;
         }
+    }
+
+    // Same as release, but don't assert on ptr_. This allows moving from a null
+    // struct.
+    FidlCStruct* release_allow_null() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        FidlCStruct* tmp = ptr_;
+        ptr_ = nullptr;
+        return tmp;
     }
 
     FidlCStruct storage_{};
