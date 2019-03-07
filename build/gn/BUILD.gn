@@ -73,21 +73,6 @@ generated_file("tests") {
   ]
 }
 
-# Write a JSON metadata file about the host tests in the build.
-host_tests = []
-foreach(label, package_host_tests) {
-  host_label = "$label($host_toolchain)"
-  host_tests += [
-    {
-      dir = get_label_info(host_label, "dir")
-      name = get_label_info(host_label, "name")
-      build_dir = rebase_path(get_label_info(host_label, "target_out_dir"),
-                              root_build_dir)
-    },
-  ]
-}
-write_file("$root_build_dir/host_tests.json", host_tests, "json")
-
 # Collect the source files that are dependencies of the create_gn_rules.py
 # script, below.  Unfortunately, exec_script cannot use a depfile produced
 # by the script and only supports a separately computed list of dependencies.
