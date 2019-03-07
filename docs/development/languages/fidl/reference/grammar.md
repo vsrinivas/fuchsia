@@ -77,7 +77,7 @@ enum-declaration = ( attribute-list ) , "enum" , IDENTIFIER , ( ":" , type-const
 bits-declaration = ( attribute-list ) , "bits" , IDENTIFIER , ( ":" , type-constructor ) ,
                    "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 3]
 
-bits-or-enum-member = ( attribute-list ) , IDENTIFIER , ( "=" , bits-or-enum-member-value ) ;
+bits-or-enum-member = ( attribute-list ) , IDENTIFIER , "=" , bits-or-enum-member-value ;
 
 bits-or-enum-member-value = IDENTIFIER | literal ; [NOTE 4]
 
