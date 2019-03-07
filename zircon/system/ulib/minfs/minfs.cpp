@@ -308,15 +308,15 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     return ZX_OK;
 }
 
-void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
+zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
     // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
     ZX_DEBUG_ASSERT(state->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
     state->Resolve();
-    writeback_->Enqueue(state->RemoveWork());
+    return writeback_->Enqueue(state->RemoveWork());
 #else
-    state->GetWork()->Complete();
+    return state->GetWork()->Complete();
 #endif
 }
 
@@ -331,7 +331,9 @@ void Minfs::Sync(SyncCallback closure) {
     }
 
     state->GetWork()->SetSyncCallback(std::move(closure));
-    CommitTransaction(std::move(state));
+
+    // This may return an error, but it doesn't matter - the closure will be called anyway.
+    status = CommitTransaction(std::move(state));
 }
 #endif
 
@@ -567,7 +569,10 @@ zx_status_t Minfs::PurgeUnlinked() {
         }
 
         sb_->Write(state->GetWork());
-        CommitTransaction(std::move(state));
+        status = CommitTransaction(std::move(state));
+        if (status != ZX_OK) {
+            return status;
+        }
         unlinked_count++;
     }
 

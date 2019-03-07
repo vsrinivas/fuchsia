@@ -1200,7 +1200,7 @@ zx_status_t VnodeMinfs::Close() {
         ZX_ASSERT(fs_->BeginTransaction(0, 0, &state) == ZX_OK);
         fs_->RemoveUnlinked(state->GetWork(), this);
         Purge(state->GetWork());
-        fs_->CommitTransaction(std::move(state));
+        return fs_->CommitTransaction(std::move(state));
     }
     return ZX_OK;
 }
@@ -1317,7 +1317,7 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
     if (*out_actual != 0) {
         InodeSync(state->GetWork(), kMxFsSyncMtime);  // Successful writes updates mtime
         state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-        fs_->CommitTransaction(std::move(state));
+        return fs_->CommitTransaction(std::move(state));
     }
     return ZX_OK;
 }
@@ -1443,7 +1443,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* state, const void* data,
 #ifdef __Fuchsia__
     if (!IsDirectory()) {
         data_state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-        fs_->CommitTransaction(std::move(data_state));
+        return fs_->CommitTransaction(std::move(data_state));
     }
 #endif
     return ZX_OK;
@@ -1516,7 +1516,7 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
         ZX_ASSERT(fs_->BeginTransaction(0, 0, &state) == ZX_OK);
         InodeSync(state->GetWork(), kMxFsSyncDefault);
         state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-        fs_->CommitTransaction(std::move(state));
+        return fs_->CommitTransaction(std::move(state));
     }
     return ZX_OK;
 }
@@ -1722,7 +1722,9 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
 
     state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     state->GetWork()->PinVnode(vn);
-    fs_->CommitTransaction(std::move(state));
+    if ((status = fs_->CommitTransaction(std::move(state))) != ZX_OK) {
+        return status;
+    }
 
     vn->fd_count_ = 1;
     *out = std::move(vn);
@@ -1813,7 +1815,7 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     status = ForEachDirent(&args, DirentCallbackUnlink);
     if (status == ZX_OK) {
         state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-        fs_->CommitTransaction(std::move(state));
+        return fs_->CommitTransaction(std::move(state));
     }
     success = (status == ZX_OK);
     return status;
@@ -1840,13 +1842,13 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
         return status;
     }
 
-    if ((status = TruncateInternal(state.get(), len)) == ZX_OK) {
-        // Successful truncates update inode
-        InodeSync(state->GetWork(), kMxFsSyncMtime);
+    if ((status = TruncateInternal(state.get(), len)) != ZX_OK) {
+        return status;
     }
+
+    InodeSync(state->GetWork(), kMxFsSyncMtime);
     state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-    fs_->CommitTransaction(std::move(state));
-    return status;
+    return fs_->CommitTransaction(std::move(state));
 }
 
 zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
@@ -1933,7 +1935,9 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* state, size_t len) {
                     data_state->GetWork()->Enqueue(vmo_.get(), rel_bno,
                                                    bno + fs_->Info().dat_block, 1);
                     data_state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-                    fs_->CommitTransaction(std::move(data_state));
+                    if ((status = fs_->CommitTransaction(std::move(data_state))) != ZX_OK) {
+                        return status;
+                    }
                 }
 #else // __Fuchsia__
                 if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
@@ -2097,9 +2101,11 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
     }
     state->GetWork()->PinVnode(oldvn);
     state->GetWork()->PinVnode(newdir);
-    fs_->CommitTransaction(std::move(state));
-    success = true;
-    return ZX_OK;
+    status = fs_->CommitTransaction(std::move(state));
+    if (status == ZX_OK) {
+        success = true;
+    }
+    return status;
 }
 
 zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {
@@ -2160,8 +2166,7 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
     target->InodeSync(state->GetWork(), kMxFsSyncDefault);
     state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     state->GetWork()->PinVnode(target);
-    fs_->CommitTransaction(std::move(state));
-    return ZX_OK;
+    return fs_->CommitTransaction(std::move(state));
 }
 
 #ifdef __Fuchsia__

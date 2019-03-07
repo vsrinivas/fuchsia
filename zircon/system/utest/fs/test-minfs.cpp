@@ -496,9 +496,18 @@ bool TestUnlinkFail(void) {
     // and all unlinked files will be left intact (on disk).
     ASSERT_EQ(ramdisk_sleep_after(test_ramdisk, 0), 0);
 
-    for (unsigned i = first_fd + 1; i < last_fd; i++) {
+    // The ramdisk is asleep but since no transactions have been processed, the writeback state has
+    // not been updated. The first file we close will appear to succeed.
+    ASSERT_EQ(close(fds[first_fd + 1].release()), 0);
+
+    // Sync to ensure the writeback state is updated. Since the purge from the previous close will
+    // fail, sync will also fail.
+    ASSERT_LT(syncfs(fd.get()), 0);
+
+    // All succeeding close calls will fail.
+    for (unsigned i = first_fd + 2; i < last_fd; i++) {
         if (i != mid_fd) {
-            ASSERT_EQ(close(fds[i].release()), 0);
+            ASSERT_LT(close(fds[i].release()), 0);
         }
     }
 

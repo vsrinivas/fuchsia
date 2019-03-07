@@ -200,9 +200,9 @@ public:
     }
 
     zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                                 fbl::unique_ptr<Transaction>* out);
+                                 fbl::unique_ptr<Transaction>* out) __WARN_UNUSED_RESULT;
 
-    void CommitTransaction(fbl::unique_ptr<Transaction> state);
+    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> state) __WARN_UNUSED_RESULT;
 
 #ifdef __Fuchsia__
     // Returns the capacity of the writeback buffer, in blocks.
