@@ -40,11 +40,6 @@ static const zx_duration_t timeout_ns = ZX_SEC(2);
 
 #define WAIT_FOR(condition, poll_interval) DO_UNTIL(condition, , poll_interval)
 
-// This is a controller implementation constant.  This value is likely lower
-// than reality, but it is a conservative choice.
-// TODO(teisenbe): Discover this/look it up from a table
-const uint32_t kRxFifoDepth = 8;
-
 // Implement the functionality of the i2c slave devices.
 
 static int bus_is_idle(intel_serialio_i2c_device_t *controller) {
@@ -172,8 +167,10 @@ zx_status_t intel_serialio_i2c_slave_transfer(
                 goto transfer_finish_1;
             }
 
-            // If its a read then queue up more reads until we hit fifodepth
-            if (outstanding_reads != 0 && len > 0 && outstanding_reads < kRxFifoDepth) {
+            // If its a read then queue up more reads until we hit fifo_depth.
+            // (We use fifo_depth - 1 because going to the full fifo_depth
+            // causes an overflow interrupt).
+            if (outstanding_reads != 0 && len > 0 && outstanding_reads < (size_t) (controller->rx_fifo_depth - 1)) {
                 continue;
             }
 

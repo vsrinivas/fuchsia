@@ -48,6 +48,8 @@
 // More than enough
 #define MAX_TRANSFER_SIZE (UINT16_MAX - 1)
 
+#define INTEL_DESIGNWARE_COMP_TYPE 0x44570140
+
 // Implement the functionality of the i2c bus device.
 
 static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
@@ -107,6 +109,14 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
 static zx_status_t intel_i2c_get_max_transfer_size(void* ctx, size_t* out_size) {
     *out_size = MAX_TRANSFER_SIZE;
     return ZX_OK;
+}
+
+static uint32_t intel_i2c_extract_tx_fifo_depth_from_param(uint32_t param) {
+        return ((param >> 16) & 0xff) + 1;
+}
+
+static uint32_t intel_i2c_extract_rx_fifo_depth_from_param(uint32_t param) {
+        return ((param >> 8)  & 0xff) + 1;
 }
 
 static zx_status_t intel_i2c_get_interrupt(void* ctx, uint32_t flags, zx_handle_t* out_handle) {
@@ -696,6 +706,15 @@ zx_status_t intel_serialio_i2c_reset_controller(
     mtx_lock(&device->irq_mask_mutex);
     // Mask all interrupts
     writel(0, &device->regs->intr_mask);
+
+    if (readl(&device->regs->comp_type) == INTEL_DESIGNWARE_COMP_TYPE) {
+        uint32_t param = readl(&device->regs->comp_param1);
+        device->tx_fifo_depth = intel_i2c_extract_tx_fifo_depth_from_param(param);
+        device->rx_fifo_depth = intel_i2c_extract_rx_fifo_depth_from_param(param);
+    } else {
+        device->tx_fifo_depth = 8;
+        device->rx_fifo_depth = 8;
+    }
 
     status = intel_serialio_i2c_set_rx_fifo_threshold(device, DEFAULT_RX_FIFO_TRIGGER_LEVEL);
     if (status != ZX_OK) {
