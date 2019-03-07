@@ -98,12 +98,11 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 function find_config {
   local config_type="$1"
   local config_name="$2"
-  local __resultvar="$3"
 
   for directory in vendor/*/"${config_type}" "${config_type}"; do
     local guessed_config="${directory}/${config_name}.gni"
     if [[ -a "${guessed_config}" ]]; then
-      eval "${__resultvar}"="${guessed_config}"
+      echo "${guessed_config}"
       return
     fi
   done
@@ -133,10 +132,8 @@ function main {
     *.*)
       local product_name="${1%.*}"
       local board_name="${1##*.}"
-      local product=""
-      local board=""
-      find_config "products" "${product_name}" product
-      find_config "boards" "${board_name}" board
+      local product="$(find_config "products" "${product_name}")"
+      local board="$(find_config "boards" "${board_name}")"
       gn_args+=" import(\"//${board}\") import(\"//${product}\")"
       ;;
     *)
