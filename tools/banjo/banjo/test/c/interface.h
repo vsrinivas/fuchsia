@@ -33,23 +33,16 @@ typedef void (*cookie_maker_bake_callback)(void* ctx, zx_status_t s);
 
 // Declarations
 
-
-
-
-
-
-
-struct cookie_maker {
-  cookie_maker_ops_t* ops;
-  void* ctx;
-};
-
 typedef struct cookie_maker_ops {
     void (*prep)(void* ctx, cookie_kind_t cookie, cookie_maker_prep_callback callback, void* cookie);
     void (*bake)(void* ctx, uint64_t token, zx_time_t time, cookie_maker_bake_callback callback, void* cookie);
     zx_status_t (*deliver)(void* ctx, uint64_t token);
 } cookie_maker_ops_t;
 
+struct cookie_maker {
+  cookie_maker_ops_t* ops;
+  void* ctx;
+};
 
 // Asynchonously preps a cookie.
 static inline void cookie_maker_prep(const cookie_maker_t* proto, cookie_kind_t cookie, cookie_maker_prep_callback callback, void* cookie) {
