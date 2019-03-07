@@ -24,7 +24,8 @@ class Err;
 class SystemObserver;
 class SystemSymbols;
 
-// Represents system-wide state on the debugged computer.
+// Represents the client's view of the system-wide state on the debugged
+// computer.
 class System : public ClientObject {
  public:
   // Callback for requesting the process tree.
@@ -39,19 +40,20 @@ class System : public ClientObject {
 
   virtual SystemSymbols* GetSymbols() = 0;
 
-  // Returns all targets currently in the System. The returned pointers are
-  // managed by the System object and should not be cached once you return to
-  // the message loop.
+  // Returns all targets currently in this System instance. The returned
+  // pointers are managed by the System object and should not be cached once you
+  // return to the message loop.  There is a single default Target, which is not
+  // initially attached to anything.
   virtual std::vector<Target*> GetTargets() const = 0;
 
-  // Returns all job contexts currently in the System. The returned pointers are
-  // managed by the System object and should not be cached once you return to
-  // the message loop.
+  // Returns all job contexts currently in this System instance. The returned
+  // pointers are managed by the System object and should not be cached once you
+  // return to the message loop.
   virtual std::vector<JobContext*> GetJobContexts() const = 0;
 
-  // Returns all non-internal breakpoints currently in the system. The returned
-  // pointers are managed by the System object and should not be cached once
-  // you return to the message loop.
+  // Returns all non-internal breakpoints currently in this System instance. The
+  // returned pointers are managed by the System object and should not be cached
+  // once you return to the message loop.
   virtual std::vector<Breakpoint*> GetBreakpoints() const = 0;
 
   // Returns the process (and hence Target) associated with the given live
@@ -61,12 +63,12 @@ class System : public ClientObject {
   // Schedules a request for the system process tree.
   virtual void GetProcessTree(ProcessTreeCallback callback) = 0;
 
-  // Creates a new target in the system. If "clone" is given, the settings
-  // from that target will be cloned into the new one. If clone is null,
-  // an empty Target will be allocated.
+  // Creates a new target in this System instance. If "clone" is given, the
+  // settings from that target will be cloned into the new one. If clone is
+  // null, an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
 
-  // Creates a new job context  in the system. If "clone" is given, the
+  // Creates a new job context in this System instance. If "clone" is given, the
   // settings from that target will be cloned into the new one. If clone is
   // null, an empty Target will be allocated.
   virtual JobContext* CreateNewJobContext(JobContext* clone) = 0;

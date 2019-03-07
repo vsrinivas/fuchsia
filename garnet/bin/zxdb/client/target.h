@@ -28,11 +28,18 @@ class TargetSymbols;
 // A Target represents the abstract idea of a process that can be debugged.
 // This is as opposed to a Process which corresponds to one running process.
 //
-// Generally upon startup there would be a Target but no Process. This Target
-// would receive the breakpoints, process name, command line switches, and
-// other state from the user. Running this target would create the associated
-// Process object. When the process exits, the Target can be re-used to
-// launch the process again with the same configuration.
+// Targets are not initially attached to Processes on the debugged device.
+// There are multiple ways of associating a Target with a Process.
+//
+// If users want to start a new process on the debugged device, they set the
+// breakpoints, process name, command line switches, and other state in the
+// Target.  The user then runs the target, which creates the associated Process
+// object. When the process exits, the Target can be re-used to launch the
+// process again with the same configuration.
+//
+// If users want to associate a Target with a process on the debugged device,
+// they create a new Target (possibly using System::CreateNewTarget), and then
+// call Attach() to perform the association.
 class Target : public ClientObject {
  public:
   // Note that the callback will be issued in all cases which may be after the
