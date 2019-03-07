@@ -51,7 +51,5 @@ driver_module("virtual_audio_driver") {
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
