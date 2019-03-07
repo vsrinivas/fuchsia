@@ -91,7 +91,7 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const TEEC_UUID& ta_uuid) {
 }
 
 static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t optee_return_origin,
-                                          fuchsia_hardware_tee_Result* zx_result) {
+                                          fuchsia_hardware_tee_OpResult* zx_result) {
     ZX_DEBUG_ASSERT(zx_result != nullptr);
 
     // Do a quick check of the return origin to make sure we can map it to one
@@ -195,7 +195,7 @@ zx_status_t OpteeClient::OpenSession(const fuchsia_hardware_tee_Uuid* trusted_ap
     ZX_DEBUG_ASSERT(trusted_app != nullptr);
     ZX_DEBUG_ASSERT(parameter_set != nullptr);
 
-    fuchsia_hardware_tee_Result result = {};
+    fuchsia_hardware_tee_OpResult result = {};
 
     Uuid ta_uuid{*trusted_app};
 
@@ -242,7 +242,7 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
                                        fidl_txn_t* txn) {
     ZX_DEBUG_ASSERT(parameter_set != nullptr);
 
-    fuchsia_hardware_tee_Result result = {};
+    fuchsia_hardware_tee_OpResult result = {};
 
     if (!open_sessions_.find(session_id).IsValid()) {
         result.return_code = TEEC_ERROR_BAD_STATE;

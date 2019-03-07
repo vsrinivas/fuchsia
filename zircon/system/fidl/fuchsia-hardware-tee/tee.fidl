@@ -39,9 +39,9 @@ enum Direction : uint32 {
     INOUT = 2;
 };
 
-// None is an empty parameter type that is used as a placeholder for elements in the parameter set
-// that are not used.
-struct None {};
+// An empty parameter type is used as a placeholder for elements in the parameter set that are not
+// used.
+struct Empty {};
 
 struct Buffer {
     Direction direction;
@@ -63,7 +63,7 @@ struct Value {
 };
 
 union Parameter {
-    None none;
+    Empty empty;
     Buffer buffer;
     Value value;
 };
@@ -82,11 +82,11 @@ enum ReturnOrigin : uint32 {
     TRUSTED_APPLICATION = 2;
 };
 
-// The Result of an operation will include a return code, the origin of the result, and the return
+// The result of an operation will include a return code, the origin of the result, and the return
 // of the parameter set. The returned parameter set will be a copy of the input parameter set, but
 // with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
 // Buffer.size to the number of bytes written.
-struct Result {
+struct OpResult {
     uint64 return_code;
     ReturnOrigin return_origin;
     ParameterSet parameter_set;
@@ -99,12 +99,12 @@ protocol Device {
 
     // Initiates a communication session with the specified trusted application.
     OpenSession(Uuid trusted_app, ParameterSet parameter_set)
-        -> (uint32 session_id, Result result);
+        -> (uint32 session_id, OpResult OpResult);
 
     // Requests the trusted application perform the provided command. The command is unique to the
     // trusted application.
     InvokeCommand(uint32 session_id, uint32 command_id, ParameterSet parameter_set)
-        -> (Result result);
+        -> (OpResult OpResult);
 
     // Closes an established session.
     CloseSession(uint32 session_id) -> ();

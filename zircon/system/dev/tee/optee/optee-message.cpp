@@ -54,7 +54,7 @@ bool Message::TryInitializeParameters(size_t starting_param_index,
         const fuchsia_hardware_tee_Parameter& zx_param = parameter_set.parameters[i];
 
         switch (zx_param.tag) {
-        case fuchsia_hardware_tee_ParameterTag_none:
+        case fuchsia_hardware_tee_ParameterTag_empty:
             optee_param.attribute = MessageParam::kAttributeTypeNone;
             break;
         case fuchsia_hardware_tee_ParameterTag_value:
@@ -210,8 +210,8 @@ Message::CreateOutputParameterSet(size_t starting_param_index,
 
         switch (optee_param.attribute) {
         case MessageParam::kAttributeTypeNone:
-            zx_param.tag = fuchsia_hardware_tee_ParameterTag_none;
-            zx_param.none = {};
+            zx_param.tag = fuchsia_hardware_tee_ParameterTag_empty;
+            zx_param.empty = {};
             break;
         case MessageParam::kAttributeTypeValueInput:
         case MessageParam::kAttributeTypeValueOutput:

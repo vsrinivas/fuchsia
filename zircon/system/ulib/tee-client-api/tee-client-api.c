@@ -12,9 +12,9 @@
 #include <zircon/syscalls.h>
 
 #include <fuchsia/hardware/tee/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 
 #include <tee-client-api/tee_client_api.h>
 
@@ -284,7 +284,7 @@ static TEEC_Result preprocess_operation(const TEEC_Operation* operation,
 
         switch (param_type) {
         case TEEC_NONE:
-            out_parameter_set->parameters[i].tag = fuchsia_hardware_tee_ParameterTag_none;
+            out_parameter_set->parameters[i].tag = fuchsia_hardware_tee_ParameterTag_empty;
             break;
         case TEEC_VALUE_INPUT:
         case TEEC_VALUE_OUTPUT:
@@ -482,7 +482,7 @@ static TEEC_Result postprocess_operation(const fuchsia_hardware_tee_ParameterSet
 
         switch (param_type) {
         case TEEC_NONE:
-            if (parameter_set->parameters[i].tag != fuchsia_hardware_tee_ParameterTag_none) {
+            if (parameter_set->parameters[i].tag != fuchsia_hardware_tee_ParameterTag_empty) {
                 rc = TEEC_ERROR_BAD_PARAMETERS;
             }
             break;
@@ -649,7 +649,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context,
 
     // Outputs
     uint32_t out_session_id;
-    fuchsia_hardware_tee_Result out_result;
+    fuchsia_hardware_tee_OpResult out_result;
     memset(&out_result, 0, sizeof(out_result));
 
     zx_status_t status = fuchsia_hardware_tee_DeviceOpenSession(
@@ -707,7 +707,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session,
     fuchsia_hardware_tee_ParameterSet parameter_set;
     memset(&parameter_set, 0, sizeof(parameter_set));
 
-    fuchsia_hardware_tee_Result out_result;
+    fuchsia_hardware_tee_OpResult out_result;
     memset(&out_result, 0, sizeof(out_result));
 
     uint32_t teec_rc = preprocess_operation(operation, &parameter_set);
