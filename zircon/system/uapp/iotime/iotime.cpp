@@ -10,6 +10,11 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/vmo.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -92,42 +97,50 @@ static zx_duration_t iotime_block(int is_read, int fd, size_t total, size_t bufs
 }
 
 static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_t bufsz) {
-    zx_status_t r;
-    zx_handle_t vmo;
-    if ((r = zx_vmo_create(bufsz, 0, &vmo)) != ZX_OK) {
-        fprintf(stderr, "error: out of memory %d\n", r);
+    zx_status_t status;
+    zx::vmo vmo;
+    if ((status = zx::vmo::create(bufsz, 0, &vmo)) != ZX_OK) {
+        fprintf(stderr, "error: out of memory %d\n", status);
         return ZX_TIME_INFINITE;
     }
 
-    block_info_t info;
-    if (ioctl_block_get_info(fd, &info) < 0) {
+    fzl::UnownedFdioCaller disk_connection(fd);
+    zx::unowned_channel channel(disk_connection.borrow_channel());
+    fuchsia_hardware_block_BlockInfo info;
+
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &info);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "error: cannot get info for '%s'\n", dev);
         return ZX_TIME_INFINITE;
     }
 
-    zx_handle_t fifo;
-    if (ioctl_block_get_fifos(fd, &fifo) != sizeof(fifo)) {
+    zx::fifo fifo;
+    io_status = fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
+                                                    fifo.reset_and_get_address());
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
         return ZX_TIME_INFINITE;
     }
 
     groupid_t group = 0;
 
-    zx_handle_t dup;
-    if ((r = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-        fprintf(stderr, "error: cannot duplicate handle %d\n", r);
+    zx::vmo dup;
+    if ((status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+        fprintf(stderr, "error: cannot duplicate handle %d\n", status);
         return ZX_TIME_INFINITE;
     }
 
-    vmoid_t vmoid;
-    if (ioctl_block_attach_vmo(fd, &dup, &vmoid) != sizeof(vmoid)) {
+    fuchsia_hardware_block_VmoID vmoid;
+    io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status,
+                                                      &vmoid);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
         return ZX_TIME_INFINITE;
     }
 
     fifo_client_t* client;
-    if ((r = block_fifo_create_client(fifo, &client)) != ZX_OK) {
-        fprintf(stderr, "error: cannot create block client for '%s' %d\n", dev, r);
+    if ((status = block_fifo_create_client(fifo.release(), &client)) != ZX_OK) {
+        fprintf(stderr, "error: cannot create block client for '%s' %d\n", dev, status);
         return ZX_TIME_INFINITE;
     }
 
@@ -136,15 +149,16 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
         block_fifo_request_t request = {
+            .opcode = static_cast<uint32_t>(is_read ? BLOCKIO_READ : BLOCKIO_WRITE),
+            .reqid = 0,
             .group = group,
-            .vmoid = vmoid,
-            .opcode = is_read ? BLOCKIO_READ : BLOCKIO_WRITE,
-            .length = xfer / info.block_size,
+            .vmoid = vmoid.id,
+            .length = static_cast<uint32_t>(xfer / info.block_size),
             .vmo_offset = 0,
             .dev_offset = (total - n) / info.block_size,
         };
-        if ((r = block_fifo_txn(client, &request, 1)) != ZX_OK) {
-            fprintf(stderr, "error: block_fifo_txn error %d\n", r);
+        if ((status = block_fifo_txn(client, &request, 1)) != ZX_OK) {
+            fprintf(stderr, "error: block_fifo_txn error %d\n", status);
             return ZX_TIME_INFINITE;
         }
         n -= xfer;

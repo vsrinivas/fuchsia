@@ -18,12 +18,12 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/thread.h>
-
-#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
@@ -104,14 +104,13 @@ public:
     // Implementation specific information.
     struct {
         block_client::Client client;
-        block_info_t info = {};
-        // File descriptor to device being tested.
-        fbl::unique_fd fd;
+        fuchsia_hardware_block_BlockInfo info = {};
     } block;
     struct {
         fuchsia_hardware_skipblock_PartitionInfo info = {};
-        fzl::FdioCaller caller;
     } skip;
+    // Connection to device being tested.
+    fzl::FdioCaller caller;
     // Protects |iochk_failure| and |progress|
     fbl::Mutex lock;
     bool iochk_failure = false;
@@ -186,7 +185,7 @@ protected:
 
 class BlockChecker : public Checker {
 public:
-    static zx_status_t Initialize(const fbl::unique_fd& fd, block_info_t info,
+    static zx_status_t Initialize(fzl::FdioCaller& caller, fuchsia_hardware_block_BlockInfo info,
                                   block_client::Client& client,
                                   fbl::unique_ptr<Checker>* checker) {
         fzl::OwnedVmoMapper mapping;
@@ -203,18 +202,19 @@ public:
             return status;
         }
 
-        size_t s;
-        vmoid_t vmoid;
-        zx_handle_t raw_dup = dup.release();
-        if ((s = ioctl_block_attach_vmo(fd.get(), &raw_dup, &vmoid) != sizeof(vmoid_t))) {
-            printf("cannot attach vmo for init %lu\n", s);
+        fuchsia_hardware_block_VmoID vmoid;
+        zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(),
+                                                                      dup.release(), &status,
+                                                                      &vmoid);
+        if (io_status != ZX_OK || status != ZX_OK) {
+            printf("cannot attach vmo for init\n");
             return ZX_ERR_IO;
         }
 
         groupid_t group = next_txid_.fetch_add(1);
         ZX_ASSERT(group < MAX_TXN_GROUP_COUNT);
 
-        checker->reset(new BlockChecker(std::move(mapping), info, client, vmoid, group));
+        checker->reset(new BlockChecker(std::move(mapping), info, client, vmoid.id, group));
         return ZX_OK;
     }
 
@@ -279,7 +279,7 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockChecker);
 
 private:
-    BlockChecker(fzl::OwnedVmoMapper mapper, block_info_t info,
+    BlockChecker(fzl::OwnedVmoMapper mapper, fuchsia_hardware_block_BlockInfo info,
                  block_client::Client& client, vmoid_t vmoid, groupid_t group)
         : Checker(mapper.start()), mapper_(std::move(mapper)), info_(info),
           client_(client), vmoid_(vmoid), group_(group) {}
@@ -288,7 +288,7 @@ private:
     static std::atomic<uint16_t> next_txid_;
 
     fzl::OwnedVmoMapper mapper_;
-    block_info_t info_;
+    fuchsia_hardware_block_BlockInfo info_;
     block_client::Client& client_;
     vmoid_t vmoid_;
     groupid_t group_;
@@ -396,8 +396,8 @@ private:
 };
 
 zx_status_t InitializeChecker(WorkContext& ctx, fbl::unique_ptr<Checker>* checker) {
-    return skip ? SkipBlockChecker::Initialize(ctx.skip.caller, ctx.skip.info, checker)
-                : BlockChecker::Initialize(ctx.block.fd, ctx.block.info, ctx.block.client, checker);
+    return skip ? SkipBlockChecker::Initialize(ctx.caller, ctx.skip.info, checker)
+                : BlockChecker::Initialize(ctx.caller, ctx.block.info, ctx.block.client, checker);
 }
 
 zx_status_t InitializeDevice(WorkContext& ctx) {
@@ -574,16 +574,16 @@ int iochk(int argc, char** argv) {
 
     WorkContext ctx(ProgressBar(), false);
 
+    ctx.caller.reset(std::move(fd));
     if (skip) {
-        ctx.skip.caller.reset(std::move(fd));
         // Skip Block Device Setup.
         zx_status_t status;
         fuchsia_hardware_skipblock_PartitionInfo info;
-        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(ctx.skip.caller.borrow_channel(),
+        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(ctx.caller.borrow_channel(),
                                                              &status, &info);
         if (status != ZX_OK) {
             printf("unable to get skip-block partition info: %d\n", status);
-            printf("fd: %d\n", ctx.skip.caller.release().get());
+            printf("fd: %d\n", ctx.caller.release().get());
             return -1;
         }
         printf("opened %s - block_size_bytes=%lu, partition_block_count=%u\n", device,
@@ -615,10 +615,12 @@ int iochk(int argc, char** argv) {
             return -1;
         }
     } else {
-        ctx.block.fd = std::move(fd);
         // Block Device Setup.
-        block_info_t info;
-        if (ioctl_block_get_info(ctx.block.fd.get(), &info) != sizeof(info)) {
+        fuchsia_hardware_block_BlockInfo info;
+        zx_status_t status;
+        zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(ctx.caller.borrow_channel(),
+                                                                    &status, &info);
+        if (io_status != ZX_OK || status != ZX_OK) {
             printf("unable to get block info\n");
             return -1;
         }
@@ -656,8 +658,10 @@ int iochk(int argc, char** argv) {
         }
 
         zx::fifo fifo;
-        if (ioctl_block_get_fifos(ctx.block.fd.get(),
-                                  fifo.reset_and_get_address()) != sizeof(fifo)) {
+
+        io_status = fuchsia_hardware_block_BlockGetFifo(ctx.caller.borrow_channel(), &status,
+                                                        fifo.reset_and_get_address());
+        if (io_status != ZX_OK || status != ZX_OK) {
             printf("cannot get fifo for device\n");
             return -1;
         }

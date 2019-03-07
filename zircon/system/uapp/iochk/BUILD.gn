@@ -7,6 +7,7 @@ executable("iochk") {
     "iochk.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/fbl",
