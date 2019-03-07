@@ -20,6 +20,8 @@ using TestingBase = ::gtest::TestLoopFixture;
 
 using common::CreateStaticByteBuffer;
 
+constexpr common::DeviceId kDeviceOne(1), kDeviceTwo(2), kDeviceThree(3);
+
 class FakeClient : public Client {
  public:
   // |destroyed_cb| will be called when this client is destroyed, with true if
@@ -87,7 +89,7 @@ class SDP_ServiceDiscovererTest : public TestingBase {
 TEST_F(SDP_ServiceDiscovererTest, NoSearches) {
   ServiceDiscoverer discoverer;
 
-  discoverer.StartServiceDiscovery("test", GetFakeClient());
+  discoverer.StartServiceDiscovery(kDeviceOne, GetFakeClient());
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
@@ -100,7 +102,7 @@ TEST_F(SDP_ServiceDiscovererTest, NoResults) {
 
   size_t cb_count = 0;
 
-  auto result_cb = [&cb_count](std::string, const auto &) { cb_count++; };
+  auto result_cb = [&cb_count](auto, const auto &) { cb_count++; };
 
   ServiceDiscoverer::SearchId id = discoverer.AddSearch(
       profile::kSerialPort,
@@ -121,7 +123,7 @@ TEST_F(SDP_ServiceDiscovererTest, NoResults) {
         });
       });
 
-  discoverer.StartServiceDiscovery("test", std::move(client));
+  discoverer.StartServiceDiscovery(kDeviceOne, std::move(client));
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
@@ -137,11 +139,11 @@ TEST_F(SDP_ServiceDiscovererTest, NoResults) {
 TEST_F(SDP_ServiceDiscovererTest, SomeResults) {
   ServiceDiscoverer discoverer;
 
-  std::vector<std::pair<std::string, std::map<AttributeId, DataElement>>>
+  std::vector<std::pair<common::DeviceId, std::map<AttributeId, DataElement>>>
       results;
 
   ServiceDiscoverer::ResultCallback result_cb =
-      [&results](std::string id, const auto &attributes) {
+      [&results](common::DeviceId id, const auto &attributes) {
         std::map<AttributeId, DataElement> attributes_clone;
         for (const auto &it : attributes) {
           auto [inserted_it, added] =
@@ -175,7 +177,7 @@ TEST_F(SDP_ServiceDiscovererTest, SomeResults) {
         });
       });
 
-  discoverer.StartServiceDiscovery("unused", std::move(client));
+  discoverer.StartServiceDiscovery(kDeviceOne, std::move(client));
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
@@ -226,7 +228,7 @@ TEST_F(SDP_ServiceDiscovererTest, SomeResults) {
     }
   });
 
-  discoverer.StartServiceDiscovery("two", std::move(client));
+  discoverer.StartServiceDiscovery(kDeviceTwo, std::move(client));
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
@@ -271,7 +273,7 @@ TEST_F(SDP_ServiceDiscovererTest, SomeResults) {
     }
   });
 
-  discoverer.StartServiceDiscovery("three", std::move(client));
+  discoverer.StartServiceDiscovery(kDeviceThree, std::move(client));
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
@@ -286,7 +288,7 @@ TEST_F(SDP_ServiceDiscovererTest, Disconnected) {
 
   size_t cb_count = 0;
 
-  auto result_cb = [&cb_count](std::string, const auto &) { cb_count++; };
+  auto result_cb = [&cb_count](auto, const auto &) { cb_count++; };
 
   ServiceDiscoverer::SearchId id = discoverer.AddSearch(
       profile::kSerialPort,
@@ -315,7 +317,7 @@ TEST_F(SDP_ServiceDiscovererTest, Disconnected) {
         }
       });
 
-  discoverer.StartServiceDiscovery("unused", std::move(client));
+  discoverer.StartServiceDiscovery(kDeviceOne, std::move(client));
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
@@ -328,13 +330,13 @@ TEST_F(SDP_ServiceDiscovererTest, Disconnected) {
 TEST_F(SDP_ServiceDiscovererTest, UnregisterInProgress) {
   ServiceDiscoverer discoverer;
 
-  std::optional<std::pair<std::string, std::map<AttributeId, DataElement>>>
+  std::optional<std::pair<common::DeviceId, std::map<AttributeId, DataElement>>>
       result;
 
   ServiceDiscoverer::SearchId id = ServiceDiscoverer::kInvalidSearchId;
 
   ServiceDiscoverer::ResultCallback one_result_cb =
-      [&discoverer, &result, &id](std::string peer_id, const auto &attributes) {
+      [&discoverer, &result, &id](auto peer_id, const auto &attributes) {
         // We should only be called once
         ASSERT_TRUE(!result.has_value());
         std::map<AttributeId, DataElement> attributes_clone;
@@ -387,14 +389,14 @@ TEST_F(SDP_ServiceDiscovererTest, UnregisterInProgress) {
     }
   });
 
-  discoverer.StartServiceDiscovery("test", std::move(client));
+  discoverer.StartServiceDiscovery(kDeviceOne, std::move(client));
 
   RETURN_IF_FATAL(RunLoopUntilIdle());
 
   EXPECT_EQ(1u, searches.size());
 
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ("test", result->first);
+  ASSERT_EQ(kDeviceOne, result->first);
   auto value = result->second[kBluetoothProfileDescriptorList].Get<uint32_t>();
   ASSERT_TRUE(value);
   ASSERT_EQ(1u, *value);
