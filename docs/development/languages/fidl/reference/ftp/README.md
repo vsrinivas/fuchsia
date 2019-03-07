@@ -9,7 +9,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-007](ftp-007.md) | 2018-07-27 | 2018-09-20 | Tables
 [FTP-008](ftp-008.md) | 2018-07-19 | 2018-10-04 | Epitaphs
 [FTP-013](ftp-013.md) | 2018-09-07 | 2018-10-11 | Introduce a `[Deprecated]` Attribute
-FTP-015               | 2018-09-26 | 2018-10-11 | Extensible Unions
+[FTP-015](ftp-015.md) | 2018-09-20 | 2018-10-11 | Extensible Unions
 [FTP-021](ftp-021.md) | 2018-10-31 | 2018-11-01 | Soft Transitions for Methods Add / Remove
 [FTP-020](ftp-020.md) | 2018-10-26 | 2018-11-29 | Interface Ordinal Hashing
 [FTP-014](ftp-014.md) | 2018-09-18 | 2018-12-06 | Error Handling
