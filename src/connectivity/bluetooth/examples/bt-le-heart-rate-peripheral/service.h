@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_BLUETOOTH_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
-#define GARNET_EXAMPLES_BLUETOOTH_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
 
 #include <unordered_set>
 
@@ -60,8 +60,7 @@ class Service final : fuchsia::bluetooth::gatt::LocalServiceDelegate {
                                      bool indicate) override;
   void OnReadValue(uint64_t id, int32_t offset,
                    OnReadValueCallback callback) override;
-  void OnWriteValue(uint64_t id, uint16_t offset,
-                    std::vector<uint8_t> value,
+  void OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint8_t> value,
                     OnWriteValueCallback callback) override;
   void OnWriteWithoutResponse(uint64_t id, uint16_t offset,
                               std::vector<uint8_t> value) override;
@@ -108,4 +107,4 @@ enum class BodySensorLocation : uint8_t {
 
 }  // namespace bt_le_heart_rate
 
-#endif  // GARNET_EXAMPLES_BLUETOOTH_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_

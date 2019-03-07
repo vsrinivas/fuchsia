@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-package("garnet_bluetooth_examples") {
+package("examples") {
   deps = [
     "bt-le-battery-service",
     "bt-le-heart-rate-peripheral",

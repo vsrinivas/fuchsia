@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_BLUETOOTH_BT_BEACON_READER_APP_H_
-#define GARNET_EXAMPLES_BLUETOOTH_BT_BEACON_READER_APP_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_BEACON_READER_APP_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_BEACON_READER_APP_H_
 
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -39,4 +39,4 @@ class App final : public fuchsia::bluetooth::le::CentralDelegate {
 
 }  // namespace bt_beacon_reader
 
-#endif  // GARNET_EXAMPLES_BLUETOOTH_BT_BEACON_READER_APP_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_BEACON_READER_APP_H_

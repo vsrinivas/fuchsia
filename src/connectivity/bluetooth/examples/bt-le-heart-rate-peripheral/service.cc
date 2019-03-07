@@ -172,26 +172,27 @@ void Service::NotifyMeasurement() {
 
 void Service::ScheduleNotification() {
   auto self = weak_factory_.GetWeakPtr();
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         [self] {
-                           if (!self)
-                             return;
+  async::PostDelayedTask(
+      async_get_default_dispatcher(),
+      [self] {
+        if (!self)
+          return;
 
-                           if (!self->measurement_peers_.empty()) {
-                             self->NotifyMeasurement();
-                             self->ScheduleNotification();
-                           } else {
-                             self->notify_scheduled_ = false;
-                           }
-                         },
-                         zx::msec(measurement_interval_));
+        if (!self->measurement_peers_.empty()) {
+          self->NotifyMeasurement();
+          self->ScheduleNotification();
+        } else {
+          self->notify_scheduled_ = false;
+        }
+      },
+      zx::msec(measurement_interval_));
 
   notify_scheduled_ = true;
 }
 
 void Service::OnCharacteristicConfiguration(uint64_t characteristic_id,
-                                            std::string peer_id,
-                                            bool notify, bool indicate) {
+                                            std::string peer_id, bool notify,
+                                            bool indicate) {
   std::cout << "CharacteristicConfiguration on peer " << peer_id
             << " (notify: " << notify << ", indicate: " << indicate << ")"
             << std::endl;

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_BLUETOOTH_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
-#define GARNET_EXAMPLES_BLUETOOTH_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
 
 #include <memory>
 
 #include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
-#include <lib/sys/cpp/startup_context.h>
 #include <lib/fidl/cpp/string.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include "service.h"
 
@@ -45,4 +45,4 @@ class App final {
 
 }  // namespace bt_le_heart_rate
 
-#endif  // GARNET_EXAMPLES_BLUETOOTH_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_APP_H_

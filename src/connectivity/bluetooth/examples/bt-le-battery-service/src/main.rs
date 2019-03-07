@@ -33,11 +33,7 @@ struct BatteryState {
 impl BatteryState {
     pub fn new(service: gatt::LocalServiceProxy) -> BatteryState {
         BatteryState {
-            inner: Mutex::new(BatteryStateInner {
-                level: 0,
-                service,
-                peers: HashSet::new(),
-            }),
+            inner: Mutex::new(BatteryStateInner { level: 0, service, peers: HashSet::new() }),
         }
     }
 
@@ -94,17 +90,13 @@ struct BatteryStateInner {
 /// Handle a stream of incoming gatt battery service requests.
 /// Returns when the channel backing the stream closes or an error occurs while handling requests.
 async fn gatt_service_delegate(
-    state: &BatteryState, mut stream: gatt::LocalServiceDelegateRequestStream,
+    state: &BatteryState,
+    mut stream: gatt::LocalServiceDelegateRequestStream,
 ) -> Result<(), Error> {
     while let Some(request) = await!(stream.try_next()).context("error running service delegate")? {
         use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
         match request {
-            OnCharacteristicConfiguration {
-                peer_id,
-                notify,
-                indicate,
-                ..
-            } => {
+            OnCharacteristicConfiguration { peer_id, notify, indicate, .. } => {
                 println!(
                     "Peer configured characteristic (notify: {}, indicate: {}, id: {})",
                     notify, indicate, peer_id
@@ -132,7 +124,8 @@ async fn gatt_service_delegate(
 /// Handle a stream of incoming power notifications, updating state.
 /// Returns when the channel backing the stream closes or an error occurs while handling requests.
 async fn power_manager_watcher(
-    state: &BatteryState, mut stream: PowerManagerWatcherRequestStream,
+    state: &BatteryState,
+    mut stream: PowerManagerWatcherRequestStream,
 ) -> Result<(), Error> {
     while let Some(PowerManagerWatcherRequest::OnChangeBatteryStatus { battery_status, .. }) =
         await!(stream.try_next()).context("error running power manager watcher")?
@@ -202,10 +195,7 @@ fn main() -> Result<(), Error> {
             service_server
         ))?;
         if let Some(error) = status.error {
-            bail!(
-                "Failed to publish battery service to gatt server: {:?}",
-                error
-            );
+            bail!("Failed to publish battery service to gatt server: {:?}", error);
         }
         println!("Published Battery Service to local device database.");
 
