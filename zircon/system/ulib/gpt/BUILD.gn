@@ -13,6 +13,8 @@ library("gpt") {
     "$zx/system/ulib/fbl:headers",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/third_party/ulib/cksum",
   ]

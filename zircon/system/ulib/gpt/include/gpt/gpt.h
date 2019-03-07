@@ -110,9 +110,8 @@ public:
 
     // print out the GPT
     void PrintTable() const;
-    zx_status_t BlockRrPart() {
-        return static_cast<zx_status_t>(ioctl_block_rr_part(fd_.get()));
-    }
+
+    zx_status_t BlockRrPart();
 
     // Return device's block size
     uint64_t BlockSize() const { return blocksize_; }

@@ -17,6 +17,12 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h> // for zx_cprng_draw
 
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <gpt/gpt.h>
+#include <lib/fzl/fdio.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h> // for zx_cprng_draw
+
 #include "gpt/gpt.h"
 
 namespace gpt {
@@ -299,6 +305,16 @@ void GptDevice::PrintTable() const {
     for (; partitions_[count] != NULL; ++count)
         ;
     print_array(partitions_, count);
+}
+
+zx_status_t GptDevice::BlockRrPart() {
+    fzl::UnownedFdioCaller caller(fd_.get());
+    zx_status_t status, io_status;
+    io_status = fuchsia_hardware_block_BlockRebindDevice(caller.borrow_channel(), &status);
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    return status;
 }
 
 zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {

@@ -28,6 +28,8 @@ library("fvm") {
   ]
   if (is_fuchsia) {
     deps += [
+      "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+      "$zx/system/ulib/fzl",
       "$zx/system/ulib/gpt",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",

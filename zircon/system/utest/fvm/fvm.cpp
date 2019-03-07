@@ -3462,10 +3462,13 @@ bool TestValidAfterBlockDeviceGrowthAndFVMGrowth() {
                     "Read data and written data do not match after growth.");
 
     // Allocate all slices.
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = final_format_info.slice_count() - 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), ZX_OK);
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    uint64_t offset = 1;
+    uint64_t length = final_format_info.slice_count() - 1;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_caller.borrow_channel(),
+                                                         offset, length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     // Write to the last slice, and read the data back.
     int64_t last_slice_offset = kSliceSize * (final_format_info.slice_count() - 1);
