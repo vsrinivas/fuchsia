@@ -43,11 +43,11 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
         return status;
     }
 
-    vmoid_t vmoid;
+    fuchsia_hardware_block_VmoID vmoid;
     if ((status = bc->AttachVmo(mgr->inode_table_.vmo(), &vmoid)) != ZX_OK) {
         return status;
     }
-    txn->Enqueue(vmoid, 0, start_block, inoblks);
+    txn->Enqueue(vmoid.id, 0, start_block, inoblks);
 #endif
     *out = std::move(mgr);
     return ZX_OK;

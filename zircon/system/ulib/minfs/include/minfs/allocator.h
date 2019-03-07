@@ -241,7 +241,7 @@ public:
     virtual ~AllocatorStorage() {}
 
 #ifdef __Fuchsia__
-    virtual zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid) = 0;
+    virtual zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) = 0;
 #endif
 
     // Loads data from disk into |data| using |txn|.
@@ -282,7 +282,7 @@ public:
     ~PersistentStorage() {}
 
 #ifdef __Fuchsia__
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid);
+    zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid);
 #endif
 
     void Load(fs::ReadTxn* txn, ReadData data);

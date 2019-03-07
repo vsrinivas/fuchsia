@@ -120,7 +120,7 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
     } else {
         const size_t kBlocksPerSlice = info->slice_size / kMinfsBlockSize;
 #ifdef __Fuchsia__
-        fvm_info_t fvm_info;
+        fuchsia_hardware_block_volume_VolumeInfo fvm_info;
         if (bc->FVMQuery(&fvm_info) != ZX_OK) {
             FS_TRACE_ERROR("minfs: Unable to query FVM\n");
             return ZX_ERR_UNAVAILABLE;
@@ -144,23 +144,25 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
         request.vslice_start[2] = kFVMBlockInodeStart / kBlocksPerSlice;
         request.vslice_start[3] = kFVMBlockDataStart / kBlocksPerSlice;
 
-        query_response_t response;
+        fuchsia_hardware_block_volume_VsliceRange
+                ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+        size_t ranges_count;
 
-        if (bc->FVMVsliceQuery(&request, &response) != ZX_OK) {
+        if (bc->FVMVsliceQuery(&request, ranges, &ranges_count) != ZX_OK) {
             FS_TRACE_ERROR("minfs: Unable to query FVM\n");
             return ZX_ERR_UNAVAILABLE;
         }
 
-        if (response.count != request.count) {
+        if (ranges_count != request.count) {
             FS_TRACE_ERROR("minfs: Unable to query FVM\n");
             return ZX_ERR_BAD_STATE;
         }
 
         for (unsigned i = 0; i < request.count; i++) {
             size_t minfs_count = expected_count[i];
-            size_t fvm_count = response.vslice_range[i].count;
+            size_t fvm_count = ranges[i].count;
 
-            if (!response.vslice_range[i].allocated || fvm_count < minfs_count) {
+            if (!ranges[i].allocated || fvm_count < minfs_count) {
                 // Currently, since Minfs can only grow new slices, it should not be possible for
                 // the FVM to report a slice size smaller than what is reported by Minfs. In this
                 // case, automatically fail without trying to resolve the situation, as it is
@@ -355,16 +357,14 @@ Minfs::~Minfs() {
     vnode_hash_.clear();
 }
 
-zx_status_t Minfs::FVMQuery(fvm_info_t* info) const {
 #ifdef __Fuchsia__
+zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const {
     if (!(Info().flags & kMinfsFlagFVM)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     return bc_->FVMQuery(info);
-#else
-    return ZX_ERR_NOT_SUPPORTED;
-#endif
 }
+#endif
 
 zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
     TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->ino_);
@@ -980,7 +980,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     auto fvm_cleanup =
         fbl::MakeAutoCall([bc = bc.get(), &info]() { minfs_free_slices(bc, &info); });
 #ifdef __Fuchsia__
-    fvm_info_t fvm_info;
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
     if (bc->FVMQuery(&fvm_info) == ZX_OK) {
         info.slice_size = fvm_info.slice_size;
         info.flags |= kMinfsFlagFVM;

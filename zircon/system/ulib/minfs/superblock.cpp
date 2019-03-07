@@ -48,7 +48,7 @@ zx_status_t SuperblockManager::Create(Bcache* bc, const Superblock* info,
         return status;
     }
 
-    vmoid_t info_vmoid;
+    fuchsia_hardware_block_VmoID info_vmoid;
     if ((status = bc->AttachVmo(mapper.vmo(), &info_vmoid)) != ZX_OK) {
         return status;
     }

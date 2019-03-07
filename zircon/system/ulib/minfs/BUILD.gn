@@ -34,7 +34,11 @@ library("minfs") {
     "$zx/system/ulib/zircon-internal",
   ]
   if (is_fuchsia) {
-    public_deps += [ "$zx/system/ulib/zx:headers" ]
+    public_deps += [
+      "$zx/system/fidl/fuchsia-hardware-block:c",
+      "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+      "$zx/system/ulib/zx:headers",
+    ]
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
     deps += [
       "$zx/system/fidl/fuchsia-device:c",

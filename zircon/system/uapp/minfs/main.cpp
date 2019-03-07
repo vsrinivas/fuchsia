@@ -16,6 +16,7 @@
 
 #include <fbl/unique_ptr.h>
 #include <fs/trace.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
@@ -102,13 +103,22 @@ int usage() {
     return -1;
 }
 
-off_t get_size(int fd) {
-    block_info_t info;
-    if (ioctl_block_get_info(fd, &info) != sizeof(info)) {
-        fprintf(stderr, "error: minfs could not find size of device\n");
-        return 0;
+zx_status_t GetInfo(const fbl::unique_fd& fd, off_t* out_size, bool* out_readonly) {
+    fuchsia_hardware_block_BlockInfo info;
+    const fzl::UnownedFdioCaller connection(fd.get());
+    zx_status_t status;
+    zx_status_t io_status =
+            fuchsia_hardware_block_BlockGetInfo(connection.borrow_channel(), &status, &info);
+    if (io_status != ZX_OK) {
+        status = io_status;
     }
-    return info.block_size * info.block_count;
+    if (status != ZX_OK) {
+        fprintf(stderr, "error: minfs could not find size of device\n");
+        return status;
+    }
+    *out_size = info.block_size * info.block_count;
+    *out_readonly = info.flags & fuchsia_hardware_block_FLAG_READONLY;
+    return ZX_OK;
 }
 
 } // namespace
@@ -168,26 +178,24 @@ int main(int argc, char** argv) {
 
     fbl::unique_fd fd;
     fd.reset(FS_FD_BLOCKDEVICE);
-    if (!options.readonly) {
-        block_info_t block_info;
-        zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
-        if (status < ZX_OK) {
-            fprintf(stderr, "minfs: Unable to query block device, fd: %d status: 0x%x\n", fd.get(),
-                    status);
-            return -1;
-        }
-        options.readonly = block_info.flags & BLOCK_FLAG_READONLY;
+
+    off_t device_size = 0;
+    bool block_readonly = false;
+    zx_status_t status = GetInfo(fd, &device_size, &block_readonly);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    off_t size = get_size(fd.get());
-    if (size == 0) {
+    options.readonly = options.readonly || block_readonly;
+
+    if (device_size == 0) {
         fprintf(stderr, "minfs: failed to access block device\n");
         return usage();
     }
-    size /= minfs::kMinfsBlockSize;
+    size_t block_count = device_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t)size) < 0) {
+    if (minfs::Bcache::Create(&bc, std::move(fd), static_cast<uint32_t>(block_count)) < 0) {
         fprintf(stderr, "minfs: error: cannot create block cache\n");
         return -1;
     }

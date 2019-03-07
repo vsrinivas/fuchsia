@@ -24,7 +24,7 @@ public:
     ~FakeStorage() {}
 
 #ifdef __Fuchsia__
-    zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid) final {
+    zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) final {
         return ZX_OK;
     }
 #endif

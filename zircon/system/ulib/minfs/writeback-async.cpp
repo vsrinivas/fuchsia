@@ -9,11 +9,11 @@
 namespace minfs {
 
 Buffer::~Buffer() {
-    if (vmoid_ != VMOID_INVALID) {
+    if (vmoid_.id != VMOID_INVALID) {
         // Close the buffer vmo.
         block_fifo_request_t request;
         request.group = bc_->BlockGroupID();
-        request.vmoid = vmoid_;
+        request.vmoid = vmoid_.id;
         request.opcode = BLOCKIO_CLOSE_VMO;
         bc_->Transaction(&request, 1);
     }

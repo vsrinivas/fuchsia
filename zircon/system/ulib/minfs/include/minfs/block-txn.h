@@ -32,7 +32,8 @@ struct WriteRequest {
 class WriteTxn {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
-    explicit WriteTxn(Bcache* bc) : bc_(bc), vmoid_(VMOID_INVALID), block_count_(0) {}
+    explicit WriteTxn(Bcache* bc)
+            : bc_(bc), vmoid_(fuchsia_hardware_block_VmoID{.id = VMOID_INVALID}), block_count_(0) {}
     ~WriteTxn() {
         ZX_DEBUG_ASSERT_MSG(requests_.is_empty(), "WriteTxn still has pending requests");
     }
@@ -50,22 +51,22 @@ public:
     blk_t BlockCount() const { return block_count_; }
 
     bool IsBuffered() const {
-        return vmoid_ != VMOID_INVALID;
+        return vmoid_.id != VMOID_INVALID;
     }
 
     // Sets the source buffer for the WriteTxn to |vmoid|, and the starting block within that
     // buffer to |block_start|.
-    void SetBuffer(vmoid_t vmoid, blk_t block_start);
+    void SetBuffer(fuchsia_hardware_block_VmoID vmoid, blk_t block_start);
 
     // Checks if the WriteTxn vmoid_ matches |vmoid|.
-    bool CheckBuffer(vmoid_t vmoid) const {
-        return vmoid_ == vmoid;
+    bool CheckBuffer(fuchsia_hardware_block_VmoID vmoid) const {
+        return vmoid_.id == vmoid.id;
     }
 
     // Resets the transaction's state.
     void Cancel() {
         requests_.reset();
-        vmoid_ = VMOID_INVALID;
+        vmoid_.id = VMOID_INVALID;
         block_count_ = 0;
     }
 protected:
@@ -74,7 +75,7 @@ protected:
 
 private:
     Bcache* bc_;
-    vmoid_t vmoid_; // Vmoid of the external source buffer.
+    fuchsia_hardware_block_VmoID vmoid_; // Vmoid of the external source buffer.
     blk_t block_start_; // Starting block within the external source buffer.
     blk_t block_count_; // Total number of blocks in all requests_.
     fbl::Vector<WriteRequest> requests_;

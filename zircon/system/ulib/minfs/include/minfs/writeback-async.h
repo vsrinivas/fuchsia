@@ -57,7 +57,7 @@ private:
     Bcache* bc_;
 
     fzl::OwnedVmoMapper mapper_;
-    vmoid_t vmoid_ = VMOID_INVALID;
+    fuchsia_hardware_block_VmoID vmoid_ = {.id = VMOID_INVALID};
 
     blk_t start_ = 0;
     blk_t length_ = 0;

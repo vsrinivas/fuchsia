@@ -75,9 +75,9 @@ blk_t WriteTxn::BlockStart() const {
     return block_start_;
 }
 
-void WriteTxn::SetBuffer(vmoid_t vmoid, blk_t block_start) {
-    ZX_DEBUG_ASSERT(vmoid_ == VMOID_INVALID);
-    ZX_DEBUG_ASSERT(vmoid != VMOID_INVALID);
+void WriteTxn::SetBuffer(fuchsia_hardware_block_VmoID vmoid, blk_t block_start) {
+    ZX_DEBUG_ASSERT(vmoid_.id == VMOID_INVALID);
+    ZX_DEBUG_ASSERT(vmoid.id != VMOID_INVALID);
     vmoid_ = vmoid;
     block_start_ = block_start;
 }
@@ -88,7 +88,7 @@ zx_status_t WriteTxn::Transact() {
     const uint32_t kDiskBlocksPerMinfsBlock = kMinfsBlockSize / bc_->DeviceBlockSize();
     for (size_t i = 0; i < requests_.size(); i++) {
         blk_reqs[i].group = bc_->BlockGroupID();
-        blk_reqs[i].vmoid = vmoid_;
+        blk_reqs[i].vmoid = vmoid_.id;
         blk_reqs[i].opcode = BLOCKIO_WRITE;
         blk_reqs[i].vmo_offset = requests_[i].vmo_offset * kDiskBlocksPerMinfsBlock;
         blk_reqs[i].dev_offset = requests_[i].dev_offset * kDiskBlocksPerMinfsBlock;
@@ -102,7 +102,7 @@ zx_status_t WriteTxn::Transact() {
     zx_status_t status = bc_->Transaction(blk_reqs, requests_.size());
 
     requests_.reset();
-    vmoid_ = VMOID_INVALID;
+    vmoid_.id = VMOID_INVALID;
     block_count_ = 0;
     return status;
 }

@@ -382,12 +382,12 @@ zx_status_t Allocator::Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage
     }
 
 #ifdef __Fuchsia__
-    vmoid_t map_vmoid;
+    fuchsia_hardware_block_VmoID map_vmoid;
     if ((status = allocator->storage_->AttachVmo(allocator->map_.StorageUnsafe()->GetVmo(),
                                                  &map_vmoid)) != ZX_OK) {
         return status;
     }
-    allocator->storage_->Load(txn, map_vmoid);
+    allocator->storage_->Load(txn, map_vmoid.id);
 #else
     allocator->storage_->Load(txn, allocator->GetMapDataLocked());
 #endif
@@ -396,7 +396,7 @@ zx_status_t Allocator::Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage
 }
 
 #ifdef __Fuchsia__
-zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, vmoid_t* vmoid) {
+zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) {
     return bc_->AttachVmo(vmo, vmoid);
 }
 #endif

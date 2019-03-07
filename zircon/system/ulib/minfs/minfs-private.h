@@ -144,6 +144,9 @@ public:
     // Initializes the Minfs writeback queue and resolves any pending disk state (e.g., resolving
     // unlinked nodes).
     zx_status_t InitializeWriteback();
+
+    // Queries the underlying FVM, if it exists.
+    zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
 #endif
 
     // instantiate a vnode from an inode
@@ -167,9 +170,6 @@ public:
 
     // Free a data block.
     void BlockFree(WriteTxn* txn, blk_t bno);
-
-    // Queries the underlying FVM, if it exists.
-    zx_status_t FVMQuery(fvm_info_t* info) const;
 
     // Free ino in inode bitmap, release all blocks held by inode.
     zx_status_t InoFree(VnodeMinfs* vn, WritebackWork* wb);
@@ -706,8 +706,8 @@ private:
     //                                                              by doubly indirect blocks
     fbl::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
 
-    vmoid_t vmoid_{};
-    vmoid_t vmoid_indirect_{};
+    fuchsia_hardware_block_VmoID vmoid_{};
+    fuchsia_hardware_block_VmoID vmoid_indirect_{};
 
     fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};

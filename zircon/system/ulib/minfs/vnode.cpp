@@ -197,7 +197,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
         blk_t ibno;
         if ((ibno = iarray[i]) != 0) {
             fs_->ValidateBno(ibno);
-            txn.Enqueue(vmoid_indirect_, offset + i, ibno + fs_->Info().dat_block, 1);
+            txn.Enqueue(vmoid_indirect_.id, offset + i, ibno + fs_->Info().dat_block, 1);
         }
     }
 
@@ -291,7 +291,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
             dnum_count++;
-            txn.Enqueue(vmoid_, d, bno + fs_->Info().dat_block, 1);
+            txn.Enqueue(vmoid_.id, d, bno + fs_->Info().dat_block, 1);
         }
     }
 
@@ -315,7 +315,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                 if ((bno = ientry[j]) != 0) {
                     fs_->ValidateBno(bno);
                     uint32_t n = kMinfsDirect + i * kMinfsDirectPerIndirect + j;
-                    txn.Enqueue(vmoid_, n, bno + fs_->Info().dat_block, 1);
+                    txn.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
                 }
             }
         }
@@ -357,7 +357,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                             fs_->ValidateBno(bno);
                             uint32_t n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect
                                          + j * kMinfsDirectPerIndirect + k;
-                            txn.Enqueue(vmoid_, n, bno + fs_->Info().dat_block, 1);
+                            txn.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
                         }
                     }
                 }
@@ -1135,13 +1135,13 @@ VnodeMinfs::~VnodeMinfs() {
     block_fifo_request_t request[2];
     if (vmo_.is_valid()) {
         request[request_count].group = fs_->bc_->BlockGroupID();
-        request[request_count].vmoid = vmoid_;
+        request[request_count].vmoid = vmoid_.id;
         request[request_count].opcode = BLOCKIO_CLOSE_VMO;
         request_count++;
     }
     if (vmo_indirect_ != nullptr) {
         request[request_count].group = fs_->bc_->BlockGroupID();
-        request[request_count].vmoid = vmoid_indirect_;
+        request[request_count].vmoid = vmoid_indirect_.id;
         request[request_count].opcode = BLOCKIO_CLOSE_VMO;
         request_count++;
     }
@@ -1749,7 +1749,7 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     info->total_nodes = fs_->Info().inode_count;
     info->used_nodes = fs_->Info().alloc_inode_count;
 
-    fvm_info_t fvm_info;
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
     if (fs_->FVMQuery(&fvm_info) == ZX_OK) {
         uint64_t free_slices = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
         info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
