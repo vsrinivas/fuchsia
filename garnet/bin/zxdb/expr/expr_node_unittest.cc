@@ -28,7 +28,6 @@ namespace zxdb {
 
 namespace {
 
-
 class ExprNodeTest : public TestWithLoop {};
 
 }  // namespace
@@ -180,8 +179,7 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
       fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), data_provider,
-      nullptr);
+      SymbolContext::ForRelativeAddresses(), data_provider, nullptr);
 
   // Dereferencing should remove the const on the pointer but not the pointee.
   auto base_type =
@@ -351,6 +349,35 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   EXPECT_EQ(uint32_type.get(), out_value.type());
   EXPECT_EQ(kExpectedValue, out_value.GetAs<uint32_t>());
   EXPECT_EQ(kExpectedAddr, out_value.source().address());
+}
+
+TEST_F(ExprNodeTest, FunctionCall) {
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+
+  auto ptr_to_void_type =
+      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol());
+
+  auto [err, reinterpret] = Identifier::FromString("reinterpret_cast<void*>");
+  ASSERT_FALSE(err.has_error());
+
+  // Parameter for the call.
+  std::vector<fxl::RefPtr<ExprNode>> args;
+  args.push_back(fxl::MakeRefCounted<LiteralExprNode>(
+      ExprToken(ExprToken::Type::kInteger, "255", 0)));
+
+  auto call_node =
+      fxl::MakeRefCounted<FunctionCallExprNode>(reinterpret, std::move(args));
+
+  bool complete = false;
+  call_node->Eval(context, [&complete](const Err& err, ExprValue result) {
+    EXPECT_FALSE(err.has_error());
+
+    EXPECT_EQ("void*", result.type()->GetFullName());
+    EXPECT_EQ(0xffu, result.GetAs<uint64_t>());
+
+    complete = true;
+  });
+  EXPECT_TRUE(complete);  // Should have synchronously completed.
 }
 
 // This is more of an integration smoke test for "." and "->". The details are

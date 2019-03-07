@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/type_parser.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 
@@ -314,6 +315,47 @@ Err CoerceValueTo(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
   return Err("Can't cast from '%s' to '%s'.",
              source.type()->GetFullName().c_str(),
              dest_type->GetFullName().c_str());
+}
+
+Err ReinterpretCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                    ExprValue* result) {
+  if (!source.type())
+    return Err("Can't cast from a null type.");
+  if (!dest_type)
+    return Err("Can't cast to a null type.");
+
+  // The input and output types should both be integer-like (this includes
+  // pointers). This check is more restrictive than the "coerce" rules above
+  // because we don't want to support things like integer-to-double conversion.
+  const Type* concrete_source = source.type()->GetConcreteType();
+  if (!IsIntegerLike(concrete_source)) {
+    return Err("Can't cast from a '%s'.", source.type()->GetFullName().c_str());
+  }
+
+  const Type* concrete_dest = dest_type->GetConcreteType();
+  if (!IsIntegerLike(concrete_dest))
+    return Err("Can't cast to a '%s'.", dest_type->GetFullName().c_str());
+
+  // Our implementation of reinterpret_cast is just a bit cast with truncation
+  // or 0-fill (not sign extend). C++ would require the type sizes match and
+  // would prohibit most number-to-number conversions, but those restrictions
+  // aren't useful or even desirable in the case of a debugger handling user
+  // input.
+  auto new_data = source.data();
+  new_data.resize(dest_type->byte_size());
+  // The new ExprValueSource severs the tie to the original data since
+  // reinterpret_cast "returns" a temporary rather than a reference.
+  *result = ExprValue(dest_type, std::move(new_data), ExprValueSource());
+  return Err();
+}
+
+Err ReinterpretCast(const ExprValue& source, const std::string& dest_type_str,
+                    ExprValue* result) {
+  fxl::RefPtr<Type> dest_type;
+  Err err = StringToType(dest_type_str, &dest_type);
+  if (err.has_error())
+    return err;
+  return ReinterpretCast(source, dest_type, result);
 }
 
 }  // namespace zxdb

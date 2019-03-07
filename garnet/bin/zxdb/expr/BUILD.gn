@@ -44,6 +44,8 @@ static_library("expr") {
     "symbol_variable_resolver.h",
     "template_type_extractor.cc",
     "template_type_extractor.h",
+    "type_parser.cc",
+    "type_parser.h",
   ]
 
   public_deps = [
@@ -75,6 +77,7 @@ source_set("tests") {
     "symbol_eval_context_unittest.cc",
     "symbol_variable_resolver_unittest.cc",
     "template_type_extractor_unittest.cc",
+    "type_parser_unittest.cc",
   ]
 
   deps = [

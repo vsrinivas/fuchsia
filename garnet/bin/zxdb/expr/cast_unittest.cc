@@ -124,4 +124,58 @@ TEST(Cast, Coerce) {
   EXPECT_EQ(-1, result.GetAs<int64_t>());
 }
 
+TEST(Cast, Reinterpret) {
+  auto int32_type = MakeInt32Type();
+  auto uint32_type = MakeInt32Type();
+  auto int64_type = MakeInt64Type();
+  auto uint64_type = MakeInt64Type();
+  auto char_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
+  auto bool_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool");
+  auto double_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
+
+  auto ptr_to_int32_type = fxl::MakeRefCounted<ModifiedType>(
+      Symbol::kTagPointerType, LazySymbol(int32_type));
+  auto ptr_to_void_type =
+      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol());
+
+  ExprValue int32_minus_one(int32_type, {0xff, 0xff, 0xff, 0xff},
+                            ExprValueSource());
+  ExprValue int64_big_num(int32_type, {8, 7, 6, 5, 4, 3, 2, 1},
+                          ExprValueSource());
+  ExprValue ptr_to_void(ptr_to_void_type, {8, 7, 6, 5, 4, 3, 2, 1},
+                        ExprValueSource());
+  ExprValue double_pi(double_type,
+                      {0x18, 0x2d, 0x44, 0x54, 0xfb, 0x21, 0x09, 0x40},
+                      ExprValueSource());
+
+  // Two pointer types: reinterpret_cast<int32_t*>(ptr_to_void);
+  ExprValue result;
+  Err err = ReinterpretCast(ptr_to_void, ptr_to_int32_type, &result);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(0x0102030405060708u, result.GetAs<uint64_t>());
+  EXPECT_EQ(ptr_to_int32_type.get(), result.type());
+
+  // Conversion from int to void*. C++ would prohibit this case because the
+  // integer is 32 bits and the pointer is 64, but the debugger allows it.
+  // This should not be sign extended.
+  err = ReinterpretCast(int32_minus_one, ptr_to_void_type, &result);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(0xffffffffu, result.GetAs<uint64_t>());
+
+  // Truncation of a number. This is also disallowed in C++.
+  err = ReinterpretCast(int64_big_num, int32_type, &result);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(4u, result.data().size());
+  EXPECT_EQ(0x05060708u, result.GetAs<uint32_t>());
+
+  // Prohibit conversions between a double and a pointer:
+  // reinterpret_cast<void*>(3.14159265258979);
+  err = ReinterpretCast(double_pi, ptr_to_void_type, &result);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Can't cast from a 'double'.", err.msg());
+}
+
 }  // namespace zxdb

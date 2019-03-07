@@ -9,6 +9,7 @@
 #include <ostream>
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/expr/cast.h"
 #include "garnet/bin/zxdb/expr/eval_operators.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
@@ -99,15 +100,14 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
 
 void ExprNode::EvalFollowReferences(fxl::RefPtr<ExprEvalContext> context,
                                     EvalCallback cb) const {
-  Eval(context,
-       [ context, cb = std::move(cb) ](const Err& err, ExprValue value) {
-         if (err.has_error()) {
-           cb(err, ExprValue());
-         } else {
-           EnsureResolveReference(context->GetDataProvider(), std::move(value),
-                                  std::move(cb));
-         }
-       });
+  Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
+    if (err.has_error()) {
+      cb(err, ExprValue());
+    } else {
+      EnsureResolveReference(context->GetDataProvider(), std::move(value),
+                             std::move(cb));
+    }
+  });
 }
 
 void AddressOfExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
@@ -139,29 +139,30 @@ void AddressOfExprNode::Print(std::ostream& out, int indent) const {
 void ArrayAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
   left_->EvalFollowReferences(
-      context, [ inner = inner_, context, cb = std::move(cb) ](
+      context, [inner = inner_, context, cb = std::move(cb)](
                    const Err& err, ExprValue left_value) {
         if (err.has_error()) {
           cb(err, ExprValue());
         } else {
           // "left" has been evaluated, now do "inner".
-          inner->EvalFollowReferences(context, [
-            context, left_value = std::move(left_value), cb = std::move(cb)
-          ](const Err& err, ExprValue inner_value) {
-            if (err.has_error()) {
-              cb(err, ExprValue());
-            } else {
-              // Both "left" and "inner" has been evaluated.
-              int64_t offset = 0;
-              Err offset_err = InnerValueToOffset(inner_value, &offset);
-              if (offset_err.has_error()) {
-                cb(offset_err, ExprValue());
-              } else {
-                DoAccess(std::move(context), std::move(left_value), offset,
-                         std::move(cb));
-              }
-            }
-          });
+          inner->EvalFollowReferences(
+              context,
+              [context, left_value = std::move(left_value), cb = std::move(cb)](
+                  const Err& err, ExprValue inner_value) {
+                if (err.has_error()) {
+                  cb(err, ExprValue());
+                } else {
+                  // Both "left" and "inner" has been evaluated.
+                  int64_t offset = 0;
+                  Err offset_err = InnerValueToOffset(inner_value, &offset);
+                  if (offset_err.has_error()) {
+                    cb(offset_err, ExprValue());
+                  } else {
+                    DoAccess(std::move(context), std::move(left_value), offset,
+                             std::move(cb));
+                  }
+                }
+              });
         }
       });
 }
@@ -217,8 +218,7 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
 
 void BinaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                             EvalCallback cb) const {
-  EvalBinaryOperator(std::move(context), left_, op_, right_,
-                     std::move(cb));
+  EvalBinaryOperator(std::move(context), left_, op_, right_, std::move(cb));
 }
 
 void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
@@ -229,10 +229,10 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
 
 void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
-  expr_->EvalFollowReferences(context, [ context, cb = std::move(cb) ](
-                                           const Err& err, ExprValue value) {
-    ResolvePointer(context->GetDataProvider(), value, std::move(cb));
-  });
+  expr_->EvalFollowReferences(
+      context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
+        ResolvePointer(context->GetDataProvider(), value, std::move(cb));
+      });
 }
 
 void DereferenceExprNode::Print(std::ostream& out, int indent) const {
@@ -241,9 +241,52 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void FunctionCallExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
-    EvalCallback cb) const {
-  // TODO(brettw) implement this.
-  cb(Err("Function calls aren't implemented."), ExprValue());
+                                EvalCallback cb) const {
+  // Handle reinterpret_cast calls since this is currently the only function
+  // that can be called (this will need to be enhanced significantly when we
+  // add more).
+  //
+  // This has a single name component (no namespaces), a single template
+  // parameter, and a single argument.
+  if (name_.components().size() != 1) {
+    cb(Err("Unknown function call '%s'.", name_.GetFullName().c_str()),
+       ExprValue());
+    return;
+  }
+
+  const std::string& single_name = name_.components()[0].name().value();
+  if (single_name != "reinterpret_cast") {
+    cb(Err("Unknown function call '%s'.", single_name.c_str()), ExprValue());
+    return;
+  }
+
+  if (name_.components()[0].template_contents().size() != 1u) {
+    cb(Err("Expecting one template parameter for '%s', got %zu.",
+           single_name.c_str(),
+           name_.components()[0].template_contents().size()),
+       ExprValue());
+    return;
+  }
+  const std::string& dest_type = name_.components()[0].template_contents()[0];
+
+  if (args_.size() != 1u) {
+    cb(Err("Expecting one parameter for '%s', got %zu.", single_name.c_str(),
+           args_.size()),
+       ExprValue());
+    return;
+  }
+
+  args_[0]->EvalFollowReferences(
+      std::move(context),
+      [cb = std::move(cb), dest_type](const Err& err, ExprValue value) {
+        if (err.has_error()) {
+          cb(err, ExprValue());
+        } else {
+          ExprValue result;
+          Err cast_err = ReinterpretCast(value, dest_type, &result);
+          cb(cast_err, result);
+        }
+      });
 }
 
 void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
@@ -292,7 +335,7 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprToken::kArrow;
   left_->EvalFollowReferences(
-      context, [ context, is_arrow, member = member_, cb = std::move(cb) ](
+      context, [context, is_arrow, member = member_, cb = std::move(cb)](
                    const Err& err, ExprValue base) {
         if (!is_arrow) {
           // "." operator.
@@ -321,13 +364,13 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
 
 void UnaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
-  expr_->EvalFollowReferences(context, [ cb = std::move(cb), op = op_ ](
-                                           const Err& err, ExprValue value) {
-    if (err.has_error())
-      cb(err, std::move(value));
-    else
-      EvalUnaryOperator(op, value, std::move(cb));
-  });
+  expr_->EvalFollowReferences(
+      context, [cb = std::move(cb), op = op_](const Err& err, ExprValue value) {
+        if (err.has_error())
+          cb(err, std::move(value));
+        else
+          EvalUnaryOperator(op, value, std::move(cb));
+      });
 }
 
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {

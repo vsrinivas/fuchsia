@@ -29,4 +29,23 @@ class ExprValueSource;
 Err CoerceValueTo(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                   const ExprValueSource& dest_source, ExprValue* result);
 
+// Executes a C++-style reinterpret_cast. The first version takes a known type
+// to convert to, while the second attempts to find the correct type that
+// matches the string.
+//
+// The source type should not be a reference type since this function is
+// synchronous and will not follow references to get the referenced value.
+// Calling code should use ExprNode::EvalFollowReferences() to compute the
+// value or have called EnsureResolveReference().
+//
+// This implementation is more lax than C++, allowing any conversion that can
+// be reasonable executed. C++ will, for example, prohibit conversion of a
+// 32-bit integer to a 64-bit pointer, but if the user types
+// "reinterpret_cast<char*>(0x12343567)" we want the debugger to be able to
+// execute.
+Err ReinterpretCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                    ExprValue* result);
+Err ReinterpretCast(const ExprValue& source, const std::string& dest_type,
+                    ExprValue* result);
+
 }  // namespace zxdb
