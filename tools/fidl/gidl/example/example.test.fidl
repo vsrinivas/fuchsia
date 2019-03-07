@@ -9,3 +9,9 @@ table TableOnlyPrimitives {
     2: bool b;
     3: uint16 u;
 };
+
+xunion UnionOnlyPrimitives {
+    int32 i;
+    bool b;
+    uint16 u;
+};

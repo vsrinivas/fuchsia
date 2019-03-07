@@ -39,6 +39,7 @@ type ValueVisitor interface {
 	OnString(value string)
 	OnStruct(value gidlir.Object, decl *StructDecl)
 	OnTable(value gidlir.Object, decl *TableDecl)
+	OnXUnion(value gidlir.Object, decl *XUnionDecl)
 }
 
 // Visit is the entry point into visiting a value, it dispatches appropriately
@@ -59,6 +60,8 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 			visitor.OnStruct(value, decl)
 		case *TableDecl:
 			visitor.OnTable(value, decl)
+		case *XUnionDecl:
+			visitor.OnXUnion(value, decl)
 		default:
 			panic(fmt.Sprintf("not implemented: %T", decl))
 		}
@@ -92,6 +95,7 @@ var _ = []Declaration{
 	&stringDecl{},
 	&StructDecl{},
 	&TableDecl{},
+	&XUnionDecl{},
 }
 
 type hasNoKey struct{}
@@ -226,6 +230,41 @@ func (decl *TableDecl) conforms(untypedValue interface{}) error {
 	}
 }
 
+// XUnionDecl describes a xunion declaration.
+type XUnionDecl struct {
+	fidlir.XUnion
+	schema schema
+}
+
+// ForKey retrieves a declaration for a key.
+func (decl XUnionDecl) ForKey(key string) (Declaration, bool) {
+	for _, member := range decl.Members {
+		if string(member.Name) == key {
+			return decl.schema.LookupDeclByType(member.Type)
+		}
+	}
+	return nil, false
+}
+
+func (decl XUnionDecl) conforms(untypedValue interface{}) error {
+	switch value := untypedValue.(type) {
+	default:
+		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
+	case gidlir.Object:
+		if num := len(value.Fields); num != 1 {
+			return fmt.Errorf("must have one field, found %d", num)
+		}
+		for key, field := range value.Fields {
+			if fieldDecl, ok := decl.ForKey(key); !ok {
+				return fmt.Errorf("field %s: unknown", key)
+			} else if err := fieldDecl.conforms(field); err != nil {
+				return fmt.Errorf("field %s: %s", key, err)
+			}
+		}
+		return nil
+	}
+}
+
 type schema fidlir.Root
 
 // LookupDeclByName looks up a message declaration by name.
@@ -242,6 +281,14 @@ func (s schema) LookupDeclByName(name string) (Declaration, bool) {
 		if decl.Name == s.name(name) {
 			return &TableDecl{
 				Table:  decl,
+				schema: s,
+			}, true
+		}
+	}
+	for _, decl := range s.XUnions {
+		if decl.Name == s.name(name) {
+			return &XUnionDecl{
+				XUnion: decl,
 				schema: s,
 			}, true
 		}

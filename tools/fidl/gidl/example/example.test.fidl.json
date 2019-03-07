@@ -112,13 +112,81 @@
     }
   ],
   "union_declarations": [],
-  "xunion_declarations": [],
+  "xunion_declarations": [
+    {
+      "name": "example/UnionOnlyPrimitives",
+      "location": {
+        "filename": "tools/fidl/gidl/example/example.test.fidl",
+        "line": 13,
+        "column": 7
+      },
+      "members": [
+        {
+          "ordinal": 1509869756,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 14,
+            "column": 10
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        },
+        {
+          "ordinal": 717083448,
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool"
+          },
+          "name": "b",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 15,
+            "column": 9
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "offset": 0
+        },
+        {
+          "ordinal": 2077764519,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "u",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 16,
+            "column": 11
+          },
+          "size": 2,
+          "max_out_of_line": 0,
+          "alignment": 2,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 8,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
   "declaration_order": [
     "example/OneStringOfMaxLengthFive",
+    "example/UnionOnlyPrimitives",
     "example/TableOnlyPrimitives"
   ],
   "declarations": {
     "example/OneStringOfMaxLengthFive": "struct",
-    "example/TableOnlyPrimitives": "table"
+    "example/TableOnlyPrimitives": "table",
+    "example/UnionOnlyPrimitives": "xunion"
   }
 }

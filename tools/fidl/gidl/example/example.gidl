@@ -36,8 +36,15 @@ success("TableOnlyPrimitives-all-fields-are-set") {
 		u: 314,
 	}
 	bytes = {
-		3, 0, 0, 0, 0, 0, 0, 0, // length
-		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		// not important
+	}
+}
+
+success("UnionOnlyPrimitives-variant-i") {
+	value = UnionOnlyPrimitives {
+		i: -9,
+	}
+	bytes = {
 		// not important
 	}
 }

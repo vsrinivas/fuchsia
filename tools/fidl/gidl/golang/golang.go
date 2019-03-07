@@ -125,43 +125,43 @@ func (b *goValueBuilder) OnString(value string) {
 }
 
 func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
-	structVar := b.newVar()
-	b.Builder.WriteString(structVar)
-	b.Builder.WriteString(":=")
-	b.Builder.WriteString(value.Name)
-	b.Builder.WriteString("{}")
-	b.Builder.WriteString("\n")
+	containerVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s %s\n", containerVar, value.Name))
 	for key, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(key)
 		gidlmixer.Visit(b, field, fieldDecl)
 		fieldVar := b.lastVar
-		b.Builder.WriteString(structVar)
-		b.Builder.WriteString(".")
-		b.Builder.WriteString(key)
-		b.Builder.WriteString("=")
-		b.Builder.WriteString(fieldVar)
-		b.Builder.WriteString("\n")
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.%s = %s\n", containerVar, key, fieldVar))
 	}
-	b.lastVar = structVar
+	b.lastVar = containerVar
 }
 
 func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
-	structVar := b.newVar()
-	b.Builder.WriteString(structVar)
-	b.Builder.WriteString(":=")
-	b.Builder.WriteString(value.Name)
-	b.Builder.WriteString("{}")
-	b.Builder.WriteString("\n")
+	containerVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s %s\n", containerVar, value.Name))
 	for key, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(key)
 		gidlmixer.Visit(b, field, fieldDecl)
 		fieldVar := b.lastVar
-		b.Builder.WriteString(structVar)
-		b.Builder.WriteString(".set_")
-		b.Builder.WriteString(key)
-		b.Builder.WriteString("(")
-		b.Builder.WriteString(fieldVar)
-		b.Builder.WriteString(")\n")
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.set_%s(%s)\n", containerVar, key, fieldVar))
 	}
-	b.lastVar = structVar
+	b.lastVar = containerVar
+}
+
+func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) {
+	containerVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s %s\n", containerVar, value.Name))
+	for key, field := range value.Fields {
+		fieldDecl, _ := decl.ForKey(key)
+		gidlmixer.Visit(b, field, fieldDecl)
+		fieldVar := b.lastVar
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.set_%s(%s)\n", containerVar, key, fieldVar))
+	}
+	b.lastVar = containerVar
 }
