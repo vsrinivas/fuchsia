@@ -13,10 +13,10 @@ def main():
     parser.add_argument('--build-dir', action='store', required=True)
 
     args = parser.parse_args()
-    with open(os.path.join(args.build_dir, "packages.json")) as f:
-      data = json.load(f)
+    with open(os.path.join(args.build_dir, "available_packages.list")) as f:
+      data = f.read()
 
-    available_build_packages = set(data["available"])
+    available_build_packages = set(data.split('\n'))
 
     with open(os.path.join(args.build_dir, "amber-files", "repository", "targets.json")) as f:
       data = json.load(f)

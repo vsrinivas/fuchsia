@@ -65,47 +65,57 @@ images = [
   },
 ]
 
-# Write a JSON metadata file about the packages in the build.
-_packages_json = {
-  _all = []
-  monolith = []
-  foreach(pkg, monolith_packages) {
-    monolith += [ get_label_info(pkg, "name") ]
-    _all += [ pkg ]
-    _all -= [ pkg ]
-    _all += [ pkg ]
-  }
-  preinstall = []
-  foreach(pkg, preinstall_packages) {
-    preinstall += [ get_label_info(pkg, "name") ]
-    _all += [ pkg ]
-    _all -= [ pkg ]
-    _all += [ pkg ]
-  }
-  available = []
-  foreach(pkg, available_packages) {
-    available += [ get_label_info(pkg, "name") ]
-    _all += [ pkg ]
-    _all -= [ pkg ]
-    _all += [ pkg ]
-  }
-  packages = []
-  foreach(pkg, _all) {
-    packages += [
-      {
-        dir = get_label_info(pkg, "dir")
-        name = get_label_info(pkg, "name")
-        build_dir =
-            rebase_path(get_label_info(pkg, "target_out_dir"), root_build_dir)
-      },
+group("monolith_packages") {
+  testonly = true
+  public_deps = monolith_packages
+}
+
+group("preinstall_packages") {
+  testonly = true
+  public_deps = preinstall_packages
+}
+
+group("available_packages") {
+  testonly = true
+  public_deps = available_packages
+}
+
+template("package_list") {
+  generated_file(target_name) {
+    testonly = true
+    visibility = [ ":*"]
+    forward_variables_from(invoker, [ "deps", "public_deps" ])
+
+    data_keys = [ "package_names" ]
+    walk_keys = [ "package_barrier" ]
+    outputs = [
+      "$root_out_dir/$target_name",
     ]
   }
 }
-write_file("$root_build_dir/packages.json",
-           {
-             forward_variables_from(_packages_json, "*", [ "_all" ])
-           },
-           "json")
+
+package_list("monolith_packages.list") {
+  deps = [ ":monolith_packages" ]
+}
+
+package_list("preinstall_packages.list") {
+  deps = [ ":preinstall_packages" ]
+}
+
+package_list("available_packages.list") {
+  deps = [ ":available_packages" ]
+}
+
+group("package_lists") {
+  testonly = true
+  visibility = [ ":*"]
+
+  deps = [
+    ":monolith_packages.list",
+    ":preinstall_packages.list",
+    ":available_packages.list",
+  ]
+}
 
 shell_commands("shell-commands") {
   testonly = true
@@ -948,6 +958,7 @@ group("images") {
   testonly = true
   deps = [
     ":ids.txt",
+    ":package_lists",
     ":paver-script",
     "zedboot",
   ]
@@ -1391,8 +1402,9 @@ group("updates") {
     ":amber_publish_blobs",
     ":amber_publish_index",
     ":ids.txt",
+    ":package_lists",
     ":system_snapshot",
-  ]
+  ] 
 }
 
 ###

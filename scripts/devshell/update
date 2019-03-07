@@ -29,7 +29,7 @@ function main {
     return -1
   fi
 
-  for pkg in $("$FUCHSIA_DIR/scripts/list-preinstall-packages.py" --build-dir "${FUCHSIA_BUILD_DIR}"); do
+  for pkg in $(cat "${FUCHSIA_BUILD_DIR}/preinstall_packages.list"); do
     fx-command-run shell amberctl get_up -n "${pkg}" -v 0
   done
   fx-command-run ota

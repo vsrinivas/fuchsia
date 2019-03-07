@@ -177,6 +177,8 @@ template("pm_build_package") {
       # walk_keys` for more information on the mechanic.
       package_barrier = []
 
+      package_names = [ package_name ]
+
       snapshot_entries = [ "$package_name/$package_variant=$blobs_json_path" ]
 
       blob_manifests =
