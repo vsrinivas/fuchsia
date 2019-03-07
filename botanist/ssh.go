@@ -44,14 +44,13 @@ func GeneratePrivateKey() ([]byte, error) {
 	return buf, nil
 }
 
-func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
+func ConnectViaSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
 	network, err := network(address)
 	if err != nil {
 		return nil, err
 	}
 
 	var client *ssh.Client
-
 	// TODO: figure out optimal backoff time and number of retries
 	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, 10*time.Second), func() error {
 		var err error
@@ -71,7 +70,21 @@ func SSHIntoNode(ctx context.Context, nodename string, config *ssh.ClientConfig)
 		return nil, err
 	}
 	addr.Port = SSHPort
-	return ConnectSSH(ctx, addr, config)
+	return ConnectViaSSH(ctx, addr, config)
+}
+
+// DefaultSSHConfig returns a basic SSH client configuration.
+func DefaultSSHConfig(privateKey []byte) (*ssh.ClientConfig, error) {
+	signer, err := ssh.ParsePrivateKey(privateKey)
+	if err != nil {
+		return nil, err
+	}
+	return &ssh.ClientConfig{
+		User:            sshUser,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		Timeout:         defaultIOTimeout,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}, nil
 }
 
 // Returns the network to use to SSH into a device.

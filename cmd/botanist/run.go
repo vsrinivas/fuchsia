@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -53,6 +54,9 @@ type RunCommand struct {
 	// CmdStderr is the file to which the command's stderr will be redirected.
 	cmdStderr string
 
+	// SysloggerFile, if nonempty, is the file to where the system's logs will be written.
+	syslogFile string
+
 	// sshKey is the path to a private SSH user key.
 	sshKey string
 }
@@ -82,10 +86,11 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
 	f.StringVar(&r.cmdStdout, "stdout", "", "file to redirect the command's stdout into; if unspecified, it will be redirected to the process' stdout")
 	f.StringVar(&r.cmdStderr, "stderr", "", "file to redirect the command's stderr into; if unspecified, it will be redirected to the process' stderr")
+	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKeys [][]byte) error {
+func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKey []byte, signers []ssh.Signer, syslog io.Writer) error {
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(nodename)
 	if err != nil {
@@ -113,15 +118,6 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		return err
 	}
 
-	var signers []ssh.Signer
-	for _, p := range privKeys {
-		s, err := ssh.ParsePrivateKey(p)
-		if err != nil {
-			return err
-		}
-		signers = append(signers, s)
-	}
-
 	// Boot fuchsia.
 	var bootMode int
 	if r.netboot {
@@ -133,6 +129,26 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		return err
 	}
 
+	// If having paved, SSH in and stream syslogs back to a file sink.
+	if !r.netboot && syslog != nil {
+		config, err := botanist.DefaultSSHConfig(privKey)
+		if err != nil {
+			return err
+		}
+		client, err := botanist.SSHIntoNode(ctx, nodename, config)
+		if err != nil {
+			return err
+		}
+		syslogger, err := botanist.NewSyslogger(client)
+		if err != nil {
+			return err
+		}
+		go func() {
+			syslogger.Stream(ctx, syslog)
+			syslogger.Close()
+		}()
+	}
+
 	ip, err := botanist.ResolveIPv4(ctx, nodename, netstackTimeout)
 	if err != nil {
 		return fmt.Errorf("could not resolve IP address: %v", err)
@@ -142,7 +158,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		os.Environ(),
 		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
 		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%s", ip),
-		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKeys[0]),
+		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKey),
 	)
 
 	// Run command.
@@ -238,6 +254,15 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		signers = append(signers, signer)
 	}
 
+	var syslog io.WriteCloser
+	if r.syslogFile != "" {
+		syslog, err = os.Create(r.syslogFile)
+		if err != nil {
+			return err
+		}
+		defer syslog.Close()
+	}
+
 	if properties.PDU != nil {
 		defer func() {
 			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
@@ -249,8 +274,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-
-	// Ensure cancel() is called on all return paths.
 	defer cancel()
 
 	// Handle SIGTERM and make sure we send a reboot to the device.
@@ -278,7 +301,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKeys)
+		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKeys[0], signers, syslog)
 	}()
 
 	select {

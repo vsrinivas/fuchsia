@@ -11,16 +11,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/testrunner"
 	"fuchsia.googlesource.com/tools/testsharder"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -29,12 +26,6 @@ const (
 
 	// The username used to authenticate with the Fuchsia device.
 	sshUser = "fuchsia"
-
-	// The filename to use for log_listener's stdout captured during Fuchsia tests.
-	syslogStdoutFilename = "syslog-stdout.txt"
-
-	// The filename to use for log_listener's stderr captured during Fuchsia tests.
-	syslogStderrFilename = "syslog-stderr.txt"
 )
 
 // Command-line flags
@@ -185,24 +176,6 @@ func execute(tests []testsharder.Test, output *Output, device *FuchsiaDevice) er
 	return runFuchsiaTests(fuchsia, output, device)
 }
 
-func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
-	signer, err := ssh.ParsePrivateKey([]byte(privateKey))
-	if err != nil {
-		return nil, err
-	}
-
-	config := &ssh.ClientConfig{
-		User: sshUser,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		Timeout:         defaultIOTimeout,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	return botanist.SSHIntoNode(context.Background(), nodename, config)
-}
-
 func runFuchsiaTests(tests []testsharder.Test, output *Output, device *FuchsiaDevice) error {
 	if len(tests) == 0 {
 		return nil
@@ -219,37 +192,6 @@ func runFuchsiaTests(tests []testsharder.Test, output *Output, device *FuchsiaDe
 		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
 	}
 	defer tester.Close()
-
-	// Ensure the syslog is always included in the output, even if tests fail.
-	// TODO(IN-824): Run fuchsia/linux/mac tests in go-routines and emit errors on channels.
-	defer func() {
-		if output.Tar == nil {
-			return
-		}
-
-		stdout, stderr := tester.SyslogOutput()
-		stdoutBytes, err := ioutil.ReadAll(stdout)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		stderrBytes, err := ioutil.ReadAll(stderr)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		if err := output.Tar.TarFile(stdoutBytes, syslogStdoutFilename); err != nil {
-			log.Println(err)
-		}
-		output.Summary.AddFile("syslog-stdout", syslogStdoutFilename)
-
-		if err := output.Tar.TarFile(stderrBytes, syslogStderrFilename); err != nil {
-			log.Println(err)
-		}
-		output.Summary.AddFile("syslog-stderr", syslogStderrFilename)
-	}()
-
 	return runTests(tests, tester.Test, output)
 }
 
