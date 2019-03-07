@@ -29,7 +29,11 @@ void Connection::Describe(Node* vn,
                           fuchsia::io::Node::DescribeCallback callback) {
   fuchsia::io::NodeInfo info{};
   vn->Describe(&info);
-  callback(std::move(info));
+  if (info.has_invalid_tag()) {
+    vn->Close(this);
+  } else {
+    callback(std::move(info));
+  }
 }
 
 void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {
