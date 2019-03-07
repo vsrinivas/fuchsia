@@ -7,6 +7,9 @@ library("chromeos-disk-setup") {
     "chromeos-disk-setup.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+  ]
   deps = [
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/zircon",

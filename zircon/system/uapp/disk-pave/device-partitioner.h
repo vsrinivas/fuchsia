@@ -11,7 +11,10 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <gpt/gpt.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 #include <utility>
@@ -87,13 +90,13 @@ public:
                                      fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
     // Returns block info for a specified block device.
-    zx_status_t GetBlockInfo(block_info_t* block_info) const {
+    zx_status_t GetBlockInfo(fuchsia_hardware_block_BlockInfo* block_info) const {
         memcpy(block_info, &block_info_, sizeof(*block_info));
         return ZX_OK;
     }
 
     GptDevice* GetGpt() const { return gpt_.get(); }
-    int GetFd() const { return fd_.get(); }
+    zx::unowned_channel Channel() { return zx::unowned_channel(caller_.borrow_channel()); }
 
     // Find the first spot that has at least |bytes_requested| of space.
     //
@@ -122,17 +125,18 @@ private:
     static bool FindTargetGptPath(const fbl::unique_fd& devfs_root, fbl::String* out);
 
     GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd,
-                         fbl::unique_ptr<GptDevice> gpt, block_info_t block_info)
-        : devfs_root_(std::move(devfs_root)), fd_(std::move(fd)), gpt_(std::move(gpt)),
+                         fbl::unique_ptr<GptDevice> gpt,
+                         fuchsia_hardware_block_BlockInfo block_info)
+        : devfs_root_(std::move(devfs_root)), caller_(std::move(fd)), gpt_(std::move(gpt)),
           block_info_(block_info) {}
 
     zx_status_t CreateGptPartition(const char* name, uint8_t* type, uint64_t offset,
                                    uint64_t blocks, uint8_t* out_guid);
 
     fbl::unique_fd devfs_root_;
-    fbl::unique_fd fd_;
+    fzl::FdioCaller caller_;
     fbl::unique_ptr<GptDevice> gpt_;
-    block_info_t block_info_;
+    fuchsia_hardware_block_BlockInfo block_info_;
 };
 
 // DevicePartitioner implementation for EFI based devices.

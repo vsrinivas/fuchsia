@@ -196,7 +196,7 @@ bool is_cros(const GptDevice* gpt) {
 // * ZIRCON-B is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
 // * ZIRCON-R is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
 // * FVM      is a GUID_FVM_VALUE         at least sz_kern * 8 in size
-bool is_ready_to_pave(const GptDevice* gpt, const block_info_t* blk_info,
+bool is_ready_to_pave(const GptDevice* gpt, const fuchsia_hardware_block_BlockInfo* blk_info,
                       const uint64_t sz_kern) {
 
     bool found_zircon_a = false, found_zircon_b = false, found_zircon_r = false;
@@ -249,7 +249,7 @@ bool is_ready_to_pave(const GptDevice* gpt, const block_info_t* blk_info,
 }
 
 zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
-                                    const block_info_t* blk_info,
+                                    const fuchsia_hardware_block_BlockInfo* blk_info,
                                     const uint64_t sz_kern) {
 
     // TODO(raggi): this ends up getting called twice, as the canonical user,

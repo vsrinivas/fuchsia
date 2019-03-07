@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
@@ -26,7 +27,7 @@ bool is_cros(const gpt::GptDevice* gpt);
 // We define that we're ready to pave if
 //  - ZIRCON-A, ZIRCON-B, and ZIRCON-R are present and at least sz_kern bytes
 //  - An FVM a partition is present
-bool is_ready_to_pave(const gpt::GptDevice* gpt, const block_info_t* block_info,
+bool is_ready_to_pave(const gpt::GptDevice* gpt, const fuchsia_hardware_block_BlockInfo* block_info,
                       const uint64_t sz_kern);
 
 // Configure the GPT for a dual-boot of Fuchsia and ChromeOS.
@@ -41,7 +42,7 @@ bool is_ready_to_pave(const gpt::GptDevice* gpt, const block_info_t* block_info,
 // reconfigured. In the case of error, the GPT should NOT be written back to
 // disk and should be discarded.
 zx_status_t config_cros_for_fuchsia(gpt::GptDevice* gpt,
-                                    const block_info_t* blk_info,
+                                    const fuchsia_hardware_block_BlockInfo* blk_info,
                                     const uint64_t sz_kern);
 
 __END_CDECLS

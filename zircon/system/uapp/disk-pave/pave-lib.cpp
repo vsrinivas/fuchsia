@@ -140,23 +140,31 @@ inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size
 
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo,
-                                vmoid_t* vmoid_out, block_client::Client* client_out) {
+                                vmoid_t* out_vmoid, block_client::Client* out_client) {
+    fzl::UnownedFdioCaller disk_connection(fd.get());
+    zx::unowned_channel channel(disk_connection.borrow_channel());
+
     zx::fifo fifo;
-    if (ioctl_block_get_fifos(fd.get(), fifo.reset_and_get_address()) < 0) {
-        ERROR("Couldn't attach fifo to partition\n");
-        return ZX_ERR_IO;
-    }
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
+                                                                fifo.reset_and_get_address());
+    if (io_status != ZX_OK) return io_status;
+    if (status != ZX_OK) return status;
+
     zx::vmo dup;
     if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
         ERROR("Couldn't duplicate buffer vmo\n");
         return ZX_ERR_IO;
     }
-    zx_handle_t h = dup.release();
-    if (ioctl_block_attach_vmo(fd.get(), &h, vmoid_out) < 0) {
-        ERROR("Couldn't attach VMO\n");
-        return ZX_ERR_IO;
-    }
-    return block_client::Client::Create(std::move(fifo), client_out);
+
+    fuchsia_hardware_block_VmoID vmoid;
+    io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status,
+                                                      &vmoid);
+    if (io_status != ZX_OK) return io_status;
+    if (status != ZX_OK) return status;
+
+    *out_vmoid = vmoid.id;
+    return block_client::Client::Create(std::move(fifo), out_client);
 }
 
 // Stream an FVM partition to disk.
@@ -485,11 +493,18 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
         return fbl::unique_fd();
     }
 
-    ssize_t r = ioctl_block_rr_part(partition_fd.get());
-    if (r < 0) {
-        ERROR("Could not rebind partition: %s\n",
-              zx_status_get_string(static_cast<zx_status_t>(r)));
-        return fbl::unique_fd();
+
+    {
+        fzl::UnownedFdioCaller partition_connection(partition_fd.get());
+        zx::unowned_channel partition(partition_connection.borrow_channel());
+        zx_status_t io_status = fuchsia_hardware_block_BlockRebindDevice(partition->get(), &status);
+        if (io_status != ZX_OK) {
+            status = io_status;
+        }
+        if (status != ZX_OK) {
+            ERROR("Could not rebind partition: %s\n", zx_status_get_string(status));
+            return fbl::unique_fd();
+        }
     }
 
     return TryBindToFvmDriver(partition_fd, zx::sec(3));
@@ -536,15 +551,20 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     }
 
     // Otherwise, extend by the number of slices we stole for metadata
-    extend_request_t req;
-    req.offset = allocated - reserved;
-    req.length = needed - allocated;
-
-    ssize_t r;
-    if ((r = ioctl_block_fvm_extend(part->new_part.get(), &req)) < 0) {
-        status = static_cast<zx_status_t>(r);
-        ERROR("Failed to extend zxcrypt volume: %s\n", zx_status_get_string(status));
-        return status;
+    uint64_t offset = allocated - reserved;
+    uint64_t length = needed - allocated;
+    {
+        fzl::UnownedFdioCaller partition_connection(part->new_part.get());
+        zx::unowned_channel partition(partition_connection.borrow_channel());
+        zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(partition->get(),
+                                                                           offset, length, &status);
+        if (io_status != ZX_OK) {
+            status = io_status;
+        }
+        if (status != ZX_OK) {
+            ERROR("Failed to extend zxcrypt volume: %s\n", zx_status_get_string(status));
+            return status;
+        }
     }
 
     return ZX_OK;
@@ -606,10 +626,17 @@ zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uin
 
         // We're paving a partition that already exists within the FVM: let's
         // destroy it before we pave anew.
-        ssize_t r = ioctl_block_fvm_destroy_partition(old_part.get());
-        if (r < 0) {
-            ERROR("Couldn't destroy partition: %ld\n", r);
-            return static_cast<zx_status_t>(r);
+
+        fzl::UnownedFdioCaller partition_connection(old_part.get());
+        zx::unowned_channel partition(partition_connection.borrow_channel());
+        zx_status_t io_status, status;
+        io_status = fuchsia_hardware_block_volume_VolumeDestroy(partition->get(), &status);
+        if (io_status != ZX_OK) {
+            status = io_status;
+        }
+        if (status != ZX_OK) {
+            ERROR("Couldn't destroy partition: %s\n", zx_status_get_string(status));
+            return status;
         }
     }
 
@@ -726,14 +753,21 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
         // begin indexing from the 1st extent here.
         for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
             ext = GetExtent(parts[p].pd, e);
-            extend_request_t request;
-            request.offset = ext->slice_start;
-            request.length = ext->slice_count;
-            ssize_t result = ioctl_block_fvm_extend(parts[p].new_part.get(), &request);
-            if (result < 0) {
-                ERROR("Failed to extend partition: %s\n",
-                      zx_status_get_string(static_cast<zx_status_t>(result)));
-                return ZX_ERR_NO_SPACE;
+            uint64_t offset = ext->slice_start;
+            uint64_t length = ext->slice_count;
+
+            fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+            zx::unowned_channel partition(partition_connection.borrow_channel());
+            zx_status_t status;
+            zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(partition->get(),
+                                                                               offset, length,
+                                                                               &status);
+            if (io_status != ZX_OK) {
+                status = io_status;
+            }
+            if (status != ZX_OK) {
+                ERROR("Failed to extend partition: %s\n", zx_status_get_string(status));
+                return status;
             }
         }
     }
@@ -843,12 +877,20 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
             return status;
         }
 
-        block_info_t binfo;
-        if ((ioctl_block_get_info(parts[p].new_part.get(), &binfo)) < 0) {
-            ERROR("Couldn't get partition block info\n");
-            return ZX_ERR_IO;
+        fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+        zx::unowned_channel partition(partition_connection.borrow_channel());
+        fuchsia_hardware_block_BlockInfo block_info;
+        zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(partition->get(),
+                                                                    &status, &block_info);
+        if (io_status != ZX_OK) {
+            status = io_status;
         }
-        size_t block_size = binfo.block_size;
+        if (status != ZX_OK) {
+            ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(status));
+            return status;
+        }
+
+        size_t block_size = block_info.block_size;
 
         block_fifo_request_t request;
         request.group = 0;
@@ -871,18 +913,22 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     }
 
     for (size_t p = 0; p < parts.size(); p++) {
+        fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+        zx::unowned_channel partition(partition_connection.borrow_channel());
         // Upgrade the old partition (currently active) to the new partition (currently
         // inactive) so the new partition persists.
         fuchsia_hardware_block_partition_GUID guid;
-        if (ioctl_block_get_partition_guid(parts[p].new_part.get(), &guid.value,
-                                           GUID_LEN) < 0) {
+        zx_status_t io_status =
+                fuchsia_hardware_block_partition_PartitionGetInstanceGuid(partition->get(), &status,
+                                                                          &guid);
+        if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to get unique GUID of new partition\n");
             return ZX_ERR_BAD_STATE;
         }
 
         zx_status_t status;
-        zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerActivate(
-            volume_manager.borrow_channel(), &guid, &guid, &status);
+        io_status = fuchsia_hardware_block_volume_VolumeManagerActivate(
+                volume_manager.borrow_channel(), &guid, &guid, &status);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to upgrade partition\n");
             return ZX_ERR_IO;
