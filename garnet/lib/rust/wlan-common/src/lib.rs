@@ -10,19 +10,25 @@
 
 #[macro_use]
 mod utils;
+
 pub mod appendable;
 pub mod buffer_reader;
 pub mod buffer_writer;
 pub mod channel;
 pub mod data_writer;
+pub mod error;
 pub mod ie;
 pub mod mac;
 pub mod mgmt_writer;
 pub mod sequence;
 pub mod test_utils;
+pub mod tim;
 
-use channel::{Cbw, Phy};
-use fidl_fuchsia_wlan_sme as fidl_sme;
+use {
+    channel::{Cbw, Phy},
+    failure::{self, Fail},
+    fidl_fuchsia_wlan_sme as fidl_sme,
+};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RadioConfig {
