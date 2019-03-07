@@ -1465,7 +1465,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
                Status::NOT_CONNECTED_ERROR);
 }
 
-TEST_F(PageStorageTest, FullDownloadAfterPartial) {
+TEST_F(PageStorageTest, DISABLED_FullDownloadAfterPartial) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
   int64_t offset = 0;
   int64_t size = 128;
