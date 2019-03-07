@@ -34,6 +34,8 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
@@ -43,6 +45,8 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
@@ -143,36 +147,39 @@ typedef struct {
     size_t number;
 } partition_entry_t;
 
-int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries, size_t entry_count) {
+fbl::unique_fd FVMRebind(fbl::unique_fd fvm_fd, char* disk_path, const partition_entry_t* entries,
+                         size_t entry_count) {
     if (use_real_disk) {
-        fbl::unique_fd disk_fd(open(disk_path, O_RDWR));
-        if (!disk_fd) {
-            fprintf(stderr, "fvm rebind: Could not open disk\n");
-            return -1;
+        {
+            fbl::unique_fd disk_fd(open(disk_path, O_RDWR));
+            if (!disk_fd) {
+                fprintf(stderr, "fvm rebind: Could not open disk\n");
+                return fbl::unique_fd();
+            }
+            fzl::FdioCaller disk_client(std::move(disk_fd));
+            zx_status_t status;
+            if ((fuchsia_hardware_block_BlockRebindDevice(disk_client.borrow_channel(),
+                                                          &status) != ZX_OK) ||
+                status != ZX_OK) {
+                fprintf(stderr, "fvm rebind: Rebind hack failed\n");
+                return fbl::unique_fd();
+            }
         }
-
-        if (ioctl_block_rr_part(disk_fd.get()) != 0) {
-            fprintf(stderr, "fvm rebind: Rebind hack failed\n");
-            return -1;
-        }
-
-        close(fvm_fd);
-        disk_fd.reset();
 
         // Wait for the disk to rebind to a block driver
         if (wait_for_device(disk_path, ZX_SEC(3)) != ZX_OK) {
             fprintf(stderr, "fvm rebind: Block driver did not rebind to disk\n");
-            return -1;
+            return fbl::unique_fd();
         }
 
         zx::channel disk_dev, disk_dev_remote;
         if (zx::channel::create(0, &disk_dev, &disk_dev_remote) != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not create channel\n");
-            return -1;
+            return fbl::unique_fd();
         }
         if (fdio_service_connect(disk_path, disk_dev_remote.release()) != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not connect to disk\n");
-            return -1;
+            return fbl::unique_fd();
         }
         zx_status_t call_status;
         zx_status_t status = fuchsia_device_ControllerBind(disk_dev.get(), FVM_DRIVER_LIB,
@@ -182,28 +189,24 @@ int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries, siz
         }
         if (status != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not bind fvm driver\n");
-            return -1;
+            return fbl::unique_fd();
         }
     } else {
         if (ramdisk_rebind(test_ramdisk) != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not rebind ramdisk\n");
-            return -1;
+            return fbl::unique_fd();
         }
-        fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(test_ramdisk));
-        if (io == nullptr) {
-            fprintf(stderr, "fvm rebind: could not convert fd to io\n");
-            return -1;
-        }
+        fzl::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(test_ramdisk));
         zx_status_t call_status;
-        zx_status_t status = fuchsia_device_ControllerBind(
-            fdio_unsafe_borrow_channel(io), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB), &call_status);
-        fdio_unsafe_release(io);
+        zx_status_t status = fuchsia_device_ControllerBind(disk_caller.borrow_channel(),
+                                                           FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                                           &call_status);
         if (status == ZX_OK) {
             status = call_status;
         }
         if (status != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not bind fvm driver\n");
-            return -1;
+            return fbl::unique_fd();
         }
     }
 
@@ -211,7 +214,7 @@ int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries, siz
     snprintf(path, sizeof(path), "%s/fvm", disk_path);
     if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
         fprintf(stderr, "fvm rebind: Error waiting for fvm driver to bind\n");
-        return -1;
+        return fbl::unique_fd();
     }
 
     for (size_t i = 0; i < entry_count; i++) {
@@ -219,15 +222,15 @@ int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries, siz
                  entries[i].number);
         if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
             fprintf(stderr, "  Failed to wait for %s\n", path);
-            return -1;
+            return fbl::unique_fd();
         }
     }
 
     snprintf(path, sizeof(path), "%s/fvm", disk_path);
-    fvm_fd = open(path, O_RDWR);
-    if (fvm_fd < 0) {
+    fvm_fd.reset(open(path, O_RDWR));
+    if (!fvm_fd) {
         fprintf(stderr, "fvm rebind: Failed to open fvm\n");
-        return -1;
+        return fbl::unique_fd();
     }
     return fvm_fd;
 }
@@ -260,8 +263,13 @@ bool ValidateFVM(const char* device_path, ValidationResult result = ValidationRe
     BEGIN_HELPER;
     fbl::unique_fd fd(open(device_path, O_RDONLY));
     ASSERT_TRUE(fd);
-    block_info_t block_info;
-    ASSERT_GT(ioctl_block_get_info(fd.get(), &block_info), 0);
+    fzl::UnownedFdioCaller disk_caller(fd.get());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status,
+                                                  &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     fvm::Checker checker(std::move(fd), block_info.block_size, true);
     switch (result) {
     case ValidationResult::Valid:
@@ -343,7 +351,7 @@ public:
 
 private:
     int fd_;
-    block_info_t info_;
+    fuchsia_hardware_block_BlockInfo info_;
     fifo_client_t* client_;
 };
 
@@ -352,22 +360,23 @@ public:
     static bool Create(fbl::RefPtr<VmoClient> client, size_t size, fbl::unique_ptr<VmoBuf>* out) {
         BEGIN_HELPER;
 
-        fbl::AllocChecker ac;
-        fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[size]);
-        ASSERT_TRUE(ac.check());
+        fbl::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
 
         zx::vmo vmo;
         ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
+        zx::vmo xfer_vmo;
+        ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
 
-        zx_handle_t xfer_vmo;
-        ASSERT_EQ(zx_handle_duplicate(vmo.get(), ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+        fzl::UnownedFdioCaller disk_connection(client->fd());
+        zx::unowned_channel channel(disk_connection.borrow_channel());
+        fuchsia_hardware_block_VmoID vmoid;
+        zx_status_t status;
+        ASSERT_EQ(fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(),
+                                                        &status, &vmoid), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
 
-        vmoid_t vmoid;
-        ASSERT_GT(ioctl_block_attach_vmo(client->fd(), &xfer_vmo, &vmoid), 0);
-
-        fbl::unique_ptr<VmoBuf> vb(
-            new (&ac) VmoBuf(std::move(client), std::move(vmo), std::move(buf), vmoid));
-        ASSERT_TRUE(ac.check());
+        fbl::unique_ptr<VmoBuf> vb(new VmoBuf(std::move(client), std::move(vmo), std::move(buf),
+                                              vmoid));
         *out = std::move(vb);
         END_HELPER;
     }
@@ -376,7 +385,7 @@ public:
         if (vmo_.is_valid()) {
             block_fifo_request_t request;
             request.group = client_->group();
-            request.vmoid = vmoid_;
+            request.vmoid = vmoid_.id;
             request.opcode = BLOCKIO_CLOSE_VMO;
             client_->Transaction(&request, 1);
         }
@@ -385,25 +394,36 @@ public:
 private:
     friend VmoClient;
 
-    VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo, fbl::unique_ptr<uint8_t[]> buf,
-           vmoid_t vmoid)
-        : client_(std::move(client)), vmo_(std::move(vmo)), buf_(std::move(buf)), vmoid_(vmoid) {}
+    VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo,
+           fbl::unique_ptr<uint8_t[]> buf, fuchsia_hardware_block_VmoID vmoid) :
+        client_(std::move(client)), vmo_(std::move(vmo)),
+        buf_(std::move(buf)), vmoid_(vmoid) {}
 
     fbl::RefPtr<VmoClient> client_;
     zx::vmo vmo_;
     fbl::unique_ptr<uint8_t[]> buf_;
-    vmoid_t vmoid_;
+    fuchsia_hardware_block_VmoID vmoid_;
 };
 
 bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     BEGIN_HELPER;
-    fbl::AllocChecker ac;
-    fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new (&ac) VmoClient());
-    ASSERT_TRUE(ac.check());
-    zx_handle_t fifo;
-    ASSERT_GT(ioctl_block_get_fifos(fd, &fifo), 0, "Failed to get FIFO");
-    ASSERT_GT(ioctl_block_get_info(fd, &vc->info_), 0, "Failed to get block info");
-    ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), ZX_OK);
+    fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new VmoClient());
+
+
+    fzl::UnownedFdioCaller disk_connection(fd);
+    zx::unowned_channel channel(disk_connection.borrow_channel());
+    zx_status_t status;
+
+    zx::fifo fifo;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
+                                                  fifo.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status,
+                                                  &vc->info_),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(block_fifo_create_client(fifo.release(), &vc->client_), ZX_OK);
     vc->fd_ = fd;
     *out = std::move(vc);
     END_HELPER;
@@ -421,7 +441,7 @@ bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
     // Write to the block device
     block_fifo_request_t request;
     request.group = group();
-    request.vmoid = vbuf->vmoid_;
+    request.vmoid = vbuf->vmoid_.id;
     request.opcode = BLOCKIO_WRITE;
     ASSERT_EQ(len % info_.block_size, 0);
     ASSERT_EQ(buf_off % info_.block_size, 0);
@@ -445,7 +465,7 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
     // Read from the block device
     block_fifo_request_t request;
     request.group = group();
-    request.vmoid = vbuf->vmoid_;
+    request.vmoid = vbuf->vmoid_.id;
     request.opcode = BLOCKIO_READ;
     ASSERT_EQ(len % info_.block_size, 0);
     ASSERT_EQ(buf_off % info_.block_size, 0);
@@ -510,13 +530,15 @@ bool CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
 
 bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
     BEGIN_HELPER;
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(fd, &block_info), 0);
+    fzl::UnownedFdioCaller disk_connection(fd);
+    zx_status_t status;
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status,
+                                                  &block_info), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     size_t len = block_info.block_size * count;
     size_t off = block_info.block_size * block;
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> in(new (&ac) uint8_t[len]);
-    ASSERT_TRUE(ac.check());
+    fbl::unique_ptr<uint8_t[]> in(new uint8_t[len]);
     ASSERT_TRUE(CheckWrite(fd, off, len, in.get()));
     ASSERT_TRUE(CheckRead(fd, off, len, in.get()));
     END_HELPER;
@@ -524,11 +546,13 @@ bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
 
 bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
     BEGIN_HELPER;
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(fd, &block_info), 0);
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[block_info.block_size * count]);
-    ASSERT_TRUE(ac.check());
+    fzl::UnownedFdioCaller disk_connection(fd);
+    zx_status_t status;
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status,
+                                                  &block_info), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * count]);
     size_t len = block_info.block_size * count;
     size_t off = block_info.block_size * block;
     for (size_t i = 0; i < len; i++)
@@ -610,25 +634,25 @@ bool TestLarge() {
     ASSERT_GE(ramdisk_create(blk_size, blk_count, &test_ramdisk), 0);
     const char* ramdisk_path = ramdisk_get_path(test_ramdisk);
 
-    fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
-    ASSERT_GT(fd.get(), 0);
     size_t slice_size = 16 * (1 << 10);
     size_t metadata_size = fvm::MetadataSize(blk_size * blk_count, slice_size);
 
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(fd.get(), &block_info), 0);
+    fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
+    ASSERT_GT(fd.get(), 0);
+    fzl::UnownedFdioCaller disk_connection(fd.get());
+    zx::unowned_channel channel(disk_connection.borrow_channel());
+    zx_status_t status;
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status,
+                                                  &block_info), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_LT(block_info.max_transfer_size, metadata_size);
 
     ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
-    zx::channel fvm_channel;
-    ASSERT_EQ(fdio_get_service_handle(fd.release(), fvm_channel.reset_and_get_address()), ZX_OK);
-    zx_status_t call_status;
-    zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
-                                                       STRLEN(FVM_DRIVER_LIB), &call_status);
-    ASSERT_EQ(status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
-    ASSERT_EQ(call_status, ZX_OK, "[FAILED]: Could not bind disk to FVM driver");
-    fvm_channel.reset();
+    ASSERT_EQ(fuchsia_device_ControllerBind(channel->get(), FVM_DRIVER_LIB,
+                                            STRLEN(FVM_DRIVER_LIB), &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path);
     ASSERT_EQ(wait_for_device(fvm_path, ZX_SEC(3)), ZX_OK);
@@ -671,7 +695,15 @@ bool TestAllocateOne() {
 
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
-    ASSERT_GE(ioctl_block_get_name(vp_fd.get(), name, sizeof(name)), 0);
+    fzl::UnownedFdioCaller partition_connection(vp_fd.get());
+
+    zx_status_t status;
+    size_t actual;
+    ASSERT_EQ(fuchsia_hardware_block_partition_PartitionGetName(
+                partition_connection.borrow_channel(), &status, name, sizeof(name), &actual),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    name[actual] = '\0';
     ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0);
 
     // Check that we can read from / write to it.
@@ -912,7 +944,11 @@ bool TestDestroyDuringAccess() {
     // Let the background thread warm up a little bit...
     usleep(10000);
     // ... and destroy the vpartition
-    ASSERT_EQ(ioctl_block_fvm_destroy_partition(vp_fd.get()), 0);
+    fzl::FdioCaller partition_caller(std::move(vp_fd));
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(),
+                                                          &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     int res;
     ASSERT_EQ(thrd_join(thread, &res), thrd_success);
@@ -955,57 +991,66 @@ bool TestVPartitionExtend() {
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), slices_total - slices_left, slices_total));
 
     // Confirm that the disk reports the correct number of slices
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    fzl::FdioCaller partition_caller(std::move(vp_fd));
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
-    extend_request_t erequest;
-
     // Try re-allocating an already allocated vslice
-    erequest.offset = 0;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 0, 1, &status),
+              ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
     // Try again with a portion of the request which is unallocated
-    erequest.length = 2;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
-    ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 0, 2, &status),
+              ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // Allocate OBSCENELY too many slices
-    erequest.offset = slice_count;
-    erequest.length = std::numeric_limits<size_t>::max();
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
+                                                         std::numeric_limits<size_t>::max(),
+                                                         &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // Allocate slices at a too-large offset
-    erequest.offset = std::numeric_limits<size_t>::max();
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(),
+                                                         std::numeric_limits<size_t>::max(),
+                                                         1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // Attempt to allocate slightly too many slices
-    erequest.offset = slice_count;
-    erequest.length = slices_left + 1;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
+                                                         slices_left + 1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // The number of free slices should be unchanged.
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), slices_total - slices_left, slices_total));
 
     // Allocate exactly the remaining number of slices
-    erequest.offset = slice_count;
-    erequest.length = slices_left;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
+                                                         slices_left, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+
     slice_count += slices_left;
     slices_left = 0;
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), slices_total - slices_left, slices_total));
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
     // We can't allocate any more to this VPartition
-    erequest.offset = slice_count;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
+                                                         1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // We can't allocate a new VPartition
     strcpy(request.name, kTestPartName2);
@@ -1050,29 +1095,31 @@ bool TestVPartitionExtendSparse() {
     ASSERT_EQ(bno / (slice_size / blk_size), (VSLICE_MAX - 1), "bno overflowed");
     ASSERT_EQ((bno * blk_size) / blk_size, bno, "block access will overflow");
 
-    extend_request_t erequest;
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    zx_status_t status;
 
     // Try allocating at a location that's slightly too large
-    erequest.offset = VSLICE_MAX;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), VSLICE_MAX,
+                                                         1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
     // Try allocating at the largest offset
-    erequest.offset = VSLICE_MAX - 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), VSLICE_MAX - 1,
+                                                         1, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), bno, 1));
 
     // Try freeing beyond largest offset
-    erequest.offset = VSLICE_MAX;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), VSLICE_MAX,
+                                                         1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), bno, 1));
 
     // Try freeing at the largest offset
-    erequest.offset = VSLICE_MAX - 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), VSLICE_MAX - 1,
+                                                         1, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), bno, 1));
 
     ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1113,72 +1160,87 @@ bool TestVPartitionShrink() {
     ASSERT_TRUE(vp_fd, "Couldn't open Volume");
     slices_left--;
 
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    zx_status_t status;
+
     // Confirm that the disk reports the correct number of slices
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1));
     ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2));
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), slices_total - slices_left, slices_total));
 
-    extend_request_t erequest;
-
     // Try shrinking the 0th vslice
-    erequest.offset = 0;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0,
-              "Expected request failure (0th offset)");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 0, 1, &status),
+              ZX_OK);
+    ASSERT_NE(status, ZX_OK, "Expected request failure");
 
-    // Try no-op requests
-    erequest.offset = 1;
-    erequest.length = 0;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0,
-              "Zero Length request should be no-op");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0,
-              "Zero Length request should be no-op");
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    // Try no-op requests (length = 0).
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 1, 0, &status),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, 0, &status),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
     // Try again with a portion of the request which is unallocated
-    erequest.length = 2;
-    ASSERT_LT(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0, "Expected request failure");
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1, 2, &status),
+              ZX_OK);
+    ASSERT_NE(status, ZX_OK);
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), slices_total - slices_left, slices_total));
 
     // Allocate exactly the remaining number of slices
-    erequest.offset = slice_count;
-    erequest.length = slices_left;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
+                                                         slices_left, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     slice_count += slices_left;
     slices_left = 0;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1));
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2));
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), slices_total - slices_left, slices_total));
 
     // We can't allocate any more to this VPartition
-    erequest.offset = slice_count;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), slice_count,
+                                                         1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK);
 
     // Try to shrink off the end (okay, since SOME of the slices are allocated)
-    erequest.offset = 1;
-    erequest.length = slice_count + 3;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1,
+                                                         slice_count + 3, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), 1, slices_total));
 
     // The same request to shrink should now fail (NONE of the slices are
     // allocated)
-    erequest.offset = 1;
-    erequest.length = slice_count - 1;
-    ASSERT_LT(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0, "Expected request failure");
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1,
+                                                         slice_count - 1, &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK);
     ASSERT_TRUE(FVMCheckAllocatedCount(fd.get(), 1, slices_total));
 
     // ... unless we re-allocate and try again.
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 1,
+                                                         slice_count - 1, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), 1,
+                                                         slice_count - 1, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     ASSERT_TRUE(FVMCheckSliceSize(fvm_driver, 64lu * (1 << 20)));
     ASSERT_TRUE(ValidateFVM(ramdisk_path));
@@ -1213,9 +1275,15 @@ bool TestVPartitionSplit() {
     ASSERT_TRUE(vp_fd);
     slices_left--;
 
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+
     // Confirm that the disk reports the correct number of slices
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
     extend_request_t reset_erequest;
@@ -1254,66 +1322,86 @@ bool TestVPartitionSplit() {
         return true;
     };
 
+    auto doExtend = [](const zx::unowned_channel& partition_channel, extend_request_t request) {
+        BEGIN_HELPER;
+        zx_status_t status;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(),
+                                                             request.offset, request.length,
+                                                             &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+        END_HELPER;
+    };
+
+    auto doShrink = [](const zx::unowned_channel& partition_channel, extend_request_t request) {
+        BEGIN_HELPER;
+        zx_status_t status;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(),
+                                                             request.offset, request.length,
+                                                             &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+        END_HELPER;
+    };
+
     // We should be able to split the extent.
     ASSERT_TRUE(verifyExtents(true, true, true));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(true, false, true));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(false, false, true));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(false, false, false));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &reset_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, reset_erequest));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(false, true, true));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(false, false, true));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(false, false, false));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &reset_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, reset_erequest));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(true, true, false));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(true, false, false));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(false, false, false));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &reset_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, reset_erequest));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(true, true, false));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(false, true, false));
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(false, false, false));
 
     // We should also be able to combine extents
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(false, true, false));
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(true, true, false));
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(true, true, true));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &reset_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, reset_erequest));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(false, false, true));
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(false, true, true));
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(true, true, true));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &reset_erequest), 0);
+    ASSERT_TRUE(doShrink(partition_channel, reset_erequest));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &end_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, end_erequest));
     ASSERT_TRUE(verifyExtents(false, false, true));
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &start_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, start_erequest));
     ASSERT_TRUE(verifyExtents(true, false, true));
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &mid_erequest), 0);
+    ASSERT_TRUE(doExtend(partition_channel, mid_erequest));
     ASSERT_TRUE(verifyExtents(true, true, true));
 
     ASSERT_EQ(close(vp_fd.release()), 0);
@@ -1343,14 +1431,22 @@ bool TestVPartitionDestroy() {
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     fbl::unique_fd data_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(data_fd);
+    fzl::UnownedFdioCaller data_caller(data_fd.get());
+    zx::unowned_channel data_channel(data_caller.borrow_channel());
+
     strcpy(request.name, kTestPartName2);
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
     fbl::unique_fd blob_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(blob_fd);
+    fzl::UnownedFdioCaller blob_caller(blob_fd.get());
+    zx::unowned_channel blob_channel(blob_caller.borrow_channel());
+
     strcpy(request.name, kTestPartName3);
     memcpy(request.type, kTestPartGUIDSystem, GUID_LEN);
     fbl::unique_fd sys_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(sys_fd);
+    fzl::UnownedFdioCaller sys_caller(sys_fd.get());
+    zx::unowned_channel sys_channel(sys_caller.borrow_channel());
 
     // We can access all three...
     ASSERT_TRUE(CheckWriteReadBlock(data_fd.get(), 0, 1));
@@ -1358,27 +1454,35 @@ bool TestVPartitionDestroy() {
     ASSERT_TRUE(CheckWriteReadBlock(sys_fd.get(), 0, 1));
 
     // But not after we destroy the blob partition.
-    ASSERT_EQ(ioctl_block_fvm_destroy_partition(blob_fd.get()), 0);
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(blob_channel->get(),
+                                                          &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckWriteReadBlock(data_fd.get(), 0, 1));
     ASSERT_TRUE(CheckDeadBlock(blob_fd.get()));
     ASSERT_TRUE(CheckWriteReadBlock(sys_fd.get(), 0, 1));
 
     // We also can't re-destroy the blob partition.
-    ASSERT_LT(ioctl_block_fvm_destroy_partition(blob_fd.get()), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(blob_channel->get(),
+                                                          &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK);
 
     // We also can't allocate slices to the destroyed blob partition.
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(blob_fd.get(), &erequest), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(blob_channel->get(), 1, 1,
+                                                          &status), ZX_OK);
+    ASSERT_NE(status, ZX_OK);
 
     // Destroy the other two VPartitions.
-    ASSERT_EQ(ioctl_block_fvm_destroy_partition(data_fd.get()), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(data_channel->get(),
+                                                          &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckDeadBlock(data_fd.get()));
     ASSERT_TRUE(CheckDeadBlock(blob_fd.get()));
     ASSERT_TRUE(CheckWriteReadBlock(sys_fd.get(), 0, 1));
 
-    ASSERT_EQ(ioctl_block_fvm_destroy_partition(sys_fd.get()), 0);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(sys_channel->get(),
+                                                          &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_TRUE(CheckDeadBlock(data_fd.get()));
     ASSERT_TRUE(CheckDeadBlock(blob_fd.get()));
     ASSERT_TRUE(CheckDeadBlock(sys_fd.get()));
@@ -1414,76 +1518,83 @@ bool TestVPartitionQuery() {
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     fbl::unique_fd part_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(part_fd);
+    fzl::FdioCaller partition_caller(std::move(part_fd));
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
-    // Create non-contiguous extent
-    extend_request_t extend_request;
-    extend_request.offset = 20;
-    extend_request.length = 10;
-    ASSERT_EQ(ioctl_block_fvm_extend(part_fd.get(), &extend_request), 0);
+    // Create non-contiguous extent.
+    zx_status_t status;
+    uint64_t offset = 20;
+    uint64_t length = 10;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
+                                                         &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     volume_info_t volume_info;
     ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
     // Query various vslice ranges
-    query_request_t query_request;
-    query_request.count = 6;
-    query_request.vslice_start[0] = 0;
-    query_request.vslice_start[1] = 10;
-    query_request.vslice_start[2] = 20;
-    query_request.vslice_start[3] = 50;
-    query_request.vslice_start[4] = 25;
-    query_request.vslice_start[5] = 15;
+    uint64_t start_slices[6];
+    start_slices[0] = 0;
+    start_slices[1] = 10;
+    start_slices[2] = 20;
+    start_slices[3] = 50;
+    start_slices[4] = 25;
+    start_slices[5] = 15;
 
     // Check response from partition query
-    query_response_t query_response;
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_response.count, query_request.count);
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 10);
-    ASSERT_FALSE(query_response.vslice_range[1].allocated);
-    ASSERT_EQ(query_response.vslice_range[1].count, 10);
-    ASSERT_TRUE(query_response.vslice_range[2].allocated);
-    ASSERT_EQ(query_response.vslice_range[2].count, 10);
-    ASSERT_FALSE(query_response.vslice_range[3].allocated);
-    ASSERT_EQ(query_response.vslice_range[3].count, volume_info.vslice_count - 50);
-    ASSERT_TRUE(query_response.vslice_range[4].allocated);
-    ASSERT_EQ(query_response.vslice_range[4].count, 5);
-    ASSERT_FALSE(query_response.vslice_range[5].allocated);
-    ASSERT_EQ(query_response.vslice_range[5].count, 5);
+    fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    size_t actual_ranges_count;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                partition_channel->get(), start_slices, fbl::count_of(start_slices), &status,
+                ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(actual_ranges_count, fbl::count_of(start_slices));
+    ASSERT_TRUE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count, 10);
+    ASSERT_FALSE(ranges[1].allocated);
+    ASSERT_EQ(ranges[1].count, 10);
+    ASSERT_TRUE(ranges[2].allocated);
+    ASSERT_EQ(ranges[2].count, 10);
+    ASSERT_FALSE(ranges[3].allocated);
+    ASSERT_EQ(ranges[3].count, volume_info.vslice_count - 50);
+    ASSERT_TRUE(ranges[4].allocated);
+    ASSERT_EQ(ranges[4].count, 5);
+    ASSERT_FALSE(ranges[5].allocated);
+    ASSERT_EQ(ranges[5].count, 5);
 
     // Merge the extents!
-    extend_request.offset = 10;
-    extend_request.length = 10;
-    ASSERT_EQ(ioctl_block_fvm_extend(part_fd.get(), &extend_request), 0);
+    offset = 10;
+    length = 10;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
+                                                         &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     // Check partition query response again after extend
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_response.count, query_request.count);
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 30);
-    ASSERT_TRUE(query_response.vslice_range[1].allocated);
-    ASSERT_EQ(query_response.vslice_range[1].count, 20);
-    ASSERT_TRUE(query_response.vslice_range[2].allocated);
-    ASSERT_EQ(query_response.vslice_range[2].count, 10);
-    ASSERT_FALSE(query_response.vslice_range[3].allocated);
-    ASSERT_EQ(query_response.vslice_range[3].count, volume_info.vslice_count - 50);
-    ASSERT_TRUE(query_response.vslice_range[4].allocated);
-    ASSERT_EQ(query_response.vslice_range[4].count, 5);
-    ASSERT_TRUE(query_response.vslice_range[5].allocated);
-    ASSERT_EQ(query_response.vslice_range[5].count, 15);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                partition_channel->get(), start_slices, fbl::count_of(start_slices), &status,
+                ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(actual_ranges_count, fbl::count_of(start_slices));
+    ASSERT_TRUE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count, 30);
+    ASSERT_TRUE(ranges[1].allocated);
+    ASSERT_EQ(ranges[1].count, 20);
+    ASSERT_TRUE(ranges[2].allocated);
+    ASSERT_EQ(ranges[2].count, 10);
+    ASSERT_FALSE(ranges[3].allocated);
+    ASSERT_EQ(ranges[3].count, volume_info.vslice_count - 50);
+    ASSERT_TRUE(ranges[4].allocated);
+    ASSERT_EQ(ranges[4].count, 5);
+    ASSERT_TRUE(ranges[5].allocated);
+    ASSERT_EQ(ranges[5].count, 15);
 
-    query_request.vslice_start[0] = volume_info.vslice_count + 1;
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd.get(), &query_request, &query_response),
-              ZX_ERR_OUT_OF_RANGE);
+    start_slices[0] = volume_info.vslice_count + 1;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                partition_channel->get(), start_slices, fbl::count_of(start_slices), &status,
+                ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE);
 
-    // Check that request count is valid
-    query_request.count = MAX_FVM_VSLICE_REQUESTS + 1;
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(part_fd.get(), &query_request, &query_response),
-              ZX_ERR_BUFFER_TOO_SMALL);
-
-    ASSERT_EQ(close(part_fd.release()), 0);
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_TRUE(FVMCheckSliceSize(fvm_driver, slice_size));
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
@@ -1512,8 +1623,15 @@ bool TestSliceAccessContiguous() {
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(vp_fd);
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status,
+                                                  &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     // This is the last 'accessible' block.
     size_t last_block = (slice_size / block_info.block_size) - 1;
@@ -1533,10 +1651,9 @@ bool TestSliceAccessContiguous() {
         ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), slice_size / block_info.block_size, 1));
 
         // Attempt to access the next contiguous slice
-        extend_request_t erequest;
-        erequest.offset = 1;
-        erequest.length = 1;
-        ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Couldn't extend VPartition");
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), 1, 1,
+                                                             &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
 
         // Now we can access the next slice...
         ASSERT_TRUE(vc->CheckWrite(vb.get(), block_info.block_size,
@@ -1587,8 +1704,15 @@ bool TestSliceAccessMany() {
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(vp_fd);
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status,
+                                                  &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_size, kBlockSize);
 
     {
@@ -1606,10 +1730,11 @@ bool TestSliceAccessMany() {
         ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), kBlocksPerSlice, 1));
 
         // Attempt to access the next contiguous slices
-        extend_request_t erequest;
-        erequest.offset = 1;
-        erequest.length = 2;
-        ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Couldn't extend VPartition");
+        uint64_t offset = 1;
+        uint64_t length = 2;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                             length, &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
 
         // Now we can access the next slices...
         ASSERT_TRUE(vc->CheckWrite(vb.get(), kSliceSize, kSliceSize, 2 * kSliceSize));
@@ -1687,8 +1812,14 @@ bool TestSliceAccessNonContiguousPhysical() {
         ASSERT_TRUE(vparts[i].fd);
     }
 
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vparts[0].fd.get(), &block_info), 0);
+    fzl::UnownedFdioCaller partition_caller(vparts[0].fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status,
+                                                  &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     size_t usable_slices_per_vpart = fvm::UsableSlicesCount(kDiskSize, slice_size) / kNumVParts;
     size_t i = 0;
@@ -1711,10 +1842,13 @@ bool TestSliceAccessNonContiguousPhysical() {
         ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1));
 
         // Attempt to access the next contiguous slice
-        extend_request_t erequest;
-        erequest.offset = vparts[i].slices_used;
-        erequest.length = 1;
-        ASSERT_EQ(ioctl_block_fvm_extend(vfd, &erequest), 0, "Couldn't extend VPartition");
+        fzl::UnownedFdioCaller partition_caller(vfd);
+        zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+        uint64_t offset = vparts[i].slices_used;
+        uint64_t length = 1;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                             length, &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
 
         // Now we can access the next slice...
         ASSERT_TRUE(vc->CheckWrite(vb.get(), block_info.block_size,
@@ -1834,8 +1968,14 @@ bool TestSliceAccessNonContiguousVirtual() {
         ASSERT_TRUE(vparts[i].fd);
     }
 
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vparts[0].fd.get(), &block_info), 0);
+    fzl::UnownedFdioCaller partition_caller(vparts[0].fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status,
+                                                  &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     size_t usable_slices_per_vpart = fvm::UsableSlicesCount(kDiskSize, slice_size) / kNumVParts;
     size_t i = 0;
@@ -1850,21 +1990,24 @@ bool TestSliceAccessNonContiguousVirtual() {
         ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1));
 
         // Attempt to access a non-contiguous slice
-        extend_request_t erequest;
-        erequest.offset = vparts[i].last_slice + 2;
-        erequest.length = 1;
-        ASSERT_EQ(ioctl_block_fvm_extend(vfd, &erequest), 0, "Couldn't extend VPartition");
+        fzl::UnownedFdioCaller partition_caller(vfd);
+        zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+        uint64_t offset = vparts[i].last_slice + 2;
+        uint64_t length = 1;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                             length, &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
 
         // We still don't have access to the next slice...
         ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2));
         ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1));
 
         // But we have access to the slice we asked for!
-        size_t requested_block = (erequest.offset * slice_size) / block_info.block_size;
+        size_t requested_block = (offset * slice_size) / block_info.block_size;
         ASSERT_TRUE(CheckWriteReadBlock(vfd, requested_block, 1));
 
         vparts[i].slices_used++;
-        vparts[i].last_slice = erequest.offset;
+        vparts[i].last_slice = offset;
         i = (i + 1) % kNumVParts;
     }
 
@@ -1910,15 +2053,24 @@ bool TestPersistenceSimple() {
     ASSERT_TRUE(vp_fd);
     slices_left--;
 
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
-    ASSERT_GE(ioctl_block_get_name(vp_fd.get(), name, sizeof(name)), 0);
+    zx_status_t status;
+    size_t actual;
+    ASSERT_EQ(fuchsia_hardware_block_partition_PartitionGetName(
+                partition_channel->get(), &status, name, sizeof(name), &actual),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    name[actual] = '\0';
     ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0);
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[block_info.block_size * 2]);
-    ASSERT_TRUE(ac.check());
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * 2]);
 
     // Check that we can read from / write to it
     ASSERT_TRUE(CheckWrite(vp_fd.get(), 0, block_info.block_size, buf.get()));
@@ -1929,7 +2081,7 @@ bool TestPersistenceSimple() {
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
     };
-    fd.reset(FVMRebind(fd.release(), ramdisk_path, entries, 1));
+    fd = FVMRebind(std::move(fd), ramdisk_path, entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
 
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
@@ -1947,15 +2099,21 @@ bool TestPersistenceSimple() {
     // Try writing out of bounds -- check that we don't have access.
     ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2));
     ASSERT_TRUE(CheckNoAccessBlock(vp_fd.get(), slice_size / block_info.block_size, 1));
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Couldn't extend VPartition");
+
+    partition_caller.reset(vp_fd.get());
+    partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
+    uint64_t offset = 1;
+    uint64_t length = 1;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                         length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     slices_left--;
 
     // Rebind the FVM driver, check the extension has succeeded.
-    fd.reset(FVMRebind(fd.release(), ramdisk_path, entries, 1));
+    fd = FVMRebind(std::move(fd), ramdisk_path, entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
+    partition_caller.reset(vp_fd.get());
+    partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
 
     // Now we can access the next slice...
     ASSERT_TRUE(CheckWrite(vp_fd.get(), block_info.block_size * (last_block + 1),
@@ -1971,22 +2129,33 @@ bool TestPersistenceSimple() {
 
     // Try allocating the rest of the slices, rebinding, and ensuring
     // that the size stays updated.
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
-    erequest.offset = 2;
-    erequest.length = slices_left;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0, "Couldn't extend VPartition");
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+
+    offset = 2;
+    length = slices_left;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                         length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
     ASSERT_EQ(close(vp_fd.release()), 0);
-    fd.reset(FVMRebind(fd.release(), ramdisk_path, entries, 1));
+    fd = FVMRebind(std::move(fd), ramdisk_path, entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
 
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
+    partition_caller.reset(vp_fd.get());
+    partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
 
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
     ASSERT_EQ(close(vp_fd.release()), 0);
@@ -2005,66 +2174,93 @@ bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
 
     fbl::unique_fd vp_fd(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd);
+    fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    zx_status_t status;
+    size_t actual_ranges_count;
 
     // Check initial slice allocation.
-    query_response_t query_response;
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
+    //
+    // Avoid keping the "FdioCaller" in-scope across mount, as the caller prevents
+    // the file descriptor from being transferred.
+    {
+        fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+        zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                    partition_channel->get(), query_request.vslice_start, query_request.count,
+                    &status, ranges, &actual_ranges_count), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(query_request.count, actual_ranges_count);
 
-    for (unsigned i = 0; i < query_request.count; i++) {
-        ASSERT_TRUE(query_response.vslice_range[i].allocated);
-        ASSERT_EQ(query_response.vslice_range[i].count, 1);
+        for (unsigned i = 0; i < actual_ranges_count; i++) {
+            ASSERT_TRUE(ranges[i].allocated);
+            ASSERT_EQ(ranges[i].count, 1);
+        }
+
+        // Manually shrink slices so FVM will differ from the partition.
+        uint64_t offset = query_request.vslice_start[0];
+        uint64_t length = 1;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset,
+                                                             length, &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+
+        // Check slice allocation after manual grow/shrink
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                    partition_channel->get(), query_request.vslice_start, query_request.count,
+                    &status, ranges, &actual_ranges_count), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(query_request.count, actual_ranges_count);
+        ASSERT_FALSE(ranges[0].allocated);
+        ASSERT_EQ(ranges[0].count, query_request.vslice_start[1] - query_request.vslice_start[0]);
     }
-
-    // Manually shrink slices so FVM will differ from the partition.
-    extend_request_t extend_request;
-    extend_request.length = 1;
-    extend_request.offset = query_request.vslice_start[0];
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd.get(), &extend_request), 0);
-
-    // Check slice allocation after manual grow/shrink
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_FALSE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count,
-              query_request.vslice_start[1] - query_request.vslice_start[0]);
 
     // Try to mount the VPart.
     ASSERT_NE(
         mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_async),
         ZX_OK);
 
-    vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
-    ASSERT_TRUE(vp_fd);
+    {
+        vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
+        ASSERT_TRUE(vp_fd);
 
-    // Grow back the slice we shrunk earlier.
-    extend_request.length = 1;
-    extend_request.offset = query_request.vslice_start[0];
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &extend_request), 0);
+        fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+        zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
-    // Verify grow was successful.
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 1);
+        // Grow back the slice we shrunk earlier.
+        uint64_t offset = query_request.vslice_start[0];
+        uint64_t length = 1;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                             length, &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
 
-    // Now extend all extents by some number of additional slices.
-    for (unsigned i = 0; i < query_request.count; i++) {
-        extend_request_t extend_request;
-        extend_request.length = query_request.count - i;
-        extend_request.offset = query_request.vslice_start[i] + 1;
-        ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &extend_request), 0);
-    }
+        // Verify grow was successful.
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                    partition_channel->get(), query_request.vslice_start, query_request.count,
+                    &status, ranges, &actual_ranges_count), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(query_request.count, actual_ranges_count);
+        ASSERT_TRUE(ranges[0].allocated);
+        ASSERT_EQ(ranges[0].count, 1);
 
-    // Verify that the extensions were successful.
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
-    for (unsigned i = 0; i < query_request.count; i++) {
-        ASSERT_TRUE(query_response.vslice_range[i].allocated);
-        ASSERT_EQ(query_response.vslice_range[i].count, 1 + query_request.count - i);
+        // Now extend all extents by some number of additional slices.
+        for (unsigned i = 0; i < query_request.count; i++) {
+            uint64_t offset = query_request.vslice_start[i] + 1;
+            uint64_t length = query_request.count - i;
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
+        }
+
+        // Verify that the extensions were successful.
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                    partition_channel->get(), query_request.vslice_start, query_request.count,
+                    &status, ranges, &actual_ranges_count), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(query_request.count, actual_ranges_count);
+        for (unsigned i = 0; i < query_request.count; i++) {
+            ASSERT_TRUE(ranges[i].allocated);
+            ASSERT_EQ(ranges[i].count, 1 + query_request.count - i);
+        }
     }
 
     // Try mount again.
@@ -2075,15 +2271,19 @@ bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
 
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd);
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
     // Verify that slices were fixed on mount.
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                partition_channel->get(), query_request.vslice_start, query_request.count,
+                &status, ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(query_request.count, actual_ranges_count);
 
     for (unsigned i = 0; i < query_request.count; i++) {
-        ASSERT_TRUE(query_response.vslice_range[i].allocated);
-        ASSERT_EQ(query_response.vslice_range[i].count, 1);
+        ASSERT_TRUE(ranges[i].allocated);
+        ASSERT_EQ(ranges[i].count, 1);
     }
 
     END_HELPER;
@@ -2187,7 +2387,7 @@ bool TestVPartitionUpgrade() {
     const partition_entry_t entries[] = {
         {kTestPartName2, 2},
     };
-    fd.reset(FVMRebind(volume_manager.release().release(), ramdisk_path, entries, 1));
+    fd = FVMRebind(volume_manager.release(), ramdisk_path, entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
     volume_manager.reset(std::move(fd));
 
@@ -2216,7 +2416,7 @@ bool TestVPartitionUpgrade() {
     const partition_entry_t upgraded_entries[] = {
         {kTestPartName1, 1},
     };
-    fd.reset(FVMRebind(volume_manager.release().release(), ramdisk_path, upgraded_entries, 1));
+    fd = FVMRebind(volume_manager.release(), ramdisk_path, upgraded_entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
     volume_manager.reset(std::move(fd));
 
@@ -2227,7 +2427,7 @@ bool TestVPartitionUpgrade() {
     // (It should return an error and have no noticable effect).
     ASSERT_TRUE(Upgrade(volume_manager, kTestUniqueGUID, kTestUniqueGUID2, ZX_ERR_NOT_FOUND));
 
-    fd.reset(FVMRebind(volume_manager.release().release(), ramdisk_path, upgraded_entries, 1));
+    fd = FVMRebind(volume_manager.release(), ramdisk_path, upgraded_entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
     volume_manager.reset(std::move(fd));
 
@@ -2250,7 +2450,7 @@ bool TestVPartitionUpgrade() {
         {kTestPartName1, 1},
         {kTestPartName2, 2},
     };
-    fd.reset(FVMRebind(volume_manager.release().release(), ramdisk_path, upgraded_entries_both, 2));
+    fd = FVMRebind(volume_manager.release(), ramdisk_path, upgraded_entries_both, 2);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
     volume_manager.reset(std::move(fd));
 
@@ -2261,8 +2461,12 @@ bool TestVPartitionUpgrade() {
     // Destroy and reallocate the first partition as inactive.
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd, "Couldn't open volume");
-    ASSERT_EQ(ioctl_block_fvm_destroy_partition(vp_fd.get()), 0);
-    ASSERT_EQ(close(vp_fd.release()), 0);
+    fzl::FdioCaller partition_caller(std::move(vp_fd));
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(),
+                                                          &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    partition_caller.reset();
     request.flags = fvm::kVPartFlagInactive;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
     strcpy(request.name, kTestPartName1);
@@ -2274,7 +2478,7 @@ bool TestVPartitionUpgrade() {
     // This should activate the partition.
     ASSERT_TRUE(Upgrade(volume_manager, kTestUniqueGUID, kTestUniqueGUID, ZX_OK));
 
-    fd.reset(FVMRebind(volume_manager.release().release(), ramdisk_path, upgraded_entries_both, 2));
+    fd = FVMRebind(volume_manager.release(), ramdisk_path, upgraded_entries_both, 2);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
     volume_manager.reset(std::move(fd));
 
@@ -2461,12 +2665,18 @@ bool TestCorruptionOk() {
     ASSERT_TRUE(vp_fd);
 
     // Extend the vpart (writes to primary)
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    zx_status_t status;
+    uint64_t offset = 1;
+    uint64_t length = 1;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset, length,
+                                                         &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * 2);
 
     // Initial slice access
@@ -2491,7 +2701,7 @@ bool TestCorruptionOk() {
         {kTestPartName1, 1},
     };
 
-    fd.reset(FVMRebind(fd.release(), ramdisk_path, entries, 1));
+    fd = FVMRebind(std::move(fd), ramdisk_path, entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
 
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
@@ -2535,13 +2745,20 @@ bool TestCorruptionRegression() {
     fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(vp_fd);
 
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    zx_status_t status;
+
     // Extend the vpart (writes to primary)
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    uint64_t offset = 1;
+    uint64_t length = 1;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                         length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * 2);
 
     // Initial slice access
@@ -2549,7 +2766,7 @@ bool TestCorruptionRegression() {
     // Extended slice access
     ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), slice_size / block_info.block_size, 1));
 
-    ASSERT_EQ(close(vp_fd.get()), 0);
+    ASSERT_EQ(close(vp_fd.release()), 0);
 
     // Corrupt the (primary) metadata and rebind.
     // The 'primary' was the last one written, so the backup will be used.
@@ -2564,7 +2781,7 @@ bool TestCorruptionRegression() {
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
     };
-    fd.reset(FVMRebind(fd.release(), ramdisk_path, entries, 1));
+    fd = FVMRebind(std::move(fd), ramdisk_path, entries, 1);
     ASSERT_TRUE(fd, "Failed to rebind FVM driver");
     vp_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
     ASSERT_TRUE(vp_fd);
@@ -2608,13 +2825,20 @@ bool TestCorruptionUnrecoverable() {
     fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(vp_fd);
 
+    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+    zx_status_t status;
+
     // Extend the vpart (writes to primary)
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd.get(), &erequest), 0);
-    block_info_t block_info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd.get(), &block_info), 0);
+    uint64_t offset = 1;
+    uint64_t length = 1;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                         length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    fuchsia_hardware_block_BlockInfo block_info;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * 2);
 
     // Initial slice access
@@ -2643,8 +2867,8 @@ bool TestCorruptionUnrecoverable() {
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
     };
-    ASSERT_LT(FVMRebind(fd.release(), ramdisk_path, entries, 1), 0,
-              "FVM Should have failed to rebind");
+    ASSERT_FALSE(FVMRebind(std::move(fd), ramdisk_path, entries, 1),
+                "FVM Should have failed to rebind");
     ASSERT_TRUE(ValidateFVM(ramdisk_path, ValidationResult::Corrupted));
 
     // Clean up
@@ -2701,6 +2925,7 @@ template <size_t ThreadCount> int random_access_thread(void* arg) {
     ASSERT_TRUE(CheckWriteColor(self->vp_fd.get(), 0, st->slice_size, color));
     ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), 0, st->slice_size, color));
 
+    zx_status_t status;
     size_t num_ops = 100;
     for (size_t i = 0; i < num_ops; ++i) {
         switch (rand_r(&seed) % 5) {
@@ -2716,18 +2941,22 @@ template <size_t ThreadCount> int random_access_thread(void* arg) {
                 extension_length = fbl::min((rand_r(&seed) % st->slices_left) + 1, 5lu);
                 st->slices_left -= extension_length;
             }
-            extend_request_t erequest;
-            erequest.offset = self->extents[extent_index].start + self->extents[extent_index].len;
-            erequest.length = extension_length;
-            size_t off = erequest.offset * st->slice_size;
-            size_t len = extension_length * st->slice_size;
-            ASSERT_TRUE(
-                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
-            ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd.get(), &erequest), 0);
+            uint64_t offset = self->extents[extent_index].start + self->extents[extent_index].len;
+            uint64_t length = extension_length;
+            size_t byte_off = offset * st->slice_size;
+            size_t byte_len = extension_length * st->slice_size;
+            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), byte_off / st->block_size,
+                                           byte_len / st->block_size));
+
+            fzl::UnownedFdioCaller partition_caller(self->vp_fd.get());
+            zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
             self->extents[extent_index].len += extension_length;
 
-            ASSERT_TRUE(CheckWriteColor(self->vp_fd.get(), off, len, color));
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
+            ASSERT_TRUE(CheckWriteColor(self->vp_fd.get(), byte_off, byte_len, color));
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
             break;
         }
         case 1: {
@@ -2744,19 +2973,20 @@ template <size_t ThreadCount> int random_access_thread(void* arg) {
                 extent.len = fbl::min((rand_r(&seed) % st->slices_left) + 1, 5lu);
                 st->slices_left -= extent.len;
             }
-            extend_request_t erequest;
-            erequest.offset = extent.start;
-            erequest.length = extent.len;
-            size_t off = erequest.offset * st->slice_size;
-            size_t len = extent.len * st->slice_size;
-            ASSERT_TRUE(
-                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
-            ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd.get(), &erequest), 0);
-            ASSERT_TRUE(CheckWriteColor(self->vp_fd.get(), off, len, color));
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
-            fbl::AllocChecker ac;
-            self->extents.push_back(std::move(extent), &ac);
-            ASSERT_TRUE(ac.check());
+            uint64_t offset = extent.start;
+            uint64_t length = extent.len;
+            size_t byte_off = offset * st->slice_size;
+            size_t byte_len = extent.len * st->slice_size;
+            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), byte_off / st->block_size,
+                                           byte_len / st->block_size));
+            fzl::UnownedFdioCaller partition_caller(self->vp_fd.get());
+            zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
+            ASSERT_TRUE(CheckWriteColor(self->vp_fd.get(), byte_off, byte_len, color));
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
+            self->extents.push_back(std::move(extent));
             break;
         }
         case 2: {
@@ -2767,17 +2997,20 @@ template <size_t ThreadCount> int random_access_thread(void* arg) {
             }
             size_t shrink_length = (rand_r(&seed) % (self->extents[extent_index].len - 1)) + 1;
 
-            extend_request_t erequest;
-            erequest.offset =
-                self->extents[extent_index].start + self->extents[extent_index].len - shrink_length;
-            erequest.length = shrink_length;
-            size_t off = self->extents[extent_index].start * st->slice_size;
-            size_t len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd.get(), &erequest), 0);
+            uint64_t offset = self->extents[extent_index].start +
+                              self->extents[extent_index].len - shrink_length;
+            uint64_t length = shrink_length;
+            size_t byte_off = self->extents[extent_index].start * st->slice_size;
+            size_t byte_len = self->extents[extent_index].len * st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
+            fzl::UnownedFdioCaller partition_caller(self->vp_fd.get());
+            zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
             self->extents[extent_index].len -= shrink_length;
-            len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
+            byte_len = self->extents[extent_index].len * st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
             {
                 fbl::AutoLock al(&st->lock);
                 st->slices_left += shrink_length;
@@ -2791,38 +3024,44 @@ template <size_t ThreadCount> int random_access_thread(void* arg) {
                 continue;
             }
             size_t shrink_length = (rand_r(&seed) % (self->extents[extent_index].len - 2)) + 1;
-            extend_request_t erequest;
-            erequest.offset = self->extents[extent_index].start + 1;
-            erequest.length = shrink_length;
-            size_t off = self->extents[extent_index].start * st->slice_size;
-            size_t len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd.get(), &erequest), 0);
+            uint64_t offset = self->extents[extent_index].start + 1;
+            uint64_t length = shrink_length;
+            size_t byte_off = self->extents[extent_index].start * st->slice_size;
+            size_t byte_len = self->extents[extent_index].len * st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
+
+            fzl::UnownedFdioCaller partition_caller(self->vp_fd.get());
+            zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
 
             // We can read the slice before...
-            off = self->extents[extent_index].start * st->slice_size;
-            len = st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
+            byte_off = self->extents[extent_index].start * st->slice_size;
+            byte_len = st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
             // ... and the slices after...
-            off = (self->extents[extent_index].start + 1 + shrink_length) * st->slice_size;
-            len = (self->extents[extent_index].len - shrink_length - 1) * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
+            byte_off = (self->extents[extent_index].start + 1 + shrink_length) * st->slice_size;
+            byte_len = (self->extents[extent_index].len - shrink_length - 1) * st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
             // ... but not in the middle.
-            off = (self->extents[extent_index].start + 1) * st->slice_size;
-            len = (shrink_length)*st->slice_size;
-            ASSERT_TRUE(
-                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
+            byte_off = (self->extents[extent_index].start + 1) * st->slice_size;
+            byte_len = (shrink_length) * st->slice_size;
+            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), byte_off / st->block_size,
+                                           byte_len / st->block_size));
 
             // To avoid collisions between test extents, let's remove the
             // trailing extent.
-            erequest.offset = self->extents[extent_index].start + 1 + shrink_length;
-            erequest.length = self->extents[extent_index].len - shrink_length - 1;
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd.get(), &erequest), 0);
+            offset = self->extents[extent_index].start + 1 + shrink_length;
+            length = self->extents[extent_index].len - shrink_length - 1;
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
 
             self->extents[extent_index].len = 1;
-            off = self->extents[extent_index].start * st->slice_size;
-            len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
+            byte_off = self->extents[extent_index].start * st->slice_size;
+            byte_len = self->extents[extent_index].len * st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
             {
                 fbl::AutoLock al(&st->lock);
                 st->slices_left += shrink_length;
@@ -2836,15 +3075,19 @@ template <size_t ThreadCount> int random_access_thread(void* arg) {
                 // We must keep the 0th slice
                 continue;
             }
-            extend_request_t erequest;
-            erequest.offset = self->extents[extent_index].start;
-            erequest.length = self->extents[extent_index].len;
-            size_t off = self->extents[extent_index].start * st->slice_size;
-            size_t len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), off, len, color));
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd.get(), &erequest), 0);
-            ASSERT_TRUE(
-                CheckNoAccessBlock(self->vp_fd.get(), off / st->block_size, len / st->block_size));
+            uint64_t offset = self->extents[extent_index].start;
+            uint64_t length = self->extents[extent_index].len;
+            size_t byte_off = self->extents[extent_index].start * st->slice_size;
+            size_t byte_len = self->extents[extent_index].len * st->slice_size;
+            ASSERT_TRUE(CheckReadColor(self->vp_fd.get(), byte_off, byte_len, color));
+
+            fzl::UnownedFdioCaller partition_caller(self->vp_fd.get());
+            zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+            ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(partition_channel->get(), offset,
+                                                                 length, &status), ZX_OK);
+            ASSERT_EQ(status, ZX_OK);
+            ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd.get(), byte_off / st->block_size,
+                                           byte_len / st->block_size));
             {
                 fbl::AutoLock al(&st->lock);
                 st->slices_left += self->extents[extent_index].len;
@@ -2889,8 +3132,8 @@ template <size_t ThreadCount, bool Persistence> bool TestRandomOpMultithreaded()
         s.slices_total = kSlicesCount;
     }
 
-    int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open(fvm_driver, O_RDWR));
+    ASSERT_TRUE(fd);
 
     alloc_req_t request;
     memset(&request, 0, sizeof(request));
@@ -2903,7 +3146,7 @@ template <size_t ThreadCount, bool Persistence> bool TestRandomOpMultithreaded()
     for (size_t i = 0; i < ThreadCount; i++) {
         // Change the GUID enough to be distinct for each thread
         request.guid[0] = static_cast<uint8_t>(i);
-        s.thread_states[i].vp_fd.reset(fvm_allocate_partition(fd, &request));
+        s.thread_states[i].vp_fd.reset(fvm_allocate_partition(fd.get(), &request));
         ASSERT_TRUE(s.thread_states[i].vp_fd);
     }
 
@@ -2918,9 +3161,7 @@ template <size_t ThreadCount, bool Persistence> bool TestRandomOpMultithreaded()
         fvm_extent_t extent;
         extent.start = 0;
         extent.len = 1;
-        fbl::AllocChecker ac;
-        s.thread_states[i].extents.push_back(std::move(extent), &ac);
-        EXPECT_TRUE(ac.check());
+        s.thread_states[i].extents.push_back(std::move(extent));
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd.get(), 0, kBlocksPerSlice));
         EXPECT_EQ(thrd_create(&s.thread_states[i].thr, random_access_thread<ThreadCount>, &ta[i]),
                   thrd_success);
@@ -2940,8 +3181,8 @@ template <size_t ThreadCount, bool Persistence> bool TestRandomOpMultithreaded()
         }
 
         // Rebind the FVM (simulating rebooting)
-        fd = FVMRebind(fd, ramdisk_path, entries, fbl::count_of(entries));
-        ASSERT_GT(fd, 0);
+        fd = FVMRebind(std::move(fd), ramdisk_path, entries, fbl::count_of(entries));
+        ASSERT_TRUE(fd);
 
         // Re-open all partitions, re-launch the worker threads
         for (size_t i = 0; i < ThreadCount; i++) {
@@ -2962,11 +3203,15 @@ template <size_t ThreadCount, bool Persistence> bool TestRandomOpMultithreaded()
         EXPECT_EQ(thrd_join(s.thread_states[i].thr, &r), thrd_success);
         EXPECT_EQ(r, 0);
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd.get(), 0, kBlocksPerSlice));
-        EXPECT_EQ(ioctl_block_fvm_destroy_partition(s.thread_states[i].vp_fd.get()), 0);
-        EXPECT_EQ(close(s.thread_states[i].vp_fd.release()), 0);
+
+        fzl::FdioCaller partition_caller(std::move(s.thread_states[i].vp_fd));;
+        zx_status_t status;
+        ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(),
+                                                              &status), ZX_OK);
+        ASSERT_EQ(status, ZX_OK);
     }
 
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_TRUE(FVMCheckSliceSize(fvm_driver, kSliceSize));
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
@@ -3101,7 +3346,7 @@ bool TestValidAfterBlockDeviceGrowth() {
         {kTestPartName1, 1},
     };
     vp_fd.reset();
-    driver.reset(FVMRebind(driver.release(), ramdisk_path, entries, 1));
+    driver = FVMRebind(std::move(driver), ramdisk_path, entries, 1);
     ASSERT_TRUE(driver);
 
     // Get the new fvm info.
@@ -3188,7 +3433,7 @@ bool TestValidAfterBlockDeviceGrowthAndFVMGrowth() {
         {kTestPartName1, 1},
     };
     vp_fd.reset();
-    driver.reset(FVMRebind(driver.release(), ramdisk_path, entries, 1));
+    driver = FVMRebind(std::move(driver), ramdisk_path, entries, 1);
     ASSERT_TRUE(driver);
 
     // Get the new fvm info.
@@ -3316,10 +3561,12 @@ int main(int argc, char** argv) {
                 }
                 test_disk_path[path_len] = 0;
 
-                block_info_t block_info;
-                ssize_t rc = ioctl_block_get_info(fd.get(), &block_info);
-
-                if (rc < 0 || rc != sizeof(block_info)) {
+                fzl::UnownedFdioCaller disk_caller(fd.get());
+                fuchsia_hardware_block_BlockInfo block_info;
+                zx_status_t io_status =
+                        fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status,
+                                                            &block_info);
+                if (io_status != ZX_OK || status != ZX_OK) {
                     fprintf(stderr, "[fs] Could not query block device info\n");
                     return -1;
                 }
