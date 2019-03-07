@@ -37,6 +37,7 @@ source_set("src") {
     "//garnet/public/lib/netemul/fidl:network",
     "//garnet/public/lib/netemul/fidl:sandbox",
     "//garnet/public/lib/netemul/fidl:sync",
+    "//garnet/public/lib/netemul/network:netdump",
     "//garnet/public/lib/netemul/network:network_service",
     "//garnet/public/lib/netemul/sync:sync_service",
     "//sdk/fidl/fuchsia.sys",

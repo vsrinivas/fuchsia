@@ -27,9 +27,9 @@ component within it. The exit code of the `netemul_sandbox` process will mimic t
 using enclosing process, clients will typically setup a layout for the test using the netemul
 (facet)[#facet] in the component-under-test's cmx manifest.
 
-In service provider mode, `netemul_sandbox` will expose the 
+In service provider mode, `netemul_sandbox` will expose the
 [fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) protocol that allows
-users to create netemul's managed environments or run full sandboxes from components. 
+users to create netemul's managed environments or run full sandboxes from components.
 
 In sum, users have two options to use netemul for a given component under test:
 * use `netemul_runner`, which will use `netemul_sandbox` in enclosing process mode and spawn the
@@ -180,8 +180,18 @@ Below is the documentation of the objects accepted. The root object is of type [
 | default_url | String                      | Global default URL, will be used by any instance of [LaunchArgs](#launchargs)                        |
 | disabled    | Boolean                     | if true, no tests or environments will be created and sandbox will exit cleanly. defaults to *false* |
 | timeout     | Number                      | Optional global timeout for all tests to complete, in seconds.                                       |
+| capture     | String or Boolean           | Capture network traffic on emulated networks. See below for possible values. Defaults to `"NO"`      |
 | environment | [Environment](#environment) | root environment configuration                                                                       |
 | networks    | Array of [Network](#network)| collection of networks to setup                                                                      |
+
+`capture` values:
+* `"ALWAYS"` will always generate network dumps once sandbox exits.
+* `"ON_ERROR"` will only generate dumps if the suite failed for any reason. Same as `true`.
+* `"NO"` disables capturing. Same as `false`.
+
+Network dumps are captured as `pcap` files and printed hex-encoded to `STDOUT` at the end of the
+test run. You can save the dump in hex format and then convert it to binary with
+`xxd -r -p [hexdata]`.
 
 ### Environment
 

@@ -6,6 +6,8 @@
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/netemul/network/ethernet_client.h"
 #include "lib/netemul/network/fake_endpoint.h"
+#include "lib/netemul/network/netdump.h"
+#include "lib/netemul/network/netdump_parser.h"
 #include "lib/netemul/network/network_context.h"
 
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
@@ -950,6 +952,47 @@ TEST_F(NetworkServiceTest, NetworkConfigChanges) {
     EXPECT_TRUE(received.find(i) != received.end());
   }
   received.clear();
+}
+
+TEST_F(NetworkServiceTest, NetWatcher) {
+  StartServices();
+
+  fidl::SynchronousInterfacePtr<Network::FNetwork> net;
+  CreateNetwork("net", &net);
+
+  fidl::InterfacePtr<FakeEndpoint::FFakeEndpoint> fe;
+  ASSERT_OK(net->CreateFakeEndpoint(fe.NewRequest()));
+  // create net watcher first, so we're guaranteed it'll be there before:
+  NetWatcher<InMemoryDump> watcher;
+  watcher.Watch("net", std::move(fe));
+
+  fidl::InterfacePtr<FakeEndpoint::FFakeEndpoint> fe_in;
+  ASSERT_OK(net->CreateFakeEndpoint(fe_in.NewRequest()));
+
+  constexpr uint32_t packet_count = 10;
+  for (uint32_t i = 0; i < packet_count; i++) {
+    auto ptr = reinterpret_cast<const uint8_t*>(&i);
+    fe_in->Write(std::vector<uint8_t>(ptr, ptr + sizeof(i)));
+  }
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&watcher]() { return watcher.dump().packet_count() == packet_count; },
+      zx::sec(5)));
+
+  // check that all the saved data is correct:
+  NetDumpParser parser;
+  auto dump_bytes = watcher.dump().CopyBytes();
+  ASSERT_TRUE(parser.Parse(&dump_bytes[0], dump_bytes.size()));
+  ASSERT_EQ(parser.interfaces().size(), 1ul);
+  ASSERT_EQ(parser.packets().size(), packet_count);
+
+  EXPECT_EQ(parser.interfaces()[0], "net");
+  for (uint32_t i = 0; i < packet_count; i++) {
+    auto& pkt = parser.packets()[i];
+    EXPECT_EQ(pkt.len, sizeof(uint32_t));
+    EXPECT_EQ(pkt.interface, 0u);
+    EXPECT_EQ(memcmp(pkt.data, &i, sizeof(i)), 0);
+  }
 }
 
 }  // namespace testing

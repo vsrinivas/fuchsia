@@ -25,6 +25,16 @@ class ModelTest : public ::testing::Test {
     std::cout << "Parse failed as expected: " << parser.error_str()
               << std::endl;
   }
+
+  void ExpectSuccessfulParse(const char* json, Config* config) {
+    json::JSONParser parser;
+    auto doc = parser.ParseFromString(
+        json, ::testing::UnitTest::GetInstance()->current_test_info()->name());
+
+    ASSERT_FALSE(parser.HasError());
+    ASSERT_TRUE(config->ParseFromJSON(doc, &parser));
+    ASSERT_FALSE(parser.HasError());
+  }
 };
 
 TEST_F(ModelTest, ParseTest) {
@@ -114,6 +124,7 @@ TEST_F(ModelTest, ParseTest) {
             "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx");
   EXPECT_EQ(config.disabled(), false);
   EXPECT_EQ(config.timeout(), zx::duration::infinite());
+  EXPECT_EQ(config.capture(), CaptureMode::NONE);
 
   // sanity check the objects:
   auto& root_env = config.environment();
@@ -289,6 +300,21 @@ TEST_F(ModelTest, TimeoutParsing) {
   EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
       << "Parse error: " << parser.error_str();
   EXPECT_EQ(config.timeout(), zx::sec(10));
+}
+
+TEST_F(ModelTest, CaptureParsing) {
+  Config config;
+  ExpectSuccessfulParse(R"({"capture" : true})", &config);
+  EXPECT_EQ(config.capture(), CaptureMode::ON_ERROR);
+  ExpectSuccessfulParse(R"({"capture" : false})", &config);
+  EXPECT_EQ(config.capture(), CaptureMode::NONE);
+  ExpectSuccessfulParse(R"({"capture" : "NO"})", &config);
+  EXPECT_EQ(config.capture(), CaptureMode::NONE);
+  ExpectSuccessfulParse(R"({"capture" : "ON_ERROR"})", &config);
+  EXPECT_EQ(config.capture(), CaptureMode::ON_ERROR);
+  ExpectSuccessfulParse(R"({"capture" : "ALWAYS"})", &config);
+  EXPECT_EQ(config.capture(), CaptureMode::ALWAYS);
+  ExpectFailedParse(R"({"capture" : "foo"})", "Can't parse bad capture value");
 }
 
 }  // namespace testing

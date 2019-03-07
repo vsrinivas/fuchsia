@@ -12,6 +12,10 @@ static const char* kEnvironment = "environment";
 static const char* kDefaultUrl = "default_url";
 static const char* kDisabled = "disabled";
 static const char* kTimeout = "timeout";
+static const char* kCapture = "capture";
+static const char* kCaptureAlways = "ALWAYS";
+static const char* kCaptureOnError = "ON_ERROR";
+static const char* kCaptureNo = "NO";
 
 const char Config::Facet[] = "fuchsia.netemul";
 
@@ -87,6 +91,31 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
     timeout_ = zx::duration::infinite();
   }
 
+  auto capture = value.FindMember(kCapture);
+  if (capture != value.MemberEnd()) {
+    if (capture->value.IsBool()) {
+      capture_mode_ =
+          capture->value.GetBool() ? CaptureMode::ON_ERROR : CaptureMode::NONE;
+    } else if (capture->value.IsString()) {
+      std::string val = capture->value.GetString();
+      if (val == kCaptureNo) {
+        capture_mode_ = CaptureMode::NONE;
+      } else if (val == kCaptureOnError) {
+        capture_mode_ = CaptureMode::ON_ERROR;
+      } else if (val == kCaptureAlways) {
+        capture_mode_ = CaptureMode::ALWAYS;
+      } else {
+        json_parser->ReportError("unrecognized \"capture\" option");
+        return false;
+      }
+    } else {
+      json_parser->ReportError("\"capture\" must be a Boolean or String value");
+      return false;
+    }
+  } else {
+    capture_mode_ = CaptureMode::NONE;
+  }
+
   return true;
 }
 
@@ -99,6 +128,8 @@ const std::string& Config::default_url() const { return default_url_; }
 bool Config::disabled() const { return disabled_; }
 
 zx::duration Config::timeout() const { return timeout_; }
+
+CaptureMode Config::capture() const { return capture_mode_; }
 
 }  // namespace config
 }  // namespace netemul

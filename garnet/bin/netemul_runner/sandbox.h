@@ -7,6 +7,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/netemul/network/netdump.h>
 #include <unordered_set>
 #include "managed_environment.h"
 #include "model/config.h"
@@ -97,6 +98,7 @@ class Sandbox {
   // keep component controller handles to keep processes alive
   std::vector<fuchsia::sys::ComponentControllerPtr> procs_;
   std::unordered_set<size_t> tests_;
+  std::unique_ptr<NetWatcher<InMemoryDump>> net_dumps_;
 };
 
 }  // namespace netemul

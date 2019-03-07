@@ -15,6 +15,8 @@
 namespace netemul {
 namespace config {
 
+enum CaptureMode { NONE, ON_ERROR, ALWAYS };
+
 class Config {
  public:
   Config() = default;
@@ -29,6 +31,7 @@ class Config {
   const std::string& default_url() const;
   bool disabled() const;
   zx::duration timeout() const;
+  CaptureMode capture() const;
 
  private:
   std::vector<Network> networks_;
@@ -36,6 +39,7 @@ class Config {
   std::string default_url_;
   bool disabled_;
   zx::duration timeout_;
+  CaptureMode capture_mode_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

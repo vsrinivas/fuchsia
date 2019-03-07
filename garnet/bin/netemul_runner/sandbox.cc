@@ -91,6 +91,25 @@ void Sandbox::Terminate(int64_t exit_code, Sandbox::TerminationReason reason) {
   // all processes must have been emptied to call callback
   ASSERT_MAIN_DISPATCHER;
   ZX_ASSERT(procs_.empty());
+
+  if (helper_loop_) {
+    helper_loop_->Quit();
+    helper_loop_->JoinThreads();
+    helper_loop_ = nullptr;
+  }
+
+  if (exit_code != 0 || env_config_.capture() == config::CaptureMode::ALWAYS) {
+    // check if any of the network dumps have data, and just dump them to
+    // stdout:
+    if (net_dumps_ && net_dumps_->HasData()) {
+      std::cout << "PCAP dump for all network data ==================="
+                << std::endl;
+      net_dumps_->dump().DumpHex(&std::cout);
+      std::cout << "================================================"
+                << std::endl;
+    }
+  }
+
   if (termination_callback_) {
     termination_callback_(exit_code, reason);
   }
@@ -186,6 +205,15 @@ bool Sandbox::ConfigureNetworks() {
     }
 
     auto network = network_h.BindSync();
+
+    if (env_config_.capture() != config::CaptureMode::NONE) {
+      if (!net_dumps_) {
+        net_dumps_ = std::make_unique<NetWatcher<InMemoryDump>>();
+      }
+      fidl::InterfacePtr<network::FakeEndpoint> fake_endpoint;
+      network->CreateFakeEndpoint(fake_endpoint.NewRequest());
+      net_dumps_->Watch(net_cfg.name(), std::move(fake_endpoint));
+    }
 
     for (const auto& endp_cfg : net_cfg.endpoints()) {
       network::EndpointConfig fidl_config;
