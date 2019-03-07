@@ -35,12 +35,12 @@ executable("bin") {
   deps = [
     ":fidl_interface",
     "//garnet/public/lib/component/cpp",
-    "//zircon/public/lib/inspect-vmo",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/inspect-vmo",
     "//zircon/public/lib/zx",
   ]
   public_deps = [
