@@ -300,24 +300,15 @@ impl EventBroadcaster {
             }
             SessionEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => listener
                 .send_on_playback_capabilities_changed(PlaybackCapabilities {
-                    can_play: playback_capabilities.can_play,
-                    can_stop: playback_capabilities.can_stop,
-                    can_pause: playback_capabilities.can_pause,
-                    can_seek_to_position: playback_capabilities.can_seek_to_position,
-                    can_skip_forward: playback_capabilities.can_skip_forward,
-                    can_skip_reverse: playback_capabilities.can_skip_reverse,
+                    flags: playback_capabilities.flags,
                     supported_skip_intervals: playback_capabilities
                         .supported_skip_intervals
                         .clone(),
                     supported_playback_rates: playback_capabilities
                         .supported_playback_rates
                         .clone(),
-                    can_shuffle: playback_capabilities.can_shuffle,
                     supported_repeat_modes: playback_capabilities.supported_repeat_modes.clone(),
-                    can_change_to_next_item: playback_capabilities.can_change_to_next_item,
-                    can_change_to_prev_item: playback_capabilities.can_change_to_prev_item,
                     custom_extensions: playback_capabilities.custom_extensions.clone(),
-                    has_gain_control: playback_capabilities.has_gain_control,
                 }),
         }
         .map_err(Into::into)

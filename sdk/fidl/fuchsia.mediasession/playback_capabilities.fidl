@@ -5,40 +5,39 @@
 library fuchsia.mediasession;
 
 using zx;
+bits PlaybackCapabilityFlags:uint32 {
+    /// If set, the player can |Play()|.
+    PLAY = 0x1;
+    /// If set, the player can |Stop()|.
+    STOP = 0x2;
+    /// If set, the player can |Pause()|.
+    PAUSE = 0x4;
+    /// If set, the player can |SeekToPosition()|.
+    SEEK_TO_POSITION = 0x8;
+    /// If set, the player can |SkipForward()| on |supported_skip_intervals|.
+    SKIP_FORWARD = 0x10;
+    /// If set, the player can |SkipReverse()| on |supported_skip_intervals|.
+    SKIP_REVERSE = 0x20;
+    /// The intervals on which skipping can be performed in the media.
+    SHUFFLE = 0x40;
+    // If set, the player can |NextItem()| if there is a next item.
+    CHANGE_TO_NEXT_ITEM = 0x80;
+    // If set, the player can |PrevItem()| if there is a previous item.
+    CHANGE_TO_PREV_ITEM = 0x100;
+    /// If set, the player can |BindGainControl()|.
+    HAS_GAIN_CONTROL = 0x200;
+};
 
-/// `PlaybackCapabilities` enumerates the capabilities of the player backing
+/// |PlaybackCapabilities| enumerates the capabilities of the player backing
 /// the media session, and correspond to the control commands they can execute.
 table PlaybackCapabilities {
-    /// If set, the player can `Play()`.
-    1: bool can_play;
-    /// If set, the player can `Stop()`.
-    2: bool can_stop;
-    /// If set, the player can `Pause()`.
-    3: bool can_pause;
-    /// If set, the player can `SeekToPosition()`.
-    4: bool can_seek_to_position;
-    /// If set, the player can `SkipForward()` on `supported_skip_intervals`.
-    5: bool can_skip_forward;
-    /// If set, the player can `SkipReverse()` on `supported_skip_intervals`.
-    6: bool can_skip_reverse;
+    1: PlaybackCapabilityFlags flags;
     /// The intervals on which skipping can be performed in the media.
-    7: vector<zx.duration> supported_skip_intervals;
+    2: vector<zx.duration> supported_skip_intervals;
     /// The playback rates supported by the media.
-    8: vector<float32> supported_playback_rates;
-
-    /// If set, the player can `SetShuffleMode()`.
-    9: bool can_shuffle;
-    /// Supported repeat modes that can be set with `SetRepeatMode()`.
-    10: vector<RepeatMode> supported_repeat_modes;
-
-    // If set, the player can `NextItem()` if there is a next item.
-    11: bool can_change_to_next_item;
-    // If set, the player can `PrevItem()` if there is a previous item.
-    12: bool can_change_to_prev_item;
-
+    3: vector<float32> supported_playback_rates;
+    /// Supported repeat modes that can be set with |SetRepeatMode()|.
+    4: vector<RepeatMode> supported_repeat_modes;
     /// A set of names of custom extensions the player advertises.
-    13: vector<string> custom_extensions;
-
-    /// If set, the player can `BindGainControl()`.
-    14: bool has_gain_control;
+    5: vector<string> custom_extensions;
 };

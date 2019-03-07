@@ -6,9 +6,9 @@ use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_media::TimelineFunction;
 use fidl_fuchsia_mediasession::{
-    PlaybackState, PlaybackStatus, PublisherMarker, PublisherProxy, RegistryEvent,
-    RegistryEventStream, RegistryMarker, RegistryProxy, RepeatMode, SessionControlHandle,
-    SessionEvent, SessionMarker, SessionRequest, SessionRequestStream,
+    PlaybackCapabilities, PlaybackCapabilityFlags, PlaybackState, PlaybackStatus, PublisherMarker,
+    PublisherProxy, RegistryEvent, RegistryEventStream, RegistryMarker, RegistryProxy, RepeatMode,
+    SessionControlHandle, SessionEvent, SessionMarker, SessionRequest, SessionRequestStream,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
@@ -205,11 +205,23 @@ async fn service_broadcasts_events() {
     let session_id = await!(test_service.publisher.publish(test_session.client_end))
         .expect(&format!("To publish session."));
 
-    // Send a single event.
+    let expected_playback_capabilities = || PlaybackCapabilities {
+        flags: Some(PlaybackCapabilityFlags::Play | PlaybackCapabilityFlags::Pause),
+        supported_skip_intervals: Some(vec![23, 34]),
+        supported_playback_rates: Some(vec![10.0, 20.0]),
+        supported_repeat_modes: Some(vec![RepeatMode::Off]),
+        custom_extensions: Some(vec![String::from("1"), String::from("2")]),
+    };
+
     test_session
         .control_handle
         .send_on_playback_status_changed(default_playback_status())
         .expect("To update playback status.");
+
+    test_session
+        .control_handle
+        .send_on_playback_capabilities_changed(expected_playback_capabilities())
+        .expect("To update playback capabilities.");
 
     // Ensure we wait for the service to accept the session.
     await!(test_service.expect_active_session(Some(
@@ -233,14 +245,23 @@ async fn service_broadcasts_events() {
             )
             .expect("To connect to session.");
         let mut event_stream = client_end.into_proxy().expect("Session proxy").take_event_stream();
-        let event = await!(event_stream.try_next()).expect("Next Session event.");
-        assert_eq!(
-            event.and_then(|event| match event {
-                SessionEvent::OnPlaybackStatusChanged { playback_status } => Some(playback_status),
-                _ => None,
-            }),
-            Some(default_playback_status())
-        );
+        let check_event = |event: Option<SessionEvent>| {
+            assert!(event
+                .and_then(|event| match event {
+                    SessionEvent::OnPlaybackStatusChanged { playback_status } => {
+                        Some(playback_status == default_playback_status())
+                    }
+                    SessionEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => {
+                        Some(playback_capabilities == expected_playback_capabilities())
+                    }
+                    _ => None,
+                })
+                .unwrap_or(false));
+        };
+
+        // Expect we get both of our published events; accept any order.
+        check_event(await!(event_stream.try_next()).expect("Next Session event."));
+        check_event(await!(event_stream.try_next()).expect("Next Session event."));
     }
 }
 
