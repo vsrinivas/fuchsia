@@ -10,7 +10,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/qmi",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
@@ -20,6 +19,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
+    "//src/connectivity/telephony/lib/qmi",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
