@@ -88,7 +88,7 @@
 ## Example:
 ##
 ##   $ fx set core.x64 --with bundle/kitchen_sink
-##   -> build directory: out/x64
+##   -> build directory: out/default
 ##      board: //boards/x64.gni
 ##      product: //products/core.gni
 ##      universe: //bundle/kitchen_sink (all other packages)
