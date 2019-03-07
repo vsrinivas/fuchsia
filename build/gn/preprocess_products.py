@@ -10,27 +10,6 @@ import paths
 import sys
 from prepreprocess_build_packages import PackageImportsResolver, PackageLabelObserver
 
-def parse_product(product, build_packages):
-    """
-    product - a path to a JSON product file to parse
-    build_packages - a dict that collects merged sets
-    """
-    product = os.path.join(paths.FUCHSIA_ROOT, product)
-    build_packages["files_read"].add(product)
-
-    with open(product) as f:
-        for k, v in json.load(f).items():
-            if k == "monolith":
-                build_packages[k].update(v)
-                continue
-            if k == "preinstall":
-                build_packages[k].update(v)
-                continue
-            if k == "available":
-                build_packages[k].update(v)
-                continue
-            sys.stderr.write("Invalid product key in %s: %s\n" % (product, k))
-
 
 def preprocess_packages(packages):
     observer = PackageLabelObserver()
@@ -66,9 +45,6 @@ files_read - a list of files used to compute all of the above
     parser.add_argument("--available",
                         help="List of package definitions for available packages",
                         required=True)
-    parser.add_argument("--legacy-products",
-                        help="List of legacy product definitions",
-                        required=False)
     args = parser.parse_args()
 
     build_packages = {
@@ -83,10 +59,6 @@ files_read - a list of files used to compute all of the above
     build_packages["monolith"].update(json.loads(args.monolith))
     build_packages["preinstall"].update(json.loads(args.preinstall))
     build_packages["available"].update(json.loads(args.available))
-
-    # Merge in the legacy product configurations, if set
-    [parse_product(product, build_packages) for product in
-            json.loads(args.legacy_products)]
 
     try:
         monolith_results = preprocess_packages(list(build_packages["monolith"]))

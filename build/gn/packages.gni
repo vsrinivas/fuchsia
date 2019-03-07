@@ -41,9 +41,6 @@ declare_args() {
   # //{layer}/products/default.gni will be used.
   fuchsia_packages = []
 
-  # Legacy product definitions.
-  fuchsia_products = []
-
   # List of GN labels of extra packages to included in OTA images, base system
   # images, and the distribution repository.
   extra_package_labels = []
@@ -51,16 +48,6 @@ declare_args() {
 
 monolith += board_packages
 monolith += fuchsia_packages
-
-# Print a warning message if the legacy fuchsia_products field is set.
-# Only print in the default toolchain so the warning only shows up once.
-if (fuchsia_products != [] && current_toolchain == default_toolchain) {
-  print("WARNING! Deprecated fuchsia product specification detected")
-  print("Please re-run 'fx set' to update your build configuration")
-  print(
-      "See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/")
-  print("or BLD-240 for more details")
-}
 
 if (allow_layer_guesswork && monolith == [] && preinstall == [] &&
     available == [] && fuchsia_packages == []) {
@@ -74,7 +61,7 @@ if (allow_layer_guesswork && monolith == [] && preinstall == [] &&
   }
 }
 
-# Resolve all the `fuchsia_products` JSON files and their dependencies
+# Resolve all the JSON files and their dependencies
 # into lists of GN labels:
 # monolith - package labels for base system and verified boot image
 # preinstall - package labels for preinstall, but not OTA
@@ -83,12 +70,9 @@ if (allow_layer_guesswork && monolith == [] && preinstall == [] &&
 # data_deps - labels for host tools and non-package build targets
 _preprocessed_products = exec_script("preprocess_products.py",
                                      [
-                                       # A list of strings in GN syntax is
-                                       # valid JSON too.
                                        "--monolith=$monolith",
                                        "--preinstall=$preinstall",
                                        "--available=$available",
-                                       "--legacy-products=$fuchsia_products",
                                      ],
                                      "json")
 
