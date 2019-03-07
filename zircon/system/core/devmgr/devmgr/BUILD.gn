@@ -29,17 +29,28 @@ executable("devmgr") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
+    "binding-internal.h",
     "binding.cpp",
+    "boot-args.cpp",
+    "boot-args.h",
     "coordinator.cpp",
+    "coordinator.h",
     "devfs.cpp",
+    "devfs.h",
     "devhost-loader-service.cpp",
+    "devhost-loader-service.h",
     "device.cpp",
+    "device.h",
     "driver.cpp",
+    "driver.h",
     "fidl-proxy.cpp",
+    "fidl-proxy.h",
     "fidl.cpp",
     "vmo-writer.cpp",
+    "vmo-writer.h",
   ]
   public_deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-mem:c",
@@ -69,6 +80,7 @@ test("devmgr-test") {
   test_group = "ddk"
   sources = [
     "binding-test.cpp",
+    "boot-args-test.cpp",
     "coordinator-test.cpp",
   ]
   deps = [

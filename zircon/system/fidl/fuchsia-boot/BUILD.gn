@@ -6,6 +6,7 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-boot") {
   sources = [
+    "arguments.fidl",
     "root-resource.fidl",
   ]
 }

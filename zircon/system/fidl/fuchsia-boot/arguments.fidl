@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.boot;
+
+/// Protocol for accessing kernel arguments.
+[Discoverable, Layout = "Simple"]
+protocol Arguments {
+    /// Get a |vmo| containing boot arguments, along with the |size| of the boot
+    /// arguments contained within.
+    Get() -> (handle<vmo> vmo, uint64 size);
+};

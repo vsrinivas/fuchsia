@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#include <ctype.h>
+
 #include <fs/connection.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -21,6 +23,37 @@ fbl::Vector<zx::vmo> RetrieveBootdata() {
         vmos.push_back(std::move(vmo));
     }
     return vmos;
+}
+
+zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
+    buf->reserve(buf->size() + str.size());
+    for (auto it = str.begin(); it != str.end(); it++) {
+        // Skip any leading whitespace.
+        if (isspace(*it)) {
+            continue;
+        }
+        // Is the line a comment or a zero-length name?
+        bool is_comment = *it == '#' || *it == '=';
+        // Append line, if it is not a comment.
+        for (; it != str.end(); it++) {
+            if (*it == '\n') {
+                // We've reached the end of the line.
+                break;
+            } else if (is_comment) {
+                // Skip this character, as it is part of a comment.
+                continue;
+            } else if (isspace(*it)) {
+                // It is invalid to have a space within an argument.
+                return ZX_ERR_INVALID_ARGS;
+            } else {
+                buf->push_back(*it);
+            }
+        }
+        if (!is_comment) {
+            buf->push_back(0);
+        }
+    }
+    return ZX_OK;
 }
 
 zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel* out) {

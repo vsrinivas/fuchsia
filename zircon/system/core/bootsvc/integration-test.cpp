@@ -11,7 +11,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
-#include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/boot/c/fidl.h>
@@ -30,13 +29,7 @@
 namespace {
 
 constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
-
-// Check that bootsvc put the boot cmdline in env
-bool TestBootCmdline() {
-    BEGIN_TEST;
-    ASSERT_STR_EQ(getenv("bootsvc.next"), "bin/bootsvc-tests");
-    END_TEST;
-}
+constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
 
 // Make sure that bootsvc passed the bootdata here, and check if it published
 // a crashlog if one of the bootdata had one.
@@ -130,26 +123,85 @@ bool TestNamespace() {
     END_TEST;
 }
 
+// Make sure the RootResource service works
 bool TestRootResource() {
     BEGIN_TEST;
 
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(ZX_OK, status);
 
     // Check that we can open the fuchsia.boot.RootResource service.
     status = fdio_service_connect(kRootResourcePath, remote.release());
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(ZX_OK, status);
 
     // Check that we received a resource from the service.
     zx::resource root_resource;
     status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(ZX_OK, status);
     ASSERT_TRUE(root_resource.is_valid());
 
     // Check that a subsequent call results in a peer closed.
     status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
-    ASSERT_EQ(status, ZX_ERR_PEER_CLOSED);
+    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
+
+    END_TEST;
+}
+
+// Make sure that we can parse boot args from a configuration string
+bool TestParseBootArgs() {
+    BEGIN_TEST;
+
+    const char config1[] = R"(
+# comment
+key
+key=value
+=value
+)";
+
+    // Parse a valid config.
+    fbl::Vector<char> buf;
+    zx_status_t status = bootsvc::ParseBootArgs(config1, &buf);
+    ASSERT_EQ(ZX_OK, status);
+
+    const char expected[] = "key\0key=value";
+    auto actual = reinterpret_cast<const uint8_t*>(buf.get());
+    ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected), actual, buf.size(), "");
+
+    // Parse an invalid config.
+    const char config2[] = "k ey=value";
+    status = bootsvc::ParseBootArgs(config2, &buf);
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
+
+    END_TEST;
+}
+
+// Make sure the Arguments service works
+bool TestArguments() {
+    BEGIN_TEST;
+
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we can open the fuchsia.boot.Arguments service.
+    status = fdio_service_connect(kArgumentsPath, remote.release());
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we received a VMO from the service, each time we call it.
+    for (size_t i = 0; i < 8; i++) {
+        zx::vmo vmo;
+        size_t size;
+        status = fuchsia_boot_ArgumentsGet(local.get(), vmo.reset_and_get_address(), &size);
+        ASSERT_EQ(ZX_OK, status);
+        ASSERT_TRUE(vmo.is_valid());
+
+        // Check that the VMO is read-only.
+        zx_info_handle_basic_t info;
+        status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+        ASSERT_EQ(ZX_OK, status);
+        ASSERT_EQ(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE, info.rights);
+    }
 
     END_TEST;
 }
@@ -180,10 +232,11 @@ bool TestVdsosPresent() {
 } // namespace
 
 BEGIN_TEST_CASE(bootsvc_integration_tests)
-RUN_TEST(TestBootCmdline)
 RUN_TEST(TestBootdata)
 RUN_TEST(TestLoader)
 RUN_TEST(TestNamespace)
 RUN_TEST(TestRootResource)
+RUN_TEST(TestParseBootArgs)
+RUN_TEST(TestArguments)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)

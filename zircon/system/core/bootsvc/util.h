@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string_view>
+
 #include <fbl/vector.h>
 #include <fs/vfs.h>
 #include <lib/zx/channel.h>
@@ -13,6 +15,10 @@ namespace bootsvc {
 
 // Retrieves all bootdata VMOs from the startup handle table.
 fbl::Vector<zx::vmo> RetrieveBootdata();
+
+// Parse boot arguments in |str|, and add them to |buf|. |buf| is a series of
+// null-separated "key" or "key=value" pairs.
+zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf);
 
 // Create a connection to a |vnode| in a |vfs|.
 zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel* out);

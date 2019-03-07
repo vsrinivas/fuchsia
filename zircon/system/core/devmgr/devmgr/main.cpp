@@ -13,22 +13,11 @@
 #include <unistd.h>
 #include <utility>
 
+#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <launchpad/launchpad.h>
-#include <loader-service/loader-service.h>
-#include <zircon/boot/bootdata.h>
-#include <zircon/device/vfs.h>
-#include <zircon/dlfcn.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/log.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/syscalls/policy.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
@@ -44,17 +33,31 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <loader-service/loader-service.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/device/vfs.h>
+#include <zircon/dlfcn.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/policy.h>
 
-#include "../shared/env.h"
-#include "../shared/fdio.h"
-#include "../shared/log.h"
+#include "boot-args.h"
 #include "coordinator.h"
 #include "devfs.h"
 #include "devhost-loader-service.h"
 
+#include "../shared/env.h"
+#include "../shared/fdio.h"
+#include "../shared/log.h"
+
 namespace {
 
 constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
+constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
 
 struct {
     // The handle used to transmit messages to appmgr.
@@ -112,11 +115,10 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
     return status;
 }
 
-void do_autorun(const char* name, const char* env) {
-    const char* cmd = getenv(env);
+void do_autorun(const char* name, const char* cmd) {
     if (cmd != nullptr) {
         auto args = devmgr::ArgumentVector::FromCmdline(cmd);
-        args.Print(env);
+        args.Print("autorun");
         devmgr::devmgr_launch(g_handles.svc_job, name, args.argv(), nullptr, -1,
                               nullptr, nullptr, 0, nullptr, FS_ALL);
     }
@@ -140,8 +142,27 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
     return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
 }
 
+// Get kernel arguments from the arguments service.
+zx_status_t get_arguments(zx::vmo* args_vmo, size_t* args_size) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fdio_service_connect(kArgumentsPath, remote.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_boot_ArgumentsGet(local.get(), args_vmo->reset_and_get_address(), args_size);
+}
+
+struct ServiceArgs {
+    devmgr::Coordinator* coordinator;
+    const devmgr::BootArgs& boot_args;
+};
+
 int fuchsia_starter(void* arg) {
-    auto coordinator = static_cast<devmgr::Coordinator*>(arg);
+    auto service_args = static_cast<const ServiceArgs*>(arg);
     bool appmgr_started = false;
     bool autorun_started = false;
     bool drivers_loaded = false;
@@ -150,11 +171,11 @@ int fuchsia_starter(void* arg) {
     zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
     do {
-        zx_status_t status =
-            coordinator->fshost_event().wait_one(FSHOST_SIGNAL_READY, deadline, nullptr);
+        zx_status_t status = service_args->coordinator->fshost_event().wait_one(
+            FSHOST_SIGNAL_READY, deadline, nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
-                if (coordinator->require_system()) {
+                if (service_args->coordinator->require_system()) {
                     fprintf(stderr, "devmgr: appmgr not launched in %zus, closing appmgr handle\n",
                             appmgr_timeout);
                 }
@@ -167,7 +188,7 @@ int fuchsia_starter(void* arg) {
             fprintf(stderr, "devmgr: error waiting on fuchsia start event: %d\n", status);
             break;
         }
-        status = coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
+        status = service_args->coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
         if (status != ZX_OK) {
             fprintf(stderr, "devmgr: error signaling fshost: %d\n", status);
         }
@@ -176,8 +197,8 @@ int fuchsia_starter(void* arg) {
             // we're starting the appmgr because /system is present
             // so we also signal the device coordinator that those
             // drivers are now loadable
-            coordinator->set_system_available(true);
-            coordinator->ScanSystemDrivers();
+            service_args->coordinator->set_system_available(true);
+            service_args->coordinator->ScanSystemDrivers();
             drivers_loaded = true;
         }
 
@@ -199,7 +220,7 @@ int fuchsia_starter(void* arg) {
             appmgr_started = true;
         }
         if (!autorun_started) {
-            do_autorun("autorun:system", "zircon.autorun.system");
+            do_autorun("autorun:system", service_args->boot_args.Get("zircon.autorun.system"));
             autorun_started = true;
         }
     } while (!appmgr_started);
@@ -209,18 +230,19 @@ int fuchsia_starter(void* arg) {
 int console_starter(void* arg) {
     // if no kernel shell on serial uart, start a sh there
     printf("devmgr: shell startup\n");
+    auto& boot_args = *static_cast<const devmgr::BootArgs*>(arg);
 
     // If we got a TERM environment variable (aka a TERM=... argument on
     // the kernel command line), pass this down; otherwise pass TERM=uart.
-    const char* term = getenv("TERM");
+    const char* term = boot_args.Get("TERM");
     if (term == nullptr) {
         term = "TERM=uart";
     } else {
         term -= sizeof("TERM=") - 1;
     }
 
-    const char* device = getenv("console.path");
-    if (!device) {
+    const char* device = boot_args.Get("console.path");
+    if (device == nullptr) {
         device = "/dev/misc/console";
     }
 
@@ -304,14 +326,16 @@ int pwrbtn_monitor_starter(void* arg) {
     return 0;
 }
 
-void start_console_shell() {
-    // start a shell on the kernel console if it isn't already running a shell
-    if (!devmgr::getenv_bool("kernel.shell", false)) {
-        thrd_t t;
-        if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) ==
-            thrd_success) {
-            thrd_detach(t);
-        }
+void start_console_shell(const devmgr::BootArgs& boot_args) {
+    // Only start a shell on the kernel console if it isn't already running a shell.
+    if (boot_args.GetBool("kernel.shell", false)) {
+        return;
+    }
+    thrd_t t;
+    int ret = thrd_create_with_name(&t, console_starter, const_cast<devmgr::BootArgs*>(&boot_args),
+                                    "console-starter");
+    if (ret == thrd_success) {
+        thrd_detach(t);
     }
 }
 
@@ -491,7 +515,7 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator)
                                    svchost_public_remote.release());
 }
 
-void fshost_start(devmgr::Coordinator* coordinator) {
+void fshost_start(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot_args) {
     // assemble handles to pass down to fshost
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t types[fbl::count_of(handles)];
@@ -562,24 +586,17 @@ void fshost_start(devmgr::Coordinator* coordinator) {
     }
 
     const char* argv[] = {"/boot/bin/fshost", "--netboot", nullptr};
-    if (!devmgr::getenv_bool("netsvc.netboot", false) &&
-        !devmgr::getenv_bool("zircon.system.disable-automount", false)) {
+    if (!boot_args.GetBool("netsvc.netboot", false) &&
+        !boot_args.GetBool("zircon.system.disable-automount", false)) {
         argv[1] = nullptr;
     }
 
     // Pass zircon.system.* options to the fshost as environment variables
-    const char* envp[16];
-    unsigned envc = 0;
-    char** e = environ;
-    while (*e && (envc < fbl::count_of(envp) - 1)) {
-        if (!strncmp(*e, "zircon.system", strlen("zircon.system"))) {
-            envp[envc++] = *e;
-        }
-        e++;
-    }
-    envp[envc] = nullptr;
+    fbl::Vector<const char*> env;
+    boot_args.Collect("zircon.system", &env);
+    env.push_back(nullptr);
 
-    devmgr::devmgr_launch(g_handles.svc_job, "fshost", argv, envp, -1, handles, types, n,
+    devmgr::devmgr_launch(g_handles.svc_job, "fshost", argv, env.get(), -1, handles, types, n,
                           nullptr, FS_BOOT | FS_DEV | FS_SVC);
 
     // switch to system loader service provided by fshost
@@ -603,7 +620,8 @@ zx::channel bootfs_root_clone() {
     return boot;
 }
 
-void devmgr_vfs_init(devmgr::Coordinator* coordinator, bool needs_svc_mount) {
+void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot_args,
+                     bool needs_svc_mount) {
     printf("devmgr: vfs init\n");
 
     fdio_ns_t* ns;
@@ -621,7 +639,7 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, bool needs_svc_mount) {
     }
 
     // Start fshost before binding /system, since it publishes it.
-    fshost_start(coordinator);
+    fshost_start(coordinator, boot_args);
 
     if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", r);
@@ -629,56 +647,46 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, bool needs_svc_mount) {
 }
 
 int service_starter(void* arg) {
-    // Features like Intel Processor Trace need a dump of ld.so activity.
-    // The output has a specific format, and will eventually be recorded
-    // via a specific mechanism (magenta tracing support), so we use a specific
-    // env var (and don't, for example, piggyback on LD_DEBUG).
-    // We enable this pretty early so that we get a trace of as many processes
-    // as possible.
-    if (getenv(LDSO_TRACE_CMDLINE)) {
-        // This takes care of places that clone our environment.
-        putenv(strdup(LDSO_TRACE_ENV));
-        // There is still devmgr_launch() which does not clone our enviroment.
-        // It has its own check.
-    }
+    auto service_args = static_cast<const ServiceArgs*>(arg);
 
-    char vcmd[64];
     bool netboot = false;
     bool vruncmd = false;
-    if (!devmgr::getenv_bool("netsvc.disable", false)) {
+    fbl::String vcmd;
+    if (!service_args->boot_args.GetBool("netsvc.disable", false)) {
         const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr,
                               nullptr};
         int argc = 1;
 
-        if (devmgr::getenv_bool("netsvc.netboot", false)) {
+        if (service_args->boot_args.GetBool("netsvc.netboot", false)) {
             args[argc++] = "--netboot";
             netboot = true;
             vruncmd = true;
         }
 
-        if (devmgr::getenv_bool("netsvc.advertise", true)) {
+        if (service_args->boot_args.GetBool("netsvc.advertise", true)) {
             args[argc++] = "--advertise";
         }
 
-        const char* interface;
-        if ((interface = getenv("netsvc.interface")) != nullptr) {
+        const char* interface = service_args->boot_args.Get("netsvc.interface");
+        if (interface != nullptr) {
             args[argc++] = "--interface";
             args[argc++] = interface;
         }
 
-        const char* nodename = getenv("zircon.nodename");
+        const char* nodename = service_args->boot_args.Get("zircon.nodename");
         if (nodename) {
             args[argc++] = nodename;
         }
 
         zx::process proc;
-        if (devmgr::devmgr_launch(g_handles.svc_job, "netsvc", args, nullptr, -1, nullptr,
-                                  nullptr, 0, &proc, FS_ALL) == ZX_OK) {
+        zx_status_t status = devmgr::devmgr_launch(g_handles.svc_job, "netsvc", args, nullptr, -1,
+                                                   nullptr, nullptr, 0, &proc, FS_ALL);
+        if (status == ZX_OK) {
             if (vruncmd) {
                 zx_info_handle_basic_t info = {};
                 proc.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
                 proc.reset();
-                snprintf(vcmd, sizeof(vcmd), "dlog -f -t -p %zu", info.koid);
+                vcmd = fbl::StringPrintf("dlog -f -t -p %zu", info.koid);
             }
         } else {
             vruncmd = false;
@@ -686,21 +694,14 @@ int service_starter(void* arg) {
         __UNUSED auto leaked_handle = proc.release();
     }
 
-    auto coordinator = static_cast<devmgr::Coordinator*>(arg);
-    if (!devmgr::getenv_bool("virtcon.disable", false)) {
+    if (!service_args->boot_args.GetBool("virtcon.disable", false)) {
         // pass virtcon.* options along
-        const char* envp[16];
-        unsigned envc = 0;
-        char** e = environ;
-        while (*e && (envc < fbl::count_of(envp))) {
-            if (!strncmp(*e, "virtcon.", 8)) {
-                envp[envc++] = *e;
-            }
-            e++;
-        }
-        envp[envc] = nullptr;
+        fbl::Vector<const char*> env;
+        service_args->boot_args.Collect("virtcon.", &env);
+        env.push_back(nullptr);
 
-        const char* num_shells = coordinator->require_system() && !netboot ? "0" : "3";
+        const char* num_shells =
+            service_args->coordinator->require_system() && !netboot ? "0" : "3";
         size_t handle_count = 0;
         zx_handle_t handles[2];
         uint32_t types[2];
@@ -708,41 +709,42 @@ int service_starter(void* arg) {
         zx::channel virtcon_client, virtcon_server;
         zx_status_t status = zx::channel::create(0, &virtcon_client, &virtcon_server);
         if (status == ZX_OK) {
-            coordinator->set_virtcon_channel(std::move(virtcon_client));
+            service_args->coordinator->set_virtcon_channel(std::move(virtcon_client));
             handles[handle_count] = virtcon_server.release();
             types[handle_count] = PA_HND(PA_USER0, 0);
             ++handle_count;
         }
 
         zx::debuglog debuglog;
-        status =
-            zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE, &debuglog);
+        status = zx::debuglog::create(service_args->coordinator->root_resource(),
+                                      ZX_LOG_FLAG_READABLE, &debuglog);
         if (status == ZX_OK) {
             handles[handle_count] = debuglog.release();
             types[handle_count] = PA_HND(PA_USER0, 1);
             ++handle_count;
         }
 
-        const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells,
-                              "--run", vcmd, nullptr};
-        if (!vruncmd) {
-            args[3] = nullptr;
+        const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, nullptr, nullptr,
+                              nullptr};
+        if (vruncmd) {
+            args[3] = "--run";
+            args[4] = vcmd.data();
         }
-        devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, envp, -1, handles, types,
-                              handle_count, nullptr, FS_ALL);
+        devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, env.get(), -1, handles,
+                              types, handle_count, nullptr, FS_ALL);
     }
 
-    const char* epoch = getenv("devmgr.epoch");
+    const char* epoch = service_args->boot_args.Get("devmgr.epoch");
     if (epoch) {
         zx_time_t offset = ZX_SEC(atoi(epoch));
-        zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
+        zx_clock_adjust(service_args->coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
     }
 
-    do_autorun("autorun:boot", "zircon.autorun.boot");
+    do_autorun("autorun:boot", service_args->boot_args.Get("zircon.autorun.boot"));
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, fuchsia_starter, coordinator, "fuchsia-starter")) ==
-        thrd_success) {
+    int ret = thrd_create_with_name(&t, fuchsia_starter, arg, "fuchsia-starter");
+    if (ret == thrd_success) {
         thrd_detach(t);
     }
 
@@ -869,36 +871,49 @@ zx::channel fs_clone(const char* path) {
 
 int main(int argc, char** argv) {
     printf("devmgr: main()\n");
-    for (char** e = environ; *e != nullptr; e++) {
-        printf("cmdline: %s\n", *e);
+
+    devmgr::BootArgs boot_args;
+    zx::vmo args_vmo;
+    size_t args_size;
+    zx_status_t status = get_arguments(&args_vmo, &args_size);
+    if (status == ZX_OK) {
+        status = devmgr::BootArgs::Create(std::move(args_vmo), args_size, &boot_args);
+        if (status != ZX_OK) {
+            fprintf(stderr, "devmgr: failed to create kernel arguments: %d\n", status);
+            return 1;
+        }
+    } else {
+        fprintf(stderr, "devmgr: failed to get kernel arguments, assuming test "
+                        "environment and continuing\n");
     }
-    if (devmgr::getenv_bool("devmgr.verbose", false)) {
+
+    if (boot_args.GetBool("devmgr.verbose", false)) {
         devmgr::log_flags |= LOG_ALL;
     }
 
-    devmgr::DevmgrArgs args;
-    ParseArgs(argc, argv, &args);
+    devmgr::DevmgrArgs devmgr_args;
+    ParseArgs(argc, argv, &devmgr_args);
     // Set up the default values for our arguments if they weren't given.
-    if (args.driver_search_paths.size() == 0) {
-        args.driver_search_paths.push_back("/boot/driver");
+    if (devmgr_args.driver_search_paths.size() == 0) {
+        devmgr_args.driver_search_paths.push_back("/boot/driver");
     }
-    if (args.sys_device_driver == nullptr) {
-        args.sys_device_driver = "/boot/driver/platform-bus.so";
+    if (devmgr_args.sys_device_driver == nullptr) {
+        devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
     }
 
     g_handles.root_job = zx::job::default_job();
     g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
-    bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
+    bool require_system = boot_args.GetBool("devmgr.require-system", false);
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::CoordinatorConfig config;
     config.dispatcher = loop.dispatcher();
     config.require_system = require_system;
-    config.asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
-    config.suspend_fallback = devmgr::getenv_bool("devmgr.suspend-timeout-fallback", false);
-    config.suspend_debug = devmgr::getenv_bool("devmgr.suspend-timeout-debug", false);
+    config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
+    config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", false);
+    config.suspend_debug = boot_args.GetBool("devmgr.suspend-timeout-debug", false);
 
-    zx_status_t status = get_root_resource(&config.root_resource);
+    status = get_root_resource(&config.root_resource);
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
         return 1;
@@ -920,7 +935,7 @@ int main(int argc, char** argv) {
     }
 
     devmgr::Coordinator coordinator(std::move(config));
-    status = coordinator.InitializeCoreDevices(args.sys_device_driver);
+    status = coordinator.InitializeCoreDevices(devmgr_args.sys_device_driver);
     if (status != ZX_OK) {
         log(ERROR, "devmgr: failed to initialize core devices\n");
         return 1;
@@ -952,7 +967,7 @@ int main(int argc, char** argv) {
 
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
 
-    if (args.use_system_svchost) {
+    if (devmgr_args.use_system_svchost) {
         zx::channel dir_request;
         zx_status_t status = zx::channel::create(0, &dir_request, &g_handles.svchost_outgoing);
         if (status != ZX_OK) {
@@ -972,8 +987,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    const bool needs_svc_mount = !args.use_system_svchost;
-    devmgr_vfs_init(&coordinator, needs_svc_mount);
+    const bool needs_svc_mount = !devmgr_args.use_system_svchost;
+    devmgr_vfs_init(&coordinator, boot_args, needs_svc_mount);
 
     // If this is not a full Fuchsia build, do not setup appmgr services, as
     // this will delay startup.
@@ -989,9 +1004,10 @@ int main(int argc, char** argv) {
     }
     thrd_detach(t);
 
-    start_console_shell();
+    start_console_shell(boot_args);
 
-    ret = thrd_create_with_name(&t, service_starter, &coordinator, "service-starter");
+    ServiceArgs service_args{&coordinator, boot_args};
+    ret = thrd_create_with_name(&t, service_starter, &service_args, "service-starter");
     if (ret != thrd_success) {
         log(ERROR, "devmgr: failed to create service starter thread\n");
         return 1;
@@ -999,7 +1015,7 @@ int main(int argc, char** argv) {
     thrd_detach(t);
 
     fbl::unique_ptr<devmgr::DevhostLoaderService> loader_service;
-    if (devmgr::getenv_bool("devmgr.devhost.strict-linking", false)) {
+    if (boot_args.GetBool("devmgr.devhost.strict-linking", false)) {
         status = devmgr::DevhostLoaderService::Create(loop.dispatcher(), &loader_service);
         if (status != ZX_OK) {
             return 1;
@@ -1007,11 +1023,11 @@ int main(int argc, char** argv) {
         coordinator.set_loader_service(loader_service.get());
     }
 
-    for (const char* path : args.driver_search_paths) {
+    for (const char* path : devmgr_args.driver_search_paths) {
         devmgr::find_loadable_drivers(
             path, fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
     }
-    for (const char* driver : args.load_drivers) {
+    for (const char* driver : devmgr_args.load_drivers) {
         devmgr::load_driver(driver,
                             fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
     }

@@ -41,69 +41,56 @@ void SetupStdout() {
     fdio_bind_to_fd(logger, 1, 0);
 }
 
-// Load the cmdline arguments overrides from the bootfs
-void LoadCmdlineOverridesFromBootfs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs) {
+// Load the boot arguments from bootfs and environment variables.
+zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::vmo* out,
+                                uint64_t* size) {
     // TODO(teisenbe): Rename this file
-    const char* config_file = "/config/devmgr";
+    const char* config_path = "/config/devmgr";
+    fbl::Vector<char> buf;
 
-    zx::vmo vmo;
+    zx::vmo config_vmo;
     uint64_t file_size;
-    zx_status_t status = bootfs->Open(config_file, &vmo, &file_size);
+    zx_status_t status = bootfs->Open(config_path, &config_vmo, &file_size);
+    if (status == ZX_OK) {
+        auto config = std::make_unique<char[]>(file_size);
+        status = config_vmo.read(config.get(), 0, file_size);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        // Parse boot arguments file from bootfs.
+        std::string_view str(config.get(), file_size);
+        status = bootsvc::ParseBootArgs(std::move(str), &buf);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    // Add boot arguments from environment variables.
+    for (char** e = environ; *e != nullptr; e++) {
+        for (const char* x = *e; *x != 0; x++) {
+            buf.push_back(*x);
+        }
+        buf.push_back(0);
+    }
+
+    // Copy boot arguments into VMO.
+    zx::vmo args_vmo;
+    status = zx::vmo::create(buf.size(), ZX_VMO_NON_RESIZABLE, &args_vmo);
     if (status != ZX_OK) {
-        return;
+        return status;
     }
-
-    auto cfg = fbl::make_unique<char[]>(file_size + 1);
-    ZX_ASSERT(cfg);
-
-    status = vmo.read(cfg.get(), 0, file_size);
+    status = args_vmo.write(buf.get(), 0, buf.size());
     if (status != ZX_OK) {
-        printf("zx_vmo_read on /boot/config/devmgr BOOTFS VMO: %d (%s)\n",
-               status, zx_status_get_string(status));
-        return;
+        return status;
     }
-    cfg[file_size] = '\0';
-
-    // putenv() below takes ownership of pieces of this memory, so just release
-    // ownership of it now.
-    char* x = cfg.release();
-    while (*x) {
-        // skip any leading whitespace
-        while (isspace(*x)) {
-            x++;
-        }
-
-        // find the next line (seek for CR or NL)
-        char* next = x;
-        for (;;) {
-            // eof? we're all done then
-            if (*next == 0) {
-                return;
-            }
-            if ((*next == '\r') || (*next == '\n')) {
-                *next++ = 0;
-                break;
-            }
-            next++;
-        }
-
-        // process line if not a comment and not a zero-length name
-        if ((*x != '#') && (*x != '=')) {
-            for (char* y = x; *y != 0; y++) {
-                // space in name is invalid, give up
-                if (isspace(*y)) {
-                    break;
-                }
-                // valid looking env entry? store it
-                if (*y == '=') {
-                    putenv(x);
-                    break;
-                }
-            }
-        }
-
-        x = next;
+    status = args_vmo.replace(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE, &args_vmo);
+    if (status != ZX_OK) {
+        return status;
     }
+    *out = std::move(args_vmo);
+    *size = buf.size();
+    return ZX_OK;
 }
 
 struct LaunchNextProcessArgs {
@@ -155,7 +142,7 @@ int LaunchNextProcess(void* raw_ctx) {
     launchpad_t* lp;
     launchpad_create(0, next_program, &lp);
     launchpad_load_from_vmo(lp, program.release());
-    launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
+    launchpad_clone(lp, LP_CLONE_DEFAULT_JOB);
 
     launchpad_add_handle(lp, bootfs_conn.release(), PA_HND(PA_NS_DIR, count));
     nametable[count++] = "/boot";
@@ -179,7 +166,8 @@ int LaunchNextProcess(void* raw_ctx) {
     }
 
     const char* errmsg;
-    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
+    status = launchpad_go(lp, nullptr, &errmsg);
+    if (status != ZX_OK) {
         printf("bootsvc: launchpad %s failed: %s: %s\n", next_program, errmsg,
                zx_status_get_string(status));
     } else {
@@ -295,10 +283,6 @@ int main(int argc, char** argv) {
     status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
     ZX_ASSERT_MSG(status == ZX_OK, "bootfs add failed: %s\n", zx_status_get_string(status));
 
-    fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
-    svcfs_svc->AddService(fuchsia_boot_RootResource_Name,
-                          bootsvc::CreateRootResourceService(loop.dispatcher()));
-
     // Process the bootdata to get additional bootfs parts
     printf("bootsvc: Processing bootdata...\n");
     fbl::Vector<zx::vmo> bootdata = bootsvc::RetrieveBootdata();
@@ -306,9 +290,21 @@ int main(int argc, char** argv) {
     ZX_ASSERT_MSG(status == ZX_OK, "Processing bootdata failed: %s\n",
                   zx_status_get_string(status));
 
-    // Apply any cmdline overrides from bootfs
+    // Load boot arguments into VMO
     printf("bootsvc: Loading boot cmdline overrides...\n");
-    LoadCmdlineOverridesFromBootfs(bootfs_svc);
+    zx::vmo args_vmo;
+    uint64_t args_size = 0;
+    status = LoadBootArgs(bootfs_svc, &args_vmo, &args_size);
+    ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
+                  zx_status_get_string(status));
+
+    // Set up the svcfs service
+    fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
+    svcfs_svc->AddService(fuchsia_boot_RootResource_Name,
+                          bootsvc::CreateRootResourceService(loop.dispatcher()));
+    svcfs_svc->AddService(fuchsia_boot_Arguments_Name,
+                          bootsvc::CreateArgumentsService(loop.dispatcher(), std::move(args_vmo),
+                                                          args_size));
 
     // Consume certain VMO types from the startup handle table
     printf("bootsvc: Loading kernel VMOs...\n");

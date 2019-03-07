@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "zircon/types.h"
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
@@ -41,5 +40,9 @@ private:
 
 // Create a service to provide the root resource.
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher);
+
+// Create a service to access boot arguments.
+fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
+                                                uint64_t size);
 
 } // namespace bootsvc
