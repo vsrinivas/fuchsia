@@ -15,6 +15,16 @@
 
 namespace {
 
+/*** Common definitions ***/
+// The motivation for multiple sizes is to quantify any scaling behavior with
+// the size of the allocation.
+constexpr size_t kSmallBlockSizeBytes = 64;
+constexpr size_t kLargeBlockSizeBytes = 8192;
+
+// This value must accommodate the maximal value of |total_size_kbytes| in
+// RegisterRetainedMemTest().
+constexpr size_t kLiveAllocLimitBytes = 32u * 1024 * 1024;
+
 template <typename AllocatorTraits>
 class SlabDataBuf;
 
@@ -36,6 +46,44 @@ class SlabDataBuf : public fbl::SlabAllocated<AllocatorTraits>,
  private:
   char data[AllocatorTraits::kUserBufSize];
 };
+
+/*** Static slab allocator definitions ***/
+template <typename AllocatorTraits>
+class StaticSlabAllocator;
+
+template <size_t ObjSize, size_t SlabSize>
+struct StaticSlabAllocatorTraits
+    : public fbl::StaticSlabAllocatorTraits<
+          fbl::RefPtr<
+              SlabDataBuf<StaticSlabAllocatorTraits<ObjSize, SlabSize>>>,
+          SlabSize> {
+  using AllocT =
+      StaticSlabAllocator<StaticSlabAllocatorTraits<ObjSize, SlabSize>>;
+  static constexpr char kName[] = "SlabStatic";
+  static constexpr size_t kUserBufSize = ObjSize;
+  static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
+};
+
+template <typename AllocatorTraits>
+class StaticSlabAllocator {
+ public:
+  static constexpr size_t kUserBufSize = AllocatorTraits::kUserBufSize;
+  auto New() { return fbl::SlabAllocator<AllocatorTraits>::New(); }
+};
+
+using StaticSmallBlockAllocatorTraits =
+    StaticSlabAllocatorTraits<kSmallBlockSizeBytes,
+                              fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
+using StaticLargeBlockAllocatorTraits =
+    StaticSlabAllocatorTraits<kLargeBlockSizeBytes, kLargeBlockSizeBytes * 205>;
+
+static_assert(
+    fbl::SlabAllocator<StaticLargeBlockAllocatorTraits>::AllocsPerSlab ==
+        fbl::SlabAllocator<StaticSmallBlockAllocatorTraits>::AllocsPerSlab,
+    "Please adjust the SLAB_SIZE parameter for "
+    "StaticLargeBlockAllocatorTraits, so that the StaticLargeBlockAllocator "
+    "amortizes malloc() calls over as many slab objects as the Static "
+    "SmallBlockAllocator.");
 
 /*** Benchmark code ***/
 // Utility function called from RetainAndFreeOldest() and RetainAndFreeRandom().
@@ -167,54 +215,6 @@ void RegisterTest(const char* bench_name) {
     REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,               \
                                 StaticLargeBlockAllocatorTraits); \
   } while (0)
-
-/*** Common definitions ***/
-// The motivation for multiple sizes is to quantify any scaling behavior with
-// the size of the allocation.
-constexpr size_t kSmallBlockSizeBytes = 64;
-constexpr size_t kLargeBlockSizeBytes = 8192;
-
-// This value must accommodate the maximal value of |total_size_kbytes| in
-// RegisterRetainedMemTest().
-constexpr size_t kLiveAllocLimitBytes = 32u * 1024 * 1024;
-
-/*** Static slab allocator definitions ***/
-template <typename AllocatorTraits>
-class StaticSlabAllocator;
-
-template <size_t ObjSize, size_t SlabSize>
-struct StaticSlabAllocatorTraits
-    : public fbl::StaticSlabAllocatorTraits<
-          fbl::RefPtr<
-              SlabDataBuf<StaticSlabAllocatorTraits<ObjSize, SlabSize>>>,
-          SlabSize> {
-  using AllocT =
-      StaticSlabAllocator<StaticSlabAllocatorTraits<ObjSize, SlabSize>>;
-  static constexpr char kName[] = "SlabStatic";
-  static constexpr size_t kUserBufSize = ObjSize;
-  static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
-};
-
-template <typename AllocatorTraits>
-class StaticSlabAllocator {
- public:
-  static constexpr size_t kUserBufSize = AllocatorTraits::kUserBufSize;
-  auto New() { return fbl::SlabAllocator<AllocatorTraits>::New(); }
-};
-
-using StaticSmallBlockAllocatorTraits =
-    StaticSlabAllocatorTraits<kSmallBlockSizeBytes,
-                              fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>;
-using StaticLargeBlockAllocatorTraits =
-    StaticSlabAllocatorTraits<kLargeBlockSizeBytes, kLargeBlockSizeBytes * 205>;
-
-static_assert(
-    fbl::SlabAllocator<StaticLargeBlockAllocatorTraits>::AllocsPerSlab ==
-        fbl::SlabAllocator<StaticSmallBlockAllocatorTraits>::AllocsPerSlab,
-    "Please adjust the SLAB_SIZE parameter for "
-    "StaticLargeBlockAllocatorTraits, so that the StaticLargeBlockAllocator "
-    "amortizes malloc() calls over as many slab objects as the Static "
-    "SmallBlockAllocator.");
 
 void RegisterTests() {
   REGISTER_PERF_TEST(AllocAndFree);
