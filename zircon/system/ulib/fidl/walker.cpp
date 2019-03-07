@@ -5,30 +5,31 @@
 #include <cstdint>
 #include <limits>
 
-#include "walker.h"
+#include <lib/fidl/walker.h>
 
 namespace fidl {
 
 zx_status_t PrimaryObjectSize(const fidl_type_t* type,
                               size_t* out_size,
                               const char** out_error) {
-    auto set_error = [&out_error] (const char* msg) {
-        if (out_error) *out_error = msg;
+    auto set_error = [&out_error](const char* msg) {
+        if (out_error)
+            *out_error = msg;
     };
     if (type == nullptr) {
         set_error("fidl type cannot be null");
         return ZX_ERR_INVALID_ARGS;
     }
     switch (type->type_tag) {
-        case fidl::kFidlTypeStruct:
-            *out_size = type->coded_struct.size;
-            return ZX_OK;
-        case fidl::kFidlTypeTable:
-            *out_size = sizeof(fidl_vector_t);
-            return ZX_OK;
-        default:
-            set_error("Message must be a struct or a table");
-            return ZX_ERR_INVALID_ARGS;
+    case fidl::kFidlTypeStruct:
+        *out_size = type->coded_struct.size;
+        return ZX_OK;
+    case fidl::kFidlTypeTable:
+        *out_size = sizeof(fidl_vector_t);
+        return ZX_OK;
+    default:
+        set_error("Message must be a struct or a table");
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
@@ -36,8 +37,9 @@ zx_status_t StartingOutOfLineOffset(const fidl_type_t* type,
                                     uint32_t buffer_size,
                                     uint32_t* out_first_out_of_line,
                                     const char** out_error) {
-    auto set_error = [&out_error] (const char* msg) {
-        if (out_error) *out_error = msg;
+    auto set_error = [&out_error](const char* msg) {
+        if (out_error)
+            *out_error = msg;
     };
     size_t primary_size;
     zx_status_t status;
@@ -57,4 +59,4 @@ zx_status_t StartingOutOfLineOffset(const fidl_type_t* type,
     return ZX_OK;
 }
 
-}
+} // namespace fidl

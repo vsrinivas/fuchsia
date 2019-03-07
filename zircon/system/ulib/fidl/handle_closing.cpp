@@ -4,6 +4,8 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/visitor.h>
+#include <lib/fidl/walker.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
@@ -12,9 +14,6 @@
 #include <cstdlib>
 #include <limits>
 #include <stdalign.h>
-
-#include "visitor.h"
-#include "walker.h"
 
 namespace {
 
@@ -28,7 +27,7 @@ struct StartingPoint {
 struct Position {
     void* addr;
     Position operator+(uint32_t size) const {
-        return Position { reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(addr) + size) };
+        return Position{reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(addr) + size)};
     }
     Position& operator+=(uint32_t size) {
         *this = *this + size;
@@ -41,11 +40,11 @@ struct Position {
 };
 
 Position StartingPoint::ToPosition() const {
-    return Position { reinterpret_cast<void*>(addr) };
+    return Position{reinterpret_cast<void*>(addr)};
 }
 
 class FidlHandleCloser final : public fidl::Visitor<
-    fidl::MutatingVisitorTrait, StartingPoint, Position> {
+                                   fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
     FidlHandleCloser(const char** out_error_msg)
         : out_error_msg_(out_error_msg) {}
@@ -61,7 +60,7 @@ public:
                         uint32_t inline_size,
                         Position* out_position) {
         // Just follow the pointer into the child object
-        *out_position = Position { *object_ptr_ptr };
+        *out_position = Position{*object_ptr_ptr};
         return Status::kSuccess;
     }
 
@@ -106,8 +105,9 @@ private:
 } // namespace
 
 zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg) {
-    auto set_error = [&out_error_msg] (const char* msg) {
-        if (out_error_msg) *out_error_msg = msg;
+    auto set_error = [&out_error_msg](const char* msg) {
+        if (out_error_msg)
+            *out_error_msg = msg;
     };
     if (value == nullptr) {
         set_error("Cannot close handles for null message");
@@ -121,7 +121,7 @@ zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char*
     FidlHandleCloser handle_closer(out_error_msg);
     fidl::Walk(handle_closer,
                type,
-               StartingPoint { reinterpret_cast<uint8_t*>(value) });
+               StartingPoint{reinterpret_cast<uint8_t*>(value)});
 
     return handle_closer.status();
 }
@@ -130,4 +130,3 @@ zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* ms
                                    const char** out_error_msg) {
     return fidl_close_handles(type, msg->bytes, out_error_msg);
 }
-

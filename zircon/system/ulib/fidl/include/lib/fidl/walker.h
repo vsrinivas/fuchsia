@@ -13,10 +13,9 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/visitor.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-
-#include "visitor.h"
 
 namespace fidl {
 
@@ -429,7 +428,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             // Utility to locate the position of the Nth-ordinal envelope header
             auto envelope_position = [&frame](uint32_t ordinal) -> Position {
                 return frame->position +
-                    (ordinal - 1) * static_cast<uint32_t>(sizeof(fidl_envelope_t));
+                       (ordinal - 1) * static_cast<uint32_t>(sizeof(fidl_envelope_t));
             };
             if (table_frame.ordinal == 0) {
                 // Process the vector part of the table
@@ -784,4 +783,4 @@ zx_status_t StartingOutOfLineOffset(const fidl_type_t* type,
 
 } // namespace fidl
 
-#endif  // ZIRCON_SYSTEM_ULIB_FIDL_WALKER_H_
+#endif // ZIRCON_SYSTEM_ULIB_FIDL_WALKER_H_

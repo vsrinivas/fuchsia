@@ -93,8 +93,8 @@ public:
     // Status returned by visitor callbacks.
     enum class Status {
         kSuccess = 0,
-        kConstraintViolationError,       // recoverable errors
-        kMemoryError                     // overflow/out-of-bounds etc. Non-recoverable.
+        kConstraintViolationError, // recoverable errors
+        kMemoryError               // overflow/out-of-bounds etc. Non-recoverable.
     };
 
     // Compile-time interface checking. Code is invisible to the subclass.

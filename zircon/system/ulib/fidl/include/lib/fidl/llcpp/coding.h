@@ -10,8 +10,8 @@
 #include <lib/fidl/llcpp/traits.h>
 
 #ifdef __Fuchsia__
-#include <zircon/syscalls.h>
 #include <lib/zx/channel.h>
+#include <zircon/syscalls.h>
 #endif
 
 namespace fidl {
@@ -32,7 +32,7 @@ struct IsFidlType<AnyZeroArgMessage> : public std::true_type {};
 template <>
 struct IsFidlMessage<AnyZeroArgMessage> : public std::true_type {};
 
-template<typename FidlType>
+template <typename FidlType>
 struct DecodeResult {
     zx_status_t status = ZX_ERR_INTERNAL;
     const char* error = nullptr;
@@ -46,7 +46,7 @@ struct DecodeResult {
         : status(status), error(error), message(std::move(message)) {}
 };
 
-template<typename FidlType>
+template <typename FidlType>
 struct EncodeResult {
     zx_status_t status = ZX_ERR_INTERNAL;
     const char* error = nullptr;
@@ -106,8 +106,8 @@ DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg) {
 template <typename FidlType>
 EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
     EncodeResult<FidlType> result;
-    result.status = result.message.Initialize([&msg, &result] (BytePart& msg_bytes,
-                                                               HandlePart& msg_handles) {
+    result.status = result.message.Initialize([&msg, &result](BytePart& msg_bytes,
+                                                              HandlePart& msg_handles) {
         msg_bytes = std::move(msg.bytes_);
         if (NeedsEncodeDecode<FidlType>::value) {
             uint32_t actual_handles = 0;
@@ -251,8 +251,7 @@ EncodeResult<ResponseType> Call(zx::channel& chan,
             .wr_num_bytes = request.bytes().actual(),
             .wr_num_handles = request.handles().actual(),
             .rd_num_bytes = bytes.capacity(),
-            .rd_num_handles = handles.capacity()
-        };
+            .rd_num_handles = handles.capacity()};
 
         uint32_t actual_num_bytes = 0u;
         uint32_t actual_num_handles = 0u;
@@ -273,4 +272,4 @@ EncodeResult<ResponseType> Call(zx::channel& chan,
 
 } // namespace fidl
 
-#endif  // LIB_FIDL_LLCPP_CODING_H_
+#endif // LIB_FIDL_LLCPP_CODING_H_

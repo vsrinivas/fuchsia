@@ -8,13 +8,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <lib/fidl/envelope_frames.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/visitor.h>
+#include <lib/fidl/walker.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-
-#include "envelope_frames.h"
-#include "visitor.h"
-#include "walker.h"
 
 // TODO(kulakowski) Design zx_status_t error values.
 
@@ -30,7 +29,7 @@ struct StartingPoint {
 struct Position {
     uint32_t offset;
     Position operator+(uint32_t size) const {
-        return Position { offset + size };
+        return Position{offset + size};
     }
     Position& operator+=(uint32_t size) {
         offset += size;
@@ -43,7 +42,7 @@ struct Position {
 };
 
 Position StartingPoint::ToPosition() const {
-    return Position { 0 };
+    return Position{0};
 }
 
 constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
@@ -52,7 +51,7 @@ constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
 class FidlValidator final : public fidl::Visitor<
-    fidl::NonMutatingVisitorTrait, StartingPoint, Position> {
+                                fidl::NonMutatingVisitorTrait, StartingPoint, Position> {
 public:
     FidlValidator(uint32_t num_bytes, uint32_t num_handles, uint32_t next_out_of_line,
                   const char** out_error_msg)
@@ -82,7 +81,7 @@ public:
             SetError("message tried to access more than provided number of bytes");
             return Status::kMemoryError;
         }
-        *out_position = Position { next_out_of_line_ };
+        *out_position = Position{next_out_of_line_};
         next_out_of_line_ = new_offset;
         return Status::kSuccess;
     }
@@ -184,8 +183,9 @@ private:
 
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
                           uint32_t num_handles, const char** out_error_msg) {
-    auto set_error = [&out_error_msg] (const char* msg) {
-        if (out_error_msg) *out_error_msg = msg;
+    auto set_error = [&out_error_msg](const char* msg) {
+        if (out_error_msg)
+            *out_error_msg = msg;
     };
     if (bytes == nullptr) {
         set_error("Cannot validate null bytes");
@@ -204,7 +204,7 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
     FidlValidator validator(num_bytes, num_handles, next_out_of_line, out_error_msg);
     fidl::Walk(validator,
                type,
-               StartingPoint { reinterpret_cast<const uint8_t*>(bytes) });
+               StartingPoint{reinterpret_cast<const uint8_t*>(bytes)});
 
     if (validator.status() == ZX_OK) {
         if (!validator.DidConsumeAllBytes()) {

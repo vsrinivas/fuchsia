@@ -10,13 +10,12 @@
 #include <stdalign.h>
 #include <string.h>
 
+#include <lib/fidl/envelope_frames.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/visitor.h>
+#include <lib/fidl/walker.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-
-#include "envelope_frames.h"
-#include "visitor.h"
-#include "walker.h"
 
 namespace {
 
@@ -36,10 +35,9 @@ struct Position {
     // |offset| is an offset into the destination buffer
     uint32_t offset;
     Position operator+(uint32_t size) const {
-        return Position {
+        return Position{
             .object = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(object) + size),
-            .offset = offset + size
-        };
+            .offset = offset + size};
     }
     Position& operator+=(uint32_t size) {
         *this = *this + size;
@@ -58,16 +56,15 @@ struct Position {
 };
 
 Position StartingPoint::ToPosition() const {
-    return Position {
+    return Position{
         .object = source,
-        .offset = 0
-    };
+        .offset = 0};
 }
 
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
 class FidlLinearizer final : public fidl::Visitor<
-    fidl::MutatingVisitorTrait, StartingPoint, Position> {
+                                 fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
     FidlLinearizer(void* bytes, uint32_t num_bytes, uint32_t next_out_of_line,
                    const char** out_error_msg)
@@ -106,10 +103,9 @@ public:
                new_offset - next_out_of_line_ - inline_size);
 
         // Instruct the walker to traverse the pointee afterwards.
-        *out_position = Position {
+        *out_position = Position{
             .object = *object_ptr_ptr,
-            .offset = next_out_of_line_
-        };
+            .offset = next_out_of_line_};
 
         // Update the pointer within message buffer to point to the copy
         *object_ptr_ptr = &bytes_[next_out_of_line_];
@@ -201,8 +197,9 @@ private:
 zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer,
                            uint32_t num_bytes, uint32_t* out_num_bytes,
                            const char** out_error_msg) {
-    auto set_error = [&out_error_msg] (const char* msg) {
-        if (out_error_msg) *out_error_msg = msg;
+    auto set_error = [&out_error_msg](const char* msg) {
+        if (out_error_msg)
+            *out_error_msg = msg;
     };
     if (value == nullptr) {
         set_error("Cannot linearize with null starting object");
@@ -242,7 +239,7 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
                               out_error_msg);
     fidl::Walk(linearizer,
                type,
-               StartingPoint {
+               StartingPoint{
                    .source = value,
                    .destination = buffer,
                });
@@ -252,7 +249,7 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
     }
 
     // Clear out handles in the original objects
-    linearizer.ForEachHandle([] (zx_handle_t* handle_ptr) {
+    linearizer.ForEachHandle([](zx_handle_t* handle_ptr) {
         *handle_ptr = ZX_HANDLE_INVALID;
     });
 

@@ -16,21 +16,21 @@ library("fidl_base") {
     "lib/fidl/cpp/vector_view.h",
     "lib/fidl/internal_callable_traits.h",
     "lib/fidl/internal.h",
+    "lib/fidl/walker.h",
+    "lib/fidl/visitor.h",
+    "lib/fidl/envelope_frames.h",
   ]
   sources = [
     "builder.cpp",
     "decoding.cpp",
     "encoding.cpp",
-    "envelope_frames.h",
     "formatting.cpp",
     "linearizing.cpp",
     "message.cpp",
     "message_buffer.cpp",
     "message_builder.cpp",
     "validating.cpp",
-    "visitor.h",
     "walker.cpp",
-    "walker.h",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -46,16 +46,13 @@ library("fidl") {
   ]
   sources = [
     "epitaph.c",
-    "envelope_frames.h",
     "handle_closing.cpp",
     "transport.cpp",
-    "visitor.h",
-    "walker.h",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
-    "$zx/system/ulib/zircon",
     ":fidl_base",
+    "$zx/system/ulib/zircon",
   ]
 }
 
@@ -80,7 +77,7 @@ library("fidl-llcpp") {
     "$zx/system/ulib/zx:headers",
   ]
   deps = [
-    "$zx/system/ulib/zircon",
     ":fidl",
+    "$zx/system/ulib/zircon",
   ]
 }
