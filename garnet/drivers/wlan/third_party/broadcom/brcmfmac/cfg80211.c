@@ -1347,7 +1347,8 @@ static zx_status_t brcmf_cfg80211_get_station(struct net_device* ndev, const uin
     struct brcmf_if* ifp = ndev_to_if(ndev);
     zx_status_t err = ZX_OK;
 
-    brcmf_dbg(TRACE, "Enter, MAC %" PRId64 "\n", *(uint64_t*)mac & 0xffffffffffff);
+    brcmf_dbg(TRACE, "Enter, MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     if (!check_vif_up(ifp->vif)) {
         return ZX_ERR_IO;
     }
@@ -1751,7 +1752,8 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     ext_key = false;
     if (mac_addr && (req->cipher_suite_type != WPA_CIPHER_WEP_40) &&
             (req->cipher_suite_type != WPA_CIPHER_WEP_104)) {
-        brcmf_dbg(TRACE, "Ext key, mac %ld", *(uint64_t*)mac_addr & 0xffffffffffff);
+        brcmf_dbg(TRACE, "Ext key, mac %02x:%02x:%02x:%02x:%02x:%02x",
+                  mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
         ext_key = true;
     }
 
@@ -4125,8 +4127,10 @@ void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(TRACE, "Enter\n");
-    brcmf_dbg(CONN, "Join requested: ssid %.*s, bssid %lx", req->selected_bss.ssid.len,
-              req->selected_bss.ssid.data, *(uint64_t*)(req->selected_bss.bssid) & 0xffffffffffff);
+    const uint8_t* bssid = req->selected_bss.bssid;
+    brcmf_dbg(CONN, "Join requested: ssid %.*s, bssid %02x:%02x:%02x:%02x:%02x:%02x",
+              req->selected_bss.ssid.len, req->selected_bss.ssid.data,
+              bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
     memcpy(&ifp->bss, &req->selected_bss, sizeof(ifp->bss));
 
     wlanif_join_confirm_t result;
@@ -4146,9 +4150,12 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
     // At this point, the firmware should already have fully connected, and filled in
     // profile->bssid.
     if (memcmp(req->peer_sta_address, profile->bssid, ETH_ALEN)) {
-        brcmf_dbg(TEMP, " * * ERROR * * Requested MAC %lx !=  connected MAC %lx",
-                  *(uint64_t*)req->peer_sta_address & 0xffffffffffff,
-                  *(uint64_t*)profile->bssid & 0xffffffffffff);
+        const uint8_t* old_mac = profile->bssid;
+        const uint8_t* new_mac = req->peer_sta_address;
+        brcmf_err("Requested MAC (%02x:%02x:%02x:%02x:%02x:%02x) != "
+                  "connected MAC (%02x:%02x:%02x:%02x:%02x:%02x)\n",
+                  new_mac[0], new_mac[1], new_mac[2], new_mac[3], new_mac[4], new_mac[5],
+                  old_mac[0], old_mac[1], old_mac[2], old_mac[3], old_mac[4], old_mac[5]);
     }
     memcpy(&response.peer_sta_address, profile->bssid, ETH_ALEN);
     ndev->if_callbacks->auth_conf(ndev->if_callback_cookie, &response);
@@ -4168,8 +4175,9 @@ void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
     }
 
     if (ind->result_code == WLAN_AUTH_RESULT_SUCCESS) {
-        brcmf_dbg(CONN, "Successfully authenticated client %" PRId64 "\n",
-                  *(uint64_t*)ind->peer_sta_address & 0xffffffffffff);
+        const uint8_t* mac = ind->peer_sta_address;
+        brcmf_dbg(CONN, "Successfully authenticated client %02x:%02x:%02x:%02x:%02x:%02x\n",
+                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         return;
     }
 
@@ -4216,9 +4224,12 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
         brcmf_dbg_hex_dump(BRCMF_BYTES_ON(), req->rsne, req->rsne_len, "RSNE:\n");
     }
     if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
-        brcmf_dbg(TEMP, " * * ERROR * * Requested MAC %lx !=  connected MAC %lx",
-                  *(uint64_t*)req->peer_sta_address & 0xffffffffffff,
-                  *(uint64_t*)ifp->bss.bssid & 0xffffffffffff);
+        const uint8_t* old_mac = ifp->bss.bssid;
+        const uint8_t* new_mac = req->peer_sta_address;
+        brcmf_err("Requested MAC %02x:%02x:%02x:%02x:%02x:%02x != "
+                  "connected MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+                  new_mac[0], new_mac[1], new_mac[2], new_mac[3], new_mac[4], new_mac[5],
+                  old_mac[0], old_mac[1], old_mac[2], old_mac[3], old_mac[4], old_mac[5]);
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
     } else {
         brcmf_cfg80211_connect(ndev, req);
@@ -4237,8 +4248,9 @@ void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
     }
 
     if (ind->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
-        brcmf_dbg(CONN, "Successfully associated client %" PRId64 "\n",
-                  *(uint64_t*)ind->peer_sta_address & 0xffffffffffff);
+        const uint8_t* mac = ind->peer_sta_address;
+        brcmf_dbg(CONN, "Successfully associated client %02x:%02x:%02x:%02x:%02x:%02x\n",
+                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         return;
     }
 
@@ -4438,7 +4450,7 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
 
 static void brcmf_dump_query_info(wlanif_query_info_t* info) {
     zxlogf(INFO, "brcmfmac: Device capabilities as reported to wlanif:\n");
-    zxlogf(INFO, "brcmfmac:   mac_addr: %02X:%02X:%02X:%02X:%02X:%02X\n",
+    zxlogf(INFO, "brcmfmac:   mac_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
            info->mac_addr[0], info->mac_addr[1], info->mac_addr[2],
            info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
     zxlogf(INFO, "brcmfmac:   role(s): %s%s%s\n",
