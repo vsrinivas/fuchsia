@@ -46,8 +46,17 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx_time_t time) {
   }
 
   swapchain_records_[swapchain_index].frame_rendered_time = time;
-
   ++frame_rendered_count_;
+
+  // TODO(SCN-1324): We currently only return the time of the last received
+  // callback. This is not a problem right now, since we only have cases where
+  // with a single swapchain/display, but need to figure out how to handle the
+  // general case.
+  rendering_finished_time_ = time;
+  if (received_all_frame_rendered_callbacks() && frame_scheduler_) {
+    frame_scheduler_->OnFrameRendered(*this);
+  }
+
   if (received_all_callbacks()) {
     Finalize();
   }

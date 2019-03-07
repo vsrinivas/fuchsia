@@ -61,10 +61,16 @@ class FrameTimings : public escher::Reffable {
     return actual_presentation_time_;
   }
 
+  zx_time_t rendering_finished_time() const { return rendering_finished_time_; }
+
  private:
   // Called once all swapchains have reported back with their render-finished
   // and presentation times.
   void Finalize();
+
+  bool received_all_frame_rendered_callbacks() {
+    return frame_rendered_count_ == swapchain_records_.size();
+  }
 
   bool received_all_callbacks() {
     return frame_rendered_count_ == swapchain_records_.size() &&
@@ -80,6 +86,7 @@ class FrameTimings : public escher::Reffable {
   const uint64_t frame_number_;
   const zx_time_t target_presentation_time_;
   zx_time_t actual_presentation_time_ = 0;
+  zx_time_t rendering_finished_time_ = 0;
   size_t frame_rendered_count_ = 0;
   size_t frame_presented_count_ = 0;
   bool finalized_ = false;

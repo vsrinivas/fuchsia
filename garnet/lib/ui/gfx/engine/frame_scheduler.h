@@ -9,13 +9,12 @@
 
 #include "garnet/lib/ui/gfx/id.h"
 
+#include <lib/fxl/memory/weak_ptr.h>
 #include <lib/zx/time.h>
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-class Display;
 class FrameTimings;
 using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 using PresentationTime = uint64_t;
@@ -89,10 +88,14 @@ class FrameScheduler {
                                         scenic_impl::SessionId session) = 0;
 
  protected:
+  friend class FrameTimings;
+
   // Called when the frame drawn by RenderFrame() has been
   // presented to the display.
-  friend class FrameTimings;
   virtual void OnFramePresented(FrameTimings* timings) = 0;
+
+  // Called when the frame drawn by RenderFrame() has finished rendering.
+  virtual void OnFrameRendered(const FrameTimings& timings) = 0;
 };
 
 }  // namespace gfx

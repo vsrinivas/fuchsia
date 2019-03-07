@@ -19,6 +19,7 @@ namespace scenic_impl {
 namespace gfx {
 
 using SessionUpdate = SessionUpdater::SessionUpdate;
+class Display;
 
 class DefaultFrameScheduler : public FrameScheduler {
  public:
@@ -47,6 +48,9 @@ class DefaultFrameScheduler : public FrameScheduler {
  protected:
   // |FrameScheduler|
   void OnFramePresented(FrameTimings* timings) override;
+
+  // |FrameScheduler|
+  void OnFrameRendered(const FrameTimings& timings) override;
 
  private:
   // Used to compare presentation times so that the priority_queue acts as a min

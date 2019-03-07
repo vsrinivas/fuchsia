@@ -36,6 +36,13 @@ DefaultFrameScheduler::DefaultFrameScheduler(Display* display)
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
+void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
+  TRACE_INSTANT("gfx", "DefaultFrameScheduler::OnFrameRendered",
+                TRACE_SCOPE_PROCESS, "Timestamp",
+                timings.rendering_finished_time(), "Frame number",
+                timings.frame_number());
+}
+
 void DefaultFrameScheduler::RequestFrame(zx_time_t presentation_time) {
   if (frame_number_ < 5) {
     FXL_LOG(INFO) << "DefaultFrameScheduler::RequestFrame presentation_time="
@@ -234,8 +241,12 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
   if (delegate_.frame_renderer && delegate_.session_updater) {
     FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
 
+    const zx_time_t now = async_now(dispatcher_);
     auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
         this, ++frame_number_, presentation_time);
+
+    TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS, "Timestamp", now,
+                  "Frame number", frame_number_);
 
     // Apply all updates
     bool any_updates_were_applied = ApplyScheduledSessionUpdates(
