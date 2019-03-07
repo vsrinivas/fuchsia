@@ -579,15 +579,23 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     .map(|f| {
                         let mut accum = String::new();
                         accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
-                        accum.push_str(
-                            format!(
-                                "    {ty}{ptr} {c_name};",
-                                c_name = to_c_name(f.ident.to_string().as_str()),
-                                ptr = if false { "*" } else { "" },
-                                ty = ty_to_c_str(ast, &f.ty)?
-                            )
-                            .as_str(),
-                        );
+                        match f.ty {
+                            ast::Ty::Vector { .. } => {
+                                accum.push_str(format!(
+                                        "    {ty}{ptr} {c_name}_buffer;\n\
+                                            uint32_t {c_name}_size;",
+                                        c_name = to_c_name(f.ident.to_string().as_str()),
+                                        ptr = if false { "*" } else { "" },
+                                        ty = ty_to_c_str(ast, &f.ty)?).as_str());
+                                },
+                            _ => {
+                                accum.push_str(format!(
+                                        "    {ty}{ptr} {c_name};",
+                                        c_name = to_c_name(f.ident.to_string().as_str()),
+                                        ptr = if false { "*" } else { "" },
+                                        ty = ty_to_c_str(ast, &f.ty)?).as_str());
+                            }
+                        }
                         Ok(accum)
                     })
                     .collect::<Result<Vec<_>, Error>>()?
