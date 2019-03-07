@@ -1,8 +1,8 @@
 {
     "facets": {
         "fuchsia.netemul": {
+            "capture": true,
             "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/easy_netstack_cfg.cmx",
-            "disabled": true,
             "environment": {
                 "children": [
                     {
