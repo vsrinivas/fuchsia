@@ -120,7 +120,7 @@ int main(int argc, const char** argv) {
   if (status.is_ok()) {
     return 0;
   } else {
-    std::cerr << "Failed to start overnetstack: " << status << "\n";
+    OVERNET_TRACE(ERROR) << "Failed to start overnetstack: " << status << "\n";
     return static_cast<int>(status.code());
   }
 }
