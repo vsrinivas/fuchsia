@@ -1,9 +1,9 @@
 # OTA Tests
 
 This is the integration tests for Over the Air (OTA) updates. At a high level,
-it extends the current system image by inserting a new unique file into it. The
-test then is to trigger an OTA, and verify that file exists in the latest
-system.
+it downloads a package from the package repository, and attempts to update a
+device to that version. It verifies a successful OTA by checking if the
+/config/build-info/snapshot file is what we expect.
 
 This test is designed to be run against any system that is discoverable by the
 zircon tool netaddr. To run, first you will need a running vanilla version of
@@ -14,7 +14,7 @@ into the system image. You can do this by running:
 ```
 % fx set x64 \
   --product garnet/products/default.gni \
-  --monolith garnet/go/src/amber/tests/ota/ota-test.package \
+  --available garnet/packages/tests/system_ota \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"'
 % fx build
 ```
@@ -24,18 +24,13 @@ Finally, you can run the test with:
 ```
 % ~/fuchsia/out/x64/tools/system_ota_test \
   -fuchsia-build-dir ~/fuchsia/out/x64 \
-  -zircon-tools-dir ~/fuchsia/out/build-zircon/tools
-------------------------------------------------
-RUNNING TEST: /usr/local/google/home/etryzelaar/fuchsia/out/x64/host_tests/system_ota_test
-...
---- PASS: TestSystemOTA (8.68s)
-PASS
-
-SUMMARY: Ran 1 tests: 0 failed (10.000 sec)
+  -zircon-tools-dir ~/fuchsia/out/build-zircon/tools \
+  -builder-name fuchsia/ci/fuchsia-x64-release \
+  upgrade
 ```
 
 This will run through the whole test. There are more options to the test, to see
-them all run `fx run-host-tests system_ota_test -- -h`.
+them all run `~/fuchsia/out/x64/tools/system_ota_test -- -h`.
 
 ## Running the tests locally in QEMU
 
@@ -80,7 +75,7 @@ output to the terminal:
 ```
 % fx set x64 \
   --product garnet/products/default.gni \
-  --monolith garnet/go/src/amber/tests/ota/ota-test.package \
+  --available garnet/packages/tests/system_ota \
   --args 'extra_authorized_keys_file="//.ssh/authorized_keys"' \
   --args 'kernel_cmdline_args=["kernel.serial=legacy"]'
 % fx build
@@ -89,24 +84,3 @@ output to the terminal:
 With all that setup, you now should be able to test your OTAs.
 
 [OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
-
-# Adding New Tests
-
-The system OTA test takes advantage of the Go Test Runner to drive tests. At the
-moment the tests are not hermetic, so in order to create a new OTA test, create
-a new file like `some_test.go` with one single test that has the following
-structure:
-
-```
-func TestSomeOTA(t *testing.T) {
-        PrepareOTA(t)
-
-        // Here you can check (or modify the system before the OTA).
-        ...
-
-        TriggerOTA(t)
-
-        // Here you can check if an OTA succeeded.
-        ...
-}
-```

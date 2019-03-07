@@ -1,44 +1,37 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package ota
+package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"fuchsia.googlesource.com/system_ota_test/util"
 )
 
 var (
 	fuchsiaDir      = flag.String("fuchsia-dir", os.Getenv("FUCHSIA_DIR"), "fuchsia dir")
-	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 	sshKeyFile      = flag.String("ssh-private-key", "", "SSH private key file that can access the device")
-	repoDir         = flag.String("repo-dir", "", "amber repository dir")
 	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 	localHostname   = flag.String("local-hostname", "", "local hostname")
 	deviceName      = flag.String("device", "", "device name")
 	deviceHostname  = flag.String("device-hostname", "", "device hostname")
 	localDevmgrPath = flag.String("devmgr-config", "", "path to the new system version devmgr config file")
-
-	localDevmgrConfig []byte
+	lkgbPath        = flag.String("lkgb", "", "path to lkgb, default is $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb")
+	artifactsPath   = flag.String("artifacts", "", "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
+	builderName     = flag.String("builder-name", "", "download the amber repository from the latest build of this builder")
+	buildID         = flag.String("build-id", "", "download the amber repository from this build id")
 )
 
 func needFuchsiaDir() {
 	if *fuchsiaDir == "" {
 		log.Fatalf("either pass -fuchsia-dir or set $FUCHSIA_DIR")
-	}
-}
-
-func needFuchsiaBuildDir() {
-	if *fuchsiaBuildDir == "" {
-		log.Fatalf("either pass -fuchsia-build-dir or set $FUCHSIA_BUILD_DIR")
 	}
 }
 
@@ -48,9 +41,20 @@ func needZirconToolsDir() {
 	}
 }
 
-func init() {
+const usage = `Usage: %s [options] <command>
+
+System OTA Tests:
+    upgrade - upgrade a device to the specified build
+`
+
+func doMain() int {
 	var err error
 
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
+		fmt.Fprintln(os.Stderr)
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *deviceName != "" && *deviceHostname != "" {
@@ -60,11 +64,6 @@ func init() {
 	if *sshKeyFile == "" {
 		needFuchsiaDir()
 		*sshKeyFile = filepath.Join(*fuchsiaDir, ".ssh", "pkey")
-	}
-
-	if *repoDir == "" {
-		needFuchsiaBuildDir()
-		*repoDir = filepath.Join(*fuchsiaBuildDir, "amber-files", "repository")
 	}
 
 	if *localHostname == "" {
@@ -89,36 +88,33 @@ func init() {
 		}
 	}
 
-	if *localDevmgrPath == "" {
-		needFuchsiaBuildDir()
-		*localDevmgrPath = filepath.Join(*fuchsiaBuildDir, "obj", "build", "images", "devmgr_config.txt")
+	if *lkgbPath == "" {
+		needFuchsiaDir()
+		*lkgbPath = filepath.Join(*fuchsiaDir, "prebuilt", "tools", "lkgb", "lkgb")
 	}
 
-	// We want to make sure that /boot/config/devmgr config file changed to the
-	// value we expect. First, read the file from the build.
-	localDevmgrConfig, err = ioutil.ReadFile(*localDevmgrPath)
-	if err != nil {
-		log.Fatalf("failed to read %q: %s", localDevmgrPath, err)
+	if *artifactsPath == "" {
+		needFuchsiaDir()
+		*artifactsPath = filepath.Join(*fuchsiaDir, "prebuilt", "tools", "artifacts", "artifacts")
 	}
+
+	switch flag.Arg(0) {
+	case "upgrade":
+		DoUpgradeTest(flag.Args()[1:])
+	default:
+		flag.Usage()
+		return 1
+	}
+
+	return 0
 }
 
-func runOutput(name string, arg ...string) ([]byte, []byte, error) {
-	log.Printf("running: %s %q", name, arg)
-	c := exec.Command(name, arg...)
-	var o bytes.Buffer
-	var e bytes.Buffer
-	c.Stdout = &o
-	c.Stderr = &e
-	err := c.Run()
-	stdout := o.Bytes()
-	stderr := e.Bytes()
-	log.Printf("stdout: %s", stdout)
-	log.Printf("stderr: %s", stderr)
-	return stdout, stderr, err
+func main() {
+	os.Exit(doMain())
 }
 
 func netaddr(arg ...string) (string, error) {
-	stdout, stderr, err := runOutput(filepath.Join(*zirconToolsDir, "netaddr"), arg...)
+	stdout, stderr, err := util.RunCommand(filepath.Join(*zirconToolsDir, "netaddr"), arg...)
 	if err != nil {
 		return "", fmt.Errorf("netaddr failed: %s: %s", err, string(stderr))
 	}

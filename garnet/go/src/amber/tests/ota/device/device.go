@@ -13,17 +13,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"testing"
 	"time"
 
-	"system_ota/amber"
-	"system_ota/sshclient"
+	"fuchsia.googlesource.com/system_ota_test/amber"
+	"fuchsia.googlesource.com/system_ota_test/sshclient"
 
 	"golang.org/x/crypto/ssh"
-)
-
-const (
-	remoteDevmgrPath = "/boot/config/devmgr"
 )
 
 // Client manages the connection to the device.
@@ -86,11 +81,11 @@ func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
 }
 
 // WaitForDeviceToBeUp blocks until a device is available for access.
-func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
+func (c *Client) WaitForDeviceToBeUp() {
 	log.Printf("waiting for device %q to ping", c.deviceHostname)
 	path, err := exec.LookPath("/bin/ping")
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
 	for {
@@ -111,39 +106,37 @@ func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 	log.Printf("device up")
 }
 
-// GetCurrentDevmgrConfig fetches the device's current system version, as
-// expressed by the file /boot/config/devmgr.
-func (c *Client) GetCurrentDevmgrConfig(t *testing.T) []byte {
-	// Make sure that the device does not have the /boot/config/devmgr we
-	// are OTA-ing to. In addition, make sure our package and system
-	// package do not exist on the system.
-	devmgr, err := c.ReadRemotePath(remoteDevmgrPath)
+// GetBuildSnapshot fetch the device's current system version, as expressed by the file
+// /config/build-info/snapshot.
+func (c *Client) GetBuildSnapshot() []byte {
+	const buildInfoSnapshot = "/config/build-info/snapshot"
+	snapshot, err := c.ReadRemotePath(buildInfoSnapshot)
 	if err != nil {
-		t.Fatalf("failed to read %q", remoteDevmgrPath)
+		log.Fatalf("failed to read %q", buildInfoSnapshot)
 	}
 
-	return devmgr
+	return snapshot
 }
 
 // TriggerSystemOTA gets the device to perform a system update.
-func (c *Client) TriggerSystemOTA(t *testing.T) {
+func (c *Client) TriggerSystemOTA() {
 	log.Printf("triggering OTA")
 
 	err := c.Run("amber_ctl system_update", os.Stdout, os.Stderr)
 	if err != nil {
-		t.Fatalf("failed to trigger OTA: %s", err)
+		log.Fatalf("failed to trigger OTA: %s", err)
 	}
 
 	// Wait until we get a signal that we have disconnected
 	c.sshClient.WaitUntilDisconnected()
 	log.Printf("disconnected from device")
 
-	c.WaitForDeviceToBeUp(t)
+	c.WaitForDeviceToBeUp()
 	log.Printf("device rebooted")
 
-	c.waitForDevicePath(t, "/boot")
-	c.waitForDevicePath(t, "/system")
-	c.waitForDevicePath(t, "/pkgfs")
+	c.waitForDevicePath("/boot")
+	c.waitForDevicePath("/system")
+	c.waitForDevicePath("/pkgfs")
 }
 
 // ReadRemotePath read a file off the remote device.
@@ -159,7 +152,7 @@ func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 }
 
 // RemoteFileExists checks if a file exists on the remote device.
-func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
+func (c *Client) RemoteFileExists(path string) bool {
 	var stderr bytes.Buffer
 	err := c.Run(fmt.Sprintf("/bin/ls %s", path), ioutil.Discard, &stderr)
 	if err == nil {
@@ -172,14 +165,14 @@ func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
 		}
 	}
 
-	t.Fatalf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
+	log.Fatalf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
 
 	return false
 }
 
 // RegisterAmberSource adds the repository as a source inside the device's amber.
 func (c *Client) RegisterAmberSource(repoDir string, localHostname string) error {
-	log.Printf("registering devhost as update source")
+	log.Printf("registering devhost as update source: %s", repoDir)
 
 	configURL, configHash, err := amber.WriteConfig(repoDir, localHostname)
 	if err != nil {
@@ -195,7 +188,7 @@ func (c *Client) RegisterAmberSource(repoDir string, localHostname string) error
 }
 
 // Wait for the path to exist on the device.
-func (c *Client) waitForDevicePath(t *testing.T, path string) {
+func (c *Client) waitForDevicePath(path string) {
 	for {
 		log.Printf("waiting for %q to mount", path)
 		err := c.Run(fmt.Sprintf("/bin/ls %s", path), ioutil.Discard, ioutil.Discard)
