@@ -52,23 +52,37 @@ void describe_error(zx::channel h, zx_status_t status) {
     h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
+static fidl_union_tag_t device_or_tty(const fbl::RefPtr<zx_device_t>& dev) {
+    // only a couple of special cases for now
+    const char *libname = dev->driver->libname().c_str();
+    if ((strcmp(libname, "/boot/driver/pty.so") == 0) ||
+        (strcmp(libname, "/boot/driver/console.so") == 0)) {
+        return fuchsia_io_NodeInfoTag_tty;
+    } else {
+        return fuchsia_io_NodeInfoTag_device;
+    }
+}
+
 static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, fs::OnOpenMsg* msg,
                                       zx::eventpair* handle) {
     memset(msg, 0, sizeof(*msg));
     msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
-    msg->extra.tag = fuchsia_io_NodeInfoTag_device;
+    msg->extra.tag = device_or_tty(dev);
     msg->primary.s = ZX_OK;
     msg->primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
     handle->reset();
+    zx_handle_t* event = (msg->extra.tag == fuchsia_io_NodeInfoTag_device)
+        ? &msg->extra.device.event
+        : &msg->extra.tty.event;
     if (dev->event.is_valid()) {
         zx_status_t r;
         if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC, handle)) != ZX_OK) {
             msg->primary.s = r;
             return r;
         }
-        msg->extra.device.event = FIDL_HANDLE_PRESENT;
+        *event = FIDL_HANDLE_PRESENT;
     } else {
-        msg->extra.device.event = FIDL_HANDLE_ABSENT;
+        *event = FIDL_HANDLE_ABSENT;
     }
 
     return ZX_OK;
@@ -178,14 +192,17 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
     const auto& dev = conn->dev;
     fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
-    info.tag = fuchsia_io_NodeInfoTag_device;
+    info.tag = device_or_tty(dev);
     if (dev->event != ZX_HANDLE_INVALID) {
         zx::eventpair event;
         zx_status_t status = dev->event.duplicate(ZX_RIGHTS_BASIC, &event);
         if (status != ZX_OK) {
             return status;
         }
-        info.device.event = event.release();
+        zx_handle_t* event_handle = (info.tag == fuchsia_io_NodeInfoTag_device)
+            ? &info.device.event
+            : &info.tty.event;
+        *event_handle = event.release();
     }
     return fuchsia_io_NodeDescribe_reply(txn, &info);
 }

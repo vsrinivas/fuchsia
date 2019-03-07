@@ -1929,14 +1929,27 @@ int isatty(int fd) {
         return 0;
     }
 
-    int ret;
+    zx_handle_t handle = fdio_unsafe_borrow_channel(io);
+    if (handle == ZX_HANDLE_INVALID) {
+        errno = EBADF;
+        return 0;
+    }
+
+    int ret = 0;
+    fuchsia_io_NodeInfo info;
+    zx_status_t io_status = fuchsia_io_NodeDescribe(handle, &info);
+    if ((io_status == ZX_OK) && (info.tag == fuchsia_io_NodeInfoTag_tty)) {
+        ret = 1;
+    }
+
     // TODO(ZX-972)
     // For now, stdout etc. needs to be a tty for line buffering to
-    // work. So let's pretend those are ttys but nothing else is.
+    // work. So let's pretend those are ttys.
     if (fd == 0 || fd == 1 || fd == 2) {
         ret = 1;
-    } else {
-        ret = 0;
+    }
+
+    if (ret == 0) {
         errno = ENOTTY;
     }
 

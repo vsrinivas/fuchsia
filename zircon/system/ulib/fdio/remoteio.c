@@ -66,6 +66,11 @@ static void zxrio_object_close_handle_if_present(const fuchsia_io_NodeInfo* info
             zx_handle_close(info->device.event);
         }
         break;
+    case fuchsia_io_NodeInfoTag_tty:
+        if (info->tty.event != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->tty.event);
+        }
+        break;
     }
 }
 
@@ -121,6 +126,9 @@ static zx_status_t zxrio_decode_on_open_event(fdio_on_open_msg_t* info,
         goto handle_optional;
     case fuchsia_io_NodeInfoTag_device:
         handle_target = &info->extra.device.event;
+        goto handle_optional;
+    case fuchsia_io_NodeInfoTag_tty:
+        handle_target = &info->extra.tty.event;
         goto handle_optional;
 handle_optional:
         want_handle = *handle_target == FIDL_HANDLE_PRESENT;
@@ -368,6 +376,9 @@ static zx_status_t fdio_from_node_info(zx_handle_t handle,
         break;
     case fuchsia_io_NodeInfoTag_device:
         io = fdio_remote_create(handle, info->device.event);
+        break;
+    case fuchsia_io_NodeInfoTag_tty:
+        io = fdio_remote_create(handle, info->tty.event);
         break;
     case fuchsia_io_NodeInfoTag_vmofile: {
         uint64_t seek = 0u;

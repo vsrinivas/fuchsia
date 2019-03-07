@@ -18,6 +18,7 @@ union NodeInfo {
     Pipe pipe;
     Vmofile vmofile;
     Device device;
+    Tty tty;
 };
 
 /// The default protocol, interface information must be acquired some
@@ -48,6 +49,11 @@ struct Vmofile {
 
 /// The object may be cast to interface 'Device'.
 struct Device {
+    handle<event>? event;
+};
+
+/// The object may be cast to interface 'Tty'
+struct Tty {
     handle<event>? event;
 };
 
