@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::buffer_writer::BufferWriter,
+    crate::{appendable::Appendable, buffer_writer::BufferWriter},
     bitfield::bitfield,
     failure::{bail, ensure, Error},
     zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned},
@@ -143,11 +143,12 @@ impl<B: ByteSliceMut> InfoElementWriter<B> {
     pub fn write_ssid(mut self, ssid: &[u8]) -> Result<Self, Error> {
         ensure!(ssid.len() <= SSID_IE_MAX_BODY_LEN, "SSID '{:x?}' > 32 bytes", ssid);
         ensure!(
-            self.w.remaining_bytes() >= IE_HDR_LEN + ssid.len(),
+            self.w.bytes_remaining() >= IE_HDR_LEN + ssid.len(),
             "buffer too short to write SSID IE"
         );
-        let w = self.w.write_bytes(&[IE_ID_SSID, ssid.len() as u8])?.write_bytes(ssid)?;
-        Ok(InfoElementWriter { w })
+        self.w.append_bytes(&[IE_ID_SSID, ssid.len() as u8])?;
+        self.w.append_bytes(ssid)?;
+        Ok(self)
     }
 
     pub fn write_supported_rates(mut self, rates: &[u8]) -> Result<Self, Error> {
@@ -159,23 +160,22 @@ impl<B: ByteSliceMut> InfoElementWriter<B> {
             rates.len()
         );
         ensure!(
-            self.w.remaining_bytes() >= IE_HDR_LEN + rates.len(),
+            self.w.bytes_remaining() >= IE_HDR_LEN + rates.len(),
             "buffer too short to write supported rates IE"
         );
 
-        let w =
-            self.w.write_bytes(&[IE_ID_SUPPORTED_RATES, rates.len() as u8])?.write_bytes(rates)?;
-        Ok(InfoElementWriter { w })
+        self.w.append_bytes(&[IE_ID_SUPPORTED_RATES, rates.len() as u8])?;
+        self.w.append_bytes(rates)?;
+        Ok(self)
     }
 
     pub fn write_dsss_param_set(mut self, chan: u8) -> Result<Self, Error> {
         ensure!(
-            self.w.remaining_bytes() >= IE_HDR_LEN + DSSS_PARAM_SET_IE_BODY_LEN,
+            self.w.bytes_remaining() >= IE_HDR_LEN + DSSS_PARAM_SET_IE_BODY_LEN,
             "buffer too short to write DSSS param set IE"
         );
-        let w =
-            self.w.write_bytes(&[IE_ID_DSSS_PARAM_SET, DSSS_PARAM_SET_IE_BODY_LEN as u8, chan])?;
-        Ok(InfoElementWriter { w })
+        self.w.append_bytes(&[IE_ID_DSSS_PARAM_SET, DSSS_PARAM_SET_IE_BODY_LEN as u8, chan])?;
+        Ok(self)
     }
 
     pub fn write_tim<C: ByteSliceMut>(mut self, tim: &Tim<C>) -> Result<Self, Error> {
@@ -190,16 +190,14 @@ impl<B: ByteSliceMut> InfoElementWriter<B> {
             tim.partial_virtual_bmp.len()
         );
         ensure!(
-            self.w.remaining_bytes() >= IE_HDR_LEN + tim.len(),
+            self.w.bytes_remaining() >= IE_HDR_LEN + tim.len(),
             "buffer too short to write TIM IE"
         );
 
-        let w = self
-            .w
-            .write_bytes(&[IE_ID_TIM, tim.len() as u8])?
-            .write_bytes(&[tim.dtim_count, tim.dtim_period, tim.bmp_ctrl])?
-            .write_bytes(&tim.partial_virtual_bmp[..])?;
-        Ok(InfoElementWriter { w })
+        self.w.append_bytes(&[IE_ID_TIM, tim.len() as u8])?;
+        self.w.append_bytes(&[tim.dtim_count, tim.dtim_period, tim.bmp_ctrl])?;
+        self.w.append_bytes(&tim.partial_virtual_bmp[..])?;
+        Ok(self)
     }
 
     pub fn close(mut self) -> BufferWriter<B> {

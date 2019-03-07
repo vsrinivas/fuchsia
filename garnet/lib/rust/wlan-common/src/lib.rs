@@ -10,6 +10,7 @@
 
 #[macro_use]
 mod utils;
+pub mod appendable;
 pub mod buffer_reader;
 pub mod buffer_writer;
 pub mod channel;

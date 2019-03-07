@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        buffer_writer::{BufferWriter, ByteSliceMut, LayoutVerified},
+        appendable::Appendable,
         mac::{
             self, Addr4, DataHdr, FrameControl, HtControl, QosControl, RawHtControl, RawQosControl,
         },
@@ -59,11 +59,11 @@ impl OptionalFields {
     }
 }
 
-pub fn write_data_hdr<B: ByteSliceMut>(
-    w: BufferWriter<B>,
+pub fn write_data_hdr<B: Appendable>(
+    w: &mut B,
     mut fixed: FixedFields,
     optional: OptionalFields,
-) -> Result<BufferWriter<B>, Error> {
+) -> Result<(), Error> {
     fixed.frame_ctrl.set_frame_type(mac::FRAME_TYPE_DATA);
     if optional.addr4.is_some() {
         fixed.frame_ctrl.set_from_ds(true);
@@ -88,59 +88,38 @@ pub fn write_data_hdr<B: ByteSliceMut>(
         ensure!(!fixed.frame_ctrl.htc_order(), "htc_order bit set while HT-Control is absent");
     }
 
-    let (mut data_hdr, mut w) = w.reserve_zeroed::<DataHdr>()?;
+    let mut data_hdr = w.append_value_zeroed::<DataHdr>()?;
     data_hdr.set_frame_ctrl(fixed.frame_ctrl.value());
     data_hdr.addr1 = fixed.addr1;
     data_hdr.addr2 = fixed.addr2;
     data_hdr.addr3 = fixed.addr3;
     data_hdr.set_seq_ctrl(fixed.seq_ctrl);
 
-    let mut w = match optional.addr4 {
-        None => w,
-        Some(addr4_value) => {
-            let (mut addr4, mut w) = w.reserve_zeroed::<Addr4>()?;
-            *addr4 = addr4_value;
-            w
-        }
-    };
-
-    let mut w = match optional.qos_ctrl {
-        None => w,
-        Some(qos_ctrl_bitfield) => {
-            let (mut qos_ctrl, mut w) = w.reserve_zeroed::<RawQosControl>()?;
-            qos_ctrl.set(qos_ctrl_bitfield.value());
-            w
-        }
-    };
-
-    let mut w = match optional.ht_ctrl {
-        None => w,
-        Some(ht_ctrl_bitfield) => {
-            let (mut ht_ctrl, mut w) = w.reserve_zeroed::<RawHtControl>()?;
-            ht_ctrl.set(ht_ctrl_bitfield.value());
-            w
-        }
-    };
-
-    Ok(w)
+    if let Some(addr4) = optional.addr4.as_ref() {
+        w.append_value(addr4)?;
+    }
+    if let Some(qos_ctrl) = optional.qos_ctrl.as_ref() {
+        w.append_value(qos_ctrl)?;
+    }
+    if let Some(ht_ctrl) = optional.ht_ctrl.as_ref() {
+        w.append_value(ht_ctrl)?;
+    }
+    Ok(())
 }
 
-pub fn write_snap_llc_hdr<B: ByteSliceMut>(
-    w: BufferWriter<B>,
-    protocol_id: u16,
-) -> Result<BufferWriter<B>, Error> {
-    let (mut llc_hdr, w) = w.reserve_zeroed::<mac::LlcHdr>()?;
+pub fn write_snap_llc_hdr<B: Appendable>(w: &mut B, protocol_id: u16) -> Result<(), Error> {
+    let mut llc_hdr = w.append_value_zeroed::<mac::LlcHdr>()?;
     llc_hdr.dsap = mac::LLC_SNAP_EXTENSION;
     llc_hdr.ssap = mac::LLC_SNAP_EXTENSION;
     llc_hdr.control = mac::LLC_SNAP_UNNUMBERED_INFO;
     llc_hdr.oui = mac::LLC_SNAP_OUI;
     llc_hdr.set_protocol_id(protocol_id);
-    Ok(w)
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::buffer_writer::BufferWriter};
 
     #[test]
     fn fixed_fields_sent_from_client() {
@@ -160,7 +139,7 @@ mod tests {
     fn too_small_buffer() {
         let mut bytes = vec![0u8; 20];
         let result = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut BufferWriter::new(&mut bytes[..]),
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),
                 addr1: [1; 6],
@@ -175,9 +154,8 @@ mod tests {
 
     #[test]
     fn invalid_ht_configuration() {
-        let mut bytes = vec![0u8; 30];
         let result = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut vec![],
             FixedFields {
                 frame_ctrl: FrameControl(0b10110001_00110000),
                 addr1: [1; 6],
@@ -192,9 +170,8 @@ mod tests {
 
     #[test]
     fn invalid_addr4_configuration() {
-        let mut bytes = vec![0u8; 30];
         let result = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut vec![],
             FixedFields {
                 frame_ctrl: FrameControl(0b00110011_00110000),
                 addr1: [1; 6],
@@ -209,9 +186,8 @@ mod tests {
 
     #[test]
     fn invalid_qos_configuration() {
-        let mut bytes = vec![0u8; 30];
         let result = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut vec![],
             FixedFields {
                 frame_ctrl: FrameControl(0b00110000_10110000),
                 addr1: [1; 6],
@@ -226,9 +202,9 @@ mod tests {
 
     #[test]
     fn write_fixed_fields_only() {
-        let mut bytes = vec![0u8; 30];
-        let w = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+        let mut bytes = vec![];
+        write_data_hdr(
+            &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_0011_00_00),
                 addr1: [1; 6],
@@ -240,12 +216,10 @@ mod tests {
         )
         .expect("Failed writing data frame");
 
-        assert_eq!(w.written_bytes(), 24);
-
         #[rustfmt::skip]
         assert_eq!(
-            bytes,
-            [
+            &bytes[..],
+            &[
                 // Data Header
                 0b0011_10_00u8, 0b00110001, // Frame Control
                 0, 0, // duration
@@ -253,17 +227,15 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr2
                 3, 3, 3, 3, 3, 3, // addr3
                 0b10010000, 0b11000000, // Sequence Control
-                // Trailing bytes
-                0, 0, 0, 0, 0, 0,
             ]
         );
     }
 
     #[test]
     fn write_addr4_ht_ctrl() {
-        let mut bytes = vec![0u8; 35];
-        let w = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+        let mut bytes = vec![];
+        write_data_hdr(
+            &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00111000),
                 addr1: [1; 6],
@@ -278,8 +250,6 @@ mod tests {
             },
         )
         .expect("Failed writing data frame");
-
-        assert_eq!(w.written_bytes(), 34);
 
         #[rustfmt::skip]
         assert_eq!(
@@ -296,17 +266,15 @@ mod tests {
                 4, 4, 4, 4, 4, 4,
                 // Ht Control
                 0b10101010, 0b11110000, 0b11000011, 0b10101111,
-                // Trailing byte
-                0,
             ][..]
         );
     }
 
     #[test]
     fn write_qos_ctrl() {
-        let mut bytes = vec![0u8; 30];
+        let mut bytes = vec![];
         let w = write_data_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00111000),
                 addr1: [1; 6],
@@ -322,8 +290,6 @@ mod tests {
         )
         .expect("Failed writing data frame");
 
-        assert_eq!(w.written_bytes(), 26);
-
         #[rustfmt::skip]
         assert_eq!(
             &bytes[..],
@@ -337,28 +303,22 @@ mod tests {
                 0b10010000, 0b11000000, // Sequence Control
                 // Qos Control
                 0b10101010, 0b11110000,
-                // Trailing bytes
-                0, 0, 0, 0,
             ][..]
         );
     }
 
     #[test]
     fn write_llc_hdr() {
-        let mut bytes = vec![0u8; 10];
-        let w = write_snap_llc_hdr(BufferWriter::new(&mut bytes[..]), 0x888E)
-            .expect("Failed writing LLC header");
+        let mut bytes = vec![];
+        let w = write_snap_llc_hdr(&mut bytes, 0x888E).expect("Failed writing LLC header");
 
-        assert_eq!(w.written_bytes(), 8);
         #[rustfmt::skip]
         assert_eq!(
-            bytes,
-            [
+            &bytes[..],
+            &[
                 0xAA, 0xAA, 0x03, // DSAP, SSAP, Control
                 0, 0, 0, // OUI
                 0x88, 0x8E, // Protocol ID
-                // Trailing bytes
-                0, 0,
             ]
         );
     }

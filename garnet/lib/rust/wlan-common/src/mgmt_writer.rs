@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        appendable::Appendable,
         buffer_writer::{BufferWriter, ByteSliceMut},
         mac::{self, FrameControl, HtControl, MgmtHdr, RawHtControl},
     },
@@ -45,11 +46,11 @@ impl std::fmt::Debug for FixedFields {
     }
 }
 
-pub fn write_mgmt_hdr<B: ByteSliceMut>(
-    w: BufferWriter<B>,
+pub fn write_mgmt_hdr<B: Appendable>(
+    w: &mut B,
     mut fixed: FixedFields,
     ht_ctrl: Option<HtControl>,
-) -> Result<BufferWriter<B>, Error> {
+) -> Result<(), Error> {
     fixed.frame_ctrl.set_frame_type(mac::FRAME_TYPE_MGMT);
     if ht_ctrl.is_some() {
         fixed.frame_ctrl.set_htc_order(true);
@@ -57,21 +58,17 @@ pub fn write_mgmt_hdr<B: ByteSliceMut>(
         ensure!(!fixed.frame_ctrl.htc_order(), "htc_order bit set while HT-Control is absent");
     }
 
-    let (mut mgmt_hdr, mut w) = w.reserve_zeroed::<MgmtHdr>()?;
+    let mut mgmt_hdr = w.append_value_zeroed::<MgmtHdr>()?;
     mgmt_hdr.set_frame_ctrl(fixed.frame_ctrl.value());
     mgmt_hdr.addr1 = fixed.addr1;
     mgmt_hdr.addr2 = fixed.addr2;
     mgmt_hdr.addr3 = fixed.addr3;
     mgmt_hdr.set_seq_ctrl(fixed.seq_ctrl);
 
-    match ht_ctrl {
-        None => Ok(w),
-        Some(ht_ctrl_bitfield) => {
-            let (mut ht_ctrl, mut w) = w.reserve_zeroed::<RawHtControl>()?;
-            ht_ctrl.set(ht_ctrl_bitfield.value());
-            Ok(w)
-        }
+    if let Some(ht_ctrl) = ht_ctrl.as_ref() {
+        w.append_value(ht_ctrl);
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -95,7 +92,7 @@ mod tests {
     fn too_small_buffer() {
         let mut bytes = vec![0u8; 20];
         let result = write_mgmt_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut BufferWriter::new(&mut bytes[..]),
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),
                 addr1: [1; 6],
@@ -110,9 +107,9 @@ mod tests {
 
     #[test]
     fn invalid_ht_configuration() {
-        let mut bytes = vec![0u8; 30];
+        let mut bytes = vec![];
         let result = write_mgmt_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b10110001_00110000),
                 addr1: [1; 6],
@@ -127,9 +124,9 @@ mod tests {
 
     #[test]
     fn write_fixed_fields_only() {
-        let mut bytes = vec![0u8; 30];
+        let mut bytes = vec![];
         let w = write_mgmt_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),
                 addr1: [1; 6],
@@ -141,11 +138,9 @@ mod tests {
         )
         .expect("Failed writing mgmt frame");
 
-        assert_eq!(w.written_bytes(), 24);
-
         #[rustfmt::skip]
         assert_eq!(
-            bytes,
+            &bytes[..],
             [
                 // Data Header
                 0b00110000u8, 0b00110001, // Frame Control
@@ -154,17 +149,15 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr2
                 3, 3, 3, 3, 3, 3, // addr3
                 0b10010000, 0b11000000, // Sequence Control
-                // Trailing bytes
-                0, 0, 0, 0, 0, 0,
             ]
         );
     }
 
     #[test]
     fn write_ht_ctrl() {
-        let mut bytes = vec![0u8; 30];
+        let mut bytes = vec![];
         let w = write_mgmt_hdr(
-            BufferWriter::new(&mut bytes[..]),
+            &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),
                 addr1: [1; 6],
@@ -175,8 +168,6 @@ mod tests {
             Some(HtControl(0b10101111_11000011_11110000_10101010)),
         )
         .expect("Failed writing mgmt frame");
-
-        assert_eq!(w.written_bytes(), 28);
 
         #[rustfmt::skip]
         assert_eq!(
@@ -191,8 +182,6 @@ mod tests {
                 0b10010000, 0b11000000, // Sequence Control
                 // Ht Control
                 0b10101010, 0b11110000, 0b11000011, 0b10101111,
-                // Trailing byte
-                0, 0,
             ][..]
         );
     }

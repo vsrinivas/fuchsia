@@ -107,9 +107,9 @@ impl SequenceControl {
 
 // IEEE Std 802.11-2016, 9.2.4.6
 bitfield! {
-    #[derive(PartialEq)]
+    #[repr(C)]
+    #[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
     pub struct HtControl(u32);
-    impl Debug;
 
     pub vht, set_vht: 0;
     // Structure of this middle section is defined in 9.2.4.6.2 for HT,
@@ -148,8 +148,9 @@ bitfield! {
 
 // IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
 bitfield! {
+    #[repr(C)]
+    #[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
     pub struct QosControl(u16);
-    impl Debug;
 
     pub tid, set_tid: 3, 0;
     pub eosp, set_eosp: 4;
