@@ -49,9 +49,9 @@ source_set("datagram_stream_test") {
   deps = [
     ":datagram_stream",
     "//sdk/fidl/fuchsia.overnet.protocol",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/testing:flags",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -80,8 +80,8 @@ source_set("linearizer_fuzzer_lib") {
   ]
   deps = [
     ":linearizer",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
     "//src/connectivity/overnet/lib/vocabulary:optional",
   ]
 }

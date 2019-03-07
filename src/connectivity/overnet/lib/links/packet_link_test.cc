@@ -5,9 +5,9 @@
 #include "src/connectivity/overnet/lib/links/packet_link.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/testing/flags.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 
 using testing::_;
 using testing::Mock;

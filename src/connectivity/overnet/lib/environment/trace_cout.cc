@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include <iostream>
 
 namespace overnet {

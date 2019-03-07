@@ -61,15 +61,3 @@ source_set("test_timer_test") {
     "//third_party/googletest:gtest",
   ]
 }
-
-source_set("trace_cout") {
-  testonly = true
-  sources = [
-    "trace_cout.cc",
-    "trace_cout.h",
-  ]
-  deps = [
-    "//src/connectivity/overnet/lib/environment:timer",
-    "//src/connectivity/overnet/lib/environment:trace",
-  ]
-}

@@ -6,11 +6,11 @@
 #include <tuple>
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/endpoint/router_endpoint.h"
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/links/packet_link.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
 #include "src/connectivity/overnet/lib/testing/flags.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Two node fling

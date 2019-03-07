@@ -4,11 +4,11 @@
 
 #include <fuchsia/overnet/streamlinkfuzzer/cpp/fidl.h>
 #include <queue>
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/links/stream_link.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"
 #include "src/connectivity/overnet/lib/routing/router.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 
 using namespace overnet;
 

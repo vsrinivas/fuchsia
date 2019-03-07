@@ -7,9 +7,9 @@
 #include <iostream>
 #include <map>
 #include <random>
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 #include "src/connectivity/overnet/lib/vocabulary/closed_ptr.h"
 
 namespace overnet {

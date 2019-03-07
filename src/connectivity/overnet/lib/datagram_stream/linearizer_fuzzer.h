@@ -4,8 +4,8 @@
 
 #include <vector>
 #include "src/connectivity/overnet/lib/datagram_stream/linearizer.h"
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 
 namespace overnet {

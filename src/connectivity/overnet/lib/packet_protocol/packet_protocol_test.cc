@@ -6,12 +6,12 @@
 #include <memory>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/packet_protocol/aead_codec.h"
 #include "src/connectivity/overnet/lib/packet_protocol/packet_protocol_fuzzer.h"
 #include "src/connectivity/overnet/lib/protocol/serialization_helpers.h"
 #include "src/connectivity/overnet/lib/testing/flags.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 #include "src/connectivity/overnet/lib/vocabulary/closed_ptr.h"
 
 using testing::_;

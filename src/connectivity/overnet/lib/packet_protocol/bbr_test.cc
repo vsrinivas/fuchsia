@@ -9,10 +9,10 @@
 #include <random>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/testing/csv_writer.h"
 #include "src/connectivity/overnet/lib/testing/flags.h"
 #include "src/connectivity/overnet/lib/testing/test_timer.h"
-#include "src/connectivity/overnet/lib/testing/trace_cout.h"
 
 using testing::AllOf;
 using testing::Ge;

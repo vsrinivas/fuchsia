@@ -49,9 +49,9 @@ source_set("router_test") {
   ]
   deps = [
     ":router",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/testing:flags",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -97,9 +97,9 @@ fuzz_target("routing_table_fuzzer") {
   deps = [
     ":fuchsia.overnet.routingtablefuzzer",
     ":routing_table",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/protocol:fidl",
     "//src/connectivity/overnet/lib/protocol:varint",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
   ]
 }

@@ -72,10 +72,10 @@ source_set("bbr_test") {
   ]
   deps = [
     ":bbr",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/testing:csv_writer",
     "//src/connectivity/overnet/lib/testing:flags",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -111,8 +111,8 @@ source_set("packet_protocol_fuzzer_lib") {
   ]
   deps = [
     ":packet_protocol",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
     "//src/connectivity/overnet/lib/vocabulary:closed_ptr",
   ]
 }
@@ -126,10 +126,10 @@ source_set("packet_protocol_test") {
     ":aead_codec",
     ":packet_protocol",
     ":packet_protocol_fuzzer_lib",
+    "//src/connectivity/overnet/lib/environment:trace_cout",
     "//src/connectivity/overnet/lib/protocol:serialization_helpers",
     "//src/connectivity/overnet/lib/testing:flags",
     "//src/connectivity/overnet/lib/testing:test_timer",
-    "//src/connectivity/overnet/lib/testing:trace_cout",
     "//src/connectivity/overnet/lib/vocabulary:closed_ptr",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

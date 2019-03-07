@@ -54,3 +54,15 @@ source_set("trace_test") {
     "//third_party/googletest:gtest",
   ]
 }
+
+# trace_cout
+source_set("trace_cout") {
+  sources = [
+    "trace_cout.cc",
+    "trace_cout.h",
+  ]
+  deps = [
+    ":timer",
+    ":trace",
+  ]
+}
