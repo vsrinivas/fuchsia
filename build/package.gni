@@ -557,8 +557,12 @@ template("package") {
       dest = "bin/${dest}"
 
       if (defined(binary.shell) && binary.shell) {
+        shellfile = target_gen_dir + "/" + dest + ".shell"
+        write_file(shellfile, [
+          "#!resolve fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}",
+        ])
         shell_binaries += [
-          "fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}",
+          "${dest}=" + rebase_path(shellfile, root_build_dir)
         ]
       }
 
