@@ -563,12 +563,11 @@ template("package") {
 
       if (defined(binary.shell) && binary.shell) {
         shellfile = target_gen_dir + "/" + dest + ".shell"
-        write_file(shellfile, [
-          "#!resolve fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}",
-        ])
-        shell_binaries += [
-          "${dest}=" + rebase_path(shellfile, root_build_dir)
-        ]
+        write_file(
+            shellfile,
+            [ "#!resolve fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}" ])
+        shell_binaries +=
+            [ "${dest}=" + rebase_path(shellfile, root_build_dir) ]
       }
 
       pkg_manifest += [
@@ -712,10 +711,12 @@ template("package") {
     }
 
     if (!pkg.deprecated_system_image) {
+      manifest = "${pkg_target_name}.manifest"
+
       # Synthesize the meta/package file.
       pkg_meta_package = "${pkg_target_name}_meta_package.json"
       action(pkg_meta_package) {
-        visibility = [ ":${pkg_target_name}.manifest" ]
+        visibility = [ ":$manifest" ]
         script = "//build/gn/write_package_json.py"
         outputs = [
           "$target_out_dir/$pkg_meta_package",
@@ -729,52 +730,28 @@ template("package") {
         ]
       }
 
-      generate_manifest("${pkg_target_name}.manifest") {
+      generate_manifest(manifest) {
         sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
         args = manifest_args +
                [ "--entry=meta/package=" +
                  rebase_path(pkg_meta_package, "", target_out_dir) ]
         deps = pkg.deps + [ ":$pkg_meta_package" ]
         public_deps = pkg.public_deps
-      }
-
-      final_manifest = "${pkg_target_name}.final.manifest"
-
-      # Merge all component and package manifests in single file
-      action(final_manifest) {
-        script = "//build/cat.sh"
-        output_name = "${target_out_dir}/${final_manifest}"
-        outputs = [
-          output_name,
-        ]
-        visibility = [ "*" ]
-
-        pmx = "$target_out_dir/${pkg_target_name}.manifest"
-        args = [
-          rebase_path(output_name),
-          rebase_path("$target_out_dir/${pkg_target_name}.manifest"),
-        ]
-        inputs = [
-          pmx,
-        ]
-        deps = [
-          ":${pkg_target_name}.manifest",
-        ]
 
         foreach(component, pkg.components) {
           deps += [ component ]
           component_name = get_label_info(component, "name")
           dir = get_label_info(component, "target_out_dir")
-          manifest_file = "${dir}/${component_name}.manifest"
-          inputs += [ manifest_file ]
-          args += [ rebase_path(manifest_file) ]
+          rsp_file = "${dir}/${component_name}.rsp"
+          sources += [ rsp_file ]
+          args += [ "@" + rebase_path(rsp_file) ]
         }
       }
 
       # Next generate a signed, sealed package file.
       pm_build_package("${pkg_target_name}.meta") {
-        manifest = ":$final_manifest"
         package_name = pkg.package_name
+        manifest = ":$manifest"
       }
 
       # Clear it so we don't put anything into the system image.
@@ -793,7 +770,9 @@ template("package") {
       if (pkg.deprecated_system_image) {
         deps = pkg.deps
       } else {
-        deps = pkg.deps + [ ":${pkg_target_name}.meta" ]
+        deps = [
+          ":${pkg_target_name}.meta",
+        ]
       }
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps

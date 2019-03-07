@@ -152,9 +152,10 @@ template("fuchsia_component") {
         if (!defined(component.deprecated_global_persistent_storage)) {
           extra_schemas = [
             {
-              schema = "//build/cmx/block_deprecated_global_persistent_storage.json"
+              schema =
+                  "//build/cmx/block_deprecated_global_persistent_storage.json"
               error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by a whitelist. Use 'isolated-persistent-storage' instead."
-            }
+            },
           ]
         }
       }
@@ -225,26 +226,19 @@ template("fuchsia_component") {
 
     # Collect all the arguments describing input manifest files
     # and all the entries we've just synthesized in `component_manifest`.
-    manifest_sources = []
     manifest_args = []
     foreach(entry, component_manifest) {
-      manifest_sources += [ entry.source ]
       manifest_args += [ "--entry=${entry.dest}=${entry.source}" ]
     }
 
     # Generate component build manifest with all its dynamically linked libraries
     # resolved.
-    generate_manifest("${target_name}.manifest") {
-      sources = manifest_sources
-      args = manifest_args
+    # TODO(raggi): replace this with metadata propagation
+    generate_response_file(target_name) {
+      output_name = target_name + ".rsp"
+      response_file_contents = manifest_args
       deps = component.deps
       public_deps = component.public_deps
-    }
-
-    group(target_name) {
-      public_deps = [
-        ":${target_name}.manifest",
-      ]
     }
 
     # This dep is added at the end so that only this target depends on the
