@@ -107,8 +107,7 @@ private:
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
-
-    ktl::unique_ptr<uint8_t[]> guest_extended_registers_ = nullptr;
+    ktl::unique_ptr<uint8_t[]> guest_extended_registers_;
 
     Vcpu(Guest* guest, uint16_t vpid, const thread_t* thread);
 
