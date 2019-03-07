@@ -442,7 +442,7 @@ static int hci_read_thread(void* arg) {
     return 0;
 }
 
-static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_handle_t* out_channel) {
+static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_handle_t in) {
     zx_status_t result = ZX_OK;
     mtx_lock(&hci->mutex);
 
@@ -452,13 +452,7 @@ static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_hand
         goto done;
     }
 
-    zx_status_t status = zx_channel_create(0, in_channel, out_channel);
-    if (status < 0) {
-        zxlogf(ERROR, "bt-transport-usb: Failed to create channel: %s\n",
-               zx_status_get_string(status));
-        result = ZX_ERR_INTERNAL;
-        goto done;
-    }
+    *in_channel = in;
 
     // Kick off the hci_read_thread if it's not already running.
     if (!hci->read_thread_running) {
@@ -515,17 +509,17 @@ static void hci_release(void* ctx) {
     free(hci);
 }
 
-static zx_status_t hci_open_command_channel(void* ctx, zx_handle_t* out_channel) {
+static zx_status_t hci_open_command_channel(void* ctx, zx_handle_t in) {
     hci_t* hci = ctx;
-    return hci_open_channel(hci, &hci->cmd_channel, out_channel);
+    return hci_open_channel(hci, &hci->cmd_channel, in);
 }
 
-static zx_status_t hci_open_acl_data_channel(void* ctx, zx_handle_t* out_channel) {
+static zx_status_t hci_open_acl_data_channel(void* ctx, zx_handle_t in) {
     hci_t* hci = ctx;
-    return hci_open_channel(hci, &hci->acl_channel, out_channel);
+    return hci_open_channel(hci, &hci->acl_channel, in);
 }
 
-static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t* out_channel) {
+static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t in) {
     hci_t* hci = ctx;
 
     if (hci->snoop_watch == ZX_HANDLE_INVALID) {
@@ -548,7 +542,7 @@ static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t* out_channel) {
         hci->snoop_channel = ZX_HANDLE_INVALID;
     }
 
-    zx_status_t ret = hci_open_channel(hci, &hci->snoop_channel, out_channel);
+    zx_status_t ret = hci_open_channel(hci, &hci->snoop_channel, in);
     if (ret == ZX_OK) {
         zx_signals_t sigs = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
         zx_object_wait_async(hci->snoop_channel, hci->snoop_watch, 0, sigs,

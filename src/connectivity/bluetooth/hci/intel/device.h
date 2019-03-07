@@ -8,6 +8,7 @@
 #include <ddk/protocol/bt/hci.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/bt/hci.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 
 #include "vendor_hci.h"
 
@@ -16,7 +17,7 @@ namespace btintel {
 class Device;
 
 using DeviceType =
-    ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Ioctlable>;
+    ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable, ddk::Messageable>;
 
 class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
@@ -38,14 +39,23 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                       void* out_buf, size_t out_len, size_t* actual);
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-  zx_status_t BtHciOpenCommandChannel(zx::channel* out_channel);
-  zx_status_t BtHciOpenAclDataChannel(zx::channel* out_channel);
-  zx_status_t BtHciOpenSnoopChannel(zx::channel* out_channel);
+  zx_status_t BtHciOpenCommandChannel(zx::channel in);
+  zx_status_t BtHciOpenAclDataChannel(zx::channel in);
+  zx_status_t BtHciOpenSnoopChannel(zx::channel in);
 
  private:
+  static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t in);
+  static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t in);
+  static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t in);
+
+  static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {
+    .OpenCommandChannel = OpenCommandChannel,
+    .OpenAclDataChannel = OpenAclDataChannel,
+    .OpenSnoopChannel = OpenSnoopChannel,
+  };
+
   zx_status_t LoadSecureFirmware(zx::channel* cmd, zx::channel* acl);
   zx_status_t LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl);
 

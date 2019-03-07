@@ -6,15 +6,13 @@
 
 use {
     failure::{format_err, Error},
-    fdio::{fdio_sys, ioctl, make_ioctl},
+    fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_device_test::{CONTROL_DEVICE, DeviceSynchronousProxy, RootDeviceSynchronousProxy},
-    fuchsia_zircon::{self as zircon, Handle},
+    fuchsia_zircon as zx,
     rand::{self, Rng},
     std::{
         fs::{File, OpenOptions},
-        mem,
-        os::raw,
         path::Path,
     },
 };
@@ -49,8 +47,8 @@ pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Err
     let channel = fdio::clone_channel(&test_dev)?;
     let mut interface = RootDeviceSynchronousProxy::new(channel);
 
-    let (status, devpath) = interface.create_device(dev_name, fuchsia_zircon::Time::INFINITE)?;
-    fuchsia_zircon::Status::ok(status)?;
+    let (status, devpath) = interface.create_device(dev_name, zx::Time::INFINITE)?;
+    zx::Status::ok(status)?;
     match devpath {
         Some(path) => Ok(path),
         None => Err(format_err!("RootDevice.CreateDevice received no devpath?")),
@@ -60,8 +58,8 @@ pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Err
 pub fn bind_fake_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let status = interface.bind(BTHCI_DRIVER_NAME, fuchsia_zircon::Time::INFINITE)?;
-    fuchsia_zircon::Status::ok(status)?;
+    let status = interface.bind(BTHCI_DRIVER_NAME, zx::Time::INFINITE)?;
+    zx::Status::ok(status)?;
     Ok(())
 }
 
@@ -71,36 +69,24 @@ pub fn destroy_device(device: &File) -> Result<(), Error> {
     Ok(interface.destroy()?)
 }
 
-// Ioctl called used to get the driver name of the bluetooth hci device. This is used to ensure
-// the driver is the right driver to be bound to the device.
-// TODO(bwb): move out to a generic crate
 pub fn get_device_driver_name(device: &File) -> Result<String, Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let (status, name) = interface.get_driver_name(fuchsia_zircon::Time::INFINITE)?;
-    fuchsia_zircon::Status::ok(status)?;
+    let (status, name) = interface.get_driver_name(zx::Time::INFINITE)?;
+    zx::Status::ok(status)?;
     match name {
         Some(name) => Ok(name),
         None => Err(format_err!("GetDriverName returned no name?")),
     }
 }
 
-// Ioctl definitions for the above calls.
-// TODO(bwb): move out to a generic crate
-pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
-    let mut handle = zircon::sys::ZX_HANDLE_INVALID;
-    unsafe {
-        ioctl(
-            device,
-            IOCTL_BT_HCI_GET_SNOOP_CHANNEL,
-            ::std::ptr::null_mut() as *mut raw::c_void,
-            0,
-            &mut handle as *mut _ as *mut raw::c_void,
-            mem::size_of::<zircon::sys::zx_handle_t>(),
-        )
-        .map(|_| Handle::from_raw(handle))
-        .map_err(|e| e.into())
-    }
+// TODO (belgum) use asynchronous client
+pub fn open_snoop_channel(device: &File) -> Result<zx::Channel, Error> {
+    let hci_channel = fdio::clone_channel(device)?;
+    let mut interface = HciSynchronousProxy::new(hci_channel);
+    let (ours, theirs) = zx::Channel::create()?;
+    interface.open_snoop_channel(theirs)?;
+    Ok(ours)
 }
 
 pub fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
@@ -110,11 +96,3 @@ pub fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
         .open(path)
         .map_err(|e| e.into())
 }
-
-// Ioctl definitions for the above calls.
-// TODO(bwb): move out to a generic crate
-const IOCTL_BT_HCI_GET_SNOOP_CHANNEL: raw::c_int = make_ioctl(
-    fdio_sys::IOCTL_KIND_GET_HANDLE,
-    fdio_sys::IOCTL_FAMILY_BT_HCI,
-    2
-);

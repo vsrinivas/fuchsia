@@ -68,17 +68,17 @@ private:
         kStopThreadKey
     };
 
-    static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t* out_channel);
-    static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t* out_channel);
-    static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t* out_channel);
+    static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t in_handle);
+    static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t in_handle);
+    static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t in_handle);
 
     zx_status_t Init(const zx::vmo& fw_vmo, size_t fw_size);
 
-    zx_status_t BtHciOpenCommandChannel(zx::channel* out_channel);
-    zx_status_t BtHciOpenAclDataChannel(zx::channel* out_channel);
-    zx_status_t BtHciOpenSnoopChannel(zx::channel* out_channel);
+    zx_status_t BtHciOpenCommandChannel(zx_handle_t in);
+    zx_status_t BtHciOpenAclDataChannel(zx_handle_t in);
+    zx_status_t BtHciOpenSnoopChannel(zx_handle_t in);
 
-    zx_status_t OpenChannel(zx::channel* ours, zx::channel* theirs, PacketKey key);
+    zx_status_t OpenChannel(zx::channel* in_channel, zx_handle_t in, PacketKey key);
 
     zx_status_t CardEnableInterrupt();
     zx_status_t CardDisableInterrupt();

@@ -9,7 +9,10 @@
 #include <sys/stat.h>
 
 #include <ddk/driver.h>
+#include <fbl/unique_fd.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/log.h"
@@ -57,14 +60,20 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  fxl::UniqueFD hci_dev_fd(open(hci_dev_path.c_str(), O_RDWR));
-  if (!hci_dev_fd.is_valid()) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    std::perror("Failed to open HCI device. Could not create fidl channel");
+    return EXIT_FAILURE;
+  }
+  status = fdio_service_connect(hci_dev_path.c_str(), remote.release());
+  if (status != ZX_OK) {
     std::perror("Failed to open HCI device");
     return EXIT_FAILURE;
   }
 
   auto hci_dev =
-      std::make_unique<::btlib::hci::IoctlDeviceWrapper>(std::move(hci_dev_fd));
+      std::make_unique<::btlib::hci::FidlDeviceWrapper>(std::move(local));
   auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
   if (!hci->Initialize()) {
     return EXIT_FAILURE;

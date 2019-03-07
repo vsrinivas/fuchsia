@@ -11,8 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 
 typedef struct {
   zx_device_t* dev;
@@ -37,34 +37,6 @@ static zx_status_t bt_hci_passthrough_get_protocol(void* ctx, uint32_t proto_id,
   return ZX_OK;
 }
 
-static zx_status_t bt_hci_passthrough_ioctl(void* ctx, uint32_t op,
-                                            const void* in_buf, size_t in_len,
-                                            void* out_buf, size_t out_len,
-                                            size_t* out_actual) {
-  passthrough_t* passthrough = ctx;
-  if (out_len < sizeof(zx_handle_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  zx_handle_t* reply = out_buf;
-
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-    status = bt_hci_open_command_channel(&passthrough->hci, reply);
-  } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-    status = bt_hci_open_acl_data_channel(&passthrough->hci, reply);
-  } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-    status = bt_hci_open_snoop_channel(&passthrough->hci, reply);
-  }
-
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out_actual = sizeof(*reply);
-  return ZX_OK;
-}
-
 static void bt_hci_passthrough_unbind(void* ctx) {
   passthrough_t* passthrough = ctx;
 
@@ -73,10 +45,36 @@ static void bt_hci_passthrough_unbind(void* ctx) {
 
 static void bt_hci_passthrough_release(void* ctx) { free(ctx); }
 
+zx_status_t fidl_bt_hci_open_command_channel(void* ctx, zx_handle_t channel) {
+  passthrough_t* hci = ctx;
+  return bt_hci_open_command_channel(&hci->hci, channel);
+}
+
+zx_status_t fidl_bt_hci_open_acl_data_channel(void* ctx, zx_handle_t channel) {
+  passthrough_t* hci = ctx;
+  return bt_hci_open_acl_data_channel(&hci->hci, channel);
+}
+
+zx_status_t fidl_bt_hci_open_snoop_channel(void* ctx, zx_handle_t channel) {
+  passthrough_t* hci = ctx;
+  return bt_hci_open_snoop_channel(&hci->hci, channel);
+}
+
+const fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops = {
+  .OpenCommandChannel = fidl_bt_hci_open_command_channel,
+  .OpenAclDataChannel = fidl_bt_hci_open_acl_data_channel,
+  .OpenSnoopChannel = fidl_bt_hci_open_snoop_channel,
+};
+
+static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_bluetooth_Hci_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
+
 static zx_protocol_device_t passthrough_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = bt_hci_passthrough_get_protocol,
-    .ioctl = bt_hci_passthrough_ioctl,
+    .message = fuchsia_bt_hci_message_instance,
     .unbind = bt_hci_passthrough_unbind,
     .release = bt_hci_passthrough_release,
 };

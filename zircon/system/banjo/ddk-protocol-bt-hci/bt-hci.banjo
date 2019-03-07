@@ -11,10 +11,10 @@ interface BtHci {
     /// Open the two-way HCI command channel for sending HCI commands and
     /// receiving event packets.  Returns ZX_ERR_ALREADY_BOUND if the channel
     /// is already open.
-    OpenCommandChannel() -> (zx.status s, handle<channel> channel);
+    OpenCommandChannel(handle<channel> channel) -> (zx.status s);
     /// Open the two-way HCI ACL data channel.
     /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
-    OpenAclDataChannel() -> (zx.status s, handle<channel> channel);
+    OpenAclDataChannel(handle<channel> channel) -> (zx.status s);
     /// Open an output-only channel for monitoring HCI traffic.
     /// The format of each message is: [1-octet flags] [n-octet payload]
     /// The flags octet is a bitfield with the following values defined:
@@ -22,5 +22,5 @@ interface BtHci {
     ///          controller.
     ///  - 0x01: The payload represents an event packet sent by the controller.
     /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
-    OpenSnoopChannel() -> (zx.status s, handle<channel> channel);
+    OpenSnoopChannel(handle<channel> channel) -> (zx.status s);
 };

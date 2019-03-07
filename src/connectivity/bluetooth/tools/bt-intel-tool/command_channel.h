@@ -6,8 +6,10 @@
 #define SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_
 
 #include <fbl/unique_fd.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 

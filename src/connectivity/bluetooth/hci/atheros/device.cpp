@@ -11,9 +11,9 @@
 #include <fbl/string_printf.h>
 #include <lib/zx/vmo.h>
 #include <usb/usb-request.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 
 #include "logging.h"
 
@@ -38,11 +38,8 @@ static zx_protocol_device_t dev_proto = {
                        void* protocol) -> zx_status_t {
       return static_cast<Device*>(ctx)->DdkGetProtocol(proto_id, protocol);
     },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                void* out_buf, size_t out_len,
-                size_t* out_actual) -> zx_status_t {
-      return static_cast<Device*>(ctx)->DdkIoctl(op, in_buf, in_len, out_buf,
-                                                 out_len, out_actual);
+    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+      return static_cast<Device*>(ctx)->DdkMessage(msg, txn);
     },
 };
 
@@ -307,31 +304,23 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   return ZX_OK;
 }
 
-zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* actual) {
-  fbl::AutoLock lock(&mutex_);
-  ZX_DEBUG_ASSERT(firmware_loaded_);
-  if (out_len < sizeof(zx_handle_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
+zx_status_t Device::OpenCommandChannel(void* ctx, zx_handle_t channel) {
+  auto& self = *static_cast<btatheros::Device*>(ctx);
+  return bt_hci_open_command_channel(&self.hci_, channel);
+}
 
-  zx_handle_t* reply = (zx_handle_t*)out_buf;
+zx_status_t Device::OpenAclDataChannel(void* ctx, zx_handle_t channel) {
+  auto& self = *static_cast<btatheros::Device*>(ctx);
+  return bt_hci_open_acl_data_channel(&self.hci_, channel);
+}
 
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-    status = bt_hci_open_command_channel(&hci_, reply);
-  } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-    status = bt_hci_open_acl_data_channel(&hci_, reply);
-  } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-    status = bt_hci_open_snoop_channel(&hci_, reply);
-  }
+zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t channel) {
+  auto& self = *static_cast<btatheros::Device*>(ctx);
+  return bt_hci_open_snoop_channel(&self.hci_, channel);
+}
 
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *actual = sizeof(*reply);
-  return ZX_OK;
+zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &fidl_ops_);
 }
 
 }  // namespace btatheros

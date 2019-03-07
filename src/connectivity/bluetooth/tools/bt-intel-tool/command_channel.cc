@@ -13,7 +13,6 @@
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 
 #include "bt_intel.h"
@@ -25,27 +24,51 @@
 namespace {
 
 zx::channel GetCommandChannel(int fd) {
-  zx::channel channel;
-  ssize_t status =
-      ioctl_bt_hci_get_command_channel(fd, channel.reset_and_get_address());
-  if (status < 0) {
+  fdio_t* hci_io = fdio_unsafe_fd_to_io(fd);
+  assert(hci_io);
+
+  zx::channel ours, theirs;
+  zx_status_t status = zx::channel::create(0, &ours, &theirs);
+  if (status != ZX_OK) {
+    std::cerr << "CommandChannel: Failed to create channel: %s\n"
+              << zx_status_get_string(status) << std::endl;
+    return ours;
+  }
+
+  status = fuchsia_hardware_bluetooth_HciOpenCommandChannel(
+    fdio_unsafe_borrow_channel(hci_io), theirs.release());
+  fdio_unsafe_release(hci_io);
+
+  if (status != ZX_OK) {
     std::cerr << "hci: Failed to obtain command channel handle: "
               << zx_status_get_string(status) << std::endl;
-    assert(!channel.is_valid());
+    assert(!ours.is_valid());
   }
-  return channel;
+  return ours;
 }
 
 zx::channel GetAclChannel(int fd) {
-  zx::channel channel;
-  ssize_t status =
-      ioctl_bt_hci_get_acl_data_channel(fd, channel.reset_and_get_address());
-  if (status < 0) {
-    std::cerr << "hci: Failed to obtain ACL data channel handle: "
+  fdio_t* hci_io = fdio_unsafe_fd_to_io(fd);
+  assert(hci_io);
+
+  zx::channel ours, theirs;
+  zx_status_t status = zx::channel::create(0, &ours, &theirs);
+  if (status != ZX_OK) {
+    std::cerr << "CommandChannel: Failed to create channel: %s\n"
               << zx_status_get_string(status) << std::endl;
-    assert(!channel.is_valid());
+    return ours;
   }
-  return channel;
+
+  status = fuchsia_hardware_bluetooth_HciOpenAclDataChannel(
+    fdio_unsafe_borrow_channel(hci_io), theirs.release());
+  fdio_unsafe_release(hci_io);
+
+  if (status != ZX_OK) {
+    std::cerr << "hci: Failed to obtain ACL channel handle: "
+              << zx_status_get_string(status) << std::endl;
+    assert(!ours.is_valid());
+  }
+  return ours;
 }
 
 }  // namespace

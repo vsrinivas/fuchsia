@@ -17,10 +17,10 @@
 #include <sys/random.h>
 #include <threads.h>
 #include <zircon/assert.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/device/serial.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE    2000000
@@ -118,32 +118,6 @@ static zx_status_t bcm_hci_get_protocol(void* ctx, uint32_t proto_id, void* out_
     return ZX_OK;
 }
 
-static zx_status_t bcm_hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
-    bcm_hci_t* hci = ctx;
-    if (out_len < sizeof(zx_handle_t)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    zx_handle_t* reply = out_buf;
-
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-        status = bt_hci_open_command_channel(&hci->hci, reply);
-    } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-        status = bt_hci_open_acl_data_channel(&hci->hci, reply);
-    } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-        status = bt_hci_open_snoop_channel(&hci->hci, reply);
-    }
-
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    *out_actual = sizeof(*reply);
-    return ZX_OK;
-}
-
 static void bcm_hci_unbind(void* ctx) {
     bcm_hci_t* hci = ctx;
 
@@ -160,10 +134,47 @@ static void bcm_hci_release(void* ctx) {
     free(hci);
 }
 
+zx_status_t fidl_bt_hci_open_command_channel(void* ctx, zx_handle_t channel) {
+    bcm_hci_t* hci = ctx;
+    zx_status_t status = bt_hci_open_command_channel(&hci->hci, channel);
+    if (status != ZX_OK) {
+        zx_handle_close(channel);
+    }
+    return status;
+}
+
+zx_status_t fidl_bt_hci_open_acl_data_channel(void* ctx, zx_handle_t channel) {
+    bcm_hci_t* hci = ctx;
+    zx_status_t status = bt_hci_open_acl_data_channel(&hci->hci, channel);
+    if (status != ZX_OK) {
+        zx_handle_close(channel);
+    }
+    return status;
+}
+
+zx_status_t fidl_bt_hci_open_snoop_channel(void* ctx, zx_handle_t channel) {
+    bcm_hci_t* hci = ctx;
+    zx_status_t status = bt_hci_open_snoop_channel(&hci->hci, channel);
+    if (status != ZX_OK) {
+        zx_handle_close(channel);
+    }
+    return status;
+}
+
+static fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops = {
+    .OpenCommandChannel = fidl_bt_hci_open_command_channel,
+    .OpenAclDataChannel = fidl_bt_hci_open_acl_data_channel,
+    .OpenSnoopChannel = fidl_bt_hci_open_snoop_channel,
+};
+
+static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_bluetooth_Hci_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 static zx_protocol_device_t bcm_hci_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = bcm_hci_get_protocol,
-    .ioctl = bcm_hci_ioctl,
+    .message = fuchsia_bt_hci_message_instance,
     .unbind = bcm_hci_unbind,
     .release = bcm_hci_release,
 };
@@ -174,8 +185,8 @@ static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header
     #define CHAN_READ_BUF_LEN 257
     uint8_t read_buf[CHAN_READ_BUF_LEN];
     if (out_buf_len > CHAN_READ_BUF_LEN) {
-      zxlogf(ERROR, "bcm_hci_send_command provided |out_buf| is too large");
-      return ZX_ERR_INVALID_ARGS;
+        zxlogf(ERROR, "bcm_hci_send_command provided |out_buf| is too large");
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // send HCI command
@@ -278,7 +289,12 @@ static int bcm_hci_start_thread(void* arg) {
     bcm_hci_t* hci = arg;
     zx_handle_t fw_vmo;
 
-    zx_status_t status = bt_hci_open_command_channel(&hci->hci, &hci->command_channel);
+    zx_handle_t theirs;
+    zx_status_t status = zx_channel_create(0, &hci->command_channel, &theirs);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = bt_hci_open_command_channel(&hci->hci, theirs);
     if (status != ZX_OK) {
         goto fail;
     }

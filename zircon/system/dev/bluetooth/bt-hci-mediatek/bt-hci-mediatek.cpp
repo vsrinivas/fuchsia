@@ -92,25 +92,16 @@ uint16_t GetSizeField(const uint8_t* packet) {
 
 namespace bluetooth {
 
-zx_status_t BtHciMediatek::OpenCommandChannel(void* ctx, zx_handle_t* out_channel) {
-    zx::channel out_channel2;
-    zx_status_t ret = reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenCommandChannel(&out_channel2);
-    *out_channel = out_channel2.release();
-    return ret;
+zx_status_t BtHciMediatek::OpenCommandChannel(void* ctx, zx_handle_t in_handle) {
+    return reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenCommandChannel(in_handle);
 }
 
-zx_status_t BtHciMediatek::OpenAclDataChannel(void* ctx, zx_handle_t* out_channel) {
-    zx::channel out_channel2;
-    zx_status_t ret = reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenAclDataChannel(&out_channel2);
-    *out_channel = out_channel2.release();
-    return ret;
+zx_status_t BtHciMediatek::OpenAclDataChannel(void* ctx, zx_handle_t in_handle) {
+    return reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenAclDataChannel(in_handle);
 }
 
-zx_status_t BtHciMediatek::OpenSnoopChannel(void* ctx, zx_handle_t* out_channel) {
-    zx::channel out_channel2;
-    zx_status_t ret = reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenSnoopChannel(&out_channel2);
-    *out_channel = out_channel2.release();
-    return ret;
+zx_status_t BtHciMediatek::OpenSnoopChannel(void* ctx, zx_handle_t in_handle) {
+    return reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenSnoopChannel(in_handle);
 }
 
 void BtHciMediatek::DdkRelease() {
@@ -259,37 +250,34 @@ zx_status_t BtHciMediatek::DdkGetProtocol(uint32_t proto_id, void* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t BtHciMediatek::BtHciOpenCommandChannel(zx::channel* out_channel) {
-    return OpenChannel(&cmd_channel_, out_channel, kCommandChannelKey);
+zx_status_t BtHciMediatek::BtHciOpenCommandChannel(zx_handle_t in) {
+    return OpenChannel(&cmd_channel_, in, kCommandChannelKey);
 }
 
-zx_status_t BtHciMediatek::BtHciOpenAclDataChannel(zx::channel* out_channel) {
-    return OpenChannel(&acl_channel_, out_channel, kAclChannelKey);
+zx_status_t BtHciMediatek::BtHciOpenAclDataChannel(zx_handle_t in) {
+    return OpenChannel(&acl_channel_, in, kAclChannelKey);
 }
 
-zx_status_t BtHciMediatek::BtHciOpenSnoopChannel(zx::channel* out_channel) {
-    return OpenChannel(&snoop_channel_, out_channel, kSnoopChannelKey);
+zx_status_t BtHciMediatek::BtHciOpenSnoopChannel(zx_handle_t in) {
+    return OpenChannel(&snoop_channel_, in, kSnoopChannelKey);
 }
 
-zx_status_t BtHciMediatek::OpenChannel(zx::channel* ours, zx::channel* theirs, PacketKey key) {
+zx_status_t BtHciMediatek::OpenChannel(zx::channel* in_channel, zx_handle_t in, PacketKey key) {
     fbl::AutoLock lock(&thread_mutex_);
 
-    if (ours->is_valid()) {
+    if (in_channel->is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    zx_status_t status = zx::channel::create(0, ours, theirs);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to create channel\n", __FILE__);
-        return status;
-    }
+    *in_channel = zx::channel(in);
 
     zx_signals_t wait_signals = ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED;
     if (key != kSnoopChannelKey) {
         wait_signals |= ZX_CHANNEL_READABLE;
     }
 
-    if ((status = ours->wait_async(port_, key, wait_signals, ZX_WAIT_ASYNC_REPEATING)) != ZX_OK) {
+    zx_status_t status = ZX_OK;
+    if ((status = in_channel->wait_async(port_, key, wait_signals, ZX_WAIT_ASYNC_REPEATING)) != ZX_OK) {
         zxlogf(ERROR, "%s: Channel object_wait_async failed\n", __FILE__);
         return status;
     }

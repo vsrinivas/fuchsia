@@ -16,5 +16,7 @@ executable("bt-hci-tool") {
     "//src/connectivity/bluetooth/core/bt-host/common",
     "//src/connectivity/bluetooth/core/bt-host/gap",
     "//src/connectivity/bluetooth/core/bt-host/hci",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
   ]
 }

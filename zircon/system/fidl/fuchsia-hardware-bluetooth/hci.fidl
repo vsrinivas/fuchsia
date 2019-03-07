@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.bluetooth;
+using zx;
+
+[Layout = "Simple"]
+protocol Hci {
+    /// Opens a command/event channel on the provided handle. The zircon channel
+    /// is closed in the event of an error opening the hci channel or if the hci
+    /// channel is already associated with a handle to another zircon channel.
+    OpenCommandChannel(handle<channel> channel);
+
+    /// Opens a acl data channel on the provided handle. The zircon channel is
+    /// closed in the event of an error opening the hci channel or if the hci
+    /// channel is already associated with a handle to another zircon channel.
+    OpenAclDataChannel(handle<channel> channel);
+
+    /// Opens a snoop channel on the provided handle. The zircon channel is
+    /// closed in the event of an error opening the hci channel or if the hci
+    /// channel is already associated with a handle to another zircon channel.
+    OpenSnoopChannel(handle<channel> channel);
+};

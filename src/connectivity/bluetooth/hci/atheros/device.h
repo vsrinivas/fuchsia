@@ -9,7 +9,9 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/usb.h>
+#include <ddktl/device.h>
 #include <fbl/mutex.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/sync/completion.h>
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
@@ -24,6 +26,8 @@ struct qca_version {
 } __PACKED;
 
 namespace btatheros {
+
+class Device;
 
 class Device {
  public:
@@ -44,10 +48,19 @@ class Device {
   void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                       void* out_buf, size_t out_len, size_t* actual);
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
  private:
+  static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t channel);
+  static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t channel);
+  static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t channel);
+
+  static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {
+    .OpenCommandChannel = OpenCommandChannel,
+    .OpenAclDataChannel = OpenAclDataChannel,
+    .OpenSnoopChannel = OpenSnoopChannel,
+  };
+
   // Removes the device and leaves an error on the kernel log
   // prepended with |note|.
   // Returns |status|.

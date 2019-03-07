@@ -9,6 +9,7 @@
 #include <ddk/protocol/test.h>
 
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <zircon/compiler.h>
@@ -33,10 +34,18 @@ class Device {
   void Unbind();
   void Release();
 
-  zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                    void* out_buf, size_t out_len, size_t* out_actual);
+  zx_status_t Message(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t GetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t OpenChan(Channel chan_type, zx_handle_t* chan);
+  zx_status_t OpenChan(Channel chan_type, zx_handle_t chan);
+
+  static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t channel);
+  static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t channel);
+  static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t channel);
+  static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {
+    .OpenCommandChannel = OpenCommandChannel,
+    .OpenAclDataChannel = OpenAclDataChannel,
+    .OpenSnoopChannel = OpenSnoopChannel,
+  };
 
  private:
   async::Loop loop_ __TA_GUARDED(device_lock_);

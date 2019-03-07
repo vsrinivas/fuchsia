@@ -6,7 +6,6 @@
 
 #include <fbl/string_printf.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -29,23 +28,31 @@ zx_status_t Device::LoadFirmware(bool secure) {
   // TODO(armansito): Track metrics for initialization failures.
 
   zx_status_t status;
-  zx::channel cmd_channel, acl_channel;
-
-  // Get the channels
-  status = BtHciOpenCommandChannel(&cmd_channel);
+  zx::channel our_cmd, their_cmd, our_acl, their_acl;
+  status = zx::channel::create(0, &our_cmd, &their_cmd);
   if (status != ZX_OK) {
-    return Remove(status, "failed to open command channel");
+    return Remove(status, "failed to create command channel");
+  }
+  status = zx::channel::create(0, &our_acl, &their_acl);
+  if (status != ZX_OK) {
+    return Remove(status, "failed to create ACL channel");
   }
 
-  status = BtHciOpenAclDataChannel(&acl_channel);
+  // Get the channels
+  status = BtHciOpenCommandChannel(std::move(their_cmd));
   if (status != ZX_OK) {
-    return Remove(status, "failed to open ACL channel");
+    return Remove(status, "failed to bind command channel");
+  }
+
+  status = BtHciOpenAclDataChannel(std::move(their_acl));
+  if (status != ZX_OK) {
+    return Remove(status, "failed to bind ACL channel");
   }
 
   if (secure) {
-    status = LoadSecureFirmware(&cmd_channel, &acl_channel);
+    status = LoadSecureFirmware(&our_cmd, &our_acl);
   } else {
-    status = LoadLegacyFirmware(&cmd_channel, &acl_channel);
+    status = LoadLegacyFirmware(&our_cmd, &our_acl);
   }
 
   if (status != ZX_OK) {
@@ -103,32 +110,23 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   return ZX_OK;
 }
 
-zx_status_t Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* actual) {
-  ZX_DEBUG_ASSERT(firmware_loaded_);
-  if (out_len < sizeof(zx_handle_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
+zx_status_t Device::OpenCommandChannel(void* ctx, zx_handle_t in) {
+  auto& self = *static_cast<btintel::Device*>(ctx);
+  return self.BtHciOpenCommandChannel(zx::channel(in));
+}
 
-  zx_handle_t* reply = static_cast<zx_handle_t*>(out_buf);
-  zx::channel out_channel;
+zx_status_t Device::OpenAclDataChannel(void* ctx, zx_handle_t in) {
+  auto& self = *static_cast<btintel::Device*>(ctx);
+  return self.BtHciOpenAclDataChannel(zx::channel(in));
+}
 
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-    status = BtHciOpenCommandChannel(&out_channel);
-  } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-    status = BtHciOpenAclDataChannel(&out_channel);
-  } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-    status = BtHciOpenSnoopChannel(&out_channel);
-  }
+zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t in) {
+  auto& self = *static_cast<btintel::Device*>(ctx);
+  return self.BtHciOpenSnoopChannel(zx::channel(in));
+}
 
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *reply = out_channel.release();
-  *actual = sizeof(*reply);
-  return ZX_OK;
+zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &fidl_ops_);
 }
 
 zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
@@ -271,16 +269,16 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
   return ZX_OK;
 }
 
-zx_status_t Device::BtHciOpenCommandChannel(zx::channel* out_channel) {
-  return hci_.OpenCommandChannel(out_channel);
+zx_status_t Device::BtHciOpenCommandChannel(zx::channel in) {
+  return hci_.OpenCommandChannel(std::move(in));
 }
 
-zx_status_t Device::BtHciOpenAclDataChannel(zx::channel* out_channel) {
-  return hci_.OpenAclDataChannel(out_channel);
+zx_status_t Device::BtHciOpenAclDataChannel(zx::channel in) {
+  return hci_.OpenAclDataChannel(std::move(in));
 }
 
-zx_status_t Device::BtHciOpenSnoopChannel(zx::channel* out_channel) {
-  return hci_.OpenSnoopChannel(out_channel);
+zx_status_t Device::BtHciOpenSnoopChannel(zx::channel in) {
+  return hci_.OpenSnoopChannel(std::move(in));
 }
 
 }  // namespace btintel

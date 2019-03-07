@@ -8,7 +8,6 @@
 
 #include <ddk/protocol/bt/hci.h>
 #include <lib/async/cpp/task.h>
-#include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -38,21 +37,19 @@ static zx_protocol_device_t bthci_fake_device_ops = {
         -> zx_status_t { return DEV(ctx)->GetProtocol(proto_id, out_proto); },
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                void* out_buf, size_t out_len,
-                size_t* out_actual) -> zx_status_t {
-      return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-    },
+    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+      return DEV(ctx)->Message(msg, txn);
+    }
 };
 
 static bt_hci_protocol_ops_t hci_protocol_ops = {
-    .open_command_channel = [](void* ctx, zx_handle_t* chan) -> zx_status_t {
+    .open_command_channel = [](void* ctx, zx_handle_t chan) -> zx_status_t {
       return DEV(ctx)->OpenChan(Channel::COMMAND, chan);
     },
-    .open_acl_data_channel = [](void* ctx, zx_handle_t* chan) -> zx_status_t {
+    .open_acl_data_channel = [](void* ctx, zx_handle_t chan) -> zx_status_t {
       return DEV(ctx)->OpenChan(Channel::ACL, chan);
     },
-    .open_snoop_channel = [](void* ctx, zx_handle_t* chan) -> zx_status_t {
+    .open_snoop_channel = [](void* ctx, zx_handle_t chan) -> zx_status_t {
       return DEV(ctx)->OpenChan(Channel::SNOOP, chan);
     },
 };
@@ -126,35 +123,13 @@ void Device::Unbind() {
   device_remove(zxdev_);
 }
 
-zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
-                          void* out_buf, size_t out_len, size_t* out_actual) {
+zx_status_t Device::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
   std::printf("%s\n", __func__);
-  zx_handle_t* reply = static_cast<zx_handle_t*>(out_buf);
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-
-  if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-    status = OpenChan(Channel::COMMAND, reply);
-  } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
-    status = OpenChan(Channel::ACL, reply);
-  } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
-    status = OpenChan(Channel::SNOOP, reply);
-  }
-
-  if (status == ZX_OK) {
-    *out_actual = sizeof(*reply);
-  }
-  return status;
+  return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &fidl_ops_);
 }
 
-zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t* out_channel) {
-  zx::channel in, out;
-  auto status = zx::channel::create(0, &out, &in);
-  if (status != ZX_OK) {
-    printf("bt_hci_fake: could not create channel (type %i): %d\n", chan_type,
-           status);
-    return status;
-  }
-  *out_channel = out.release();
+zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
+  zx::channel in(in_h);
   std::lock_guard<std::mutex> lock(device_lock_);
 
   if (chan_type == Channel::COMMAND) {
@@ -188,6 +163,16 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
   hci_proto->ctx = this;
 
   return ZX_OK;
+}
+
+zx_status_t Device::OpenCommandChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<Device*>(ctx)->OpenChan(Channel::COMMAND, channel);
+}
+zx_status_t Device::OpenAclDataChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<Device*>(ctx)->OpenChan(Channel::ACL, channel);
+}
+zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t channel) {
+  return static_cast<Device*>(ctx)->OpenChan(Channel::SNOOP, channel);
 }
 
 }  // namespace bthci_fake
