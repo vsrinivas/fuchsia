@@ -24,7 +24,12 @@ type Environment struct {
 	Dimensions DimensionSet `json:"dimensions"`
 
 	// Label is a label given to an environment on which the testsharder may filter.
+	//
+	// TODO(joshuaseaton): deprecate in favor of tags.
 	Label string `json:"label,omitempty"`
+
+	// Tags are keys given to an environment on which the testsharder may filter.
+	Tags []string `json:"tags,omitempty"`
 }
 
 // Name returns a name calculated from its specfied properties.

@@ -4,6 +4,7 @@
 package testsharder
 
 import (
+	"fmt"
 	"sort"
 )
 
@@ -20,30 +21,42 @@ type Shard struct {
 }
 
 // MakeShards is the core algorithm to this tool. It takes a set of test specs and produces
-// a set of shards which may then be converted into Swarming tasks. Environments with a
-// label different from the provided will be ignored.
+// a set of shards which may then be converted into Swarming tasks.
+//
+// Environments that do not match all specified tags will be ignored.
 //
 // This is the most naive algorithm at the moment. It just merges all tests together which
 // have the same environment setting into the same shard.
-func MakeShards(specs []TestSpec, label string) []*Shard {
+func MakeShards(specs []TestSpec, tags []string) []*Shard {
 	// Collect the order of the shards so our shard ordering is deterministic with
 	// respect to the input.
-	envToSuites := make(map[Environment][]TestSpec)
+	envToSuites := newEnvMap()
 	envs := []Environment{}
 	for _, spec := range specs {
 		for _, env := range spec.Envs {
-			if env.Label != label {
+			envTags := env.Tags
+			if env.Label != "" {
+				envTags = append(envTags, env.Label)
+			}
+			if !stringSlicesEq(tags, envTags) {
 				continue
 			}
-			if _, ok := envToSuites[env]; !ok {
+
+			// Tags should not differ by ordering.
+			sortableTags := sort.StringSlice(tags)
+			sortableTags.Sort()
+			env.Tags = []string(sortableTags)
+
+			specs, ok := envToSuites.get(env)
+			if !ok {
 				envs = append(envs, env)
 			}
-			envToSuites[env] = append(envToSuites[env], spec)
+			envToSuites.set(env, append(specs, spec))
 		}
 	}
 	shards := make([]*Shard, 0, len(envs))
 	for _, env := range envs {
-		specs := envToSuites[env]
+		specs, _ := envToSuites.get(env)
 		sort.Slice(specs, func(i, j int) bool {
 			return specs[i].Test.Path < specs[i].Test.Path
 		})
@@ -58,4 +71,40 @@ func MakeShards(specs []TestSpec, label string) []*Shard {
 		})
 	}
 	return shards
+}
+
+// Abstracts a mapping Environment -> []string, as Environment contains non-comparable
+// members (e.g., string slices), which makes it invalid for a map key.
+type envMap struct {
+	m map[string][]TestSpec
+}
+
+func newEnvMap() envMap {
+	return envMap{m: make(map[string][]TestSpec)}
+}
+
+func (em envMap) get(e Environment) ([]TestSpec, bool) {
+	specs, ok := em.m[fmt.Sprintf("%v", e)]
+	return specs, ok
+}
+
+func (em *envMap) set(e Environment, specs []TestSpec) {
+	em.m[fmt.Sprintf("%v", e)] = specs
+}
+
+func stringSlicesEq(s []string, t []string) bool {
+	if len(s) != len(t) {
+		return false
+	}
+	seen := make(map[string]int)
+	for i, _ := range s {
+		seen[s[i]] += 1
+		seen[t[i]] -= 1
+	}
+	for _, v := range seen {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
 }

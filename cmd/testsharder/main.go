@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 
+	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/testsharder"
 )
 
@@ -19,14 +20,14 @@ var (
 	// The filepath to write output to. If unspecified, stdout is used.
 	outputFile string
 
-	// Label is a key on which to filter environments, which are labeled.
-	label string
+	// Tags are keys on which to filter environments, which are labeled.
+	tags command.StringsFlag
 )
 
 func init() {
 	flag.StringVar(&buildDir, "build-dir", "", "path to the fuchsia build directory root (required)")
 	flag.StringVar(&outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
-	flag.StringVar(&label, "label", "", "environment label on which to filter")
+	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
 }
 
 func main() {
@@ -51,7 +52,7 @@ func main() {
 	}
 
 	// Create shards and write them to an output file if specifed, else stdout.
-	shards := testsharder.MakeShards(specs, label)
+	shards := testsharder.MakeShards(specs, tags)
 	f := os.Stdout
 	if outputFile != "" {
 		var err error
