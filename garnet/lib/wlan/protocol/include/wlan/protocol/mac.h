@@ -75,6 +75,9 @@ enum {
     // For rate control: indicate an important data frame, such as EAPOL, which should be sent
     // _reliably_ rather than fast, and is exempt from rate probing
     WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY = (1 << 1),
+    // Indicate that this packet should be sent out with QoS header when possible (11n+).
+    // TODO(WLAN-1002): remove this when MLME supports QoS tag.
+    WLAN_TX_INFO_FLAGS_QOS = (1 << 2),
 };
 
 enum {

@@ -384,7 +384,8 @@ void AssociatedState::HandleEthFrame(EthFrame&& eth_frame) {
         errorf("[client] couldn't convert ethernet frame\n");
         return;
     }
-    client_->bss()->SendDataFrame(DataFrame<>(data_frame->Take()));
+    client_->bss()->SendDataFrame(DataFrame<>(data_frame->Take()),
+                                  client_->is_qos_ready() ? WLAN_TX_INFO_FLAGS_QOS : 0);
 }
 
 void AssociatedState::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {
@@ -696,7 +697,7 @@ bool AssociatedState::HasBufferedFrames() const {
 
 RemoteClient::RemoteClient(DeviceInterface* device, BssInterface* bss,
                            RemoteClient::Listener* listener, const common::MacAddr& addr)
-    : listener_(listener), device_(device), bss_(bss), addr_(addr) {
+    : listener_(listener), device_(device), bss_(bss), addr_(addr), is_qos_ready_(false) {
     ZX_DEBUG_ASSERT(device_ != nullptr);
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
@@ -1021,6 +1022,13 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
     }
 
     // TODO(NET-1708): Support VHT MSC
+
+    // If the client supports either HT or VHT, tell the driver to send out with QoS header (if the
+    // driver/firmware supports it).
+    if (assoc.has_ht_cap || assoc.has_vht_cap) {
+        assoc.qos = true;
+        is_qos_ready_ = true;
+    }
 
     return assoc;
 }

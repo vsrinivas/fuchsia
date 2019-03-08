@@ -3736,8 +3736,14 @@ static void ath10k_mac_tx_h_tx_flags(struct ath10k* ar, struct ath10k_msg_buf* t
         tx_buf->tx.flags |= ATH10K_TX_BUF_PROTECTED;
     }
 
+    // If the packet contains QoS header, mark it to tell firmware we need to transmit that.
     if ((ieee80211_get_frame_type(hdr) == IEEE80211_FRAME_TYPE_DATA) &&
         (ieee80211_get_frame_subtype(hdr) & IEEE80211_FRAME_SUBTYPE_QOS)) {
+        tx_buf->tx.flags |= ATH10K_TX_BUF_QOS;
+    }
+
+    // If the MLME tells use to send it with QoS header, mark it to tell firmware.
+    if (tx_info->tx_flags & WLAN_TX_INFO_FLAGS_QOS) {
         tx_buf->tx.flags |= ATH10K_TX_BUF_QOS;
     }
 }

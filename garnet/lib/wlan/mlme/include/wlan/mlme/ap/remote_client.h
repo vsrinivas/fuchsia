@@ -69,12 +69,14 @@ class RemoteClient : public RemoteClientInterface {
     DeviceInterface* device() { return device_; }
     BssInterface* bss() { return bss_; }
     const common::MacAddr& addr() { return addr_; }
+    bool is_qos_ready() { return is_qos_ready_; }
 
    private:
     Listener* const listener_;
     DeviceInterface* const device_;
     BssInterface* const bss_;
     const common::MacAddr addr_;
+    bool is_qos_ready_;  // Indicate this client supports 11n+ (HT or VHT).
     // Queue which holds buffered ethernet frames while the client is dozing.
     std::queue<EthFrame> bu_queue_;
     fbl::unique_ptr<BaseState> state_;
