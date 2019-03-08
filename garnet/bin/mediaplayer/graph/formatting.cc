@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
   }
 
   os << AsNs(value->GetPts(media::TimelineRate::NsPerSecond)) << " ("
-     << value->pts() << "@" << value->pts_rate() << ")"
+     << AsNs(value->pts()) << "@" << value->pts_rate() << ")"
      << " " << value->size() << " bytes";
 
   if (value->keyframe()) {
@@ -83,6 +83,10 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
 
   if (value->end_of_stream()) {
     os << " eos";
+  }
+
+  if (value->discontinuity()) {
+    os << " disc";
   }
 
   return os;

@@ -81,13 +81,15 @@ class FidlAudioRenderer : public AudioRenderer {
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   fuchsia::media::AudioRendererPtr audio_renderer_;
   media::TimelineRate pts_rate_;
-  int64_t last_supplied_pts_ns_ = 0;
-  int64_t last_departed_pts_ns_ = 0;
+  int64_t last_supplied_pts_ns_ = Packet::kNoPts;
+  int64_t last_departed_pts_ns_ = Packet::kNoPts;
+  int64_t next_pts_to_assign_ = Packet::kNoPts;
   bool input_packet_request_outstanding_ = false;
   fit::closure prime_callback_;
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
-  int64_t min_lead_time_ns_ = ZX_MSEC(100);
+  int64_t min_lead_time_ns_;
+  int64_t target_lead_time_ns_;
   async::TaskClosure demand_task_;
 
   PacketTimingTracker arrivals_;

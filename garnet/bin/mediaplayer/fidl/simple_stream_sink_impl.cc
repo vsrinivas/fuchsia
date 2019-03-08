@@ -170,6 +170,7 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
   PutOutputPacket(Packet::Create(
       packet.pts, pts_rate_,
       (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_KEY_FRAME) != 0,
+      (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) != 0,
       false,  // end_of_stream
       packet.payload_size, payload_buffer));
 

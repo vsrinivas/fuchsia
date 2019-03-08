@@ -32,6 +32,12 @@ class Packet {
 
   // Creates a packet.
   static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
+                          bool keyframe, bool discontinuity, bool end_of_stream,
+                          size_t size,
+                          fbl::RefPtr<PayloadBuffer> payload_buffer);
+
+  // Creates a packet.
+  static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
                           bool keyframe, bool end_of_stream, size_t size,
                           fbl::RefPtr<PayloadBuffer> payload_buffer);
 
@@ -42,7 +48,7 @@ class Packet {
   using Action = fit::function<void(Packet*)>;
 
   Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-         bool end_of_stream, size_t size,
+         bool discontinuity, bool end_of_stream, size_t size,
          fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   virtual ~Packet();
@@ -63,6 +69,9 @@ class Packet {
   // Indicates whether this is the last packet in the stream.
   bool end_of_stream() const { return end_of_stream_; }
 
+  // Indicates whether this packet follows a discontinuity in the stream.
+  bool discontinuity() const { return discontinuity_; }
+
   // Returns the size in bytes of the packet payload or 0 if the packet has no
   // payload.
   size_t size() const { return size_; }
@@ -80,6 +89,9 @@ class Packet {
   // obtain the PTS at a specific tick rate once, possibly at the cost of a
   // TimelineRate::Product call and a TimelineRate::Scale call.
   int64_t GetPts(media::TimelineRate pts_rate);
+
+  // Sets the PTS value on the packet.
+  void SetPts(int64_t pts) { pts_ = pts; }
 
   // Sets the PTS rate and adjusts PTS accordingly. Use this method to adjust
   // the packet's PTS to a desired PTS tick rate so that future calls to
@@ -116,6 +128,7 @@ class Packet {
   int64_t pts_;
   media::TimelineRate pts_rate_;
   bool keyframe_;
+  bool discontinuity_;
   bool end_of_stream_;
   size_t size_;
   fbl::RefPtr<PayloadBuffer> payload_buffer_;

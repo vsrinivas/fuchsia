@@ -50,9 +50,6 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   // For interleaving, if needed.
   std::unique_ptr<StreamType> stream_type_;
-
-  // PTS rate from incoming packet.
-  media::TimelineRate incoming_pts_rate_;
 };
 
 }  // namespace media_player

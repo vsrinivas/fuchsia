@@ -46,16 +46,11 @@ void FfmpegAudioDecoder::ConfigureConnectors() {
 }
 
 void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
-  incoming_pts_rate_ = packet->pts_rate();
-
   if (next_pts() == Packet::kNoPts) {
-    if (packet->pts() == Packet::kNoPts) {
-      FXL_DLOG(WARNING) << "No PTS established, using 0 by default.";
-      set_next_pts(0);
-    } else {
-      set_next_pts(packet->GetPts(pts_rate()));
-    }
+    set_next_pts(packet->GetPts(pts_rate()));
   }
+
+  context()->reordered_opaque = packet->discontinuity() ? 1 : 0;
 }
 
 int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
@@ -130,6 +125,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   }
 
   av_frame->buf[0] = CreateAVBuffer(std::move(buffer));
+  av_frame->reordered_opaque = av_codec_context.reordered_opaque;
 
   return 0;
 }
@@ -145,7 +141,9 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
   // consistent with the way Chromium deals with the ffmpeg audio decoders.
   int64_t pts = next_pts();
 
-  set_next_pts(pts + av_frame.nb_samples);
+  if (pts != Packet::kNoPts) {
+    set_next_pts(pts + av_frame.nb_samples);
+  }
 
   FXL_DCHECK(stream_type_);
   FXL_DCHECK(stream_type_->audio());
@@ -175,9 +173,12 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     payload_buffer = std::move(new_payload_buffer);
   }
 
+  // Create the output packet. We set the discontinuity bit on the packet if
+  // the corresponding input packet had one.
   return Packet::Create(
       pts, pts_rate(),
-      false,  // Not a keyframe
+      false,                           // Not a keyframe
+      av_frame.reordered_opaque != 0,  // discontinuity
       false,  // Not end-of-stream. The base class handles end-of-stream.
       payload_size, std::move(payload_buffer));
 }

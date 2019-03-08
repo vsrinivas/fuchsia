@@ -13,7 +13,17 @@ namespace media_player {
 PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
                          bool keyframe, bool end_of_stream, size_t size,
                          fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  return std::make_shared<Packet>(pts, pts_rate, keyframe, end_of_stream, size,
+  return std::make_shared<Packet>(pts, pts_rate, keyframe, false, end_of_stream,
+                                  size, std::move(payload_buffer));
+}
+
+// static
+PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
+                         bool keyframe, bool discontinuity, bool end_of_stream,
+                         size_t size,
+                         fbl::RefPtr<PayloadBuffer> payload_buffer) {
+  return std::make_shared<Packet>(pts, pts_rate, keyframe, discontinuity,
+                                  end_of_stream, size,
                                   std::move(payload_buffer));
 }
 
@@ -21,17 +31,19 @@ PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
 PacketPtr Packet::CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate) {
   return std::make_shared<Packet>(pts, pts_rate,
                                   false,     // keyframe
+                                  false,     // discontinuity
                                   true,      // end_of_stream
                                   0,         // size
                                   nullptr);  // payload_buffer
 }
 
 Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-               bool end_of_stream, size_t size,
+               bool discontinuity, bool end_of_stream, size_t size,
                fbl::RefPtr<PayloadBuffer> payload_buffer)
     : pts_(pts),
       pts_rate_(pts_rate),
       keyframe_(keyframe),
+      discontinuity_(discontinuity),
       end_of_stream_(end_of_stream),
       size_(size),
       payload_buffer_(std::move(payload_buffer)) {
@@ -45,6 +57,10 @@ Packet::~Packet() {
 }
 
 int64_t Packet::GetPts(media::TimelineRate pts_rate) {
+  if (pts() == kNoPts) {
+    return kNoPts;
+  }
+
   // We're asking for an inexact product here, because, in some cases,
   // pts_rate / pts_rate_ can't be represented exactly as a TimelineRate.
   // Using this approach produces small errors in the resulting pts in those
