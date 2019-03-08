@@ -732,6 +732,13 @@ template("package") {
         # finished doing large scale cleanups.
         "//build/images:*",
         "//build/gn:packages",
+        "//build/packages/*",
+        "//bundles/*",
+        "//garnet/packages/*",
+        "//peridot/packages/*",
+        "//src/modular/bundles/*",
+        "//topaz/packages/*",
+        "//vendor/*",
       ]
     }
 
