@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FIDL_ENVELOPE_FRAMES_H_
+#define ZIRCON_SYSTEM_ULIB_FIDL_ENVELOPE_FRAMES_H_
 
 #include <stdalign.h>
 #include <cstdint>
@@ -51,3 +52,6 @@ private:
 };
 
 } // namespace fidl
+
+
+#endif  // ZIRCON_SYSTEM_ULIB_FIDL_ENVELOPE_FRAMES_H_

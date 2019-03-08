@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FIDL_VISITOR_H_
+#define ZIRCON_SYSTEM_ULIB_FIDL_VISITOR_H_
 
 #include <cstdint>
 #include <cstdlib>
@@ -207,3 +208,5 @@ constexpr bool CheckVisitorInterface() {
 } // namespace
 
 } // namespace fidl
+
+#endif  // ZIRCON_SYSTEM_ULIB_FIDL_VISITOR_H_
