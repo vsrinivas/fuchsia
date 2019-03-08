@@ -5,10 +5,7 @@
 // This file was generated with bindgen, then modified to consume already bound
 // types and remove various bindgen-isms that we don't want.
 
-use {
-    fuchsia_zircon::sys::*,
-    std::os::raw,
-};
+use {fuchsia_zircon::sys::*, std::os::raw};
 
 #[repr(C)]
 #[derive(Default)]
@@ -185,42 +182,22 @@ fn bindgen_test_layout_fdio_flat_namespace() {
     assert_eq!(
         unsafe { &(*(0 as *const fdio_flat_namespace)).count as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_flat_namespace),
-            "::",
-            stringify!(count)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_flat_namespace), "::", stringify!(count))
     );
     assert_eq!(
         unsafe { &(*(0 as *const fdio_flat_namespace)).handle as *const _ as usize },
         8usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_flat_namespace),
-            "::",
-            stringify!(handle)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_flat_namespace), "::", stringify!(handle))
     );
     assert_eq!(
         unsafe { &(*(0 as *const fdio_flat_namespace)).type_ as *const _ as usize },
         16usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_flat_namespace),
-            "::",
-            stringify!(type_)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_flat_namespace), "::", stringify!(type_))
     );
     assert_eq!(
         unsafe { &(*(0 as *const fdio_flat_namespace)).path as *const _ as usize },
         24usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_flat_namespace),
-            "::",
-            stringify!(path)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_flat_namespace), "::", stringify!(path))
     );
 }
 impl Clone for fdio_flat_namespace {
@@ -258,22 +235,12 @@ fn bindgen_test_layout_sockaddr() {
     assert_eq!(
         unsafe { &(*(0 as *const sockaddr)).sa_family as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(sockaddr),
-            "::",
-            stringify!(sa_family)
-        )
+        concat!("Alignment of field: ", stringify!(sockaddr), "::", stringify!(sa_family))
     );
     assert_eq!(
         unsafe { &(*(0 as *const sockaddr)).sa_data as *const _ as usize },
         2usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(sockaddr),
-            "::",
-            stringify!(sa_data)
-        )
+        concat!("Alignment of field: ", stringify!(sockaddr), "::", stringify!(sa_data))
     );
 }
 impl Clone for sockaddr {
@@ -303,22 +270,12 @@ fn bindgen_test_layout_sockaddr_storage() {
     assert_eq!(
         unsafe { &(*(0 as *const sockaddr_storage)).ss_family as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(sockaddr_storage),
-            "::",
-            stringify!(ss_family)
-        )
+        concat!("Alignment of field: ", stringify!(sockaddr_storage), "::", stringify!(ss_family))
     );
     assert_eq!(
         unsafe { &(*(0 as *const sockaddr_storage)).__ss_align as *const _ as usize },
         8usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(sockaddr_storage),
-            "::",
-            stringify!(__ss_align)
-        )
+        concat!("Alignment of field: ", stringify!(sockaddr_storage), "::", stringify!(__ss_align))
     );
     assert_eq!(
         unsafe { &(*(0 as *const sockaddr_storage)).__ss_padding as *const _ as usize },
@@ -363,82 +320,42 @@ fn bindgen_test_layout_addrinfo() {
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_flags as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_flags)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_flags))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_family as *const _ as usize },
         4usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_family)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_family))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_socktype as *const _ as usize },
         8usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_socktype)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_socktype))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_protocol as *const _ as usize },
         12usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_protocol)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_protocol))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_addrlen as *const _ as usize },
         16usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_addrlen)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_addrlen))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_addr as *const _ as usize },
         24usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_addr)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_addr))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_canonname as *const _ as usize },
         32usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_canonname)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_canonname))
     );
     assert_eq!(
         unsafe { &(*(0 as *const addrinfo)).ai_next as *const _ as usize },
         40usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(addrinfo),
-            "::",
-            stringify!(ai_next)
-        )
+        concat!("Alignment of field: ", stringify!(addrinfo), "::", stringify!(ai_next))
     );
 }
 impl Clone for addrinfo {
@@ -469,42 +386,22 @@ fn bindgen_test_layout_fdio_socket_msg() {
     assert_eq!(
         unsafe { &(*(0 as *const fdio_socket_msg)).addr as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_socket_msg),
-            "::",
-            stringify!(addr)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(addr))
     );
     assert_eq!(
         unsafe { &(*(0 as *const fdio_socket_msg)).addrlen as *const _ as usize },
         128usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_socket_msg),
-            "::",
-            stringify!(addrlen)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(addrlen))
     );
     assert_eq!(
         unsafe { &(*(0 as *const fdio_socket_msg)).flags as *const _ as usize },
         132usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_socket_msg),
-            "::",
-            stringify!(flags)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(flags))
     );
     assert_eq!(
         unsafe { &(*(0 as *const fdio_socket_msg)).data as *const _ as usize },
         136usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(fdio_socket_msg),
-            "::",
-            stringify!(data)
-        )
+        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(data))
     );
 }
 impl Clone for fdio_socket_msg {
@@ -528,11 +425,7 @@ pub struct vnattr {
 }
 #[test]
 fn bindgen_test_layout_vnattr() {
-    assert_eq!(
-        ::std::mem::size_of::<vnattr>(),
-        64usize,
-        concat!("Size of: ", stringify!(vnattr))
-    );
+    assert_eq!(::std::mem::size_of::<vnattr>(), 64usize, concat!("Size of: ", stringify!(vnattr)));
     assert_eq!(
         ::std::mem::align_of::<vnattr>(),
         8usize,
@@ -541,92 +434,47 @@ fn bindgen_test_layout_vnattr() {
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).valid as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(valid)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(valid))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).mode as *const _ as usize },
         4usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(mode)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(mode))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).inode as *const _ as usize },
         8usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(inode)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(inode))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).size as *const _ as usize },
         16usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(size)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(size))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).blksize as *const _ as usize },
         24usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(blksize)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(blksize))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).blkcount as *const _ as usize },
         32usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(blkcount)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(blkcount))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).nlink as *const _ as usize },
         40usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(nlink)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(nlink))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).create_time as *const _ as usize },
         48usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(create_time)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(create_time))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vnattr)).modify_time as *const _ as usize },
         56usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vnattr),
-            "::",
-            stringify!(modify_time)
-        )
+        concat!("Alignment of field: ", stringify!(vnattr), "::", stringify!(modify_time))
     );
 }
 impl Clone for vnattr {
@@ -644,11 +492,7 @@ pub struct vdirent {
 }
 #[test]
 fn bindgen_test_layout_vdirent() {
-    assert_eq!(
-        ::std::mem::size_of::<vdirent>(),
-        8usize,
-        concat!("Size of: ", stringify!(vdirent))
-    );
+    assert_eq!(::std::mem::size_of::<vdirent>(), 8usize, concat!("Size of: ", stringify!(vdirent)));
     assert_eq!(
         ::std::mem::align_of::<vdirent>(),
         4usize,
@@ -657,41 +501,27 @@ fn bindgen_test_layout_vdirent() {
     assert_eq!(
         unsafe { &(*(0 as *const vdirent)).size as *const _ as usize },
         0usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vdirent),
-            "::",
-            stringify!(size)
-        )
+        concat!("Alignment of field: ", stringify!(vdirent), "::", stringify!(size))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vdirent)).type_ as *const _ as usize },
         4usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vdirent),
-            "::",
-            stringify!(type_)
-        )
+        concat!("Alignment of field: ", stringify!(vdirent), "::", stringify!(type_))
     );
     assert_eq!(
         unsafe { &(*(0 as *const vdirent)).name as *const _ as usize },
         8usize,
-        concat!(
-            "Alignment of field: ",
-            stringify!(vdirent),
-            "::",
-            stringify!(name)
-        )
+        concat!("Alignment of field: ", stringify!(vdirent), "::", stringify!(name))
     );
 }
 pub type vdirent_t = vdirent;
 pub type watchdir_func_t = ::std::option::Option<
-    unsafe extern "C" fn(dirfd: raw::c_int,
-                         event: raw::c_int,
-                         fn_: *const raw::c_char,
-                         cookie: *mut raw::c_void)
-                         -> zx_status_t,
+    unsafe extern "C" fn(
+        dirfd: raw::c_int,
+        event: raw::c_int,
+        fn_: *const raw::c_char,
+        cookie: *mut raw::c_void,
+    ) -> zx_status_t,
 >;
 
 #[repr(C)]
@@ -803,19 +633,10 @@ extern "C" {
         signals_out: *mut zx_signals_t,
     );
     pub fn fdio_unsafe_wait_end(io: *mut fdio_t, signals: zx_signals_t, events_out: *mut u32);
-    pub fn fdio_fd_clone(
-        fd: raw::c_int,
-        handle: *mut zx_handle_t,
-    ) -> zx_status_t;
+    pub fn fdio_fd_clone(fd: raw::c_int, handle: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_pipe_pair_raw(handles: *mut zx_handle_t, types: *mut u32) -> zx_status_t;
-    pub fn fdio_fd_transfer(
-        fd: raw::c_int,
-        handle: *mut zx_handle_t,
-    ) -> zx_status_t;
-    pub fn fdio_fd_create(
-        handle: zx_handle_t,
-        fd_out: *mut raw::c_int,
-    ) -> zx_status_t;
+    pub fn fdio_fd_transfer(fd: raw::c_int, handle: *mut zx_handle_t) -> zx_status_t;
+    pub fn fdio_fd_create(handle: zx_handle_t, fd_out: *mut raw::c_int) -> zx_status_t;
     pub fn fdio_bind_to_fd(io: *mut fdio_t, fd: raw::c_int, starting_fd: raw::c_int) -> raw::c_int;
     pub fn fdio_unbind_from_fd(fd: raw::c_int, io_out: *mut *mut fdio_t) -> zx_status_t;
     pub fn fdio_get_service_handle(fd: raw::c_int, out: *mut zx_handle_t) -> zx_status_t;
