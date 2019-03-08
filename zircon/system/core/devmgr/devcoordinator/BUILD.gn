@@ -17,12 +17,19 @@ executable("devcoordinator") {
   # Bring the auxiliaries into the build and the image.  devhost isn't
   # listed here because it's implicitly in data_deps of every driver().
   data_deps = [
-    "../dmctl",
+    ":internal-drivers",
     "../fshost",
     "$zx/system/core/netsvc",
     "$zx/system/core/svchost",
     "$zx/system/core/virtcon:virtual-console",
     "$zx/system/core/pwrbtn-monitor",
+  ]
+}
+
+source_set("internal-drivers") {
+  deps = [
+    "$zx/system/core/devmgr/composite-impl-drivers/component",
+    "$zx/system/core/devmgr/dmctl",
   ]
 }
 

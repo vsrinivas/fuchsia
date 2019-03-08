@@ -1768,6 +1768,11 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
         return;
     }
 
+    // Record the special component driver when we see it
+    if (!strcmp(driver->libname.data(), "/boot/driver/component.so")) {
+        driver->never_autoselect = true;
+    }
+
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
         fallback_drivers_.push_front(driver.release());
