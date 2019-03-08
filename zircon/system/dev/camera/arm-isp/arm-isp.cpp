@@ -84,7 +84,7 @@ void ArmIspDevice::PowerUpIsp() {
     // set the divisor = 1 (writing (1-1) to div field)
     // source for the unused mux = S905D2_FCLK_DIV3   = 3 // 666.7 MHz
     hiu_mmio_.SetBits32(((1 << kClockEnableShift) | 4 << 9),
-                         HHI_MIPI_ISP_CLK_CNTL);
+                        HHI_MIPI_ISP_CLK_CNTL);
 }
 
 // Interrupt handler for the ISP.
@@ -191,7 +191,13 @@ zx_status_t ArmIspDevice::IspContextInit() {
     // This is being written to the local_config_buffer_
     IspLoadSeq_settings_context();
 
-    // TODO(braval@) Call StatManagerInit() here
+    statsMgr_ = camera::StatsManager::Create(isp_mmio_.View(0),
+                                             isp_mmio_local_,
+                                             sensor_callbacks_);
+    if (statsMgr_ == nullptr) {
+        zxlogf(ERROR, "%s: Unable to start StatsManager \n", __func__);
+        return ZX_ERR_NO_MEMORY;
+    }
 
     // Call custom_init()
     IspLoadCustomSequence();
@@ -278,7 +284,7 @@ zx_status_t ArmIspDevice::InitIsp() {
 }
 
 // static
-zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
+zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_t sensor_callbacks) {
 
     ddk::PDev pdev(parent);
     if (!pdev.is_valid()) {
@@ -345,7 +351,8 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
         std::move(*reset_mmio),
         std::move(*isp_mmio),
         local_mmio_buffer,
-        std::move(isp_irq)));
+        std::move(isp_irq),
+        sensor_callbacks));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

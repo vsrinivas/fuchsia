@@ -4,6 +4,7 @@
 
 #include "global_regs.h"
 #include "pingpong_regs.h"
+#include "stats-mgr.h"
 
 #include <atomic>
 #include <ddk/metadata/camera.h>
@@ -41,16 +42,17 @@ public:
                           ddk ::MmioBuffer reset_mmio,
                           ddk ::MmioBuffer isp_mmio,
                           mmio_buffer_t local_mmio,
-                          zx::interrupt isp_irq)
+                          zx::interrupt isp_irq,
+                          isp_callbacks_t sensor_callbacks)
         : IspDeviceType(parent), pdev_(parent),
           hiu_mmio_(std::move(hiu_mmio)), power_mmio_(std::move(power_mmio)),
           memory_pd_mmio_(std::move(memory_pd_mmio)), reset_mmio_(std::move(reset_mmio)),
           isp_mmio_(std::move(isp_mmio)), isp_mmio_local_(local_mmio, 0),
-          isp_irq_(std::move(isp_irq)) {}
+          isp_irq_(std::move(isp_irq)), sensor_callbacks_(sensor_callbacks) {}
 
     ~ArmIspDevice();
 
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(zx_device_t* parent, isp_callbacks_t cbs);
 
     // Methods required by the ddk.
     void DdkRelease();
@@ -96,6 +98,10 @@ private:
     zx::interrupt isp_irq_;
     thrd_t irq_thread_;
     std::atomic<bool> running_;
+
+    isp_callbacks_t sensor_callbacks_;
+
+    fbl::unique_ptr<camera::StatsManager> statsMgr_;
 };
 
 } // namespace camera

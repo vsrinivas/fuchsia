@@ -53,7 +53,7 @@ private:
 
     thrd_t worker_thread_;
 
-    isp_callbacks_t cbs_;
+    isp_callbacks_t sensor_callbacks_;
 
     sync_completion_t cb_registered_signal_;
 

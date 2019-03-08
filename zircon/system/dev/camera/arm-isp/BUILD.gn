@@ -6,9 +6,11 @@ driver("arm-isp") {
   sources = [
     "arm-isp-impl.cpp",
     "arm-isp.cpp",
-    "init_sequences.cc",
+    "init_sequences.cpp",
     "modules/dma-format.cc",
     "modules/dma-mgr.cc",
+    "modules/sensor.cpp",
+    "stats-mgr.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-clock",

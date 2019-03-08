@@ -40,7 +40,7 @@ zx_status_t ArmISPImplDevice::IspImplRegisterCallbacks(const isp_callbacks_t* cb
         return ZX_ERR_INVALID_ARGS;
     }
 
-    cbs_ = *cbs;
+    sensor_callbacks_ = *cbs;
 
     sync_completion_signal(&cb_registered_signal_);
     return ZX_OK;
@@ -78,7 +78,7 @@ int ArmISPImplDevice::WorkerThread() {
     //       support for multiple sensors easily when needed.
     sync_completion_wait(&cb_registered_signal_, ZX_TIME_INFINITE);
 
-    return camera::ArmIspDevice::Create(parent_);
+    return camera::ArmIspDevice::Create(parent_, sensor_callbacks_);
 }
 
 // static
