@@ -85,7 +85,7 @@ void VmoPayloadAllocator::AddVmo(fbl::RefPtr<PayloadVmo> payload_vmo) {
   payload_vmos_.push_back(payload_vmo);
   if (vmo_allocation_ != VmoAllocation::kVmoPerBuffer) {
     payload_vmo->allocator_ =
-        fbl::make_unique<media::FifoAllocator>(payload_vmo->size());
+        fbl::make_unique<FifoAllocator>(payload_vmo->size());
   }
 }
 
@@ -147,7 +147,7 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
   // aligning-up all the sizes.
   uint64_t offset =
       payload_vmo->allocator_->AllocateRegion(PayloadBuffer::AlignUp(size));
-  if (offset == media::FifoAllocator::kNullOffset) {
+  if (offset == FifoAllocator::kNullOffset) {
     // Can't allocate.
     return nullptr;
   }

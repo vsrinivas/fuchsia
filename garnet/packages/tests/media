@@ -12,7 +12,6 @@
         "//garnet/bin/media/codecs/test:raw_frames_test",
         "//garnet/examples/media:use_aac_decoder_test",
         "//garnet/public/lib/media/audio_dfx:audio_dfx_tests",
-        "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
-        "//garnet/public/lib/media/transport:media_lib_transport_tests"
+        "//garnet/public/lib/media/timeline:media_lib_timeline_tests"
     ]
 }

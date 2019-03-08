@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEDIA_TRANSPORT_FIFO_ALLOCATOR_H_
-#define LIB_MEDIA_TRANSPORT_FIFO_ALLOCATOR_H_
+#ifndef GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOADS_FIFO_ALLOCATOR_H_
+#define GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOADS_FIFO_ALLOCATOR_H_
 
 #include <cstdint>
 #include <limits>
 
-namespace media {
+namespace media_player {
 
 // FifoAllocator implements heap semantics on a single contiguous buffer using
 // a strategy that is especially suited to streaming. Allocations can vary in
@@ -141,6 +141,6 @@ class FifoAllocator {
   Region* active_;
 };
 
-}  // namespace media
+}  // namespace media_player
 
-#endif  // LIB_MEDIA_TRANSPORT_FIFO_ALLOCATOR_H_
+#endif  // GARNET_BIN_MEDIAPLAYER_GRAPH_PAYLOADS_FIFO_ALLOCATOR_H_

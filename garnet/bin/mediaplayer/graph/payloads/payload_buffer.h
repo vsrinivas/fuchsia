@@ -13,8 +13,8 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <memory>
+#include "garnet/bin/mediaplayer/graph/payloads/fifo_allocator.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/transport/fifo_allocator.h"
 
 namespace media_player {
 
@@ -79,7 +79,7 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   // NOTE: Access to these two fields is serialized using the mutex on the
   // owning |VmoPayloadAllocator|.
   bool allocated_ = false;
-  fbl::unique_ptr<media::FifoAllocator> allocator_;
+  fbl::unique_ptr<FifoAllocator> allocator_;
 
   friend class VmoPayloadAllocator;
 };

@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "test/media_lib_transport_tests"
-    },
-    "sandbox": {
-        "services": [ ]
-    }
-}

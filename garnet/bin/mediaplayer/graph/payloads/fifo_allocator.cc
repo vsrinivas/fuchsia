@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/media/transport/fifo_allocator.h"
+#include "garnet/bin/mediaplayer/graph/payloads/fifo_allocator.h"
 
 #include <zircon/compiler.h>
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 FifoAllocator::FifoAllocator(uint64_t size) : front_(nullptr), free_(nullptr) {
   // front_ and free_ need to be set to nullptr before calling reset.
@@ -213,4 +213,4 @@ void FifoAllocator::DeleteFrontToBack(Region* region) {
   }
 }
 
-}  // namespace media
+}  // namespace media_player
