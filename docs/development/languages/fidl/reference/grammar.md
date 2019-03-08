@@ -87,7 +87,7 @@ protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
 protocol-member = protocol-method | protocol-event | protocol-compose ;
 
 protocol-method = ( attribute-list ) , IDENTIFIER , parameter-list,
-                  ( "->" , parameter-list ) ;
+                  ( "->" , parameter-list , ( "error" type-constructor ) ) ; [NOTE 5]
 
 protocol-event = ( attribute-list ) , "->" , IDENTIFIER , parameter-list ;
 
@@ -159,6 +159,11 @@ limits this to unsigned integer types, see [primitives].
 The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar, but the compiler limits this to:
 * A `NUMERIC-LITERAL` in the context of an `enum`;
 * A `NUMERIC-LITERAL` which must be a power of two, in the context of a `bits`.
+
+### NOTE 5
+The `protocol-method` error stanza allows the more liberal `type-constructor`
+in the grammar, but the compiler limits this to an `int32`, `uint32`, or
+an enum thereof.
 
 <!-- xrefs -->
 [primitives]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md#primitives
