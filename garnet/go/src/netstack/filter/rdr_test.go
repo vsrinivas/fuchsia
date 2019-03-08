@@ -93,7 +93,7 @@ func TestRDROneWayWanToLanUDP(t *testing.T) {
 	receiverLan := tcpip.FullAddress{Addr: testLanNICAddr, Port: testLanPort}
 	receiverRouter := tcpip.FullAddress{Addr: testRouterNICAddr2, Port: testRouterPort}
 
-	if err := epLanUDP.Bind(receiverLan, nil); err != nil {
+	if err := epLanUDP.Bind(receiverLan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
@@ -151,10 +151,10 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	receiverRouter := tcpip.FullAddress{Addr: testRouterNICAddr2, Port: testRouterPort}
 	receiverWan := tcpip.FullAddress{Addr: testWanNICAddr, Port: testWanPort}
 
-	if err := epLanUDP.Bind(receiverLan, nil); err != nil {
+	if err := epLanUDP.Bind(receiverLan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
-	if err := epWanUDP.Bind(receiverWan, nil); err != nil {
+	if err := epWanUDP.Bind(receiverWan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
@@ -242,7 +242,7 @@ func TestRDRWanToLanTCP(t *testing.T) {
 	receiverLan := tcpip.FullAddress{Addr: testLanNICAddr, Port: testLanPort}
 	receiverRouter := tcpip.FullAddress{Addr: testRouterNICAddr2, Port: testRouterPort}
 
-	if err := epLanTCPMaster.Bind(receiverLan, nil); err != nil {
+	if err := epLanTCPMaster.Bind(receiverLan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 	if err := epLanTCPMaster.Listen(10); err != nil {

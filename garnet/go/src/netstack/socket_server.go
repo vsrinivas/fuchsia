@@ -620,7 +620,7 @@ func (ios *iostate) Bind(sockaddr []uint8) (int16, error) {
 	if err != nil {
 		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
 	}
-	if err := ios.ep.Bind(addr, nil); err != nil {
+	if err := ios.ep.Bind(addr); err != nil {
 		return tcpipErrorToCode(err), nil
 	}
 	return 0, nil

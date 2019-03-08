@@ -165,7 +165,7 @@ func TestNATOneWayLanToWanUDP(t *testing.T) {
 
 	receiverWan := tcpip.FullAddress{Addr: testWanNICAddr, Port: testWanPort}
 
-	if err := epWanUDP.Bind(receiverWan, nil); err != nil {
+	if err := epWanUDP.Bind(receiverWan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
@@ -222,10 +222,10 @@ func TestNATRoundtripLanToWanUDP(t *testing.T) {
 	receiverLan := tcpip.FullAddress{Addr: testLanNICAddr, Port: testLanPort}
 	receiverWan := tcpip.FullAddress{Addr: testWanNICAddr, Port: testWanPort}
 
-	if err := epLanUDP.Bind(receiverLan, nil); err != nil {
+	if err := epLanUDP.Bind(receiverLan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
-	if err := epWanUDP.Bind(receiverWan, nil); err != nil {
+	if err := epWanUDP.Bind(receiverWan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
@@ -310,7 +310,7 @@ func TestNATLanToWanTCP(t *testing.T) {
 
 	receiverWan := tcpip.FullAddress{Addr: testWanNICAddr, Port: testWanPort}
 
-	if err := epWanTCPMaster.Bind(receiverWan, nil); err != nil {
+	if err := epWanTCPMaster.Bind(receiverWan); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 	if err := epWanTCPMaster.Listen(10); err != nil {

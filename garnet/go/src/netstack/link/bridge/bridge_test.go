@@ -148,9 +148,9 @@ func TestBridge(t *testing.T) {
 		}
 	}
 
-	for ipaddr, toStack := range addrs {
-		t.Run(fmt.Sprintf("ConnectAndWrite_%s", ipaddr), func(t *testing.T) {
-			recvd, err := connectAndWrite(s1, toStack, ipaddr, payload)
+	for addr, toStack := range addrs {
+		t.Run(fmt.Sprintf("ConnectAndWrite_%s", addr), func(t *testing.T) {
+			recvd, err := connectAndWrite(s1, toStack, addr, payload)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -227,36 +227,42 @@ func TestBridge(t *testing.T) {
 		bcaddr: sb,
 	}
 
-	for ipaddr, toStack := range noLongerConnectable {
-		senderWaitQueue := new(waiter.Queue)
-		sender, err := s1.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, senderWaitQueue)
-		if err != nil {
-			t.Fatalf("NewEndpoint failed: %s", err)
-		}
-		defer sender.Close()
+	for addr, toStack := range noLongerConnectable {
+		t.Run(string(addr), func(t *testing.T) {
+			senderWaitQueue := new(waiter.Queue)
+			sender, err := s1.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, senderWaitQueue)
+			if err != nil {
+				t.Fatalf("NewEndpoint failed: %s", err)
+			}
+			defer sender.Close()
 
-		receiverWaitQueue := new(waiter.Queue)
-		receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, receiverWaitQueue)
-		if err != nil {
-			t.Fatalf("NewEndpoint failed: %s", err)
-		}
-		defer receiver.Close()
+			receiverWaitQueue := new(waiter.Queue)
+			receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, receiverWaitQueue)
+			if err != nil {
+				t.Fatalf("NewEndpoint failed: %s", err)
+			}
+			defer receiver.Close()
 
-		fulladdr := tcpip.FullAddress{Addr: ipaddr, Port: 2}
-		if err := receiver.Bind(fulladdr, nil); err != nil {
-			t.Fatalf("bind failed: %s", err)
-		}
-		if err := receiver.Listen(1); err != nil {
-			t.Fatalf("listen failed: %s", err)
-		}
+			if err := receiver.Bind(tcpip.FullAddress{Addr: addr}); err != nil {
+				t.Fatalf("bind failed: %s", err)
+			}
+			if err := receiver.Listen(1); err != nil {
+				t.Fatalf("listen failed: %s", err)
+			}
+			addr, err := receiver.GetLocalAddress()
+			if err != nil {
+				t.Fatalf("getlocaladdress failed: %s", err)
+			}
+			addr.NIC = 0
 
-		if err := connect(sender, fulladdr, senderWaitQueue, receiverWaitQueue); err != timeoutSendReady {
-			t.Errorf("expected timeout sendready, got nil error connecting to addr %s", ipaddr)
-		}
+			if err := connect(sender, addr, senderWaitQueue, receiverWaitQueue); err != timeoutSendReady {
+				t.Errorf("expected timeout sendready, got %v connecting to addr %+v", err, addr)
+			}
+		})
 	}
 
-	for ipaddr, toStack := range stillConnectable {
-		recvd, err := connectAndWrite(s1, toStack, ipaddr, payload)
+	for addr, toStack := range stillConnectable {
+		recvd, err := connectAndWrite(s1, toStack, addr, payload)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -388,32 +394,38 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, addr tcpip.Ad
 	}
 	defer receiver.Close()
 
-	fulladdr := tcpip.FullAddress{Addr: addr, Port: 1}
-	if err := receiver.Bind(fulladdr, nil); err != nil {
+	if err := receiver.Bind(tcpip.FullAddress{Addr: addr}); err != nil {
 		return nil, fmt.Errorf("bind failed: %s", err)
 	}
 	if err := receiver.Listen(1); err != nil {
 		return nil, fmt.Errorf("listen failed: %s", err)
 	}
+	{
+		addr, err := receiver.GetLocalAddress()
+		if err != nil {
+			return nil, fmt.Errorf("getlocaladdress failed: %s", err)
+		}
+		addr.NIC = 0
 
-	if err := connect(sender, fulladdr, senderWaitQueue, receiverWaitQueue); err != nil {
-		return nil, fmt.Errorf("connect failed: %s\n\n%+v\n\n%+v", err, fromStack.Stats(), toStack.Stats())
-	}
+		if err := connect(sender, addr, senderWaitQueue, receiverWaitQueue); err != nil {
+			return nil, fmt.Errorf("connect failed: %s\n\n%+v\n\n%+v", err, fromStack.Stats(), toStack.Stats())
+		}
 
-	ep, wq, err := receiver.Accept()
-	if err != nil {
-		return nil, fmt.Errorf("accept failed: %s", err)
-	}
+		ep, wq, err := receiver.Accept()
+		if err != nil {
+			return nil, fmt.Errorf("accept failed: %s", err)
+		}
 
-	if err := write(sender, fulladdr, payload, wq); err != nil {
-		return nil, err
-	}
+		if err := write(sender, addr, payload, wq); err != nil {
+			return nil, err
+		}
 
-	recvd, _, err := ep.Read(nil)
-	if err != nil {
-		return nil, fmt.Errorf("read failed: %s", err)
+		recvd, _, err := ep.Read(nil)
+		if err != nil {
+			return nil, fmt.Errorf("read failed: %s", err)
+		}
+		return recvd, nil
 	}
-	return recvd, nil
 }
 
 func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, wq *waiter.Queue) error {
