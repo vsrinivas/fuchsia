@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/recovery_netstack#meta/recovery_netstack.cmx",
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/recovery_netstack#meta/recovery_netstack.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/enclosed_runner"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.net.stack.Stack"
+        ]
+    }
+}

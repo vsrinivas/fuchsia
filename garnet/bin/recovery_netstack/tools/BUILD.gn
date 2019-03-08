@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("recovery_netstack_tools") {
+  testonly = true
+
+  deps = [
+    "//garnet/bin/recovery_netstack/tools/enclosed_runner",
+  ]
+
+  binaries = [
+    {
+      name = "enclosed_runner"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/enclosed_runner.cmx")
+      dest = "enclosed_runner.cmx"
+    },
+  ]
+}
