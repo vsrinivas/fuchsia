@@ -1135,16 +1135,6 @@ private:
     // so, returns the type. Otherwise, returns nullptr.
     const PrimitiveType* LookupTypeAlias(const Name& name) const;
 
-    // Returns nullptr when |type| does not correspond directly to a
-    // declaration. For example, if |type| refers to int32 or if it is
-    // a struct pointer, this will return null. If it is a struct, it
-    // will return a pointer to the declaration of the type.
-    enum class LookupOption {
-        kIgnoreNullable,
-        kIncludeNullable,
-    };
-    Decl* DependentDeclOfTypeConstructor(const TypeConstructor* type_ctor, LookupOption option) const;
-
     bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
     bool SortDeclarations();

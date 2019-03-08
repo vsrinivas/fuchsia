@@ -1049,7 +1049,7 @@ Libraries::Libraries() {
     }));
     AddAttributeSchema("Transport", AttributeSchema({
         AttributeSchema::Placement::kInterfaceDecl,
-    }, { 
+    }, {
         /* any value */
     }, TransportConstraint));
     // clang-format on
@@ -2201,23 +2201,6 @@ const PrimitiveType* Library::LookupTypeAlias(const Name& name) const {
     return it->second->type;
 }
 
-Decl* Library::DependentDeclOfTypeConstructor(const TypeConstructor* type_ctor,
-                                              LookupOption option) const {
-    for (;;) {
-        const auto& name = type_ctor->name;
-        if (name.name_part() == "request") {
-            return nullptr;
-        } else if (type_ctor->maybe_arg_type_ctor) {
-            type_ctor = type_ctor->maybe_arg_type_ctor.get();
-        } else if (type_ctor->nullability == types::Nullability::kNullable &&
-                   option == LookupOption::kIgnoreNullable) {
-            return nullptr;
-        } else {
-            return LookupDeclByName(type_ctor->name);
-        }
-    }
-}
-
 Decl* Library::LookupDeclByName(const Name& name) const {
     auto iter = declarations_.find(&name);
     if (iter == declarations_.end()) {
@@ -2238,25 +2221,49 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
     return result == utils::ParseNumericResult::kSuccess;
 }
 
-// An edge from D1 to D2 means that a C needs to see the declaration
-// of D1 before the declaration of D2. For instance, given the fidl
-//     struct D2 { D1 d; };
-//     struct D1 { int32 x; };
-// D1 has an edge pointing to D2. Note that struct, union, and xunion pointers,
-// unlike inline structs/unions/xunions, do not have dependency edges.
+// Calculating declaration dependencies is largely serving the C/C++ family of languages bindings.
+// For instance, the declaration of a struct member type must be defined before the containing
+// struct if that member is stored inline.
+// Given the FIDL declarations:
+//
+//     struct D2 { D1 d; }
+//     struct D1 { int32 x; }
+//
+// We must first declare D1, followed by D2 when emitting C code.
+//
+// Below, an edge from D1 to D2 means that we must see the declaration of of D1 before
+// the declaration of D2, i.e. the calculated set of |out_edges| represents all the declarations
+// that |decl| depends on.
+//
+// Notes:
+// - Nullable structs do not require dependency edges since they are boxed via a
+// pointer indirection, and their content placed out-of-line.
+// - However, xunions always require dependency edges since nullability does not affect
+// their layout.
 bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     std::set<Decl*> edges;
-    auto maybe_add_decl = [this, &edges](const TypeConstructor* type_ctor,
-                                         LookupOption option) {
-        auto type_decl = DependentDeclOfTypeConstructor(type_ctor, option);
-        if (type_decl != nullptr) {
-            edges.insert(type_decl);
-        }
-    };
     auto maybe_add_name = [this, &edges](const Name& name) {
         auto type_decl = LookupDeclByName(name);
         if (type_decl != nullptr) {
             edges.insert(type_decl);
+        }
+    };
+    auto maybe_add_decl = [this, &edges, &maybe_add_name](const TypeConstructor* type_ctor) {
+        for (;;) {
+            const auto& name = type_ctor->name;
+            if (name.name_part() == "request") {
+                return;
+            } else if (type_ctor->maybe_arg_type_ctor) {
+                type_ctor = type_ctor->maybe_arg_type_ctor.get();
+            } else if (type_ctor->nullability == types::Nullability::kNullable) {
+                if (auto decl = LookupDeclByName(name); decl && decl->kind == Decl::Kind::kXUnion) {
+                    edges.insert(decl);
+                }
+                return;
+            } else {
+                maybe_add_name(name);
+                return;
+            }
         }
     };
     auto maybe_add_constant = [this, &edges](const TypeConstructor* type_ctor,
@@ -2320,9 +2327,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const Struct*>(decl);
         for (const auto& member : struct_decl->members) {
-            auto option = struct_decl->anonymous ? LookupOption::kIncludeNullable
-                                                 : LookupOption::kIgnoreNullable;
-            maybe_add_decl(member.type_ctor.get(), option);
+            maybe_add_decl(member.type_ctor.get());
             if (member.maybe_default_value) {
                 if (!maybe_add_constant(member.type_ctor.get(), member.maybe_default_value.get()))
                     return false;
@@ -2335,7 +2340,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         for (const auto& member : table_decl->members) {
             if (!member.maybe_used)
                 continue;
-            maybe_add_decl(member.maybe_used->type_ctor.get(), LookupOption::kIgnoreNullable);
+            maybe_add_decl(member.maybe_used->type_ctor.get());
             if (member.maybe_used->maybe_default_value) {
                 if (!maybe_add_constant(member.maybe_used->type_ctor.get(),
                                         member.maybe_used->maybe_default_value.get()))
@@ -2347,14 +2352,14 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (const auto& member : union_decl->members) {
-            maybe_add_decl(member.type_ctor.get(), LookupOption::kIgnoreNullable);
+            maybe_add_decl(member.type_ctor.get());
         }
         break;
     }
     case Decl::Kind::kXUnion: {
         auto xunion_decl = static_cast<const XUnion*>(decl);
         for (const auto& member : xunion_decl->members) {
-            maybe_add_decl(member.type_ctor.get(), LookupOption::kIgnoreNullable);
+            maybe_add_decl(member.type_ctor.get());
         }
         break;
     }
