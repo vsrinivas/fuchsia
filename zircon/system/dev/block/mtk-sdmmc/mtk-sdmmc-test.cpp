@@ -26,10 +26,10 @@ public:
                    zx::interrupt(ZX_HANDLE_INVALID),
                    ddk::GpioProtocolClient(),
                    ddk::GpioProtocolClient(),
-                   pdev_device_info_t{},
                    board_mt8167::MtkSdmmcConfig{
                        .fifo_depth = 128,
-                       .src_clk_freq = 200000000
+                       .src_clk_freq = 200000000,
+                       .is_sdio = false
                    }) {}
 
     MtkSdmmcTest(zx_device_t* parent, ddk_mock::MockMmioRegRegion& registers)
@@ -40,10 +40,10 @@ public:
                    zx::interrupt(ZX_HANDLE_INVALID),
                    ddk::GpioProtocolClient(),
                    ddk::GpioProtocolClient(),
-                   pdev_device_info_t{},
                    board_mt8167::MtkSdmmcConfig{
                        .fifo_depth = 128,
-                       .src_clk_freq = 200000000
+                       .src_clk_freq = 200000000,
+                       .is_sdio = false
                    }) {}
 
     void StopIrqThread() {

@@ -161,7 +161,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, *std::move(mmio), std::move(bti),
                                                         info, std::move(irq), reset_gpio,
-                                                        power_en_gpio, dev_info, config));
+                                                        power_en_gpio, config));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
@@ -206,7 +206,7 @@ zx_status_t MtkSdmmc::Init() {
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
     auto sdc_cfg = SdcCfg::Get().ReadFrom(&mmio_);
-    if (dev_info_.did == PDEV_DID_MEDIATEK_SDIO) {
+    if (config_.is_sdio) {
         sdc_cfg.set_sdio_interrupt_enable(1).set_sdio_enable(1);
         MsdcIntEn::Get().FromValue(0).set_sdio_irq_enable(1).WriteTo(&mmio_);
     }
@@ -754,7 +754,7 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
             .set_cmd_ready_enable(1)
             .WriteTo(&mmio_);
 
-        SdcCmd::FromRequest(req, dev_info_.did == PDEV_DID_MEDIATEK_SDIO).WriteTo(&mmio_);
+        SdcCmd::FromRequest(req, config_.is_sdio).WriteTo(&mmio_);
     }
 
     sync_completion_wait(&req_completion_, ZX_TIME_INFINITE);
@@ -781,7 +781,7 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
 }
 
 zx_status_t MtkSdmmc::SdmmcGetInBandInterrupt(zx::interrupt* out_irq) {
-    if (dev_info_.did != PDEV_DID_MEDIATEK_SDIO) {
+    if (!config_.is_sdio) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -904,7 +904,7 @@ int MtkSdmmc::IrqThread() {
 
         MsdcIntEn::Get()
             .FromValue(0)
-            .set_sdio_irq_enable(dev_info_.did == PDEV_DID_MEDIATEK_SDIO ? 1 : 0)
+            .set_sdio_irq_enable(config_.is_sdio ? 1 : 0)
             .WriteTo(&mmio_);
 
         req_ = nullptr;
@@ -925,9 +925,10 @@ static zx_driver_ops_t mtk_sdmmc_driver_ops = []() -> zx_driver_ops_t {
     return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(mtk_sdmmc, mtk_sdmmc_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(mtk_sdmmc, mtk_sdmmc_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_EMMC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_SDIO),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC0),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC1),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_MSDC2),
 ZIRCON_DRIVER_END(mtk_sdmmc)

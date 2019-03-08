@@ -22,8 +22,9 @@ namespace board_mt8167 {
 enum {
     BTI_BOARD,
     BTI_DISPLAY,
-    BTI_EMMC,
-    BTI_SDIO,
+    BTI_MSDC0,
+    BTI_MSDC1,
+    BTI_MSDC2,
     BTI_USB,
     BTI_AUDIO_OUT,
     BTI_AUDIO_IN,
@@ -48,8 +49,9 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Mt8167);
 
     zx_status_t Start();
-    zx_status_t EmmcInit();
-    zx_status_t SdioInit();
+    zx_status_t Msdc0Init();
+    zx_status_t Msdc1Init();
+    zx_status_t Msdc2Init();
     zx_status_t SocInit();
     zx_status_t SysmemInit();
     zx_status_t GpioInit();

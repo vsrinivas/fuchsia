@@ -82,11 +82,18 @@ int Mt8167::Thread() {
     }
 
     // Then the platform device drivers.
-    if (EmmcInit() != ZX_OK) {
-        zxlogf(ERROR, "EmmcInit() failed\n");
+
+    // eMMC
+    if (Msdc0Init() != ZX_OK) {
+        zxlogf(ERROR, "Msdc0Init() failed\n");
     }
-    if (SdioInit() != ZX_OK) {
-        zxlogf(ERROR, "SdioInit() failed\n");
+    // SDIO on Eagle, not used on others
+    if (Msdc1Init() != ZX_OK) {
+        zxlogf(ERROR, "Msdc1Init() failed\n");
+    }
+    // SD on Eagle, SDIO on others
+    if (Msdc2Init() != ZX_OK) {
+        zxlogf(ERROR, "Msdc2Init() failed\n");
     }
     // display driver is only supported on the ref board only
     if (board_info_.vid == PDEV_VID_MEDIATEK &&

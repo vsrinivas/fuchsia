@@ -65,24 +65,25 @@ public:
     DEF_FIELD(20, 0, pcw);
 };
 
-zx_status_t Mt8167::EmmcInit() {
-    static const pbus_mmio_t emmc_mmios[] = {
+zx_status_t Mt8167::Msdc0Init() {
+    static const pbus_mmio_t msdc0_mmios[] = {
         {
             .base = MT8167_MSDC0_BASE,
             .length = MT8167_MSDC0_SIZE,
         }
     };
 
-    static const pbus_bti_t emmc_btis[] = {
+    static const pbus_bti_t msdc0_btis[] = {
         {
             .iommu_index = 0,
-            .bti_id = BTI_EMMC,
+            .bti_id = BTI_MSDC0,
         }
     };
 
-    static const MtkSdmmcConfig emmc_config = {
+    static const MtkSdmmcConfig msdc0_config = {
         .fifo_depth = kFifoDepth,
-        .src_clk_freq = kSrcClkFreq
+        .src_clk_freq = kSrcClkFreq,
+        .is_sdio = false
     };
 
     static const guid_map_t guid_map[] = {
@@ -107,11 +108,11 @@ zx_status_t Mt8167::EmmcInit() {
     };
     static_assert(fbl::count_of(guid_map) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
 
-    static const pbus_metadata_t emmc_metadata[] = {
+    static const pbus_metadata_t msdc0_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &emmc_config,
-            .data_size = sizeof(emmc_config)
+            .data_buffer = &msdc0_config,
+            .data_size = sizeof(msdc0_config)
         },
         {
             .type = DEVICE_METADATA_GUID_MAP,
@@ -120,33 +121,33 @@ zx_status_t Mt8167::EmmcInit() {
         }
     };
 
-    static const pbus_irq_t emmc_irqs[] = {
+    static const pbus_irq_t msdc0_irqs[] = {
         {
             .irq = MT8167_IRQ_MSDC0,
             .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
         }
     };
 
-    static const pbus_gpio_t emmc_gpios[] = {
+    static const pbus_gpio_t msdc0_gpios[] = {
         {
             .gpio = MT8167_GPIO_MSDC0_RST
         }
     };
 
-    pbus_dev_t emmc_dev = {};
-    emmc_dev.name = "emmc";
-    emmc_dev.vid = PDEV_VID_MEDIATEK;
-    emmc_dev.did = PDEV_DID_MEDIATEK_EMMC;
-    emmc_dev.mmio_list = emmc_mmios;
-    emmc_dev.mmio_count = countof(emmc_mmios);
-    emmc_dev.bti_list = emmc_btis;
-    emmc_dev.bti_count = countof(emmc_btis);
-    emmc_dev.metadata_list = emmc_metadata;
-    emmc_dev.metadata_count = countof(emmc_metadata);
-    emmc_dev.irq_list = emmc_irqs;
-    emmc_dev.irq_count = countof(emmc_irqs);
-    emmc_dev.gpio_list = emmc_gpios;
-    emmc_dev.gpio_count = countof(emmc_gpios);
+    pbus_dev_t msdc0_dev = {};
+    msdc0_dev.name = "emmc";
+    msdc0_dev.vid = PDEV_VID_MEDIATEK;
+    msdc0_dev.did = PDEV_DID_MEDIATEK_MSDC0;
+    msdc0_dev.mmio_list = msdc0_mmios;
+    msdc0_dev.mmio_count = countof(msdc0_mmios);
+    msdc0_dev.bti_list = msdc0_btis;
+    msdc0_dev.bti_count = countof(msdc0_btis);
+    msdc0_dev.metadata_list = msdc0_metadata;
+    msdc0_dev.metadata_count = countof(msdc0_metadata);
+    msdc0_dev.irq_list = msdc0_irqs;
+    msdc0_dev.irq_count = countof(msdc0_irqs);
+    msdc0_dev.gpio_list = msdc0_gpios;
+    msdc0_dev.gpio_count = countof(msdc0_gpios);
 
     // TODO(bradenkell): Have the clock driver do this once muxing is supported.
     zx::unowned_resource root_resource(get_root_resource());
@@ -183,7 +184,7 @@ zx_status_t Mt8167::EmmcInit() {
         .set_msdc0_mux_sel(ClkMuxSel0::kClkMmPllDiv2)
         .WriteTo(&(*clk_mmio));
 
-    if ((status = pbus_.DeviceAdd(&emmc_dev)) != ZX_OK) {
+    if ((status = pbus_.DeviceAdd(&msdc0_dev)) != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
     }
 
