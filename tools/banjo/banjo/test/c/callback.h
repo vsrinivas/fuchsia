@@ -21,19 +21,13 @@ typedef uint32_t direction_t;
 #define DIRECTION_LEFT UINT32_C(2)
 #define DIRECTION_RIGHT UINT32_C(3)
 
-
-
 typedef struct point point_t;
-
-
+typedef struct draw draw_t;
 
 typedef struct drawing_protocol drawing_protocol_t;
 
 
-
 // Declarations
-
-
 
 
 
@@ -42,7 +36,10 @@ struct point {
     int32_t y;
 };
 
-
+struct draw {
+  void (*callback)(void* ctx, const point_t* p, direction_t d);
+  void* ctx;
+};
 
 
 typedef struct drawing_protocol_ops {

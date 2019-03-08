@@ -368,6 +368,20 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
     ))
 }
 
+/// Checks whether a decl is a interface, and if it is a interface, checks that it is a "ddk-callback".
+fn filter_callback<'a>(
+    decl: &'a ast::Decl,
+) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
+        if let Some(layout) = attributes.get_attribute("Layout") {
+            if layout == "ddk-callback" {
+                return Some((name, methods, attributes));
+            }
+        }
+    }
+    None
+}
+
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
@@ -779,6 +793,40 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .map(|x| x.join("\n"))
     }
 
+    fn codegen_callback_defs(
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .into_iter()
+            .filter_map(filter_callback)
+            .map(|(name, methods, _)| {
+                let m = methods.get(0).ok_or(format_err!("callback has no methods"))?;
+                let (out_params, return_param) = get_out_params(&m, name, ast)?;
+                let in_params = get_in_params(&m, false, ast)?;
+
+                let params = iter::once("void* ctx".to_string())
+                    .chain(in_params)
+                    .chain(out_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let method = format!(
+                    "{return_param} (*{fn_name})({params})",
+                    return_param = return_param,
+                    params = params,
+                    fn_name = to_c_name(m.name.as_str())
+                );
+                Ok(format!(
+                    include_str!("templates/c/callback.h"),
+                    callback_name = to_c_name(name),
+                    callback = method,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
     fn codegen_protocol_decl(
         &self,
         namespace: &Vec<ast::Decl>,
@@ -805,6 +853,21 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(namespace
             .into_iter()
             .filter_map(filter_interface)
+            .map(|(name, _, _)| {
+                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name))
+            })
+            .collect::<Vec<_>>()
+            .join("\n"))
+    }
+
+    fn codegen_callback_decl(
+        &self,
+        namespace: &Vec<ast::Decl>,
+        _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        Ok(namespace
+            .into_iter()
+            .filter_map(filter_callback)
             .map(|(name, _, _)| {
                 format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name))
             })
@@ -876,12 +939,14 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             enum_decls = self.codegen_enum_decl(namespace, &ast)?,
             union_decls = self.codegen_union_decl(namespace, &ast)?,
             struct_decls = self.codegen_struct_decl(namespace, &ast)?,
+            callback_decls = self.codegen_callback_decl(namespace, &ast)?,
             interface_decls = self.codegen_interface_decl(namespace, &ast)?,
             protocol_decls = self.codegen_protocol_decl(namespace, &ast)?,
             async_decls = self.codegen_async_decl(namespace, &ast)?,
             constant_definitions = self.codegen_constant_defs(namespace, &ast)?,
             union_definitions = self.codegen_union_defs(namespace, &ast)?,
             struct_definitions = self.codegen_struct_defs(namespace, &ast)?,
+            callback_definitions = self.codegen_callback_defs(namespace, &ast)?,
             interface_definitions = self.codegen_interface_defs(namespace, &ast)?,
             protocol_definitions = self.codegen_protocol_defs(namespace, &ast)?
         ))?;
