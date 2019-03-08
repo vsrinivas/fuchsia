@@ -54,7 +54,7 @@ if (current_toolchain == default_toolchain) {
       "enums_tests.cpp",
       "errors_tests.cpp",
       "flat_ast_tests.cpp",
-      "formatter_unittests.cpp",
+      "formatter_tests.cpp",
       "json_generator_tests.cpp",
       "lint_tests.cpp",
       "max_bytes_multipass_tests.cpp",
