@@ -11,6 +11,7 @@
 #include "garnet/bin/mediaplayer/metrics/packet_timing_tracker.h"
 #include "garnet/bin/mediaplayer/render/audio_renderer.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace media_player {
 
@@ -58,6 +59,8 @@ class FidlAudioRenderer : public AudioRenderer {
   void OnTimelineTransition() override;
 
  private:
+  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
+
   // Determines if more packets are needed.
   bool NeedMorePackets();
 
