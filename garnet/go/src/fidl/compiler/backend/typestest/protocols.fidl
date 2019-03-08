@@ -2,11 +2,13 @@ library test.name;
 
 protocol WithAndWithoutRequestResponse {
     NoRequestNoResponse();
-    WithRequestNoResponse(string arg);
+    NoRequestEmptyResponse() -> ();
     NoRequestWithResponse() -> (string ret);
+    WithRequestNoResponse(string arg);
+    WithRequestEmptyResponse(string arg) -> ();
     WithRequestWithResponse(string arg) -> (string ret);
-    -> OnNoResponse();
-    -> WithNoResponse(string ret);
+    -> OnEmptyResponse();
+    -> OnWithResponse(string ret);
 };
 
 [Transport="OvernetInternal"]

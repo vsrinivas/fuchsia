@@ -377,27 +377,35 @@ class WithAndWithoutRequestResponse {
   virtual ~WithAndWithoutRequestResponse();
       
   virtual void NoRequestNoResponse() = 0;
+  using NoRequestEmptyResponseCallback =
+      fit::function<void()>;
       
-  virtual void WithRequestNoResponse(::std::string arg) = 0;
+  virtual void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) = 0;
   using NoRequestWithResponseCallback =
       fit::function<void(::std::string)>;
       
   virtual void NoRequestWithResponse(NoRequestWithResponseCallback callback) = 0;
+      
+  virtual void WithRequestNoResponse(::std::string arg) = 0;
+  using WithRequestEmptyResponseCallback =
+      fit::function<void()>;
+      
+  virtual void WithRequestEmptyResponse(::std::string arg, WithRequestEmptyResponseCallback callback) = 0;
   using WithRequestWithResponseCallback =
       fit::function<void(::std::string)>;
       
   virtual void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) = 0;
-  using OnNoResponseCallback =
+  using OnEmptyResponseCallback =
       fit::function<void()>;
-  using WithNoResponseCallback =
+  using OnWithResponseCallback =
       fit::function<void(::std::string)>;
 };
 
 class WithAndWithoutRequestResponse_EventSender {
  public:
   virtual ~WithAndWithoutRequestResponse_EventSender();
-  virtual void OnNoResponse() = 0;
-  virtual void WithNoResponse(::std::string ret) = 0;
+  virtual void OnEmptyResponse() = 0;
+  virtual void OnWithResponse(::std::string ret) = 0;
 };
 
 class WithAndWithoutRequestResponse_Sync {
@@ -405,8 +413,10 @@ class WithAndWithoutRequestResponse_Sync {
   using Proxy_ = WithAndWithoutRequestResponse_SyncProxy;
   virtual ~WithAndWithoutRequestResponse_Sync();
   virtual zx_status_t NoRequestNoResponse() = 0;
-  virtual zx_status_t WithRequestNoResponse(::std::string arg) = 0;
+  virtual zx_status_t NoRequestEmptyResponse() = 0;
   virtual zx_status_t NoRequestWithResponse(::std::string* out_ret) = 0;
+  virtual zx_status_t WithRequestNoResponse(::std::string arg) = 0;
+  virtual zx_status_t WithRequestEmptyResponse(::std::string arg) = 0;
   virtual zx_status_t WithRequestWithResponse(::std::string arg, ::std::string* out_ret) = 0;
 };
 
@@ -417,11 +427,13 @@ class WithAndWithoutRequestResponse_Proxy : public ::fidl::internal::Proxy, publ
 
   zx_status_t Dispatch_(::fidl::Message message) override;
   void NoRequestNoResponse() override;
-  void WithRequestNoResponse(::std::string arg) override;
+  void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override;
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
+  void WithRequestNoResponse(::std::string arg) override;
+  void WithRequestEmptyResponse(::std::string arg, WithRequestEmptyResponseCallback callback) override;
   void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override;
-  OnNoResponseCallback OnNoResponse;
-  WithNoResponseCallback WithNoResponse;
+  OnEmptyResponseCallback OnEmptyResponse;
+  OnWithResponseCallback OnWithResponse;
 
  private:
   WithAndWithoutRequestResponse_Proxy(const WithAndWithoutRequestResponse_Proxy&) = delete;
@@ -438,8 +450,8 @@ class WithAndWithoutRequestResponse_Stub : public ::fidl::internal::Stub, public
 
   zx_status_t Dispatch_(::fidl::Message message,
                         ::fidl::internal::PendingResponse response) override;
-  void OnNoResponse() override;
-  void WithNoResponse(::std::string ret) override;
+  void OnEmptyResponse() override;
+  void OnWithResponse(::std::string ret) override;
 
  private:
   WithAndWithoutRequestResponse_clazz* impl_;
@@ -452,8 +464,10 @@ class WithAndWithoutRequestResponse_SyncProxy : public WithAndWithoutRequestResp
 
   ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t NoRequestNoResponse() override;
-  zx_status_t WithRequestNoResponse(::std::string arg) override;
+  zx_status_t NoRequestEmptyResponse() override;
   zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
+  zx_status_t WithRequestNoResponse(::std::string arg) override;
+  zx_status_t WithRequestEmptyResponse(::std::string arg) override;
   zx_status_t WithRequestWithResponse(::std::string arg, ::std::string* out_ret) override;
 
   private:

@@ -66,11 +66,17 @@ class WithAndWithoutRequestResponse_TestBase : public WithAndWithoutRequestRespo
   void NoRequestNoResponse() override {
     NotImplemented_("NoRequestNoResponse");
   }
-  void WithRequestNoResponse(::std::string arg) override {
-    NotImplemented_("WithRequestNoResponse");
+  void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override {
+    NotImplemented_("NoRequestEmptyResponse");
   }
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override {
     NotImplemented_("NoRequestWithResponse");
+  }
+  void WithRequestNoResponse(::std::string arg) override {
+    NotImplemented_("WithRequestNoResponse");
+  }
+  void WithRequestEmptyResponse(::std::string arg, WithRequestEmptyResponseCallback callback) override {
+    NotImplemented_("WithRequestEmptyResponse");
   }
   void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override {
     NotImplemented_("WithRequestWithResponse");

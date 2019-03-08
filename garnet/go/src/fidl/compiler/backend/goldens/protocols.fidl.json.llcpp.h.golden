@@ -553,27 +553,20 @@ class OvernetInternalProtocol final {
 
 };
 
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithNoResponseEventTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 class WithAndWithoutRequestResponse final {
  public:
 
   using NoRequestNoResponseRequest = ::fidl::AnyZeroArgMessage;
 
-  struct WithRequestNoResponseRequest {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView arg;
-
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 4294967295;
-  };
+  using NoRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
+  using NoRequestEmptyResponseRequest = ::fidl::AnyZeroArgMessage;
 
   struct NoRequestWithResponseResponse {
     FIDL_ALIGNDECL
@@ -586,6 +579,29 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t MaxOutOfLine = 4294967295;
   };
   using NoRequestWithResponseRequest = ::fidl::AnyZeroArgMessage;
+
+  struct WithRequestNoResponseRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::StringView arg;
+
+    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 4294967295;
+  };
+
+  using WithRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
+  struct WithRequestEmptyResponseRequest {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::StringView arg;
+
+    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 4294967295;
+  };
 
   struct WithRequestWithResponseResponse {
     FIDL_ALIGNDECL
@@ -609,13 +625,13 @@ class WithAndWithoutRequestResponse final {
     using ResponseType = WithRequestWithResponseResponse;
   };
 
-  using OnNoResponseResponse = ::fidl::AnyZeroArgMessage;
-  struct WithNoResponseResponse {
+  using OnEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
+  struct OnWithResponseResponse {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithNoResponseEventTable;
+    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -629,6 +645,15 @@ class WithAndWithoutRequestResponse final {
 
     zx_status_t NoRequestNoResponse();
 
+    zx_status_t NoRequestEmptyResponse();
+
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t NoRequestWithResponse(::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(::fidl::BytePart response_buffer);
+
     zx_status_t WithRequestNoResponse(::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -637,12 +662,13 @@ class WithAndWithoutRequestResponse final {
     // Messages are encoded and decoded in-place.
     zx_status_t WithRequestNoResponse(::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
 
+    zx_status_t WithRequestEmptyResponse(::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t NoRequestWithResponse(::fidl::BytePart _response_buffer, ::fidl::StringView* out_ret);
+    zx_status_t WithRequestEmptyResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(::fidl::BytePart response_buffer);
+    zx_status_t WithRequestEmptyResponse(::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -667,9 +693,17 @@ class WithAndWithoutRequestResponse final {
 
     virtual void NoRequestNoResponse(NoRequestNoResponseCompleter::Sync _completer) = 0;
 
-    using WithRequestNoResponseCompleter = ::fidl::Completer<>;
+    class NoRequestEmptyResponseCompleterBase : public _Base {
+     public:
+      void Reply();
 
-    virtual void WithRequestNoResponse(::fidl::StringView arg, WithRequestNoResponseCompleter::Sync _completer) = 0;
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using NoRequestEmptyResponseCompleter = ::fidl::Completer<NoRequestEmptyResponseCompleterBase>;
+
+    virtual void NoRequestEmptyResponse(NoRequestEmptyResponseCompleter::Sync _completer) = 0;
 
     class NoRequestWithResponseCompleterBase : public _Base {
      public:
@@ -684,6 +718,22 @@ class WithAndWithoutRequestResponse final {
     using NoRequestWithResponseCompleter = ::fidl::Completer<NoRequestWithResponseCompleterBase>;
 
     virtual void NoRequestWithResponse(NoRequestWithResponseCompleter::Sync _completer) = 0;
+
+    using WithRequestNoResponseCompleter = ::fidl::Completer<>;
+
+    virtual void WithRequestNoResponse(::fidl::StringView arg, WithRequestNoResponseCompleter::Sync _completer) = 0;
+
+    class WithRequestEmptyResponseCompleterBase : public _Base {
+     public:
+      void Reply();
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WithRequestEmptyResponseCompleter = ::fidl::Completer<WithRequestEmptyResponseCompleterBase>;
+
+    virtual void WithRequestEmptyResponse(::fidl::StringView arg, WithRequestEmptyResponseCompleter::Sync _completer) = 0;
 
     class WithRequestWithResponseCompleterBase : public _Base {
      public:
@@ -719,15 +769,15 @@ class WithAndWithoutRequestResponse final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendOnNoResponseEvent(::zx::unowned_channel _chan);
+  static zx_status_t SendOnEmptyResponseEvent(::zx::unowned_channel _chan);
 
-  static zx_status_t SendWithNoResponseEvent(::zx::unowned_channel _chan, ::fidl::StringView ret);
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::StringView ret);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendWithNoResponseEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::StringView ret);
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::StringView ret);
 
   // Messages are encoded in-place.
-  static zx_status_t SendWithNoResponseEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<WithNoResponseResponse> params);
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnWithResponseResponse> params);
 
 };
 
@@ -877,6 +927,14 @@ static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodBResponse)
 static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBResponse, result) == 16);
 
 template <>
+struct IsFidlType<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse)
+    == ::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse::PrimarySize);
+static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse, ret) == 16);
+
+template <>
 struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
@@ -885,12 +943,12 @@ static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestNoR
 static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
+struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse)
-    == ::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse, ret) == 16);
+struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
+static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest)
+    == ::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::PrimarySize);
+static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest, arg) == 16);
 
 template <>
 struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
@@ -909,11 +967,11 @@ static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestWit
 static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse, ret) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithNoResponseResponse> : public std::true_type {};
+struct IsFidlType<::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithNoResponseResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithNoResponseResponse)
-    == ::test::name::WithAndWithoutRequestResponse::WithNoResponseResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithNoResponseResponse, ret) == 16);
+struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse)
+    == ::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse::PrimarySize);
+static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse, ret) == 16);
 
 }  // namespace fidl

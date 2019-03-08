@@ -832,22 +832,30 @@ namespace {
 constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 503576693u;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361u;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 1308023765u;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
   
 constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 107534328u;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
   
+constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361u;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+  
+constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 1995585907u;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+  
 constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 426977568u;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_OnNoResponse_Ordinal = 1440694697u;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnNoResponseEventTable;
+constexpr uint32_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 1769985842u;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_WithNoResponse_Ordinal = 1029625418u;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithNoResponseEventTable;
+constexpr uint32_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 2051478023u;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
 
@@ -867,34 +875,34 @@ WithAndWithoutRequestResponse_Proxy::~WithAndWithoutRequestResponse_Proxy() = de
 zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kWithAndWithoutRequestResponse_OnNoResponse_Ordinal: {
-      if (!OnNoResponse) {
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
+      if (!OnEmptyResponse) {
         status = ZX_OK;
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&test_name_WithAndWithoutRequestResponseOnNoResponseEventTable, &error_msg);
+      status = message.Decode(&test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseOnNoResponseEventTable, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable, error_msg);
         break;
       }
-      OnNoResponse();
+      OnEmptyResponse();
       break;
     }
-    case kWithAndWithoutRequestResponse_WithNoResponse_Ordinal: {
-      if (!WithNoResponse) {
+    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
+      if (!OnWithResponse) {
         status = ZX_OK;
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&test_name_WithAndWithoutRequestResponseWithNoResponseEventTable, &error_msg);
+      status = message.Decode(&test_name_WithAndWithoutRequestResponseOnWithResponseEventTable, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithNoResponseEventTable, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable, error_msg);
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
       auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-      WithNoResponse(std::move(arg0));
+      OnWithResponse(std::move(arg0));
       break;
     }
     default: {
@@ -910,11 +918,38 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestNoResponse() {
   ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
   controller_->Send(&test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable, _encoder.GetMessage(), nullptr);
 }
-void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(::std::string arg) {
-  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
-  _encoder.Alloc(32 - sizeof(fidl_message_header_t));
-  ::fidl::Encode(&_encoder, &arg, 16);
-  controller_->Send(&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable, _encoder.GetMessage(), nullptr);
+namespace {
+
+class WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler : public ::fidl::internal::MessageHandler {
+ public:
+  WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(WithAndWithoutRequestResponse::NoRequestEmptyResponseCallback callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for WithAndWithoutRequestResponse::NoRequestEmptyResponse\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable, error_msg);
+      return status;
+    }
+    callback_();
+    return ZX_OK;
+  }
+
+ private:
+  WithAndWithoutRequestResponse::NoRequestEmptyResponseCallback callback_;
+
+  WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(const WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler&) = delete;
+  WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler& operator=(const WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler&) = delete;
+};
+
+}  // namespace
+void WithAndWithoutRequestResponse_Proxy::NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
+  controller_->Send(&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, _encoder.GetMessage(), std::make_unique<WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler>(std::move(callback)));
 }
 namespace {
 
@@ -950,6 +985,47 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler : publ
 void WithAndWithoutRequestResponse_Proxy::NoRequestWithResponse(NoRequestWithResponseCallback callback) {
   ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   controller_->Send(&test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, _encoder.GetMessage(), std::make_unique<WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler>(std::move(callback)));
+}
+void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(::std::string arg) {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
+  _encoder.Alloc(32 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &arg, 16);
+  controller_->Send(&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable, _encoder.GetMessage(), nullptr);
+}
+namespace {
+
+class WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler : public ::fidl::internal::MessageHandler {
+ public:
+  WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(WithAndWithoutRequestResponse::WithRequestEmptyResponseCallback callback)
+      : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT_MSG(callback_,
+                        "Callback must not be empty for WithAndWithoutRequestResponse::WithRequestEmptyResponse\n");
+  }
+
+  zx_status_t OnMessage(::fidl::Message message) override {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable, error_msg);
+      return status;
+    }
+    callback_();
+    return ZX_OK;
+  }
+
+ private:
+  WithAndWithoutRequestResponse::WithRequestEmptyResponseCallback callback_;
+
+  WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(const WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler&) = delete;
+  WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler& operator=(const WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler&) = delete;
+};
+
+}  // namespace
+void WithAndWithoutRequestResponse_Proxy::WithRequestEmptyResponse(::std::string arg, WithRequestEmptyResponseCallback callback) {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
+  _encoder.Alloc(32 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &arg, 16);
+  controller_->Send(&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, _encoder.GetMessage(), std::make_unique<WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler>(std::move(callback)));
 }
 namespace {
 
@@ -997,6 +1073,21 @@ WithAndWithoutRequestResponse_Stub::~WithAndWithoutRequestResponse_Stub() = defa
 
 namespace {
 
+class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder {
+ public:
+  WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
+
+  void operator()() {
+    ::fidl::Encoder _encoder(ordinal_);
+    response_.Send(&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable, _encoder.GetMessage());
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
+};
+
 class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder {
  public:
   WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
@@ -1007,6 +1098,21 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder {
     _encoder.Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(&_encoder, &ret, 16);
     response_.Send(&test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable, _encoder.GetMessage());
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
+};
+
+class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder {
+ public:
+  WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
+
+  void operator()() {
+    ::fidl::Encoder _encoder(ordinal_);
+    response_.Send(&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable, _encoder.GetMessage());
   }
 
  private:
@@ -1049,6 +1155,26 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->NoRequestNoResponse();
       break;
     }
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
+      const char* error_msg = nullptr;
+      status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, error_msg);
+        break;
+      }
+      impl_->NoRequestEmptyResponse(WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(std::move(response), ordinal));
+      break;
+    }
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
+      const char* error_msg = nullptr;
+      status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, error_msg);
+        break;
+      }
+      impl_->NoRequestWithResponse(WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(std::move(response), ordinal));
+      break;
+    }
     case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable, &error_msg);
@@ -1061,14 +1187,16 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       impl_->WithRequestNoResponse(std::move(arg0));
       break;
     }
-    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
       const char* error_msg = nullptr;
-      status = message.Decode(&test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, &error_msg);
+      status = message.Decode(&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, error_msg);
         break;
       }
-      impl_->NoRequestWithResponse(WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(std::move(response), ordinal));
+      ::fidl::Decoder decoder(std::move(message));
+      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
+      impl_->WithRequestEmptyResponse(std::move(arg0), WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(std::move(response), ordinal));
       break;
     }
     case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
@@ -1090,15 +1218,15 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
   }
   return status;
 }
-void WithAndWithoutRequestResponse_Stub::OnNoResponse() {
-  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_OnNoResponse_Ordinal);
-  controller()->Send(&test_name_WithAndWithoutRequestResponseOnNoResponseEventTable, _encoder.GetMessage());
+void WithAndWithoutRequestResponse_Stub::OnEmptyResponse() {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
+  controller()->Send(&test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable, _encoder.GetMessage());
 }
-void WithAndWithoutRequestResponse_Stub::WithNoResponse(::std::string ret) {
-  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithNoResponse_Ordinal);
+void WithAndWithoutRequestResponse_Stub::OnWithResponse(::std::string ret) {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   _encoder.Alloc(32 - sizeof(fidl_message_header_t));
   ::fidl::Encode(&_encoder, &ret, 16);
-  controller()->Send(&test_name_WithAndWithoutRequestResponseWithNoResponseEventTable, _encoder.GetMessage());
+  controller()->Send(&test_name_WithAndWithoutRequestResponseOnWithResponseEventTable, _encoder.GetMessage());
 }
 
 WithAndWithoutRequestResponse_SyncProxy::WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel)
@@ -1109,11 +1237,14 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestNoResponse() {
   ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
   return proxy_.Send(&test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable, _encoder.GetMessage());
 }
-zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestNoResponse(::std::string arg) {
-  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
-  _encoder.Alloc(32 - sizeof(fidl_message_header_t));
-  ::fidl::Encode(&_encoder, &arg, 16);
-  return proxy_.Send(&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable, _encoder.GetMessage());
+zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestEmptyResponse() {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status_ = proxy_.Call(&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable, &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable, _encoder.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
+  return ZX_OK;
 }
 zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(::std::string* out_ret) {
   ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
@@ -1124,6 +1255,23 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(::std
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_ret = ::fidl::DecodeAs<::std::string>(&decoder_, 16);
+  return ZX_OK;
+}
+zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestNoResponse(::std::string arg) {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
+  _encoder.Alloc(32 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &arg, 16);
+  return proxy_.Send(&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable, _encoder.GetMessage());
+}
+zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestEmptyResponse(::std::string arg) {
+  ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
+  _encoder.Alloc(32 - sizeof(fidl_message_header_t));
+  ::fidl::Encode(&_encoder, &arg, 16);
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status_ = proxy_.Call(&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable, &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable, _encoder.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
   return ZX_OK;
 }
 zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(::std::string arg, ::std::string* out_ret) {

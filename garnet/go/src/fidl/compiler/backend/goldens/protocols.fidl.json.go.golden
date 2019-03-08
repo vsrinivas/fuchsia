@@ -14,16 +14,20 @@ import (
 const (
 	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint32 = 503576693
 	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal uint32 = 503576693
-	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal uint32 = 432149361
-	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal uint32 = 432149361
+	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal uint32 = 1308023765
+	WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal uint32 = 1308023765
 	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal uint32 = 107534328
 	WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal uint32 = 107534328
+	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal uint32 = 432149361
+	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal uint32 = 432149361
+	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint32 = 1995585907
+	WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal uint32 = 1995585907
 	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal uint32 = 426977568
 	WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal uint32 = 426977568
-	WithAndWithoutRequestResponseOnNoResponseOrdinal uint32 = 1440694697
-	WithAndWithoutRequestResponseOnNoResponseGenOrdinal uint32 = 1440694697
-	WithAndWithoutRequestResponseWithNoResponseOrdinal uint32 = 1029625418
-	WithAndWithoutRequestResponseWithNoResponseGenOrdinal uint32 = 1029625418
+	WithAndWithoutRequestResponseOnEmptyResponseOrdinal uint32 = 1769985842
+	WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal uint32 = 1769985842
+	WithAndWithoutRequestResponseOnWithResponseOrdinal uint32 = 2051478023
+	WithAndWithoutRequestResponseOnWithResponseGenOrdinal uint32 = 2051478023
 )
 
 type WithAndWithoutRequestResponseNoRequestNoResponseRequest struct {
@@ -46,25 +50,44 @@ func (_ *WithAndWithoutRequestResponseNoRequestNoResponseRequest) InlineSize() i
 	return 0
 }
 
-type WithAndWithoutRequestResponseWithRequestNoResponseRequest struct {
-	_ struct{} `fidl2:"s,16,0"`
-	Arg string
+type WithAndWithoutRequestResponseNoRequestEmptyResponseRequest struct {
+	_ struct{} `fidl2:"s,0,0"`
 }
 
-var _mWithAndWithoutRequestResponseWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestNoResponseRequest{})
+var _mWithAndWithoutRequestResponseNoRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestEmptyResponseRequest{})
 
-func (msg *WithAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithRequestNoResponseRequest
+func (msg *WithAndWithoutRequestResponseNoRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseNoRequestEmptyResponseRequest
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestNoResponseRequest) InlineAlignment() int {
+func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestNoResponseRequest) InlineSize() int {
-	return 16
+func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseRequest) InlineSize() int {
+	return 0
+}
+
+type WithAndWithoutRequestResponseNoRequestEmptyResponseResponse struct {
+	_ struct{} `fidl2:"s,0,0"`
+}
+
+var _mWithAndWithoutRequestResponseNoRequestEmptyResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestEmptyResponseResponse{})
+
+func (msg *WithAndWithoutRequestResponseNoRequestEmptyResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseNoRequestEmptyResponseResponse
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseResponse) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseResponse) InlineSize() int {
+	return 0
 }
 
 type WithAndWithoutRequestResponseNoRequestWithResponseRequest struct {
@@ -106,6 +129,68 @@ func (_ *WithAndWithoutRequestResponseNoRequestWithResponseResponse) InlineAlign
 // Implements Payload.
 func (_ *WithAndWithoutRequestResponseNoRequestWithResponseResponse) InlineSize() int {
 	return 16
+}
+
+type WithAndWithoutRequestResponseWithRequestNoResponseRequest struct {
+	_ struct{} `fidl2:"s,16,0"`
+	Arg string
+}
+
+var _mWithAndWithoutRequestResponseWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestNoResponseRequest{})
+
+func (msg *WithAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseWithRequestNoResponseRequest
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseWithRequestNoResponseRequest) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseWithRequestNoResponseRequest) InlineSize() int {
+	return 16
+}
+
+type WithAndWithoutRequestResponseWithRequestEmptyResponseRequest struct {
+	_ struct{} `fidl2:"s,16,0"`
+	Arg string
+}
+
+var _mWithAndWithoutRequestResponseWithRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{})
+
+func (msg *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseWithRequestEmptyResponseRequest
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineSize() int {
+	return 16
+}
+
+type WithAndWithoutRequestResponseWithRequestEmptyResponseResponse struct {
+	_ struct{} `fidl2:"s,0,0"`
+}
+
+var _mWithAndWithoutRequestResponseWithRequestEmptyResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestEmptyResponseResponse{})
+
+func (msg *WithAndWithoutRequestResponseWithRequestEmptyResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseWithRequestEmptyResponseResponse
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseResponse) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseResponse) InlineSize() int {
+	return 0
 }
 
 type WithAndWithoutRequestResponseWithRequestWithResponseRequest struct {
@@ -150,44 +235,44 @@ func (_ *WithAndWithoutRequestResponseWithRequestWithResponseResponse) InlineSiz
 	return 16
 }
 
-type WithAndWithoutRequestResponseOnNoResponseResponse struct {
+type WithAndWithoutRequestResponseOnEmptyResponseResponse struct {
 	_ struct{} `fidl2:"s,0,0"`
 }
 
-var _mWithAndWithoutRequestResponseOnNoResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseOnNoResponseResponse{})
+var _mWithAndWithoutRequestResponseOnEmptyResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseOnEmptyResponseResponse{})
 
-func (msg *WithAndWithoutRequestResponseOnNoResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseOnNoResponseResponse
+func (msg *WithAndWithoutRequestResponseOnEmptyResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseOnEmptyResponseResponse
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseOnNoResponseResponse) InlineAlignment() int {
+func (_ *WithAndWithoutRequestResponseOnEmptyResponseResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseOnNoResponseResponse) InlineSize() int {
+func (_ *WithAndWithoutRequestResponseOnEmptyResponseResponse) InlineSize() int {
 	return 0
 }
 
-type WithAndWithoutRequestResponseWithNoResponseResponse struct {
+type WithAndWithoutRequestResponseOnWithResponseResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Ret string
 }
 
-var _mWithAndWithoutRequestResponseWithNoResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithNoResponseResponse{})
+var _mWithAndWithoutRequestResponseOnWithResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseOnWithResponseResponse{})
 
-func (msg *WithAndWithoutRequestResponseWithNoResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithNoResponseResponse
+func (msg *WithAndWithoutRequestResponseOnWithResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mWithAndWithoutRequestResponseOnWithResponseResponse
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithNoResponseResponse) InlineAlignment() int {
+func (_ *WithAndWithoutRequestResponseOnWithResponseResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithNoResponseResponse) InlineSize() int {
+func (_ *WithAndWithoutRequestResponseOnWithResponseResponse) InlineSize() int {
 	return 16
 }
 
@@ -201,11 +286,11 @@ func (p *WithAndWithoutRequestResponseInterface) NoRequestNoResponse() error {
 	return err
 }
 
-func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg string) error {
-	req_ := WithAndWithoutRequestResponseWithRequestNoResponseRequest{
-		Arg: arg,
+func (p *WithAndWithoutRequestResponseInterface) NoRequestEmptyResponse() error {
+	req_ := WithAndWithoutRequestResponseNoRequestEmptyResponseRequest{
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, &req_)
+	resp_ := WithAndWithoutRequestResponseNoRequestEmptyResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal, &req_, &resp_)
 	return err
 }
 
@@ -217,6 +302,23 @@ func (p *WithAndWithoutRequestResponseInterface) NoRequestWithResponse() (string
 	return resp_.Ret, err
 }
 
+func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg string) error {
+	req_ := WithAndWithoutRequestResponseWithRequestNoResponseRequest{
+		Arg: arg,
+	}
+	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, &req_)
+	return err
+}
+
+func (p *WithAndWithoutRequestResponseInterface) WithRequestEmptyResponse(arg string) error {
+	req_ := WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{
+		Arg: arg,
+	}
+	resp_ := WithAndWithoutRequestResponseWithRequestEmptyResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal, &req_, &resp_)
+	return err
+}
+
 func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg string) (string, error) {
 	req_ := WithAndWithoutRequestResponseWithRequestWithResponseRequest{
 		Arg: arg,
@@ -226,23 +328,25 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg str
 	return resp_.Ret, err
 }
 
-func (p *WithAndWithoutRequestResponseInterface) ExpectOnNoResponse() error {
-	resp_ := WithAndWithoutRequestResponseOnNoResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnNoResponseOrdinal, &resp_)
+func (p *WithAndWithoutRequestResponseInterface) ExpectOnEmptyResponse() error {
+	resp_ := WithAndWithoutRequestResponseOnEmptyResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, &resp_)
 	return err
 }
 
-func (p *WithAndWithoutRequestResponseInterface) ExpectWithNoResponse() (string, error) {
-	resp_ := WithAndWithoutRequestResponseWithNoResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseWithNoResponseOrdinal, &resp_)
+func (p *WithAndWithoutRequestResponseInterface) ExpectOnWithResponse() (string, error) {
+	resp_ := WithAndWithoutRequestResponseOnWithResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, &resp_)
 	return resp_.Ret, err
 }
 
 
 type WithAndWithoutRequestResponse interface {
 	NoRequestNoResponse() error
-	WithRequestNoResponse(arg string) error
+	NoRequestEmptyResponse() error
 	NoRequestWithResponse() (string, error)
+	WithRequestNoResponse(arg string) error
+	WithRequestEmptyResponse(arg string) error
 	WithRequestWithResponse(arg string) (string, error)
 }
 
@@ -269,13 +373,14 @@ func (s *WithAndWithoutRequestResponseStub) Dispatch(ord uint32, b_ []byte, h_ [
 		}
 		err_ := s.Impl.NoRequestNoResponse()
 		return nil, err_
-	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseWithRequestNoResponseRequest{}
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
+		in_ := WithAndWithoutRequestResponseNoRequestEmptyResponseRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.WithRequestNoResponse(in_.Arg)
-		return nil, err_
+		out_ := WithAndWithoutRequestResponseNoRequestEmptyResponseResponse{}
+		err_ := s.Impl.NoRequestEmptyResponse()
+		return &out_, err_
 	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
 		in_ := WithAndWithoutRequestResponseNoRequestWithResponseRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
@@ -284,6 +389,21 @@ func (s *WithAndWithoutRequestResponseStub) Dispatch(ord uint32, b_ []byte, h_ [
 		out_ := WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
 		ret, err_ := s.Impl.NoRequestWithResponse()
 		out_.Ret = ret
+		return &out_, err_
+	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
+		in_ := WithAndWithoutRequestResponseWithRequestNoResponseRequest{}
+		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
+			return nil, err_
+		}
+		err_ := s.Impl.WithRequestNoResponse(in_.Arg)
+		return nil, err_
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
+		in_ := WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
+		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
+			return nil, err_
+		}
+		out_ := WithAndWithoutRequestResponseWithRequestEmptyResponseResponse{}
+		err_ := s.Impl.WithRequestEmptyResponse(in_.Arg)
 		return &out_, err_
 	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
 		in_ := WithAndWithoutRequestResponseWithRequestWithResponseRequest{}
@@ -312,16 +432,16 @@ func (s *WithAndWithoutRequestResponseService) EventProxyFor(key _bindings.Bindi
 
 type WithAndWithoutRequestResponseEventProxy _bindings.ChannelProxy
 
-func (p *WithAndWithoutRequestResponseEventProxy) OnNoResponse() error {
-	event_ := WithAndWithoutRequestResponseOnNoResponseResponse{
+func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
+	event_ := WithAndWithoutRequestResponseOnEmptyResponseResponse{
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnNoResponseOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, &event_)
 }
-func (p *WithAndWithoutRequestResponseEventProxy) WithNoResponse(ret string) error {
-	event_ := WithAndWithoutRequestResponseWithNoResponseResponse{
+func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) error {
+	event_ := WithAndWithoutRequestResponseOnWithResponseResponse{
 		Ret: ret,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithNoResponseOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseOrdinal, &event_)
 }
 
 
