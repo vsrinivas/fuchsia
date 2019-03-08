@@ -37,6 +37,10 @@ DefaultFrameScheduler::DefaultFrameScheduler(Display* display)
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
 void DefaultFrameScheduler::RequestFrame(zx_time_t presentation_time) {
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO) << "DefaultFrameScheduler::RequestFrame presentation_time="
+                  << presentation_time;
+  }
   const bool should_schedule_frame =
       requested_presentation_times_.empty() ||
       requested_presentation_times_.top() > presentation_time;
@@ -152,6 +156,9 @@ DefaultFrameScheduler::ComputeTargetPresentationAndWakeupTimes(
 
 void DefaultFrameScheduler::ScheduleFrame() {
   FXL_DCHECK(!requested_presentation_times_.empty());
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO) << "DefaultFrameScheduler::ScheduleFrame";
+  }
 
   auto times = ComputeNextPresentationAndWakeupTimes();
   zx_time_t presentation_time = times.first;
@@ -181,6 +188,12 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
   TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "presentation_time",
                  presentation_time);
   TRACE_FLOW_END("gfx", "FrameScheduler_Request", flow_id);
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO)
+        << "DefaultFrameScheduler::MaybeRenderFrame presentation_time="
+        << presentation_time << " wakeup_time=" << wakeup_time
+        << " frame_number=" << frame_number_;
+  }
 
   if (requested_presentation_times_.empty()) {
     // No frame was requested, so none needs to be rendered.  More precisely, a
@@ -233,6 +246,11 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
       return;
     }
 
+    if (frame_number_ < 5) {
+      FXL_LOG(INFO)
+          << "DefaultFrameScheduler: calling RenderFrame presentation_time="
+          << presentation_time << " frame_number=" << frame_number_;
+    }
     // Render the frame
     if (delegate_.frame_renderer->RenderFrame(frame_timings, presentation_time,
                                               display_->GetVsyncInterval())) {
@@ -258,6 +276,11 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
     uint64_t presentation_interval) {
   FXL_DCHECK(delegate_.session_updater);
 
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO) << "DefaultFrameScheduler::ApplyScheduledSessionUpdates "
+                     "presentation_time="
+                  << presentation_time << " frame_number=" << frame_number_;
+  }
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
                  presentation_time, "interval", presentation_interval);
 
