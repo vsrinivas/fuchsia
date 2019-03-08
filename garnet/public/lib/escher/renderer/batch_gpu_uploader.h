@@ -37,19 +37,18 @@ class BatchGpuUploader {
   // memory into optimally-formatted Images and Buffers.
   class Writer {
    public:
-    Writer(CommandBufferPtr command_buffer, BufferPtr buffer,
-           SemaphorePtr batch_done_semaphore);
+    Writer(CommandBufferPtr command_buffer, BufferPtr buffer);
     ~Writer();
 
     // Schedule a buffer-to-buffer copy that will be submitted when Submit()
     // is called.  Retains a reference to the target until the submission's
-    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the target,
+    // CommandBuffer is retired. Places a wait semaphore on the target,
     // which is signaled when the batched commands are done.
     void WriteBuffer(const BufferPtr& target, vk::BufferCopy region);
 
     // Schedule a buffer-to-image copy that will be submitted when Submit()
     // is called.  Retains a reference to the target until the submission's
-    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the target,
+    // CommandBuffer is retired. Places a wait semaphore on the target,
     // which is signaled when the batched commands are done.
     void WriteImage(const ImagePtr& target, vk::BufferImageCopy region);
 
@@ -64,7 +63,6 @@ class BatchGpuUploader {
 
     CommandBufferPtr command_buffer_;
     BufferPtr buffer_;
-    SemaphorePtr batch_done_semaphore_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Writer);
   };
@@ -73,19 +71,18 @@ class BatchGpuUploader {
   // this memory from Images and Buffers on the GPU.
   class Reader {
    public:
-    Reader(CommandBufferPtr command_buffer, BufferPtr buffer,
-           SemaphorePtr batch_done_semaphore);
+    Reader(CommandBufferPtr command_buffer, BufferPtr buffer);
     ~Reader();
 
     // Schedule a buffer-to-buffer copy that will be submitted when Submit()
     // is called.  Retains a reference to the source until the submission's
-    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the source,
+    // CommandBuffer is retired. Places a wait semaphore on the source,
     // which is signaled when the batched commands are done.
     void ReadBuffer(const BufferPtr& source, vk::BufferCopy region);
 
     // Schedule a image-to-buffer copy that will be submitted when Submit()
     // is called.  Retains a reference to the source until the submission's
-    // CommandBuffer is retired. Places the "BatchDone" Semaphore on the source,
+    // CommandBuffer is retired. Places a wait semaphore on the source,
     // which is signaled when the batched commands are done.
     void ReadImage(const ImagePtr& source, vk::BufferImageCopy region);
 
@@ -99,7 +96,6 @@ class BatchGpuUploader {
 
     CommandBufferPtr command_buffer_;
     BufferPtr buffer_;
-    SemaphorePtr batch_done_semaphore_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
   };
@@ -124,20 +120,12 @@ class BatchGpuUploader {
   void PostReader(std::unique_ptr<Reader> reader,
                   fit::function<void(escher::BufferPtr buffer)> callback);
 
-  // The "BatchDone" Semaphore that is signaled when all posted batches are
-  // complete. This is non-null after the first Reader or Writer is acquired,
-  // and before Submit().
-  SemaphorePtr GetBatchDoneSemaphore() {
-    return batched_commands_done_semaphore_;
-  }
-
   // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
   // can be posted once Submit is called.
   void Submit(fit::function<void()> callback = nullptr);
 
  private:
-  static void SemaphoreAssignmentHelper(SemaphorePtr batch_done_semaphore,
-                                        WaitableResource* resource,
+  static void SemaphoreAssignmentHelper(WaitableResource* resource,
                                         CommandBuffer* command_buffer);
 
   void Initialize();
@@ -152,7 +140,6 @@ class BatchGpuUploader {
   // Lazily created when the first Reader or Writer is acquired.
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
-  SemaphorePtr batched_commands_done_semaphore_;
 
   std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>>
       read_callbacks_;

@@ -25,11 +25,9 @@ std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(
 }
 
 BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer,
-                                 BufferPtr buffer,
-                                 SemaphorePtr batch_done_semaphore)
+                                 BufferPtr buffer)
     : command_buffer_(std::move(command_buffer)),
-      buffer_(std::move(buffer)),
-      batch_done_semaphore_(batch_done_semaphore) {
+      buffer_(std::move(buffer)) {
   FXL_DCHECK(command_buffer_ && buffer_);
 }
 
@@ -41,8 +39,8 @@ void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target,
                                            vk::BufferCopy region) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteBuffer");
 
-  BatchGpuUploader::SemaphoreAssignmentHelper(
-      batch_done_semaphore_, target.get(), command_buffer_.get());
+  BatchGpuUploader::SemaphoreAssignmentHelper(target.get(),
+                                              command_buffer_.get());
 
   command_buffer_->vk().copyBuffer(buffer_->vk(), target->vk(), 1, &region);
   command_buffer_->impl()->KeepAlive(target);
@@ -52,8 +50,8 @@ void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target,
                                           vk::BufferImageCopy region) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteImage");
 
-  BatchGpuUploader::SemaphoreAssignmentHelper(
-      batch_done_semaphore_, target.get(), command_buffer_.get());
+  BatchGpuUploader::SemaphoreAssignmentHelper(target.get(),
+                                              command_buffer_.get());
 
   command_buffer_->impl()->TransitionImageLayout(
       target, vk::ImageLayout::eUndefined,
@@ -80,11 +78,9 @@ CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
 }
 
 BatchGpuUploader::Reader::Reader(CommandBufferPtr command_buffer,
-                                 BufferPtr buffer,
-                                 SemaphorePtr batch_done_semaphore)
+                                 BufferPtr buffer)
     : command_buffer_(std::move(command_buffer)),
-      buffer_(std::move(buffer)),
-      batch_done_semaphore_(batch_done_semaphore) {
+      buffer_(std::move(buffer)) {
   FXL_DCHECK(command_buffer_ && buffer_);
 }
 
@@ -96,8 +92,8 @@ void BatchGpuUploader::Reader::ReadBuffer(const BufferPtr& source,
                                           vk::BufferCopy region) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Reader::ReadBuffer");
 
-  BatchGpuUploader::SemaphoreAssignmentHelper(
-      batch_done_semaphore_, source.get(), command_buffer_.get());
+  BatchGpuUploader::SemaphoreAssignmentHelper(source.get(),
+                                              command_buffer_.get());
 
   command_buffer_->vk().copyBuffer(source->vk(), buffer_->vk(), 1, &region);
   command_buffer_->impl()->KeepAlive(source);
@@ -107,8 +103,8 @@ void BatchGpuUploader::Reader::ReadImage(const ImagePtr& source,
                                          vk::BufferImageCopy region) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Reader::ReadImage");
 
-  BatchGpuUploader::SemaphoreAssignmentHelper(
-      batch_done_semaphore_, source.get(), command_buffer_.get());
+  BatchGpuUploader::SemaphoreAssignmentHelper(source.get(),
+                                              command_buffer_.get());
 
   command_buffer_->impl()->TransitionImageLayout(
       source, vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -144,23 +140,16 @@ BatchGpuUploader::~BatchGpuUploader() { FXL_CHECK(!frame_); }
 
 /* static */
 void BatchGpuUploader::SemaphoreAssignmentHelper(
-    SemaphorePtr batch_done_semaphore, WaitableResource* resource,
-    CommandBuffer* command_buffer) {
+    WaitableResource* resource, CommandBuffer* command_buffer) {
   if (resource->HasWaitSemaphore()) {
-    SemaphorePtr resource_semaphore = resource->TakeWaitSemaphore();
-    // TODO(SCN-1197) Relax this DCHECK once memory barriers are added to this
-    // class.
-    FXL_DCHECK(resource_semaphore != batch_done_semaphore)
-        << "Reads and writes to the same resource in the same batch is"
-        << " currently unsupported.";
-    // Protect against waiting on a buffer that is already waiting on this
-    // BatchGpuUploader.
-    if (resource_semaphore != batch_done_semaphore) {
-      command_buffer->impl()->AddWaitSemaphore(
-          std::move(resource_semaphore), vk::PipelineStageFlagBits::eTransfer);
-    }
+    command_buffer->impl()->TakeWaitSemaphore(
+        resource, vk::PipelineStageFlagBits::eTransfer);
   }
-  resource->SetWaitSemaphore(batch_done_semaphore);
+  // The resource no longer has a wait semaphore, so add a semaphore that's
+  // signalled when the batched upload is done.
+  SemaphorePtr semaphore = Semaphore::New(command_buffer->vk_device());
+  resource->SetWaitSemaphore(semaphore);
+  command_buffer->impl()->AddSignalSemaphore(std::move(semaphore));
 }
 
 void BatchGpuUploader::Initialize() {
@@ -177,10 +166,6 @@ void BatchGpuUploader::Initialize() {
     buffer_cache_ = escher_->buffer_cache()->GetWeakPtr();
   }
   FXL_DCHECK(buffer_cache_);
-
-  // Create a semaphore that is signaled when the frame is done.
-  batched_commands_done_semaphore_ =
-      Semaphore::New(frame_->cmds()->vk_device());
 
   is_initialized_ = true;
 }
@@ -208,8 +193,7 @@ std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(
 
   ++writer_count_;
   return std::make_unique<BatchGpuUploader::Writer>(
-      std::move(command_buffer), std::move(buffer),
-      batched_commands_done_semaphore_);
+      std::move(command_buffer), std::move(buffer));
 }
 
 std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(
@@ -235,8 +219,7 @@ std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(
 
   ++reader_count_;
   return std::make_unique<BatchGpuUploader::Reader>(
-      std::move(command_buffer), std::move(buffer),
-      batched_commands_done_semaphore_);
+      std::move(command_buffer), std::move(buffer));
 }
 
 void BatchGpuUploader::PostWriter(
@@ -290,7 +273,7 @@ void BatchGpuUploader::Submit(fit::function<void()> callback) {
   FXL_DCHECK(frame_);
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
-  frame_->EndFrame(std::move(batched_commands_done_semaphore_),
+  frame_->EndFrame(Semaphore::New(frame_->cmds()->vk_device()),
                    [callback = std::move(callback),
                     read_callbacks = std::move(read_callbacks_)]() {
                      for (auto& pair : read_callbacks) {
