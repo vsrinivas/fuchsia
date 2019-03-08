@@ -10,6 +10,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/fzl/fdio.h>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/mouse.h"
@@ -26,6 +27,9 @@ struct ReportField;
 namespace mozart {
 
 // This is the "real" FDIO implementation of |HidDecoder|.
+// FdioHidDecoder takes ownership of an fd that represents a single Hid device.
+// The FdioHidDecoder sends reports to and from the Hid device for the lifetime
+// of the Hid device.
 class FdioHidDecoder : public HidDecoder {
  public:
   FdioHidDecoder(const std::string& name, fbl::unique_fd fd);
@@ -48,7 +52,7 @@ class FdioHidDecoder : public HidDecoder {
   const std::vector<uint8_t>& Read(int* bytes_read) override;
 
  private:
-  fbl::unique_fd fd_;
+  fzl::FdioCaller caller_;
   const std::string name_;
   BootMode boot_mode_ = BootMode::NONE;
   std::vector<uint8_t> report_;

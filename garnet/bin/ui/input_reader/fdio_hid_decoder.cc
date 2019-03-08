@@ -6,7 +6,6 @@
 
 #include <unistd.h>
 
-#include <fbl/auto_call.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <hid/acer12.h>
@@ -17,7 +16,6 @@
 #include <hid/samsung.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
-#include <lib/fzl/fdio.h>
 #include <trace/event.h>
 #include <zircon/status.h>
 
@@ -38,29 +36,17 @@ bool log_err(zx_status_t status, const std::string& what,
 namespace mozart {
 
 FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
-    : fd_(std::move(fd)), name_(name) {}
+    : caller_(std::move(fd)), name_(name) {}
 
 FdioHidDecoder::~FdioHidDecoder() = default;
 
 bool FdioHidDecoder::Init() {
-  // |fzl::FdioCaller| expects full temporary ownership of the file
-  // descriptor, but it doesn't actually require it. We still need the file
-  // descriptor to set up some devices in |ParseProtocol| using C setup
-  // functions. They do the same thing as |fzl::FdioCaller|, in particular
-  // |fzl::FdioCaller::borrow_channel()|. They do both take references to the
-  // corresponding |fdio_t|, but that is refcounted.
-  //
-  // Since this is really unsafe wrt. |fd_|, we need to be sure to relinquish
-  // ownership by |caller| when we're done.
-  fzl::FdioCaller caller(fbl::unique_fd(fd_.get()));
-  auto auto_releaser = fbl::MakeAutoCall([&]() { caller.release().release(); });
-
   uint16_t max_len = 0;
   zx_status_t status = fuchsia_hardware_input_DeviceGetMaxInputReportSize(
-      caller.borrow_channel(), &max_len);
+      caller_.borrow_channel(), &max_len);
   report_.resize(max_len);
 
-  zx_handle_t svc = caller.borrow_channel();
+  zx_handle_t svc = caller_.borrow_channel();
 
   // Get the Boot Protocol if there is one.
   fuchsia_hardware_input_BootProtocol boot_protocol;
@@ -107,15 +93,11 @@ bool FdioHidDecoder::Init() {
 zx::event FdioHidDecoder::GetEvent() {
   zx::event event;
 
-  // See comment in Init() about this pattern
-  fzl::FdioCaller caller(fbl::unique_fd(fd_.get()));
-  auto auto_releaser = fbl::MakeAutoCall([&]() { caller.release().release(); });
-
   zx_status_t call_status;
   zx_status_t status = fuchsia_device_ControllerGetEventHandle(
-          caller.borrow_channel(), &call_status, event.reset_and_get_address());
+      caller_.borrow_channel(), &call_status, event.reset_and_get_address());
   if (status == ZX_OK) {
-      status = call_status;
+    status = call_status;
   }
   if (status != ZX_OK) {
     log_err(status, "event handle", name_);
@@ -127,13 +109,13 @@ zx::event FdioHidDecoder::GetEvent() {
 void FdioHidDecoder::SetupDevice(Device device) {
   switch (device) {
     case Device::EYOYO:
-      setup_eyoyo_touch(fd_.get());
+      setup_eyoyo_touch(caller_.fd().get());
       break;
     case Device::SAMSUNG:
-      setup_samsung_touch(fd_.get());
+      setup_samsung_touch(caller_.fd().get());
       break;
     case Device::FT3X27:
-      setup_ft3x27_touch(fd_.get());
+      setup_ft3x27_touch(caller_.fd().get());
       break;
     default:
       break;
@@ -147,7 +129,7 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(
 }
 
 const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
-  *bytes_read = read(fd_.get(), report_.data(), report_.size());
+  *bytes_read = read(caller_.fd().get(), report_.data(), report_.size());
 
   TRACE_FLOW_END("input", "hid_report",
                  HID_REPORT_TRACE_ID(trace_id_, reports_read_));
