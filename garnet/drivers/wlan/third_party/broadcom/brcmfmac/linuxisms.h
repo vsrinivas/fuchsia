@@ -219,8 +219,6 @@ LINUX_FUNCVI(seq_printf)
 LINUX_FUNCVS(seq_write)
 LINUX_FUNCVI(seq_puts)
 LINUX_FUNCVI(dev_coredumpv)
-// I can't find this defined (or even declared) anywhere in the Linux codebase.
-//LINUX_FUNCVI(trace_brcmf_bcdchdr)
 
 #define pci_write_config_dword(pdev, offset, value) \
     pci_config_write32(&pdev->pci_proto, offset, value)
@@ -249,7 +247,6 @@ LINUX_FUNCVI(dma_unmap_single) // PCI only
 #define CONFIG_BRCMFMAC_PROTO_BCDC    // Needed to see func defs in bcdc.h
 
 #define KBUILD_MODNAME "brcmfmac"
-#define BRCMFMAC_PDATA_NAME ("pdata name")
 
 #define IEEE80211_MAX_SSID_LEN (32)
 
@@ -321,7 +318,6 @@ enum {
     WLAN_CAPABILITY_SHORT_PREAMBLE,
     NL80211_STA_FLAG_TDLS_PEER,
     NL80211_STA_INFO_INACTIVE_TIME,
-    CFG80211_BSS_FTYPE_UNKNOWN,
     WLAN_CAPABILITY_IBSS,
     UPDATE_ASSOC_IES,
     IEEE80211_HT_CAP_SGI_40,
@@ -347,13 +343,7 @@ enum {
     IEEE80211_STYPE_DISASSOC,
     IEEE80211_STYPE_AUTH,
     IEEE80211_STYPE_DEAUTH,
-    CFG80211_SIGNAL_TYPE_MBM,
-    WIPHY_FLAG_PS_ON_BY_DEFAULT,
-    WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL,
     WIPHY_FLAG_SUPPORTS_TDLS,
-    WIPHY_FLAG_SUPPORTS_FW_ROAM,
-    WIPHY_FLAG_NETNS_OK,
-    WIPHY_FLAG_OFFCHAN_TX,
     REGULATORY_CUSTOM_REG,
     NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR,
     IFF_ALLMULTI = 0,
@@ -393,8 +383,6 @@ enum nl80211_key_type {
     NL80211_KEYTYPE_PAIRWISE,
 };
 
-enum nl80211_auth_type { FOONLAT };
-
 enum nl80211_crit_proto_id {
     NL80211_CRIT_PROTO_DHCP,
 };
@@ -425,7 +413,6 @@ enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE 
 
 #define __iomem            // May want it later
 #define IS_ENABLED(a) (a)  // not in compiler.h
-#define HZ (60)
 
 struct brcmfmac_pd_cc_entry {
     uint8_t* iso3166;
@@ -438,18 +425,6 @@ struct brcmfmac_pd_cc {
     struct brcmfmac_pd_cc_entry* table;
 };
 
-struct net_device_ops { // Probably all return zx_status_t
-    void* ndo_open;
-    void* ndo_stop;
-    void* ndo_start_xmit;
-    void* ndo_set_mac_address;
-    void* ndo_set_rx_mode;
-};
-
-struct ethtool_ops {
-    void* get_drvinfo;
-};
-
 struct ieee80211_channel {
     int hw_value;
     uint32_t flags;
@@ -460,16 +435,8 @@ struct ieee80211_channel {
     uint32_t orig_flags;
 };
 
-struct ieee80211_rate {
-    int bitrate;
-    uint32_t flags;
-    uint32_t hw_value;
-};
-
 struct ieee80211_supported_band {
     int band;
-    struct ieee80211_rate* bitrates;
-    int n_bitrates;
     struct ieee80211_channel* channels;
     uint32_t n_channels;
     struct {
@@ -586,10 +553,6 @@ struct seq_file {
 
 typedef uint64_t dma_addr_t;
 
-struct pci_device_id {
-    int a, b, c, d, e, f, g;
-};
-
 struct ieee80211_regdomain {
     int n_reg_rules;
     char* alpha2;
@@ -640,71 +603,15 @@ struct wiphy_vendor_command {
     zx_status_t (*doit)(struct wiphy* wiphy, struct wireless_dev* wdev, const void* data, int len);
 };
 
-struct cfg80211_chan_def {
-    struct ieee80211_channel* chan;
-    int center_freq1;
-    int center_freq2;
-    int width;
-};
-
 struct iface_combination_params {
     int num_different_channels;
     int iftype_num[555];
-};
-
-struct cfg80211_ibss_params {
-    char* ssid;
-    int privacy;
-    int beacon_interval;
-    int ssid_len;
-    uint8_t* bssid;
-    int channel_fixed;
-    struct cfg80211_chan_def chandef;
-    uint8_t* ie;
-    int ie_len;
-    int basic_rates;
 };
 
 struct key_params {
     uint32_t key_len;
     int cipher;
     void* key;
-};
-
-struct nl80211_sta_flag_update {
-    int mask;
-    int set;
-};
-
-struct station_info {
-    unsigned long filled;
-    struct nl80211_sta_flag_update sta_flags;
-    struct {
-        uint32_t flags;
-        uint32_t dtim_period;
-        uint32_t beacon_interval;
-    } bss_param;
-    struct {
-        uint32_t legacy;
-    } txrate;
-    struct {
-        uint32_t legacy;
-    } rxrate;
-    uint32_t signal;
-    uint32_t rx_packets;
-    uint32_t rx_dropped_misc;
-    uint32_t tx_packets;
-    uint32_t tx_failed;
-    uint32_t inactive_time;
-    uint32_t connected_time;
-    uint32_t tx_bytes;
-    uint32_t rx_bytes;
-    uint32_t chain_signal_avg[555];
-    uint32_t chain_signal[555];
-    uint32_t chains;
-    void* assoc_req_ies;
-    uint32_t assoc_req_ies_len;
-    uint32_t generation;
 };
 
 struct cfg80211_wowlan {
@@ -750,23 +657,6 @@ struct cfg80211_beacon_data {
     int head_len;
     void* proberesp_ies;
     int proberesp_ies_len;
-};
-
-struct cfg80211_ap_settings {
-    wlan_channel_t* chan;
-    int beacon_interval;
-    int dtim_period;
-    void* ssid;
-    size_t ssid_len;
-    int auth_type;
-    int inactivity_timeout;
-    struct cfg80211_beacon_data beacon;
-    int hidden_ssid;
-};
-
-struct station_del_parameters {
-    uint8_t* mac;
-    int reason_code;
 };
 
 struct station_parameters {
@@ -829,15 +719,6 @@ struct cfg80211_ops { // Most of these return zx_status_t
     void* del_pmk;
 };
 
-struct cfg80211_roam_info {
-    struct ieee80211_channel* channel;
-    uint8_t* bssid;
-    void* req_ie;
-    int req_ie_len;
-    void* resp_ie;
-    int resp_ie_len;
-};
-
 struct ieee80211_iface_combination {
     int num_different_channels;
     struct ieee80211_iface_limit* limits;
@@ -858,18 +739,6 @@ struct ieee80211_iface_limit {
 
 struct netdev_hw_addr {
     uint8_t addr[ETH_ALEN];
-};
-
-struct ethtool_drvinfo {
-    void* driver;
-    void* version;
-    void* fw_version;
-    void* bus_info;
-};
-
-struct va_format {
-    va_list* va;
-    const char* fmt;
 };
 
 #endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_

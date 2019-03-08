@@ -286,7 +286,6 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
     h->flags2 = 0;
     h->data_offset = offset;
     BCDC_SET_IF_IDX(h, ifidx);
-    // trace_brcmf_bcdchdr(pktbuf->data);
 }
 
 static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
@@ -303,7 +302,6 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    // trace_brcmf_bcdchdr(pktbuf->data);
     h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
 
     tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(h));
