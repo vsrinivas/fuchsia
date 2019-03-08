@@ -33,9 +33,9 @@ std::string MergeRow::GetEntriesPrefixFor(CommitIdView parent1_id,
   return fxl::Concatenate({kPrefix, parent_min_id, "/", parent_max_id, "/"});
 }
 
-std::string MergeRow::GetKeyFor(CommitIdView merge_commit_id,
-                                CommitIdView parent1_id,
-                                CommitIdView parent2_id) {
+std::string MergeRow::GetKeyFor(CommitIdView parent1_id,
+                                CommitIdView parent2_id,
+                                CommitIdView merge_commit_id) {
   return fxl::Concatenate(
       {GetEntriesPrefixFor(parent1_id, parent2_id), merge_commit_id});
 }

@@ -34,7 +34,7 @@ TEST_F(DbSerialization, SerializationVersionControl) {
 
   // Merge row.
   EXPECT_EQ("merges/parent1/parent2/merge",
-            MergeRow::GetKeyFor("merge", "parent1", "parent2"));
+            MergeRow::GetKeyFor("parent1", "parent2", "merge"));
 
   // Commit row.
   EXPECT_EQ("commits/commit", CommitRow::GetKeyFor("commit"));
@@ -97,7 +97,7 @@ TEST_F(DbSerialization, MergeRow) {
   const CommitId commit2 = RandomCommitId(environment_.random());
   const CommitId commit3 = RandomCommitId(environment_.random());
   EXPECT_THAT(MergeRow::GetKeyFor(commit1, commit2, commit3),
-              StartsWith(MergeRow::GetEntriesPrefixFor(commit2, commit3)));
+              StartsWith(MergeRow::GetEntriesPrefixFor(commit1, commit2)));
 }
 
 TEST_F(DbSerialization, ReferenceRow) {

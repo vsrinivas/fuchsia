@@ -24,9 +24,8 @@ class MergeRow {
  public:
   static constexpr fxl::StringView kPrefix = "merges/";
 
-  static std::string GetKeyFor(CommitIdView merge_commit_id,
-                               CommitIdView parent1_id,
-                               CommitIdView parent2_id);
+  static std::string GetKeyFor(CommitIdView parent1_id, CommitIdView parent2_id,
+                               CommitIdView merge_commit_id);
   static std::string GetEntriesPrefixFor(CommitIdView parent1_id,
                                          CommitIdView parent2_id);
 };

@@ -44,7 +44,7 @@ Status PageDbBatchImpl::AddMerge(coroutine::CoroutineHandler* handler,
                                  CommitIdView parent2_id,
                                  CommitIdView merge_commit_id) {
   return batch_->Put(
-      handler, MergeRow::GetKeyFor(merge_commit_id, parent1_id, parent2_id),
+      handler, MergeRow::GetKeyFor(parent1_id, parent2_id, merge_commit_id),
       "");
 }
 
