@@ -13,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct {
     size_t length;
@@ -96,4 +96,4 @@ static inline zx_status_t i2c_read_sync(const i2c_protocol_t* i2c, void* read_bu
     return i2c_write_read_sync(i2c, NULL, 0, read_buf, read_length);
 }
 
-__END_CDECLS;
+__END_CDECLS

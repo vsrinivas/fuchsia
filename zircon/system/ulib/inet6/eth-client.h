@@ -7,7 +7,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct eth_client {
     zx_handle_t tx_fifo;
@@ -43,4 +43,4 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
 // ZX_OK - completed packets are available
 zx_status_t eth_wait_rx(eth_client_t* eth, zx_time_t deadline);
 
-__END_CDECLS;
+__END_CDECLS

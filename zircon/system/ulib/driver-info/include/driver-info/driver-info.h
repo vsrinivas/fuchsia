@@ -10,7 +10,7 @@
 #include <zircon/types.h>
 #include <zircon/driver/binding.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef void (*di_info_func_t)(zircon_driver_note_payload_t* note,
                                const zx_bind_inst_t* binding, void *cookie);
@@ -31,4 +31,4 @@ const char* di_bind_param_name(uint32_t param_num);
 // the caller.  If the buffer is too small, the disassembly may be truncated.
 void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len);
 
-__END_CDECLS;
+__END_CDECLS

@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef void hexdump_printf_func_t(void* arg, const char* fmt, ...) __PRINTFLIKE(2, 3);
 
@@ -40,4 +40,4 @@ static inline void hexdump8(const void* ptr, size_t len) {
     hexdump8_ex(ptr, len, (uint64_t)((uintptr_t)ptr));
 }
 
-__END_CDECLS;
+__END_CDECLS

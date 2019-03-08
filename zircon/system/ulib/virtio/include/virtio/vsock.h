@@ -31,7 +31,7 @@
 
 // clang-format on
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct virtio_vsock_config {
     uint64_t guest_cid;
@@ -54,4 +54,4 @@ typedef struct virtio_vsock_event {
     uint32_t id;
 } __PACKED virtio_vsock_event_t;
 
-__END_CDECLS;
+__END_CDECLS

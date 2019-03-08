@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct fdio_namespace fdio_ns_t;
 
@@ -105,6 +105,6 @@ zx_status_t fdio_ns_open(fdio_ns_t* ns, const char* path,
 // Closes all handles contained within |ns|.
 void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns);
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // LIB_FDIO_NAMESPACE_H_

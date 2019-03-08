@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Vendor, Product and Device IDs for generic platform drivers
 #define PDEV_VID_GENERIC            0
@@ -194,4 +194,4 @@ __BEGIN_CDECLS;
 #define PDEV_PID_QUALCOMM_MSM8X53    1
 #define PDEV_DID_QUALCOMM_GPIO       1
 
-__END_CDECLS;
+__END_CDECLS

@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 //
 // Common SD/MMC defines
@@ -171,4 +171,4 @@ __BEGIN_CDECLS;
 #define MMC_STATUS_EXCEPTION_EVENT      (1 << 6)
 #define MMC_STATUS_APP_CMD              (1 << 5)
 
-__END_CDECLS;
+__END_CDECLS

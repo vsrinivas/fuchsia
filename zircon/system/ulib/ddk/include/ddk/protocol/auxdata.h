@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 #include <zircon/driver/binding.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #define AUXDATA_MAX_DEVPROPS 5
 
@@ -25,4 +25,4 @@ typedef struct {
     uint32_t propcount;
 } auxdata_i2c_device_t;
 
-__END_CDECLS;
+__END_CDECLS

@@ -15,7 +15,7 @@
 
 // clang-format on
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct virtio_console_config {
   uint16_t cols;
@@ -24,4 +24,4 @@ typedef struct virtio_console_config {
   uint32_t emerg_wr;
 } __PACKED virtio_console_config_t;
 
-__END_CDECLS;
+__END_CDECLS
