@@ -49,6 +49,16 @@ using SocketControlProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SocketContr
 class SocketControlProtocol_SyncProxy;
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
+class WithAndWithoutRequestResponse;
+using WithAndWithoutRequestResponsePtr = ::fidl::InterfacePtr<WithAndWithoutRequestResponse>;
+class WithAndWithoutRequestResponse_Proxy;
+class WithAndWithoutRequestResponse_Stub;
+class WithAndWithoutRequestResponse_EventSender;
+class WithAndWithoutRequestResponse_Sync;
+using WithAndWithoutRequestResponseSyncPtr = ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
+class WithAndWithoutRequestResponse_SyncProxy;
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 
 class KitchenSink {
  public:
@@ -351,6 +361,100 @@ class SocketControlProtocol_SyncProxy : public SocketControlProtocol_Sync {
   ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+
+  private:
+  ::fidl::internal::SynchronousProxy proxy_;
+};
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
+
+class WithAndWithoutRequestResponse {
+ public:
+  using Proxy_ = WithAndWithoutRequestResponse_Proxy;
+  using Stub_ = WithAndWithoutRequestResponse_Stub;
+  using EventSender_ = WithAndWithoutRequestResponse_EventSender;
+  using Sync_ = WithAndWithoutRequestResponse_Sync;
+  virtual ~WithAndWithoutRequestResponse();
+      
+  virtual void NoRequestNoResponse() = 0;
+      
+  virtual void WithRequestNoResponse(::std::string arg) = 0;
+  using NoRequestWithResponseCallback =
+      fit::function<void(::std::string)>;
+      
+  virtual void NoRequestWithResponse(NoRequestWithResponseCallback callback) = 0;
+  using WithRequestWithResponseCallback =
+      fit::function<void(::std::string)>;
+      
+  virtual void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) = 0;
+  using OnNoResponseCallback =
+      fit::function<void()>;
+  using WithNoResponseCallback =
+      fit::function<void(::std::string)>;
+};
+
+class WithAndWithoutRequestResponse_EventSender {
+ public:
+  virtual ~WithAndWithoutRequestResponse_EventSender();
+  virtual void OnNoResponse() = 0;
+  virtual void WithNoResponse(::std::string ret) = 0;
+};
+
+class WithAndWithoutRequestResponse_Sync {
+ public:
+  using Proxy_ = WithAndWithoutRequestResponse_SyncProxy;
+  virtual ~WithAndWithoutRequestResponse_Sync();
+  virtual zx_status_t NoRequestNoResponse() = 0;
+  virtual zx_status_t WithRequestNoResponse(::std::string arg) = 0;
+  virtual zx_status_t NoRequestWithResponse(::std::string* out_ret) = 0;
+  virtual zx_status_t WithRequestWithResponse(::std::string arg, ::std::string* out_ret) = 0;
+};
+
+class WithAndWithoutRequestResponse_Proxy : public ::fidl::internal::Proxy, public WithAndWithoutRequestResponse {
+ public:
+  explicit WithAndWithoutRequestResponse_Proxy(::fidl::internal::ProxyController* controller);
+  ~WithAndWithoutRequestResponse_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void NoRequestNoResponse() override;
+  void WithRequestNoResponse(::std::string arg) override;
+  void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
+  void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override;
+  OnNoResponseCallback OnNoResponse;
+  WithNoResponseCallback WithNoResponse;
+
+ private:
+  WithAndWithoutRequestResponse_Proxy(const WithAndWithoutRequestResponse_Proxy&) = delete;
+  WithAndWithoutRequestResponse_Proxy& operator=(const WithAndWithoutRequestResponse_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class WithAndWithoutRequestResponse_Stub : public ::fidl::internal::Stub, public WithAndWithoutRequestResponse_EventSender {
+ public:
+  typedef class WithAndWithoutRequestResponse WithAndWithoutRequestResponse_clazz;
+  explicit WithAndWithoutRequestResponse_Stub(WithAndWithoutRequestResponse_clazz* impl);
+  ~WithAndWithoutRequestResponse_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void OnNoResponse() override;
+  void WithNoResponse(::std::string ret) override;
+
+ private:
+  WithAndWithoutRequestResponse_clazz* impl_;
+};
+
+class WithAndWithoutRequestResponse_SyncProxy : public WithAndWithoutRequestResponse_Sync {
+ public:
+  explicit WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel);
+  ~WithAndWithoutRequestResponse_SyncProxy() override;
+
+  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
+  zx_status_t NoRequestNoResponse() override;
+  zx_status_t WithRequestNoResponse(::std::string arg) override;
+  zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
+  zx_status_t WithRequestWithResponse(::std::string arg, ::std::string* out_ret) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;

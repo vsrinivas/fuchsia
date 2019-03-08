@@ -1,5 +1,14 @@
 library test.name;
 
+protocol WithAndWithoutRequestResponse {
+    NoRequestNoResponse();
+    WithRequestNoResponse(string arg);
+    NoRequestWithResponse() -> (string ret);
+    WithRequestWithResponse(string arg) -> (string ret);
+    -> OnNoResponse();
+    -> WithNoResponse(string ret);
+};
+
 [Transport="OvernetInternal"]
 protocol OvernetInternalProtocol {
     MethodA(int64 a, int64 b);

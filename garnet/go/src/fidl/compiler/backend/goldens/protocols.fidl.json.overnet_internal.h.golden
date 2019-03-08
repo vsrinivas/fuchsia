@@ -23,6 +23,8 @@ class OvernetInternalProtocol_Proxy;
 class OvernetInternalProtocol_Stub;
       
   
+      
+  
   
       
         
@@ -112,6 +114,8 @@ class OvernetInternalProtocol_Stub : public ::overnet::FidlStream, public Overne
 };
       
   
+      
+  
   
       
         
@@ -123,6 +127,8 @@ class OvernetInternalProtocol_Stub : public ::overnet::FidlStream, public Overne
   
       
         
+      
+  
       
   
   }  // namespace name

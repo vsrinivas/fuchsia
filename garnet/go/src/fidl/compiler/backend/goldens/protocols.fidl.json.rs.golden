@@ -23,6 +23,1037 @@ use fidl::{
 
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct WithAndWithoutRequestResponseMarker;
+
+impl fidl::endpoints::ServiceMarker for WithAndWithoutRequestResponseMarker {
+	type Proxy = WithAndWithoutRequestResponseProxy;
+	type RequestStream = WithAndWithoutRequestResponseRequestStream;
+	const NAME: &'static str = "";
+}
+
+pub trait WithAndWithoutRequestResponseProxyInterface: Send + Sync {
+	fn no_request_no_response(&self,
+	)-> Result<(), fidl::Error>;
+	fn with_request_no_response(&self,
+		arg: &str,
+	)-> Result<(), fidl::Error>;
+	type NoRequestWithResponseResponseFut: futures::Future<Output = Result<(String), fidl::Error>> + Send;
+	fn no_request_with_response(&self,
+	)-> Self::NoRequestWithResponseResponseFut;
+	type WithRequestWithResponseResponseFut: futures::Future<Output = Result<(String), fidl::Error>> + Send;
+	fn with_request_with_response(&self,
+		arg: &str,
+	)-> Self::WithRequestWithResponseResponseFut;
+	type OnNoResponseResponseFut: futures::Future<Output = Result<(), fidl::Error>> + Send;
+	type WithNoResponseResponseFut: futures::Future<Output = Result<(String), fidl::Error>> + Send;
+}
+
+#[derive(Debug)]
+pub struct WithAndWithoutRequestResponseSynchronousProxy {
+	client: fidl::client::sync::Client,
+}
+
+impl WithAndWithoutRequestResponseSynchronousProxy {
+	pub fn new(channel: zx::Channel) -> Self {
+		Self { client: fidl::client::sync::Client::new(channel) }
+	}
+
+	pub fn into_channel(self) -> zx::Channel {
+		self.client.into_channel()
+	}
+	pub fn no_request_no_response(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
+				503576693,
+			)}
+	pub fn with_request_no_response(&mut self,
+		mut arg: &str,) -> Result<(), fidl::Error> {self.client.send(&mut (arg),
+				432149361,
+			)}
+	pub fn no_request_with_response(&mut self,___deadline: zx::Time,) -> Result<(String), fidl::Error> {self.client.send_query(&mut (),
+				107534328,
+				___deadline,
+			)}
+	pub fn with_request_with_response(&mut self,
+		mut arg: &str,___deadline: zx::Time,) -> Result<(String), fidl::Error> {self.client.send_query(&mut (arg),
+				426977568,
+				___deadline,
+			)}
+}
+
+#[derive(Debug, Clone)]
+pub struct WithAndWithoutRequestResponseProxy {
+	client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for WithAndWithoutRequestResponseProxy {
+	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
+		Self::new(inner)
+	}
+}
+
+impl ::std::ops::Deref for WithAndWithoutRequestResponseProxy {
+	type Target = fidl::client::Client;
+
+	fn deref(&self) -> &Self::Target {
+		&self.client
+	}
+}
+
+/// Proxy object for communicating with interface WithAndWithoutRequestResponse
+impl WithAndWithoutRequestResponseProxy {
+	/// Create a new Proxy for WithAndWithoutRequestResponse
+	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
+		Self { client: fidl::client::Client::new(channel) }
+	}
+
+	/// Attempt to convert the Proxy back into a channel.
+	///
+	/// This will only succeed if there are no active clones of this Proxy
+	/// and no currently-alive EventStream or response futures that came from
+	/// this Proxy.
+	pub fn into_channel(self) -> Result<::fuchsia_async::Channel, Self> {
+		self.client.into_channel().map_err(|client| Self { client })
+	}
+
+	/// Get a Stream of events from the remote end of the WithAndWithoutRequestResponse interface
+	pub fn take_event_stream(&self) -> WithAndWithoutRequestResponseEventStream {
+		WithAndWithoutRequestResponseEventStream {
+			event_receiver: self.client.take_event_receiver(),
+		}
+	}
+	pub fn no_request_no_response(&self,
+	)-> Result<(), fidl::Error> {
+		WithAndWithoutRequestResponseProxyInterface::no_request_no_response(self,
+		)
+	}
+	pub fn with_request_no_response(&self,
+		mut arg: &str,
+	)-> Result<(), fidl::Error> {
+		WithAndWithoutRequestResponseProxyInterface::with_request_no_response(self,
+		arg,
+		)
+	}
+	pub fn no_request_with_response(&self,
+	)-> fidl::client::QueryResponseFut<(String)> {
+		WithAndWithoutRequestResponseProxyInterface::no_request_with_response(self,
+		)
+	}
+	pub fn with_request_with_response(&self,
+		mut arg: &str,
+	)-> fidl::client::QueryResponseFut<(String)> {
+		WithAndWithoutRequestResponseProxyInterface::with_request_with_response(self,
+		arg,
+		)
+	}
+}
+
+impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestResponseProxy {
+	fn no_request_no_response(&self,
+	)-> Result<(), fidl::Error> {
+		self.client.send(&mut (), 503576693)
+	}
+	fn with_request_no_response(&self,
+		mut arg: &str,
+	)-> Result<(), fidl::Error> {
+		self.client.send(&mut (arg), 432149361)
+	}
+	type NoRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
+	fn no_request_with_response(&self,
+	)-> Self::NoRequestWithResponseResponseFut {
+		self.client.send_query(&mut (), 107534328)
+	}
+	type WithRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
+	fn with_request_with_response(&self,
+		mut arg: &str,
+	)-> Self::WithRequestWithResponseResponseFut {
+		self.client.send_query(&mut (arg), 426977568)
+	}
+	type OnNoResponseResponseFut = fidl::client::QueryResponseFut<()>;
+	type WithNoResponseResponseFut = fidl::client::QueryResponseFut<(String)>;}
+
+pub struct WithAndWithoutRequestResponseEventStream {
+	event_receiver: fidl::client::EventReceiver,
+}
+
+impl ::std::marker::Unpin for WithAndWithoutRequestResponseEventStream {}
+
+impl futures::stream::FusedStream for WithAndWithoutRequestResponseEventStream {
+	fn is_terminated(&self) -> bool {
+		self.event_receiver.is_terminated()
+	}
+}
+
+impl futures::Stream for WithAndWithoutRequestResponseEventStream {
+	type Item = Result<WithAndWithoutRequestResponseEvent, fidl::Error>;
+
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
+		-> futures::Poll<Option<Self::Item>>
+	{
+		let mut buf = match futures::ready!(
+			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, lw)?
+		) {
+			Some(buf) => buf,
+			None => return futures::Poll::Ready(None),
+		};
+		let (bytes, _handles) = buf.split_mut();
+		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		futures::Poll::Ready(Some(match tx_header.ordinal {
+			1440694697 | 1440694697 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				Ok((
+					WithAndWithoutRequestResponseEvent::OnNoResponse {}
+				))
+			}
+			1029625418 | 1029625418 => {
+				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				Ok((
+					WithAndWithoutRequestResponseEvent::WithNoResponse {ret: out_tuple,}
+				))
+			}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: tx_header.ordinal,
+				service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::NAME,
+			})
+		}))
+	}
+}
+
+#[derive(Debug)]
+pub enum WithAndWithoutRequestResponseEvent {
+	
+	
+	
+	
+	
+	
+	OnNoResponse {
+		
+	},
+	
+	WithNoResponse {
+		
+		ret: String,
+		
+	},}
+
+pub struct WithAndWithoutRequestResponseEventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> WithAndWithoutRequestResponseEventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+	pub fn send_on_no_response(&self) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithAndWithoutRequestResponseEncoder::encode_on_no_response_response(
+				bytes, handles,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	
+	pub fn send_with_no_response(&self,
+		mut ret: &str) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithAndWithoutRequestResponseEncoder::encode_with_no_response_response(
+				bytes, handles,ret,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	
+}
+
+#[deprecated(note = "use WithAndWithoutRequestResponseRequestStream instead")]
+pub trait WithAndWithoutRequestResponse {
+	type OnOpenFut: futures::Future<Output = ()> + Send;
+	fn on_open(&mut self, control_handle: WithAndWithoutRequestResponseControlHandle) -> Self::OnOpenFut;
+	type NoRequestNoResponseFut: futures::Future<Output = ()> + Send;
+	fn no_request_no_response (&mut self,
+		control_handle: WithAndWithoutRequestResponseControlHandle
+	) -> Self::NoRequestNoResponseFut;
+	
+	type WithRequestNoResponseFut: futures::Future<Output = ()> + Send;
+	fn with_request_no_response (&mut self,
+		arg: String,
+		control_handle: WithAndWithoutRequestResponseControlHandle
+	) -> Self::WithRequestNoResponseFut;
+	
+	type NoRequestWithResponseFut: futures::Future<Output = ()> + Send;
+	fn no_request_with_response (&mut self,
+		response_chan: WithAndWithoutRequestResponseNoRequestWithResponseResponder,
+	) -> Self::NoRequestWithResponseFut;
+	
+	type WithRequestWithResponseFut: futures::Future<Output = ()> + Send;
+	fn with_request_with_response (&mut self,
+		arg: String,
+		response_chan: WithAndWithoutRequestResponseWithRequestWithResponseResponder,
+	) -> Self::WithRequestWithResponseFut;
+	
+
+	fn serve(mut self, channel: ::fuchsia_async::Channel)
+		-> WithAndWithoutRequestResponseServer<Self>
+	where Self: Sized
+	{
+		let inner = ::std::sync::Arc::new(fidl::ServeInner::new(channel));
+		let on_open_fut = self.on_open(
+			WithAndWithoutRequestResponseControlHandle {
+				inner: inner.clone(),
+			}
+		);
+		WithAndWithoutRequestResponseServer {
+			server: self,
+			inner: inner.clone(),
+			on_open_fut: Some(on_open_fut),no_request_no_response_futures: futures::stream::FuturesUnordered::new(),with_request_no_response_futures: futures::stream::FuturesUnordered::new(),no_request_with_response_futures: futures::stream::FuturesUnordered::new(),with_request_with_response_futures: futures::stream::FuturesUnordered::new(),
+		}
+	}
+}
+
+pub struct WithAndWithoutRequestResponseServer<T: WithAndWithoutRequestResponse> {
+	#[allow(dead_code)] // not used if no methods are present
+	server: T,
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+	on_open_fut: Option<T::OnOpenFut>,no_request_no_response_futures: futures::stream::FuturesUnordered<T::NoRequestNoResponseFut>,with_request_no_response_futures: futures::stream::FuturesUnordered<T::WithRequestNoResponseFut>,no_request_with_response_futures: futures::stream::FuturesUnordered<T::NoRequestWithResponseFut>,with_request_with_response_futures: futures::stream::FuturesUnordered<T::WithRequestWithResponseFut>,
+}
+
+// Safety: only the OnOpen fut is held directly, so it's the only one that
+// is projected to, so it's the only one that needs to be Unpin for the Impl
+// struct to be Unpin.
+impl<T: WithAndWithoutRequestResponse> ::std::marker::Unpin for WithAndWithoutRequestResponseServer<T>
+where T::OnOpenFut: ::std::marker::Unpin,
+{}
+
+impl<T: WithAndWithoutRequestResponse> WithAndWithoutRequestResponseServer<T> {
+	pub fn control_handle(&self) -> WithAndWithoutRequestResponseControlHandle {
+		WithAndWithoutRequestResponseControlHandle {
+			inner: self.inner.clone(),
+		}
+	}
+}
+
+impl<T: WithAndWithoutRequestResponse> futures::Future for WithAndWithoutRequestResponseServer<T> {
+	type Output = Result<(), fidl::Error>;
+
+	fn poll(
+		mut self: ::std::pin::Pin<&mut Self>,
+		lw: &futures::task::Waker,
+	) -> futures::Poll<Self::Output> {
+		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
+		// isn't moved below
+		let this = unsafe { ::std::pin::Pin::get_unchecked_mut(self) };
+		loop {
+		let mut made_progress_this_loop_iter = false;
+
+		if this.inner.poll_shutdown(lw) {
+			return futures::Poll::Ready(Ok(()));
+		}
+
+		unsafe {
+			// Safety: ensure that on_open isn't moved
+			let completed_on_open = if let Some(on_open_fut) = &mut this.on_open_fut {
+				match futures::Future::poll(::std::pin::Pin::new_unchecked(on_open_fut), lw) {
+					futures::Poll::Ready(()) => true,
+					futures::Poll::Pending => false,
+				}
+			} else {
+				false
+			};
+
+			if completed_on_open {
+				made_progress_this_loop_iter = true;
+				this.on_open_fut = None;
+			}
+		}match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.no_request_no_response_futures, lw
+		) {
+			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
+			_ => {},
+		}match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.with_request_no_response_futures, lw
+		) {
+			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
+			_ => {},
+		}match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.no_request_with_response_futures, lw
+		) {
+			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
+			_ => {},
+		}match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.with_request_with_response_futures, lw
+		) {
+			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
+			_ => {},
+		}
+
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						503576693 | 503576693 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = WithAndWithoutRequestResponseControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.no_request_no_response_futures.push(
+								this.server.no_request_no_response(control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						432149361 | 432149361 => {
+							let mut req: (String) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = WithAndWithoutRequestResponseControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.with_request_no_response_futures.push(
+								this.server.with_request_no_response(req,control_handle)
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						107534328 | 107534328 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = WithAndWithoutRequestResponseControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.no_request_with_response_futures.push(
+								this.server.no_request_with_response(WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						426977568 | 426977568 => {
+							let mut req: (String) = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = WithAndWithoutRequestResponseControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.with_request_with_response_futures.push(
+								this.server.with_request_with_response(req,WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
+				}
+			}
+		})?;
+
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
+		}
+	}}
+}
+
+/// A Stream of incoming requests for WithAndWithoutRequestResponse
+pub struct WithAndWithoutRequestResponseRequestStream {
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+	is_terminated: bool,
+}
+
+impl ::std::marker::Unpin for WithAndWithoutRequestResponseRequestStream {}
+
+impl futures::stream::FusedStream for WithAndWithoutRequestResponseRequestStream {
+	fn is_terminated(&self) -> bool {
+		self.is_terminated
+	}
+}
+
+impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStream {
+	/// Consume a channel to make a WithAndWithoutRequestResponseRequestStream
+	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
+		Self {
+			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
+			is_terminated: false,
+		}
+	}
+
+	/// ControlHandle for the remote connection
+	type ControlHandle = WithAndWithoutRequestResponseControlHandle;
+
+	/// ControlHandle for the remote connection
+	fn control_handle(&self) -> Self::ControlHandle {
+		WithAndWithoutRequestResponseControlHandle { inner: self.inner.clone() }
+	}
+
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
+	}
+
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
+		-> Self
+	{
+		Self { inner, is_terminated }
+	}
+}
+
+impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
+	type Item = Result<WithAndWithoutRequestResponseRequest, fidl::Error>;
+
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
+		-> futures::Poll<Option<Self::Item>>
+	{
+		let this = &mut *self;
+		if this.inner.poll_shutdown(lw) {
+			this.is_terminated = true;
+			return futures::Poll::Ready(None);
+		}
+		if this.is_terminated {
+			panic!("polled WithAndWithoutRequestResponseRequestStream after completion");
+		}
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+			}
+
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				503576693 | 503576693 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithAndWithoutRequestResponseControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithAndWithoutRequestResponseRequest::NoRequestNoResponse {control_handle,})
+				}
+				432149361 | 432149361 => {
+					let mut req: (String) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithAndWithoutRequestResponseControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithAndWithoutRequestResponseRequest::WithRequestNoResponse {arg: req,control_handle,})
+				}
+				107534328 | 107534328 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithAndWithoutRequestResponseControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithAndWithoutRequestResponseRequest::NoRequestWithResponse {responder:WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				426977568 | 426977568 => {
+					let mut req: (String) = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithAndWithoutRequestResponseControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithAndWithoutRequestResponseRequest::WithRequestWithResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
+	}
+}
+pub enum WithAndWithoutRequestResponseRequest {
+	NoRequestNoResponse {
+		control_handle: WithAndWithoutRequestResponseControlHandle,},
+	WithRequestNoResponse {
+		
+		arg: String,
+		control_handle: WithAndWithoutRequestResponseControlHandle,},
+	NoRequestWithResponse {
+		responder: WithAndWithoutRequestResponseNoRequestWithResponseResponder,},
+	WithRequestWithResponse {
+		
+		arg: String,
+		responder: WithAndWithoutRequestResponseWithRequestWithResponseResponder,},
+}
+
+pub struct WithAndWithoutRequestResponseEncoder;
+impl WithAndWithoutRequestResponseEncoder {
+	pub fn encode_no_request_no_response_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 503576693,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_with_request_no_response_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_arg: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 432149361,
+		};
+		let mut body = (in_arg,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_no_request_with_response_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 107534328,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_no_request_with_response_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 107534328,
+		};
+		let mut body = (in_ret,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_with_request_with_response_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 426977568,
+		};
+		let mut body = (in_arg,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_with_request_with_response_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 426977568,
+		};
+		let mut body = (in_ret,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_on_no_response_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1440694697,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_with_no_response_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_ret: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1029625418,
+		};
+		let mut body = (in_ret,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
+#[deprecated(note = "use WithAndWithoutRequestResponseRequestStream instead")]
+pub struct WithAndWithoutRequestResponseImpl<
+	State,
+OnOpen: FnMut(&mut State, WithAndWithoutRequestResponseControlHandle) -> OnOpenFut,
+OnOpenFut: futures::Future<Output = ()> + Send,
+	NoRequestNoResponse: FnMut(&mut State,WithAndWithoutRequestResponseControlHandle) -> NoRequestNoResponseFut,
+	NoRequestNoResponseFut: futures::Future<Output = ()> + Send,
+	WithRequestNoResponse: FnMut(&mut State,String,WithAndWithoutRequestResponseControlHandle) -> WithRequestNoResponseFut,
+	WithRequestNoResponseFut: futures::Future<Output = ()> + Send,
+	NoRequestWithResponse: FnMut(&mut State,WithAndWithoutRequestResponseNoRequestWithResponseResponder) -> NoRequestWithResponseFut,
+	NoRequestWithResponseFut: futures::Future<Output = ()> + Send,
+	WithRequestWithResponse: FnMut(&mut State,String,WithAndWithoutRequestResponseWithRequestWithResponseResponder) -> WithRequestWithResponseFut,
+	WithRequestWithResponseFut: futures::Future<Output = ()> + Send,
+> {
+	pub state: State,
+	pub on_open: OnOpen,
+	pub no_request_no_response: NoRequestNoResponse,
+	pub with_request_no_response: WithRequestNoResponse,
+	pub no_request_with_response: NoRequestWithResponse,
+	pub with_request_with_response: WithRequestWithResponse,
+}
+
+// Unpin is never projected for the Impl struct
+impl<
+	State,
+OnOpen: FnMut(&mut State, WithAndWithoutRequestResponseControlHandle) -> OnOpenFut,
+OnOpenFut: futures::Future<Output = ()> + Send,
+	NoRequestNoResponse: FnMut(&mut State,WithAndWithoutRequestResponseControlHandle) -> NoRequestNoResponseFut,
+	NoRequestNoResponseFut: futures::Future<Output = ()> + Send,
+	WithRequestNoResponse: FnMut(&mut State,String,WithAndWithoutRequestResponseControlHandle) -> WithRequestNoResponseFut,
+	WithRequestNoResponseFut: futures::Future<Output = ()> + Send,
+	NoRequestWithResponse: FnMut(&mut State,WithAndWithoutRequestResponseNoRequestWithResponseResponder) -> NoRequestWithResponseFut,
+	NoRequestWithResponseFut: futures::Future<Output = ()> + Send,
+	WithRequestWithResponse: FnMut(&mut State,String,WithAndWithoutRequestResponseWithRequestWithResponseResponder) -> WithRequestWithResponseFut,
+	WithRequestWithResponseFut: futures::Future<Output = ()> + Send,
+> ::std::marker::Unpin for WithAndWithoutRequestResponseImpl<State, OnOpen, OnOpenFut,
+	NoRequestNoResponse,
+	NoRequestNoResponseFut,
+	WithRequestNoResponse,
+	WithRequestNoResponseFut,
+	NoRequestWithResponse,
+	NoRequestWithResponseFut,
+	WithRequestWithResponse,
+	WithRequestWithResponseFut,
+>
+{}
+
+impl<
+	State,
+OnOpen: FnMut(&mut State, WithAndWithoutRequestResponseControlHandle) -> OnOpenFut,
+OnOpenFut: futures::Future<Output = ()> + Send,
+	NoRequestNoResponse: FnMut(&mut State,WithAndWithoutRequestResponseControlHandle) -> NoRequestNoResponseFut,
+	NoRequestNoResponseFut: futures::Future<Output = ()> + Send,
+	WithRequestNoResponse: FnMut(&mut State,String,WithAndWithoutRequestResponseControlHandle) -> WithRequestNoResponseFut,
+	WithRequestNoResponseFut: futures::Future<Output = ()> + Send,
+	NoRequestWithResponse: FnMut(&mut State,WithAndWithoutRequestResponseNoRequestWithResponseResponder) -> NoRequestWithResponseFut,
+	NoRequestWithResponseFut: futures::Future<Output = ()> + Send,
+	WithRequestWithResponse: FnMut(&mut State,String,WithAndWithoutRequestResponseWithRequestWithResponseResponder) -> WithRequestWithResponseFut,
+	WithRequestWithResponseFut: futures::Future<Output = ()> + Send,
+> WithAndWithoutRequestResponse for WithAndWithoutRequestResponseImpl<State, OnOpen, OnOpenFut,
+	NoRequestNoResponse,
+	NoRequestNoResponseFut,
+	WithRequestNoResponse,
+	WithRequestNoResponseFut,
+	NoRequestWithResponse,
+	NoRequestWithResponseFut,
+	WithRequestWithResponse,
+	WithRequestWithResponseFut,
+>
+{
+	type OnOpenFut = OnOpenFut;
+	fn on_open(&mut self, response_chan: WithAndWithoutRequestResponseControlHandle) -> Self::OnOpenFut {
+		(self.on_open)(&mut self.state, response_chan)
+	}
+	type NoRequestNoResponseFut = NoRequestNoResponseFut;
+	fn no_request_no_response (&mut self,
+		response_chan: WithAndWithoutRequestResponseControlHandle
+	) -> Self::NoRequestNoResponseFut
+	{
+		(self.no_request_no_response)(
+			&mut self.state,
+			response_chan
+		)
+	}
+	
+	type WithRequestNoResponseFut = WithRequestNoResponseFut;
+	fn with_request_no_response (&mut self,
+		arg: String,
+		response_chan: WithAndWithoutRequestResponseControlHandle
+	) -> Self::WithRequestNoResponseFut
+	{
+		(self.with_request_no_response)(
+			&mut self.state,
+			arg,
+			response_chan
+		)
+	}
+	
+	type NoRequestWithResponseFut = NoRequestWithResponseFut;
+	fn no_request_with_response (&mut self,
+		response_chan: WithAndWithoutRequestResponseNoRequestWithResponseResponder
+	) -> Self::NoRequestWithResponseFut
+	{
+		(self.no_request_with_response)(
+			&mut self.state,
+			response_chan
+		)
+	}
+	
+	type WithRequestWithResponseFut = WithRequestWithResponseFut;
+	fn with_request_with_response (&mut self,
+		arg: String,
+		response_chan: WithAndWithoutRequestResponseWithRequestWithResponseResponder
+	) -> Self::WithRequestWithResponseFut
+	{
+		(self.with_request_with_response)(
+			&mut self.state,
+			arg,
+			response_chan
+		)
+	}
+	
+}
+
+#[derive(Clone)]
+pub struct WithAndWithoutRequestResponseControlHandle {
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+}
+
+impl ::std::ops::Deref for WithAndWithoutRequestResponseControlHandle {
+	type Target = ::std::sync::Arc<fidl::ServeInner>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+
+impl WithAndWithoutRequestResponseControlHandle {
+	pub fn shutdown(&self) {
+		self.inner.shutdown()
+	}
+	pub fn send_on_no_response(&self) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: 0,
+			flags: 0,
+			ordinal: 1440694697,
+		};
+
+		let mut response = ();
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
+		Ok(())
+	}
+	
+	pub fn send_with_no_response(&self,
+		mut ret: &str) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: 0,
+			flags: 0,
+			ordinal: 1029625418,
+		};
+
+		let mut response = (ret);
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+		})?;
+
+		Ok(())
+	}
+	}
+
+/* beginning of response types */
+#[must_use = "FIDL methods require a response to be sent"]
+pub struct WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
+	tx_id: u32,
+	ordinal: u32,
+}
+
+impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+	fn drop(&mut self) {
+		// Shutdown the channel if the responder is dropped without sending a response
+		// so that the client doesn't hang. To prevent this behavior, some methods
+		// call "drop_without_shutdown"
+		self.control_handle.shutdown();
+		// Safety: drops once, never accessed again
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+	}
+}
+
+impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+	pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
+		&self.control_handle
+	}
+
+	/// Drop the Responder without setting the channel to shutdown.
+	///
+	/// This method shouldn't normally be used-- instead, send a response
+	/// to prevent the channel from shutting down.
+	pub fn drop_without_shutdown(mut self) {
+		// Safety: drops once, never accessed again due to mem::forget
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		// Prevent Drop from running (which would shut down the channel)
+		::std::mem::forget(self);
+	}
+
+	/// Sends a response to the FIDL transaction.
+	///
+	/// Sets the channel to shutdown if an error occurs.
+	pub fn send(self,mut ret: &str,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(ret,);
+		if r.is_err() {
+			self.control_handle.shutdown();
+		}
+		self.drop_without_shutdown();
+		r
+	}
+
+	/// Similar to "send" but does not shutdown the channel if
+	/// an error occurs.
+	pub fn send_no_shutdown_on_err(self,mut ret: &str,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(ret,);
+		self.drop_without_shutdown();
+		r
+	}
+
+	fn send_raw(&self,mut ret: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: self.tx_id,
+			flags: 0,
+			ordinal: self.ordinal,
+		};
+
+		let mut response = (ret);
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+}
+#[must_use = "FIDL methods require a response to be sent"]
+pub struct WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+	control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
+	tx_id: u32,
+	ordinal: u32,
+}
+
+impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+	fn drop(&mut self) {
+		// Shutdown the channel if the responder is dropped without sending a response
+		// so that the client doesn't hang. To prevent this behavior, some methods
+		// call "drop_without_shutdown"
+		self.control_handle.shutdown();
+		// Safety: drops once, never accessed again
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+	}
+}
+
+impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+	pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
+		&self.control_handle
+	}
+
+	/// Drop the Responder without setting the channel to shutdown.
+	///
+	/// This method shouldn't normally be used-- instead, send a response
+	/// to prevent the channel from shutting down.
+	pub fn drop_without_shutdown(mut self) {
+		// Safety: drops once, never accessed again due to mem::forget
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		// Prevent Drop from running (which would shut down the channel)
+		::std::mem::forget(self);
+	}
+
+	/// Sends a response to the FIDL transaction.
+	///
+	/// Sets the channel to shutdown if an error occurs.
+	pub fn send(self,mut ret: &str,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(ret,);
+		if r.is_err() {
+			self.control_handle.shutdown();
+		}
+		self.drop_without_shutdown();
+		r
+	}
+
+	/// Similar to "send" but does not shutdown the channel if
+	/// an error occurs.
+	pub fn send_no_shutdown_on_err(self,mut ret: &str,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(ret,);
+		self.drop_without_shutdown();
+		r
+	}
+
+	fn send_raw(&self,mut ret: &str,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: self.tx_id,
+			flags: 0,
+			ordinal: self.ordinal,
+		};
+
+		let mut response = (ret);
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+}
+
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OvernetInternalProtocolMarker;
 
 impl fidl::endpoints::ServiceMarker for OvernetInternalProtocolMarker {

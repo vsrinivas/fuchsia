@@ -58,6 +58,25 @@ class OvernetInternalProtocol_TestBase : public OvernetInternalProtocol {
   }
 
 };
+
+class WithAndWithoutRequestResponse_TestBase : public WithAndWithoutRequestResponse {
+  public:
+  virtual ~WithAndWithoutRequestResponse_TestBase() { }
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void NoRequestNoResponse() override {
+    NotImplemented_("NoRequestNoResponse");
+  }
+  void WithRequestNoResponse(::std::string arg) override {
+    NotImplemented_("WithRequestNoResponse");
+  }
+  void NoRequestWithResponse(NoRequestWithResponseCallback callback) override {
+    NotImplemented_("NoRequestWithResponse");
+  }
+  void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override {
+    NotImplemented_("WithRequestWithResponse");
+  }
+
+};
 }  // namespace testing
 }  // namespace name
 }  // namespace test
