@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+""" Pipe `fx syslog` through this tool for simpler stack traces.
+
+E.g. `fx syslog | scripts/simplify_stacktraces`.
+"""
+
+import sys
+import re
+
+TEMPLATE_TAG = "###TEMPLATE###"
+
+class TerminalEscapeCodes:
+    GREEN = '\033[92m'
+    ENDC = '\033[0m'
+    UNDERLINE = '\033[4m'
+
+def simplify_cpp_file_path(path):
+  path = re.sub(r"^../../out/[^/]+/../../", "", path);
+  path = re.sub(r"^/[\S]+/build-zircon/../../", "", path);
+  return path
+
+def simplify_cpp_function_signature(function):
+  # To find "core part" to underline, strip out all param lists and templated
+  # types.
+  core_part = function
+  while True:
+    prev = core_part
+    core_part = re.sub(r"<[^<>]*>", "", core_part)
+    core_part = re.sub(r"\([^\(\)]*\)", "", core_part)
+    if prev == core_part:
+      break
+  core_part = re.sub(r"::\$[^:]+::operator", "", core_part)
+  core_part = re.sub(r"::'lambda'::operator", "", core_part)
+  core_part = re.sub(r"auto ", "", core_part)
+  core_part = re.sub(r"void ", "", core_part)
+  core_part = re.sub(r" const", "", core_part)
+
+  # To make function signature less verbose, replace templates with <...>
+  signature = function
+  while True:
+    prev = signature
+    signature = re.sub(r"<[^<>]+>", TEMPLATE_TAG, signature)
+    if prev == signature:
+      break
+  signature = re.sub(TEMPLATE_TAG, "<>", signature)
+  # Underline the "core part" in the signature
+  signature = signature.replace(core_part, TerminalEscapeCodes.UNDERLINE +
+                                core_part + TerminalEscapeCodes.ENDC)
+  return signature
+
+def is_cpp_stacktrace_entry(parts):
+  return len(parts) >= 7 and parts[3][:3] == "0x0"
+
+def simplify_cpp_stacktrace_entry(parts):
+  prefix = parts[0]  # "[01127.479810][1169][1262][klog]"
+  level = parts[1]   # "INFO:"
+  index = parts[2]   # "#1"
+  symbol = parts[3]  # "0x00005a22a477d585"
+  function = " ".join(parts[5:-2])  # function signature, can contain spaces
+  file_path = parts[-2]   # file path
+
+  function = simplify_cpp_function_signature(function)
+  file_path = simplify_cpp_file_path(file_path)
+  file_path = TerminalEscapeCodes.GREEN + file_path + TerminalEscapeCodes.ENDC
+
+  return "%s %s %s" % (index, file_path, function)
+
+def main():
+  for line in sys.stdin:
+    line = line.strip()
+    parts = line.split()
+    if is_cpp_stacktrace_entry(parts):
+      print(simplify_cpp_stacktrace_entry(parts))
+    else:
+      # Contributions to handle other stacktrace types very welcome.
+      print(line)
+
+
+if __name__ == '__main__':
+    sys.exit(main())
