@@ -203,7 +203,9 @@ protocol Netstack {
 
     SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
-    BridgeInterfaces(vector<uint32> nicids) -> (NetErr result);
+    // Creates a bridge and returns the newly created nicid or an
+    // error if the creation fails.
+    BridgeInterfaces(vector<uint32> nicids) -> (NetErr result, uint32 nicid);
 
     AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
 

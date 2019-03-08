@@ -341,16 +341,16 @@ func (ni *netstackImpl) SetInterfaceMetric(nicid uint32, metric uint32) (result 
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
-func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, error) {
+func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint32, error) {
 	nics := make([]tcpip.NICID, len(nicids))
 	for i, n := range nicids {
 		nics[i] = tcpip.NICID(n)
 	}
-	_, err := ni.ns.Bridge(nics)
+	ifs, err := ni.ns.Bridge(nics)
 	if err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownError}, nil
+		return netstack.NetErr{Status: netstack.StatusUnknownError}, 0, nil
 	}
-	return netstack.NetErr{Status: netstack.StatusOk}, nil
+	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.mu.nic.ID), nil
 }
 
 func (ni *netstackImpl) GetAggregateStats() (stats netstack.AggregateStats, err error) {

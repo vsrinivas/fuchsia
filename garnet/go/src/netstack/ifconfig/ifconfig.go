@@ -254,29 +254,29 @@ func (a *netstackClientApp) showRoutes() error {
 	return nil
 }
 
-func (a *netstackClientApp) bridge(ifNames []string) error {
+func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
 	ifs := make([]*netstack.NetInterface2, len(ifNames))
 	nicIDs := make([]uint32, len(ifNames))
 	// first, validate that all interfaces exist
 	ifaces, err := a.netstack.GetInterfaces2()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	for i, ifName := range ifNames {
 		iface := getIfaceByNameFromIfaces(ifName, ifaces)
 		if iface == nil {
-			return fmt.Errorf("no such interface '%s'\n", ifName)
+			return 0, fmt.Errorf("no such interface '%s'\n", ifName)
 		}
 		ifs[i] = iface
 		nicIDs[i] = iface.Id
 	}
 
-	result, _ := a.netstack.BridgeInterfaces(nicIDs)
+	result, nicid, _ := a.netstack.BridgeInterfaces(nicIDs)
 	if result.Status != netstack.StatusOk {
-		return fmt.Errorf("error bridging interfaces: %s, result: %s", ifNames, result)
+		return 0, fmt.Errorf("error bridging interfaces: %s, result: %s", ifNames, result)
 	}
 
-	return nil
+	return nicid, nil
 }
 
 func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop string) {
@@ -484,11 +484,13 @@ func main() {
 		return
 	case "bridge":
 		ifaces := os.Args[2:]
-		err := a.bridge(ifaces)
+		nicid, err := a.bridge(ifaces)
 		if err != nil {
 			fmt.Printf("error creating bridge: %s\n", err)
 		} else {
-			fmt.Printf("Bridged interfaces %s. Please run `ifconfig <bridge_id> up` to enable it.\n", ifaces)
+			interfaces, _ := a.netstack.GetInterfaces2()
+			bridge := getIfaceByIdFromIfaces(uint32(nicid), interfaces)
+			fmt.Printf("Bridged interfaces %s.\nInterface '%s' created.\nPlease run `ifconfig %[2]s up` to enable it.\n", ifaces, bridge.Name)
 		}
 		return
 	case "help":
