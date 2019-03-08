@@ -5,7 +5,7 @@
     "sandbox": {
         "dev": [ "sys/cpu-trace" ],
         "features": [
-          "deprecated-global-persistent-storage",
+          "isolated-persistent-storage",
           "shell-commands",
           "system-temp"
         ],

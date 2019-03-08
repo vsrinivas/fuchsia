@@ -16,13 +16,14 @@ group("deprecated_global_persistent_storage_whitelist") {
   # the "deprecated-global-persistent-storage" feature. Do not add to this
   # list. Use "isolated-persistent-storage" instead.
   visibility = [
+    # These first two entries do not need migration and will be updated when
+    # deleting the 'deprecated-global-persistent-storage' feature.
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:isolated_persistent_storage",
+
     "//garnet/bin/auth:account_handler",
     "//garnet/bin/auth:account_manager",
     "//garnet/bin/auth:token_manager_factory",
-    "//garnet/bin/cpuperf:cpuperf",
-    "//garnet/bin/cpuperf/tests:cpuperf_tests",
     "//garnet/bin/crashpad:crashpad_analyzer",
     "//garnet/bin/device_settings:device_settings_manager",
     "//garnet/bin/dhcpd:dhcpd",
@@ -30,25 +31,15 @@ group("deprecated_global_persistent_storage_whitelist") {
     "//garnet/bin/insntrace:insntrace",
     "//garnet/bin/media:audio_core",
     "//garnet/bin/media/camera_manager:camera_manager_cpp",
-    "//garnet/bin/mediaplayer:mediaplayer_test_util",
     "//garnet/bin/netcfg:netcfg",
-    "//garnet/bin/netemul_runner/test:netemul_sandbox_test",
     "//garnet/bin/stash:stash",
     "//garnet/bin/timezone:timezone",
     "//garnet/bin/trace:trace",
-    "//garnet/bin/trace/tests:trace_tests",
-    "//garnet/bin/wlan/wlan-stress-test:wlan-stress-test",
     "//garnet/bin/wlan/wlancfg:wlancfg",
-    "//garnet/examples/camera/camera_client:example_camera_client",
-    "//garnet/examples/http/example_http_server:example_http_server",
-    "//garnet/examples/tcp/tcp_file_sender:tcp_file_sender",
     "//garnet/go/src/amber:amber",
     "//peridot/bin/basemgr:basemgr",
     "//peridot/bin/basemgr:dev_base_shell",
-    "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//peridot/bin/voila:voila",
     "//topaz/app/dashboard:dashboard",
-    "//topaz/examples/mediaplayer/mediaplayer_skia:mediaplayer_skia",
-    "//topaz/examples/mediaplayer/mediaplayer_flutter:mediaplayer_flutter",
   ]
 }

@@ -17,7 +17,6 @@ rustc_binary("bin") {
 }
 
 package("tcp_file_sender") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

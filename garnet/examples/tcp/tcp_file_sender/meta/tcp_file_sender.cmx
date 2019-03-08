@@ -3,9 +3,6 @@
         "binary": "bin/tcp_file_sender"
     },
     "sandbox": {
-        "features": [
-            "deprecated-global-persistent-storage"
-        ],
         "services": [
             "fuchsia.net.SocketProvider",
             "fuchsia.logger.LogSink"

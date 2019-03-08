@@ -8,7 +8,6 @@ import("//src/ledger/bin/testing/sync_params.gni")
 visibility = [ "//src/ledger/*" ]
 
 package("ledger_benchmarks") {
-  deprecated_global_persistent_storage = "//build"
   testonly = true
 
   deps = [

@@ -60,7 +60,6 @@ executable("bin") {
 }
 
 package("cpuperf") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]
