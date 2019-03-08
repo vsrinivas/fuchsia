@@ -177,4 +177,12 @@ zx_status_t CompositeDeviceComponent::Bind(const fbl::RefPtr<Device>& dev) {
     return ZX_OK;
 }
 
+void CompositeDeviceComponent::Unbind() {
+    ZX_ASSERT(bound_device_ != nullptr);
+    // Drop our reference to the device added by the component driver
+    component_device_ = nullptr;
+    bound_device_->set_component(nullptr);
+    bound_device_ = nullptr;
+}
+
 } // namespace devmgr

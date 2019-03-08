@@ -46,6 +46,9 @@ public:
     // Bind this component to the given device.
     zx_status_t Bind(const fbl::RefPtr<Device>& dev);
 
+    // Unbind this component.
+    void Unbind();
+
     uint32_t index() const { return index_; }
     CompositeDevice* composite() const { return composite_; }
     // If not nullptr, this component has been bound to this device

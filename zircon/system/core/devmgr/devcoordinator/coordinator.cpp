@@ -792,9 +792,12 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         }
     }
 
-    // If this is an instance of a component device, detatch our reference
+    // Check if this device is a composite component device
     if (component_driver_ != nullptr && dev->libname == component_driver_->libname) {
-        dev->parent()->component()->set_component_device(nullptr);
+        // If it is, then its parent will know about which one (since the parent
+        // is the actual device matched by the component description).
+        const auto& parent = dev->parent();
+        parent->component()->Unbind();
     }
 
     // detach from devhost
