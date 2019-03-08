@@ -230,10 +230,10 @@ class BlobStats {
 
   String metaFarToBlobsJson(String farPath) {
     // Assumes details of //build/package.gni, namely that it generates
-    //   <build-dir>/.../<package>.meta/meta.far
+    //   <build-dir>/.../<package>/meta.far
     // and puts a blobs.json file into
-    //   <build-dir>/.../<package>.meta/blobs.json
-    if (!farPath.endsWith(".meta/meta.far")) {
+    //   <build-dir>/.../<package>/blobs.json
+    if (!farPath.endsWith("/meta.far")) {
       throw "Build details have changed";
     }
     return removeSuffix(farPath, "meta.far") + "blobs.json";
