@@ -7,155 +7,126 @@ import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 group("ui") {
   public_deps = [
-    "hello_base_view",
-    "hello_input",
-    "hello_input/child",
-    "hello_pose_buffer",
-    "hello_scenic",
-    "hello_stereo",
-    "hello_touch_colors",
-    "hello_views",
+    "bouncing_ball",
+    "embedder",
+    "lab/direct_input",
+    "lab/direct_input/child",
+    "lab/pose_buffer",
+    "lab/pose_buffer_provider",
+    "lab/scenic_dev_app",
+    "lab/stereo_app",
     "shadertoy/client",
     "shadertoy/service",
-    "shapes",
+    "simplest_app",
+    "simplest_embedder",
     "sketchy",
     "spinning_square",
+    "standalone_app",
     "tile",
     "video_display",
+    "yuv_to_image_pipe",
   ]
 }
 
-# NOTE: this depends on the shadertoy_client example, which is launched by
-# the hello_base_view binary.
-package("hello_base_view") {
+package("bouncing_ball") {
   deps = [
-    "hello_base_view",
+    "bouncing_ball",
   ]
 
-  binary = "hello_base_view"
+  binary = "bouncing_ball"
 
   meta = [
     {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "hello_base_view.cmx"
+      path = rebase_path("bouncing_ball/meta/bouncing_ball.cmx")
+      dest = "bouncing_ball.cmx"
     },
   ]
 }
 
-package("hello_touch_colors") {
+package("embedder") {
   deps = [
-    "hello_touch_colors",
-  ]
-
-  binary = "hello_touch_colors"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "hello_touch_colors.cmx"
-    },
-  ]
-}
-
-package("hello_input") {
-  deps = [
-    "hello_input",
-  ]
-
-  binary = "hello_input"
-
-  meta = [
-    {
-      path = rebase_path("hello_input/meta/hello_input.cmx")
-      dest = "hello_input.cmx"
-    },
-  ]
-}
-
-package("hello_input_child") {
-  deps = [
-    "hello_input/child",
-  ]
-
-  binary = "hello_input_child"
-
-  meta = [
-    {
-      path = rebase_path("hello_input/meta/hello_input.cmx")
-      dest = "hello_input_child.cmx"
-    },
-  ]
-}
-
-package("hello_scenic") {
-  deps = [
-    "hello_scenic",
-  ]
-
-  binary = "hello_scenic"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "hello_scenic.cmx"
-    },
-  ]
-}
-
-package("hello_views") {
-  deps = [
-    "hello_views",
-    "hello_views:hello_subview",
+    "embedder",
+    "embedder:subview",
   ]
 
   binaries = [
     {
-      name = "hello_views"
+      name = "embedder"
     },
     {
-      name = "hello_subview"
+      name = "subview"
     },
   ]
 
   meta = [
     {
-      path = rebase_path("hello_views/meta/hello_views.cmx")
-      dest = "hello_views.cmx"
+      path = rebase_path("embedder/meta/embedder.cmx")
+      dest = "embedder.cmx"
     },
     {
-      path = rebase_path("hello_views/meta/hello_subview.cmx")
-      dest = "hello_subview.cmx"
+      path = rebase_path("embedder/meta/subview.cmx")
+      dest = "subview.cmx"
     },
   ]
 }
 
-package("hello_pose_buffer") {
+package("direct_input") {
   deps = [
-    "hello_pose_buffer",
+    "lab/direct_input",
   ]
 
-  binary = "hello_pose_buffer"
+  binary = "direct_input"
+
+  meta = [
+    {
+      path = rebase_path("lab/direct_input/meta/direct_input.cmx")
+      dest = "direct_input.cmx"
+    },
+  ]
+}
+
+package("direct_input_child") {
+  deps = [
+    "lab/direct_input/child",
+  ]
+
+  binary = "direct_input_child"
+
+  meta = [
+    {
+      path = rebase_path("lab/direct_input/meta/direct_input.cmx")
+      dest = "direct_input_child.cmx"
+    },
+  ]
+}
+
+package("pose_buffer") {
+  deps = [
+    "lab/pose_buffer",
+  ]
+
+  binary = "pose_buffer"
 
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "hello_pose_buffer.cmx"
+      dest = "pose_buffer.cmx"
     },
   ]
 }
 
-package("hello_pose_buffer_provider") {
+package("pose_buffer_provider") {
   deps = [
-    "hello_pose_buffer_provider",
+    "lab/pose_buffer_provider",
     "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
-  binary = "hello_pose_buffer_provider"
+  binary = "pose_buffer_provider"
 
   meta = [
     {
-      path = rebase_path("meta/hello_pose_buffer_provider.cmx")
-      dest = "hello_pose_buffer_provider.cmx"
+      path = rebase_path("meta/pose_buffer_provider.cmx")
+      dest = "pose_buffer_provider.cmx"
     },
   ]
 
@@ -164,17 +135,32 @@ package("hello_pose_buffer_provider") {
   resources = vulkan_validation_layers.resources
 }
 
-package("hello_stereo") {
+package("scenic_dev_app") {
   deps = [
-    "hello_stereo",
+    "lab/scenic_dev_app",
   ]
 
-  binary = "hello_stereo"
+  binary = "scenic_dev_app"
 
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "hello_stereo.cmx"
+      dest = "scenic_dev_app.cmx"
+    },
+  ]
+}
+
+package("stereo_app") {
+  deps = [
+    "lab/stereo_app",
+  ]
+
+  binary = "stereo_app"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "stereo_app.cmx"
     },
   ]
 }
@@ -214,17 +200,35 @@ package("shadertoy_service") {
   resources = vulkan_validation_layers.resources
 }
 
-package("shapes_view") {
+package("simplest_app") {
   deps = [
-    "shapes",
+    "simplest_app",
   ]
 
-  binary = "shapes_view"
+  binary = "simplest_app"
 
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
-      dest = "shapes_view.cmx"
+      dest = "simplest_app.cmx"
+    },
+  ]
+}
+
+# NOTE: this depends on the shadertoy_client example, which is launched by
+# the simplest_embedder binary.
+package("simplest_embedder") {
+  deps = [
+    "shadertoy/client",
+    "simplest_embedder",
+  ]
+
+  binary = "simplest_embedder"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "simplest_embedder.cmx"
     },
   ]
 }
@@ -259,17 +263,17 @@ package("spinning_square_view") {
   ]
 }
 
-package("bouncing_ball") {
+package("standalone_app") {
   deps = [
-    "bouncing_ball",
+    "standalone_app",
   ]
 
-  binary = "bouncing_ball"
+  binary = "standalone_app"
 
   meta = [
     {
-      path = rebase_path("bouncing_ball/meta/bouncing_ball.cmx")
-      dest = "bouncing_ball.cmx"
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "standalone_app.cmx"
     },
   ]
 }

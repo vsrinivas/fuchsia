@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("simplest_embedder") {
+  output_name = "simplest_embedder"
+
+  sources = [
+    "example_presenter.cc",
+    "example_presenter.h",
+    "main.cc",
+    "view.cc",
+    "view.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/input/cpp",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

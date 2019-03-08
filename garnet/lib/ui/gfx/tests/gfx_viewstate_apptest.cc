@@ -59,7 +59,7 @@ class ViewEmbedderTest : public component::testing::TestWithEnvironment {
   }
 
   // Create a |ViewContext| that allows us to present a view via
-  // |RootPresenter|. See also examples/ui/hello_base_view
+  // |RootPresenter|. See also examples/ui/simplest_embedder
   scenic::ViewContext CreatePresentationContext() {
     zx::eventpair view_holder_token, view_token;
     zx_status_t status =
