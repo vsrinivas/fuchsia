@@ -12,16 +12,42 @@
 
 namespace storage {
 
+// The prefix to be used in rows depending on their type. ' ' (space) is used as the value of the
+// first one as a way to make rows easier to read on debug information.
+//
+// Important: Always append at the end. Do not reorder, do not delete.
+enum class RowType : uint8_t {
+  HEADS = ' ',
+  MERGES,                   // '!'
+  COMMITS,                  // '"'
+  OBJECTS,                  // '#'
+  REFCOUNTS,                // '$'
+  UNSYNCED_COMMIT,          // '%'
+  TRANCIENT_OBJECT_DIGEST,  // '&'
+  LOCAL_OBJECT_DIGEST,      // '\''
+  SYNCED_OBJECT_DIGEST,     // '('
+  SYNC_METADATA,            // ')'
+  PAGE_IS_ONLINE,           // '*'
+  CLOCK_DEVICE_ID,          // '+'
+  CLOCK_ENTRIES,            // ','
+};
+
 class HeadRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::HEADS);
+
  public:
-  static constexpr fxl::StringView kPrefix = "heads/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView head);
 };
 
 class MergeRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::MERGES);
+
  public:
-  static constexpr fxl::StringView kPrefix = "merges/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView parent1_id, CommitIdView parent2_id,
                                CommitIdView merge_commit_id);
@@ -29,15 +55,21 @@ class MergeRow {
 };
 
 class CommitRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::COMMITS);
+
  public:
-  static constexpr fxl::StringView kPrefix = "commits/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView commit_id);
 };
 
 class ObjectRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::OBJECTS);
+
  public:
-  static constexpr fxl::StringView kPrefix = "objects/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
 
   static std::string GetKeyFor(const ObjectDigest& object_digest);
 };
@@ -45,12 +77,27 @@ class ObjectRow {
 // Serialization of rows for reference counting.
 // The methods in this class are valid only for non-inline |destination| pieces.
 class ReferenceRow {
+ private:
+  enum class Type : uint8_t {
+    OBJECT = ' ',
+    COMMIT,  // '!'
+  };
+  enum class Priority : uint8_t {
+    EAGER = ' ',
+    LAZY,  // '!'
+  };
+  static constexpr char kPrefixChar = static_cast<char>(RowType::REFCOUNTS);
+  static constexpr char kCommitPrefixChar = static_cast<char>(Type::COMMIT);
+  static constexpr char kObjectPrefixChar = static_cast<char>(Type::OBJECT);
+  static constexpr char kEagerPrefixChar = static_cast<char>(Priority::EAGER);
+  static constexpr char kLazyPrefixChar = static_cast<char>(Priority::LAZY);
+
  public:
-  static constexpr fxl::StringView kPrefix = "refcounts/";
-  static constexpr fxl::StringView kObjectPrefix = "/object/";
-  static constexpr fxl::StringView kEagerPrefix = "eager/";
-  static constexpr fxl::StringView kLazyPrefix = "lazy/";
-  static constexpr fxl::StringView kCommitPrefix = "/commit/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr fxl::StringView kCommitPrefix= fxl::StringView(&kCommitPrefixChar, 1);
+  static constexpr fxl::StringView kObjectPrefix= fxl::StringView(&kObjectPrefixChar, 1);
+  static constexpr fxl::StringView kEagerPrefix= fxl::StringView(&kEagerPrefixChar, 1);
+  static constexpr fxl::StringView kLazyPrefix= fxl::StringView(&kLazyPrefixChar, 1);
 
   // Returns key for object-object links.
   static std::string GetKeyForObject(const ObjectDigest& source, const ObjectDigest& destination,
@@ -72,8 +119,11 @@ class ReferenceRow {
 };
 
 class UnsyncedCommitRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::UNSYNCED_COMMIT);
+
  public:
-  static constexpr fxl::StringView kPrefix = "unsynced/commits/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView commit_id);
 };
@@ -81,10 +131,15 @@ class UnsyncedCommitRow {
 // Serialization of rows holding object synchronization status.
 // The methods in this class are valid only for non-inline objects.
 class ObjectStatusRow {
+ private:
+  static constexpr char kTransientPrefixChar = static_cast<char>(RowType::TRANCIENT_OBJECT_DIGEST);
+  static constexpr char kLocalPrefixChar = static_cast<char>(RowType::LOCAL_OBJECT_DIGEST);
+  static constexpr char kSyncedPrefixChar = static_cast<char>(RowType::SYNCED_OBJECT_DIGEST);
+
  public:
-  static constexpr fxl::StringView kTransientPrefix = "transient/objects/";
-  static constexpr fxl::StringView kLocalPrefix = "local/objects/";
-  static constexpr fxl::StringView kSyncedPrefix = "synced/objects/";
+  static constexpr fxl::StringView kTransientPrefix = fxl::StringView(&kTransientPrefixChar, 1);
+  static constexpr fxl::StringView kLocalPrefix = fxl::StringView(&kLocalPrefixChar, 1);
+  static constexpr fxl::StringView kSyncedPrefix = fxl::StringView(&kSyncedPrefixChar, 1);
 
   static std::string GetKeyFor(PageDbObjectStatus object_status,
                                const ObjectIdentifier& object_identifier);
@@ -97,21 +152,31 @@ class ObjectStatusRow {
 };
 
 class SyncMetadataRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::SYNC_METADATA);
+
  public:
-  static constexpr fxl::StringView kPrefix = "sync_metadata/";
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
 
   static std::string GetKeyFor(fxl::StringView key);
 };
 
 class PageIsOnlineRow {
+ private:
+  static constexpr char kKeyChar = static_cast<char>(RowType::PAGE_IS_ONLINE);
+
  public:
-  static constexpr fxl::StringView kKey = "page_is_online";
+  static constexpr fxl::StringView kKey = fxl::StringView(&kKeyChar, 1);
 };
 
 class ClockRow {
+ private:
+  static constexpr char kClockDeviceIdChar = static_cast<char>(RowType::CLOCK_DEVICE_ID);
+  static constexpr char kClockEntriesPrefixChar = static_cast<char>(RowType::CLOCK_ENTRIES);
+
  public:
-  static constexpr fxl::StringView kDeviceIdKey = "clocks/device_id";
-  static constexpr fxl::StringView kEntriesPrefix = "clocks/entries/";
+  static constexpr fxl::StringView kDeviceIdKey = fxl::StringView(&kClockDeviceIdChar, 1);
+  static constexpr fxl::StringView kEntriesPrefix = fxl::StringView(&kClockEntriesPrefixChar, 1);
 
   // Gets the clock entry key for the provided |device_id|.
   static std::string GetClockEntryForKey(DeviceIdView device_id);

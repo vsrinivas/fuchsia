@@ -20,65 +20,69 @@ using ::testing::StartsWith;
 
 using DbSerialization = ::ledger::TestWithEnvironment;
 
-// Allows to create correct std::strings with \0 bytes inside from C-style
-// string constants.
+// Allows to create correct std::strings with \0 bytes inside from C-style string constants.
 std::string operator"" _s(const char* str, size_t size) { return std::string(str, size); }
 
-// This test makes sure nothing has changed in the rows serialization. If this
-// breaks, it means action needs to be taken to avoid breaking backward
-// compatibility.
+// This test makes sure nothing has changed in the rows serialization. If this breaks, it means
+// action needs to be taken to avoid breaking backward compatibility.
 TEST_F(DbSerialization, SerializationVersionControl) {
-  // Head row.
-  EXPECT_EQ(HeadRow::GetKeyFor("head"), "heads/head");
+  // Head row (prefix ' ').
+  EXPECT_EQ(HeadRow::GetKeyFor("head"), " head");
 
-  // Merge row.
-  EXPECT_EQ(MergeRow::GetKeyFor("parent1", "parent2", "merge"), "merges/parent1/parent2/merge");
+  // Merge row (prefix '!').
+  EXPECT_EQ(MergeRow::GetKeyFor("parent1", "parent2", "merge"), "!parent1/parent2/merge");
 
-  // Commit row.
-  EXPECT_EQ(CommitRow::GetKeyFor("commit"), "commits/commit");
+  // Commit row (prefix '"').
+  EXPECT_EQ(CommitRow::GetKeyFor("commit"), "\"commit");
 
-  // Object row.
-  EXPECT_EQ(ObjectRow::GetKeyFor(ObjectDigest("object")), "objects/object");
+  // Object row (prefix '#').
+  EXPECT_EQ(ObjectRow::GetKeyFor(ObjectDigest("object")), "#object");
 
-  // Reference row
+  // Reference row (prefix '$').
   // Destination object digest must be exactly 32+1 bytes long (ie. non-inline).
   EXPECT_EQ(ReferenceRow::GetKeyForObject(ObjectDigest("source"),
                                           ObjectDigest("0123456789ABCDEF0123456789ABCDEF0"),
                                           KeyPriority::EAGER),
-            "refcounts/0123456789ABCDEF0123456789ABCDEF0/object/eager/source");
+            "$0123456789ABCDEF0123456789ABCDEF0  source");
   EXPECT_EQ(ReferenceRow::GetKeyForObject(ObjectDigest("source"),
                                           ObjectDigest("0123456789ABCDEF0123456789ABCDEF0"),
                                           KeyPriority::LAZY),
-            "refcounts/0123456789ABCDEF0123456789ABCDEF0/object/lazy/source");
+            "$0123456789ABCDEF0123456789ABCDEF0 !source");
   EXPECT_EQ(
       ReferenceRow::GetKeyForCommit("source", ObjectDigest("0123456789ABCDEF0123456789ABCDEF0")),
-      "refcounts/0123456789ABCDEF0123456789ABCDEF0/commit/source");
+      "$0123456789ABCDEF0123456789ABCDEF0!source");
 
-  // Unsynced Commit row.
-  EXPECT_EQ(UnsyncedCommitRow::GetKeyFor("commit"), "unsynced/commits/commit");
+  // Unsynced Commit row (prefix '%').
+  EXPECT_EQ(UnsyncedCommitRow::GetKeyFor("commit"), "\%commit");
 
-  // Object Status row.
+  // Object Status rows.
   ObjectIdentifier identifier(1u, ObjectDigest("0123456789ABCDEF0123456789ABCDEF0"), nullptr);
   // Identifier is serialized as object-digest concatenated with the serialization of key-index.
   std::string identifier_serialization = "0123456789ABCDEF0123456789ABCDEF0\x1\0\0\0"_s;
 
-  // Object Status: Transient row.
+  // Object Status: Transient row (prefix '&').
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::TRANSIENT, identifier),
-            fxl::Concatenate({"transient/objects/", identifier_serialization}));
+            fxl::Concatenate({"&", identifier_serialization}));
 
-  // Object Status: Local row.
+  // Object Status: Local row (prefix '\'').
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::LOCAL, identifier),
-            fxl::Concatenate({"local/objects/", identifier_serialization}));
+            fxl::Concatenate({"'", identifier_serialization}));
 
-  // Object Status: Synced row.
+  // Object Status: Synced row (prefix '(').
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::SYNCED, identifier),
-            fxl::Concatenate({"synced/objects/", identifier_serialization}));
+            fxl::Concatenate({"(", identifier_serialization}));
 
-  // Sync Metadata row.
-  EXPECT_EQ(SyncMetadataRow::GetKeyFor("metadata"), "sync_metadata/metadata");
+  // Sync Metadata row (prefix ')').
+  EXPECT_EQ(SyncMetadataRow::GetKeyFor("metadata"), ")metadata");
 
-  // Sync Metadata row.
-  EXPECT_EQ(PageIsOnlineRow::kKey, "page_is_online");
+  // Page is online row (prefix '*').
+  EXPECT_EQ(PageIsOnlineRow::kKey, "*");
+
+  // Clock row: device id (prefix '+').
+  EXPECT_EQ(ClockRow::kDeviceIdKey, "+");
+
+  // Clock row: entries (prefix ',').
+  EXPECT_EQ(ClockRow::GetClockEntryForKey(DeviceId("device")), ",device");
 }
 
 TEST_F(DbSerialization, MergeRow) {
