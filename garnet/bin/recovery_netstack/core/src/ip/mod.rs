@@ -52,10 +52,12 @@ struct IpLayerStateInner<I: Ip> {
 
 /// Dispatch a received IP packet to the appropriate protocol.
 ///
-/// `parse_metadata` is the parse metadata associated with parsing the IP
-/// headers. It is used to undo that parsing, which is required in order to send
-/// ICMP messages in response to unrecognized protocols. If `parse_metadata` is
-/// `None`, the caller promises that the protocol is recognized.
+/// `device` is the device the packet was received on. `parse_metadata` is the
+/// parse metadata associated with parsing the IP headers. It is used to undo
+/// that parsing. Both `device` and `parse_metadata` are required in order to
+/// send ICMP messages in response to unrecognized protocols or ports. If either
+/// of `device` or `parse_metadata` is `None`, the caller promises that the
+/// protocol and port are recognized.
 ///
 /// # Panics
 ///
@@ -63,9 +65,10 @@ struct IpLayerStateInner<I: Ip> {
 /// `parse_metadata` is `None`.
 fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
-    proto: IpProto,
+    device: Option<DeviceId>,
     src_ip: I,
     dst_ip: I,
+    proto: IpProto,
     mut buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
@@ -86,14 +89,24 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
             // contains the entire original IP packet.
             let meta = parse_metadata.unwrap();
             buffer.undo_parse(meta);
-            icmp::send_icmp_protocol_unreachable(ctx, src_ip, dst_ip, buffer, meta.header_len());
+            icmp::send_icmp_protocol_unreachable(
+                ctx,
+                device.unwrap(),
+                src_ip,
+                dst_ip,
+                buffer,
+                meta.header_len(),
+            );
             Ok(())
         }
     };
 
     if let Err(mut buffer) = res {
         // TODO(joshlf): What if we're called from a loopback handler, and
-        // parse_metadata is None?
+        // device and parse_metadata are None? In other words, what happens if
+        // we attempt to send to a loopback port which is unreachable? We will
+        // eventually need to restructure the control flow here to handle that
+        // case.
 
         // tcp::receive_ip_packet and udp::receive_ip_packet promise to return
         // the buffer in the same state it was in when they were called. Thus,
@@ -101,7 +114,14 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
         // the buffer will be back to containing the entire original IP packet.
         let meta = parse_metadata.unwrap();
         buffer.undo_parse(meta);
-        icmp::send_icmp_port_unreachable(ctx, src_ip, dst_ip, buffer, meta.header_len());
+        icmp::send_icmp_port_unreachable(
+            ctx,
+            device.unwrap(),
+            src_ip,
+            dst_ip,
+            buffer,
+            meta.header_len(),
+        );
     }
 }
 
@@ -166,7 +186,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // - Do something with ICMP if we don't have a handler for that protocol?
         // - Check for already-expired TTL?
         let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
-        dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer, Some(meta));
+        dispatch_receive_ip_packet(ctx, Some(device), src_ip, dst_ip, proto, buffer, Some(meta));
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
@@ -183,12 +203,12 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
             let (src_ip, dst_ip, _, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            icmp::send_icmp_ttl_expired(ctx, src_ip, dst_ip, buffer, meta.header_len());
+            icmp::send_icmp_ttl_expired(ctx, device, src_ip, dst_ip, buffer, meta.header_len());
             debug!("received IP packet dropped due to expired TTL");
         }
     } else {
         let (src_ip, dst_ip, _, meta) = drop_packet_and_undo_parse!(packet, buffer);
-        icmp::send_icmp_net_unreachable(ctx, src_ip, dst_ip, buffer, meta.header_len());
+        icmp::send_icmp_net_unreachable(ctx, device, src_ip, dst_ip, buffer, meta.header_len());
         debug!("received IP packet with no known route to destination {}", dst_ip);
     }
 }
@@ -332,6 +352,10 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
     increment_counter!(ctx, "send_ip_packet");
     if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
         increment_counter!(ctx, "send_ip_packet::loopback");
+
+        // TODO(joshlf): Currently, we have no way of representing the loopback
+        // device as a DeviceId. We will need to fix that eventually.
+
         // TODO(joshlf): Currently, we serialize using the normal Serializer
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
@@ -340,15 +364,21 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
 
-        // NOTE(joshlf): By passing a ParseMetadata of None here, we are
-        // promising that the protocol will be recognized (and the call will
-        // panic if it's not). This is OK because the fact that we're sending a
-        // packet with this protocol means we are able to process that protocol.
+        // NOTE(joshlf): By passing a DeviceId and ParseMetadata of None here,
+        // we are promising that the protocol will be recognized (and the call
+        // will panic if it's not). This is OK because the fact that we're
+        // sending a packet with this protocol means we are able to process that
+        // protocol.
+        //
+        // NOTE(joshlf): By doing that, we are also promising that the port will
+        // be recognized. That is NOT OK, and the call will panic in that case.
+        // TODO(joshlf): Fix this.
         dispatch_receive_ip_packet(
             ctx,
-            proto,
+            None,
             A::Version::LOOPBACK_ADDRESS,
             dst_ip,
+            proto,
             buffer.as_buf_mut(),
             None,
         );
@@ -433,4 +463,68 @@ pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
         proto,
     ));
     crate::device::send_ip_frame(ctx, device, next_hop, body);
+}
+
+/// Send an ICMP response to a remote host.
+///
+/// Unlike other send functions, `send_icmp_response` takes the ingress device,
+/// source IP, and destination IP of the packet *being responded to*. It uses
+/// ICMP-specific logic to figure out whether and how to send an ICMP response.
+/// `get_body` returns a `Serializer` with the bytes of the ICMP packet.
+fn send_icmp_response<D: EventDispatcher, A, S, F>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    get_body: F,
+) where
+    A: IpAddress,
+    S: Serializer,
+    F: FnOnce(A) -> S,
+{
+    trace!("send_icmp_response({}, {}, {}, {})", device, src_ip, dst_ip, proto);
+    increment_counter!(ctx, "send_icmp_response");
+
+    // TODO(joshlf): Should this be used for ICMP echo replies as well?
+
+    // TODO(joshlf): Come up with rules for when to send ICMP responses. E.g.,
+    // should we send a response over a different device than the device that
+    // the original packet ingressed over? We'll probably want to consult BCP 38
+    // (aka RFC 2827) and RFC 3704.
+
+    let ip_state = &mut ctx.state().ip;
+    if let Some(route) = lookup_route(ip_state, src_ip) {
+        if let Some(local_ip) =
+            crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
+        {
+            send_ip_packet_from_device(
+                ctx,
+                route.device,
+                local_ip,
+                src_ip,
+                route.next_hop,
+                proto,
+                get_body(local_ip),
+            );
+        } else {
+            log_unimplemented!(
+                (),
+                "Sending ICMP over unnumbered device {} is unimplemented",
+                route.device
+            );
+
+            // TODO(joshlf): We need a general-purpose mechanism for choosing a
+            // source address in cases where we're a) acting as a router (and
+            // thus sending packets with our own source address, but not as a
+            // result of any local application behavior) and, b) sending over an
+            // unnumbered device (one without any configured IP address). ICMP
+            // is the notable use case. Most likely, we will want to pick the IP
+            // address of a different local device. See for an explanation of
+            // why we might have this setup:
+            // https://www.cisco.com/c/en/us/support/docs/ip/hot-standby-router-protocol-hsrp/13786-20.html#unnumbered_iface
+        }
+    } else {
+        debug!("Can't send ICMP response to {}: no route to host", src_ip);
+    }
 }

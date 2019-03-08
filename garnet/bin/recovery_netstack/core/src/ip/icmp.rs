@@ -10,7 +10,10 @@ use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::ip::{send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use crate::device::DeviceId;
+use crate::ip::{
+    send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+};
 use crate::wire::icmp::{
     IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
     Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode,
@@ -121,6 +124,7 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 #[specialize_ip_address]
 pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: DeviceId,
     src_ip: A,
     dst_ip: A,
     original_packet: B,
@@ -128,12 +132,10 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
 ) {
     increment_counter!(ctx, "send_icmp_protocol_unreachable");
 
-    // Swap since we're responding.
-    let (src_ip, dst_ip) = (dst_ip, src_ip);
-
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
         ctx,
+        device,
         src_ip,
         dst_ip,
         Icmpv4DestUnreachableCode::DestProtocolUnreachable,
@@ -149,14 +151,14 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
         original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
         // TODO(joshlf): The source address should probably be fixed rather than
         // looked up in the routing table.
-        send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
+        send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
                 Ipv6,
                 &[u8],
                 _,
             >::new(
+                local_ip,
                 src_ip,
-                dst_ip,
                 Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
                 // Per RFC 4443, the pointer refers to the first byte of
                 // the packet whose Next Header field was unrecognized.
@@ -189,6 +191,7 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
 #[specialize_ip_address]
 pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: DeviceId,
     src_ip: A,
     dst_ip: A,
     original_packet: B,
@@ -196,12 +199,10 @@ pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: Bu
 ) {
     increment_counter!(ctx, "send_icmp_port_unreachable");
 
-    // Swap since we're responding.
-    let (src_ip, dst_ip) = (dst_ip, src_ip);
-
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
         ctx,
+        device,
         src_ip,
         dst_ip,
         Icmpv4DestUnreachableCode::DestPortUnreachable,
@@ -211,6 +212,7 @@ pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: Bu
     #[ipv6addr]
     send_icmpv6_dest_unreachable(
         ctx,
+        device,
         src_ip,
         dst_ip,
         Icmpv6DestUnreachableCode::PortUnreachable,
@@ -233,6 +235,7 @@ pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: Bu
 #[specialize_ip_address]
 pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: DeviceId,
     src_ip: A,
     dst_ip: A,
     original_packet: B,
@@ -245,12 +248,10 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
     // source IP rather than the original packet's destination IP (which won't
     // necessarily be the same if we have forwarding enabled).
 
-    // Swap since we're responding.
-    let (src_ip, dst_ip) = (dst_ip, src_ip);
-
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
         ctx,
+        device,
         src_ip,
         dst_ip,
         Icmpv4DestUnreachableCode::DestNetworkUnreachable,
@@ -261,6 +262,7 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
     #[ipv6addr]
     send_icmpv6_dest_unreachable(
         ctx,
+        device,
         src_ip,
         dst_ip,
         Icmpv6DestUnreachableCode::NoRoute,
@@ -284,6 +286,7 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
 #[specialize_ip_address]
 pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: DeviceId,
     src_ip: A,
     dst_ip: A,
     original_packet: B,
@@ -296,9 +299,6 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
     // source IP rather than the original packet's destination IP (which won't
     // necessarily be the same if we have forwarding enabled).
 
-    // Swap since we're responding.
-    let (src_ip, dst_ip) = (dst_ip, src_ip);
-
     #[ipv4addr]
     {
         // Per RFC 792, body contains entire IPv4 header + 64 bytes of
@@ -307,14 +307,14 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
         original_packet.shrink_back_to(ipv4_header_len + 64);
         // TODO(joshlf): The source address should probably be fixed rather than
         // looked up in the routing table.
-        send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+        send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmp, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
                 Ipv4,
                 &[u8],
                 _,
             >::new(
+                local_ip,
                 src_ip,
-                dst_ip,
                 Icmpv4TimeExceededCode::TtlExpired,
                 IcmpTimeExceeded::default(),
             ))
@@ -328,14 +328,14 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
         original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
         // TODO(joshlf): The source address should probably be fixed rather than
         // looked up in the routing table.
-        send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
+        send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
                 Ipv6,
                 &[u8],
                 _,
             >::new(
+                local_ip,
                 src_ip,
-                dst_ip,
                 Icmpv6TimeExceededCode::HopLimitExceeded,
                 IcmpTimeExceeded::default(),
             ))
@@ -345,6 +345,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
 
 fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: DeviceId,
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,
     code: Icmpv4DestUnreachableCode,
@@ -355,22 +356,21 @@ fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     // body.
     let mut original_packet = original_packet;
     original_packet.shrink_back_to(header_len + 64);
-    // TODO(joshlf): The source address should probably be fixed rather than
-    // looked up in the routing table.
-    send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+    send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmp, |local_ip| {
         BufferSerializer::new_vec(original_packet).encapsulate(
             IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                local_ip,
                 src_ip,
-                dst_ip,
                 code,
                 IcmpDestUnreachable::default(),
             ),
         )
-    });
+    })
 }
 
 fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
     code: Icmpv6DestUnreachableCode,
@@ -380,13 +380,11 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     // without exceeding IPv6 minimum MTU.
     let mut original_packet = original_packet;
     original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
-    // TODO(joshlf): The source address should probably be fixed rather than
-    // looked up in the routing table.
-    send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
+    send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
         BufferSerializer::new_vec(original_packet).encapsulate(
             IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                local_ip,
                 src_ip,
-                dst_ip,
                 code,
                 IcmpDestUnreachable::default(),
             ),
@@ -509,7 +507,7 @@ mod tests {
             DUMMY_CONFIG.local_ip,
             64,
             IpProto::Other(255),
-            &["send_icmp_protocol_unreachable", "send_ip_packet"],
+            &["send_icmp_protocol_unreachable", "send_icmp_response"],
             IcmpDestUnreachable::default(),
             Icmpv4DestUnreachableCode::DestProtocolUnreachable,
             // ensure packet is truncated to the right length
@@ -544,7 +542,7 @@ mod tests {
             DUMMY_CONFIG.local_ip,
             64,
             IpProto::Udp,
-            &["send_icmp_port_unreachable", "send_ip_packet"],
+            &["send_icmp_port_unreachable", "send_icmp_response"],
             IcmpDestUnreachable::default(),
             Icmpv4DestUnreachableCode::DestPortUnreachable,
             // ensure packet is truncated to the right length
@@ -564,7 +562,7 @@ mod tests {
             Ipv4Addr::new([1, 2, 3, 4]),
             64,
             IpProto::Udp,
-            &["send_icmp_net_unreachable", "send_ip_packet"],
+            &["send_icmp_net_unreachable", "send_icmp_response"],
             IcmpDestUnreachable::default(),
             Icmpv4DestUnreachableCode::DestNetworkUnreachable,
             // ensure packet is truncated to the right length
@@ -584,7 +582,7 @@ mod tests {
             DUMMY_CONFIG.remote_ip,
             1,
             IpProto::Udp,
-            &["send_icmp_ttl_expired", "send_ip_packet"],
+            &["send_icmp_ttl_expired", "send_icmp_response"],
             IcmpTimeExceeded::default(),
             Icmpv4TimeExceededCode::TtlExpired,
             // ensure packet is truncated to the right length
