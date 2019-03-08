@@ -22,112 +22,30 @@ const (
 	SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal uint32 = 2146190926
 )
 
-type SwitchingOrdinalsOrdinalFiveRequest struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mSwitchingOrdinalsOrdinalFiveRequest = _bindings.CreateLazyMarshaler(SwitchingOrdinalsOrdinalFiveRequest{})
-
-func (msg *SwitchingOrdinalsOrdinalFiveRequest) Marshaler() _bindings.Marshaler {
-	return _mSwitchingOrdinalsOrdinalFiveRequest
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsOrdinalFiveRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsOrdinalFiveRequest) InlineSize() int {
-	return 0
-}
-
-type SwitchingOrdinalsOnlyGeneratedOrdinalRequest struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mSwitchingOrdinalsOnlyGeneratedOrdinalRequest = _bindings.CreateLazyMarshaler(SwitchingOrdinalsOnlyGeneratedOrdinalRequest{})
-
-func (msg *SwitchingOrdinalsOnlyGeneratedOrdinalRequest) Marshaler() _bindings.Marshaler {
-	return _mSwitchingOrdinalsOnlyGeneratedOrdinalRequest
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsOnlyGeneratedOrdinalRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsOnlyGeneratedOrdinalRequest) InlineSize() int {
-	return 0
-}
-
-type SwitchingOrdinalsEventOrdinalFifteenResponse struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mSwitchingOrdinalsEventOrdinalFifteenResponse = _bindings.CreateLazyMarshaler(SwitchingOrdinalsEventOrdinalFifteenResponse{})
-
-func (msg *SwitchingOrdinalsEventOrdinalFifteenResponse) Marshaler() _bindings.Marshaler {
-	return _mSwitchingOrdinalsEventOrdinalFifteenResponse
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsEventOrdinalFifteenResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsEventOrdinalFifteenResponse) InlineSize() int {
-	return 0
-}
-
-type SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mSwitchingOrdinalsEventOnlyGeneratedOrdinalResponse = _bindings.CreateLazyMarshaler(SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse{})
-
-func (msg *SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse) Marshaler() _bindings.Marshaler {
-	return _mSwitchingOrdinalsEventOnlyGeneratedOrdinalResponse
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse) InlineSize() int {
-	return 0
-}
-
 type SwitchingOrdinalsInterface _bindings.ChannelProxy
 
 
 func (p *SwitchingOrdinalsInterface) OrdinalFive() error {
-	req_ := SwitchingOrdinalsOrdinalFiveRequest{
-	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveOrdinal, &req_)
+	var req_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveOrdinal, req_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) OnlyGeneratedOrdinal() error {
-	req_ := SwitchingOrdinalsOnlyGeneratedOrdinalRequest{
-	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal, &req_)
+	var req_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal, req_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOrdinalFifteen() error {
-	resp_ := SwitchingOrdinalsEventOrdinalFifteenResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, &resp_)
+	var resp_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOnlyGeneratedOrdinal() error {
-	resp_ := SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, &resp_)
+	var resp_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_)
 	return err
 }
 
@@ -154,17 +72,9 @@ type SwitchingOrdinalsStub struct {
 func (s *SwitchingOrdinalsStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
 	switch ord {
 	case SwitchingOrdinalsOrdinalFiveOrdinal:
-		in_ := SwitchingOrdinalsOrdinalFiveRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
-			return nil, err_
-		}
 		err_ := s.Impl.OrdinalFive()
 		return nil, err_
 	case SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal:
-		in_ := SwitchingOrdinalsOnlyGeneratedOrdinalRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
-			return nil, err_
-		}
 		err_ := s.Impl.OnlyGeneratedOrdinal()
 		return nil, err_
 	}
@@ -186,14 +96,12 @@ func (s *SwitchingOrdinalsService) EventProxyFor(key _bindings.BindingKey) (*Swi
 type SwitchingOrdinalsEventProxy _bindings.ChannelProxy
 
 func (p *SwitchingOrdinalsEventProxy) EventOrdinalFifteen() error {
-	event_ := SwitchingOrdinalsEventOrdinalFifteenResponse{
-	}
-	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOrdinalFifteenOrdinal, &event_)
+	var event_ _bindings.Payload
+	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOrdinalFifteenOrdinal, event_)
 }
 func (p *SwitchingOrdinalsEventProxy) EventOnlyGeneratedOrdinal() error {
-	event_ := SwitchingOrdinalsEventOnlyGeneratedOrdinalResponse{
-	}
-	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, &event_)
+	var event_ _bindings.Payload
+	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, event_)
 }
 
 

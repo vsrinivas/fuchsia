@@ -125,26 +125,6 @@ const (
 	InterfaceMethodGenOrdinal uint32 = 1061382220
 )
 
-type InterfaceMethodRequest struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mInterfaceMethodRequest = _bindings.CreateLazyMarshaler(InterfaceMethodRequest{})
-
-func (msg *InterfaceMethodRequest) Marshaler() _bindings.Marshaler {
-	return _mInterfaceMethodRequest
-}
-
-// Implements Payload.
-func (_ *InterfaceMethodRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *InterfaceMethodRequest) InlineSize() int {
-	return 0
-}
-
 type InterfaceInterface _bindings.ChannelProxy
 
 
@@ -152,9 +132,8 @@ type InterfaceInterface _bindings.ChannelProxy
 //
 // method comment #3
 func (p *InterfaceInterface) Method() error {
-	req_ := InterfaceMethodRequest{
-	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal, &req_)
+	var req_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal, req_)
 	return err
 }
 
@@ -186,10 +165,6 @@ type InterfaceStub struct {
 func (s *InterfaceStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
 	switch ord {
 	case InterfaceMethodOrdinal:
-		in_ := InterfaceMethodRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
-			return nil, err_
-		}
 		err_ := s.Impl.Method()
 		return nil, err_
 	}

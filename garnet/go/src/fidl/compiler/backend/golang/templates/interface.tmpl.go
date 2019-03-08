@@ -16,10 +16,14 @@ const (
 
 {{- range .Methods }}
 {{- if .Request }}
+{{- if len .Request.Members }}
 {{ template "StructDefinition" .Request }}
 {{- end }}
+{{- end }}
 {{- if .Response }}
+{{- if len .Response.Members }}
 {{ template "StructDefinition" .Response }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -49,24 +53,32 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- else }} error{{ end }} {
 
 	{{- if .Request }}
-	req_ := {{ .Request.Name }}{
+	{{- if len .Request.Members }}
+	req_ := &{{ .Request.Name }}{
 		{{- range .Request.Members }}
 		{{ .Name }}: {{ .PrivateName }},
 		{{- end }}
 	}
+	{{- else }}
+	var req_ _bindings.Payload
+	{{- end }}
 	{{- end }}
 	{{- if .Response }}
-	resp_ := {{ .Response.Name }}{}
+	{{- if len .Response.Members }}
+	resp_ := &{{ .Response.Name }}{}
+	{{- else }}
+	var resp_ _bindings.Payload
+	{{- end }}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, &req_, &resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, req_, resp_)
 		{{- else }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, &req_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, &resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -169,13 +181,12 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 	{{ end }}
 	case {{ .OrdinalName }}:
 		{{- if .Request }}
+		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		{{- end }}
-		{{- if .Response }}
-		out_ := {{ .Response.Name }}{}
 		{{- end }}
 		{{ if .Response }}
 		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
@@ -189,10 +200,15 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 		{{- end -}}
 		)
 		{{- if .Response }}
+		{{- if len .Response.Members }}
+		out_ := {{ .Response.Name }}{}
 		{{- range .Response.Members }}
 		out_.{{ .Name }} = {{ .PrivateName }}
 		{{- end }}
 		return &out_, err_
+		{{- else }}
+		return nil, err_
+		{{- end }}
 		{{- else }}
 		return nil, err_
 		{{- end }}
@@ -228,13 +244,17 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 	) error {
 
 	{{- if .Response }}
-	event_ := {{ .Response.Name }}{
+	{{- if len .Response.Members }}
+	event_ := &{{ .Response.Name }}{
 		{{- range .Response.Members }}
 		{{ .Name }}: {{ .PrivateName }},
 		{{- end }}
 	}
+	{{- else }}
+	var event_ _bindings.Payload
 	{{- end }}
-	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, &event_)
+	{{- end }}
+	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, event_)
 }
 {{- end }}
 {{- end }}

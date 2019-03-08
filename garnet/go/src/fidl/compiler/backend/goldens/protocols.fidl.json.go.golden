@@ -30,86 +30,6 @@ const (
 	WithAndWithoutRequestResponseOnWithResponseGenOrdinal uint32 = 2051478023
 )
 
-type WithAndWithoutRequestResponseNoRequestNoResponseRequest struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mWithAndWithoutRequestResponseNoRequestNoResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestNoResponseRequest{})
-
-func (msg *WithAndWithoutRequestResponseNoRequestNoResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseNoRequestNoResponseRequest
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestNoResponseRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestNoResponseRequest) InlineSize() int {
-	return 0
-}
-
-type WithAndWithoutRequestResponseNoRequestEmptyResponseRequest struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mWithAndWithoutRequestResponseNoRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestEmptyResponseRequest{})
-
-func (msg *WithAndWithoutRequestResponseNoRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseNoRequestEmptyResponseRequest
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseRequest) InlineSize() int {
-	return 0
-}
-
-type WithAndWithoutRequestResponseNoRequestEmptyResponseResponse struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mWithAndWithoutRequestResponseNoRequestEmptyResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestEmptyResponseResponse{})
-
-func (msg *WithAndWithoutRequestResponseNoRequestEmptyResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseNoRequestEmptyResponseResponse
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestEmptyResponseResponse) InlineSize() int {
-	return 0
-}
-
-type WithAndWithoutRequestResponseNoRequestWithResponseRequest struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mWithAndWithoutRequestResponseNoRequestWithResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestWithResponseRequest{})
-
-func (msg *WithAndWithoutRequestResponseNoRequestWithResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseNoRequestWithResponseRequest
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestWithResponseRequest) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestWithResponseRequest) InlineSize() int {
-	return 0
-}
-
 type WithAndWithoutRequestResponseNoRequestWithResponseResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Ret string
@@ -173,26 +93,6 @@ func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineSiz
 	return 16
 }
 
-type WithAndWithoutRequestResponseWithRequestEmptyResponseResponse struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mWithAndWithoutRequestResponseWithRequestEmptyResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestEmptyResponseResponse{})
-
-func (msg *WithAndWithoutRequestResponseWithRequestEmptyResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithRequestEmptyResponseResponse
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseResponse) InlineSize() int {
-	return 0
-}
-
 type WithAndWithoutRequestResponseWithRequestWithResponseRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Arg string
@@ -235,26 +135,6 @@ func (_ *WithAndWithoutRequestResponseWithRequestWithResponseResponse) InlineSiz
 	return 16
 }
 
-type WithAndWithoutRequestResponseOnEmptyResponseResponse struct {
-	_ struct{} `fidl2:"s,0,0"`
-}
-
-var _mWithAndWithoutRequestResponseOnEmptyResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseOnEmptyResponseResponse{})
-
-func (msg *WithAndWithoutRequestResponseOnEmptyResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseOnEmptyResponseResponse
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseOnEmptyResponseResponse) InlineAlignment() int {
-	return 0
-}
-
-// Implements Payload.
-func (_ *WithAndWithoutRequestResponseOnEmptyResponseResponse) InlineSize() int {
-	return 0
-}
-
 type WithAndWithoutRequestResponseOnWithResponseResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Ret string
@@ -280,63 +160,60 @@ type WithAndWithoutRequestResponseInterface _bindings.ChannelProxy
 
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestNoResponse() error {
-	req_ := WithAndWithoutRequestResponseNoRequestNoResponseRequest{
-	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseNoRequestNoResponseOrdinal, &req_)
+	var req_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseNoRequestNoResponseOrdinal, req_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestEmptyResponse() error {
-	req_ := WithAndWithoutRequestResponseNoRequestEmptyResponseRequest{
-	}
-	resp_ := WithAndWithoutRequestResponseNoRequestEmptyResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal, &req_, &resp_)
+	var req_ _bindings.Payload
+	var resp_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal, req_, resp_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestWithResponse() (string, error) {
-	req_ := WithAndWithoutRequestResponseNoRequestWithResponseRequest{
-	}
-	resp_ := WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseOrdinal, &req_, &resp_)
+	var req_ _bindings.Payload
+	resp_ := &WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseOrdinal, req_, resp_)
 	return resp_.Ret, err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg string) error {
-	req_ := WithAndWithoutRequestResponseWithRequestNoResponseRequest{
+	req_ := &WithAndWithoutRequestResponseWithRequestNoResponseRequest{
 		Arg: arg,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, &req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, req_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) WithRequestEmptyResponse(arg string) error {
-	req_ := WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{
+	req_ := &WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{
 		Arg: arg,
 	}
-	resp_ := WithAndWithoutRequestResponseWithRequestEmptyResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal, &req_, &resp_)
+	var resp_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal, req_, resp_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg string) (string, error) {
-	req_ := WithAndWithoutRequestResponseWithRequestWithResponseRequest{
+	req_ := &WithAndWithoutRequestResponseWithRequestWithResponseRequest{
 		Arg: arg,
 	}
-	resp_ := WithAndWithoutRequestResponseWithRequestWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseOrdinal, &req_, &resp_)
+	resp_ := &WithAndWithoutRequestResponseWithRequestWithResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseOrdinal, req_, resp_)
 	return resp_.Ret, err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnEmptyResponse() error {
-	resp_ := WithAndWithoutRequestResponseOnEmptyResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, &resp_)
+	var resp_ _bindings.Payload
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, resp_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnWithResponse() (string, error) {
-	resp_ := WithAndWithoutRequestResponseOnWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, &resp_)
+	resp_ := &WithAndWithoutRequestResponseOnWithResponseResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_)
 	return resp_.Ret, err
 }
 
@@ -367,27 +244,14 @@ type WithAndWithoutRequestResponseStub struct {
 func (s *WithAndWithoutRequestResponseStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
 	switch ord {
 	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseNoRequestNoResponseRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
-			return nil, err_
-		}
 		err_ := s.Impl.NoRequestNoResponse()
 		return nil, err_
 	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseNoRequestEmptyResponseRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
-			return nil, err_
-		}
-		out_ := WithAndWithoutRequestResponseNoRequestEmptyResponseResponse{}
 		err_ := s.Impl.NoRequestEmptyResponse()
-		return &out_, err_
+		return nil, err_
 	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseNoRequestWithResponseRequest{}
-		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
-			return nil, err_
-		}
-		out_ := WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
 		ret, err_ := s.Impl.NoRequestWithResponse()
+		out_ := WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, err_
 	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
@@ -402,16 +266,15 @@ func (s *WithAndWithoutRequestResponseStub) Dispatch(ord uint32, b_ []byte, h_ [
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := WithAndWithoutRequestResponseWithRequestEmptyResponseResponse{}
 		err_ := s.Impl.WithRequestEmptyResponse(in_.Arg)
-		return &out_, err_
+		return nil, err_
 	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
 		in_ := WithAndWithoutRequestResponseWithRequestWithResponseRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := WithAndWithoutRequestResponseWithRequestWithResponseResponse{}
 		ret, err_ := s.Impl.WithRequestWithResponse(in_.Arg)
+		out_ := WithAndWithoutRequestResponseWithRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, err_
 	}
@@ -433,15 +296,14 @@ func (s *WithAndWithoutRequestResponseService) EventProxyFor(key _bindings.Bindi
 type WithAndWithoutRequestResponseEventProxy _bindings.ChannelProxy
 
 func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
-	event_ := WithAndWithoutRequestResponseOnEmptyResponseResponse{
-	}
-	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, &event_)
+	var event_ _bindings.Payload
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, event_)
 }
 func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) error {
-	event_ := WithAndWithoutRequestResponseOnWithResponseResponse{
+	event_ := &WithAndWithoutRequestResponseOnWithResponseResponse{
 		Ret: ret,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseOrdinal, event_)
 }
 
 
@@ -545,27 +407,27 @@ type OvernetInternalProtocolInterface _bindings.ChannelProxy
 
 
 func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := OvernetInternalProtocolMethodARequest{
+	req_ := &OvernetInternalProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolMethodAOrdinal, &req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolMethodAOrdinal, req_)
 	return err
 }
 
 func (p *OvernetInternalProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := OvernetInternalProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetInternalProtocolEventAOrdinal, &resp_)
+	resp_ := &OvernetInternalProtocolEventAResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetInternalProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *OvernetInternalProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := OvernetInternalProtocolMethodBRequest{
+	req_ := &OvernetInternalProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := OvernetInternalProtocolMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMethodBOrdinal, &req_, &resp_)
+	resp_ := &OvernetInternalProtocolMethodBResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -603,8 +465,8 @@ func (s *OvernetInternalProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.H
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := OvernetInternalProtocolMethodBResponse{}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		out_ := OvernetInternalProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -626,11 +488,11 @@ func (s *OvernetInternalProtocolService) EventProxyFor(key _bindings.BindingKey)
 type OvernetInternalProtocolEventProxy _bindings.ChannelProxy
 
 func (p *OvernetInternalProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := OvernetInternalProtocolEventAResponse{
+	event_ := &OvernetInternalProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolEventAOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolEventAOrdinal, event_)
 }
 
 
@@ -734,27 +596,27 @@ type SocketControlProtocolInterface _bindings.SocketControlProxy
 
 
 func (p *SocketControlProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := SocketControlProtocolMethodARequest{
+	req_ := &SocketControlProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolMethodAOrdinal, &req_)
+	err := ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolMethodAOrdinal, req_)
 	return err
 }
 
 func (p *SocketControlProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := SocketControlProtocolEventAResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).Recv(SocketControlProtocolEventAOrdinal, &resp_)
+	resp_ := &SocketControlProtocolEventAResponse{}
+	err := ((*_bindings.SocketControlProxy)(p)).Recv(SocketControlProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *SocketControlProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := SocketControlProtocolMethodBRequest{
+	req_ := &SocketControlProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := SocketControlProtocolMethodBResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMethodBOrdinal, &req_, &resp_)
+	resp_ := &SocketControlProtocolMethodBResponse{}
+	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -786,8 +648,8 @@ func (s *SocketControlProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Han
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := SocketControlProtocolMethodBResponse{}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		out_ := SocketControlProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -797,11 +659,11 @@ func (s *SocketControlProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Han
 type SocketControlProtocolEventProxy _bindings.SocketControlProxy
 
 func (p *SocketControlProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := SocketControlProtocolEventAResponse{
+	event_ := &SocketControlProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolEventAOrdinal, &event_)
+	return ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolEventAOrdinal, event_)
 }
 
 
@@ -905,27 +767,27 @@ type ChannelProtocolInterface _bindings.ChannelProxy
 
 
 func (p *ChannelProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := ChannelProtocolMethodARequest{
+	req_ := &ChannelProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolMethodAOrdinal, &req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolMethodAOrdinal, req_)
 	return err
 }
 
 func (p *ChannelProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := ChannelProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, &resp_)
+	resp_ := &ChannelProtocolEventAResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *ChannelProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := ChannelProtocolMethodBRequest{
+	req_ := &ChannelProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := ChannelProtocolMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBOrdinal, &req_, &resp_)
+	resp_ := &ChannelProtocolMethodBResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -963,8 +825,8 @@ func (s *ChannelProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := ChannelProtocolMethodBResponse{}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		out_ := ChannelProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -986,11 +848,11 @@ func (s *ChannelProtocolService) EventProxyFor(key _bindings.BindingKey) (*Chann
 type ChannelProtocolEventProxy _bindings.ChannelProxy
 
 func (p *ChannelProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := ChannelProtocolEventAResponse{
+	event_ := &ChannelProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolEventAOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolEventAOrdinal, event_)
 }
 
 
@@ -1094,27 +956,27 @@ type KitchenSinkInterface _bindings.ChannelProxy
 
 
 func (p *KitchenSinkInterface) MethodA(a int64,b int64) error {
-	req_ := KitchenSinkMethodARequest{
+	req_ := &KitchenSinkMethodARequest{
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkMethodAOrdinal, &req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkMethodAOrdinal, req_)
 	return err
 }
 
 func (p *KitchenSinkInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := KitchenSinkEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(KitchenSinkEventAOrdinal, &resp_)
+	resp_ := &KitchenSinkEventAResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(KitchenSinkEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *KitchenSinkInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := KitchenSinkMethodBRequest{
+	req_ := &KitchenSinkMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := KitchenSinkMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMethodBOrdinal, &req_, &resp_)
+	resp_ := &KitchenSinkMethodBResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -1152,8 +1014,8 @@ func (s *KitchenSinkStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := KitchenSinkMethodBResponse{}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		out_ := KitchenSinkMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -1175,11 +1037,11 @@ func (s *KitchenSinkService) EventProxyFor(key _bindings.BindingKey) (*KitchenSi
 type KitchenSinkEventProxy _bindings.ChannelProxy
 
 func (p *KitchenSinkEventProxy) EventA(a int64,b int64) error {
-	event_ := KitchenSinkEventAResponse{
+	event_ := &KitchenSinkEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkEventAOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkEventAOrdinal, event_)
 }
 
 
