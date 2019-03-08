@@ -27,6 +27,7 @@ enum {
     BTI_SDIO,
     BTI_CANVAS,
     BTI_SYSMEM,
+    BTI_SD,
 };
 
 class Vim;
@@ -52,7 +53,7 @@ private:
     zx_status_t MaliInit();
     zx_status_t UartInit();
     zx_status_t UsbInit();
-    zx_status_t SdEmmcInit();
+    zx_status_t EmmcInit();
     zx_status_t SdioInit();
     zx_status_t EthInit();
     zx_status_t ThermalInit();
@@ -64,6 +65,7 @@ private:
     zx_status_t ClkInit();
     zx_status_t EnableWifi32K();
     zx_status_t SysmemInit();
+    zx_status_t SdInit();
 
     int Thread();
 

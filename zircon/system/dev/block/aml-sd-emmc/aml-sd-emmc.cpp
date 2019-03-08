@@ -979,10 +979,19 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    ddk::GpioProtocolClient reset_gpio = pdev.GetGpio(0);
-    if (!reset_gpio.is_valid()) {
-        zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO\n");
-        return ZX_ERR_NO_RESOURCES;
+    pdev_device_info_t dev_info;
+    if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
+        zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get device info: %d\n", status);
+        return status;
+    }
+
+    ddk::GpioProtocolClient reset_gpio;
+    if (dev_info.gpio_count > 0) {
+        reset_gpio = pdev.GetGpio(0);
+        if (!reset_gpio.is_valid()) {
+            zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO\n");
+            return ZX_ERR_NO_RESOURCES;
+        }
     }
 
     auto dev = fbl::make_unique<AmlSdEmmc>(parent, pdev, std::move(bti), *std::move(mmio),
@@ -1028,8 +1037,10 @@ static zx_driver_ops_t aml_sd_emmc_driver_ops = []() {
 
 } // sdmmc
 
-ZIRCON_DRIVER_BEGIN(aml_sd_emmc, sdmmc::aml_sd_emmc_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(aml_sd_emmc, sdmmc::aml_sd_emmc_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC_A),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC_B),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SD_EMMC_C),
 ZIRCON_DRIVER_END(aml_sd_emmc)

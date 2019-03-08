@@ -68,14 +68,14 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     },
 };
 
-zx_status_t Vim::SdEmmcInit() {
+zx_status_t Vim::EmmcInit() {
     zx_status_t status;
 
     pbus_dev_t emmc_dev = {};
     emmc_dev.name = "aml_emmc";
     emmc_dev.vid = PDEV_VID_AMLOGIC;
     emmc_dev.pid = PDEV_PID_GENERIC;
-    emmc_dev.did = PDEV_DID_AMLOGIC_SD_EMMC;
+    emmc_dev.did = PDEV_DID_AMLOGIC_SD_EMMC_C;
     emmc_dev.mmio_list = emmc_mmios;
     emmc_dev.mmio_count = countof(emmc_mmios);
     emmc_dev.irq_list = emmc_irqs;

@@ -134,8 +134,8 @@ int Vim::Thread() {
         return -1;
     }
 
-    if ((status = SdEmmcInit()) != ZX_OK) {
-        zxlogf(ERROR, "Thread: SdEmmcInit failed: %d\n", status);
+    if ((status = EmmcInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: EmmcInit failed: %d\n", status);
         return -1;
     }
 
@@ -187,6 +187,11 @@ int Vim::Thread() {
 
     if ((status = RtcInit()) != ZX_OK) {
         zxlogf(ERROR, "Thread: RtcInit failed: %d\n", status);
+        return -1;
+    }
+
+    if ((status = SdInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: SdInit failed: %d\n", status);
         return -1;
     }
 

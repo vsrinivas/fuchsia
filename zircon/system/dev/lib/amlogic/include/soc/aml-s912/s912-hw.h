@@ -66,6 +66,9 @@
 #define S912_FULL_CBUS_BASE              0xC1100000
 #define S912_FULL_CBUS_LENGTH            0x100000
 
+#define S912_SD_EMMC_B_BASE             0xD0072000
+#define S912_SD_EMMC_B_LENGTH           0x2000
+
 // IRQs
 #define S912_VIU1_VSYNC_IRQ             35
 #define S912_ETH_GMAC_IRQ               40
@@ -102,6 +105,7 @@
 #define S912_MBOX_IRQ_SEND5             245
 #define S912_M_I2C_1_IRQ                246
 #define S912_M_I2C_2_IRQ                247
+#define S912_SD_EMMC_B_IRQ              249
 
 // DMC registers
 #define DMC_REG_BASE        0xc8838000
@@ -376,6 +380,20 @@
 #define S912_EMMC_CMD_FN        1
 #define S912_EMMC_DS            S912_GPIOBOOT(15)
 #define S912_EMMC_DS_FN         1
+
+// Alternate functions for SD
+#define S912_SDCARD_D0          S912_GPIOCARD(1)
+#define S912_SDCARD_D0_FN       1
+#define S912_SDCARD_D1          S912_GPIOCARD(0)
+#define S912_SDCARD_D1_FN       1
+#define S912_SDCARD_D2          S912_GPIOCARD(5)
+#define S912_SDCARD_D2_FN       1
+#define S912_SDCARD_D3          S912_GPIOCARD(4)
+#define S912_SDCARD_D3_FN       1
+#define S912_SDCARD_CMD         S912_GPIOCARD(3)
+#define S912_SDCARD_CMD_FN      1
+#define S912_SDCARD_CLK         S912_GPIOCARD(2)
+#define S912_SDCARD_CLK_FN      1
 
 // Reset register offsets
 #define S912_RESET0_MASK              0x110
