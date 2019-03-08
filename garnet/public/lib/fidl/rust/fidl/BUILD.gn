@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/fidl/fidl.gni")
+import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 
@@ -13,6 +13,7 @@ rustc_library("fidl") {
   deps = [
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
@@ -24,7 +25,7 @@ rustc_library("fidl") {
 # not actually used-- just to ensure successful compilation
 fidl("fidl.rust.test.compilation") {
   sources = [
-    "test_compilation.fidl"
+    "test_compilation.fidl",
   ]
 }
 

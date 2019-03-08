@@ -21,22 +21,10 @@ use fidl::{
 };
 
 
-fidl_union! {
-  name: Union,
-  members: [
-    Primitive {
-      ty: i32,
-      offset: 8,
-    },
-    StringNeedsConstructor {
-      ty: String,
-      offset: 8,
-    },
-    VectorStringAlsoNeedsConstructor {
-      ty: Vec<String>,
-      offset: 8,
-    },
-  ],
-  size: 24,
-  align: 8,
+fidl_bits! {
+  MyBits(u32) {
+    MyFirstBit = 1,
+    MyOtherBit = 2,
+  }
 }
+

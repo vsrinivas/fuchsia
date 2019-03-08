@@ -8,7 +8,7 @@ const Bits = `
 {{- define "BitsDeclaration" -}}
 {{- $bits := . }}
 fidl_bits! {
-  {{ $bits.Name }}({{ $bits.Type }}) {
+  {{ $bits.Name }}({{ $bits.Type.Decl }}) {
     {{- range $member :=  $bits.Members }}
     {{ $member.Name }} = {{ $member.Value }},
   {{- end }}

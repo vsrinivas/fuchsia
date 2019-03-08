@@ -20,6 +20,7 @@ const SourceFile = `
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fidl::{
+	fidl_bits,
 	fidl_enum,
 	fidl_struct,
 	fidl_table,

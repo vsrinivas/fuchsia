@@ -15,6 +15,9 @@ pub mod endpoints;
 
 mod error;
 pub use self::error::{Error, Result};
+// Used to generate the types for fidl Bits.
+#[doc(hidden)]
+pub use bitflags::bitflags;
 
 use {
     fuchsia_async as fasync,

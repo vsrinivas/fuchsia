@@ -882,6 +882,77 @@ macro_rules! fidl_new_empty {
     }
 }
 
+/// Declare a bits type and implement the FIDL coding traits for it.
+///
+/// Example:
+///
+/// ```rust
+/// fidl_bits!(MyBits (u32) { BAR = 5, BAZ = 6, });
+///
+/// // expands to:
+///
+///  bitflags! {
+///    struct MyBits: u32 {
+///      const BAR = 5;
+///      const BAZ = 6;
+///    }
+///  }
+///
+///  impl Encodable for MyBits { ... }
+///  impl Decodable for MyBits { ... }
+/// ```
+#[macro_export]
+macro_rules! fidl_bits {
+    ($name:ident ($prim_ty:ident) { $($key:ident = $value:expr,)* }) => {
+        $crate::bitflags! {
+            pub struct $name: $prim_ty {
+                $(
+                    const $key = $value;
+                )*
+            }
+        }
+
+        impl $crate::encoding::Encodable for $name {
+            fn inline_align(&self) -> usize {
+                $crate::fidl_inline_align!($prim_ty)
+            }
+
+            fn inline_size(&self) -> usize {
+                $crate::fidl_inline_size!($prim_ty)
+            }
+
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
+                -> ::std::result::Result<(), $crate::Error>
+            {
+                $crate::fidl_encode!(&mut self.bits, encoder)
+            }
+        }
+
+        impl $crate::encoding::Decodable for $name {
+            fn new_empty() -> Self {
+                Self::empty()
+            }
+
+            fn inline_align() -> usize {
+                $crate::fidl_inline_align!($prim_ty)
+            }
+
+            fn inline_size() -> usize {
+                $crate::fidl_inline_size!($prim_ty)
+            }
+
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
+                -> ::std::result::Result<(), $crate::Error>
+            {
+                let mut prim = $crate::fidl_new_empty!($prim_ty);
+                $crate::fidl_decode!(&mut prim, decoder)?;
+                *self = Self::from_bits(prim).ok_or($crate::Error::Invalid)?;
+                Ok(())
+            }
+        }
+    }
+}
+
 /// Declare an enum type and implement the FIDL coding traits for it.
 ///
 /// Example:
@@ -2208,6 +2279,27 @@ mod test {
         Decoder::decode_into(buf, handle_buf, &mut handle_out).expect("Decoding failed");
 
         assert_eq!(raw_handle, handle_out.raw_handle());
+    }
+
+    #[test]
+    fn encode_decode_bits() {
+        fidl_bits!(Buttons(u32) {
+            PLAY = 1,
+            PAUSE = 2,
+            STOP = 4,
+        });
+
+        assert_eq!(Buttons::from_bits(1), Some(Buttons::PLAY));
+        assert_eq!(Buttons::from_bits(12), None);
+        assert_eq!(Buttons::STOP.bits(), 4);
+
+        identities![
+            Buttons::PLAY,
+            Buttons::PAUSE,
+            Buttons::STOP,
+            Buttons::from_bits(1).expect("should be Play"),
+            Buttons::from_bits(Buttons::PAUSE.bits()).expect("should be Pause"),
+        ];
     }
 
     #[test]

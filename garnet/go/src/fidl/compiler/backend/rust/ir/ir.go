@@ -56,15 +56,15 @@ type EnumMember struct {
 
 type XUnion struct {
 	types.Attributes
-	Name      string
-	Members   []XUnionMember
+	Name    string
+	Members []XUnionMember
 }
 
 type XUnionMember struct {
 	types.Attributes
-	Type string
-	Name string
-	Ordinal  int
+	Type    string
+	Name    string
+	Ordinal int
 }
 
 type Union struct {
@@ -143,7 +143,7 @@ type Parameter struct {
 
 type Root struct {
 	ExternCrates []string
-	Bits        []Bits
+	Bits         []Bits
 	Consts       []Const
 	Enums        []Enum
 	Structs      []Struct
@@ -499,6 +499,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		}
 		switch declType {
 		case types.BitsDeclType:
+			fallthrough
 		case types.EnumDeclType:
 			// Bits and enums are small, simple, and never contain handles,
 			// so no need to borrow
@@ -678,7 +679,7 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 		Attributes: val.Attributes,
 		Type:       c.compileType(val.Type, false).Decl,
 		Name:       compileCamelIdentifier(val.Name),
-		Ordinal:		val.Ordinal,
+		Ordinal:    val.Ordinal,
 	}
 }
 
