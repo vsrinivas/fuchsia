@@ -5,19 +5,28 @@
     "basemgr": {
       "type": "object",
       "properties": {
-        "disable_statistics": { "type": "boolean", "default": false },
+        "enable_statistics": { "type": "boolean", "default": true },
         "enable_presenter": { "type": "boolean", "default": false },
         "minfs": { "type": "boolean", "default": true },
         "test": { "type": "boolean", "default": false },
-        "base_shell_url": {
+        "base_shell_launch_configs": { "$ref": "#definitions/base_shell_launch_configs" },
+        "session_shell_launch_configs": { "$ref": "#/definitions/session_shell_launch_configs" }
+      },
+      "additionalProperties": false,
+      "required": [ "base_shell_launch_configs", "session_shell_launch_configs" ]
+    },
+    "base_shell_launch_configs": {
+      "type": "object",
+      "properties": {
+        "url": {
           "type": "string",
           "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
           "default": "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx"
         },
-        "session_shell_launch_configs": { "$ref": "#/definitions/session_shell_launch_configs" }
+        "keep_alive_after_login": { "type": "boolean", "default": false }
       },
       "additionalProperties": false,
-      "required": [ "base_shell_url", "session_shell_launch_configs" ]
+      "required": [ "url" ]
     },
     "session_shell_launch_configs": {
       "type": "object",

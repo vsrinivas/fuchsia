@@ -13,7 +13,9 @@ modular_config() target in the product's monolith packages.
 {
   "basemgr": {
     "disable_statistics": "true",
-    "base_shell_url": ""fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx"
+    "base_shell_launch_configs": {
+        url: "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx",
+    },
     "session_shell_launch_configs": {
       "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
       "display_usage": "near",
@@ -37,8 +39,14 @@ modular_config() target in the product's monolith packages.
 
 ## Basemgr fields
 
-* `base_shell_url`: **string** *(required)*
-    - The fuchsia package url for which base shell to use.
+* `base_shell_launch_configs` **boolean** *(required)*
+    - `url`: **string** *(required)*
+        * The fuchsia package url for which base shell to use.
+    - `keep_alive_after_login` **boolean** *(optional)*
+        * When set to true, the base shell is kept alive after a log in. This is
+          used for testing because current integration tests expect base shell
+          to always be running.
+        * **default**: `false`
 * `session_shell_launch_configs` *(required)*
     - `url`: **string** *(required)*
         * The fuchsia package url for which session shell to use.
@@ -49,9 +57,9 @@ modular_config() target in the product's monolith packages.
         * The screen height in millimeters for the session shell's display.
     - `screen_width`: **float** *(optional)*
         * The screen width in millimeters for the session shell's display.
-* `disable_statistics`: **boolean** *(optional)*
-    - When set to true, Cobalt statistics are disabled.
-    - **default**: `false`
+* `enable_statistics`: **boolean** *(optional)*
+    - When set to false, Cobalt statistics are disabled.
+    - **default**: `true`
 * `enable_presenter`: **boolean** *(optional)*
     - When set to true, the Presenter service controls management of views.
     - **default**: `false`
@@ -74,7 +82,7 @@ modular_config() target in the product's monolith packages.
       latency optimization. This is used for testing.
     - **default**: `true`
 * `enable_statistics`: **boolean** *(optional)*
-    - When set to true, Cobalt statistics are disabled. This is used for testing.
+    - When set to false, Cobalt statistics are disabled. This is used for testing.
     - **default**: `true`
 * `use_cloud_provider_from_environment`: **boolean** *(optional)*
     - When set to true, use the cloud provider available in the incoming namespace,

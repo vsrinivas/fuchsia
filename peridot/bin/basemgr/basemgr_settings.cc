@@ -33,6 +33,13 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   disable_statistics = command_line.HasOption("disable_statistics");
   no_minfs = command_line.HasOption("no_minfs");
   test = command_line.HasOption("test");
+
+  // This flag will be exposed with the completion of MF-10. For now, we will
+  // set it based on the test flag.
+  // Current integration tests expect base shell to always be running, therefore
+  // we will keep the base shell alive after login in all test cases.
+  keep_base_shell_alive_after_login = test;
+
   run_base_shell_with_test_runner =
       command_line.GetOptionValueWithDefault("run_base_shell_with_test_runner",
                                              "true") == "true"

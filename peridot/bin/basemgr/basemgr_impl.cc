@@ -199,7 +199,7 @@ void BasemgrImpl::Start() {
       settings_.use_session_shell_for_story_shell_factory,
       /* on_zero_sessions= */
       [this] {
-        if (settings_.test) {
+        if (settings_.keep_base_shell_alive_after_login) {
           // TODO(MI4-1117): Integration tests currently
           // expect base shell to always be running. So, if
           // we're running under a test, DidLogin() will not
@@ -282,7 +282,7 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // TODO(MI4-1117): Integration tests currently expect base shell to always be
   // running. So, if we're running under a test, do not shut down the base shell
   // after login.
-  if (!settings_.test) {
+  if (!settings_.keep_base_shell_alive_after_login) {
     FXL_DLOG(INFO) << "Stopping base shell due to login";
     StopBaseShell();
   }

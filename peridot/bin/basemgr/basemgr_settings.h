@@ -31,6 +31,7 @@ class BasemgrSettings {
   bool disable_statistics;
   bool no_minfs;
   bool test;
+  bool keep_base_shell_alive_after_login;
   bool run_base_shell_with_test_runner;
   bool enable_presenter;
 
