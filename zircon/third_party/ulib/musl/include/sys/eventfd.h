@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_EVENTFD_H_
+#define SYSROOT_SYS_EVENTFD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,3 +21,5 @@ int eventfd_write(int, eventfd_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_EVENTFD_H_

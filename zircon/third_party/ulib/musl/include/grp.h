@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_GRP_H_
+#define SYSROOT_GRP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,3 +47,5 @@ int initgroups(const char*, gid_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_GRP_H_

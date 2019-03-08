@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_RESOLV_H_
+#define SYSROOT_RESOLV_H_
 
 #include <arpa/nameser.h>
 #include <netinet/in.h>
@@ -138,3 +139,5 @@ int dn_skipname(const unsigned char*, const unsigned char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_RESOLV_H_

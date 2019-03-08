@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_STROPTS_H_
+#define SYSROOT_STROPTS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,3 +135,5 @@ int ioctl(int, int, ...);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_STROPTS_H_

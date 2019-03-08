@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ENDIAN_H_
+#define SYSROOT_ENDIAN_H_
 
 #include <features.h>
 
@@ -74,3 +75,5 @@ static __inline uint64_t __bswap64(uint64_t __x) {
 #endif
 
 #endif
+
+#endif // SYSROOT_ENDIAN_H_

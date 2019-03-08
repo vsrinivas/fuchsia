@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_WCTYPE_H_
+#define SYSROOT_WCTYPE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,3 +56,5 @@ wctype_t wctype(const char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_WCTYPE_H_

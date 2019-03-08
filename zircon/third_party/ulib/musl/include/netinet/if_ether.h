@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETINET_IF_ETHER_H_
+#define SYSROOT_NETINET_IF_ETHER_H_
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -123,3 +124,5 @@ struct ether_arp {
         (enaddr)[4] = ((uint8_t*)ipaddr)[2];        \
         (enaddr)[5] = ((uint8_t*)ipaddr)[3];        \
     } while (0)
+
+#endif // SYSROOT_NETINET_IF_ETHER_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FLOAT_H_
+#define SYSROOT_FLOAT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,3 +48,5 @@ int __flt_rounds(void);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_FLOAT_H_

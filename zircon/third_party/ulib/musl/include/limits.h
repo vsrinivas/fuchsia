@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_LIMITS_H_
+#define SYSROOT_LIMITS_H_
 
 #include <features.h>
 
@@ -149,3 +150,5 @@
 #define _XOPEN_IOV_MAX 16
 #define _XOPEN_NAME_MAX 255
 #define _XOPEN_PATH_MAX 1024
+
+#endif // SYSROOT_LIMITS_H_

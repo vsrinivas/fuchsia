@@ -1,11 +1,12 @@
-#pragma once
+#ifndef SYSROOT_LOCALE_H_
+#define SYSROOT_LOCALE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <features.h>
 #include <bits/null.h>
+#include <features.h>
 
 #define LC_CTYPE 0
 #define LC_NUMERIC 1
@@ -73,3 +74,5 @@ locale_t uselocale(locale_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_LOCALE_H_

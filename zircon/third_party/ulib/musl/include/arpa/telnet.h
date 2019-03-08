@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ARPA_TELNET_H_
+#define SYSROOT_ARPA_TELNET_H_
 
 #define IAC 255
 #define DONT 254
@@ -229,7 +230,12 @@ extern char* slc_names[];
 
 #ifdef AUTH_NAMES
 char* authtype_names[] = {
-    "NULL", "KERBEROS_V4", "KERBEROS_V5", "SPX", "MINK", 0,
+    "NULL",
+    "KERBEROS_V4",
+    "KERBEROS_V5",
+    "SPX",
+    "MINK",
+    0,
 };
 #else
 extern char* authtype_names[];
@@ -256,11 +262,22 @@ extern char* authtype_names[];
 
 #ifdef ENCRYPT_NAMES
 char* encrypt_names[] = {
-    "IS", "SUPPORT", "REPLY", "START", "END", "REQUEST-START",
-    "REQUEST-END", "ENC-KEYID", "DEC-KEYID", 0,
+    "IS",
+    "SUPPORT",
+    "REPLY",
+    "START",
+    "END",
+    "REQUEST-START",
+    "REQUEST-END",
+    "ENC-KEYID",
+    "DEC-KEYID",
+    0,
 };
 char* enctype_names[] = {
-    "ANY", "DES_CFB64", "DES_OFB64", 0,
+    "ANY",
+    "DES_CFB64",
+    "DES_OFB64",
+    0,
 };
 #else
 extern char* encrypt_names[];
@@ -272,3 +289,5 @@ extern char* enctype_names[];
 
 #define ENCTYPE_NAME_OK(x) ((unsigned int)(x) < ENCTYPE_CNT)
 #define ENCTYPE_NAME(x) enctype_names[x]
+
+#endif // SYSROOT_ARPA_TELNET_H_

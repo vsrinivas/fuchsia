@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_MMAN_H_
+#define SYSROOT_SYS_MMAN_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,3 +98,5 @@ int shm_unlink(const char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_MMAN_H_

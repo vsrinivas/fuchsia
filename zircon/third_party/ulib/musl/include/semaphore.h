@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SEMAPHORE_H_
+#define SYSROOT_SEMAPHORE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,3 +30,5 @@ int sem_wait(sem_t*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SEMAPHORE_H_

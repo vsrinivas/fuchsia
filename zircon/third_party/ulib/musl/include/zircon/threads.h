@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_THREADS_H_
+#define SYSROOT_ZIRCON_THREADS_H_
 
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -35,3 +36,5 @@ static inline zx_status_t __PURE thrd_status_to_zx_status(int thrd_status) {
 }
 
 __END_CDECLS
+
+#endif // SYSROOT_ZIRCON_THREADS_H_

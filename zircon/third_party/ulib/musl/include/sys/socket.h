@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_SOCKET_H_
+#define SYSROOT_SYS_SOCKET_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -319,3 +320,5 @@ int sockatmark(int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_SOCKET_H_

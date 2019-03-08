@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SPAWN_H_
+#define SYSROOT_SPAWN_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,3 +75,5 @@ int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t*, int, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SPAWN_H_

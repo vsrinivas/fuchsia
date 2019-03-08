@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETINET_IP_ICMP_H_
+#define SYSROOT_NETINET_IP_ICMP_H_
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -184,3 +185,5 @@ struct icmp {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NETINET_IP_ICMP_H_

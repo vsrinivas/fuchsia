@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FENV_H_
+#define SYSROOT_FENV_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,3 +24,5 @@ int feupdateenv(const fenv_t*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_FENV_H_

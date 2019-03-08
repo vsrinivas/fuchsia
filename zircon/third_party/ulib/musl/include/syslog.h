@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYSLOG_H_
+#define SYSROOT_SYSLOG_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,3 +117,5 @@ typedef struct {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYSLOG_H_

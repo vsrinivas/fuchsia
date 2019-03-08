@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_DIRENT_H_
+#define SYSROOT_DIRENT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,3 +63,5 @@ int versionsort(const struct dirent**, const struct dirent**);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_DIRENT_H_

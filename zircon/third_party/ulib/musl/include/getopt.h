@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_GETOPT_H_
+#define SYSROOT_GETOPT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,3 +26,5 @@ int getopt_long_only(int, char* const*, const char*, const struct option*, int*)
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_GETOPT_H_

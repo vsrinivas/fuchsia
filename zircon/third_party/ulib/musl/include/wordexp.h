@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_WORDEXP_H_
+#define SYSROOT_WORDEXP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,3 +37,5 @@ void wordfree(wordexp_t*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_WORDEXP_H_

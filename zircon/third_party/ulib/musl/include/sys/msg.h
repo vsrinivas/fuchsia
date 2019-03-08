@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_MSG_H_
+#define SYSROOT_SYS_MSG_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,3 +48,5 @@ struct msgbuf {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_MSG_H_

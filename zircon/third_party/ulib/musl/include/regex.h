@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_REGEX_H_
+#define SYSROOT_REGEX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,3 +58,5 @@ size_t regerror(int, const regex_t* __restrict, char* __restrict, size_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_REGEX_H_

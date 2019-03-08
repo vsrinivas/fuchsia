@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_MALLOC_H_
+#define SYSROOT_MALLOC_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,3 +21,5 @@ size_t malloc_usable_size(void*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_MALLOC_H_

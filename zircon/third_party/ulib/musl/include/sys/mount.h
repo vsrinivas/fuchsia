@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_MOUNT_H_
+#define SYSROOT_SYS_MOUNT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,3 +69,5 @@ int umount2(const char*, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_MOUNT_H_

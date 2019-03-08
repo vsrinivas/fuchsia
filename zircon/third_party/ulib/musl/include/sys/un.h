@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_UN_H_
+#define SYSROOT_SYS_UN_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,3 +27,5 @@ size_t strlen(const char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_UN_H_

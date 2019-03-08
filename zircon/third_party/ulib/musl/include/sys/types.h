@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_TYPES_H_
+#define SYSROOT_SYS_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,3 +72,5 @@ typedef unsigned long long u_quad_t;
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_TYPES_H_

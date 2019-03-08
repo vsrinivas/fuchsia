@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_LANGINFO_H_
+#define SYSROOT_LANGINFO_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,3 +88,5 @@ char* nl_langinfo_l(nl_item, locale_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_LANGINFO_H_

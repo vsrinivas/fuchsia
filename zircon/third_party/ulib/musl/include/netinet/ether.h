@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETINET_ETHER_H_
+#define SYSROOT_NETINET_ETHER_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,3 +18,5 @@ int ether_hostton(const char*, struct ether_addr*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NETINET_ETHER_H_

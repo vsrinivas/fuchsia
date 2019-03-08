@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_COMPLEX_H_
+#define SYSROOT_COMPLEX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,3 +134,5 @@ long double creall(long double complex);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_COMPLEX_H_

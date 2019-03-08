@@ -1,11 +1,12 @@
-#pragma once
+#ifndef SYSROOT_STRING_H_
+#define SYSROOT_STRING_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <features.h>
 #include <bits/null.h>
+#include <features.h>
 
 #define __NEED_size_t
 
@@ -84,3 +85,5 @@ char* basename(char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_STRING_H_

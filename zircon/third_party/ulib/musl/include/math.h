@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_MATH_H_
+#define SYSROOT_MATH_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,10 +57,8 @@ static __inline unsigned long long __DOUBLE_BITS(double __f) {
     return __u.__i;
 }
 
-#define fpclassify(x)                                                            \
-    (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : sizeof(x) == sizeof(double) \
-                                                         ? __fpclassify(x)       \
-                                                         : __fpclassifyl(x))
+#define fpclassify(x) \
+    (sizeof(x) == sizeof(float) ? __fpclassifyf(x) : sizeof(x) == sizeof(double) ? __fpclassify(x) : __fpclassifyl(x))
 
 #define isinf(x)                                                                           \
     (sizeof(x) == sizeof(float)                                                            \
@@ -429,3 +428,5 @@ long double pow10l(long double);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_MATH_H_

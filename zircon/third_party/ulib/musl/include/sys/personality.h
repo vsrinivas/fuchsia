@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_PERSONALITY_H_
+#define SYSROOT_SYS_PERSONALITY_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,3 +43,5 @@ int personality(unsigned long);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_PERSONALITY_H_

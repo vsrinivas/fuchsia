@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_PARAM_H_
+#define SYSROOT_SYS_PARAM_H_
 
 #define MAXSYMLINKS 20
 #define MAXHOSTNAMELEN 64
@@ -29,3 +30,5 @@
 
 #include <endian.h>
 #include <limits.h>
+
+#endif // SYSROOT_SYS_PARAM_H_

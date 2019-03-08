@@ -1,11 +1,12 @@
-#pragma once
+#ifndef SYSROOT_UNISTD_H_
+#define SYSROOT_UNISTD_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <features.h>
 #include <bits/null.h>
+#include <features.h>
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -432,3 +433,5 @@ int eaccess(const char*, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_UNISTD_H_

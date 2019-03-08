@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_AR_H_
+#define SYSROOT_AR_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,3 +21,5 @@ struct ar_hdr {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_AR_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETINET_TCP_H_
+#define SYSROOT_NETINET_TCP_H_
 
 #include <features.h>
 
@@ -197,3 +198,5 @@ struct tcp_md5sig {
 };
 
 #endif
+
+#endif // SYSROOT_NETINET_TCP_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SCHED_H_
+#define SYSROOT_SCHED_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,7 +48,9 @@ int memcmp(const void*, const void*, size_t);
 void* calloc(size_t, size_t);
 void free(void*);
 
-typedef struct cpu_set_t { unsigned long __bits[128 / sizeof(long)]; } cpu_set_t;
+typedef struct cpu_set_t {
+    unsigned long __bits[128 / sizeof(long)];
+} cpu_set_t;
 int __sched_cpucount(size_t, const cpu_set_t*);
 int sched_getcpu(void);
 int sched_getaffinity(pid_t, size_t, cpu_set_t*);
@@ -103,3 +106,5 @@ __CPU_op_func_S(AND, &) __CPU_op_func_S(OR, |) __CPU_op_func_S(XOR, ^)
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SCHED_H_

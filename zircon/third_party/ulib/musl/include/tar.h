@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_TAR_H_
+#define SYSROOT_TAR_H_
 
 #define TSUID 04000
 #define TSGID 02000
@@ -28,3 +29,5 @@
 
 #define TVERSION "00"
 #define TVERSLEN 2
+
+#endif // SYSROOT_TAR_H_

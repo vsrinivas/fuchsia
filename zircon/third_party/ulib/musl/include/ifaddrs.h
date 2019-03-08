@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_IFADDRS_H_
+#define SYSROOT_IFADDRS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,3 +30,5 @@ int getifaddrs(struct ifaddrs** ifap);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_IFADDRS_H_

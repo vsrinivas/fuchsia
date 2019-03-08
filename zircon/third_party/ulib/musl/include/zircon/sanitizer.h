@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_SANITIZER_H_
+#define SYSROOT_ZIRCON_SANITIZER_H_
 
 // Interfaces declared in this file are intended for the use of sanitizer
 // runtime library implementation code.  Each sanitizer runtime works only
@@ -58,7 +59,7 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void);
 // files and their debugging information.  The text can contain markup
 // around address values that should be resolved symbolically; see
 // TODO(mcgrathr) for the format and details of the post-processor.
-void __sanitizer_log_write(const char *buffer, size_t len);
+void __sanitizer_log_write(const char* buffer, size_t len);
 
 // Runtimes that have binary data to publish (e.g. coverage) use this
 // interface.  The name describes the data sink that will receive this
@@ -142,3 +143,5 @@ __EXPORT void __sanitizer_thread_start_hook(void* hook, thrd_t self);
 __EXPORT void __sanitizer_thread_exit_hook(void* hook, thrd_t self);
 
 __END_CDECLS
+
+#endif // SYSROOT_ZIRCON_SANITIZER_H_

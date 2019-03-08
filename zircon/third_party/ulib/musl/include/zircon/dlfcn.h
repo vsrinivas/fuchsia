@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DLFCN_H_
+#define SYSROOT_ZIRCON_DLFCN_H_
 
 #include <dlfcn.h>
 #include <zircon/compiler.h>
@@ -30,3 +31,5 @@ zx_handle_t dl_set_loader_service(zx_handle_t new_svc);
 zx_status_t dl_clone_loader_service(zx_handle_t* out);
 
 __END_CDECLS
+
+#endif // SYSROOT_ZIRCON_DLFCN_H_

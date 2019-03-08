@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FEATURES_H_
+#define SYSROOT_FEATURES_H_
 
 #if defined(_ALL_SOURCE) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE 1
@@ -30,3 +31,5 @@
 #else
 #define _Noreturn
 #endif
+
+#endif // SYSROOT_FEATURES_H_

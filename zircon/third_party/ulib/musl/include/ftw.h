@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FTW_H_
+#define SYSROOT_FTW_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,3 +32,5 @@ int nftw(const char*, int (*)(const char*, const struct stat*, int, struct FTW*)
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_FTW_H_

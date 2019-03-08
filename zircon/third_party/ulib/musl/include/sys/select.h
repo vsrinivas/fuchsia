@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_SELECT_H_
+#define SYSROOT_SYS_SELECT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +20,9 @@ extern "C" {
 
 typedef unsigned long fd_mask;
 
-typedef struct { unsigned long fds_bits[FD_SETSIZE / 8 / sizeof(long)]; } fd_set;
+typedef struct {
+    unsigned long fds_bits[FD_SETSIZE / 8 / sizeof(long)];
+} fd_set;
 
 #define FD_ZERO(s)                                            \
     do {                                                      \
@@ -47,3 +50,5 @@ int pselect(int, fd_set* __restrict, fd_set* __restrict, fd_set* __restrict,
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_SELECT_H_

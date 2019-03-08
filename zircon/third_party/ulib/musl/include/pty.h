@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_PTY_H_
+#define SYSROOT_PTY_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,3 +13,5 @@ int openpty(int*, int*, char*, const struct termios*, const struct winsize*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_PTY_H_

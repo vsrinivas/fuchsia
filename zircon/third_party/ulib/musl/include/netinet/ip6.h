@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETINET_IP6_H_
+#define SYSROOT_NETINET_IP6_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -137,3 +138,5 @@ struct ip6_opt_router {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NETINET_IP6_H_

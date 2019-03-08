@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_RANDOM_H_
+#define SYSROOT_SYS_RANDOM_H_
 
 #include <stddef.h>
 
@@ -11,3 +12,5 @@ int getentropy(void* buffer, size_t length) __attribute__((__warn_unused_result_
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_RANDOM_H_

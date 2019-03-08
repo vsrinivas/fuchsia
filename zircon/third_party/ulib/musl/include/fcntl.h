@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FCNTL_H_
+#define SYSROOT_FCNTL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -219,3 +220,5 @@ ssize_t tee(int, int, size_t, unsigned);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_FCNTL_H_

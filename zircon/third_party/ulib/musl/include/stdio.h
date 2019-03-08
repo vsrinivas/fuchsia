@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_STDIO_H_
+#define SYSROOT_STDIO_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -180,3 +181,5 @@ int fputs_unlocked(const char*, FILE*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_STDIO_H_

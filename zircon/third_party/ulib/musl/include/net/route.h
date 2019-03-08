@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NET_ROUTE_H_
+#define SYSROOT_NET_ROUTE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,3 +115,5 @@ struct in6_rtmsg {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NET_ROUTE_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_PWD_H_
+#define SYSROOT_PWD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,3 +44,5 @@ int putpwent(const struct passwd*, FILE*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_PWD_H_

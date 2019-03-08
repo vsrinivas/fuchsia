@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_STATVFS_H_
+#define SYSROOT_SYS_STATVFS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,3 +46,5 @@ int fstatvfs(int, struct statvfs*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_STATVFS_H_

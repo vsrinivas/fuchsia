@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETINET_IGMP_H_
+#define SYSROOT_NETINET_IGMP_H_
 
 #include <netinet/in.h>
 #include <stdint.h>
@@ -40,3 +41,5 @@ struct igmp {
 #define IGMP_HOST_MEMBERSHIP_REPORT IGMP_V1_MEMBERSHIP_REPORT
 #define IGMP_HOST_NEW_MEMBERSHIP_REPORT IGMP_V2_MEMBERSHIP_REPORT
 #define IGMP_HOST_LEAVE_MESSAGE IGMP_V2_LEAVE_GROUP
+
+#endif // SYSROOT_NETINET_IGMP_H_

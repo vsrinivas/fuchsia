@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_UTIME_H_
+#define SYSROOT_UTIME_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,3 +19,5 @@ int utime(const char*, const struct utimbuf*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_UTIME_H_

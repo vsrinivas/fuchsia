@@ -60,7 +60,9 @@ typedef struct {
     unsigned long long __reserved1[8];
 } mcontext_t;
 #else
-typedef struct { unsigned long __space[32]; } mcontext_t;
+typedef struct {
+    unsigned long __space[32];
+} mcontext_t;
 #endif
 
 struct sigaltstack {

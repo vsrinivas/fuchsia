@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYSEXITS_H_
+#define SYSROOT_SYSEXITS_H_
 
 #define EX_OK 0
 #define EX__BASE 64
@@ -18,3 +19,5 @@
 #define EX_NOPERM 77
 #define EX_CONFIG 78
 #define EX__MAX 78
+
+#endif // SYSROOT_SYSEXITS_H_

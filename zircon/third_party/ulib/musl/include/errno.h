@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ERRNO_H_
+#define SYSROOT_ERRNO_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,3 +19,5 @@ extern char *program_invocation_short_name, *program_invocation_name;
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_ERRNO_H_

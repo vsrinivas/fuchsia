@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_SEM_H_
+#define SYSROOT_SYS_SEM_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,3 +65,5 @@ int semtimedop(int, struct sembuf*, size_t, const struct timespec*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_SEM_H_

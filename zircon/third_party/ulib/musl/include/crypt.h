@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_CRYPT_H_
+#define SYSROOT_CRYPT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,3 +16,5 @@ char* crypt_r(const char*, const char*, struct crypt_data*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_CRYPT_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_REBOOT_H_
+#define SYSROOT_SYS_REBOOT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,3 +18,5 @@ int reboot(int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_REBOOT_H_

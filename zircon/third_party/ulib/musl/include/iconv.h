@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ICONV_H_
+#define SYSROOT_ICONV_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,3 +20,5 @@ int iconv_close(iconv_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_ICONV_H_

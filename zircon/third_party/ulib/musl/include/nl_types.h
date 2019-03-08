@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NL_TYPES_H_
+#define SYSROOT_NL_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,3 +18,5 @@ int catclose(nl_catd);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NL_TYPES_H_

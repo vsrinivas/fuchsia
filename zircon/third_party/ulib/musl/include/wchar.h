@@ -1,11 +1,12 @@
-#pragma once
+#ifndef SYSROOT_WCHAR_H_
+#define SYSROOT_WCHAR_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <features.h>
 #include <bits/null.h>
+#include <features.h>
 
 #define __NEED_FILE
 #define __NEED___isoc_va_list
@@ -179,3 +180,5 @@ wctype_t wctype(const char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_WCHAR_H_

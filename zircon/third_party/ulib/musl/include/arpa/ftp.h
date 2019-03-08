@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ARPA_FTP_H_
+#define SYSROOT_ARPA_FTP_H_
 
 #define PRELIM 1
 #define COMPLETE 2
@@ -32,3 +33,5 @@ char* strunames[] = {"0", "File", "Record", "Page"};
 char* typenames[] = {"0", "ASCII", "EBCDIC", "Image", "Local"};
 char* formnames[] = {"0", "Nonprint", "Telnet", "Carriage-control"};
 #endif
+
+#endif // SYSROOT_ARPA_FTP_H_

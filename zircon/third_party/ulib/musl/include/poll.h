@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_POLL_H_
+#define SYSROOT_POLL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,3 +47,5 @@ int ppoll(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_POLL_H_

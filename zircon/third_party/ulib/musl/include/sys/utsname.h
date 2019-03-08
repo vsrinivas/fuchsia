@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_UTSNAME_H_
+#define SYSROOT_SYS_UTSNAME_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,3 +25,5 @@ int uname(struct utsname*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_UTSNAME_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_INTTYPES_H_
+#define SYSROOT_INTTYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -9,7 +10,9 @@ extern "C" {
 #define __NEED_wchar_t
 #include <bits/alltypes.h>
 
-typedef struct { intmax_t quot, rem; } imaxdiv_t;
+typedef struct {
+    intmax_t quot, rem;
+} imaxdiv_t;
 
 intmax_t imaxabs(intmax_t);
 imaxdiv_t imaxdiv(intmax_t, intmax_t);
@@ -137,7 +140,6 @@ uintmax_t wcstoumax(const wchar_t* __restrict, wchar_t** __restrict, int);
 #define __UINT_FAST64_FMTX__ __INT_FAST64_FMT_MODIFIER__ "X"
 
 #endif
-
 
 #define PRId8 __INT8_FMTd__
 #define PRId16 __INT16_FMTd__
@@ -350,3 +352,5 @@ uintmax_t wcstoumax(const wchar_t* __restrict, wchar_t** __restrict, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_INTTYPES_H_

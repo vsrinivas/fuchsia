@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_UCHAR_H_
+#define SYSROOT_UCHAR_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,3 +23,5 @@ size_t mbrtoc32(char32_t* __restrict, const char* __restrict, size_t, mbstate_t*
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_UCHAR_H_

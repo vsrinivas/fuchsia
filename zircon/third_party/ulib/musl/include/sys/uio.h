@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_UIO_H_
+#define SYSROOT_SYS_UIO_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,3 +30,5 @@ ssize_t pwritev(int, const struct iovec*, int, off_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_UIO_H_

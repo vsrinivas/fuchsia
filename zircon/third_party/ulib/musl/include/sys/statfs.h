@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_STATFS_H_
+#define SYSROOT_SYS_STATFS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -8,7 +9,9 @@ extern "C" {
 
 #include <sys/statvfs.h>
 
-typedef struct __fsid_t { int __val[2]; } fsid_t;
+typedef struct __fsid_t {
+    int __val[2];
+} fsid_t;
 
 #include <bits/statfs.h>
 
@@ -18,3 +21,5 @@ int fstatfs(int, struct statfs*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_STATFS_H_

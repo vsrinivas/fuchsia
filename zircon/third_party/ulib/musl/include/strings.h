@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_STRINGS_H_
+#define SYSROOT_STRINGS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,3 +34,5 @@ int strncasecmp_l(const char*, const char*, size_t, locale_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_STRINGS_H_

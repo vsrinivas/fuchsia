@@ -39,7 +39,9 @@ struct esr_context {
     unsigned long esr;
 };
 #else
-typedef struct { long double __regs[18 + 256]; } mcontext_t;
+typedef struct {
+    long double __regs[18 + 256];
+} mcontext_t;
 #endif
 
 struct sigaltstack {

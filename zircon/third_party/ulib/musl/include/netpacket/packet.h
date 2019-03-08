@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETPACKET_PACKET_H_
+#define SYSROOT_NETPACKET_PACKET_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,3 +57,5 @@ struct packet_mreq {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NETPACKET_PACKET_H_

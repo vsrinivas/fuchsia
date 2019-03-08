@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FMTMSG_H_
+#define SYSROOT_FMTMSG_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,3 +43,5 @@ int fmtmsg(long, const char*, int, const char*, const char*, const char*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_FMTMSG_H_

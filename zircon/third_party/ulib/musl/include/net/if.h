@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NET_IF_H_
+#define SYSROOT_NET_IF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,3 +128,5 @@ struct ifconf {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NET_IF_H_

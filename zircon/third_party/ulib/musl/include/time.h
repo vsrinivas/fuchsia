@@ -1,11 +1,12 @@
-#pragma once
+#ifndef SYSROOT_TIME_H_
+#define SYSROOT_TIME_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <features.h>
 #include <bits/null.h>
+#include <features.h>
 
 #define __NEED_size_t
 #define __NEED_time_t
@@ -118,3 +119,5 @@ time_t timegm(struct tm*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_TIME_H_

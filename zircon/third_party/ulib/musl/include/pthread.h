@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_PTHREAD_H_
+#define SYSROOT_PTHREAD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -194,3 +195,5 @@ int pthread_getattr_np(pthread_t, pthread_attr_t*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_PTHREAD_H_

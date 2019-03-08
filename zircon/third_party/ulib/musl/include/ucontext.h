@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_UCONTEXT_H_
+#define SYSROOT_UCONTEXT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,3 +23,5 @@ int swapcontext(struct __ucontext*, const struct __ucontext*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_UCONTEXT_H_

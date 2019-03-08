@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_GLOB_H_
+#define SYSROOT_GLOB_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,3 +39,5 @@ void globfree(glob_t*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_GLOB_H_

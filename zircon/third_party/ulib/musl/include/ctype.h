@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_CTYPE_H_
+#define SYSROOT_CTYPE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,3 +50,5 @@ int toascii(int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_CTYPE_H_

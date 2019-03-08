@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_NETDB_H_
+#define SYSROOT_NETDB_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,3 +151,5 @@ int getservbyname_r(const char*, const char*, struct servent*, char*, size_t, st
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_NETDB_H_

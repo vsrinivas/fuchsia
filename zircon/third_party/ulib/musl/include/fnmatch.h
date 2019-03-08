@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_FNMATCH_H_
+#define SYSROOT_FNMATCH_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,3 +20,5 @@ int fnmatch(const char*, const char*, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_FNMATCH_H_

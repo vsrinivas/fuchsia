@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ALLOCA_H_
+#define SYSROOT_ALLOCA_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,3 +17,5 @@ void* alloca(size_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_ALLOCA_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_MTIO_H_
+#define SYSROOT_SYS_MTIO_H_
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -180,3 +181,5 @@ struct mtconfiginfo {
 #ifndef DEFTAPE
 #define DEFTAPE "/dev/tape"
 #endif
+
+#endif // SYSROOT_SYS_MTIO_H_

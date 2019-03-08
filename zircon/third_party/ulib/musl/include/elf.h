@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ELF_H_
+#define SYSROOT_ELF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -2580,3 +2581,5 @@ typedef Elf32_Addr Elf32_Conflict;
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_ELF_H_

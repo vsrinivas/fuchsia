@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ISO646_H_
+#define SYSROOT_ISO646_H_
 
 #ifndef __cplusplus
 
@@ -15,3 +16,5 @@
 #define xor_eq ^=
 
 #endif
+
+#endif // SYSROOT_ISO646_H_

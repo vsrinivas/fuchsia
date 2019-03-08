@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SETJMP_H_
+#define SYSROOT_SETJMP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,3 +35,5 @@ _Noreturn void longjmp(jmp_buf, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SETJMP_H_

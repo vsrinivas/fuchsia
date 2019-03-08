@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SIGNAL_H_
+#define SYSROOT_SIGNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -258,3 +259,5 @@ int raise(int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SIGNAL_H_

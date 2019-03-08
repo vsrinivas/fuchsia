@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ERR_H_
+#define SYSROOT_ERR_H_
 
 #include <features.h>
 #include <stdarg.h>
@@ -20,3 +21,5 @@ _Noreturn void verrx(int, const char*, va_list);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_ERR_H_

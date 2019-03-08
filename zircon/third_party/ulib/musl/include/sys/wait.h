@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SYS_WAIT_H_
+#define SYSROOT_SYS_WAIT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,3 +44,5 @@ int waitid(idtype_t, id_t, siginfo_t*, int);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SYS_WAIT_H_

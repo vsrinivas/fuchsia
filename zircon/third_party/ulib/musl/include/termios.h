@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_TERMIOS_H_
+#define SYSROOT_TERMIOS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,3 +42,5 @@ int cfsetspeed(struct termios*, speed_t);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_TERMIOS_H_

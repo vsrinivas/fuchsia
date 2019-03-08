@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_LINK_H_
+#define SYSROOT_LINK_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,3 +48,5 @@ int dl_iterate_phdr(int (*)(struct dl_phdr_info*, size_t, void*), void*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_LINK_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_BYTESWAP_H_
+#define SYSROOT_BYTESWAP_H_
 
 #include <features.h>
 #include <stdint.h>
@@ -19,3 +20,5 @@ static __inline uint64_t __bswap_64(uint64_t __x) {
 #define bswap_16(x) __bswap_16(x)
 #define bswap_32(x) __bswap_32(x)
 #define bswap_64(x) __bswap_64(x)
+
+#endif // SYSROOT_BYTESWAP_H_

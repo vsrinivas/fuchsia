@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_VALUES_H_
+#define SYSROOT_VALUES_H_
 
 #include <limits.h>
 
@@ -34,3 +35,5 @@
 #define FMAXEXP FLT_MAX_EXP
 
 #define BITSPERBYTE CHAR_BIT
+
+#endif // SYSROOT_VALUES_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_SEARCH_H_
+#define SYSROOT_SEARCH_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,3 +61,5 @@ void tdestroy(void*, void (*)(void*));
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_SEARCH_H_

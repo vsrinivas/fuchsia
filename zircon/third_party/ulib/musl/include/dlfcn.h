@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_DLFCN_H_
+#define SYSROOT_DLFCN_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,3 +38,5 @@ int dlinfo(void*, int, void*);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_DLFCN_H_

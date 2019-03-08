@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_CPIO_H_
+#define SYSROOT_CPIO_H_
 
 #define MAGIC "070707"
 
@@ -24,3 +25,5 @@
 #define C_ISLNK 0120000
 #define C_ISCTG 0110000
 #define C_ISREG 0100000
+
+#endif // SYSROOT_CPIO_H_

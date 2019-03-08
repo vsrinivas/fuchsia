@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SYSROOT_ARPA_INET_H_
+#define SYSROOT_ARPA_INET_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,3 +32,5 @@ in_addr_t inet_netof(struct in_addr);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // SYSROOT_ARPA_INET_H_
