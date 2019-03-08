@@ -97,8 +97,8 @@ public:
     // Terminate the child processes and jobs. Returns |false| if the job is already
     // in the process of killing, or the children are already terminated. Regardless
     // of return value, the Job now will not accept new children and eventually
-    // transitions to |DEAD|.
-    bool Kill();
+    // transitions to |DEAD|.  |return_code| can be obtained via ZX_INFO_JOB.
+    bool Kill(int64_t return_code);
 
     // Set basic policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
@@ -154,6 +154,8 @@ public:
     void set_kill_on_oom(bool kill);
     bool get_kill_on_oom() const;
 
+    void GetInfo(zx_info_job_t* info) const;
+
 private:
     enum class State {
         READY,
@@ -194,6 +196,7 @@ private:
     State state_ TA_GUARDED(get_lock());
     uint32_t process_count_ TA_GUARDED(get_lock());
     uint32_t job_count_ TA_GUARDED(get_lock());
+    int64_t  return_code_ TA_GUARDED(get_lock());
     // TODO(cpu): The OOM kill system is incomplete, see ZX-2731 for details.
     bool kill_on_oom_ TA_GUARDED(get_lock());
 

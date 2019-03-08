@@ -21,6 +21,8 @@
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/svc/cpp/services.h"
 
+#include <zircon/syscalls/object.h>
+
 namespace component {
 namespace {
 
@@ -324,7 +326,7 @@ TEST_F(ComponentControllerTest, CreateAndKill) {
 
   // make sure all messages are processed after wait was called
   RunLoopUntilIdle();
-  EXPECT_EQ(-1, return_code);
+  EXPECT_EQ(ZX_TASK_RETCODE_SYSCALL_KILL, return_code);
   EXPECT_EQ(TerminationReason::EXITED, termination_reason);
   EXPECT_EQ(realm_.ComponentCount(), 0u);
 }

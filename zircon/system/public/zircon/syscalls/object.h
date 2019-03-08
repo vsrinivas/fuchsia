@@ -36,10 +36,19 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_PROCESS_HANDLE_STATS    ((zx_object_info_topic_t) 21u) // zx_info_process_handle_stats_t[1]
 #define ZX_INFO_SOCKET                  ((zx_object_info_topic_t) 22u) // zx_info_socket_t[1]
 #define ZX_INFO_VMO                     ((zx_object_info_topic_t) 23u) // zx_info_vmo_t[1]
+#define ZX_INFO_JOB                     ((zx_object_info_topic_t) 24u) // zx_info_job_t[1]
 
 typedef uint32_t zx_obj_props_t;
-#define ZX_OBJ_PROP_NONE                ((zx_obj_props_t)0u)
-#define ZX_OBJ_PROP_WAITABLE            ((zx_obj_props_t)1u)
+#define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
+#define ZX_OBJ_PROP_WAITABLE            ((zx_obj_props_t) 1u)
+
+// Return codes set when a task is killed.
+#define ZX_TASK_RETCODE_SYSCALL_KILL    ((int64_t) -1024)   // via zx_task_kill().
+#define ZX_TASK_RETCODE_OOM_KILL        ((int64_t) -1025)   // by the OMM killer.
+#define ZX_TASK_RETCODE_POLICY_KILL     ((int64_t) -1026)   // by the Job policy.
+#define ZX_TASK_RETCODE_VDSO_KILL       ((int64_t) -1027)   // by the VDSO.
+#define ZX_TASK_RETCODE_EXCEPTION_KILL  ((int64_t) -1028)   // Exception not handled.
+
 
 typedef struct zx_info_handle_basic {
     // The unique id assigned by kernel to the object referenced by the
@@ -78,7 +87,7 @@ typedef struct zx_info_process_handle_stats {
 
 typedef struct zx_info_process {
     // The process's return code; only valid if |exited| is true.
-    // Guaranteed to be non-zero if the process was killed by |zx_task_kill|.
+    // If the process was killed, it will be one of the ZX_TASK_RETCODE values.
     int64_t return_code;
 
     // True if the process has ever left the initial creation state,
@@ -91,6 +100,22 @@ typedef struct zx_info_process {
     // True if a debugger is attached to the process.
     bool debugger_attached;
 } zx_info_process_t;
+
+typedef struct zx_info_job {
+    // The job's return code; only valid if |exited| is true.
+    // If the process was killed, it will be one of the ZX_TASK_RETCODE values.
+    int64_t return_code;
+
+    // If true, the job has exited and |return_code| is valid.
+    bool exited;
+
+    // True if the ZX_PROP_JOB_KILL_ON_OOM was set.
+    bool kill_on_oom;
+
+    // True if a debugger is attached to the job.
+    bool debugger_attached;
+} zx_info_job_t;
+
 
 typedef uint32_t zx_thread_state_t;
 

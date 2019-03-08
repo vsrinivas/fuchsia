@@ -33,6 +33,12 @@ static bool basic_test() {
     ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_OK, "");
     ASSERT_EQ(zx_job_create(job_child, 0u, &job_grandchild), ZX_OK, "");
 
+    zx_info_job_t job_info;
+    ASSERT_EQ(zx_object_get_info(
+            job_child, ZX_INFO_JOB, &job_info, sizeof(job_info), NULL, NULL), ZX_OK);
+    EXPECT_FALSE(job_info.exited);
+    EXPECT_EQ(job_info.return_code, 0, "");
+
     ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(job_grandchild), ZX_OK, "");
 
@@ -271,6 +277,19 @@ static bool kill_test() {
     ASSERT_EQ(signals, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS, "");
 
     // Process should be in the dead state here.
+    zx_info_job_t job_info;
+    ASSERT_EQ(zx_object_get_info(
+            job_child, ZX_INFO_JOB, &job_info, sizeof(job_info), NULL, NULL), ZX_OK);
+    EXPECT_TRUE(job_info.exited);
+    EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "");
+
+    zx_info_process_t proc_info;
+    ASSERT_EQ(zx_object_get_info(
+            process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL), ZX_OK);
+    EXPECT_TRUE(proc_info.exited);
+    EXPECT_EQ(proc_info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "");
+
+    // Can't create more processes or jobs.
 
     zx_handle_t job_grandchild;
     ASSERT_EQ(zx_job_create(job_child, 0u, &job_grandchild), ZX_ERR_BAD_STATE, "");
@@ -279,6 +298,7 @@ static bool kill_test() {
     ASSERT_EQ(zx_handle_close(process), ZX_OK, "");
     ASSERT_EQ(start_mini_process(job_child, event, &process, &thread), ZX_ERR_BAD_STATE, "");
 
+    ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
     END_TEST;
 }
 

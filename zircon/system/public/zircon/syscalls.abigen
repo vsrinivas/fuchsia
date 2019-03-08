@@ -218,6 +218,7 @@ syscall object_get_cookie
 
 #^ Query information about an object.
 #! If topic is ZX_INFO_PROCESS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
+#! If topic is ZX_INFO_JOB, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_INSPECT.
 #! If topic is ZX_INFO_PROCESS_THREADS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_ENUMERATE.
 #! If topic is ZX_INFO_JOB_CHILDREN, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.
 #! If topic is ZX_INFO_JOB_PROCESSES, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.

@@ -204,7 +204,7 @@ void ProcessDispatcher::Exit(int64_t retcode) {
     __UNREACHABLE;
 }
 
-void ProcessDispatcher::Kill() {
+void ProcessDispatcher::Kill(int64_t retcode) {
     LTRACE_ENTRY_OBJ;
 
     // ZX-880: Call RemoveChildProcess outside of |get_lock()|.
@@ -218,10 +218,8 @@ void ProcessDispatcher::Kill() {
             return;
 
         if (state_ != State::DYING) {
-            // If there isn't an Exit already in progress, set a nonzero exit
-            // status so e.g. crashing tests don't appear to have succeeded.
             DEBUG_ASSERT(retcode_ == 0);
-            retcode_ = -1;
+            retcode_ = retcode;
         }
 
         // if we have no threads, enter the dead state directly
@@ -552,7 +550,7 @@ zx_status_t ProcessDispatcher::GetDispatcherInternal(zx_handle_t handle_value,
 }
 
 zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
-    memset(info, 0, sizeof(*info));
+    canary_.Assert();
 
     State state;
     // retcode_ depends on the state: make sure they're consistent.

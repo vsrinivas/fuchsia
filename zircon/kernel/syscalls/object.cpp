@@ -163,7 +163,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // grab a reference to the dispatcher
         fbl::RefPtr<ProcessDispatcher> process;
         auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
-        if (error < 0)
+        if (error != ZX_OK)
             return error;
 
         // build the info structure
@@ -180,7 +180,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // grab a reference to the dispatcher
         fbl::RefPtr<ProcessDispatcher> process;
         auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_ENUMERATE, &process);
-        if (error < 0)
+        if (error != ZX_OK)
             return error;
 
         // Getting the list of threads is inherently racy (unless the
@@ -219,7 +219,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
     case ZX_INFO_JOB_PROCESSES: {
         fbl::RefPtr<JobDispatcher> job;
         auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_ENUMERATE, &job);
-        if (error < 0)
+        if (error != ZX_OK)
             return error;
 
         size_t max = buffer_size / sizeof(zx_koid_t);
@@ -251,7 +251,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // grab a reference to the dispatcher
         fbl::RefPtr<ThreadDispatcher> thread;
         auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
-        if (error < 0)
+        if (error != ZX_OK)
             return error;
 
         // build the info structure
@@ -271,7 +271,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // grab a reference to the dispatcher
         fbl::RefPtr<ThreadDispatcher> thread;
         auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
-        if (error < 0)
+        if (error != ZX_OK)
             return error;
 
         // build the info structure
@@ -291,7 +291,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // grab a reference to the dispatcher
         fbl::RefPtr<ThreadDispatcher> thread;
         auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
-        if (error < 0)
+        if (error != ZX_OK)
             return error;
 
         // build the info structure
@@ -311,9 +311,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         // Grab a reference to the dispatcher. Only supports processes for
         // now, but could support jobs or threads in the future.
         fbl::RefPtr<ProcessDispatcher> process;
-        auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT,
-                                                 &process);
-        if (error < 0)
+        auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
+        if (error != ZX_OK)
             return error;
 
         // Build the info structure.
@@ -626,6 +625,19 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
 
         zx_info_socket_t info = {};
         socket->GetInfo(&info);
+
+        return single_record_result(
+            _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+    }
+
+    case ZX_INFO_JOB: {
+        fbl::RefPtr<JobDispatcher> job;
+        auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &job);
+        if (error != ZX_OK)
+            return error;
+
+        zx_info_job info = {};
+        job->GetInfo(&info);
 
         return single_record_result(
             _buffer, buffer_size, _actual, _avail, &info, sizeof(info));

@@ -151,6 +151,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       state_(State::READY),
       process_count_(0u),
       job_count_(0u),
+      return_code_(0),
       kill_on_oom_(false),
       policy_(policy) {
 
@@ -314,7 +315,7 @@ JobPolicy JobDispatcher::GetPolicy() const {
     return policy_;
 }
 
-bool JobDispatcher::Kill() {
+bool JobDispatcher::Kill(int64_t return_code) {
     canary_.Assert();
 
     JobList jobs_to_kill;
@@ -328,6 +329,7 @@ bool JobDispatcher::Kill() {
         if (state_ != State::READY)
             return false;
 
+        return_code_ = return_code;
         state_ = State::KILLING;
         zx_status_t result;
 
@@ -345,11 +347,11 @@ bool JobDispatcher::Kill() {
     // Since we kill the child jobs first we have a depth-first massacre.
     while (!jobs_to_kill.is_empty()) {
         // TODO(cpu): This recursive call can overflow the stack.
-        jobs_to_kill.pop_front()->Kill();
+        jobs_to_kill.pop_front()->Kill(return_code);
     }
 
     while (!procs_to_kill.is_empty()) {
-        procs_to_kill.pop_front()->Kill();
+        procs_to_kill.pop_front()->Kill(return_code);
     }
 
     return true;
@@ -618,4 +620,14 @@ void JobDispatcher::set_kill_on_oom(bool value) {
 bool JobDispatcher::get_kill_on_oom() const {
     Guard<fbl::Mutex> guard{get_lock()};
     return kill_on_oom_;
+}
+
+void JobDispatcher::GetInfo(zx_info_job_t* info) const {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    info->return_code = return_code_;
+    info->exited = (state_ == State::DEAD);
+    info->kill_on_oom = kill_on_oom_;
+    info->debugger_attached = debugger_exception_port_ != nullptr;
 }

@@ -1837,6 +1837,13 @@ static bool full_queue_sending_exception_packet_test()
     ASSERT_EQ(zx_object_wait_one(child, ZX_PROCESS_TERMINATED,
                                  ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
+
+    zx_info_process_t info;
+    ASSERT_EQ(zx_object_get_info(
+            child, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
+    EXPECT_TRUE(info.exited, "");
+    EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL, "");
+
     tu_handle_close(child);
     tu_handle_close(eport);
     tu_handle_close(our_channel);

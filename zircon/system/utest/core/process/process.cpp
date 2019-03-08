@@ -277,6 +277,7 @@ bool info_reflects_process_state() {
             proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
     EXPECT_FALSE(info.started, "process should not appear as started");
     EXPECT_FALSE(info.exited, "process should not appear as exited");
+    EXPECT_EQ(info.return_code, 0, "return code is zero");
 
     zx_handle_t minip_chn;
     // Start the process and make (relatively) certain it's alive.
@@ -301,7 +302,7 @@ bool info_reflects_process_state() {
             proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
     EXPECT_TRUE(info.started, "process should appear as started");
     EXPECT_TRUE(info.exited, "process should appear as exited");
-    EXPECT_NE(info.return_code, 0, "killed process should have non-zero return code");
+    EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "process retcode invalid");
 
     END_TEST;
 }
@@ -376,7 +377,6 @@ public:
         BEGIN_HELPER;
 
         EXPECT_EQ(zx_task_kill(process_), ZX_OK);
-
         EXPECT_EQ(zx_handle_close(process_), ZX_OK);
         EXPECT_EQ(zx_handle_close(vmar_), ZX_OK);
         EXPECT_EQ(zx_handle_close_many(threads_, num_threads_), ZX_OK);

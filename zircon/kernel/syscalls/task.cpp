@@ -591,13 +591,17 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
 }
 
 // helper routine for sys_task_kill
-template <typename T>
+template <typename T, bool retcode>
 static zx_status_t kill_task(fbl::RefPtr<Dispatcher> dispatcher) {
     auto task = DownCastDispatcher<T>(&dispatcher);
     if (!task)
         return ZX_ERR_WRONG_TYPE;
 
-    task->Kill();
+    if constexpr (retcode) {
+        task->Kill(ZX_TASK_RETCODE_SYSCALL_KILL);
+    } else {
+        task->Kill();
+    }
     return ZX_OK;
 }
 
@@ -614,12 +618,12 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
 
     // see if it's a process or thread and dispatch accordingly
     switch (dispatcher->get_type()) {
-    case ZX_OBJ_TYPE_PROCESS:
-        return kill_task<ProcessDispatcher>(ktl::move(dispatcher));
-    case ZX_OBJ_TYPE_THREAD:
-        return kill_task<ThreadDispatcher>(ktl::move(dispatcher));
     case ZX_OBJ_TYPE_JOB:
-        return kill_task<JobDispatcher>(ktl::move(dispatcher));
+        return kill_task<JobDispatcher, true>(ktl::move(dispatcher));
+    case ZX_OBJ_TYPE_PROCESS:
+        return kill_task<ProcessDispatcher, true>(ktl::move(dispatcher));
+    case ZX_OBJ_TYPE_THREAD:
+        return kill_task<ThreadDispatcher, false>(ktl::move(dispatcher));
     default:
         return ZX_ERR_WRONG_TYPE;
     }

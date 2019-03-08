@@ -22,7 +22,9 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+
 #include <zircon/rights.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
@@ -236,7 +238,7 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner,
     if (unlikely(waiter->BeginWait(fbl::WrapRefPtr(this)) != ZX_OK)) {
         // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
         // channel calls has been violated.  Shoot the misbehaving process.
-        ProcessDispatcher::GetCurrent()->Kill();
+        ProcessDispatcher::GetCurrent()->Kill(ZX_TASK_RETCODE_VDSO_KILL);
         return ZX_ERR_BAD_STATE;
     }
 

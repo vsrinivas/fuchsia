@@ -115,6 +115,29 @@ typedef struct zx_info_process_handle_stats {
 } zx_info_process_handle_stats_t;
 ```
 
+### ZX_INFO_JOB
+
+*handle* type: **Job**
+
+*buffer* type: `zx_info_job_t[1]`
+
+```
+typedef struct zx_info_job {
+    // The job's return code; only valid if |exited| is true.
+    // If the job was killed, it will be one of the ZX_TASK_RETCODE values.
+    int64_t return_code;
+
+    // If true, the job has exited and |return_code| is valid.
+    bool exited;
+
+    // True if the ZX_PROP_JOB_KILL_ON_OOM property was set.
+    bool kill_on_oom;
+
+    // True if a debugger is attached to the job.
+    bool debugger_attached;
+} zx_info_job_t;
+```
+
 ### ZX_INFO_PROCESS
 
 *handle* type: **Process**

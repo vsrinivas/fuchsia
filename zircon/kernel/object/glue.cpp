@@ -11,8 +11,6 @@
 
 #include <inttypes.h>
 
-#include <trace.h>
-
 #include <kernel/cmdline.h>
 
 #include <lk/init.h>
@@ -25,11 +23,8 @@
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
-#include <fbl/function.h>
-
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-
-#define LOCAL_TRACE 0
 
 // All jobs and processes are rooted at the |root_job|.
 static fbl::RefPtr<JobDispatcher> root_job;
@@ -46,7 +41,7 @@ static void oom_lowmem(size_t shortfall_bytes) {
         if (job->get_kill_on_oom()) {
             // The traversal order of ForEachJob() is going to favor killing newer
             // jobs, this helps in case more than one is eligible.
-            if (job->Kill()) {
+            if (job->Kill(ZX_TASK_RETCODE_OOM_KILL)) {
                 found = true;
                 char name[ZX_MAX_NAME_LEN];
                 job->get_name(name);

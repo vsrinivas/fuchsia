@@ -789,10 +789,6 @@ bool ThreadDispatcher::InExceptionLocked() {
 zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
     canary_.Assert();
 
-    LTRACE_ENTRY_OBJ;
-
-    *info = {};
-
     ThreadState state;
     Blocked blocked_reason;
     ExceptionPort::Type excp_port_type;

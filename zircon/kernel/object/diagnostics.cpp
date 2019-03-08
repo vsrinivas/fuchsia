@@ -18,6 +18,8 @@
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <pretty/sizes.h>
+
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 // Machinery to walk over a job tree and run a callback on each process.
@@ -397,7 +399,7 @@ void KillProcess(zx_koid_t id) {
     }
     // if found, outside of the lock hit it with kill
     printf("killing process %" PRIu64 "\n", id);
-    pd->Kill();
+    pd->Kill(ZX_TASK_RETCODE_SYSCALL_KILL);
 }
 
 namespace {

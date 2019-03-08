@@ -29,6 +29,13 @@ will no longer succeed.
 If *handle* is a job and the syscall is successful, the job cannot longer be
 used to create new processes.
 
+When a process or job is killed via this syscall, the `return_code` is
+**ZX_TASK_RETCODE_SYSCALL_KILL** as reported by [`zx_object_get_info()`] via
+the **ZX_INFO_PROCESS** or **ZX_INFO_JOB** topic.
+
+Processes and Jobs can also be killed by other agents such as the Job policy with
+**ZX_POL_ACTION_KILL** or when the system is running low on memory [OMM](../oom.md).
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -39,11 +46,6 @@ used to create new processes.
 
 On success, `zx_task_kill()` returns **ZX_OK**. If a process or thread uses
 this syscall to kill itself, this syscall does not return.
-
-## NOTES
-
-When using this syscall on a process, the return code for the process
-is -1 as reported by [`zx_object_get_info()`] via the **ZX_INFO_PROCESS** topic.
 
 ## ERRORS
 

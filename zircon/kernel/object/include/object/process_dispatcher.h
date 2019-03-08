@@ -217,7 +217,7 @@ public:
     zx_status_t set_name(const char* name, size_t len) final;
 
     void Exit(int64_t retcode) __NO_RETURN;
-    void Kill();
+    void Kill(int64_t retcode);
 
     // Suspends the process.
     //

@@ -18,6 +18,8 @@
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
+#include <zircon/syscalls/object.h>
+
 #define LOCAL_TRACE 0
 #define TRACE_EXCEPTIONS 1
 
@@ -272,7 +274,7 @@ zx_status_t dispatch_user_exception(uint exception_type,
 #endif
 
     // kill our process
-    process->Kill();
+    process->Kill(ZX_TASK_RETCODE_EXCEPTION_KILL);
 
     // exit
     thread->Exit();
