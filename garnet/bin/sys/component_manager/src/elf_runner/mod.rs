@@ -108,8 +108,13 @@ async fn load_launch_info(
             handle: child_job_dup.into_handle(),
             id: create_handle_id(HandleType::JobDefault, 0),
         },
-        // TODO: HandleType::DirectoryRequest
     ]);
+    if let Some(outgoing_dir) = start_info.outgoing_dir {
+        handle_infos.push(fproc::HandleInfo {
+            handle: outgoing_dir.into_handle(),
+            id: create_handle_id(HandleType::DirectoryRequest, 0),
+        });
+    }
     launcher.add_handles(&mut handle_infos.iter_mut())?;
 
     let mut name_infos = vec![];
@@ -206,6 +211,7 @@ mod tests {
                         }],
                     }),
                     ns: Some(ns),
+                    outgoing_dir: None,
                 };
 
                 let runner = ElfRunner::new();

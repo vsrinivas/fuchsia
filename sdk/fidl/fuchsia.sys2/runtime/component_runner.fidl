@@ -44,6 +44,9 @@ table ComponentStartInfo {
 
     // The namespace to provide to the component instance.
     3: ComponentNamespace ns;
+
+    // The directory this component serves.
+    4: request<fuchsia.io.Directory> outgoing_dir;
 };
 
 // An interface for binding client connections and controlling the lifetime

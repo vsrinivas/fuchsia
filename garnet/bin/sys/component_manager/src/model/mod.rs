@@ -11,11 +11,11 @@ use {
     crate::ns_util::PKG_PATH,
     crate::{data, io_util},
     failure::{Error, Fail},
-    fidl::endpoints::ClientEnd,
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    std::{cell::RefCell, collections::HashMap, convert::TryFrom, rc::Rc},
+    std::{cell::RefCell, collections::HashMap, rc::Rc},
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -105,12 +105,14 @@ struct Execution {
     resolved_uri: String,
     decl: fsys::ComponentDecl,
     package_dir: Option<DirectoryProxy>,
+    outgoing_dir: DirectoryProxy,
 }
 
-impl TryFrom<fsys::Component> for Execution {
-    type Error = ModelError;
-
-    fn try_from(component: fsys::Component) -> Result<Self, Self::Error> {
+impl Execution {
+    fn start_from(
+        component: fsys::Component,
+        outgoing_dir: DirectoryProxy,
+    ) -> Result<Self, ModelError> {
         if component.resolved_uri.is_none() || component.decl.is_none() {
             return Err(ModelError::ComponentInvalid);
         }
@@ -132,6 +134,7 @@ impl TryFrom<fsys::Component> for Execution {
             resolved_uri: component.resolved_uri.unwrap(),
             decl: component.decl.unwrap(),
             package_dir,
+            outgoing_dir,
         })
     }
 }
@@ -231,7 +234,15 @@ impl Model {
                         default_runner.clone(),
                     )?);
                 }
-                let execution = Execution::try_from(component)?;
+                // TODO(CF-647): Serve in the Instance' PseudoDir instead.
+                let (outgoing_dir_client, outgoing_dir_server) =
+                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+                let execution = Execution::start_from(
+                    component,
+                    DirectoryProxy::from_channel(
+                        fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+                    ),
+                )?;
 
                 let ns = await!(execution.make_namespace(&execution.decl.uses))?;
 
@@ -239,6 +250,7 @@ impl Model {
                     resolved_uri: Some(execution.resolved_uri.clone()),
                     program: data::clone_option_dictionary(&execution.decl.program),
                     ns: Some(ns),
+                    outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
                 };
                 await!(default_runner.start(start_info))?;
                 *execution_lock = Some(execution);
@@ -331,6 +343,7 @@ impl From<RunnerError> for ModelError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_io::DirectoryMarker;
     use fidl_fuchsia_sys2::{CapabilityType, ComponentNamespace, UseDecl};
     use futures::future::{self, FutureObj};
     use lazy_static::lazy_static;
@@ -386,6 +399,7 @@ mod tests {
     struct MockRunner {
         uris_run: Rc<RefCell<Vec<String>>>,
         namespaces: Rc<RefCell<HashMap<String, ComponentNamespace>>>,
+        outgoing_dirs: Rc<RefCell<HashMap<String, ServerEnd<DirectoryMarker>>>>,
     }
 
     impl Runner for MockRunner {
@@ -396,6 +410,9 @@ mod tests {
             let resolved_uri = start_info.resolved_uri.unwrap();
             self.uris_run.borrow_mut().push(resolved_uri.clone());
             self.namespaces.borrow_mut().insert(resolved_uri.clone(), start_info.ns.unwrap());
+            self.outgoing_dirs
+                .borrow_mut()
+                .insert(resolved_uri.clone(), start_info.outgoing_dir.unwrap());
             FutureObj::new(Box::new(future::ok(())))
         }
     }
@@ -416,7 +433,12 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
         let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
         let children = Rc::new(RefCell::new(HashMap::new()));
         let uses = Rc::new(RefCell::new(HashMap::new()));
         resolver.register(
@@ -445,7 +467,12 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
         let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
         let children = Rc::new(RefCell::new(HashMap::new()));
         let uses = Rc::new(RefCell::new(HashMap::new()));
         resolver.register(
@@ -474,7 +501,12 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
         let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children
             .borrow_mut()
@@ -543,7 +575,12 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
         let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
         let uses = Rc::new(RefCell::new(HashMap::new()));
@@ -589,7 +626,12 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
         let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
         children
@@ -683,7 +725,12 @@ mod tests {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
         let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let runner = MockRunner { uris_run: uris_run.clone(), namespaces: namespaces.clone() };
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
         let children = Rc::new(RefCell::new(HashMap::new()));
         children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
         let uses = Rc::new(RefCell::new(HashMap::new()));
@@ -735,8 +782,7 @@ mod tests {
             let dir = ns.directories.pop().unwrap();
             let dir_proxy = dir.into_proxy().unwrap();
             let path = PathBuf::from("meta/component_manager_tests_hello_world.cm");
-            let file_proxy =
-                io_util::open_file(&dir_proxy, &path).expect("could not open cm");
+            let file_proxy = io_util::open_file(&dir_proxy, &path).expect("could not open cm");
             await!(io_util::read_file(&file_proxy)).expect("could not read cm");
         }
     }
