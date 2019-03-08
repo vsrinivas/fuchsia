@@ -19,29 +19,32 @@ use {
         sys::{self, zx_handle_t, zx_status_t},
     },
     std::{
-        ffi::{self, CString, CStr},
+        ffi::{self, CStr, CString},
         fs::File,
         marker::PhantomData,
         os::{
             raw,
             unix::{
                 ffi::OsStrExt,
-                io::{
-                    AsRawFd,
-                    IntoRawFd,
-                }
+                io::{AsRawFd, IntoRawFd},
             },
         },
         path::Path,
     },
 };
 
-pub unsafe fn ioctl(dev: &File, op: raw::c_int, in_buf: *const raw::c_void, in_len: usize,
-         out_buf: *mut raw::c_void, out_len: usize) -> Result<i32, zx::Status> {
-   match ioctl_raw(dev.as_raw_fd(), op, in_buf, in_len, out_buf, out_len) as i32 {
-     e if e < 0 => Err(zx::Status::from_raw(e)),
-     e => Ok(e),
-   }
+pub unsafe fn ioctl(
+    dev: &File,
+    op: raw::c_int,
+    in_buf: *const raw::c_void,
+    in_len: usize,
+    out_buf: *mut raw::c_void,
+    out_len: usize,
+) -> Result<i32, zx::Status> {
+    match ioctl_raw(dev.as_raw_fd(), op, in_buf, in_len, out_buf, out_len) as i32 {
+        e if e < 0 => Err(zx::Status::from_raw(e)),
+        e => Ok(e),
+    }
 }
 
 /// Connects a channel to a named service.
@@ -56,18 +59,16 @@ pub fn service_connect(service_path: &str, channel: zx::Channel) -> Result<(), z
     // On success, the channel is connected, and on failure, it is closed.
     // In either case, we do not need to clean up the channel so we use
     // `into_raw` so that Rust forgets about it.
-    zx::ok(unsafe {
-        fdio_sys::fdio_service_connect(
-            c_service_path.as_ptr(),
-            channel.into_raw())
-    })
+    zx::ok(unsafe { fdio_sys::fdio_service_connect(c_service_path.as_ptr(), channel.into_raw()) })
 }
 
 /// Connects a channel to a named service relative to a directory `dir`.
 /// `dir` must be a directory protocol channel.
-pub fn service_connect_at(dir: &zx::Channel, service_path: &str, channel: zx::Channel)
-    -> Result<(), zx::Status>
-{
+pub fn service_connect_at(
+    dir: &zx::Channel,
+    service_path: &str,
+    channel: zx::Channel,
+) -> Result<(), zx::Status> {
     let c_service_path = CString::new(service_path).map_err(|_| zx::Status::INVALID_ARGS)?;
 
     // TODO(raggi): this should be convered to an asynchronous FDIO
@@ -84,14 +85,18 @@ pub fn service_connect_at(dir: &zx::Channel, service_path: &str, channel: zx::Ch
         fdio_sys::fdio_service_connect_at(
             dir.raw_handle(),
             c_service_path.as_ptr(),
-            channel.into_raw())
+            channel.into_raw(),
+        )
     })
 }
 
 pub fn transfer_fd(file: std::fs::File) -> Result<zx::Handle, zx::Status> {
     unsafe {
         let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = fdio_sys::fdio_fd_transfer(file.into_raw_fd(), &mut fd_handle as *mut zx::sys::zx_handle_t);
+        let status = fdio_sys::fdio_fd_transfer(
+            file.into_raw_fd(),
+            &mut fd_handle as *mut zx::sys::zx_handle_t,
+        );
         if status != zx::sys::ZX_OK {
             return Err(zx::Status::from_raw(status));
         }
@@ -121,7 +126,8 @@ pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
 pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     let channel = clone_channel(dev)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let (status, topo) = interface.get_topological_path(fuchsia_zircon::Time::INFINITE)
+    let (status, topo) = interface
+        .get_topological_path(fuchsia_zircon::Time::INFINITE)
         .map_err(|_| zx::Status::IO)?;
     fuchsia_zircon::Status::ok(status)?;
 
@@ -164,9 +170,7 @@ bitflags! {
 
 // TODO: someday we'll have custom DSTs which will make this unnecessary.
 fn nul_term_from_slice(argv: &[&CStr]) -> Vec<*const raw::c_char> {
-    argv.iter().map(|cstr| cstr.as_ptr())
-        .chain(std::iter::once(0 as *const raw::c_char))
-        .collect()
+    argv.iter().map(|cstr| cstr.as_ptr()).chain(std::iter::once(0 as *const raw::c_char)).collect()
 }
 
 /// Spawn a process in the given `job`.
@@ -184,9 +188,7 @@ pub fn spawn(
 
     // Safety: spawn consumes no handles and frees no pointers, and only
     // produces a valid process upon success.
-    let status = unsafe {
-        fdio_sys::fdio_spawn(job, flags, path, argv.as_ptr(), &mut process_out)
-    };
+    let status = unsafe { fdio_sys::fdio_spawn(job, flags, path, argv.as_ptr(), &mut process_out) };
     zx::ok(status)?;
     Ok(zx::Process::from(unsafe { zx::Handle::from_raw(process_out) }))
 }
@@ -203,15 +205,18 @@ impl<'a> SpawnAction<'a> {
     pub fn clone_fd(local_fd: &'a File, target_fd: i32) -> Self {
         // Safety: `local_fd` is a valid file descriptor so long as we're inside the
         // 'a lifetime.
-        Self(fdio_sys::fdio_spawn_action_t {
-            action_tag: fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD,
-            action_value: fdio_sys::fdio_spawn_action_union_t {
-                fd: fdio_sys::fdio_spawn_action_fd_t {
-                    local_fd: local_fd.as_raw_fd(),
-                    target_fd,
+        Self(
+            fdio_sys::fdio_spawn_action_t {
+                action_tag: fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD,
+                action_value: fdio_sys::fdio_spawn_action_union_t {
+                    fd: fdio_sys::fdio_spawn_action_fd_t {
+                        local_fd: local_fd.as_raw_fd(),
+                        target_fd,
+                    },
                 },
             },
-        }, PhantomData)
+            PhantomData,
+        )
     }
 
     /// Transfer a file descriptor into the new process.
@@ -221,15 +226,18 @@ impl<'a> SpawnAction<'a> {
     pub fn transfer_fd(local_fd: File, target_fd: i32) -> Self {
         // Safety: ownership of `local_fd` is consumed, so `Self` can live arbitrarily long.
         // When the action is executed, the fd will be transferred.
-        Self(fdio_sys::fdio_spawn_action_t {
-            action_tag: fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD,
-            action_value: fdio_sys::fdio_spawn_action_union_t {
-                fd: fdio_sys::fdio_spawn_action_fd_t {
-                    local_fd: local_fd.into_raw_fd(),
-                    target_fd,
+        Self(
+            fdio_sys::fdio_spawn_action_t {
+                action_tag: fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD,
+                action_value: fdio_sys::fdio_spawn_action_union_t {
+                    fd: fdio_sys::fdio_spawn_action_fd_t {
+                        local_fd: local_fd.into_raw_fd(),
+                        target_fd,
+                    },
                 },
-            }
-        }, PhantomData)
+            },
+            PhantomData,
+        )
     }
 
     /// Add the given entry to the namespace of the spawned process.
@@ -239,46 +247,50 @@ impl<'a> SpawnAction<'a> {
     pub fn add_namespace_entry(prefix: &'a CStr, handle: zx::Handle) -> Self {
         // Safety: ownership of the `handle` is consumed.
         // The prefix string must stay valid through the 'a lifetime.
-        Self(fdio_sys::fdio_spawn_action_t {
-            action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-            action_value: fdio_sys::fdio_spawn_action_union_t {
-                ns: fdio_sys::fdio_spawn_action_ns_t {
-                    prefix: prefix.as_ptr(),
-                    handle: handle.into_raw(),
+        Self(
+            fdio_sys::fdio_spawn_action_t {
+                action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                action_value: fdio_sys::fdio_spawn_action_union_t {
+                    ns: fdio_sys::fdio_spawn_action_ns_t {
+                        prefix: prefix.as_ptr(),
+                        handle: handle.into_raw(),
+                    },
                 },
             },
-        }, PhantomData)
+            PhantomData,
+        )
     }
 
     /// Add the given handle to the process arguments of the spawned process.
-    pub fn add_handle(
-        kind: fuchsia_runtime::HandleType,
-        handle: zx::Handle,
-    ) -> Self {
+    pub fn add_handle(kind: fuchsia_runtime::HandleType, handle: zx::Handle) -> Self {
         // Safety: ownership of the `handle` is consumed.
         // The prefix string must stay valid through the 'a lifetime.
-        Self(fdio_sys::fdio_spawn_action_t {
-            action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE,
-            action_value: fdio_sys::fdio_spawn_action_union_t {
-                h: fdio_sys::fdio_spawn_action_h_t {
-                    id: kind as u32,
-                    handle: handle.into_raw(),
+        Self(
+            fdio_sys::fdio_spawn_action_t {
+                action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE,
+                action_value: fdio_sys::fdio_spawn_action_union_t {
+                    h: fdio_sys::fdio_spawn_action_h_t {
+                        id: kind as u32,
+                        handle: handle.into_raw(),
+                    },
                 },
             },
-        }, PhantomData)
+            PhantomData,
+        )
     }
 
     /// Sets the name of the spawned process to the given name.
     pub fn set_name(name: &'a CStr) -> Self {
         // Safety: the `name` pointer must be valid at least as long as `Self`.
-        Self(fdio_sys::fdio_spawn_action_t {
-            action_tag: fdio_sys::FDIO_SPAWN_ACTION_SET_NAME,
-            action_value: fdio_sys::fdio_spawn_action_union_t {
-                name: fdio_sys::fdio_spawn_action_name_t {
-                    data: name.as_ptr(),
+        Self(
+            fdio_sys::fdio_spawn_action_t {
+                action_tag: fdio_sys::FDIO_SPAWN_ACTION_SET_NAME,
+                action_value: fdio_sys::fdio_spawn_action_union_t {
+                    name: fdio_sys::fdio_spawn_action_name_t { data: name.as_ptr() },
                 },
             },
-        }, PhantomData)
+            PhantomData,
+        )
     }
 
     fn is_null(&self) -> bool {
@@ -290,10 +302,10 @@ impl<'a> SpawnAction<'a> {
         // Assert that our null value doesn't conflict with any "real" actions.
         debug_assert!(
             (fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD != 0)
-            && (fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD != 0)
-            && (fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY != 0)
-            && (fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE != 0)
-            && (fdio_sys::FDIO_SPAWN_ACTION_SET_NAME != 0)
+                && (fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD != 0)
+                && (fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY != 0)
+                && (fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE != 0)
+                && (fdio_sys::FDIO_SPAWN_ACTION_SET_NAME != 0)
         );
         self.0.action_tag = 0;
     }
@@ -306,13 +318,13 @@ fn spawn_with_actions(
     environ: &[&CStr],
     actions: &mut [SpawnAction],
     spawn_fn: impl FnOnce(
-        zx_handle_t, // job
-        u32, // flags
-        *const *const raw::c_char, // argv
-        *const *const raw::c_char, // environ
-        usize, // action_count
-        *const fdio_sys::fdio_spawn_action_t, // actions
-        *mut zx_handle_t, // process_out,
+        zx_handle_t,                                                          // job
+        u32,                                                                  // flags
+        *const *const raw::c_char,                                            // argv
+        *const *const raw::c_char,                                            // environ
+        usize,                                                                // action_count
+        *const fdio_sys::fdio_spawn_action_t,                                 // actions
+        *mut zx_handle_t,                                                     // process_out,
         *mut [raw::c_char; fdio_sys::FDIO_SPAWN_ERR_MSG_MAX_LENGTH as usize], // err_msg_out
     ) -> zx_status_t,
 ) -> Result<zx::Process, (zx::Status, String)> {
@@ -343,13 +355,11 @@ fn spawn_with_actions(
         &mut err_msg_out,
     );
 
-    zx::ok(status)
-        .map_err(|status| {
-            let err_msg = unsafe { CStr::from_ptr(err_msg_out.as_ptr()) }
-                .to_string_lossy()
-                .into_owned();
-            (status, err_msg)
-        })?;
+    zx::ok(status).map_err(|status| {
+        let err_msg =
+            unsafe { CStr::from_ptr(err_msg_out.as_ptr()) }.to_string_lossy().into_owned();
+        (status, err_msg)
+    })?;
 
     // Clear out the actions so we can't unsafely re-use them in a future call.
     actions.iter_mut().for_each(|a| a.nullify());
@@ -373,8 +383,8 @@ pub fn spawn_etc(
         argv,
         environ,
         actions,
-        |job, flags, argv, environ, action_count, actions_ptr, process_out, err_msg_out| {
-            unsafe { fdio_sys::fdio_spawn_etc(
+        |job, flags, argv, environ, action_count, actions_ptr, process_out, err_msg_out| unsafe {
+            fdio_sys::fdio_spawn_etc(
                 job,
                 flags,
                 path,
@@ -384,8 +394,8 @@ pub fn spawn_etc(
                 actions_ptr,
                 process_out,
                 err_msg_out,
-            ) }
-        }
+            )
+        },
     )
 }
 
@@ -405,8 +415,8 @@ pub fn spawn_vmo(
         argv,
         environ,
         actions,
-        |job, flags, argv, environ, action_count, actions_ptr, process_out, err_msg_out| {
-            unsafe { fdio_sys::fdio_spawn_vmo(
+        |job, flags, argv, environ, action_count, actions_ptr, process_out, err_msg_out| unsafe {
+            fdio_sys::fdio_spawn_vmo(
                 job,
                 flags,
                 executable_vmo,
@@ -416,8 +426,8 @@ pub fn spawn_vmo(
                 actions_ptr,
                 process_out,
                 err_msg_out,
-            ) }
-        }
+            )
+        },
     )
 }
 
@@ -520,7 +530,7 @@ pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
         let mut vmo_handle: zx::sys::zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
         match fdio_sys::fdio_get_vmo_copy(file.as_raw_fd(), &mut vmo_handle) {
             0 => Ok(zx::Vmo::from(zx::Handle::from_raw(vmo_handle))),
-            error_code => Err(zx::Status::from_raw(error_code))
+            error_code => Err(zx::Status::from_raw(error_code)),
         }
     }
 }
