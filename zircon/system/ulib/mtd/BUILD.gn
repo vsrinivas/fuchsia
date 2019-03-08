@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This library requires an environment with mtd/mtd-user.h and MTD support.
+
+library("mtd") {
+  host = true
+
+  if (current_os == "linux") {
+    sources = [
+      "mtd-interface.cpp",
+    ]
+  }
+
+  public_deps = [
+    "$zx/system/ulib/fbl",
+  ]
+
+  deps = [
+    "$zx/system/ulib/log",
+  ]
+
+  defines = []
+
+  if (current_cpu == "arm64") {
+    defines += [ "SPARE_SIZE=8" ]
+  } else {
+    defines += [ "MEMWRITE_NOT_SUPPORTED" ]
+  }
+}
