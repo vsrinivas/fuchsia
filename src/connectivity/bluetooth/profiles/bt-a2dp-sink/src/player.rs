@@ -8,7 +8,8 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_media::{
         AudioSampleFormat, AudioStreamType, MediumSpecificStreamType, SimpleStreamSinkProxy,
-        StreamPacket, StreamType, AUDIO_ENCODING_SBC,
+        StreamPacket, StreamType, AUDIO_ENCODING_SBC, NO_TIMESTAMP,
+        STREAM_PACKET_FLAG_DISCONTINUITY,
     },
     fidl_fuchsia_mediaplayer::{
         PlayerEvent, PlayerEventStream, PlayerMarker, PlayerProxy, SourceMarker,
@@ -30,6 +31,7 @@ pub struct Player {
     player: PlayerProxy,
     events: PlayerEventStream,
     playing: bool,
+    next_packet_flags: u32,
 }
 
 #[derive(Debug, PartialEq)]
@@ -195,6 +197,7 @@ impl Player {
             events: player_event_stream,
             current_offset: 0,
             playing: false,
+            next_packet_flags: 0,
         })
     }
 
@@ -222,8 +225,12 @@ impl Player {
         let mut offset = 13;
         while offset < payload.len() {
             if self.codec == AUDIO_ENCODING_SBC {
-                let len = Player::find_sbc_frame_len(&payload[offset..])?;
+                let len = Player::find_sbc_frame_len(&payload[offset..]).or_else(|e| {
+                    self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+                    Err(e)
+                })?;
                 if offset + len > payload.len() {
+                    self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
                     return Err(format_err!("Ran out of buffer for SBC frame"));
                 }
                 self.send_frame(&payload[offset..offset + len])?;
@@ -246,18 +253,19 @@ impl Player {
         }
         self.buffer.write(frame, self.current_offset as u64)?;
         let mut packet = StreamPacket {
-            pts: self.current_offset as i64,
+            pts: NO_TIMESTAMP,
             payload_buffer_id: 0,
             payload_offset: self.current_offset as u64,
             payload_size: frame.len() as u64,
             buffer_config: 0,
-            flags: 0,
+            flags: self.next_packet_flags,
             stream_segment_id: 0,
         };
 
         self.stream_source.send_packet_no_reply(&mut packet)?;
 
         self.current_offset += frame.len();
+        self.next_packet_flags = 0;
         Ok(())
     }
 
