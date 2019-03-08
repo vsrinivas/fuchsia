@@ -397,13 +397,13 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 
 	for _, properties := range propertiesSlice {
 		if properties.PDU != nil {
-			defer func() {
-				logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
+			defer func(pdu *botanist.Config, nodename string) {
+				logger.Debugf(ctx, "rebooting the node %q\n", nodename)
 
-				if err := botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
+				if err := botanist.RebootDevice(pdu, signers, nodename); err != nil {
 					logger.Errorf(ctx, "failed to reboot the device: %v", err)
 				}
-			}()
+			}(properties.PDU, properties.Nodename)
 		}
 	}
 
