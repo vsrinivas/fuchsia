@@ -64,6 +64,78 @@ TEST(VmoFile, ConstructTransferOwnership) {
   EXPECT_EQ(1000u, output.size());
 }
 
+TEST(VmoFile, Reading) {
+  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  zx::vmo test_vmo = MakeTestVmo();
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
+                    vfs::VmoFile::WriteOption::READ_ONLY,
+                    vfs::VmoFile::Sharing::NONE);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  loop.StartThread("vfs test thread");
+
+  auto file_ptr = OpenAsFile(&file, loop.dispatcher());
+  ASSERT_TRUE(file_ptr.is_bound());
+
+  // Reading the VMO from offset 24 should match reading the file from offset 0.
+  std::vector<uint8_t> result;
+  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+  zx_status_t status;
+  EXPECT_EQ(ZX_OK, file_ptr->Read(500, &status, &result));
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(ReadVmo(test_vmo, 24, 500), result);
+  EXPECT_EQ(ZX_OK, file_ptr->Read(500, &status, &result));
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(ReadVmo(test_vmo, 524, 500), result);
+}
+
+TEST(VmoFile, GetAttrReadOnly) {
+  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  zx::vmo test_vmo = MakeTestVmo();
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
+                    vfs::VmoFile::WriteOption::READ_ONLY,
+                    vfs::VmoFile::Sharing::NONE);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  loop.StartThread("vfs test thread");
+
+  auto file_ptr = OpenAsFile(&file, loop.dispatcher());
+  ASSERT_TRUE(file_ptr.is_bound());
+
+  fuchsia::io::NodeAttributes attr;
+  zx_status_t status;
+  EXPECT_EQ(ZX_OK, file_ptr->GetAttr(&status, &attr));
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(1000u, attr.content_size);
+  EXPECT_EQ(1000u, attr.storage_size);
+  EXPECT_EQ(fuchsia::io::MODE_TYPE_FILE | fuchsia::io::OPEN_RIGHT_READABLE,
+            attr.mode);
+}
+
+TEST(VmoFile, GetAttrWritable) {
+  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  zx::vmo test_vmo = MakeTestVmo();
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
+                    vfs::VmoFile::WriteOption::WRITABLE,
+                    vfs::VmoFile::Sharing::NONE);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  loop.StartThread("vfs test thread");
+
+  auto file_ptr = OpenAsFile(&file, loop.dispatcher());
+  ASSERT_TRUE(file_ptr.is_bound());
+
+  fuchsia::io::NodeAttributes attr;
+  zx_status_t status;
+  EXPECT_EQ(ZX_OK, file_ptr->GetAttr(&status, &attr));
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(1000u, attr.content_size);
+  EXPECT_EQ(1000u, attr.storage_size);
+  EXPECT_EQ(fuchsia::io::MODE_TYPE_FILE | fuchsia::io::OPEN_RIGHT_READABLE |
+                fuchsia::io::OPEN_RIGHT_WRITABLE,
+            attr.mode);
+}
+
 TEST(VmoFile, ReadOnlyNoSharing) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();

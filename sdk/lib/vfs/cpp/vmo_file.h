@@ -108,6 +108,10 @@ class VmoFile : public File {
   // this value.
   size_t GetCapacity() override;
 
+  // Returns the node attributes for this VmoFile.
+  zx_status_t GetAttr(
+      fuchsia::io::NodeAttributes* out_attributes) const override;
+
  protected:
   uint32_t GetAdditionalAllowedFlags() const override;
 
