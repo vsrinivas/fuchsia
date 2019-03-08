@@ -283,6 +283,44 @@ impl DataHdr {
     }
 }
 
+// IEEE Std 802.11-2016, Table 9-26 defines DA, SA, RA, TA, BSSID
+pub fn data_dst_addr(hdr: &DataHdr) -> MacAddr {
+    let fc = FrameControl(hdr.frame_ctrl());
+    if fc.to_ds() {
+        hdr.addr3
+    } else {
+        hdr.addr1
+    }
+}
+
+pub fn data_src_addr(hdr: &DataHdr, addr4: Option<MacAddr>) -> Option<MacAddr> {
+    let fc = FrameControl(hdr.frame_ctrl());
+    match (fc.to_ds(), fc.from_ds()) {
+        (_, false) => Some(hdr.addr2),
+        (false, true) => Some(hdr.addr3),
+        (true, true) => addr4,
+    }
+}
+
+pub fn data_transmitter_addr(hdr: &DataHdr) -> MacAddr {
+    hdr.addr2
+}
+
+pub fn data_receiver_addr(hdr: &DataHdr) -> MacAddr {
+    hdr.addr1
+}
+
+/// BSSID: basic service set ID
+pub fn data_bssid(hdr: &DataHdr) -> Option<MacAddr> {
+    let fc = FrameControl(hdr.frame_ctrl());
+    match (fc.to_ds(), fc.from_ds()) {
+        (false, false) => Some(hdr.addr3),
+        (false, true) => Some(hdr.addr2),
+        (true, false) => Some(hdr.addr1),
+        (true, true) => None,
+    }
+}
+
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct RawHtControl([u8; 4]);
@@ -1275,5 +1313,92 @@ mod tests {
             0x88, 0x8e,
             99, 99],
             &bytes[..]);
+    }
+
+    #[test]
+    fn data_hdr_dst_addr() {
+        let mut data_hdr = make_data_hdr(None, [0, 0], None);
+        let (mut data_hdr, _) =
+            LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
+                .expect("invalid data header");
+        let mut fc = FrameControl(0);
+        fc.set_to_ds(true);
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_dst_addr(&data_hdr), [5; 6]); // Addr3
+        fc.set_to_ds(false);
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_dst_addr(&data_hdr), [3; 6]); // Addr1
+    }
+
+    #[test]
+    fn data_hdr_src_addr() {
+        let mut data_hdr = make_data_hdr(None, [0, 0], None);
+        let (mut data_hdr, _) =
+            LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
+                .expect("invalid data header");
+        let mut fc = FrameControl(0);
+        // to_ds == false && from_ds == false
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_src_addr(&data_hdr, None), Some([4; 6])); // Addr2
+
+        fc.set_to_ds(true);
+        // to_ds == true && from_ds == false
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_src_addr(&data_hdr, None), Some([4; 6])); // Addr2
+
+        fc.set_from_ds(true);
+        // to_ds == true && from_ds == true;
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_src_addr(&data_hdr, Some([11; 6])), Some([11; 6])); // Addr4
+
+        fc.set_to_ds(false);
+        // to_ds == false && from_ds == true;
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_src_addr(&data_hdr, None), Some([5; 6])); // Addr3
+    }
+
+    #[test]
+    fn data_hdr_ta() {
+        let mut data_hdr = make_data_hdr(None, [0, 0], None);
+        let (mut data_hdr, _) =
+            LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
+                .expect("invalid data header");
+        assert_eq!(data_transmitter_addr(&data_hdr), [4; 6]); // Addr2
+    }
+
+    #[test]
+    fn data_hdr_ra() {
+        let mut data_hdr = make_data_hdr(None, [0, 0], None);
+        let (mut data_hdr, _) =
+            LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
+                .expect("invalid data header");
+        assert_eq!(data_receiver_addr(&data_hdr), [3; 6]); // Addr2
+    }
+
+    #[test]
+    fn data_hdr_bssid() {
+        let mut data_hdr = make_data_hdr(None, [0, 0], None);
+        let (mut data_hdr, _) =
+            LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
+                .expect("invalid data header");
+        let mut fc = FrameControl(0);
+        // to_ds == false && from_ds == false
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_bssid(&data_hdr), Some([5; 6])); // Addr3
+
+        fc.set_to_ds(true);
+        // to_ds == true && from_ds == false
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_bssid(&data_hdr), Some([3; 6])); // Addr1
+
+        fc.set_from_ds(true);
+        // to_ds == true && from_ds == true;
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_bssid(&data_hdr), None);
+
+        fc.set_to_ds(false);
+        // to_ds == false && from_ds == true;
+        data_hdr.set_frame_ctrl(fc.value());
+        assert_eq!(data_bssid(&data_hdr), Some([4; 6])); // Addr2
     }
 }
