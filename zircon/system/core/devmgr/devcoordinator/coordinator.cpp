@@ -722,6 +722,18 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     }
     devices_.push_back(dev);
 
+    // If we're creating a device that's using the component driver, inform the
+    // component.
+    if (component_driver_ != nullptr && dev->libname == component_driver_->libname) {
+        CompositeDeviceComponent* component = parent->component();
+        component->set_component_device(dev);
+        status = component->composite()->TryAssemble();
+        if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+            log(ERROR, "devcoordinator: failed to assemble composite: %s\n",
+                zx_status_get_string(status));
+        }
+    }
+
     if (!invisible) {
         log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
             dev->name.data(), dev->props().size(), dev->args.data(), dev->parent().get());
@@ -778,6 +790,11 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         if (r != ZX_OK) {
             log(ERROR, "devcoordinator: failed to send message in dc_remove_device: %d\n", r);
         }
+    }
+
+    // If this is an instance of a component device, detatch our reference
+    if (component_driver_ != nullptr && dev->libname == component_driver_->libname) {
+        dev->parent()->component()->set_component_device(nullptr);
     }
 
     // detach from devhost
@@ -1521,11 +1538,12 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
     return ZX_OK;
 }
 
-zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev) {
-    if (dev->flags & DEV_CTX_PROXY) {
-        log(ERROR, "devcoordinator: cannot proxy a proxy: %s\n", dev->name.data());
-        return ZX_ERR_INTERNAL;
-    }
+// Create the proxy node for the given device if it doesn't exist and ensure it
+// has a devhost.  If |target_devhost| is not nullptr and the proxy doesn't have
+// a devhost yet, |target_devhost| will be used for it.  Otherwise a new devhost
+// will be created.
+zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* target_devhost) {
+    ZX_ASSERT(!(dev->flags & DEV_CTX_PROXY) && (dev->flags & DEV_CTX_MUST_ISOLATE));
 
     // proxy args are "processname,args"
     const char* arg0 = dev->args.data();
@@ -1566,12 +1584,14 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev) {
             // pass bootdata VMO handle to sys device
             h1 = std::move(bootdata_vmo_);
         }
-        if ((r = NewDevhost(devhostname, dev->host, &dev->proxy->host)) < 0) {
-            log(ERROR, "devcoordinator: dc_new_devhost: %d\n", r);
-            return r;
+        if (target_devhost == nullptr) {
+            if ((r = NewDevhost(devhostname, dev->host, &target_devhost)) < 0) {
+                log(ERROR, "devcoordinator: NewDevhost: %d\n", r);
+                return r;
+            }
         }
-        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1,
-                                  std::move(h1))) < 0) {
+        dev->proxy->host = target_devhost;
+        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, std::move(h1))) < 0) {
             log(ERROR, "devcoordinator: dh_create_device: %d\n", r);
             return r;
         }
@@ -1605,7 +1625,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
     }
 
     zx_status_t r;
-    if ((r = PrepareProxy(dev)) < 0) {
+    if ((r = PrepareProxy(dev, nullptr /* target_devhost */)) < 0) {
         return r;
     }
 

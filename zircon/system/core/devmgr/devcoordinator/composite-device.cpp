@@ -82,16 +82,64 @@ bool CompositeDevice::TryMatchComponents(const fbl::RefPtr<Device>& dev, size_t*
 }
 
 zx_status_t CompositeDevice::BindComponent(size_t index, const fbl::RefPtr<Device>& dev) {
-    for (auto& component : unbound_) {
-        if (component.index() == index) {
-            zx_status_t status = component.Bind(dev);
-            if (status == ZX_OK) {
-                bound_.push_back(unbound_.erase(component));
-            }
-            return status;
+    // Find the component we're binding
+    CompositeDeviceComponent* component = nullptr;
+    for (auto& unbound_component : unbound_) {
+        if (unbound_component.index() == index) {
+            component = &unbound_component;
+            break;
         }
     }
-    return ZX_ERR_BAD_STATE;
+    ZX_ASSERT_MSG(component != nullptr, "Attempted to bind component that wasn't unbound!\n");
+
+    zx_status_t status = component->Bind(dev);
+    if (status != ZX_OK) {
+        return status;
+    }
+    bound_.push_back(unbound_.erase(*component));
+    return ZX_OK;
+}
+
+zx_status_t CompositeDevice::TryAssemble() {
+    if (!unbound_.is_empty()) {
+        return ZX_ERR_SHOULD_WAIT;
+    }
+
+    Devhost* devhost = nullptr;
+    for (auto& component : bound_) {
+        // Find the devhost to put everything in (if we don't find one, nullptr
+        // means "a new devhost").
+        if (component.index() == coresident_device_index_) {
+            devhost = component.bound_device()->host;
+        }
+        // Make sure the component driver has created its device
+        if (component.component_device() == nullptr) {
+            return ZX_ERR_SHOULD_WAIT;
+        }
+    }
+
+    // Create all of the proxies for the component devices, in the same process
+    for (auto& component : bound_) {
+        const fbl::RefPtr<Device>& dev = component.component_device();
+        // Double check that we haven't ended up in a state where the proxies
+        // would need to be in different processes.
+        if (devhost != nullptr && dev->proxy != nullptr && dev->proxy->host != nullptr &&
+            dev->proxy->host != devhost) {
+            log(ERROR, "devcoordinator: cannot create composite, proxies in different processes\n");
+            return ZX_ERR_BAD_STATE;
+        }
+        zx_status_t status = dev->coordinator->PrepareProxy(dev, devhost);
+        if (status != ZX_OK) {
+            return status;
+        }
+        // If we hadn't picked a devhost, use the one that was created just now.
+        if (devhost == nullptr) {
+            devhost = dev->proxy->host;
+            ZX_ASSERT(devhost != nullptr);
+        }
+    }
+    // TODO: Create the composite device and wire everything up
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 // CompositeDeviceComponent methods

@@ -51,6 +51,13 @@ public:
     // If not nullptr, this component has been bound to this device
     const fbl::RefPtr<Device>& bound_device() const { return bound_device_; }
 
+    const fbl::RefPtr<Device>& component_device() const { return component_device_; }
+    // Registers (or unregisters) the component device (i.e. an instance of the
+    // "component" driver) that bound to bound_device().
+    void set_component_device(fbl::RefPtr<Device> device) {
+        component_device_ = std::move(device);
+    }
+
     // Used for embedding a component in the CompositeDevice's bound and unbound
     // lists.
     struct Node {
@@ -70,6 +77,9 @@ private:
 
     // If this component has been bound to a device, this points to that device.
     fbl::RefPtr<Device> bound_device_ = nullptr;
+    // Once the bound device has the component driver attach to it, this points
+    // to the device managed by the component driver.
+    fbl::RefPtr<Device> component_device_ = nullptr;
 
     fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDeviceComponent>> node_;
 };
@@ -109,6 +119,13 @@ public:
 
     // Bind the component with the given index to the specified device
     zx_status_t BindComponent(size_t index, const fbl::RefPtr<Device>& dev);
+
+    // Creates the actual device and orchestrates the creation of the composite
+    // device in a devhost.
+    // Returns ZX_ERR_SHOULD_WAIT if some component is not fully ready (i.e. has
+    // either not been matched or the component driver that bound to it has not
+    // yet published its device).
+    zx_status_t TryAssemble();
 
     // Node for list of composite devices the coordinator knows about
     struct Node {

@@ -276,7 +276,7 @@ public:
 
     zx_status_t HandleDeviceRead(const fbl::RefPtr<Device>& dev);
     void HandleNewDevice(const fbl::RefPtr<Device>& dev);
-    zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev);
+    zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* target_devhost);
 
     void DumpState(VmoWriter* vmo) const;
     void DumpDrivers(VmoWriter* vmo) const;
