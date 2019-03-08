@@ -289,6 +289,7 @@ appears in the name of the enclosing type.
 In all target languages, bitfield member names are scoped by their
 enclosing type.
 
+
 ## Organization
 
 ### Syntax
@@ -738,10 +739,48 @@ Use tables for protocol elements that are likely to change in the future.  For
 example, use a table to represent metadata information about camera devices
 because the fields in the metadata are likely to evolve over time.
 
-### When should I use an enum?
+### How should I represent constants?
 
-(Note: This section depends on a proposed FIDL 2.1 feature that makes enums
-extensible.)
+There are three ways to represent constants, depending on the flavor of
+constant you have:
+
+1. Use `const` for special values, like **PI**, or **MAX_NAME_LEN**.
+2. Use `enum` when the values are elements of a set, like the repeat
+   mode of a media player: **OFF**, **SINGLE_TRACK**, or **ALL_TRACKS**.
+3. Use `bits` for constants forming a group of flags, such as the capabilities
+   of an interface: **WLAN**, **SYNTH**, and **LOOPBACK**.
+
+#### const
+
+Use a `const` when there is a value that you wish to use symbolically
+rather than typing the value every time.
+The classical example is **PI** &mdash; it's often coded as a `const`
+because it's convenient to not have to type `3.141592653589` every time
+you want to use this value.
+
+Alternatively, you may use a `const` when the value may change, but needs
+to otherwise be used consistently throughout.
+A maximum number of characters that can be supplied in a given field is
+a good example (e.g., **MAX_NAME_LEN**).
+By using a `const`, you centralize the definition of that number, and
+thus don't end up with different values throughout your code.
+
+Another reason to choose `const` is that you can use it both to constrain
+a message, and then later on in code.
+For example:
+
+```fidl
+const int32 MAX_BATCH_SIZE = 128;
+
+protocol Sender {
+    Emit(vector<uint8>:MAX_BATCH_SIZE batch);
+};
+```
+
+You can then use the constant `MAX_BATCH_SIZE` in your code to assemble
+batches.
+
+#### enum
 
 Use an enum if the set of enumerated values is bounded and controlled by the
 Fuchsia project.  For example, the Fuchsia project defines the pointer event
@@ -768,6 +807,39 @@ some size) to represent USB HID identifiers because the set of USB HID
 identifiers is controlled by an industry consortium.  Similarly, use a `string`
 to represent a MIME type because MIME types are controlled (at least in theory)
 by an IANA registry.
+
+#### bits
+
+If your protocol has a bitfield, represent its values using `bits` values
+(for details, see [`FTP-025`: "Bit Flags."][ftp-025])
+
+For example:
+
+```fidl
+// Bit definitions for Info.features field
+
+bits InfoFeatures : uint32 {
+    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
+    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
+};
+```
+
+This indicates that the `InfoFeatures` bit field is backed by an unsigned 32-bit
+integer, and then goes on to define the three bits that are used.
+
+You can also express the values in binary (as opposed to hex) using the `0b`
+notation:
+
+```fidl
+bits InfoFeatures : uint32 {
+    WLAN =     0b00000001;  // If present, this device represents WLAN hardware
+    SYNTH =    0b00000010;  // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0b00000100;  // If present, this device receives all messages it sends
+};
+```
+
+This is the same as the previous example.
 
 ## Good Design Patterns
 
@@ -1413,3 +1485,6 @@ A good way to avoid over object-orientation is to use client-assigned
 identifiers to model logical objects in the protocol.  That pattern lets clients
 interact with a potentially large set of logical objects through a single
 protocol.
+
+<!-- xrefs -->
+[ftp-025]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-025.md

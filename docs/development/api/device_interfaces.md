@@ -37,36 +37,8 @@ integer types when a field has a constrained set of non-arithmetic values.
 
 ## Bitfields
 
-If your protocol has a bitfield, represent its values using `bits` values
-(for details, see [`FTP-025`: "Bit Flags."][ftp-025])
-
-For example:
-
-```fidl
-// Bit definitions for Info.features field
-
-bits InfoFeatures : uint32 {
-    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
-    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
-    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
-};
-```
-
-This indicates that the `InfoFeatures` bit field is backed by an unsigned 32-bit
-integer, and then goes on to define the three bits that are used.
-
-You can also express the values in binary (as opposed to hex) using the `0b`
-notation:
-
-```fidl
-bits InfoFeatures : uint32 {
-    WLAN =     0b00000001;  // If present, this device represents WLAN hardware
-    SYNTH =    0b00000010;  // If present, this device is synthetic (not backed by h/w)
-    LOOPBACK = 0b00000100;  // If present, this device receives all messages it sends
-};
-```
-
-This is the same as the previous example.
+If your protocol has a bitfield, represent its values using `bits` values.
+For details, see the ["bits"][bits] topic in the readability rubric.
 
 ## Non-channel based protocols
 
@@ -78,5 +50,4 @@ documentation about participation in the protocol.  Packed structures are not
 currently supported.
 
 [fidl-readability-rubric]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md
-[ftp-025]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-025.md
-
+[bits]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#bits
