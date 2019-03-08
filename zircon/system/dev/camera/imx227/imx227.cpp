@@ -185,7 +185,13 @@ void Imx227Device::DeInit() {
 }
 
 zx_status_t Imx227Device::GetInfo(sensor_info_t* out_info) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (out_info == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    memcpy(out_info, &ctx_.param, sizeof(sensor_info_t));
+
+    return ZX_OK;
 }
 
 zx_status_t Imx227Device::SetMode(uint8_t mode) {
@@ -261,7 +267,7 @@ zx_status_t Imx227Device::SetMode(uint8_t mode) {
     adap_info.resolution.width = supported_modes[mode].resolution.width;
     adap_info.resolution.height = supported_modes[mode].resolution.height;
     adap_info.path = MIPI_PATH_PATH0;
-    adap_info.mode = MIPI_MODES_DDR_MODE;
+    adap_info.mode = MIPI_MODES_DIR_MODE;
     return mipi_.Init(&mipi_info, &adap_info);
 }
 

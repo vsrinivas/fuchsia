@@ -11,6 +11,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
+#include <fcntl.h>
 #include <hw/reg.h>
 #include <math.h>
 #include <stdint.h>
@@ -295,15 +296,15 @@ void AmlMipiDevice::AdapAlignStart(const mipi_adap_info_t* info) {
 
 int AmlMipiDevice::AdapterIrqHandler() {
     zxlogf(INFO, "%s start\n", __func__);
-    zx_status_t status;
+    zx_status_t status = ZX_OK;
 
     while (running_.load()) {
         status = adap_irq_.wait(NULL);
         if (status != ZX_OK) {
             return status;
         }
-        // TODO(braval) : Add ISR implementation here.
     }
+        // TODO(braval) : Add ISR implementation here.
     return status;
 }
 
