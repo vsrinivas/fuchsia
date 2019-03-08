@@ -5,29 +5,6 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-test_package("netstack_tests") {
-  deps = [
-    "//garnet/go/src/netstack/tests/automated:netstack_localhost_test",
-    "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
-    "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
-  ]
-
-  tests = [
-    {
-      name = "netstack_localhost_test"
-      environments = basic_envs
-    },
-    {
-      name = "netstack_loopback_test"
-      environments = basic_envs
-    },
-    {
-      name = "netstack_gonet_test"
-      environments = basic_envs
-    },
-  ]
-}
-
 package("netstack_manual_tests") {
   testonly = true
 

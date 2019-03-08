@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -34,6 +35,35 @@ executable("netstack_integration_test") {
   ]
 }
 
+test("netstack_bsdsocket_test") {
+  if (is_linux || is_fuchsia) {
+    sources = [
+      "bsdsocket_test.cc",
+      "util.cc",
+      "util.h",
+    ]
+  }
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test("netstack_fdio_test") {
+  sources = [
+    "fdio_test.cc",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net_c",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/sync",
+  ]
+}
+
 test_package("netstack_integration_tests") {
   deps = [
     ":netstack_integration_test",
@@ -43,6 +73,24 @@ test_package("netstack_integration_tests") {
     {
       name = "netstack_integration_test"
       environments = basic_envs
+    },
+  ]
+}
+
+test_package("netstack_libc_tests") {
+  deps = [
+    ":netstack_bsdsocket_test",
+    ":netstack_fdio_test",
+  ]
+
+  tests = [
+    {
+      name = "netstack_bsdsocket_test"
+      environments = [ qemu_env ]
+    },
+    {
+      name = "netstack_fdio_test"
+      environments = [ qemu_env ]
     },
   ]
 }
