@@ -82,12 +82,16 @@ group("monolith_packages") {
 
 group("preinstall_packages") {
   testonly = true
-  public_deps = preinstall_packages
+  public_deps = preinstall_packages + [
+    ":monolith_packages",
+  ]
 }
 
 group("available_packages") {
   testonly = true
-  public_deps = available_packages
+  public_deps = available_packages + [
+    ":preinstall_packages",
+  ]
 }
 
 template("package_list") {
