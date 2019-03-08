@@ -4,7 +4,7 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/bin/tts/tts_speaker.h"
+#include "src/speech/tts/tts_speaker.h"
 
 namespace tts {
 
@@ -39,7 +39,7 @@ zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
 }
 
 zx_status_t TtsSpeaker::Init(
-    const std::unique_ptr<component::StartupContext>& startup_context) {
+    const std::unique_ptr<sys::StartupContext>& startup_context) {
   zx_status_t res;
 
   if (wakeup_event_.is_valid()) {
@@ -64,8 +64,7 @@ zx_status_t TtsSpeaker::Init(
   }
 
   FXL_DCHECK(startup_context != nullptr);
-  auto audio =
-      startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
+  auto audio = startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
@@ -140,8 +139,7 @@ void TtsSpeaker::SendPendingAudio() {
 
     if (eos && (todo == bytes_to_send)) {
       audio_renderer_->SendPacket(
-          pkt,
-          [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
+          pkt, [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
             speak_complete_cbk();
           });
     } else if (todo == bytes_till_low_water) {

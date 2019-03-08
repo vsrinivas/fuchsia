@@ -4,12 +4,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/tts/tts_service_impl.h"
+#include "src/speech/tts/tts_service_impl.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  tts::TtsServiceImpl impl(component::StartupContext::CreateFromStartupInfo());
+  tts::TtsServiceImpl impl(sys::StartupContext::CreateFromStartupInfo());
 
   if (impl.Init() != ZX_OK)
     return -1;

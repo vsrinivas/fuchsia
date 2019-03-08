@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_TTS_TTS_SERVICE_IMPL_H_
-#define GARNET_BIN_TTS_TTS_SERVICE_IMPL_H_
+#ifndef SRC_SPEECH_TTS_TTS_SERVICE_IMPL_H_
+#define SRC_SPEECH_TTS_TTS_SERVICE_IMPL_H_
 
 #include <memory>
 #include <set>
 
 #include <fuchsia/tts/cpp/fidl.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace tts {
 
@@ -18,7 +18,7 @@ class TtsSpeaker;
 
 class TtsServiceImpl {
  public:
-  TtsServiceImpl(std::unique_ptr<component::StartupContext> startup_context);
+  TtsServiceImpl(std::unique_ptr<sys::StartupContext> startup_context);
   ~TtsServiceImpl();
 
   zx_status_t Init();
@@ -36,8 +36,8 @@ class TtsServiceImpl {
     void Say(std::string words, uint64_t token, SayCallback cbk) override;
 
    private:
-    void OnSpeakComplete(const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token,
-                         SayCallback cbk);
+    void OnSpeakComplete(const std::shared_ptr<TtsSpeaker>& speaker,
+                         uint64_t token, SayCallback cbk);
 
     TtsServiceImpl* const owner_;
     fidl::Binding<TtsService> binding_;
@@ -46,12 +46,17 @@ class TtsServiceImpl {
 
   friend class Client;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::StartupContext> startup_context_;
   std::set<Client*> clients_;
   async_dispatcher_t* dispatcher_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(TtsServiceImpl);
+
+  // Disallow copy, assign and move.
+  TtsServiceImpl(const TtsServiceImpl&) = delete;
+  TtsServiceImpl(TtsServiceImpl&&) = delete;
+  TtsServiceImpl& operator=(const TtsServiceImpl&) = delete;
+  TtsServiceImpl& operator=(TtsServiceImpl&&) = delete;
 };
 
 }  // namespace tts
 
-#endif  // GARNET_BIN_TTS_TTS_SERVICE_IMPL_H_
+#endif  // SRC_SPEECH_TTS_TTS_SERVICE_IMPL_H_

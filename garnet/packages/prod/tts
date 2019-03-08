@@ -3,6 +3,6 @@
         "garnet/packages/prod/media_audio"
     ],
     "packages": [
-        "//garnet/bin/tts:tts_service"
+        "//src/speech/tts:tts_service"
     ]
 }

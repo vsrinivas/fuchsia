@@ -4,14 +4,14 @@
 
 #include <lib/fit/defer.h>
 
-#include "garnet/bin/tts/tts_service_impl.h"
-#include "garnet/bin/tts/tts_speaker.h"
+#include "src/speech/tts/tts_service_impl.h"
+#include "src/speech/tts/tts_speaker.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace tts {
 
 TtsServiceImpl::TtsServiceImpl(
-    std::unique_ptr<component::StartupContext> startup_context)
+    std::unique_ptr<sys::StartupContext> startup_context)
     : startup_context_(std::move(startup_context)) {
   FXL_DCHECK(startup_context_);
 
@@ -85,7 +85,8 @@ void TtsServiceImpl::Client::Say(std::string words, uint64_t token,
 }
 
 void TtsServiceImpl::Client::OnSpeakComplete(
-    const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token, SayCallback cbk) {
+    const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token,
+    SayCallback cbk) {
   auto iter = active_speakers_.find(speaker);
 
   if (iter == active_speakers_.end()) {

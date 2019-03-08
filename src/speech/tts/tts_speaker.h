@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_TTS_TTS_SPEAKER_H_
-#define GARNET_BIN_TTS_TTS_SPEAKER_H_
+#ifndef SRC_SPEECH_TTS_TTS_SPEAKER_H_
+#define SRC_SPEECH_TTS_TTS_SPEAKER_H_
 
 #include <mutex>
 #include <thread>
@@ -15,10 +15,10 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/types.h>
 
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace tts {
@@ -28,8 +28,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   TtsSpeaker(async_dispatcher_t* master_dispatcher);
   ~TtsSpeaker() = default;
 
-  zx_status_t Init(
-      const std::unique_ptr<component::StartupContext>& startup_context);
+  zx_status_t Init(const std::unique_ptr<sys::StartupContext>& startup_context);
 
   zx_status_t Speak(fidl::StringPtr words, fit::closure speak_complete_cbk);
   void Shutdown();
@@ -89,4 +88,4 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
 
 }  // namespace tts
 
-#endif  // GARNET_BIN_TTS_TTS_SPEAKER_H_
+#endif  // SRC_SPEECH_TTS_TTS_SPEAKER_H_
