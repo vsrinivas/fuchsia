@@ -151,13 +151,13 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 
 	ip, err := botanist.ResolveIPv4(ctx, nodename, netstackTimeout)
 	if err != nil {
-		return fmt.Errorf("could not resolve IP address: %v", err)
+		logger.Errorf(ctx, "could not resolve IP address: %v", err)
 	}
 
 	env := append(
 		os.Environ(),
 		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
-		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%s", ip),
+		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%v", ip),
 		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKey),
 	)
 
