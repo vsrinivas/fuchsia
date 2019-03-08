@@ -15,6 +15,7 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
+            "fuchsia.tracelink.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]
     }
