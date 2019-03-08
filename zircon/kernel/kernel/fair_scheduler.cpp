@@ -182,7 +182,6 @@ thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thr
         // If the timeslice expired put the current thread back in the runqueue,
         // otherwise continue to run it.
         if (timeslice_expired) {
-            //NextThreadTimeslice(current_thread);
             UpdateThreadTimeline(current_thread);
             QueueThread(current_thread);
         } else {
@@ -288,11 +287,11 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
 
     UpdateTimeline(now);
 
-    const SchedTime total_runtime_ns = now - current_thread->last_started_running;
-    const SchedDuration actual_runtime_ns = now - last_reschedule_time_ns_;
-    last_reschedule_time_ns_ = now;
+    const SchedTime total_runtime_ns = now - start_of_current_time_slice_ns_;
+    const SchedDuration actual_runtime_ns = now - current_thread->last_started_running;
+    current_thread->last_started_running = now.raw_value();
 
-    // Update the accounting for the thread that just ran.
+    // Update the runtime accounting for the thread that just ran.
     current_thread->runtime_ns += actual_runtime_ns.raw_value();
 
     // Adjust the rate of the current task when competition increases.
@@ -335,11 +334,6 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
 
     active_thread_ = next_thread;
 
-    if (next_thread != current_thread) {
-        // Re-compute the timeslice for the new thread based on the latest state.
-        NextThreadTimeslice(next_thread);
-    }
-
     // Always call to handle races between reschedule IPIs and changes to the run queue.
     mp_prepare_current_cpu_idle_state(thread_is_idle(next_thread));
 
@@ -361,15 +355,20 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
         LOCAL_KTRACE_DURATION trace{"stop_preemption"_stringref};
         SCHED_LTRACEF("Stop preemption timer: current=%s next=%s\n",
                       current_thread->name, next_thread->name);
+        next_thread->last_started_running = now.raw_value();
         timer_preempt_cancel();
     } else if (timeslice_expired || next_thread != current_thread) {
         LOCAL_KTRACE_DURATION trace{"start_preemption: now,deadline"_stringref};
+
+        // Re-compute the time slice for the new thread based on the latest state.
+        NextThreadTimeslice(next_thread);
 
         // Update the preemption time based on the time slice.
         FairTaskState* const next_state = &next_thread->fair_task_state;
         const SchedTime absolute_deadline_ns = now + next_state->time_slice_ns_;
 
         next_thread->last_started_running = now.raw_value();
+        start_of_current_time_slice_ns_ = now;
         scheduled_weight_total_ = weight_total_;
 
         SCHED_LTRACEF("Start preemption timer: current=%s next=%s now=%ld deadline=%ld\n",
@@ -539,7 +538,6 @@ void FairScheduler::Insert(SchedTime now, thread_t* thread) {
         DEBUG_ASSERT(weight_total_ > SchedWeight{0});
         //virtual_time_ -= state->lag_time_ns_ / weight_total_;
 
-        //NextThreadTimeslice(thread);
         UpdateThreadTimeline(thread);
         QueueThread(thread);
     }

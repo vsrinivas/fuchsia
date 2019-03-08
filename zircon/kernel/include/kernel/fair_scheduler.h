@@ -189,9 +189,9 @@ private:
     TA_GUARDED(thread_lock)
     SchedTime last_update_time_ns_{0};
 
-    // The system time of the last reschedule operation on this CPU.
+    // The system time that the current time slice started.
     TA_GUARDED(thread_lock)
-    SchedTime last_reschedule_time_ns_{0};
+    SchedTime start_of_current_time_slice_ns_{0};
 
     // Scheduling period in which every runnable task executes once in units of
     // minimum granularity.
