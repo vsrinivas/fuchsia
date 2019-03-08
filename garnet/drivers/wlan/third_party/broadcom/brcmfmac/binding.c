@@ -24,7 +24,7 @@
 #include <hw/pci.h>
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
-    zxlogf(INFO, "brcmfmac: Bind was called!!\n");
+    brcmf_dbg(TRACE, "Enter");
     return brcmfmac_module_init(device);
 }
 
