@@ -8,7 +8,7 @@
         ],
         "features": [
             "build-info",
-            "deprecated-global-persistent-storage",
+            "isolated-persistent-storage",
             "root-ssl-certificates"
         ],
         "services": [
