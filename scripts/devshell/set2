@@ -36,10 +36,17 @@
 ##                         be run ephemerally. Multiple bundles can be provided
 ##                         delimited by commas or the --with argument can be
 ##                         provided multiple times.
-##   --variant             Selects which rutime variant to use (e.g., asan) by
+##   --variant             Selects which runtime variant to use (e.g., asan) by
 ##                         passing a `select_variant=[VARIANT*,...]` argument
 ##                         to gn that collects all the --variant arguments in
-##                         order.
+##                         order. Variants are normal builds in most respects,
+##                         but allow users to test different runtime settings
+##                         for either the whole build or for a specific target.
+##                         This can be specified by passing the variant name
+##                         to this argument (e.g. `--variant asan`) for the
+##                         former, or the variant name and the target name
+##                         separated by a slash (e.g. `--variant asan/my_test`)
+##                         for the latter.
 ##   --fuzz-with           Pass a sanitizer name, e.g. "--fuzz-with asan" to
 ##                         enable ALL supporting fuzzers.  Use --variant for
 ##                         individual fuzzers, e.g. "--variant asan-fuzzer/foo".
