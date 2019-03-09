@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_
 
 #include <stdbool.h>
 
@@ -36,31 +37,31 @@
 #define BT_HOG_BOOT_MOUSE_INPUT_REPORT 0x2A33
 
 typedef enum {
-    HOGD_DEVICE_BOOT_KEYBOARD,
-    HOGD_DEVICE_BOOT_MOUSE,
-    HOGD_DEVICE_REPORT,
+  HOGD_DEVICE_BOOT_KEYBOARD,
+  HOGD_DEVICE_BOOT_MOUSE,
+  HOGD_DEVICE_REPORT,
 } hogd_device_type_t;
 
 typedef struct hogd_t hogd_t;
 typedef struct hogd_device_t hogd_device_t;
 struct hogd_device_t {
-    hogd_device_type_t device_type;
+  hogd_device_type_t device_type;
 
-    bt_gatt_id_t input_report_id;
-    bool has_input_report_id;
-    bt_gatt_id_t output_report_id;
-    bool has_output_report_id;
+  bt_gatt_id_t input_report_id;
+  bool has_input_report_id;
+  bt_gatt_id_t output_report_id;
+  bool has_output_report_id;
 
-    bool is_initialized;
-    zx_device_t* dev;
-    mtx_t lock;
-    hidbus_ifc_t ifc;
+  bool is_initialized;
+  zx_device_t* dev;
+  mtx_t lock;
+  hidbus_ifc_t ifc;
 
-    // Reference to owner.
-    hogd_t *parent;
+  // Reference to owner.
+  hogd_t* parent;
 
-    // Report devices are stored as a singly linked list. Currently unused.
-    hogd_device_t *next;
+  // Report devices are stored as a singly linked list. Currently unused.
+  hogd_device_t* next;
 };
 
 struct hogd_t {
@@ -83,5 +84,7 @@ struct hogd_t {
   hogd_device_t boot_mouse_device;
 
   // Report devices are stored as a singly linked list.
-  hogd_device_t *report_device;
+  hogd_device_t* report_device;
 };
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_

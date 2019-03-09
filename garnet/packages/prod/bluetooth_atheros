@@ -3,6 +3,6 @@
         "garnet/packages/prod/bluetooth_hci"
     ],
     "packages": [
-        "//garnet/drivers/bluetooth/hci/atheros"
+        "//src/connectivity/bluetooth/hci/atheros"
     ]
 }

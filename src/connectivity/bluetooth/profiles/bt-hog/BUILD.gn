@@ -23,7 +23,7 @@ driver_module("driver") {
   ]
 }
 
-package("hid") {
+package("bt-hog") {
   deprecated_system_image = true
 
   deps = [

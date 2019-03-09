@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/drivers/bluetooth/profiles/gatt/hid"
+	"//src/connectivity/bluetooth/profiles/bt-hog"
     ]
 }

@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/drivers/bluetooth/hci/passthrough"
+	"//src/connectivity/bluetooth/hci/passthrough"
     ]
 }

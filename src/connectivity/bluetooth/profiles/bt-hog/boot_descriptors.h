@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_H_
+
+// clang-format off
+
 static const uint8_t kbd_hid_report_desc[] = {
     0x05, 0x01,  // Usage Page (Generic Desktop Ctrls)
     0x09, 0x06,  // Usage (Keyboard)
@@ -65,3 +70,5 @@ static const uint8_t mouse_hid_report_desc[] = {
     0xC0,              //   End Collection
     0xC0,              // End Collection
 };
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_H_

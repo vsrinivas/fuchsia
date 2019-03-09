@@ -12,14 +12,6 @@ fuchsia_internal/firmware/ralink git_revision:12987cadb37de28719990dfc2397ec6d09
 @Subdir drivers/wlan/third_party/broadcom/brcmfmac/firmware
 fuchsia_internal/firmware/wlan/broadcom/brcmfmac version:4
 
-# Intel bluetooth firmware
-@Subdir drivers/bluetooth/hci/intel/firmware
-fuchsia_internal/firmware/bluetooth/intel git_revision:44d4fca9922a252a0bd81f6307bcc072a78da54a
-
-# Atheros bluetooth firmware
-@Subdir drivers/bluetooth/hci/atheros/firmware
-fuchsia_internal/firmware/bluetooth/qualcomm_atheros git_revision:7b5835fd37630d18ac0c755329172f6a17c1af29
-
 # Atheros wlan firmware
 @Subdir drivers/wlan/third_party/atheros/ath10k/firmware
 fuchsia_internal/firmware/wlan/atheros/ath10k git_revision:7518922bd5b98b137af7aaf3c836f5a498e91609

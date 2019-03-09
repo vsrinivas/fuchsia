@@ -1,10 +1,10 @@
 {
     "packages": [
-        "//garnet/drivers/bluetooth/hci/atheros",
-        "//garnet/drivers/bluetooth/hci/fake",
-        "//garnet/drivers/bluetooth/hci/intel",
-        "//garnet/drivers/bluetooth/hci/passthrough",
         "//garnet/drivers/bluetooth/host",
-        "//garnet/drivers/bluetooth/profiles/gatt/hid"
+        "//src/connectivity/bluetooth/hci/atheros",
+        "//src/connectivity/bluetooth/hci/fake",
+        "//src/connectivity/bluetooth/hci/intel",
+        "//src/connectivity/bluetooth/hci/passthrough",
+        "//src/connectivity/bluetooth/profiles/bt-hog"
     ]
 }

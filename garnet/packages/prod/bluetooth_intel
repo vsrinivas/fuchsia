@@ -3,6 +3,6 @@
         "garnet/packages/prod/bluetooth_hci"
     ],
     "packages": [
-        "//garnet/drivers/bluetooth/hci/intel"
+        "//src/connectivity/bluetooth/hci/intel"
     ]
 }

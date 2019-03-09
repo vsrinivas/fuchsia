@@ -4,11 +4,11 @@
     ],
     "packages": [
         "//src/connectivity/bluetooth/core/bt-gap:tests",
-        "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
-        "//src/connectivity/bluetooth/tools/bt-snoop:tests",
-        "//src/connectivity/bluetooth/tests",
+        "//src/connectivity/bluetooth/hci/fake",
         "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
         "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
-        "//garnet/drivers/bluetooth/hci/fake"
+        "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
+        "//src/connectivity/bluetooth/tools/bt-snoop:tests",
+        "//src/connectivity/bluetooth/tests"
     ]
 }
