@@ -226,6 +226,9 @@ private:
 };
 
 TEST(ThermalTest, TripPoints) {
+    // TODO(bradenkell): Fix FLK-86
+    return;
+
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 3;
     thermal_info.critical_temp = CToKTenths(50);
