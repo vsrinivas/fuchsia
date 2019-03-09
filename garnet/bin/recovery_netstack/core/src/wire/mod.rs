@@ -17,7 +17,7 @@
 // TODO(joshlf): Move into debug_err! and debug_err_fn! definitions once
 // attributes are allowed on expressions
 // (https://github.com/rust-lang/rust/issues/15701).
-#![cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
+#![allow(clippy::block_in_if_condition_stmt)]
 
 /// Emit a debug message and return an error.
 ///

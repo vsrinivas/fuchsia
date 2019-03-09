@@ -14,7 +14,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
-use crate::wire::util::{Checksum, Options};
+use crate::wire::util::{fits_in_u16, Checksum, Options};
 
 use self::options::Ipv4OptionImpl;
 
@@ -375,7 +375,7 @@ impl PacketBuilder for Ipv4PacketBuilder {
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
@@ -392,10 +392,12 @@ impl PacketBuilder for Ipv4PacketBuilder {
 
         packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
         packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
-        // This conversion is valid because the caller promises to supply a body
-        // whose length does not exceed max_body_len. If they uphold that
-        // contract, then the conversion won't be lossy, and if they break the
-        // contract, writing an incorrect header value is OK.
+        // The caller promises to supply a body whose length does not exceed
+        // max_body_len. Doing this as a debug_assert (rather than an assert) is
+        // fine because, with debug assertions disabled, we'll just write an
+        // incorrect header value, which is acceptable if the caller has
+        // violated their contract.
+        debug_assert!(fits_in_u16(packet.total_packet_len()));
         let total_len = packet.total_packet_len() as u16;
         NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len);
         NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);

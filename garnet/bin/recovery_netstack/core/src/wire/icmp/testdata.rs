@@ -52,8 +52,8 @@ pub(crate) mod ndp_router {
     pub(crate) const SOURCE_LINK_LAYER_ADDRESS: &[u8] = &[0x00, 0x00, 0x5e, 0x00, 0x02, 0x65];
 
     /// Data from the Prefix Info option.
-    pub(crate) const PREFIX_INFO_VALID_LIFETIME: u32 = 2592000;
-    pub(crate) const PREFIX_INFO_PREFERRED_LIFETIME: u32 = 604800;
+    pub(crate) const PREFIX_INFO_VALID_LIFETIME: u32 = 2_592_000;
+    pub(crate) const PREFIX_INFO_PREFERRED_LIFETIME: u32 = 604_800;
     pub(crate) const PREFIX_ADDRESS: &[u8] = &[
         0x26, 0x20, 0x00, 0x00, 0x10, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00,

@@ -200,7 +200,7 @@ impl PacketBuilder for EthernetFrameBuilder {
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
@@ -246,8 +246,8 @@ mod tests {
     // of the body.
     fn new_parse_buf() -> ([u8; ETHERNET_MIN_FRAME_LEN], [u8; ETHERNET_MIN_BODY_LEN_NO_TAG]) {
         let mut buf = [0; ETHERNET_MIN_FRAME_LEN];
-        for i in 0..ETHERNET_MIN_FRAME_LEN {
-            buf[i] = i as u8;
+        for (i, elem) in buf.iter_mut().enumerate() {
+            *elem = i as u8;
         }
         NetworkEndian::write_u16(&mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..], EtherType::Arp.into());
         let mut body = [0; ETHERNET_MIN_BODY_LEN_NO_TAG];
@@ -259,8 +259,8 @@ mod tests {
     // serialization.
     fn new_serialize_buf() -> [u8; ETHERNET_MIN_BODY_LEN_NO_TAG] {
         let mut buf = [0; ETHERNET_MIN_BODY_LEN_NO_TAG];
-        for i in 0..ETHERNET_MIN_BODY_LEN_NO_TAG {
-            buf[i] = i as u8;
+        for (i, elem) in buf.iter_mut().enumerate() {
+            *elem = i as u8;
         }
         buf
     }
@@ -297,7 +297,7 @@ mod tests {
             let tag: &[u8; 4] = frame.tag.as_ref().unwrap();
             let got_tag = NetworkEndian::read_u32(tag);
             let want_tag =
-                (*tpid as u32) << 16 | ((TPID_OFFSET as u32 + 2) << 8) | (TPID_OFFSET as u32 + 3);
+                u32::from(*tpid) << 16 | ((TPID_OFFSET as u32 + 2) << 8) | (TPID_OFFSET as u32 + 3);
             assert_eq!(got_tag, want_tag);
             // Offset by 4 since new_parse_buf returns a body on the assumption
             // that there's no tag.

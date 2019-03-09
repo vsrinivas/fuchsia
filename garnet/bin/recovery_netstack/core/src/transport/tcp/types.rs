@@ -50,11 +50,11 @@ pub(crate) struct TcpSackBlock {
 }
 
 impl TcpSackBlock {
-    pub(crate) fn left_edge(&self) -> u32 {
+    pub(crate) fn left_edge(self) -> u32 {
         NetworkEndian::read_u32(&self.left_edge)
     }
 
-    pub(crate) fn right_edge(&self) -> u32 {
+    pub(crate) fn right_edge(self) -> u32 {
         NetworkEndian::read_u32(&self.right_edge)
     }
 

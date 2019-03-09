@@ -217,7 +217,7 @@ pub(crate) fn receive_arp_packet<
         // cancel a timeout to resend a request.
         ctx.dispatcher.cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
             DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-                device_id: device_id,
+                device_id,
                 ip_addr: packet.sender_protocol_address().addr(),
             }),
         )));
@@ -304,7 +304,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
         ctx.dispatcher.schedule_timeout(
             Duration::from_secs(20),
             TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-                device_id: device_id,
+                device_id,
                 ip_addr: lookup_addr.addr(),
             }))),
         );

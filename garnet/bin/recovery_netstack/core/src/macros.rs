@@ -11,6 +11,8 @@ macro_rules! log_unimplemented {
         unimplemented!($fmt, $($arg),*);
 
         #[cfg(not(feature = "crash_on_unimplemented"))]
+        // Clippy doesn't like blocks explicitly returning ().
+        #[allow(clippy::unused_unit)]
         {
             // log doesn't play well with the new macro system; it expects all
             // of its macros to be in scope

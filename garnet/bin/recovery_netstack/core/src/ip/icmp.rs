@@ -413,6 +413,7 @@ mod tests {
     /// `expect_message` and `expect_code`.
     ///
     /// The state is initialized to `testutil::DUMMY_CONFIG` when testing.
+    #[allow(clippy::too_many_arguments)]
     fn test_receive_ip_packet<
         C: PartialEq + Debug,
         M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + PartialEq + Debug,
@@ -444,7 +445,7 @@ mod tests {
         receive_ip_packet::<_, _, Ipv4>(&mut ctx, DeviceId::new_ethernet(1), buffer);
 
         for counter in assert_counters {
-            assert!(ctx.state().test_counters.get(counter) > &0, "counter at zero: {}", counter);
+            assert!(*ctx.state().test_counters.get(counter) > 0, "counter at zero: {}", counter);
         }
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);

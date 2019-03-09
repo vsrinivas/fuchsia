@@ -45,9 +45,9 @@ impl FixedHeader {
     }
 
     fn flowlabel(&self) -> u32 {
-        (self.version_tc_flowlabel[1] as u32 & 0xF) << 16
-            | (self.version_tc_flowlabel[2] as u32) << 8
-            | self.version_tc_flowlabel[3] as u32
+        (u32::from(self.version_tc_flowlabel[1]) & 0xF) << 16
+            | u32::from(self.version_tc_flowlabel[2]) << 8
+            | u32::from(self.version_tc_flowlabel[3])
     }
 
     fn payload_len(&self) -> u16 {
@@ -267,7 +267,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
@@ -324,7 +324,7 @@ mod tests {
     // Return a new FixedHeader with reasonable defaults.
     fn new_fixed_hdr() -> FixedHeader {
         let mut fixed_hdr = FixedHeader::default();
-        NetworkEndian::write_u32(&mut fixed_hdr.version_tc_flowlabel[..], 0x60200077);
+        NetworkEndian::write_u32(&mut fixed_hdr.version_tc_flowlabel[..], 0x6020_0077);
         NetworkEndian::write_u16(&mut fixed_hdr.payload_len[..], 0);
         fixed_hdr.next_hdr = IpProto::Tcp.into();
         fixed_hdr.hop_limit = 64;

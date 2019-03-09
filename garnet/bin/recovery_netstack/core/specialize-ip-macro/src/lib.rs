@@ -211,10 +211,15 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                 }
 
                 impl Ext for crate::ip::#ipv4_type_ident {
+                    // Due to the lack of support for attributes on expressions
+                    // (see README.md), users often need to do `return x;`
+                    // rather than just `x`, which causes Clippy to complain.
+                    #[allow(clippy::needless_return)]
                     fn f #trait_decl #ipv4_block
                 }
 
                 impl Ext for crate::ip::#ipv6_type_ident {
+                    #[allow(clippy::needless_return)]
                     fn f #trait_decl #ipv6_block
                 }
 

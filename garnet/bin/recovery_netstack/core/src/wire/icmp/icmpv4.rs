@@ -145,10 +145,10 @@ impl_icmp_message!(Ipv4, IcmpEchoReply, EchoReply, IcmpUnusedCode, OriginalPacke
 
 create_net_enum! {
   Icmpv4RedirectCode,
-  RedirectForNetwork: REDIRECT_FOR_NETWORK = 0,
-  RedirectForHost: REDIRECT_FOR_HOST = 1,
-  RedirectForToSNetwork: REDIRECT_FOR_TOS_NETWORK = 2,
-  RedirectForToSHost: REDIRECT_FOR_TOS_HOST = 3,
+  Network: NETWORK = 0,
+  Host: HOST = 1,
+  ToSNetwork: TOS_NETWORK = 2,
+  ToSHost: TOS_HOST = 3,
 }
 
 /// An ICMPv4 Redirect Message.
@@ -348,7 +348,7 @@ mod tests {
     fn test_parse_and_serialize_redirect() {
         use crate::wire::testdata::icmp_redirect::*;
         test_parse_and_serialize::<Icmpv4Redirect, _>(IP_PACKET_BYTES, |icmp| {
-            assert_eq!(icmp.code(), Icmpv4RedirectCode::RedirectForHost);
+            assert_eq!(icmp.code(), Icmpv4RedirectCode::Host);
             assert_eq!(icmp.message().gateway, GATEWAY_ADDR);
         });
     }

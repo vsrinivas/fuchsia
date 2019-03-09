@@ -226,7 +226,7 @@ mod checksum {
 
         #[test]
         fn test_smoke_update() {
-            let mut rng = new_rng(70812476915813);
+            let mut rng = new_rng(70_812_476_915_813);
 
             for _ in 0..2048 {
                 // use an odd length so we test the odd length logic
@@ -466,8 +466,8 @@ mod records {
         type Item = R::Output;
 
         fn next(&mut self) -> Option<R::Output> {
-            // use match rather than expect because expect requires that Err: Debug
             let mut bytes = LongLivedBuff::new(self.bytes);
+            // use match rather than expect because expect requires that Err: Debug
             #[allow(clippy::match_wild_err_arm)]
             let result = match next::<_, R>(&mut bytes, &mut self.limit) {
                 Ok(o) => o,

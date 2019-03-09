@@ -38,7 +38,7 @@ impl Mac {
     }
 
     /// Get the bytes of the MAC address.
-    pub(crate) fn bytes(&self) -> [u8; 6] {
+    pub(crate) fn bytes(self) -> [u8; 6] {
         self.0
     }
 
@@ -48,7 +48,7 @@ impl Mac {
     /// to form the identifier. If None, the standard 0xfffe will be used.
     ///
     // TODO: remove `eui_magic` arg if/once it is unused.
-    pub(crate) fn to_eui64(&self, eui_magic: Option<[u8; 2]>) -> [u8; 8] {
+    pub(crate) fn to_eui64(self, eui_magic: Option<[u8; 2]>) -> [u8; 8] {
         let mut eui = [0; 8];
         eui[0..3].copy_from_slice(&self.0[0..3]);
         eui[3..5].copy_from_slice(&eui_magic.unwrap_or(Self::EUI_MAGIC));
@@ -63,7 +63,7 @@ impl Mac {
     /// to form the identifier. If None, the standard 0xfffe will be used.
     ///
     /// TODO: remove `eui_magic` arg if/once it is unused.
-    pub(crate) fn to_slaac_ipv6(&self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
+    pub(crate) fn to_slaac_ipv6(self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
         let mut ipv6_addr = [0; 16];
         ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64(eui_magic));
@@ -74,7 +74,7 @@ impl Mac {
     ///
     /// Returns true if the least significant bit of the first byte of the
     /// address is 0.
-    pub(crate) fn is_unicast(&self) -> bool {
+    pub(crate) fn is_unicast(self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         self.0[0] & 1 == 0
     }
@@ -83,7 +83,7 @@ impl Mac {
     ///
     /// Returns true if the least significant bit of the first byte of the
     /// address is 1.
-    pub(crate) fn is_multicast(&self) -> bool {
+    pub(crate) fn is_multicast(self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         self.0[0] & 1 == 1
     }
@@ -91,9 +91,9 @@ impl Mac {
     /// Is this the broadcast MAC address?
     ///
     /// Returns true if this is the broadcast MAC address, FF:FF:FF:FF:FF:FF.
-    pub(crate) fn is_broadcast(&self) -> bool {
+    pub(crate) fn is_broadcast(self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
-        *self == Mac::BROADCAST
+        self == Mac::BROADCAST
     }
 }
 
@@ -331,7 +331,7 @@ fn get_device_state<D: EventDispatcher>(
         .device
         .ethernet
         .get_mut(&device_id)
-        .expect(&format!("no such Ethernet device: {}", device_id))
+        .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
 }
 
 // Dummy type used to implement ArpDevice.

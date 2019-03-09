@@ -271,7 +271,7 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let (mut header, body, _) = buffer.parts();
@@ -283,7 +283,7 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         let header = header.take_obj_front_zero::<Header>().expect("too few bytes for UDP header");
         let mut packet = UdpPacket { header, body };
 
-        packet.header.set_src_port(self.src_port.map(|port| port.get()).unwrap_or(0));
+        packet.header.set_src_port(self.src_port.map(NonZeroU16::get).unwrap_or(0));
         packet.header.set_dst_port(self.dst_port.get());
         let total_len = packet.total_packet_len();
         let len_field = if fits_in_u16(total_len) {
@@ -301,10 +301,12 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
 
         // This ignores the checksum field in the header, so it's fine that we
         // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let c = packet.compute_checksum(self.src_ip, self.dst_ip).expect(&format!(
-            "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
-            total_len
-        ));
+        let c = packet.compute_checksum(self.src_ip, self.dst_ip).unwrap_or_else(|| {
+            panic!(
+                "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
+                total_len
+            )
+        });
         NetworkEndian::write_u16(
             &mut packet.header.checksum,
             if c == 0 {
@@ -372,7 +374,7 @@ mod tests {
                 ip_packet.dst_ip(),
             ))
             .unwrap();
-        assert_eq!(udp_packet.src_port().map(|p| p.get()).unwrap_or(0), UDP_SRC_PORT);
+        assert_eq!(udp_packet.src_port().map(NonZeroU16::get).unwrap_or(0), UDP_SRC_PORT);
         assert_eq!(udp_packet.dst_port().get(), UDP_DST_PORT);
         assert_eq!(udp_packet.body(), UDP_BODY);
 

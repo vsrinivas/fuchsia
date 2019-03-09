@@ -100,7 +100,7 @@ pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> boo
         .timer_events
         .keys()
         .next()
-        .map(|t| *t)
+        .cloned()
         .and_then(|t| ctx.dispatcher.timer_events.remove(&t).map(|id| (t, id)))
     {
         Some((t, id)) => {
@@ -130,6 +130,7 @@ pub(crate) fn parse_ethernet_frame(
 ///
 /// `parse_ip_packet` parses an IP packet, returning the body along with some
 /// important header fields.
+#[allow(clippy::type_complexity)]
 pub(crate) fn parse_ip_packet<I: Ip>(
     mut buf: &[u8],
 ) -> ParseResult<(&[u8], I::Addr, I::Addr, IpProto)> {
@@ -168,7 +169,7 @@ where
 {
     let packet =
         (&mut buf).parse_with::<_, IcmpPacket<I, _, M>>(IcmpParseArgs::new(src_ip, dst_ip))?;
-    let message = packet.message().clone();
+    let message = *packet.message();
     let code = packet.code();
     f(&packet);
     Ok((message, code))
@@ -179,6 +180,7 @@ where
 /// `parse_ip_packet_in_ethernet_frame` parses an IP packet in an Ethernet
 /// frame, returning the body of the IP packet along with some important fields
 /// from both the IP and Ethernet headers.
+#[allow(clippy::type_complexity)]
 pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
     buf: &[u8],
 ) -> ParseResult<(&[u8], Mac, Mac, I::Addr, I::Addr, IpProto)> {
@@ -198,6 +200,7 @@ pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
 /// an IP packet in an Ethernet frame, returning the message and code from the
 /// ICMP packet along with some important fields from both the IP and Ethernet
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
+#[allow(clippy::type_complexity)]
 pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
     I: Ip,
     C,
@@ -387,7 +390,7 @@ impl DummyEventDispatcher {
     }
 
     /// Get an ordered list of all scheduled timer events
-    pub(crate) fn timer_events<'a>(&'a self) -> impl Iterator<Item = (&'a Instant, &'a TimerId)> {
+    pub(crate) fn timer_events(&self) -> impl Iterator<Item = (&'_ Instant, &'_ TimerId)> {
         self.timer_events.iter()
     }
 

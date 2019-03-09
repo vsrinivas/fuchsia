@@ -127,7 +127,7 @@ mod internal {
         /// The number for this IP protocol version.
         ///
         /// 4 for `V4` and 6 for `V6`.
-        pub(crate) fn version_number(&self) -> u8 {
+        pub(crate) fn version_number(self) -> u8 {
             match self {
                 IpVersion::V4 => 4,
                 IpVersion::V6 => 6,
@@ -135,13 +135,13 @@ mod internal {
         }
 
         /// Is this IPv4?
-        pub(crate) fn is_v4(&self) -> bool {
-            *self == IpVersion::V4
+        pub(crate) fn is_v4(self) -> bool {
+            self == IpVersion::V4
         }
 
         /// Is this IPv6?
-        pub(crate) fn is_v6(&self) -> bool {
-            *self == IpVersion::V6
+        pub(crate) fn is_v6(self) -> bool {
+            self == IpVersion::V6
         }
     }
 
@@ -290,7 +290,7 @@ mod internal {
         }
 
         /// Get the bytes of the IPv4 address.
-        pub(crate) const fn ipv4_bytes(&self) -> [u8; 4] {
+        pub(crate) const fn ipv4_bytes(self) -> [u8; 4] {
             self.0
         }
     }
@@ -487,7 +487,7 @@ mod internal {
 
     impl Subnet<Ipv4Addr> {
         /// Get the broadcast address in this subnet.
-        pub(crate) fn broadcast(&self) -> Ipv4Addr {
+        pub(crate) fn broadcast(self) -> Ipv4Addr {
             if self.prefix == 32 {
                 // shifting right by the size of the value is undefined
                 self.network

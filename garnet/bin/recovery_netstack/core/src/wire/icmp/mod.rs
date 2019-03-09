@@ -116,6 +116,7 @@ impl<I: Ip> IcmpIpExt for I {
     // divide by 0 will only happen during constant evaluation, which will only
     // happen if this implementation is monomorphized, which should never happen
     default const IP_PROTO: IpProto = {
+        #[allow(const_err, clippy::eq_op, clippy::erasing_op)]
         let _ = 0 / 0;
         IpProto::Other(255)
     };
@@ -221,7 +222,7 @@ impl<B: Deref<Target = [u8]>> OriginalPacket<B> {
 
 impl<B> MessageBody<B> for OriginalPacket<B> {
     fn parse(bytes: B) -> ParseResult<OriginalPacket<B>> {
-        return Ok(OriginalPacket(bytes));
+        Ok(OriginalPacket(bytes))
     }
 
     fn len(&self) -> usize
@@ -510,7 +511,7 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketBuilder for IcmpPacketBuilder<
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         use packet::BufferViewMut;
 
         let (mut prefix, message_body, _) = buffer.parts();
@@ -518,7 +519,7 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketBuilder for IcmpPacketBuilder<
         let mut prefix = &mut prefix;
 
         assert!(
-            M::Body::EXPECTS_BODY || message_body.len() == 0,
+            M::Body::EXPECTS_BODY || message_body.is_empty(),
             "body provided for message that doesn't take a body"
         );
         // SECURITY: Use _zero constructors to ensure we zero memory to prevent
@@ -577,7 +578,7 @@ impl IdAndSeq {
         IdAndSeq { id: id_bytes, seq: seq_bytes }
     }
 
-    fn id(&self) -> u16 {
+    fn id(self) -> u16 {
         NetworkEndian::read_u16(&self.id)
     }
 
@@ -585,7 +586,7 @@ impl IdAndSeq {
         NetworkEndian::write_u16(&mut self.id, id);
     }
 
-    fn seq(&self) -> u16 {
+    fn seq(self) -> u16 {
         NetworkEndian::read_u16(&self.seq)
     }
 

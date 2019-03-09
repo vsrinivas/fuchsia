@@ -339,7 +339,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
@@ -370,10 +370,12 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         let segment_len = segment.total_segment_len();
         // This ignores the checksum field in the header, so it's fine that we
         // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let checksum = segment.compute_checksum(self.src_ip, self.dst_ip).expect(&format!(
-            "total TCP segment length of {} bytes overflows length field of pseudo-header",
-            segment_len
-        ));
+        let checksum = segment.compute_checksum(self.src_ip, self.dst_ip).unwrap_or_else(|| {
+            panic!(
+                "total TCP segment length of {} bytes overflows length field of pseudo-header",
+                segment_len
+            )
+        });
         NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, checksum);
     }
 }

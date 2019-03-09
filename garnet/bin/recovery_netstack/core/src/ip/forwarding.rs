@@ -110,7 +110,7 @@ impl<I: Ip> ForwardingTable<I> {
         let best_match = self
             .entries
             .iter()
-            .filter_map(|e| if e.subnet.contains(address) { Some(e) } else { None })
+            .filter(|e| e.subnet.contains(address))
             .max_by_key(|e| e.subnet.prefix());
 
         match best_match {

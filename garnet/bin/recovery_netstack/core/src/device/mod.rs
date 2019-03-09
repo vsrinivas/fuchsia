@@ -31,7 +31,7 @@ impl DeviceId {
     }
 
     #[allow(missing_docs)]
-    pub fn id(&self) -> u64 {
+    pub fn id(self) -> u64 {
         self.id
     }
 }
