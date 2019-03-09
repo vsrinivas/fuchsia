@@ -201,8 +201,10 @@ void Device::set_host(Devhost* host) {
         this->coordinator->ReleaseDevhost(host_);
     }
     host_ = host;
+    local_id_ = 0;
     if (host_) {
         host_->AddRef();
+        local_id_ = host_->new_device_id();
     }
 }
 

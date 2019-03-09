@@ -154,6 +154,7 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
 
     void set_host(Devhost* host);
     Devhost* host() const { return host_; }
+    uint64_t local_id() const { return local_id_; }
 
 private:
     fbl::RefPtr<Device> parent_;
@@ -170,6 +171,9 @@ private:
     CompositeDeviceComponent* component_ = nullptr;
 
     Devhost* host_ = nullptr;
+    // The id of this device from the perspective of the devhost.  This can be
+    // used to communicate with the devhost about this device.
+    uint64_t local_id_ = 0;
 };
 
 } // namespace devmgr

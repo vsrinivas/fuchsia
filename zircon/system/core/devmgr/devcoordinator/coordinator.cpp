@@ -677,7 +677,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
                                    const uint64_t* props_data, size_t props_count,
                                    fbl::StringPiece name, uint32_t protocol_id,
                                    fbl::StringPiece driver_path, fbl::StringPiece args,
-                                   bool invisible, zx::channel client_remote) {
+                                   bool invisible, zx::channel client_remote,
+                                   fbl::RefPtr<Device>* new_device) {
     // If this is true, then |name_data|'s size is properly bounded.
     static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
     static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -742,6 +743,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
             return status;
         }
     }
+
+    *new_device = std::move(dev);
     return ZX_OK;
 }
 
@@ -1119,10 +1122,13 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc, const uint64_t
     fbl::StringPiece args(args_data, args_size);
     zx::channel client_remote(raw_client_remote);
 
+    fbl::RefPtr<Device> device;
     zx_status_t status = parent->coordinator->AddDevice(parent, std::move(rpc), props_data,
                                                         props_count, name, protocol_id, driver_path,
-                                                        args, false, std::move(client_remote));
-    return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status);
+                                                        args, false, std::move(client_remote),
+                                                        &device);
+    uint64_t local_id = device != nullptr ? device->local_id() : 0;
+    return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status, local_id);
 }
 
 static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
@@ -1139,10 +1145,13 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
     fbl::StringPiece args(args_data, args_size);
     zx::channel client_remote(raw_client_remote);
 
+    fbl::RefPtr<Device> device;
     zx_status_t status = parent->coordinator->AddDevice(parent, std::move(rpc), props_data,
                                                         props_count, name, protocol_id, driver_path,
-                                                        args, true, std::move(client_remote));
-    return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status);
+                                                        args, true, std::move(client_remote),
+                                                        &device);
+    uint64_t local_id = device != nullptr ? device->local_id() : 0;
+    return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status, local_id);
 }
 
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
@@ -1514,7 +1523,7 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh,
             return r;
         }
     } else {
-        r = dh_send_create_device_stub(dh, std::move(hrpc_remote), dev->protocol_id());
+        r = dh_send_create_device_stub(dev.get(), dh, std::move(hrpc_remote), dev->protocol_id());
         if (r != ZX_OK) {
             return r;
         }

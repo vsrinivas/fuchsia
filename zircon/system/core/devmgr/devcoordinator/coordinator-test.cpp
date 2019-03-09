@@ -156,10 +156,12 @@ bool bind_devices() {
     zx::channel local, remote;
     status = zx::channel::create(0, &local, &remote);
     ASSERT_EQ(ZX_OK, status);
+    fbl::RefPtr<devmgr::Device> device;
     status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
                                    nullptr /* props_data */, 0 /* props_count */, "mock-device",
                                    ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
-                                   false /* invisible */, zx::channel() /* client_remote */);
+                                   false /* invisible */, zx::channel() /* client_remote */,
+                                   &device);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(1, coordinator.devices().size_slow());
 

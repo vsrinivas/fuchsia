@@ -357,7 +357,8 @@ static const fuchsia_io_Directory_ops_t kDevcoordinatorConnectionDirectoryOps = 
     return ops;
 }();
 
-static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uint32_t protocol_id) {
+static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uint32_t protocol_id,
+                                         uint64_t device_local_id) {
     auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::channel rpc(raw_rpc);
     log(RPC_IN, "devhost[%s] create device stub\n", ctx->path);
@@ -378,6 +379,7 @@ static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uin
     dev->protocol_id = protocol_id;
     dev->ops = &device_default_ops;
     dev->rpc = zx::unowned_channel(rpc);
+    dev->set_local_id(device_local_id);
     newconn->dev = dev;
 
     newconn->set_channel(std::move(rpc));
@@ -392,7 +394,8 @@ static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uin
 static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
                                      const char* driver_path_data, size_t driver_path_size,
                                      zx_handle_t raw_driver_vmo, zx_handle_t raw_parent_proxy,
-                                     const char* proxy_args_data, size_t proxy_args_size) {
+                                     const char* proxy_args_data, size_t proxy_args_size,
+                                     uint64_t device_local_id) {
     auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::channel rpc(raw_rpc);
     zx::vmo driver_vmo(raw_driver_vmo);
@@ -457,6 +460,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
             log(ERROR, "devhost[%s] driver create() failed to create a device!", ctx->path);
             return ZX_ERR_BAD_STATE;
         }
+        newconn->dev->set_local_id(device_local_id);
     } else {
         log(ERROR, "devhost[%s] driver create() not supported\n", ctx->path);
         return ZX_ERR_NOT_SUPPORTED;
@@ -903,18 +907,19 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     size_t proxy_args_len = proxy_args ? strlen(proxy_args) : 0;
     zx_status_t call_status;
     static_assert(sizeof(zx_device_prop_t) == sizeof(uint64_t));
+    uint64_t device_id = 0;
     if (add_invisible) {
         status = fuchsia_device_manager_CoordinatorAddDeviceInvisible(
             rpc.get(), hsend.release(), reinterpret_cast<const uint64_t*>(props), prop_count,
             child->name, strlen(child->name), child->protocol_id, child->driver->libname().data(),
             child->driver->libname().size(), proxy_args, proxy_args_len, client_remote.release(),
-            &call_status);
+            &call_status, &device_id);
     } else {
         status = fuchsia_device_manager_CoordinatorAddDevice(
             rpc.get(), hsend.release(), reinterpret_cast<const uint64_t*>(props), prop_count,
             child->name, strlen(child->name), child->protocol_id, child->driver->libname().data(),
             child->driver->libname().size(), proxy_args, proxy_args_len, client_remote.release(),
-            &call_status);
+            &call_status, &device_id);
     }
     if (status != ZX_OK) {
         log(ERROR, "devhost[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);
@@ -926,6 +931,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
 
     child->rpc = zx::unowned_channel(hrpc);
     child->conn.store(conn.get());
+    child->set_local_id(device_id);
 
     conn->dev = child;
     conn->set_channel(std::move(hrpc));

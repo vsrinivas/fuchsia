@@ -57,6 +57,8 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
     req->proxy_args.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
     memcpy(args_data, args, args_size);
 
+    req->local_device_id = dev->local_id();
+
     zx_handle_t handles[3] = {rpc.release(), driver.release()};
     uint32_t num_handles = 2;
 
@@ -68,7 +70,8 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
     return msg.Write(dh->hrpc(), 0);
 }
 
-zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t protocol_id) {
+zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc,
+                                       uint32_t protocol_id) {
     FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_ControllerCreateDeviceStubRequest)];
     fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
 
@@ -80,6 +83,7 @@ zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t pr
 
     req->rpc = FIDL_HANDLE_PRESENT;
     req->protocol_id = protocol_id;
+    req->local_device_id = dev->local_id();
 
     zx_handle_t handles[] = {rpc.release()};
     fidl::Message msg(builder.Finalize(),

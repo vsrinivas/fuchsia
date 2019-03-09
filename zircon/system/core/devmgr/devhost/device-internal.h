@@ -83,6 +83,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
       return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
     }
 
+    uint64_t local_id() const { return local_id_; }
+    void set_local_id(uint64_t id) { local_id_ = id; }
+
     uintptr_t magic = DEV_MAGIC;
 
     const zx_protocol_device_t* ops = nullptr;
@@ -158,6 +161,10 @@ private:
             (*op)(ctx, args...);
         }
     }
+
+    // Identifier assigned by devmgr that can be used to assemble composite
+    // devices.
+    uint64_t local_id_ = 0;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

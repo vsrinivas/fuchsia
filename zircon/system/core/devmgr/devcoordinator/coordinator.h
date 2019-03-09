@@ -178,7 +178,8 @@ public:
     zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
                           const uint64_t* props_data, size_t props_count, fbl::StringPiece name,
                           uint32_t protocol_id, fbl::StringPiece driver_path, fbl::StringPiece args,
-                          bool invisible, zx::channel client_remote);
+                          bool invisible, zx::channel client_remote,
+                          fbl::RefPtr<Device>* new_device);
     zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
     zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
     zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
@@ -332,7 +333,8 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
 zx_status_t dh_send_remove_device(const Device* dev);
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy);
-zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t protocol_id);
+zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc,
+                                       uint32_t protocol_id);
 zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo driver);
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy);
 zx_status_t dh_send_suspend(const Device* dev, uint32_t flags);

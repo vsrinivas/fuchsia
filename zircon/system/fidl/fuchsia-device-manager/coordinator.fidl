@@ -17,6 +17,10 @@ using DeviceProperty = uint64;
 // Same as above, but for bind zx_bind_inst_t.
 using BindInstruction = uint64;
 
+// Identifier used to let the devcoordinator describe specific devices during
+// composite construction
+using LocalDeviceId = uint64;
+
 /// This definition must match ZX_DEVICE_NAME_MAX and is checked by a static assert.
 const uint32 DEVICE_NAME_MAX = 31;
 
@@ -75,7 +79,7 @@ protocol Controller {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given |protocol_id|.  This device will communicate
     /// with the devcoordinator via |rpc|.
-    CreateDeviceStub(handle<channel> rpc, uint32 protocol_id);
+    CreateDeviceStub(handle<channel> rpc, uint32 protocol_id, LocalDeviceId local_device_id);
 
     /// Create a device in the devhost representing the shadowed half of device
     /// in another devhost.  This new device will communicate with the devcoordinator
@@ -89,9 +93,11 @@ protocol Controller {
     /// a shadowed device.  The one exception is when this method is used
     /// to create the Platform Bus, in which case it will be a VMO containing
     /// the ZBI.
+    ///
+    /// |local_device_id| will be a unique value within the device's devhost
     CreateDevice(handle<channel> rpc, string:DEVICE_PATH_MAX driver_path,
                  handle<vmo> driver, handle? parent_proxy,
-                 string:DEVICE_ARGS_MAX? proxy_args);
+                 string:DEVICE_ARGS_MAX? proxy_args, LocalDeviceId local_device_id);
 
     /// Bind the requested driver to this device.  |driver_path| is informational,
     /// but all calls to BindDriver/CreateDevice should use the same |driver_path|
@@ -119,12 +125,13 @@ protocol Coordinator {
     /// as its primary protocol id.  |args| should only be used for shadowed devices,
     /// and will be forwarded to the shadow device. |client_remote|, if present,
     /// will be passed to the device as an open connection for the client.
+    /// On success, the returned |local_device_id| is the identifier assigned by devmgr.
     AddDevice(handle<channel> rpc,
               vector<DeviceProperty>:PROPERTIES_MAX props,
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
               string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
               handle<channel>? client_remote)
-        -> (zx.status status);
+        -> (zx.status status, LocalDeviceId local_device_id);
 
     /// Behaves as AddDevice, but marks the device as initially invisible.  This means
     /// that it will not be visible to other devices or the devfs until it is later marked
@@ -134,7 +141,7 @@ protocol Coordinator {
                        string:DEVICE_NAME_MAX name, uint32 protocol_id,
                        string:DEVICE_PATH_MAX? driver_path,
                        string:DEVICE_ARGS_MAX? args, handle<channel>? client_remote)
-        -> (zx.status status);
+        -> (zx.status status, LocalDeviceId local_device_id);
 
     /// Record the removal of this device.
     RemoveDevice() -> (zx.status status);
