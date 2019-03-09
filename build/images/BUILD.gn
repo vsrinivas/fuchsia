@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/config.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
@@ -36,6 +37,13 @@ declare_args() {
   active_partition = ""
   signed_image = false
 }
+
+config_package("config-data") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = available_packages
+}
+monolith_packages += [ ":config-data" ]
 
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
@@ -82,16 +90,12 @@ group("monolith_packages") {
 
 group("preinstall_packages") {
   testonly = true
-  public_deps = preinstall_packages + [
-    ":monolith_packages",
-  ]
+  public_deps = preinstall_packages + [ ":monolith_packages" ]
 }
 
 group("available_packages") {
   testonly = true
-  public_deps = available_packages + [
-    ":preinstall_packages",
-  ]
+  public_deps = available_packages + [ ":preinstall_packages" ]
 }
 
 template("package_list") {

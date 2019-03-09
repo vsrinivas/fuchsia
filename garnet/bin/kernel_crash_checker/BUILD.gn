@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
 
@@ -39,15 +40,11 @@ executable("main") {
   ]
 }
 
-package("config") {
-  package_name = "kernel_crash_checker_config"
-
-  deprecated_system_image = true
-
-  resources = [
-    {
-      path = "kernel_crash_checker.config"
-      dest = "sysmgr/kernel_crash_checker.config"
-    },
+config_data("config") {
+  sources = [
+    "kernel_crash_checker.config",
+  ]
+  outputs = [
+    "sysmgr/kernel_crash_checker.config",
   ]
 }

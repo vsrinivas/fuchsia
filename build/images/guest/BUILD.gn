@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/images/collect_blob_manifest.gni")
@@ -11,7 +12,6 @@ import("//build/package.gni")
 import("//garnet/build/pkgfs.gni")
 
 guest_packages = [
-  get_label_info(":shell-commands", "label_no_toolchain"),
   get_label_info("//garnet/bin/appmgr", "label_no_toolchain"),
   get_label_info("//garnet/bin/guest/integration:guest_integration_tests_utils",
                  "label_no_toolchain"),
@@ -32,8 +32,15 @@ shell_commands("shell-commands") {
   testonly = true
   visibility = [ ":*" ]
   deps = guest_packages
-  deps -= [ get_label_info(":shell-commands", "label_no_toolchain") ]
 }
+guest_packages += [ get_label_info(":shell-commands", "label_no_toolchain") ]
+
+config_package("config-data") {
+  testonly = true
+  visibility = [ ":*" ]
+  deps = guest_packages
+}
+guest_packages += [ get_label_info(":config-data", "label_no_toolchain") ]
 
 guest_meta_far_merkle_index = "$target_out_dir/guest_meta_far_merkle_index"
 package_metadata_list("guest_meta_far_merkle_index") {

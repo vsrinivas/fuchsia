@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test.gni")
@@ -123,13 +124,12 @@ package("mdns") {
   ]
 }
 
-package("mdns_config") {
-  deprecated_system_image = true
-  resources = [
-    {
-      dest = "sysmgr/mdns.config"
-      path = rebase_path("service.config")
-    },
+config_data("mdns_config") {
+  outputs = [
+    "sysmgr/mdns.config",
+  ]
+  sources = [
+    rebase_path("service.config"),
   ]
 }
 

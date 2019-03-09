@@ -26,6 +26,7 @@ class NamespaceBuilder {
 
   void AddFlatNamespace(fuchsia::sys::FlatNamespacePtr flat_namespace);
   void AddPackage(zx::channel package);
+  void AddConfigData(const SandboxMetadata& sandbox, const std::string& component_name);
   void AddDirectoryIfNotPresent(const std::string& path, zx::channel directory);
   void AddServices(zx::channel services);
 

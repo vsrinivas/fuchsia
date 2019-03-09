@@ -45,7 +45,9 @@ class JSONParser {
 
   // Initialize multiple documents from files in a directory. |cb| is
   // called for each file that parses. The traversal is not recursive, and all
-  // files in the directory are expected to be JSON files.
+  // files in the directory are expected to be JSON files. If the directory does
+  // not exist, no error is reported, and no callbacks are called. Callers
+  // wishing to identify such a state should stat the path themselves.
   //
   // It is up to the caller to decide how to merge multiple documents.
   void ParseFromDirectory(const std::string& path,

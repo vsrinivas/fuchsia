@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 
 executable("bin") {
@@ -48,13 +49,11 @@ package("thermd") {
   ]
 }
 
-package("config") {
-  deprecated_system_image = true
-  package_name = "thermd_config"
-  resources = [
-    {
-      dest = "sysmgr/thermd.config"
-      path = rebase_path("thermd.config")
-    },
+config_data("config") {
+  outputs = [
+    "sysmgr/thermd.config",
+  ]
+  sources = [
+    "thermd.config",
   ]
 }

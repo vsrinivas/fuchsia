@@ -1,0 +1,99 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# Define configuration data that can be aggregated into other packages. This is
+# primarily used to aggregate configuration files into the config-data package
+# that supplies the /config/data namespace.
+#
+#   outputs (required)
+#     [list of one path] This must be a relative path (no leading `/`). It can use
+#     placeholders based on $sources; see copy() and `gn help source_expansion`.
+#
+#   sources (required)
+#     [list of files] List of files in the source tree or build that become
+#     $outputs. See copy() for details.
+#
+# See copy() for other parameters.
+template("config_data") {
+  group(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "data_deps",
+                             "deps",
+                             "metadata",
+                             "outputs",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                           ])
+    metadata = {
+      config_package_entries = []
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      foreach(source, invoker.sources) {
+        foreach(target, process_file_template([ source ], invoker.outputs)) {
+          assert(rebase_path(target, "foo") != target,
+                 "`outputs` in config_data() cannot start with /")
+          config_package_entries +=
+              [ "data/" + target + "=" + rebase_path(source, root_build_dir) ]
+        }
+      }
+    }
+  }
+}
+
+# Produce a configuration package who's content are defined by all config_data
+# targets in it's dependency chain.
+#
+# Parameters
+#
+#   deps (required)
+#   public_deps (optional)
+#   data_deps (optional)
+#   testonly (optional)
+#     Usual GN meanings.
+template("config_package") {
+  config_package_manifest = "config-package-extra.manifest"
+  config_package_manifest_path = target_gen_dir + "/" + config_package_manifest
+
+  generated_file(config_package_manifest) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "data_deps",
+                             "testonly",
+                           ])
+
+    # This contract is known to package.gni.
+    data_keys = [ "config_package_entries" ]
+    walk_keys = [ "config_package_barrier" ]
+    outputs = [
+      config_package_manifest_path,
+    ]
+  }
+
+  package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps += [ ":" + config_package_manifest ]
+    extra = [ config_package_manifest_path ]
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      config_package_barrier = []
+    }
+  }
+}

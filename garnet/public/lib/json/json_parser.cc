@@ -118,9 +118,6 @@ void JSONParser::ParseFromDirectory(
       buf[dir_len] = '\0';
     }
     closedir(cfg_dir);
-  } else {
-    file_ = path;
-    ReportError("Could not open config directory.");
   }
 }
 

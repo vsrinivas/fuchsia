@@ -86,6 +86,15 @@ void NamespaceBuilder::AddPackage(zx::channel package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
 }
 
+void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::string& component_name) {
+  for (const auto& feature : sandbox.features()) {
+    if (feature == "config-data") {
+      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/" + component_name,
+                              "/config/data/" + component_name);
+    }
+  }
+}
+
 void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path,
                                                 zx::channel directory) {
   if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())

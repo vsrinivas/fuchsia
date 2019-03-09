@@ -821,6 +821,10 @@ void Realm::CreateComponentFromPackage(
     const auto& sandbox = cmx.sandbox_meta();
     service_whitelist = &sandbox.services();
 
+    builder.AddConfigData(
+        sandbox,
+        fp.GetDefaultComponentName());
+
     builder.AddSandbox(
         sandbox,
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },

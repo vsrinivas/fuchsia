@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 
 source_set("lib") {
@@ -11,10 +12,10 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.memory",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.memory",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
@@ -52,13 +53,11 @@ package("memory_monitor") {
   ]
 }
 
-package("config") {
-  deprecated_system_image = true
-  package_name = "memory_monitor_config"
-  resources = [
-    {
-      dest = "sysmgr/memory_monitor.config"
-      path = rebase_path("memory_monitor.config")
-    },
+config_data("config") {
+  outputs = [
+    "sysmgr/memory_monitor.config",
+  ]
+  sources = [
+    "memory_monitor.config",
   ]
 }

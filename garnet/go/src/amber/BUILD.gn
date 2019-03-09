@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
@@ -48,7 +49,7 @@ metrics_registry("cobalt_sw_delivery_registry") {
 generate_manifest("install-disk-image.manifest") {
   visibility = [ ":*" ]
   args = []
-  foreach(pattern, ["bin/install-disk-image"]) {
+  foreach(pattern, [ "bin/install-disk-image" ]) {
     args += [ "--binary=" + pattern ]
   }
 }
@@ -201,13 +202,11 @@ package("test_config") {
   ]
 }
 
-package("config") {
-  deprecated_system_image = true
-  package_name = "amber_config"
-  resources = [
-    {
-      dest = "sysmgr/amber.config"
-      path = rebase_path("startup.config")
-    },
+config_data("config") {
+  outputs = [
+    "sysmgr/amber.config",
+  ]
+  sources = [
+    "startup.config",
   ]
 }

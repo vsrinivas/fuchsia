@@ -3,6 +3,9 @@
         "binary": "bin/sysmgr"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "pkgfs": [
             "packages"
         ],

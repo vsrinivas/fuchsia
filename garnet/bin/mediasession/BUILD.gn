@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
@@ -63,12 +64,11 @@ package("mediasession") {
   ]
 }
 
-package("mediasession_config") {
-  deprecated_system_image = true
-  resources = [
-    {
-      dest = "sysmgr/mediasession.config"
-      path = rebase_path("service.config")
-    },
+config_data("mediasession_config") {
+  outputs = [
+    "sysmgr/mediasession.config",
+  ]
+  sources = [
+    "service.config",
   ]
 }

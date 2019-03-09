@@ -13,6 +13,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
+constexpr char kConfigDataDir[] = "/config/data/sysmgr/";
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -26,6 +27,7 @@ int main(int argc, const char** argv) {
     config.ParseFromString(config_data, "command line");
   } else {
     config.ParseFromDirectory(kConfigDir);
+    config.ParseFromDirectory(kConfigDataDir);
   }
 
   if (config.HasError()) {
