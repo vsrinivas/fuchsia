@@ -29,11 +29,11 @@ class ViewProviderComponent {
   ~ViewProviderComponent() = default;
 
  private:
-  // Implementation of the |fuchsia::ui::app::View| interface that allows it to
-  // be used with |ViewProviderComponent|.
+  // Implementation of the |fuchsia::ui::views::View| interface that allows it
+  // to be used with |ViewProviderComponent|.
   //
   // Constructs and owns a |BaseView|.
-  class ViewImpl final : public fuchsia::ui::app::View {
+  class ViewImpl final : public fuchsia::ui::views::View {
    public:
     // Basic constructor.
     //
@@ -47,11 +47,12 @@ class ViewProviderComponent {
              component::StartupContext* startup_context);
     ~ViewImpl() override = default;
 
-    // |fuchsia::ui::app::View|
-    void SetConfig(fuchsia::ui::app::ViewConfig view_config) override;
+    // |fuchsia::ui::views::View|
+    void SetConfig(fuchsia::ui::views::ViewConfig view_config) override;
 
-    // |fuchsia::ui::app::View|
-    void Attach(zx::eventpair view_token) override;
+    // |fuchsia::ui::views::View|
+    void Present(fuchsia::ui::views::ViewToken view_token,
+                 fuchsia::ui::views::ViewConfig initial_config) override;
 
     // Sets the given closure as an error handler for all error types.
     void SetErrorHandler(fit::closure error_handler);
@@ -63,11 +64,9 @@ class ViewProviderComponent {
     ViewFactory factory_;
     fuchsia::ui::scenic::Scenic* scenic_;
     component::StartupContext* startup_context_;
-    // |BaseView|, not to be confused with |fuchsia::ui::app::View| or
+    // |BaseView|, not to be confused with |fuchsia::ui::views::View| or
     // |scenic::View|.
     std::unique_ptr<BaseView> view_;
-    // Stores any provided |ViewConfig| before a |BaseView| is instantiated.
-    fuchsia::ui::app::ViewConfig view_config_;
     fidl::Binding<View> binding_;
     fit::closure error_handler_;
   };

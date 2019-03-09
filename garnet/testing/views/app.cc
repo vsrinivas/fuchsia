@@ -37,23 +37,24 @@ const std::map<std::string, ViewFactory> kViews{
     {"rotated_square_view", ViewFactoryImpl<scenic::RotatedSquareView>()},
     {"coordinate_test_view", ViewFactoryImpl<scenic::CoordinateTestView>()}};
 
-class App : public fuchsia::ui::app::View {
+class App : public fuchsia::ui::views::View {
  public:
   App(component::StartupContext* context, ViewFactory view_factory)
       : context_(context), view_factory_(std::move(view_factory)) {}
 
  private:
-  // |fuchsia::ui::app::View|
-  void SetConfig(fuchsia::ui::app::ViewConfig config) override {}
+  // |fuchsia::ui::views::View|
+  void SetConfig(fuchsia::ui::views::ViewConfig config) override {}
 
-  // |fuchsia::ui::app::View|
-  void Attach(zx::eventpair view_token) override {
+  // |fuchsia::ui::view::View|
+  void Present(fuchsia::ui::views::ViewToken view_token,
+               fuchsia::ui::views::ViewConfig initial_config) override {
     auto scenic =
         context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token2 = scenic::ToViewToken(std::move(view_token)),
+        .view_token2 = std::move(view_token),
     };
 
     view_ = view_factory_(std::move(view_context));
@@ -99,7 +100,7 @@ int main(int argc, const char** argv) {
 
   auto context = component::StartupContext::CreateFromStartupInfo();
   App app(context.get(), view_factory_it->second);
-  fidl::BindingSet<fuchsia::ui::app::View> view_bindings_;
+  fidl::BindingSet<fuchsia::ui::views::View> view_bindings_;
   context->outgoing().AddPublicService(view_bindings_.GetHandler(&app));
 
   loop.Run();
