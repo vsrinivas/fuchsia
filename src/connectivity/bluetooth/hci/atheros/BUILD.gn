@@ -18,8 +18,8 @@ driver_module("driver") {
   ]
 
   deps = [
-    "//garnet/drivers/bluetooth/lib/gap",
-    "//garnet/drivers/bluetooth/lib/hci",
+    "//src/connectivity/bluetooth/core/bt-host/gap",
+    "//src/connectivity/bluetooth/core/bt-host/hci",
     "//zircon/public/banjo/ddk-protocol-usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",

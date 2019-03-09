@@ -10,11 +10,11 @@
 #include <cstring>
 #include <iostream>
 
-#include "garnet/drivers/bluetooth/lib/common/manufacturer_names.h"
-#include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
-#include "garnet/drivers/bluetooth/lib/hci/advertising_report_parser.h"
-#include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
-#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/manufacturer_names.h"
+#include "src/connectivity/bluetooth/core/bt-host/gap/advertising_data.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/advertising_report_parser.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/command_channel.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"

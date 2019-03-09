@@ -15,7 +15,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
+#include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 
 namespace bthci_fake {
 

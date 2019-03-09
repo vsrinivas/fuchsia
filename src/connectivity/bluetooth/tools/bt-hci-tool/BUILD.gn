@@ -13,8 +13,8 @@ executable("bt-hci-tool") {
 
   deps = [
     "../lib",
-    "//garnet/drivers/bluetooth/lib/common",
-    "//garnet/drivers/bluetooth/lib/gap",
-    "//garnet/drivers/bluetooth/lib/hci",
+    "//src/connectivity/bluetooth/core/bt-host/common",
+    "//src/connectivity/bluetooth/core/bt-host/gap",
+    "//src/connectivity/bluetooth/core/bt-host/hci",
   ]
 }

@@ -12,7 +12,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
+#include "src/connectivity/bluetooth/core/bt-host/testing/fake_device.h"
 
 #include "fake-device.h"
 

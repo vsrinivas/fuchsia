@@ -11,9 +11,9 @@
 #include <ddk/protocol/usb.h>
 #include <fbl/mutex.h>
 #include <lib/sync/completion.h>
-#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
-#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
 
 struct qca_version {
   uint32_t rom_version;

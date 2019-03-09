@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_BT_INTEL_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_BT_INTEL_H_
 
-#include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/device_address.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
 
 namespace bt_intel {
 

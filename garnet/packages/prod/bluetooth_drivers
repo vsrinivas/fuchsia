@@ -1,6 +1,6 @@
 {
     "packages": [
-        "//garnet/drivers/bluetooth/host",
+        "//src/connectivity/bluetooth/core/bt-host",
         "//src/connectivity/bluetooth/hci/atheros",
         "//src/connectivity/bluetooth/hci/fake",
         "//src/connectivity/bluetooth/hci/intel",

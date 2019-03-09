@@ -17,8 +17,8 @@ driver_module("driver") {
   ]
 
   deps = [
-    "//garnet/drivers/bluetooth/lib/hci",
-    "//garnet/drivers/bluetooth/lib/testing:fake_controller",
+    "//src/connectivity/bluetooth/core/bt-host/hci",
+    "//src/connectivity/bluetooth/core/bt-host/testing:fake_controller",
     "//zircon/public/banjo/ddk-protocol-test",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

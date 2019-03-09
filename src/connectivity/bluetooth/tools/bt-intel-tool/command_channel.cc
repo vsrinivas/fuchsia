@@ -20,7 +20,7 @@
 
 #include "lib/fxl/strings/string_printf.h"
 
-#include "garnet/drivers/bluetooth/lib/hci/slab_allocators.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/slab_allocators.h"
 
 namespace {
 

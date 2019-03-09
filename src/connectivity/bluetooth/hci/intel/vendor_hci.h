@@ -6,10 +6,10 @@
 
 #include <queue>
 
-#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
-#include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/device_address.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
 
 #include <lib/zx/channel.h>
 

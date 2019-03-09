@@ -11,11 +11,11 @@
 #include <ddk/driver.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/log.h"
-#include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
-#include "garnet/drivers/bluetooth/lib/hci/hci.h"
-#include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
+#include "src/connectivity/bluetooth/core/bt-host/common/log.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/device_wrapper.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/transport.h"
 #include "lib/fxl/command_line.h"
 #include "src/connectivity/bluetooth/tools/lib/command_dispatcher.h"
 

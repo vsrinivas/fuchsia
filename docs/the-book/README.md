@@ -52,7 +52,7 @@ also provides core drivers and Fuchsia's libc implementation.
 
  - Ethernet
  - [Wireless](wireless_networking.md)
- - [Bluetooth][bluetooth]
+ - [Bluetooth](bluetooth_architecture.md)
  - [Telephony][telephony]
  - Sockets
  - HTTP

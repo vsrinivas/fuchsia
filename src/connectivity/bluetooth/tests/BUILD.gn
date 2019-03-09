@@ -10,8 +10,8 @@ test_package("tests") {
   package_name = "bluetooth-tests"
 
   deps = [
-    ":bt-host-unittests",
     "integration",
+    "//src/connectivity/bluetooth/core/bt-host:tests",
   ]
 
   tests = [
@@ -24,15 +24,5 @@ test_package("tests") {
       dest = "bt-host-integration-tests"
       environments = basic_envs
     },
-  ]
-}
-
-executable("bt-host-unittests") {
-  testonly = true
-
-  deps = [
-    "//garnet/drivers/bluetooth/lib:tests",
-    "//garnet/drivers/bluetooth/lib/testing:gtest_main",
-    "//third_party/googletest:gtest",
   ]
 }

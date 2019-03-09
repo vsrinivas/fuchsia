@@ -4,8 +4,8 @@
     ],
     "packages": [
         "//src/connectivity/bluetooth/core/bt-gap",
+        "//src/connectivity/bluetooth/core/bt-host",
         "//src/connectivity/bluetooth/core/bt-mgr",
-        "//src/connectivity/bluetooth/tools/bt-snoop",
-        "//garnet/drivers/bluetooth/host"
+        "//src/connectivity/bluetooth/tools/bt-snoop"
     ]
 }

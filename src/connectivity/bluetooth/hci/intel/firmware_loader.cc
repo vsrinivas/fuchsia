@@ -15,7 +15,7 @@
 #include <iostream>
 #include <limits>
 
-#include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>

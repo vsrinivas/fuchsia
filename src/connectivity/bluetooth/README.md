@@ -14,33 +14,20 @@ Source code shortcuts:
   * [LE](/sdk/fidl/fuchsia.bluetooth.le)
 - [Private API](/sdk/fidl/fuchsia.bluetooth.host)
 - [Tools](tools/)
-- [Host Library](drivers/host)
-- [Host Bus Driver](drivers/host)
-- [HCI Drivers](drivers/hci)
+- [Host Bus Driver](core/bt-host)
+- [HCI Drivers](hci)
 - [HCI Transport Drivers](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/bluetooth?autodive=0)
 
 For more orientation, see
-- [System Architecture](/docs/bluetooth_architecture.md)
-- [Detailed Source Layout](/docs/bluetooth_source_layout.md)
+- [System Architecture](/docs/the-book/bluetooth_architecture.md)
+- [Detailed Source Layout](/docs/the-book/bluetooth_source_layout.md)
 
 ## Getting Started
 
 ### API Examples
 
-Examples using Fuchsia's Bluetooth Low Energy APIs for all four LE roles can be
-found in Garnet and Topaz. All of these are currently compiled into Fuchsia by
-default.
-
-- __LE scanner__: see [`eddystone_agent`](https://fuchsia.googlesource.com/topaz/+/master/examples/eddystone_agent/).
-This is a suggestion agent that proposes URL links that are obtained from
-Eddystone beacons. This is built in topaz by default.
-- __LE broadcaster__: see [`eddystone_advertiser`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/eddystone_advertiser/).
-This is a Flutter module that can advertise any entered URL as an Eddystone
-beacon.
-- __LE peripheral__: see the [`ble_rect`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_rect/),
-[`bt-le-battery-service`](examples/bt-le-battery-service), and
-[`bt-le-heart-rate-peripheral`](examples/bt-le-heart-rate-peripheral) examples.
-- __LE central__: see [`ble_scanner`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_scanner/).
+Examples using Fuchsia's Bluetooth Low Energy APIs can be found
+[here](examples).
 
 ### Control API
 
@@ -174,7 +161,7 @@ For more detail on driver logging, see [Zircon driver logging](https://fuchsia.g
 
 The Bluetooth system service is invoked by sysmgr to resolve service requests.
 The mapping between environment service names and their handlers is defined in
-[bin/sysmgr/config/services.config](/garnet/bin/sysmgr/config/services.config).
+[//garnet/bin/sysmgr/config/services.config](/garnet/bin/sysmgr/config/services.config).
 Add the `--verbose` option to the Bluetooth entries to increase verbosity, for
 example:
 
