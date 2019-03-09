@@ -7,6 +7,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 
+using fuchsia::ui::views::ViewToken;
+
 namespace scenic {
 
 ViewProviderComponent::ViewProviderComponent(
@@ -20,10 +22,10 @@ ViewProviderComponent::ViewProviderComponent(
                   ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       service_(startup_context_.get(), scenic_.get(), factory.share()) {
   // Register the |View| service.
-  startup_context_->outgoing().AddPublicService<fuchsia::ui::app::View>(
+  startup_context_->outgoing().AddPublicService<fuchsia::ui::views::View>(
       [this, startup_context = startup_context_.get(),
        factory = std::move(factory)](
-          fidl::InterfaceRequest<fuchsia::ui::app::View> request) mutable {
+          fidl::InterfaceRequest<fuchsia::ui::views::View> request) mutable {
         view_impl_ =
             std::make_unique<ViewImpl>(factory.share(), std::move(request),
                                        scenic_.get(), startup_context);
@@ -53,19 +55,21 @@ ViewProviderComponent::ViewImpl::ViewImpl(
       binding_(this, std::move(view_request)) {}
 
 void ViewProviderComponent::ViewImpl::SetConfig(
-    fuchsia::ui::app::ViewConfig view_config) {
-  if (view_) {
-    view_->SetConfig(std::move(view_config));
-    // If we haven't instantiated the |BaseView| yet, hold on to the config.
-  } else {
-    view_config_ = std::move(view_config);
+    fuchsia::ui::views::ViewConfig view_config) {
+  if (!view_) {
+    FXL_LOG(ERROR) << "Tried to call SetConfig() before creating a view";
+    OnError();
+    return;
   }
+  view_->SetConfig(std::move(view_config));
 }
 
-void ViewProviderComponent::ViewImpl::Attach(zx::eventpair view_token) {
+void ViewProviderComponent::ViewImpl::Present(
+    fuchsia::ui::views::ViewToken view_token,
+    fuchsia::ui::views::ViewConfig initial_config) {
   if (view_) {
     // This should only be called once.
-    FXL_LOG(ERROR) << "view_ can only be attached once";
+    FXL_LOG(ERROR) << "Present() can only be called once";
     OnError();
     return;
   }
@@ -73,13 +77,13 @@ void ViewProviderComponent::ViewImpl::Attach(zx::eventpair view_token) {
   ViewContext context = {
       .session_and_listener_request =
           CreateScenicSessionPtrAndListenerRequest(scenic_),
-      .view_token2 = scenic::ToViewToken(std::move(view_token)),
+      .view_token2 = std::move(view_token),
       .incoming_services = {},
       .outgoing_services = {},
       .startup_context = startup_context_,
   };
   view_ = factory_(std::move(context));
-  view_->SetConfig(std::move(view_config_));
+  view_->SetConfig(std::move(initial_config));
 }
 
 void ViewProviderComponent::ViewImpl::SetErrorHandler(

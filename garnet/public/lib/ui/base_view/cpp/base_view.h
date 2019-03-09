@@ -54,7 +54,12 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
     return view_properties_;
   }
 
+  [[deprecated("Use view_config2()")]]
   const fuchsia::ui::app::ViewConfig& view_config() const {
+    return view_config_deprecated_;
+  }
+
+  const fuchsia::ui::views::ViewConfig& view_config2() const {
     return view_config_;
   }
 
@@ -94,6 +99,14 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // will be called.
   //
   // This method should be called at least once before the view is displayed.
+  void SetConfig(fuchsia::ui::views::ViewConfig view_config);
+
+  // Sets the view's presentation configuration (i18n profile, etc.). If the new
+  // |ViewConfig| differs at all from the existing one, |OnConfigChanged()|
+  // will be called.
+  //
+  // This method should be called at least once before the view is displayed.
+  [[deprecated]]
   void SetConfig(fuchsia::ui::app::ViewConfig view_config);
 
   // Sets a callback which is invoked when the view's owner releases the
@@ -140,6 +153,17 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   //
   // The default implementation does nothing. Subclasses will usually want to
   // call |InvalidateScene()|.
+  virtual void OnConfigChanged(
+      const fuchsia::ui::views::ViewConfig& old_config) {}
+
+  // Called when the view's |ViewConfig| is first set or has changed.
+  //
+  // This is not called unless there was an actual value change between the old
+  // and the new config. The new config can be accessed at |view_config()|.
+  //
+  // The default implementation does nothing. Subclasses will usually want to
+  // call |InvalidateScene()|.
+  [[deprecated]]
   virtual void OnConfigChanged(fuchsia::ui::app::ViewConfig old_config) {}
 
   // Called to handle an input event.
@@ -199,7 +223,9 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   fuchsia::ui::gfx::vec3 logical_size_;
   fuchsia::ui::gfx::vec3 physical_size_;
   fuchsia::ui::gfx::ViewProperties view_properties_;
-  fuchsia::ui::app::ViewConfig view_config_;
+  fuchsia::ui::views::ViewConfig view_config_;
+  [[deprecated]]
+  fuchsia::ui::app::ViewConfig view_config_deprecated_;
   fuchsia::ui::gfx::Metrics metrics_;
 
   zx_time_t last_presentation_time_ = 0;

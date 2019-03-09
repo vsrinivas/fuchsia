@@ -13,8 +13,6 @@
 
 namespace scenic {
 
-using fuchsia::ui::app::ViewConfig;
-
 BaseView::BaseView(ViewContext context, const std::string& debug_name)
     : startup_context_(context.startup_context),
       incoming_services_(context.outgoing_services.Bind()),
@@ -40,10 +38,19 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
   InvalidateScene();
 }
 
-void BaseView::SetConfig(fuchsia::ui::app::ViewConfig view_config) {
+void BaseView::SetConfig(fuchsia::ui::views::ViewConfig view_config) {
   if (view_config != view_config_) {
-    ViewConfig old_config = std::move(view_config_);
+    fuchsia::ui::views::ViewConfig old_config = std::move(view_config_);
     view_config_ = std::move(view_config);
+    OnConfigChanged(old_config);
+  }
+}
+
+void BaseView::SetConfig(fuchsia::ui::app::ViewConfig view_config) {
+  if (view_config != view_config_deprecated_) {
+    fuchsia::ui::app::ViewConfig old_config =
+        std::move(view_config_deprecated_);
+    view_config_deprecated_ = std::move(view_config);
     OnConfigChanged(std::move(old_config));
   }
 }
