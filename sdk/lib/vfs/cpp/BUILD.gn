@@ -30,6 +30,8 @@ sdk_source_set("cpp") {
     "internal/file_connection.h",
     "internal/node_connection.cc",
     "internal/node_connection.h",
+    "lazy_dir.cc",
+    "lazy_dir.h",
     "node.cc",
     "node.h",
     "pseudo_dir.cc",
@@ -55,6 +57,7 @@ sdk_source_set("cpp") {
 test("vfs_cpp_unittests") {
   sources = [
     "file_unittest.cc",
+    "lazy_dir_unittest.cc",
     "pseudo_dir_unittest.cc",
     "pseudo_file_unittest.cc",
     "service_unittest.cc",
@@ -63,6 +66,7 @@ test("vfs_cpp_unittests") {
 
   deps = [
     ":cpp",
+    "testing",
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",

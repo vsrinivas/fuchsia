@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/vfs/cpp/pseudo_dir.h"
+#include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <lib/fdio/vfs.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <lib/vfs/cpp/testing/dir_test_util.h>
 
 namespace {
+
+using vfs_tests::Dirent;
 
 class TestNode : public vfs::Node {
  public:
@@ -160,44 +163,6 @@ TEST_F(PseudoDirUnit, AddAfterRemove) {
   ASSERT_EQ(new_node.get(), n);
 }
 
-class Dirent {
- public:
-  uint64_t ino_;
-  uint8_t type_;
-  uint8_t size_;
-  std::string name_;
-
-  uint64_t size_in_bytes_;
-
-  static Dirent DirentForDot() { return DirentForDirectory("."); }
-
-  static Dirent DirentForDirectory(const std::string& name) {
-    return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_DIRECTORY,
-                  name);
-  }
-
-  static Dirent DirentForFile(const std::string& name) {
-    return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_FILE,
-                  name);
-  }
-
-  std::string String() {
-    return "Dirent:\nino: " + std ::to_string(ino_) +
-           "\ntype: " + std ::to_string(type_) +
-           "\nsize: " + std ::to_string(size_) + "\nname: " + name_;
-  }
-
- private:
-  Dirent(uint64_t ino, uint8_t type, const std::string& name)
-      : ino_(ino),
-        type_(type),
-        size_(static_cast<uint8_t>(name.length())),
-        name_(name) {
-    ZX_DEBUG_ASSERT(name.length() <= static_cast<uint64_t>(NAME_MAX));
-    size_in_bytes_ = sizeof(vdirent_t) + size_;
-  }
-};
-
 class DirectoryWrapper {
  public:
   DirectoryWrapper(bool start_loop = true)
@@ -247,109 +212,9 @@ class DirectoryWrapper {
   async::Loop loop_;
 };
 
-class PseudoDirConnection : public gtest::RealLoopFixture {
+class PseudoDirConnection : public vfs_tests::DirConnection {
  protected:
-  void AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr, uint64_t max_bytes,
-                         std::vector<Dirent>& expected_dirents,
-                         zx_status_t expected_status = ZX_OK) {
-    std::vector<uint8_t> out_dirents;
-    zx_status_t status;
-    ptr->ReadDirents(max_bytes, &status, &out_dirents);
-    ASSERT_EQ(expected_status, status);
-    if (status != ZX_OK) {
-      return;
-    }
-    uint64_t expected_size = 0;
-    for (auto& d : expected_dirents) {
-      expected_size += d.size_in_bytes_;
-    }
-    EXPECT_EQ(expected_size, out_dirents.size());
-    uint64_t offset = 0;
-    auto data_ptr = out_dirents.data();
-    for (auto& d : expected_dirents) {
-      SCOPED_TRACE(d.String());
-      ASSERT_LE(sizeof(vdirent_t), out_dirents.size() - offset);
-      vdirent_t* de = reinterpret_cast<vdirent_t*>(data_ptr + offset);
-      EXPECT_EQ(d.ino_, de->ino);
-      EXPECT_EQ(d.size_, de->size);
-      EXPECT_EQ(d.type_, de->type);
-      ASSERT_LE(d.size_in_bytes_, out_dirents.size() - offset);
-      EXPECT_EQ(d.name_, std::string(de->name, de->size));
-
-      offset += sizeof(vdirent_t) + de->size;
-    }
-  }
-
-  void AssertRewind(fuchsia::io::DirectorySyncPtr& ptr,
-                    zx_status_t expected_status = ZX_OK) {
-    zx_status_t status;
-    ptr->Rewind(&status);
-    ASSERT_EQ(expected_status, status);
-  }
-
-  void AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
-                  zx_status_t expected_status, bool test_on_open_event = true) {
-    fuchsia::io::NodePtr node_ptr;
-    if (test_on_open_event) {
-      flags |= fuchsia::io::OPEN_FLAG_DESCRIBE;
-    }
-    EXPECT_EQ(expected_status,
-              dir_.dir()->Serve(flags, node_ptr.NewRequest().TakeChannel(),
-                                dispatcher));
-
-    if (test_on_open_event) {
-      bool on_open_called = false;
-      node_ptr.events().OnOpen =
-          [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> info) {
-            EXPECT_FALSE(on_open_called);  // should be called only once
-            on_open_called = true;
-            EXPECT_EQ(expected_status, status);
-            if (expected_status == ZX_OK) {
-              ASSERT_NE(info.get(), nullptr);
-              EXPECT_TRUE(info->is_directory());
-            } else {
-              EXPECT_EQ(info.get(), nullptr);
-            }
-          };
-
-      ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
-    }
-  }
-
-  template <typename T>
-  void AssertOpenPath(fuchsia::io::DirectorySyncPtr& dir_ptr,
-                      const std::string& path,
-                      ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
-                      uint32_t flags = 0, uint32_t mode = 0,
-                      zx_status_t expected_status = ZX_OK) {
-    ::fidl::InterfacePtr<fuchsia::io::Node> node_ptr;
-    dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path,
-                  node_ptr.NewRequest());
-    bool on_open_called = false;
-    node_ptr.events().OnOpen =
-        [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> unused) {
-          EXPECT_FALSE(on_open_called);  // should be called only once
-          on_open_called = true;
-          EXPECT_EQ(expected_status, status);
-        };
-
-    ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
-
-    // Bind channel to sync_ptr
-    out_sync_ptr.Bind(node_ptr.Unbind().TakeChannel());
-  }
-
-  void AssertRead(fuchsia::io::FileSyncPtr& file, int count,
-                  const std::string& expected_str,
-                  zx_status_t expected_status = ZX_OK) {
-    zx_status_t status;
-    std::vector<uint8_t> buffer;
-    file->Read(count, &status, &buffer);
-    ASSERT_EQ(expected_status, status);
-    std::string str(buffer.size(), 0);
-    std::copy(buffer.begin(), buffer.end(), str.begin());
-    ASSERT_EQ(expected_str, str);
-  }
+  vfs::Directory* GetDirectoryNode() override { return dir_.dir().get(); }
 
   DirectoryWrapper dir_;
 };
@@ -442,7 +307,7 @@ TEST_F(PseudoDirConnection, ReadDirWithExactBytes) {
   };
   uint64_t exact_size = 0;
   for (auto& d : expected_dirents) {
-    exact_size += d.size_in_bytes_;
+    exact_size += d.size_in_bytes();
   }
 
   AssertReadDirents(ptr, exact_size, expected_dirents);
@@ -469,12 +334,12 @@ TEST_F(PseudoDirConnection, ReadDirInPartsWithExactBytes) {
   };
   uint64_t exact_size1 = 0;
   for (auto& d : expected_dirents1) {
-    exact_size1 += d.size_in_bytes_;
+    exact_size1 += d.size_in_bytes();
   }
 
   uint64_t exact_size2 = 0;
   for (auto& d : expected_dirents2) {
-    exact_size2 += d.size_in_bytes_;
+    exact_size2 += d.size_in_bytes();
   }
 
   AssertReadDirents(ptr, exact_size1, expected_dirents1);
