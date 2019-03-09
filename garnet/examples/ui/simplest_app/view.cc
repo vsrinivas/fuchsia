@@ -122,7 +122,7 @@ void SimplestAppView::UpdateBackground() {
                                             80, 10);
   background_.SetMaterial(NextColor(session()));
   background_.SetShape(background_shape);
-  background_.SetTranslationRH(width / 2.f, height / 2.f, -10.f);
+  background_.SetTranslation(width / 2.f, height / 2.f, -10.f);
   PresentScene();
 }
 

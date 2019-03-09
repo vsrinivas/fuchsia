@@ -123,11 +123,11 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
         scenic::EntityNode translate_1(session), translate_2(session);
 
         root_node->AddChild(translate_1);
-        translate_1.SetTranslationRH(0, 0, -1);
+        translate_1.SetTranslation(0, 0, -1);
         translate_1.Export(std::move(export_1));
 
         root_node->AddChild(translate_2);
-        translate_2.SetTranslationRH(4, 4, -2);
+        translate_2.SetTranslation(4, 4, -2);
         translate_2.Export(std::move(export_2));
 
         RequestToPresent(session);
@@ -209,7 +209,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
         import.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
@@ -231,7 +231,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
         import.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
@@ -356,11 +356,11 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
             holder_2(session, std::move(vh_2), "view holder 2");
 
         root_node->AddChild(translate_1);
-        translate_1.SetTranslationRH(0, 0, -1);
+        translate_1.SetTranslation(0, 0, -1);
         translate_1.Attach(holder_1);
 
         root_node->AddChild(translate_2);
-        translate_2.SetTranslationRH(4, 4, -2);
+        translate_2.SetTranslation(4, 4, -2);
         translate_2.Attach(holder_2);
 
         // View 2's parent (Presenter) sets "no-focus" property for view 2.
@@ -382,7 +382,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
         view.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
@@ -403,7 +403,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
         view.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.

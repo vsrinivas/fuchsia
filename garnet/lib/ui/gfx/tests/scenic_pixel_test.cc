@@ -280,8 +280,8 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
       scenic::ShapeNode pane_node(session);
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
-      pane_node.SetTranslationRH((i + 0.5) * pane_width,
-                                 (j + 0.5) * pane_height, -20);
+      pane_node.SetTranslation((i + 0.5) * pane_width, (j + 0.5) * pane_height,
+                               -20);
       root_node.AddChild(pane_node);
     }
   }
@@ -293,7 +293,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   scenic::ShapeNode pane_node(session);
   pane_node.SetShape(pane_shape);
   pane_node.SetMaterial(pane_material);
-  pane_node.SetTranslationRH(0.5 * display_width, 0.5 * display_height, -40);
+  pane_node.SetTranslation(0.5 * display_width, 0.5 * display_height, -40);
   root_node.AddChild(pane_node);
 
   // Actual tests. Test the same scene with an orthographic and perspective

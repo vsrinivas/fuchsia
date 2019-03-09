@@ -69,7 +69,7 @@ Presentation::Presentation(
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
-  root_node_.SetTranslationRH(0.f, 0.f, -0.1f);  // TODO(SCN-371).
+  root_node_.SetTranslation(0.f, 0.f, -0.1f);  // TODO(SCN-371).
   root_node_.AddChild(view_holder_node_);
   view_holder_node_.Attach(view_holder_);
 
@@ -387,7 +387,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
     float left_offset = (info_w - metrics_w) / density_w / 2;
     float top_offset = (info_h - metrics_h) / density_h / 2;
 
-    view_holder_node_.SetTranslationRH(left_offset, top_offset, 0.f);
+    view_holder_node_.SetTranslation(left_offset, top_offset, 0.f);
     FXL_VLOG(2) << "DisplayModel translation: " << left_offset << ", "
                 << top_offset;
   }
@@ -727,7 +727,7 @@ void Presentation::PresentScene() {
         scene_.AddChild(*state.node);
         state.created = true;
       }
-      state.node->SetTranslationRH(
+      state.node->SetTranslation(
           state.position.x * display_metrics_.x_scale_in_pp_per_px() +
               kCursorWidth * .5f,
           state.position.y * display_metrics_.y_scale_in_pp_per_px() +

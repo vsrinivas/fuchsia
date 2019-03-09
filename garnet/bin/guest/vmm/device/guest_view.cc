@@ -81,7 +81,7 @@ void GuestView::OnSceneInvalidated(
   // the material itself.
   // TODO(SCN-958): Materials should support transforms
   background_.SetAnchor(-center_x, -center_y, 0.0f);
-  background_.SetTranslationRH(center_x, center_y, 0.0f);
+  background_.SetTranslation(center_x, center_y, 0.0f);
   background_.SetScale(scale_x, scale_y, 1.0f);
 
   scenic::Image image(*memory_, 0u, image_info_);

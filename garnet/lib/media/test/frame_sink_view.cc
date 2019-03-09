@@ -264,8 +264,7 @@ FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
   root_node().AddChild(node_);
 
   // Translation of 0, 0 is the middle of the screen
-  node_.SetTranslationRH(kInitialWindowXPos, kInitialWindowYPos,
-                         -kDisplayHeight);
+  node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, -kDisplayHeight);
   InvalidateScene();
 
   parent_->AddFrameSinkView(this);
@@ -283,5 +282,5 @@ void FrameSinkView::OnSceneInvalidated(
   node_.SetShape(shape);
   float half_width = width * 0.5f;
   float half_height = height * 0.5f;
-  node_.SetTranslationRH(half_width, half_height, -kDisplayHeight);
+  node_.SetTranslation(half_width, half_height, -kDisplayHeight);
 }

@@ -28,8 +28,8 @@ void CoordinateTestView::Draw(float cx, float cy, float sx, float sy) {
       ShapeNode pane_node(session());
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
-      pane_node.SetTranslationRH((i + 0.5) * pane_width,
-                                 (j + 0.5) * pane_height, -20);
+      pane_node.SetTranslation((i + 0.5) * pane_width, (j + 0.5) * pane_height,
+                               -20);
       root_node.AddChild(pane_node);
     }
   }
@@ -41,7 +41,7 @@ void CoordinateTestView::Draw(float cx, float cy, float sx, float sy) {
   ShapeNode pane_node(session());
   pane_node.SetShape(pane_shape);
   pane_node.SetMaterial(pane_material);
-  pane_node.SetTranslationRH(0.5 * sx, 0.5 * sy, -40);
+  pane_node.SetTranslation(0.5 * sx, 0.5 * sy, -40);
   root_node.AddChild(pane_node);
 }
 

@@ -178,10 +178,10 @@ bool Node::SetTransform(const escher::Transform& transform) {
   return true;
 }
 
-bool Node::SetTranslationRH(const escher::vec3& translation) {
+bool Node::SetTranslation(const escher::vec3& translation) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetTranslationRH(): node of type " << type_name()
+        << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
         << " cannot have translation set.";
     return false;
   }
@@ -192,10 +192,10 @@ bool Node::SetTranslationRH(const escher::vec3& translation) {
   return true;
 }
 
-bool Node::SetTranslationRH(Vector3VariablePtr translation_variable) {
+bool Node::SetTranslation(Vector3VariablePtr translation_variable) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetTranslationRH(): node of type " << type_name()
+        << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
         << " cannot have translation set.";
     return false;
   }

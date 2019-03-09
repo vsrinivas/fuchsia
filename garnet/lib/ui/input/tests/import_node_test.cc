@@ -110,7 +110,7 @@ TEST_F(ImportNodeTest, ImportNodeEventDelivery) {
         // export that node so that the client can hang their content from it.
         scene.AddChild(*root_node);
         scenic::EntityNode translate_child_view(session);
-        translate_child_view.SetTranslationRH(2, 2, 0);
+        translate_child_view.SetTranslation(2, 2, 0);
         translate_child_view.SetTag(1);  // Emulate ViewManager's usage.
         root_node->AddChild(translate_child_view);
         translate_child_view.Export(std::move(export_token));
@@ -130,7 +130,7 @@ TEST_F(ImportNodeTest, ImportNodeEventDelivery) {
         import.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.

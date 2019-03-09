@@ -41,8 +41,7 @@ void VkCubeView::OnSceneInvalidated(
 
   scenic::Rectangle pane_shape(session(), logical_size().x, logical_size().y);
   pane_node_.SetShape(pane_shape);
-  pane_node_.SetTranslationRH(logical_size().x * 0.5, logical_size().y * 0.5,
-                              0);
+  pane_node_.SetTranslation(logical_size().x * 0.5, logical_size().y * 0.5, 0);
 
   // No need to Present on session; base_view will present after calling
   // OnSceneInvalidated.

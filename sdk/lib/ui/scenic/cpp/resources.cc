@@ -185,7 +185,7 @@ Node::Node(Node&& moved) : Resource(std::move(moved)) {}
 
 Node::~Node() = default;
 
-void Node::SetTranslationInternal(const float translation[3]) {
+void Node::SetTranslation(const float translation[3]) {
   session()->Enqueue(NewSetTranslationCmd(id(), translation));
 }
 

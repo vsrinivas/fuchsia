@@ -136,7 +136,7 @@ void ViewImpl::OnSceneInvalidated(
         glm::mix(swirl_translation, quadrant_translation, transition_param);
     float scale = 0.7f + 0.3f * transition_param;
 
-    nodes_[i].SetTranslationRH(translation.x, translation.y, translation.z);
+    nodes_[i].SetTranslation(translation.x, translation.y, translation.z);
     nodes_[i].SetScale(scale, scale, scale);
   }
 }

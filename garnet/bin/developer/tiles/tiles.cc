@@ -156,7 +156,7 @@ void Tiles::OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties properties,
   background_node_.SetShape(background_shape);
   float center_x = size_.width / 2.f;
   float center_y = size_.height / 2.f;
-  background_node_.SetTranslationRH(center_x, center_y, 0.f);
+  background_node_.SetTranslation(center_x, center_y, 0.f);
   callback();
   InvalidateScene();
 }
@@ -262,8 +262,8 @@ void Tiles::Layout() {
             view_it->first, fidl::MakeOptional(std::move(view_properties)));
       }
 
-      tile->host_node.SetTranslationRH(tile_bounds.x, tile_bounds.y,
-                                       -kTileElevation);
+      tile->host_node.SetTranslation(tile_bounds.x, tile_bounds.y,
+                                     -kTileElevation);
       ++view_it;
     }
   }

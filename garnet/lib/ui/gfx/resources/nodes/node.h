@@ -40,8 +40,8 @@ class Node : public Resource {
   uint32_t tag_value() const { return tag_value_; }
 
   bool SetTransform(const escher::Transform& transform);
-  bool SetTranslationRH(const escher::vec3& translation);
-  bool SetTranslationRH(Vector3VariablePtr translation);
+  bool SetTranslation(const escher::vec3& translation);
+  bool SetTranslation(Vector3VariablePtr translation);
   bool SetScale(const escher::vec3& scale);
   bool SetScale(Vector3VariablePtr scale);
   bool SetRotation(const escher::quat& rotation);

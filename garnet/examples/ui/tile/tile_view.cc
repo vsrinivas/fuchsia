@@ -215,7 +215,7 @@ void TileView::OnSceneInvalidated(
                                                0, 0, 0, 0);
     }
 
-    view_data->host_node.SetTranslationRH(layout_bounds.x, layout_bounds.y, 0u);
+    view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
 
     // Clip
     scenic::Rectangle shape(session(),            // session
@@ -223,8 +223,8 @@ void TileView::OnSceneInvalidated(
                             layout_bounds.height  // height
     );
     view_data->clip_shape_node.SetShape(shape);
-    view_data->clip_shape_node.SetTranslationRH(
-        layout_bounds.width * 0.5f, layout_bounds.height * 0.5f, 0.f);
+    view_data->clip_shape_node.SetTranslation(layout_bounds.width * 0.5f,
+                                              layout_bounds.height * 0.5f, 0.f);
   }
 }
 

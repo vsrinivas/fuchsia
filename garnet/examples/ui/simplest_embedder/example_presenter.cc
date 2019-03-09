@@ -92,7 +92,7 @@ ExamplePresenter::Presentation::Presentation(
   scene.AddChild(view_holder_node_);
 
   view_holder_node_.Attach(view_holder_);
-  view_holder_node_.SetTranslationRH(0, 0, -10.f);
+  view_holder_node_.SetTranslation(0, 0, -10.f);
 
   ambient_light.SetColor(0.3f, 0.3f, 0.3f);
   directional_light.SetColor(0.7f, 0.7f, 0.7f);

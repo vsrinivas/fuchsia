@@ -40,9 +40,9 @@ void View::LoadNode(scenic::ContainerNode& parent_node,
 
   if (flat_node->transform()) {
     auto transform = flat_node->transform();
-    entity_node.SetTranslationRH(transform->translation()->x(),   // x
-                                 transform->translation()->y(),   // y
-                                 transform->translation()->z());  // z
+    entity_node.SetTranslation(transform->translation()->x(),     // x
+                               transform->translation()->y(),     // y
+                               transform->translation()->z());    // z
     entity_node.SetScale(transform->scale()->x(),                 // x
                          transform->scale()->y(),                 // y
                          transform->scale()->z());                // z

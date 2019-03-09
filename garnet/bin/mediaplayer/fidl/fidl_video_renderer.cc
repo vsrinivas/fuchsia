@@ -664,9 +664,9 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // just enough to remove the parts we don't want to see.
   image_pipe_node_.SetShape(
       scenic::Rectangle(session(), image_width_, image_height_));
-  image_pipe_node_.SetTranslationRH((image_width_ - display_width_) / 2.0f,
-                                    (image_height_ - display_height_) / 2.0f,
-                                    0.0f);
+  image_pipe_node_.SetTranslation((image_width_ - display_width_) / 2.0f,
+                                  (image_height_ - display_height_) / 2.0f,
+                                  0.0f);
 
   // Scale |entity_node_| to fill the view.
   float width_scale = logical_size().x / display_width_;
@@ -677,19 +677,19 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // widget doesn't take into account that scenic 0,0 is at center. As a
   // consequence, C++ parent views need to do this:
   //
-  //    video_child_view->SetTranslationRH(video_rect.x, video_rect.y,
+  //    video_child_view->SetTranslation(video_rect.x, video_rect.y,
   //                                     kVideoElevation);
   //
   // instead of the normal thing, which would be this:
   //
-  //    video_child_view->SetTranslationRH(
+  //    video_child_view->SetTranslation(
   //        video_rect.x + video_rect.width * 0.5f,
   //        video_rect.y + video_rect.height * 0.5f, kVideoElevation);
   //
   // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
   // fixed.
-  entity_node_.SetTranslationRH(logical_size().x * .5f, logical_size().y * .5f,
-                                0.f);
+  entity_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f,
+                              0.f);
 }
 
 }  // namespace media_player

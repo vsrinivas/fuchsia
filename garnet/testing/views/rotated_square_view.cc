@@ -22,7 +22,7 @@ void RotatedSquareView::Draw(float cx, float cy, float sx, float sy) {
 
   Rectangle square_shape(session(), square_size, square_size);
   square_node_.SetShape(square_shape);
-  square_node_.SetTranslationRH((float[]){cx, cy, -kSquareElevation});
+  square_node_.SetTranslation((float[]){cx, cy, -kSquareElevation});
   square_node_.SetRotation(
       (float[]){0.f, 0.f, sinf(kSquareAngle * .5f), cosf(kSquareAngle * .5f)});
 }

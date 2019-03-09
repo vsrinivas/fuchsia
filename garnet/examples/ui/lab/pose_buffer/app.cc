@@ -124,8 +124,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
       checker_shape_node.SetShape(checker_shape);
       checker_shape_node.SetMaterial(materials[material_index]);
       // checker_node.AddPart(checker_shape_node);
-      checker_shape_node.SetTranslationRH(translation.x, translation.y,
-                                          translation.z);
+      checker_shape_node.SetTranslation(translation.x, translation.y,
+                                        translation.z);
       root_node.AddChild(checker_shape_node);
     }
   }

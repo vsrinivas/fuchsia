@@ -57,7 +57,7 @@ ViewState::ViewState(
 
   // TODO(SCN-371): Avoid Z-fighting by introducing a smidgen of elevation
   // between each view and its embedded sub-views.  This is not a long-term fix.
-  top_node_->SetTranslationRH(0.f, 0.f, -0.1f);
+  top_node_->SetTranslation(0.f, 0.f, -0.1f);
 
   session_.Present(0, [](fuchsia::images::PresentationInfo info) {});
 }

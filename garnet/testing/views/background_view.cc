@@ -38,7 +38,7 @@ void BackgroundView::set_present_callback(
 void BackgroundView::Draw(float cx, float cy, float sx, float sy) {
   Rectangle background_shape(&session_, sx, sy);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH((float[]){cx, cy, -kBackgroundElevation});
+  background_node_.SetTranslation((float[]){cx, cy, -kBackgroundElevation});
 }
 
 void BackgroundView::Present() {

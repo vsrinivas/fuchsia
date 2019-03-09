@@ -112,11 +112,11 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
             holder_2(session, std::move(vh2), "holder_2");
 
         root_node->AddChild(translate_1);
-        translate_1.SetTranslationRH(0, 0, -2);
+        translate_1.SetTranslation(0, 0, -2);
         translate_1.Attach(holder_1);
 
         root_node->AddChild(translate_2);
-        translate_2.SetTranslationRH(4, 4, -1);
+        translate_2.SetTranslation(4, 4, -1);
         translate_2.Attach(holder_2);
 
         RequestToPresent(session);
@@ -131,7 +131,7 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
         view_1.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
@@ -152,7 +152,7 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
         view_2.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
-        shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
+        shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
         root_node->AddPart(shape);
 
         scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.

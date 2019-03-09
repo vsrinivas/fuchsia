@@ -49,8 +49,7 @@ YuvView::YuvView(scenic::ViewContext context,
   root_node().AddChild(node_);
 
   // Translation of 0, 0 is the middle of the screen
-  node_.SetTranslationRH(kInitialWindowXPos, kInitialWindowYPos,
-                         -kDisplayHeight);
+  node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, -kDisplayHeight);
   InvalidateScene();
 
   StartYuv();
@@ -74,9 +73,9 @@ void YuvView::OnSceneInvalidated(
   // Compute the translation for the window to swirl around the screen.
   // Why do this?  Well, this is an example of what a View can do, and it helps
   // debug to know if scenic is still running.
-  node_.SetTranslationRH(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                         kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
-                         -kDisplayHeight);
+  node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
+                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
+                       -kDisplayHeight);
 
   // The recangle is constantly animating; invoke InvalidateScene() to guarantee
   // that OnSceneInvalidated() will be called again.

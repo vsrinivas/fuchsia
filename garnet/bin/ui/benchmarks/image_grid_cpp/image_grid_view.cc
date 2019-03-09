@@ -69,7 +69,8 @@ void ImageGridView::CreateScene() {
   scenic::Rectangle background_shape(session(), logical_size().x,
                                      logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH(
+
+  background_node_.SetTranslation(
       logical_size().x * .5f, logical_size().y * .5f, -kBackgroundElevation);
 
   root_node().AddChild(cards_parent_node_);
@@ -96,8 +97,7 @@ void ImageGridView::CreateScene() {
                                           kCardCornerRadius, kCardCornerRadius,
                                           kCardCornerRadius, kCardCornerRadius);
       card_node.SetShape(card_shape);
-      card_node.SetTranslationRH(
-          (float[]){center_x, center_y, -kCardElevation});
+      card_node.SetTranslation((float[]){center_x, center_y, -kCardElevation});
 
       cards_.push_back(std::move(card_node));
 
@@ -126,7 +126,7 @@ void ImageGridView::UpdateScene(uint64_t presentation_time) {
     }
   }
 
-  cards_parent_node_.SetTranslationRH((float[]){x_offset_, 0, 0});
+  cards_parent_node_.SetTranslation((float[]){x_offset_, 0, 0});
 }
 
 }  // namespace image_grid

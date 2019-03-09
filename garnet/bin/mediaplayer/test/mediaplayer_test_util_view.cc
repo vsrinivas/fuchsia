@@ -283,7 +283,8 @@ void MediaPlayerTestUtilView::Layout() {
   scenic::Rectangle background_shape(session(), logical_size().x,
                                      logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH(
+
+  background_node_.SetTranslation(
       logical_size().x * .5f, logical_size().y * .5f, -kBackgroundElevation);
 
   // Compute maximum size of video content after reserving space
@@ -325,7 +326,7 @@ void MediaPlayerTestUtilView::Layout() {
   scenic::Rectangle progress_bar_shape(session(), controls_rect_.width,
                                        controls_rect_.height);
   progress_bar_node_.SetShape(progress_bar_shape);
-  progress_bar_node_.SetTranslationRH(
+  progress_bar_node_.SetTranslation(
       controls_rect_.x + controls_rect_.width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f, -kProgressBarElevation);
 
@@ -333,7 +334,7 @@ void MediaPlayerTestUtilView::Layout() {
   scenic::Rectangle progress_bar_slider_shape(session(), controls_rect_.width,
                                               controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
-  progress_bar_slider_node_.SetTranslationRH(
+  progress_bar_slider_node_.SetTranslation(
       controls_rect_.x + controls_rect_.width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f,
       -kProgressBarSliderElevation);
@@ -358,11 +359,11 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   // Position the video.
   if (video_host_node_) {
     // TODO(dalesat): Fix this when SCN-1041 is fixed. Should be:
-    // video_host_node_->SetTranslationRH(
+    // video_host_node_->SetTranslation(
     //     content_rect_.x + content_rect_.width * 0.5f,
     //     content_rect_.y + content_rect_.height * 0.5f, kVideoElevation);
-    video_host_node_->SetTranslationRH(content_rect_.x, content_rect_.y,
-                                       -kVideoElevation);
+    video_host_node_->SetTranslation(content_rect_.x, content_rect_.y,
+                                     -kVideoElevation);
   }
 
   float progress_bar_slider_width =
@@ -370,7 +371,7 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   scenic::Rectangle progress_bar_slider_shape(
       session(), progress_bar_slider_width, controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
-  progress_bar_slider_node_.SetTranslationRH(
+  progress_bar_slider_node_.SetTranslation(
       controls_rect_.x + progress_bar_slider_width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f,
       -kProgressBarSliderElevation);
