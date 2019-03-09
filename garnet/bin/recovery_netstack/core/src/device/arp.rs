@@ -149,87 +149,97 @@ pub(crate) fn receive_arp_packet<
     mut buffer: B,
 ) {
     // TODO(wesleyac) Add support for gratuitous ARP and probe/announce.
-    let packet = if let Ok(packet) = buffer.parse::<ArpPacket<_, AD::HardwareAddr, P>>() {
-        let addressed_to_me =
-            Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
-        let table = &mut AD::get_arp_state(ctx, device_id).table;
-
-        // The following logic is equivalent to the "Packet Reception" section of RFC 826.
-        //
-        // We statically know that the hardware type and protocol type are correct, so we do not
-        // need to have additional code to check that. The remainder of the algorithm is:
-        //
-        // Merge_flag := false
-        // If the pair <protocol type, sender protocol address> is
-        //     already in my translation table, update the sender
-        //     hardware address field of the entry with the new
-        //     information in the packet and set Merge_flag to true.
-        // ?Am I the target protocol address?
-        // Yes:
-        //   If Merge_flag is false, add the triplet <protocol type,
-        //       sender protocol address, sender hardware address> to
-        //       the translation table.
-        //   ?Is the opcode ares_op$REQUEST?  (NOW look at the opcode!!)
-        //   Yes:
-        //     Swap hardware and protocol fields, putting the local
-        //         hardware and protocol addresses in the sender fields.
-        //     Set the ar$op field to ares_op$REPLY
-        //     Send the packet to the (new) target hardware address on
-        //         the same hardware on which the request was received.
-        //
-        // This can be summed up as follows:
-        //
-        // +----------+---------------+---------------+-----------------------------+
-        // | opcode   | Am I the TPA? | SPA in table? | action                      |
-        // +----------+---------------+---------------+-----------------------------+
-        // | REQUEST  | yes           | yes           | Update table, Send response |
-        // | REQUEST  | yes           | no            | Update table, Send response |
-        // | REQUEST  | no            | yes           | Update table                |
-        // | REQUEST  | no            | no            | NOP                         |
-        // | RESPONSE | yes           | yes           | Update table                |
-        // | RESPONSE | yes           | no            | Update table                |
-        // | RESPONSE | no            | yes           | Update table                |
-        // | RESPONSE | no            | no            | NOP                         |
-        // +----------+---------------+---------------+-----------------------------+
-        //
-        // Given that the semantics of ArpTable is that inserting and updating an entry are the
-        // same, this can be implemented with two if statements (one to update the table, and one
-        // to send a response).
-
-        if addressed_to_me || table.lookup(packet.sender_protocol_address()).is_some() {
-            table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
-            // Since we just got the protocol -> hardware address mapping, we can cancel a timeout
-            // to resend a request.
-            ctx.dispatcher.cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
-                DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-                    device_id: device_id,
-                    ip_addr: packet.sender_protocol_address().addr(),
-                }),
-            )));
+    let packet = match buffer.parse::<ArpPacket<_, AD::HardwareAddr, P>>() {
+        Ok(packet) => packet,
+        Err(err) => {
+            // If parse failed, it's because either the packet was malformed, or
+            // it was for an unexpected hardware or network protocol. In either
+            // case, we just drop the packet and move on. RFC 826's "Packet
+            // Reception" section says of packet processing algorithm, "Negative
+            // conditionals indicate an end of processing and a discarding of
+            // the packet."
+            debug!("discarding malformed ARP packet: {}", err);
+            return;
         }
-        if addressed_to_me && packet.operation() == ArpOp::Request {
-            let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
-            // TODO(joshlf): Do something if send_arp_frame returns an error?
-            AD::send_arp_frame(
-                ctx,
-                device_id,
-                packet.sender_hardware_address(),
-                InnerSerializer::new_vec(
-                    ArpPacketBuilder::new(
-                        ArpOp::Response,
-                        self_hw_addr,
-                        packet.target_protocol_address(),
-                        packet.sender_hardware_address(),
-                        packet.sender_protocol_address(),
-                    ),
-                    buffer,
-                ),
-            );
-        }
-    } else {
-        // TODO(joshlf): Do something else here?
-        return;
     };
+
+    let addressed_to_me =
+        Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
+    let table = &mut AD::get_arp_state(ctx, device_id).table;
+
+    // The following logic is equivalent to the "Packet Reception" section of
+    // RFC 826.
+    //
+    // We statically know that the hardware type and protocol type are correct,
+    // so we do not need to have additional code to check that. The remainder of
+    // the algorithm is:
+    //
+    // Merge_flag := false
+    // If the pair <protocol type, sender protocol address> is
+    //     already in my translation table, update the sender
+    //     hardware address field of the entry with the new
+    //     information in the packet and set Merge_flag to true.
+    // ?Am I the target protocol address?
+    // Yes:
+    //   If Merge_flag is false, add the triplet <protocol type,
+    //       sender protocol address, sender hardware address> to
+    //       the translation table.
+    //   ?Is the opcode ares_op$REQUEST?  (NOW look at the opcode!!)
+    //   Yes:
+    //     Swap hardware and protocol fields, putting the local
+    //         hardware and protocol addresses in the sender fields.
+    //     Set the ar$op field to ares_op$REPLY
+    //     Send the packet to the (new) target hardware address on
+    //         the same hardware on which the request was received.
+    //
+    // This can be summed up as follows:
+    //
+    // +----------+---------------+---------------+-----------------------------+
+    // | opcode   | Am I the TPA? | SPA in table? | action                      |
+    // +----------+---------------+---------------+-----------------------------+
+    // | REQUEST  | yes           | yes           | Update table, Send response |
+    // | REQUEST  | yes           | no            | Update table, Send response |
+    // | REQUEST  | no            | yes           | Update table                |
+    // | REQUEST  | no            | no            | NOP                         |
+    // | RESPONSE | yes           | yes           | Update table                |
+    // | RESPONSE | yes           | no            | Update table                |
+    // | RESPONSE | no            | yes           | Update table                |
+    // | RESPONSE | no            | no            | NOP                         |
+    // +----------+---------------+---------------+-----------------------------+
+    //
+    // Given that the semantics of ArpTable is that inserting and updating an
+    // entry are the same, this can be implemented with two if statements (one
+    // to update the table, and one to send a response).
+
+    if addressed_to_me || table.lookup(packet.sender_protocol_address()).is_some() {
+        table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
+        // Since we just got the protocol -> hardware address mapping, we can
+        // cancel a timeout to resend a request.
+        ctx.dispatcher.cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
+            DeviceLayerTimerId::ArpIpv4(ArpTimerId {
+                device_id: device_id,
+                ip_addr: packet.sender_protocol_address().addr(),
+            }),
+        )));
+    }
+    if addressed_to_me && packet.operation() == ArpOp::Request {
+        let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+        AD::send_arp_frame(
+            ctx,
+            device_id,
+            packet.sender_hardware_address(),
+            InnerSerializer::new_vec(
+                ArpPacketBuilder::new(
+                    ArpOp::Response,
+                    self_hw_addr,
+                    packet.target_protocol_address(),
+                    packet.sender_hardware_address(),
+                    packet.sender_protocol_address(),
+                ),
+                buffer,
+            ),
+        );
+    }
 }
 
 /// Insert an entry into the ARP table.
