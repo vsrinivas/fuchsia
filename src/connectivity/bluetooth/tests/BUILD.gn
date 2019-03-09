@@ -6,9 +6,9 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-# TODO(BLD-338): Rename target to the less-redundant "tests" when target names
-# no longer have to match package names.
-test_package("bluetooth-tests") {
+test_package("tests") {
+  package_name = "bluetooth-tests"
+
   deps = [
     ":bt-host-unittests",
     "integration",
