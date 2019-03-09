@@ -4,17 +4,12 @@
 
 //! A networking stack.
 
-#![feature(async_await, await_macro)]
-#![feature(never_type)]
-#![feature(specialization)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
-// We use repr(packed) in some places (particularly in the wire module) to
-// create structs whose layout matches the layout of network packets on the
-// wire. This ensures that the compiler will stop us from using repr(packed) in
-// an unsound manner without using unsafe code.
-#![deny(safe_packed_borrows)]
+#![feature(never_type)]
+#![feature(specialization)]
+
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 // TODO(joshlf): Remove this once all of the elements in the crate are actually
