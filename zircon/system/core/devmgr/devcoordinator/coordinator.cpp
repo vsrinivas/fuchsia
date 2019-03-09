@@ -360,7 +360,7 @@ zx_status_t Coordinator::SetBootdata(const zx::unowned_vmo& vmo) {
 }
 
 void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const {
-    zx_koid_t pid = dev->host ? dev->host->koid() : 0;
+    zx_koid_t pid = dev->host() ? dev->host()->koid() : 0;
     char extra[256];
     if (log_flags & LOG_DEVLC) {
         snprintf(extra, sizeof(extra), " dev=%p ", dev);
@@ -391,7 +391,7 @@ void Coordinator::DumpState(VmoWriter* vmo) const {
 }
 
 void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
-    if (dev->host) {
+    if (dev->host()) {
         vmo->Printf("Name [%s]%s%s%s\n", dev->name.data(), dev->libname.empty() ? "" : " Driver [",
                     dev->libname.empty() ? "" : dev->libname.data(), dev->libname.empty() ? "" : "]");
         vmo->Printf("Flags   :%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
@@ -801,10 +801,14 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     }
 
     // detach from devhost
-    Devhost* dh = dev->host;
+    Devhost* dh = dev->host();
     if (dh != nullptr) {
-        dev->host->devices().erase(*dev);
-        dev->host = nullptr;
+        dev->host()->devices().erase(*dev);
+        // Acquire an extra reference to the devhost that gets released below.
+        // This is necessary to prevent a dh from being freed in the middle of
+        // the code below.
+        dh->AddRef();
+        dev->set_host(nullptr);
 
         // If we are responding to a disconnect,
         // we'll remove all the other devices on this devhost too.
@@ -856,8 +860,8 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
                 // AND our parent's devhost is not dying
                 // THEN we will want to rebind our parent
                 if (!(parent->flags & DEV_CTX_DEAD) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
-                    ((parent->host == nullptr) ||
-                     !(parent->host->flags() & Devhost::Flags::kDying))) {
+                    ((parent->host() == nullptr) ||
+                     !(parent->host()->flags() & Devhost::Flags::kDying))) {
 
                     log(DEVLC, "devcoordinator: bus device %p name='%s' is unbound\n", parent.get(),
                         parent->name.data());
@@ -1520,8 +1524,6 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh,
     if ((r = Device::BeginWait(dev, dev->coordinator->dispatcher())) != ZX_OK) {
         return r;
     }
-    dev->host = dh;
-    dh->AddRef();
     dh->devices().push_back(dev.get());
     return ZX_OK;
 }
@@ -1567,7 +1569,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
     }
 
     // if this device has no devhost, first instantiate it
-    if (dev->proxy->host == nullptr) {
+    if (dev->proxy->host() == nullptr) {
         zx::channel h0;
         // May be either a VMO or a channel.
         zx::handle h1;
@@ -1588,13 +1590,13 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
             h1 = std::move(bootdata_vmo_);
         }
         if (target_devhost == nullptr) {
-            if ((r = NewDevhost(devhostname, dev->host, &target_devhost)) < 0) {
+            if ((r = NewDevhost(devhostname, dev->host(), &target_devhost)) < 0) {
                 log(ERROR, "devcoordinator: NewDevhost: %d\n", r);
                 return r;
             }
         }
-        dev->proxy->host = target_devhost;
-        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, std::move(h1))) < 0) {
+        dev->proxy->set_host(target_devhost);
+        if ((r = dh_create_device(dev->proxy, dev->proxy->host(), arg1, std::move(h1))) < 0) {
             log(ERROR, "devcoordinator: dh_create_device: %d\n", r);
             return r;
         }
@@ -1620,7 +1622,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
     }
     if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
         // non-busdev is pretty simple
-        if (dev->host == nullptr) {
+        if (dev->host() == nullptr) {
             log(ERROR, "devcoordinator: can't bind to device without devhost\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -1670,14 +1672,14 @@ void Coordinator::BuildSuspendList() {
 
     // sys_device must suspend last as on x86 it invokes
     // ACPI S-state transition
-    devhosts.push_front(sys_device_->proxy->host);
-    append_suspend_list(&suspend_context(), sys_device_->proxy->host);
+    devhosts.push_front(sys_device_->proxy->host());
+    append_suspend_list(&suspend_context(), sys_device_->proxy->host());
 
-    devhosts.push_front(root_device_->proxy->host);
-    append_suspend_list(&suspend_context(), root_device_->proxy->host);
+    devhosts.push_front(root_device_->proxy->host());
+    append_suspend_list(&suspend_context(), root_device_->proxy->host());
 
-    devhosts.push_front(misc_device_->proxy->host);
-    append_suspend_list(&suspend_context(), misc_device_->proxy->host);
+    devhosts.push_front(misc_device_->proxy->host());
+    append_suspend_list(&suspend_context(), misc_device_->proxy->host());
 
     // test devices do not (yet) participate in suspend
 

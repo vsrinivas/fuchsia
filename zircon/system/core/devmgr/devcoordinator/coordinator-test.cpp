@@ -12,6 +12,7 @@
 
 #include "coordinator.h"
 #include "devfs.h"
+#include "devhost.h"
 
 namespace devmgr {
 zx::channel fs_clone(const char* path) {
@@ -171,7 +172,8 @@ bool bind_devices() {
     // Bind the device to a fake devhost.
     fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
     devmgr::Devhost host;
-    dev->host = &host;
+    host.AddRef(); // refcount starts at zero, so bump it up to keep us from being cleaned up
+    dev->set_host(&host);
     status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
     ASSERT_EQ(ZX_OK, status);
 
@@ -217,7 +219,7 @@ bool bind_devices() {
     loop.RunUntilIdle();
 
     // Reset the fake devhost connection.
-    dev->host = nullptr;
+    dev->set_host(nullptr);
     remote.reset();
     loop.RunUntilIdle();
 

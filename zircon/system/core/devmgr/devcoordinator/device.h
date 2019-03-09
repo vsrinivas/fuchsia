@@ -80,7 +80,6 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     Coordinator* coordinator;
     uint32_t flags = 0;
 
-    Devhost* host = nullptr;
     fbl::String name;
     fbl::String libname;
     fbl::String args;
@@ -153,6 +152,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
         component_ = component;
     }
 
+    void set_host(Devhost* host);
+    Devhost* host() const { return host_; }
+
 private:
     fbl::RefPtr<Device> parent_;
     uint32_t protocol_id_ = 0;
@@ -166,6 +168,8 @@ private:
     // If the device is part of a composite device, this points to the component
     // that matched it.
     CompositeDeviceComponent* component_ = nullptr;
+
+    Devhost* host_ = nullptr;
 };
 
 } // namespace devmgr

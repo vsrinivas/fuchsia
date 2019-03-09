@@ -25,6 +25,9 @@ Device::~Device() {
 
     devfs_unpublish(this);
 
+    // Drop our reference to our devhost if we still have it
+    set_host(nullptr);
+
     fbl::unique_ptr<Metadata> md;
     while ((md = this->metadata.pop_front()) != nullptr) {
         if (md->has_path) {
@@ -66,7 +69,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     }
 
     // We exist within our parent's device host
-    dev->host = parent->host;
+    dev->set_host(parent->host());
 
     fbl::RefPtr<Device> real_parent;
     // If our parent is a proxy, for the purpose
@@ -93,10 +96,9 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
         return status;
     }
 
-    if (dev->host) {
+    if (dev->host_) {
         // TODO host == nullptr should be impossible
-        dev->host->AddRef();
-        dev->host->devices().push_back(dev.get());
+        dev->host_->devices().push_back(dev.get());
     }
     real_parent->children.push_back(dev.get());
     log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name.data());
@@ -192,6 +194,16 @@ zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
         }
     }
     return ZX_OK;
+}
+
+void Device::set_host(Devhost* host) {
+    if (host_) {
+        this->coordinator->ReleaseDevhost(host_);
+    }
+    host_ = host;
+    if (host_) {
+        host_->AddRef();
+    }
 }
 
 } // namespace devmgr

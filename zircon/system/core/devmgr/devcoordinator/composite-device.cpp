@@ -110,7 +110,7 @@ zx_status_t CompositeDevice::TryAssemble() {
         // Find the devhost to put everything in (if we don't find one, nullptr
         // means "a new devhost").
         if (component.index() == coresident_device_index_) {
-            devhost = component.bound_device()->host;
+            devhost = component.bound_device()->host();
         }
         // Make sure the component driver has created its device
         if (component.component_device() == nullptr) {
@@ -123,8 +123,8 @@ zx_status_t CompositeDevice::TryAssemble() {
         const fbl::RefPtr<Device>& dev = component.component_device();
         // Double check that we haven't ended up in a state where the proxies
         // would need to be in different processes.
-        if (devhost != nullptr && dev->proxy != nullptr && dev->proxy->host != nullptr &&
-            dev->proxy->host != devhost) {
+        if (devhost != nullptr && dev->proxy != nullptr && dev->proxy->host() != nullptr &&
+            dev->proxy->host() != devhost) {
             log(ERROR, "devcoordinator: cannot create composite, proxies in different processes\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -134,7 +134,7 @@ zx_status_t CompositeDevice::TryAssemble() {
         }
         // If we hadn't picked a devhost, use the one that was created just now.
         if (devhost == nullptr) {
-            devhost = dev->proxy->host;
+            devhost = dev->proxy->host();
             ZX_ASSERT(devhost != nullptr);
         }
     }
