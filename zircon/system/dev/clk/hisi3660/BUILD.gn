@@ -4,7 +4,7 @@
 
 driver("hisi3660") {
   sources = [
-    "hisi3660-clk.c",
+    "hisi3660-clk.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-clock",
@@ -13,6 +13,8 @@ driver("hisi3660") {
     "$zx/system/dev/clk/hisi-lib",
     "$zx/system/dev/lib/hi3660",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
