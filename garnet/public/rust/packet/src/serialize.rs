@@ -505,9 +505,14 @@ pub trait Serializer: Sized {
     /// The type of buffers returned from serialization methods on this trait.
     type Buffer: BufferMut;
 
+    // TODO(joshlf): Once the generic_associated_types feature is stabilized,
+    // change this to:
+    //
+    // type Error where MtuError<Self::InnerError>: From<Self::Error>;
+
     /// The type of errors returned from the `serialize` and `serialize_outer`
     /// methods on this trait.
-    type Error;
+    type Error: Into<MtuError<Self::InnerError>>;
 
     /// The inner error type of `Self::Error`.
     ///
@@ -990,6 +995,21 @@ pub struct MtuSerializer<S: Serializer> {
     inner: S,
 }
 
+impl<S: Serializer> MtuSerializer<S> {
+    /// Consume this `MtuSerializer` and return the MTU and encapsulated
+    /// `Serializer` separately.
+    pub fn into_mtu_serializer(self) -> (usize, S) {
+        let MtuSerializer { mtu, inner } = self;
+        (mtu, inner)
+    }
+
+    /// Consume this `MtuSerializer` and return the encapsulated `Serializer`.
+    pub fn into_serializer(self) -> S {
+        let MtuSerializer { inner, .. } = self;
+        inner
+    }
+}
+
 impl<S: Serializer> Serializer for MtuSerializer<S> {
     type Buffer = S::Buffer;
     type Error = MtuError<S::InnerError>;
@@ -1031,6 +1051,20 @@ pub struct EncapsulatingSerializer<B: PacketBuilder, S: Serializer> {
 }
 
 impl<B: PacketBuilder, S: Serializer> EncapsulatingSerializer<B, S> {
+    /// Consume this `EncapsulatingSerializer` and return the builder and
+    /// encapsulated `Serializer` separately.
+    pub fn into_builder_serializer(self) -> (B, S) {
+        let EncapsulatingSerializer { builder, inner } = self;
+        (builder, inner)
+    }
+
+    /// Consume this `EncapsulatingSerializer` and return the encapsulated
+    /// `Serializer`.
+    pub fn into_serializer(self) -> S {
+        let EncapsulatingSerializer { inner, .. } = self;
+        inner
+    }
+
     // The minimum body and MTU required of the encapsulated serializer. Returns
     // None if the MTU is exeeded by this layer's header and footer.
     fn min_body_mtu(&self, min_body: usize, mtu: usize) -> Option<(usize, usize)> {
