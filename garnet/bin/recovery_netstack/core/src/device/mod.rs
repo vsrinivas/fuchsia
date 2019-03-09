@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
-use packet::Serializer;
+use packet::{MtuError, Serializer};
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr};
@@ -134,7 +134,8 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A, S>(
     device: DeviceId,
     local_addr: A,
     body: S,
-) where
+) -> Result<(), (MtuError<S::InnerError>, S)>
+where
     A: IpAddress,
     S: Serializer,
 {

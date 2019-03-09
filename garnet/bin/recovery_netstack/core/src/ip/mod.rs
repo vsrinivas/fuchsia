@@ -18,7 +18,8 @@ use log::{debug, trace};
 use std::mem;
 
 use packet::{
-    BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
+    BufferMut, BufferSerializer, MtuError, ParsablePacket, ParseBufferMut, ParseMetadata,
+    Serializer,
 };
 use specialize_ip_macro::specialize_ip_address;
 
@@ -343,7 +344,7 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
     dst_ip: A,
     proto: IpProto,
     get_body: F,
-) -> Result<(), (S::Error, S)>
+) -> Result<(), (MtuError<S::InnerError>, S)>
 where
     A: IpAddress,
     S: Serializer,
@@ -360,7 +361,9 @@ where
         // TODO(joshlf): Currently, we serialize using the normal Serializer
         // functionality. I wonder if, in the case of delivering to loopback, we
         // can do something more efficient?
-        let mut buffer = get_body(A::Version::LOOPBACK_ADDRESS).serialize_outer()?;
+        let mut buffer = get_body(A::Version::LOOPBACK_ADDRESS)
+            .serialize_outer()
+            .map_err(|(err, ser)| (err.into(), ser))?;
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
@@ -398,7 +401,7 @@ where
             dest.next_hop,
             proto,
             get_body(src_ip),
-        );
+        )?;
     } else {
         debug!("No route to host");
         // TODO(joshlf): No route to host
@@ -423,13 +426,14 @@ pub(crate) fn send_ip_packet_from<D: EventDispatcher, A, S>(
     dst_ip: A,
     proto: IpProto,
     body: S,
-) where
+) -> Result<(), (MtuError<S::InnerError>, S)>
+where
     A: IpAddress,
     S: Serializer,
 {
     // TODO(joshlf): Figure out how to compute a route with the restrictions
     // mentioned in the doc comment.
-    log_unimplemented!((), "ip::send_ip_packet_from: not implemented");
+    log_unimplemented!(Ok(()), "ip::send_ip_packet_from: not implemented")
 }
 
 /// Send an IP packet to a remote host over a specific device.
@@ -452,7 +456,8 @@ pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     next_hop: A,
     proto: IpProto,
     body: S,
-) where
+) -> Result<(), (MtuError<S::InnerError>, S)>
+where
     A: IpAddress,
     S: Serializer,
 {
@@ -465,7 +470,8 @@ pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
         DEFAULT_TTL,
         proto,
     ));
-    crate::device::send_ip_frame(ctx, device, next_hop, body);
+    crate::device::send_ip_frame(ctx, device, next_hop, body)
+        .map_err(|(err, ser)| (err, ser.into_serializer()))
 }
 
 /// Send an ICMP response to a remote host.
@@ -481,7 +487,8 @@ fn send_icmp_response<D: EventDispatcher, A, S, F>(
     dst_ip: A,
     proto: IpProto,
     get_body: F,
-) where
+) -> Result<(), (MtuError<S::InnerError>, S)>
+where
     A: IpAddress,
     S: Serializer,
     F: FnOnce(A) -> S,
@@ -509,7 +516,7 @@ fn send_icmp_response<D: EventDispatcher, A, S, F>(
                 route.next_hop,
                 proto,
                 get_body(local_ip),
-            );
+            )?;
         } else {
             log_unimplemented!(
                 (),
@@ -530,4 +537,6 @@ fn send_icmp_response<D: EventDispatcher, A, S, F>(
     } else {
         debug!("Can't send ICMP response to {}: no route to host", src_ip);
     }
+
+    Ok(())
 }

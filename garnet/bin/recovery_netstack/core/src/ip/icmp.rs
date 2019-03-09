@@ -357,7 +357,7 @@ fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
                 IcmpDestUnreachable::default(),
             ),
         )
-    })
+    });
 }
 
 fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(

@@ -214,7 +214,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     device_id: u64,
     local_addr: A,
     body: S,
-) {
+) -> Result<(), (MtuError<S::InnerError>, S)> {
     let state = get_device_state(ctx, device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
@@ -236,14 +236,15 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     let dst_mac = log_unimplemented!(None, "device::ethernet::send_ip_frame: IPv6 unimplemented");
 
     if let Some(dst_mac) = dst_mac {
-        if let Ok(buffer) = body
+        let buffer = body
             .with_mtu(mtu)
             .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
             .serialize_outer()
-        {
-            ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
-        }
+            .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))?;
+        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
     }
+
+    Ok(())
 }
 
 /// Receive an Ethernet frame from the network.
