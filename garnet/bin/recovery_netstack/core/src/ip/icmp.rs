@@ -165,18 +165,22 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
                 local_ip,
                 src_ip,
                 Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                // Per RFC 4443, the pointer refers to the first byte of
-                // the packet whose Next Header field was unrecognized.
-                // It is measured as an offset from the beginning of the
-                // first IPv6 header. E.g., a pointer of 40 (the length
-                // of a single IPv6 header) would indicate that the Next
-                // Header field from that header - and hence of the
-                // first encapsulated packet - was unrecognized.
-                Icmpv6ParameterProblem::new({
-                    // TODO(joshlf): Use TryInto::try_into once it's stable.
-                    assert!(header_len <= u32::max_value() as usize);
-                    header_len as u32
-                }),
+                // Per RFC 4443, the pointer refers to the first byte of the
+                // packet whose Next Header field was unrecognized. It is
+                // measured as an offset from the beginning of the first IPv6
+                // header. E.g., a pointer of 40 (the length of a single IPv6
+                // header) would indicate that the Next Header field from that
+                // header - and hence of the first encapsulated packet - was
+                // unrecognized.
+                //
+                // NOTE: Since header_len is a usize, this could theoretically
+                // be a lossy conversion. However, all that means in practice is
+                // that, if a remote host somehow managed to get us to process a
+                // frame with a 4GB IP header and send an ICMP response, the
+                // pointer value would be wrong. It's not worth wasting special
+                // logic to avoid generating a malformed packet in a case that
+                // will almost certainly never happen.
+                Icmpv6ParameterProblem::new(header_len as u32),
             ))
         });
     }
