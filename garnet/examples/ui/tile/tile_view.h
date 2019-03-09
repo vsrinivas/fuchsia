@@ -12,9 +12,9 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/base_view.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <zx/eventpair.h>
 
@@ -25,7 +25,7 @@
 
 namespace examples {
 
-class TileView : public scenic::V1BaseView,
+class TileView : public scenic::BaseView,
                  public fuchsia::ui::policy::Presenter {
  public:
   TileView(scenic::ViewContext context, TileParams tile_params);
@@ -34,32 +34,41 @@ class TileView : public scenic::V1BaseView,
 
  private:
   struct ViewData {
-    explicit ViewData(uint32_t key,
+    explicit ViewData(std::string label, zx::eventpair view_holder_token,
                       fuchsia::sys::ComponentControllerPtr controller,
                       scenic::Session* session);
     ~ViewData() = default;
 
-    const uint32_t key;
     fuchsia::sys::ComponentControllerPtr controller;
     scenic::EntityNode host_node;
     scenic::ShapeNode clip_shape_node;
+    scenic::ViewHolder view_holder;
 
-    fuchsia::ui::viewsv1::ViewProperties view_properties;
-    fuchsia::ui::viewsv1::ViewInfo view_info;
+    float width;
+    float height;
   };
 
-  // |scenic::V1BaseView|
-  void OnChildAttached(
-      uint32_t child_key,
-      ::fuchsia::ui::viewsv1::ViewInfo child_view_info) override;
-  void OnChildUnavailable(uint32_t child_key) override;
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
+
+  void OnChildAttached(uint32_t view_holder_id);
+
+  void OnChildUnavailable(uint32_t view_holder_id);
+
+  // |scenic::BaseView|
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
+
+  // |scenic::BaseView|
+  void OnScenicEvent(fuchsia::ui::scenic::Event event) override;
 
   // |fuchsia::ui::policy::Presenter|
   void Present2(zx::eventpair view_owner_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                     presentation) final;
+
   void HACK_SetRendererParams(
       bool enable_clipping,
       std::vector<fuchsia::ui::gfx::RendererParam> params) override {}
@@ -73,7 +82,7 @@ class TileView : public scenic::V1BaseView,
 
   zx::channel OpenAsDirectory();
 
-  void AddChildView(zx::eventpair view_owner_token,
+  void AddChildView(std::string label, zx::eventpair view_owner_token,
                     fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
@@ -90,10 +99,7 @@ class TileView : public scenic::V1BaseView,
   // The container for all views.
   scenic::EntityNode container_node_;
 
-  // The key we will assigned to the next child view which is added.
-  uint32_t next_child_view_key_ = 1u;
-
-  // Map from keys to |ViewData|
+  // Map from ViewHolderIds to |ViewData|
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;

@@ -86,8 +86,8 @@ void AddGraphicsBenchmarks(benchmarking::BenchmarksRunner* benchmarks_runner) {
     std::string renderer_params;
   };
 
-  const std::string kSetRootView =
-      "fuchsia-pkg://fuchsia.com/set_root_view#meta/set_root_view.cmx";
+  const std::string kPresentView =
+      "fuchsia-pkg://fuchsia.com/present_view#meta/present_view.cmx";
   const std::string kImageGridCpp =
       "fuchsia-pkg://fuchsia.com/image_grid_cpp#meta/image_grid_cpp.cmx";
   const std::string kTileView =
@@ -97,9 +97,9 @@ void AddGraphicsBenchmarks(benchmarking::BenchmarksRunner* benchmarks_runner) {
     return fxl::JoinStrings(strings, " ");
   };
   const std::string kImageGridCppCommand =
-      JoinCommands({kSetRootView, kImageGridCpp});
+      JoinCommands({kPresentView, kImageGridCpp});
   const std::string kImageGridCppX3Command = JoinCommands(
-      {kSetRootView, kTileView, kImageGridCpp, kImageGridCpp, kImageGridCpp});
+      {kPresentView, kTileView, kImageGridCpp, kImageGridCpp, kImageGridCpp});
 
   // clang-format off
   std::vector<BenchmarkParams> benchmark_params_list = {

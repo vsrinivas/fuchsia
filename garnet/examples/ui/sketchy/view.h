@@ -17,16 +17,23 @@ namespace sketchy_example {
 
 // A view that allows user to draw strokes on the screen. Pressing 'c' would
 // clear the canvas.
-class View final : public scenic::V1BaseView {
+class View final : public scenic::BaseView {
  public:
   View(scenic::ViewContext context, async::Loop* loop);
 
   ~View() override = default;
 
-  // |scenic::V1BaseView|
+  // |scenic::BaseView|
   void OnPropertiesChanged(
-      ::fuchsia::ui::viewsv1::ViewProperties old_properties) override;
-  bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
+      fuchsia::ui::gfx::ViewProperties old_properties) override;
+
+  // |scenic::BaseView|
+  void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
+
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
 
  private:
   sketchy_lib::Canvas canvas_;

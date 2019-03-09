@@ -4,26 +4,25 @@
 
 #include "garnet/examples/ui/tile/tile_view.h"
 
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/split_string.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/ui/base_view/cpp/embedded_view_utils.h>
 
 namespace examples {
 
 TileView::TileView(scenic::ViewContext context, TileParams params)
-    : V1BaseView(std::move(context), "Tile"),
+    : BaseView(std::move(context), "Tile"),
       vfs_(async_get_default_dispatcher()),
       services_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       params_(std::move(params)),
       container_node_(session()) {
-  parent_node().AddChild(container_node_);
-
+  root_node().AddChild(container_node_);
   CreateNestedEnvironment();
   ConnectViews();
 }
@@ -31,7 +30,8 @@ TileView::TileView(scenic::ViewContext context, TileParams params)
 void TileView::Present2(
     zx::eventpair view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
-  AddChildView(std::move(view_holder_token), nullptr);
+  AddChildView("tile_view child(Presented view)", std::move(view_holder_token),
+               nullptr);
 }
 
 void TileView::ConnectViews() {
@@ -67,8 +67,9 @@ void TileView::ConnectViews() {
         services.ConnectToService<fuchsia::ui::app::ViewProvider>();
     view_provider->CreateView(std::move(view_token), nullptr, nullptr);
 
-    // Add the view, which increments child_key_.
-    AddChildView(std::move(view_holder_token), std::move(controller));
+    // Add the view.
+    AddChildView("tile_view child(" + split_url[0] + ")",
+                 std::move(view_holder_token), std::move(controller));
   }
 }
 
@@ -100,49 +101,62 @@ void TileView::CreateNestedEnvironment() {
   env_->GetLauncher(env_launcher_.NewRequest());
 }
 
-void TileView::OnChildAttached(
-    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {
-  auto it = views_.find(child_key);
+void TileView::OnChildAttached(uint32_t view_holder_id) {
+  auto it = views_.find(view_holder_id);
   FXL_DCHECK(it != views_.end());
-
-  ViewData* view_data = it->second.get();
-  view_data->view_info = std::move(child_view_info);
 }
 
-void TileView::OnChildUnavailable(uint32_t child_key) {
-  FXL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
-  RemoveChildView(child_key);
+void TileView::OnChildUnavailable(uint32_t view_holder_id) {
+  FXL_LOG(ERROR) << "View died unexpectedly: view_holder_id=" << view_holder_id;
+  RemoveChildView(view_holder_id);
 }
 
-void TileView::AddChildView(zx::eventpair view_holder_token,
+void TileView::OnScenicEvent(fuchsia::ui::scenic::Event event) {
+  switch (event.Which()) {
+    case ::fuchsia::ui::scenic::Event::Tag::kGfx:
+      switch (event.gfx().Which()) {
+        case ::fuchsia::ui::gfx::Event::Tag::kViewConnected: {
+          auto& evt = event.gfx().view_connected();
+          OnChildAttached(evt.view_holder_id);
+          break;
+        }
+        case ::fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+          auto& evt = event.gfx().view_disconnected();
+          OnChildUnavailable(evt.view_holder_id);
+          break;
+        }
+        default:
+          break;
+      }
+    default:
+      break;
+  }
+}
+
+void TileView::AddChildView(std::string label, zx::eventpair view_holder_token,
                             fuchsia::sys::ComponentControllerPtr controller) {
-  const uint32_t view_key = next_child_view_key_++;
+  auto view_data = std::make_unique<ViewData>(
+      label, std::move(view_holder_token), std::move(controller), session());
 
-  auto view_data =
-      std::make_unique<ViewData>(view_key, std::move(controller), session());
-
-  zx::eventpair host_import_token;
-  view_data->host_node.ExportAsRequest(&host_import_token);
   container_node_.AddChild(view_data->host_node);
 
   view_data->host_node.AddPart(view_data->clip_shape_node);
   view_data->host_node.SetClip(0, true);
 
-  views_.emplace(view_key, std::move(view_data));
+  view_data->host_node.Attach(view_data->view_holder);
 
-  GetViewContainer()->AddChild2(view_key, std::move(view_holder_token),
-                                std::move(host_import_token));
+  views_.emplace(view_data->view_holder.id(), std::move(view_data));
+
   InvalidateScene();
 }
 
-void TileView::RemoveChildView(uint32_t child_key) {
-  auto it = views_.find(child_key);
+void TileView::RemoveChildView(uint32_t view_holder_id) {
+  auto it = views_.find(view_holder_id);
   FXL_DCHECK(it != views_.end());
 
   it->second->host_node.Detach();
   views_.erase(it);
 
-  GetViewContainer()->RemoveChild2(child_key, zx::eventpair());
   InvalidateScene();
 }
 
@@ -156,7 +170,7 @@ void TileView::OnSceneInvalidated(
       (params_.orientation_mode == TileParams::OrientationMode::kVertical);
 
   uint32_t index = 0;
-  uint32_t space = vertical ? logical_size().height : logical_size().width;
+  uint32_t space = vertical ? logical_size().y : logical_size().x;
   uint32_t base = space / views_.size();
   uint32_t excess = space % views_.size();
   uint32_t offset = 0;
@@ -174,27 +188,23 @@ void TileView::OnSceneInvalidated(
     if (vertical) {
       layout_bounds.x = 0;
       layout_bounds.y = offset;
-      layout_bounds.width = logical_size().width;
+      layout_bounds.width = logical_size().x;
       layout_bounds.height = extent;
     } else {
       layout_bounds.x = offset;
       layout_bounds.y = 0;
       layout_bounds.width = extent;
-      layout_bounds.height = logical_size().height;
+      layout_bounds.height = logical_size().y;
     }
     offset += extent;
 
-    ::fuchsia::ui::viewsv1::ViewProperties view_properties;
-    view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
-    view_properties.view_layout->size.width = layout_bounds.width;
-    view_properties.view_layout->size.height = layout_bounds.height;
-
-    if (view_data->view_properties != view_properties) {
-      ::fuchsia::ui::viewsv1::ViewProperties view_properties_clone;
-      view_properties.Clone(&view_properties_clone);
-      view_data->view_properties = std::move(view_properties_clone);
-      GetViewContainer()->SetChildProperties(
-          it->first, fidl::MakeOptional(std::move(view_properties)));
+    if (view_data->width != layout_bounds.width ||
+        view_data->height != layout_bounds.height) {
+      view_data->width = layout_bounds.width;
+      view_data->height = layout_bounds.height;
+      view_data->view_holder.SetViewProperties(0, 0, 0, view_data->width,
+                                               view_data->height, 1000.f, 0, 0,
+                                               0, 0, 0, 0);
     }
 
     view_data->host_node.SetTranslationRH(layout_bounds.x, layout_bounds.y, 0u);
@@ -207,16 +217,15 @@ void TileView::OnSceneInvalidated(
     view_data->clip_shape_node.SetShape(shape);
     view_data->clip_shape_node.SetTranslationRH(
         layout_bounds.width * 0.5f, layout_bounds.height * 0.5f, 0.f);
-    ;
   }
 }
 
-TileView::ViewData::ViewData(uint32_t key,
+TileView::ViewData::ViewData(std::string label, zx::eventpair view_holder_token,
                              fuchsia::sys::ComponentControllerPtr controller,
                              scenic::Session* session)
-    : key(key),
-      controller(std::move(controller)),
+    : controller(std::move(controller)),
       host_node(session),
-      clip_shape_node(session) {}
+      clip_shape_node(session),
+      view_holder(session, std::move(view_holder_token), label) {}
 
 }  // namespace examples

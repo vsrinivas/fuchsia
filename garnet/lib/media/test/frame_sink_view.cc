@@ -6,7 +6,6 @@
 
 #include "lib/media/test/frame_sink.h"
 
-#include <lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
@@ -241,7 +240,7 @@ void FrameSinkView::PutFrame(
 
 FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
                              async::Loop* main_loop)
-    : V1BaseView(std::move(context), "FrameSinkView"),
+    : BaseView(std::move(context), "FrameSinkView"),
       parent_(parent),
       main_loop_(main_loop),
       node_(session()) {
@@ -262,7 +261,7 @@ FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent,
 
   node_.SetShape(shape);
   node_.SetMaterial(material);
-  parent_node().AddChild(node_);
+  root_node().AddChild(node_);
 
   // Translation of 0, 0 is the middle of the screen
   node_.SetTranslationRH(kInitialWindowXPos, kInitialWindowYPos,
@@ -278,8 +277,8 @@ void FrameSinkView::OnSceneInvalidated(
     return;
   }
 
-  float width = logical_size().width;
-  float height = logical_size().height;
+  float width = logical_size().x;
+  float height = logical_size().y;
   scenic::Rectangle shape(session(), width, height);
   node_.SetShape(shape);
   float half_width = width * 0.5f;

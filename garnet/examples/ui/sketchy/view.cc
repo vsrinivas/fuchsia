@@ -7,28 +7,31 @@
 namespace sketchy_example {
 
 View::View(scenic::ViewContext context, async::Loop* loop)
-    : V1BaseView(std::move(context), "Sketchy Example"),
+    : BaseView(std::move(context), "Sketchy Example"),
       canvas_(startup_context(), loop),
       background_node_(session()),
       import_node_holder_(session()),
       import_node_(&canvas_, import_node_holder_),
       scratch_group_(&canvas_),
       stable_group_(&canvas_) {
-  parent_node().AddChild(background_node_);
+  root_node().AddChild(background_node_);
   scenic::Material background_material(session());
   background_material.SetColor(220, 220, 220, 255);
   background_node_.SetMaterial(background_material);
 
-  parent_node().AddChild(import_node_holder_);
+  root_node().AddChild(import_node_holder_);
   import_node_holder_.SetTranslationRH(0.f, 0.f, -50.f);
   import_node_.AddChild(scratch_group_);
   import_node_.AddChild(stable_group_);
 }
 
 void View::OnPropertiesChanged(
-    ::fuchsia::ui::viewsv1::ViewProperties old_properties) {
-  float width = properties().view_layout->size.width;
-  float height = properties().view_layout->size.height;
+    fuchsia::ui::gfx::ViewProperties old_properties) {
+  float width = view_properties().bounding_box.max.x -
+                view_properties().bounding_box.min.x;
+  float height = view_properties().bounding_box.max.y -
+                 view_properties().bounding_box.min.y;
+
   scenic::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslationRH(width * .5f, height * .5f, -.1f);
@@ -36,7 +39,7 @@ void View::OnPropertiesChanged(
                   [](fuchsia::images::PresentationInfo info) {});
 }
 
-bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
+void View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   if (event.is_pointer()) {
     const auto& pointer = event.pointer();
     switch (pointer.phase) {
@@ -47,24 +50,24 @@ bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
         stroke->Begin({pointer.x, pointer.y});
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
                         [](fuchsia::images::PresentationInfo info) {});
-        return true;
+        return;
       }
       case fuchsia::ui::input::PointerEventPhase::MOVE: {
         const auto& stroke =
             pointer_id_to_stroke_map_.find(pointer.pointer_id)->second;
         if (!stroke) {
-          return false;
+          return;
         }
         stroke->Extend({{pointer.x, pointer.y}});
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
                         [](fuchsia::images::PresentationInfo info) {});
-        return true;
+        return;
       }
       case fuchsia::ui::input::PointerEventPhase::UP: {
         auto it = pointer_id_to_stroke_map_.find(pointer.pointer_id);
         const auto& stroke = it->second;
         if (!stroke) {
-          return false;
+          return;
         }
         stroke->Finish();
         scratch_group_.RemoveStroke(*stroke);
@@ -72,7 +75,7 @@ bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
         pointer_id_to_stroke_map_.erase(it);
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
                         [](fuchsia::images::PresentationInfo info) {});
-        return true;
+        return;
       }
       default:
         break;
@@ -86,11 +89,11 @@ bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       stable_group_.Clear();
       canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
                       [](fuchsia::images::PresentationInfo info) {});
-      return true;
+      return;
     }
   }
 
-  return false;
+  return;
 }
 
 }  // namespace sketchy_example

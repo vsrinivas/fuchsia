@@ -10,13 +10,14 @@
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/v1_base_view.h"
 
 namespace snapshot {
 
 // A view that displays saved snapshot of views.
-class View final : public scenic::V1BaseView,
+class View final : public scenic::BaseView,
                    public fuchsia::scenic::snapshot::Loader {
  public:
   View(scenic::ViewContext view_context);
@@ -26,6 +27,11 @@ class View final : public scenic::V1BaseView,
   virtual void Load(::fuchsia::mem::Buffer payload) override;
 
  private:
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
+
   fidl::BindingSet<fuchsia::scenic::snapshot::Loader> loader_bindings_;
 
   void LoadNode(scenic::ContainerNode& parent_node,

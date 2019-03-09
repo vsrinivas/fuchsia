@@ -11,9 +11,9 @@
 #include <trace-provider/provider.h>
 
 // fx shell "killall scenic; killall basemgr; killall root_presenter;
-// killall set_root_view"
+// killall present_view"
 //
-// fx shell "set_root_view yuv_to_image_pipe --NV12"
+// fx shell "present_view yuv_to_image_pipe --NV12"
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());

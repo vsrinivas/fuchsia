@@ -9,7 +9,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
+#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <queue>
 #include <unordered_map>
@@ -106,7 +106,7 @@ class FidlVideoRenderer : public VideoRenderer {
     async::WaitMethod<Image, &Image::WaitHandler> wait_;
   };
 
-  class View : public scenic::V1BaseView {
+  class View : public scenic::BaseView {
    public:
     View(scenic::ViewContext context,
          std::shared_ptr<FidlVideoRenderer> renderer);
@@ -134,9 +134,14 @@ class FidlVideoRenderer : public VideoRenderer {
                       async_dispatcher_t* dispatcher);
 
    private:
-    // |scenic::V1BaseView|
+    // |scenic::BaseView|
     void OnSceneInvalidated(
         fuchsia::images::PresentationInfo presentation_info) override;
+
+    // |scenic::SessionListener|
+    void OnScenicError(std::string error) override {
+      FXL_LOG(ERROR) << "Scenic Error " << error;
+    }
 
     std::shared_ptr<FidlVideoRenderer> renderer_;
 

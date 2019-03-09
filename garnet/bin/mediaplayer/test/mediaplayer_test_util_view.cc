@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/url/gurl.h"
@@ -21,7 +20,6 @@ namespace media_player {
 namespace test {
 
 namespace {
-constexpr uint32_t kVideoChildKey = 0u;
 
 constexpr int32_t kDefaultWidth = 640;
 constexpr int32_t kDefaultHeight = 100;
@@ -49,7 +47,7 @@ int64_t rand_less_than(int64_t limit) {
 MediaPlayerTestUtilView::MediaPlayerTestUtilView(
     scenic::ViewContext view_context, fit::function<void(int)> quit_callback,
     const MediaPlayerTestUtilParams& params)
-    : scenic::V1BaseView(std::move(view_context), "Media Player"),
+    : scenic::BaseView(std::move(view_context), "Media Player"),
       quit_callback_(std::move(quit_callback)),
       params_(params),
       background_node_(session()),
@@ -62,17 +60,17 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
   scenic::Material background_material(session());
   background_material.SetColor(0x00, 0x00, 0x00, 0xff);
   background_node_.SetMaterial(background_material);
-  parent_node().AddChild(background_node_);
+  root_node().AddChild(background_node_);
 
   scenic::Material progress_bar_material(session());
   progress_bar_material.SetColor(0x23, 0x23, 0x23, 0xff);
   progress_bar_node_.SetMaterial(progress_bar_material);
-  parent_node().AddChild(progress_bar_node_);
+  root_node().AddChild(progress_bar_node_);
 
   scenic::Material progress_bar_slider_material(session());
   progress_bar_slider_material.SetColor(0x00, 0x00, 0xff, 0xff);
   progress_bar_slider_node_.SetMaterial(progress_bar_slider_material);
-  parent_node().AddChild(progress_bar_slider_node_);
+  root_node().AddChild(progress_bar_slider_node_);
 
   // We start with a non-zero size so we get a progress bar regardless of
   // whether we get video.
@@ -91,12 +89,12 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
     FXL_NOTREACHED() << "failed to create tokens.";
   player_->CreateView2(std::move(view_token));
 
-  zx::eventpair video_host_import_token;
   video_host_node_.reset(new scenic::EntityNode(session()));
-  video_host_node_->ExportAsRequest(&video_host_import_token);
-  parent_node().AddChild(*video_host_node_);
-  GetViewContainer()->AddChild2(kVideoChildKey, std::move(view_owner_token),
-                                std::move(video_host_import_token));
+  video_view_holder_.reset(new scenic::ViewHolder(
+      session(), std::move(view_owner_token), "video view"));
+  video_host_node_->Attach(*video_view_holder_);
+
+  root_node().AddChild(*video_host_node_);
 
   commands_.Init(player_.get());
 
@@ -211,9 +209,8 @@ void MediaPlayerTestUtilView::ScheduleNextUrl() {
 
 MediaPlayerTestUtilView::~MediaPlayerTestUtilView() {}
 
-bool MediaPlayerTestUtilView::OnInputEvent(
+void MediaPlayerTestUtilView::OnInputEvent(
     fuchsia::ui::input::InputEvent event) {
-  bool handled = false;
   if (event.is_pointer()) {
     const auto& pointer = event.pointer();
     if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
@@ -228,8 +225,6 @@ bool MediaPlayerTestUtilView::OnInputEvent(
         // User poked elsewhere.
         TogglePlayPause();
       }
-
-      handled = true;
     }
   } else if (event.is_keyboard()) {
     auto& keyboard = event.keyboard();
@@ -237,23 +232,41 @@ bool MediaPlayerTestUtilView::OnInputEvent(
       switch (keyboard.hid_usage) {
         case HID_USAGE_KEY_SPACE:
           TogglePlayPause();
-          handled = true;
           break;
         case HID_USAGE_KEY_Q:
           quit_callback_(0);
-          handled = true;
           break;
         default:
           break;
       }
     }
   }
+}
 
-  return handled;
+void MediaPlayerTestUtilView::OnScenicEvent(fuchsia::ui::scenic::Event event) {
+  switch (event.Which()) {
+    case ::fuchsia::ui::scenic::Event::Tag::kGfx:
+      switch (event.gfx().Which()) {
+        case ::fuchsia::ui::gfx::Event::Tag::kViewConnected: {
+          auto& evt = event.gfx().view_connected();
+          OnChildAttached(evt.view_holder_id);
+          break;
+        }
+        case ::fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+          auto& evt = event.gfx().view_disconnected();
+          OnChildUnavailable(evt.view_holder_id);
+          break;
+        }
+        default:
+          break;
+      }
+    default:
+      break;
+  }
 }
 
 void MediaPlayerTestUtilView::OnPropertiesChanged(
-    ::fuchsia::ui::viewsv1::ViewProperties old_properties) {
+    fuchsia::ui::gfx::ViewProperties old_properties) {
   Layout();
 }
 
@@ -267,19 +280,17 @@ void MediaPlayerTestUtilView::Layout() {
   }
 
   // Make the background fill the space.
-  scenic::Rectangle background_shape(session(), logical_size().width,
-                                     logical_size().height);
+  scenic::Rectangle background_shape(session(), logical_size().x,
+                                     logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH(logical_size().width * .5f,
-                                    logical_size().height * .5f,
-                                    -kBackgroundElevation);
+  background_node_.SetTranslationRH(
+      logical_size().x * .5f, logical_size().y * .5f, -kBackgroundElevation);
 
   // Compute maximum size of video content after reserving space
   // for decorations.
   fuchsia::math::SizeF max_content_size;
-  max_content_size.width = logical_size().width;
-  max_content_size.height =
-      logical_size().height - kControlsHeight - kControlsGap;
+  max_content_size.width = logical_size().x;
+  max_content_size.height = logical_size().y - kControlsHeight - kControlsGap;
 
   // Shrink video to fit if needed.
   uint32_t video_width =
@@ -299,9 +310,9 @@ void MediaPlayerTestUtilView::Layout() {
   }
 
   // Position the video.
-  content_rect_.x = (logical_size().width - content_rect_.width) / 2.0f;
-  content_rect_.y = (logical_size().height - content_rect_.height -
-                     kControlsHeight - kControlsGap) /
+  content_rect_.x = (logical_size().x - content_rect_.width) / 2.0f;
+  content_rect_.y = (logical_size().y - content_rect_.height - kControlsHeight -
+                     kControlsGap) /
                     2.0f;
 
   // Position the controls.
@@ -332,8 +343,9 @@ void MediaPlayerTestUtilView::Layout() {
   view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
   view_properties.view_layout->size.width = content_rect_.width;
   view_properties.view_layout->size.height = content_rect_.height;
-  GetViewContainer()->SetChildProperties(
-      kVideoChildKey, fidl::MakeOptional(std::move(view_properties)));
+  video_view_holder_->SetViewProperties(0, 0, 0, content_rect_.width,
+                                        content_rect_.height, 1000.f, 0, 0, 0,
+                                        0, 0, 0);
 
   InvalidateScene();
 }
@@ -368,22 +380,19 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   }
 }
 
-void MediaPlayerTestUtilView::OnChildAttached(
-    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {
-  FXL_DCHECK(child_key == kVideoChildKey);
-
-  parent_node().AddChild(*video_host_node_);
+void MediaPlayerTestUtilView::OnChildAttached(uint32_t view_holder_id) {
+  FXL_DCHECK(view_holder_id == video_view_holder_->id());
   Layout();
 }
 
-void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t child_key) {
-  FXL_DCHECK(child_key == kVideoChildKey);
+void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t view_holder_id) {
+  FXL_DCHECK(view_holder_id == video_view_holder_->id());
   FXL_LOG(ERROR) << "Video view died unexpectedly";
 
   video_host_node_->Detach();
   video_host_node_.reset();
+  video_view_holder_.reset();
 
-  GetViewContainer()->RemoveChild2(child_key, zx::eventpair());
   Layout();
 }
 

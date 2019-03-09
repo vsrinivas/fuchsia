@@ -16,7 +16,7 @@
 
 namespace shadertoy_client {
 
-// Common functionality for |OldView| and |NewView| classes, below.
+// Common functionality for |OldView| and |ShadertoyClientView| classes, below.
 // TODO(SCN-589): Should be folded back into the latter when the former dies.
 class ViewImpl {
  public:
@@ -65,34 +65,15 @@ class ViewImpl {
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
 };
 
-// Views v1, deprecated.
-class OldView : public scenic::V1BaseView {
- public:
-  OldView(scenic::ViewContext context, const std::string& debug_name);
-  ~OldView() = default;
-
-  // |scenic::V1BaseView|
-  virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
-
- private:
-  scenic::EntityNode root_node_;
-  ViewImpl impl_;
-
-  // |scenic::V1BaseView|
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OldView);
-};
-
 // Connects to shadertoy_service to obtain an |ImagePipe| that is used as the
 // material for a number of rounded-rectangles (they all share the same
 // material).  When any of the rectangles is tapped, toggles between a swirling
 // animation and a static layout.
-class NewView : public scenic::BaseView {
+class ShadertoyClientView : public scenic::BaseView {
  public:
-  NewView(scenic::ViewContext context, const std::string& debug_name);
-  ~NewView() = default;
+  ShadertoyClientView(scenic::ViewContext context,
+                      const std::string& debug_name);
+  ~ShadertoyClientView() = default;
 
  private:
   // |scenic::BaseView|.
@@ -116,7 +97,7 @@ class NewView : public scenic::BaseView {
 
   bool focused_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(NewView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ShadertoyClientView);
 };
 
 }  // namespace shadertoy_client

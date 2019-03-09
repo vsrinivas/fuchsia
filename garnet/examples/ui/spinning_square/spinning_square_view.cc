@@ -8,8 +8,6 @@
 
 #include <algorithm>
 
-#include "lib/fxl/logging.h"
-
 namespace examples {
 namespace {
 constexpr float kBackgroundElevation = 0.f;
@@ -20,18 +18,18 @@ constexpr float kSecondsPerNanosecond = .000'000'001f;
 }  // namespace
 
 SpinningSquareView::SpinningSquareView(scenic::ViewContext context)
-    : V1BaseView(std::move(context), "Spinning Square"),
+    : BaseView(std::move(context), "Spinning Square"),
       background_node_(session()),
       square_node_(session()) {
   scenic::Material background_material(session());
   background_material.SetColor(0x67, 0x3a, 0xb7, 0xff);  // Deep Purple 500
   background_node_.SetMaterial(background_material);
-  parent_node().AddChild(background_node_);
+  root_node().AddChild(background_node_);
 
   scenic::Material square_material(session());
   square_material.SetColor(0xf5, 0x00, 0x57, 0xff);  // Pink A400
   square_node_.SetMaterial(square_material);
-  parent_node().AddChild(square_node_);
+  root_node().AddChild(square_node_);
 }
 
 SpinningSquareView::~SpinningSquareView() {}
@@ -45,16 +43,15 @@ void SpinningSquareView::OnSceneInvalidated(
   if (!start_time_)
     start_time_ = presentation_time;
 
-  const float center_x = logical_size().width * .5f;
-  const float center_y = logical_size().height * .5f;
-  const float square_size =
-      std::min(logical_size().width, logical_size().height) * .6f;
+  const float center_x = logical_size().x * .5f;
+  const float center_y = logical_size().y * .5f;
+  const float square_size = std::min(logical_size().x, logical_size().y) * .6f;
   const float t = fmod(
       (presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
   const float angle = t * M_PI * 2;
 
-  scenic::Rectangle background_shape(session(), logical_size().width,
-                                     logical_size().height);
+  scenic::Rectangle background_shape(session(), logical_size().x,
+                                     logical_size().y);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslationRH(
       (float[]){center_x, center_y, -kBackgroundElevation});

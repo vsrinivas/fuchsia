@@ -5,7 +5,6 @@
 #include "yuv_view.h"
 
 #include <lib/fxl/log_level.h>
-#include <lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
@@ -25,7 +24,7 @@ constexpr float kInitialWindowYPos = 240;
 
 YuvView::YuvView(scenic::ViewContext context,
                  fuchsia::images::PixelFormat pixel_format)
-    : V1BaseView(std::move(context), "YuvView Example"),
+    : BaseView(std::move(context), "YuvView Example"),
       node_(session()),
       pixel_format_(pixel_format),
       stride_(static_cast<uint32_t>(
@@ -47,7 +46,7 @@ YuvView::YuvView(scenic::ViewContext context,
 
   node_.SetShape(shape);
   node_.SetMaterial(material);
-  parent_node().AddChild(node_);
+  root_node().AddChild(node_);
 
   // Translation of 0, 0 is the middle of the screen
   node_.SetTranslationRH(kInitialWindowXPos, kInitialWindowYPos,
@@ -69,8 +68,8 @@ void YuvView::OnSceneInvalidated(
   double seconds =
       static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
 
-  const float kHalfWidth = logical_size().width * 0.5f;
-  const float kHalfHeight = logical_size().height * 0.5f;
+  const float kHalfWidth = logical_size().x * 0.5f;
+  const float kHalfHeight = logical_size().y * 0.5f;
 
   // Compute the translation for the window to swirl around the screen.
   // Why do this?  Well, this is an example of what a View can do, and it helps

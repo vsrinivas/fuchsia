@@ -23,7 +23,6 @@ source_set("simple_camera_lib") {
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.camera:fuchsia.camera",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",

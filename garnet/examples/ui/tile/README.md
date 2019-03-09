@@ -12,7 +12,7 @@ The applications must implement the ViewProvider interface to be embedded.
 Specify the urls of the views to embed initially as command-line arguments.
 
 ```shell
-$ set_root_view fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx <app1> <app2> ...
+$ present_view fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx <app1> <app2> ...
 ```
 
 The following command-line options are also supported:
@@ -25,7 +25,7 @@ The following command-line options are also supported:
 Example:
 
 ```shell
-$ set_root_view fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx \
+$ present_view fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx \
     --horizontal \
     fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx \
     fuchsia-pkg://fuchsia.com/shapes_view#meta/shapes_view.cmx

@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
@@ -14,7 +15,7 @@
 
 // Displays a YUV frame via ImagePipe using given PixelFormat, to allow visual
 // inspection that a given PixelFormat is being displayed properly by Scenic.
-class YuvView : public scenic::V1BaseView {
+class YuvView : public scenic::BaseView {
  public:
   YuvView(scenic::ViewContext context,
           fuchsia::images::PixelFormat pixel_format);
@@ -22,12 +23,17 @@ class YuvView : public scenic::V1BaseView {
   ~YuvView() override;
 
  private:
-  // |scenic::V1BaseView|
+  // |scenic::BaseView|
   // Called when the scene is "invalidated". Invalidation happens when surface
   // dimensions or metrics change, but not necessarily when surface contents
   // change.
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
+
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
 
   void StartYuv();
 

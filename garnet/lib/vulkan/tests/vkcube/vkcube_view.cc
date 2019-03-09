@@ -9,7 +9,7 @@
 
 VkCubeView::VkCubeView(scenic::ViewContext context,
                        ResizeCallback resize_callback)
-    : scenic::V1BaseView(std::move(context), "vkcube"),
+    : scenic::BaseView(std::move(context), "vkcube"),
       pane_node_(session()),
       pane_material_(session()),
       resize_callback_(std::move(resize_callback)) {
@@ -24,7 +24,7 @@ VkCubeView::VkCubeView(scenic::ViewContext context,
   session()->ReleaseResource(image_pipe_id);
 
   pane_node_.SetMaterial(pane_material_);
-  parent_node().AddChild(pane_node_);
+  root_node().AddChild(pane_node_);
 }
 
 VkCubeView::~VkCubeView() {}
@@ -39,13 +39,12 @@ void VkCubeView::OnSceneInvalidated(
   size_ = logical_size();
   physical_size_ = physical_size();
 
-  scenic::Rectangle pane_shape(session(), logical_size().width,
-                               logical_size().height);
+  scenic::Rectangle pane_shape(session(), logical_size().x, logical_size().y);
   pane_node_.SetShape(pane_shape);
-  pane_node_.SetTranslationRH(logical_size().width * 0.5,
-                              logical_size().height * 0.5, 0);
+  pane_node_.SetTranslationRH(logical_size().x * 0.5, logical_size().y * 0.5,
+                              0);
 
   // No need to Present on session; base_view will present after calling
   // OnSceneInvalidated.
-  resize_callback_(physical_size().width, physical_size().height);
+  resize_callback_(physical_size().x, physical_size().y);
 }

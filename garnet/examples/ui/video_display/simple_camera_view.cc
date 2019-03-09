@@ -5,7 +5,6 @@
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 
 #include <lib/fxl/log_level.h>
-#include <lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
 #if defined(countof)
@@ -38,7 +37,7 @@ static const std::string kSimpleCameraServiceUrl =
 static const bool camera_id = 0;  // 0 -> real camera, 1 -> fake
 
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
-    : V1BaseView(std::move(view_context), "Video Display Example"),
+    : BaseView(std::move(view_context), "Video Display Example"),
       node_(session()) {
   FXL_VLOG(4) << "Creating video_display View";
 
@@ -73,7 +72,7 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
 
   node_.SetShape(shape);
   node_.SetMaterial(material);
-  parent_node().AddChild(node_);
+  root_node().AddChild(node_);
   // Translation of 0, 0 is the middle of the screen
   node_.SetTranslationRH(kInitialWindowXPos, kInitialWindowYPos,
                          -kDisplayHeight);
@@ -90,8 +89,8 @@ void SimpleCameraView::OnSceneInvalidated(
   double seconds =
       static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
 
-  const float kHalfWidth = logical_size().width * 0.5f;
-  const float kHalfHeight = logical_size().height * 0.5f;
+  const float kHalfWidth = logical_size().x * 0.5f;
+  const float kHalfHeight = logical_size().y * 0.5f;
 
   // Compute the translation for the window to swirl around the screen.
   // Why do this?  Well, this is an example of what a View can do, and it helps

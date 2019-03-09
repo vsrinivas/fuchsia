@@ -14,14 +14,13 @@ executable("yuv_to_image_pipe") {
 
   deps = [
     "//garnet/lib/ui/yuv",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
-    "//sdk/lib/images/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/images/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",

@@ -14,6 +14,7 @@
 #include "garnet/bin/mediaplayer/test/command_queue.h"
 #include "garnet/bin/mediaplayer/test/mediaplayer_test_util_params.h"
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/ui/base_view/cpp/v1_base_view.h"
@@ -21,7 +22,7 @@
 namespace media_player {
 namespace test {
 
-class MediaPlayerTestUtilView : public scenic::V1BaseView {
+class MediaPlayerTestUtilView : public scenic::BaseView {
  public:
   MediaPlayerTestUtilView(scenic::ViewContext view_context,
                           fit::function<void(int)> quit_callback,
@@ -31,6 +32,11 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
 
  private:
   enum class State { kPaused, kPlaying, kEnded };
+
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
 
   // Implements --experiment. Implementations of this method should not, in
   // general, be submitted. This is for developer experiments.
@@ -46,16 +52,22 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
   // is a next URL to be played.
   void ScheduleNextUrl();
 
-  // |scenic::V1BaseView|
+  // |scenic::BaseView|
   void OnPropertiesChanged(
-      ::fuchsia::ui::viewsv1::ViewProperties old_properties) override;
+      fuchsia::ui::gfx::ViewProperties old_properties) override;
+
+  // |scenic::BaseView|
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
-  void OnChildAttached(
-      uint32_t child_key,
-      ::fuchsia::ui::viewsv1::ViewInfo child_view_info) override;
-  void OnChildUnavailable(uint32_t child_key) override;
-  bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
+
+  // |scenic::BaseView|
+  void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
+
+  // |scenic::BaseView|
+  void OnScenicEvent(fuchsia::ui::scenic::Event event) override;
+
+  void OnChildAttached(uint32_t view_holder_id);
+  void OnChildUnavailable(uint32_t view_holder_id);
 
   // Perform a layout of the UI elements.
   void Layout();
@@ -80,6 +92,7 @@ class MediaPlayerTestUtilView : public scenic::V1BaseView {
   scenic::ShapeNode progress_bar_node_;
   scenic::ShapeNode progress_bar_slider_node_;
   std::unique_ptr<scenic::EntityNode> video_host_node_;
+  std::unique_ptr<scenic::ViewHolder> video_view_holder_;
 
   fuchsia::mediaplayer::PlayerPtr player_;
   CommandQueue commands_;

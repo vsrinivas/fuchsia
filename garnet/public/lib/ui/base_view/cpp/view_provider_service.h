@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
 #include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 
 namespace scenic {
 
@@ -20,32 +19,17 @@ namespace scenic {
 using ViewFactory =
     fit::function<std::unique_ptr<BaseView>(ViewContext context)>;
 
-// A callback to create an older V1 view when given a context.
-//
-// Deprecated.
-using V1ViewFactory =
-    fit::function<std::unique_ptr<V1BaseView>(ViewContext context)>;
-
 // Publishes a view provider as an outgoing service of the application.
 // The views created by the view provider are owned by it and will be destroyed
 // when the view provider itself is destroyed.
 //
 // This is only intended to be used for simple example programs.
-class ViewProviderService : private fuchsia::ui::app::ViewProvider,
-                            private fuchsia::ui::viewsv1::ViewProvider {
+class ViewProviderService : private fuchsia::ui::app::ViewProvider {
  public:
   ViewProviderService(component::StartupContext* startup_context,
                       fuchsia::ui::scenic::Scenic* scenic, ViewFactory factory);
-  ViewProviderService(component::StartupContext* startup_context,
-                      fuchsia::ui::scenic::Scenic* scenic,
-                      V1ViewFactory factory);
 
   ~ViewProviderService();
-
-  // |fuchsia::ui::viewsv1::ViewProvider|
-  void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 
   // |fuchsia::ui::app::ViewProvider|
   void CreateView(
@@ -66,10 +50,6 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider,
   ViewFactory view_factory_ = nullptr;
   std::vector<std::unique_ptr<BaseView>> views_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
-
-  V1ViewFactory old_view_factory_ = nullptr;
-  std::vector<std::unique_ptr<V1BaseView>> old_views_;
-  fidl::BindingSet<fuchsia::ui::viewsv1::ViewProvider> old_bindings_;
 };
 
 }  // namespace scenic

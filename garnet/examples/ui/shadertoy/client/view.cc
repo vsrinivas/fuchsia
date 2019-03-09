@@ -195,42 +195,14 @@ void ViewImpl::QuitLoop() {
   async_loop_quit(async_loop_from_dispatcher(async_get_default_dispatcher()));
 }
 
-OldView::OldView(scenic::ViewContext context, const std::string& debug_name)
-    : scenic::V1BaseView(std::move(context), debug_name),
-      root_node_(session()),
-      impl_(startup_context(), session(), &root_node_) {
-  parent_node().AddChild(root_node_);
-}
-
-void OldView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size())
-    return;
-
-  impl_.OnSceneInvalidated(std::move(presentation_info), logical_size());
-
-  // The rounded-rectangles are constantly animating; invoke InvalidateScene()
-  // to guarantee that OnSceneInvalidated() will be called again.
-  InvalidateScene();
-}
-
-bool OldView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  if (event.is_pointer()) {
-    const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
-    if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
-      return impl_.PointerDown();
-    }
-  }
-  return false;
-}
-
-NewView::NewView(scenic::ViewContext context, const std::string& debug_name)
+ShadertoyClientView::ShadertoyClientView(scenic::ViewContext context,
+                                         const std::string& debug_name)
     : scenic::BaseView(std::move(context), debug_name),
       impl_(startup_context(), session(), &root_node()) {
   InvalidateScene();
 }
 
-void NewView::OnSceneInvalidated(
+void ShadertoyClientView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
@@ -241,16 +213,17 @@ void NewView::OnSceneInvalidated(
   InvalidateScene();
 }
 
-void NewView::OnPropertiesChanged(
+void ShadertoyClientView::OnPropertiesChanged(
     fuchsia::ui::gfx::ViewProperties old_properties) {
   InvalidateScene();
 }
 
-void NewView::OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics) {
+void ShadertoyClientView::OnMetricsChanged(
+    fuchsia::ui::gfx::Metrics old_metrics) {
   InvalidateScene();
 }
 
-void NewView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
+void ShadertoyClientView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   switch (event.Which()) {
     case ::fuchsia::ui::input::InputEvent::Tag::kFocus: {
       focused_ = event.focus().focused;
@@ -277,7 +250,7 @@ void NewView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-void NewView::OnScenicError(::std::string error) {
+void ShadertoyClientView::OnScenicError(::std::string error) {
   FXL_LOG(ERROR) << "Received Scenic Session error: " << error;
 }
 

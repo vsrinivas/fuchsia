@@ -12,7 +12,7 @@
 # fx shell '/pkgfs/packages/scenic_benchmarks/0/bin/scenic_benchmark_example.sh'
 #
 
-killall scenic.cmx; killall basemgr; killall root_presenter.cmx; killall set_root_view; killall tiles; killall tiles.cmx
+killall scenic.cmx; killall basemgr; killall root_presenter.cmx; killall present_view; killall tiles; killall tiles.cmx
 
 # Run benchmark
 /pkgfs/packages/scenic_benchmarks/0/bin/run_scenic_benchmark.sh \

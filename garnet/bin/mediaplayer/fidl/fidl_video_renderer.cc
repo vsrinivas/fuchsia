@@ -461,7 +461,7 @@ void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher,
 
 FidlVideoRenderer::View::View(scenic::ViewContext context,
                               std::shared_ptr<FidlVideoRenderer> renderer)
-    : scenic::V1BaseView(std::move(context), "Video Renderer"),
+    : scenic::BaseView(std::move(context), "Video Renderer"),
       renderer_(renderer),
       entity_node_(session()),
       clip_node_(session()),
@@ -502,7 +502,7 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
   // Connect the nodes up.
   entity_node_.AddPart(clip_node_);
   entity_node_.AddChild(image_pipe_node_);
-  parent_node().AddChild(entity_node_);
+  root_node().AddChild(entity_node_);
 
   // Turn clipping on. We specify clip-to-self here, which really means, clip-
   // to-part (|clip_node_|, in this case), evidently.
@@ -669,8 +669,8 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
                                     0.0f);
 
   // Scale |entity_node_| to fill the view.
-  float width_scale = logical_size().width / display_width_;
-  float height_scale = logical_size().height / display_height_;
+  float width_scale = logical_size().x / display_width_;
+  float height_scale = logical_size().y / display_height_;
   entity_node_.SetScale(width_scale, height_scale, 1.0f);
 
   // This |SetTranslation| shouldn't be necessary, but the flutter ChildView
@@ -688,8 +688,8 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   //
   // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
   // fixed.
-  entity_node_.SetTranslationRH(logical_size().width * .5f,
-                                logical_size().height * .5f, 0.f);
+  entity_node_.SetTranslationRH(logical_size().x * .5f, logical_size().y * .5f,
+                                0.f);
 }
 
 }  // namespace media_player

@@ -6,13 +6,12 @@
 
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
 #include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/host_memory.h"
 
 namespace snapshot {
 
 View::View(scenic::ViewContext view_context)
-    : V1BaseView(std::move(view_context), "Snapshot View") {
+    : BaseView(std::move(view_context), "Snapshot View") {
   outgoing_services().AddService(loader_bindings_.GetHandler(this));
 }
 
@@ -32,7 +31,7 @@ void View::Load(::fuchsia::mem::Buffer payload) {
   }
 
   auto flat_node = flatbuffers::GetRoot<snapshot::Node>(snapshot->data);
-  LoadNode(parent_node(), flat_node);
+  LoadNode(root_node(), flat_node);
 }
 
 void View::LoadNode(scenic::ContainerNode& parent_node,
@@ -44,16 +43,16 @@ void View::LoadNode(scenic::ContainerNode& parent_node,
     entity_node.SetTranslationRH(transform->translation()->x(),   // x
                                  transform->translation()->y(),   // y
                                  transform->translation()->z());  // z
-    entity_node.SetScale(transform->scale()->x(),               // x
-                         transform->scale()->y(),               // y
-                         transform->scale()->z());              // z
-    entity_node.SetRotation(transform->rotation()->x(),         // x
-                            transform->rotation()->y(),         // y
-                            transform->rotation()->z(),         // z
-                            transform->rotation()->w());        // w
-    entity_node.SetAnchor(transform->anchor()->x(),             // x
-                          transform->anchor()->y(),             // y
-                          transform->anchor()->z());            // z
+    entity_node.SetScale(transform->scale()->x(),                 // x
+                         transform->scale()->y(),                 // y
+                         transform->scale()->z());                // z
+    entity_node.SetRotation(transform->rotation()->x(),           // x
+                            transform->rotation()->y(),           // y
+                            transform->rotation()->z(),           // z
+                            transform->rotation()->w());          // w
+    entity_node.SetAnchor(transform->anchor()->x(),               // x
+                          transform->anchor()->y(),               // y
+                          transform->anchor()->z());              // z
   }
 
   if (flat_node->shape()) {

@@ -6,8 +6,9 @@
 #define GARNET_BIN_UI_BENCHMARKS_IMAGE_GRID_CPP_IMAGE_GRID_VIEW_H_
 
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
+#include "lib/ui/base_view/cpp/base_view.h"
 
 class SkCanvas;
 
@@ -16,16 +17,21 @@ namespace image_grid {
 class Frame;
 class Rasterizer;
 
-class ImageGridView : public scenic::V1BaseView {
+class ImageGridView : public scenic::BaseView {
  public:
   ImageGridView(scenic::ViewContext view_context);
 
   ~ImageGridView() override;
 
  private:
-  // |scenic::V1BaseView|
+  // |scenic::BaseView|
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
+
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
 
   void CreateScene();
   void UpdateScene(uint64_t presentation_time);

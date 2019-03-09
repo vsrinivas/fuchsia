@@ -8,31 +8,17 @@ source_set("view_framework") {
     "base_view.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fit",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/geometry/cpp",
+    "//sdk/fidl/fuchsia.ui.gfx",
     "//zircon/public/lib/trace",
-  ]
-}
-
-source_set("view_provider") {
-  sources = [
-    "view_provider_app.cc",
-    "view_provider_app.h",
-    "view_provider_service.cc",
-    "view_provider_service.h",
-  ]
-  public_deps = [
-    ":view_framework",
-    "//garnet/public/lib/component/cpp",
   ]
 }

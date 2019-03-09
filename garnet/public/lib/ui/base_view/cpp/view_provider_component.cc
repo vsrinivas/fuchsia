@@ -42,28 +42,6 @@ ViewProviderComponent::ViewProviderComponent(
   });
 }
 
-ViewProviderComponent::ViewProviderComponent(
-    V1ViewFactory factory, async::Loop* loop,
-    component::StartupContext* startup_context)
-    : startup_context_(
-          startup_context
-              ? std::unique_ptr<component::StartupContext>(startup_context)
-              : component::StartupContext::CreateFromStartupInfo()),
-      scenic_(startup_context_
-                  ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
-      service_(startup_context_.get(), scenic_.get(), std::move(factory)) {
-  // Only retain ownership if we were forced to create a unique StartupContext
-  // ourselves.
-  if (startup_context) {
-    startup_context_.release();
-  }
-
-  scenic_.set_error_handler([loop](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to Scenic.";
-    loop->Quit();
-  });
-}
-
 ViewProviderComponent::ViewImpl::ViewImpl(
     ViewFactory factory, fidl::InterfaceRequest<View> view_request,
     fuchsia::ui::scenic::Scenic* scenic,

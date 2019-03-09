@@ -57,7 +57,8 @@ MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(
 
 void MediaPlayerTestUtilParams::Usage() {
   std::cerr << "mediaplayer_test_util usage:\n";
-  std::cerr << "    set_root_view mediaplayer_test_util [ options ] url-or-path*\n";
+  std::cerr
+      << "    present_view mediaplayer_test_util [ options ] url-or-path*\n";
   std::cerr << "options:\n";
   std::cerr << "    --play       play on startup\n";
   std::cerr << "    --loop       play the files in a loop on startup\n";

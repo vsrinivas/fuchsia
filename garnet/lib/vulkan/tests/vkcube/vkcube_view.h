@@ -9,13 +9,13 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/logging.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
-class VkCubeView : public scenic::V1BaseView {
+class VkCubeView : public scenic::BaseView {
  public:
   using ResizeCallback = fit::function<void(float width, float height)>;
 
@@ -25,12 +25,17 @@ class VkCubeView : public scenic::V1BaseView {
   zx::channel TakeImagePipeChannel() { return std::move(image_pipe_endpoint_); }
 
  private:
-  // |scenic::V1BaseView|
+  // |scenic::BaseView|
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
-  fuchsia::math::SizeF size_;
-  fuchsia::math::Size physical_size_;
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
+
+  fuchsia::ui::gfx::vec3 size_;
+  fuchsia::ui::gfx::vec3 physical_size_;
   scenic::ShapeNode pane_node_;
   scenic::Material pane_material_;
   ResizeCallback resize_callback_;

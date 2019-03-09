@@ -158,9 +158,6 @@ int main(int argc, const char** argv) {
   } else {
     // Instead of creating a View directly, provide a component that will do so
     // when asked via FIDL.
-    //
-    // NOTE: This will not work with set_root_view until view_manager creates V2
-    // views internally.
     FXL_LOG(INFO) << "Launching view provider service.";
     scenic::ViewProviderComponent component(
         [&loop](scenic::ViewContext context) {

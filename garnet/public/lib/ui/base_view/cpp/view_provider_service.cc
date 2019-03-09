@@ -21,29 +21,9 @@ ViewProviderService::ViewProviderService(
 
 ViewProviderService::ViewProviderService(
     component::StartupContext* startup_context,
-    fuchsia::ui::scenic::Scenic* scenic, V1ViewFactory view_factory)
-    : ViewProviderService(startup_context, scenic) {
-  FXL_DCHECK(view_factory);
-  old_view_factory_ = std::move(view_factory);
-}
-
-ViewProviderService::ViewProviderService(
-    component::StartupContext* startup_context,
     fuchsia::ui::scenic::Scenic* scenic)
     : startup_context_(startup_context), scenic_(scenic) {
   FXL_DCHECK(startup_context_);
-
-  // Expose the V1 ViewProvider service as well, so that clients can be moved to
-  // this library without affecting embedder behavior.
-  //
-  // TODO(SCN-1030): Remove this once all embedder code is converted to use
-  // the V2 ViewProvider interface.
-  startup_context_->outgoing()
-      .AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
-          [this](fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-                     request) {
-            old_bindings_.AddBinding(this, std::move(request));
-          });
 
   startup_context_->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
@@ -54,15 +34,6 @@ ViewProviderService::ViewProviderService(
 ViewProviderService::~ViewProviderService() {
   startup_context_->outgoing()
       .RemovePublicService<fuchsia::ui::app::ViewProvider>();
-  startup_context_->outgoing()
-      .RemovePublicService<fuchsia::ui::viewsv1::ViewProvider>();
-}
-
-void ViewProviderService::CreateView(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
-  CreateView(zx::eventpair(view_owner.TakeChannel().release()),
-             std::move(services), nullptr);
 }
 
 void ViewProviderService::CreateView(
@@ -91,19 +62,6 @@ void ViewProviderService::CreateView(
             views_.erase(it);
           });
       views_.push_back(std::move(base_view));
-    }
-  } else if (old_view_factory_) {
-    if (auto view = old_view_factory_(std::move(context))) {
-      view->SetReleaseHandler([this, view = view.get()](zx_status_t status) {
-        auto it =
-            std::find_if(old_views_.begin(), old_views_.end(),
-                         [view](const std::unique_ptr<V1BaseView>& other) {
-                           return other.get() == view;
-                         });
-        FXL_DCHECK(it != old_views_.end());
-        old_views_.erase(it);
-      });
-      old_views_.push_back(std::move(view));
     }
   } else {
     // Should never happen; this was already checked in the constructors.

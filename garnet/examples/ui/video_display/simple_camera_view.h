@@ -10,24 +10,30 @@
 
 #include <fbl/vector.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 namespace video_display {
 
-class SimpleCameraView : public scenic::V1BaseView {
+class SimpleCameraView : public scenic::BaseView {
  public:
   SimpleCameraView(scenic::ViewContext view_context);
   ~SimpleCameraView() override = default;
 
  private:
-  // |scenic::V1BaseView|
+  // |scenic::BaseView|
   // Called when the scene is "invalidated". Invalidation happens when surface
   // dimensions or metrics change, but not necessarily when surface contents
   // change.
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
+
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
 
   scenic::ShapeNode node_;
 

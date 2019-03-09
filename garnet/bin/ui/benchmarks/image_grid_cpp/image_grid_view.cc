@@ -9,8 +9,6 @@
 #include <cstdlib>
 #include <utility>
 
-#include "lib/fxl/logging.h"
-
 namespace image_grid {
 
 namespace {
@@ -28,7 +26,7 @@ constexpr int kColumnsPerScreen = 5.f;
 }  // namespace
 
 ImageGridView::ImageGridView(scenic::ViewContext view_context)
-    : V1BaseView(std::move(view_context), "Image Grid Benchmark (cpp)"),
+    : BaseView(std::move(view_context), "Image Grid Benchmark (cpp)"),
       background_node_(session()),
       cards_parent_node_(session()),
       spring_(0.0 /* initial value */, 10.0 /* tension */,
@@ -43,7 +41,7 @@ void ImageGridView::OnSceneInvalidated(
   }
 
   if (max_scroll_offset_ == 0) {
-    max_scroll_offset_ = logical_size().width * (kColumns / kColumnsPerScreen);
+    max_scroll_offset_ = logical_size().x * (kColumns / kColumnsPerScreen);
     spring_.SetTargetValue(max_scroll_offset_);
   }
 
@@ -59,30 +57,29 @@ void ImageGridView::OnSceneInvalidated(
 }
 
 void ImageGridView::CreateScene() {
-  parent_node().DetachChildren();
+  root_node().DetachChildren();
   cards_parent_node_.DetachChildren();
   cards_.clear();
 
   scenic::Material background_material(session());
   background_material.SetColor(0xff, 0xff, 0xff, 0xff);  // White
   background_node_.SetMaterial(background_material);
-  parent_node().AddChild(background_node_);
+  root_node().AddChild(background_node_);
 
-  scenic::Rectangle background_shape(session(), logical_size().width,
-                                     logical_size().height);
+  scenic::Rectangle background_shape(session(), logical_size().x,
+                                     logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH(logical_size().width * .5f,
-                                    logical_size().height * .5f,
-                                    -kBackgroundElevation);
+  background_node_.SetTranslationRH(
+      logical_size().x * .5f, logical_size().y * .5f, -kBackgroundElevation);
 
-  parent_node().AddChild(cards_parent_node_);
+  root_node().AddChild(cards_parent_node_);
 
   float x_pos = 0.f;
   for (int i = 0; i < kColumns; i++) {
     float y_pos = 0.f;
     for (int i = 0; i < kRows; i++) {
-      float layout_area_width = logical_size().width / kColumnsPerScreen;
-      float layout_area_height = logical_size().height / kRows;
+      float layout_area_width = logical_size().x / kColumnsPerScreen;
+      float layout_area_height = logical_size().y / kRows;
       float card_width = layout_area_width * 0.95f;
       float card_height = layout_area_height * 0.95f;
 
@@ -106,7 +103,7 @@ void ImageGridView::CreateScene() {
 
       y_pos += layout_area_height;
     }
-    x_pos += logical_size().width / 5.f;
+    x_pos += logical_size().x / 5.f;
   }
 }
 

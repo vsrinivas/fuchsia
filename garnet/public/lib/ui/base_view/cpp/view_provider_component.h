@@ -24,9 +24,6 @@ class ViewProviderComponent {
   // Constructor for use with Views v2.
   ViewProviderComponent(ViewFactory factory, async::Loop* loop,
                         component::StartupContext* startup_context = nullptr);
-  // Constructor for use with Views v1. Deprecated.
-  ViewProviderComponent(V1ViewFactory factory, async::Loop* loop,
-                        component::StartupContext* startup_context = nullptr);
   ViewProviderComponent(const ViewProviderComponent&) = delete;
   ViewProviderComponent& operator=(const ViewProviderComponent&) = delete;
   ~ViewProviderComponent() = default;
