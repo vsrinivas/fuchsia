@@ -80,7 +80,7 @@ impl DeviceLayerState {
     /// `add` adds a new `EthernetDeviceState` with the given MAC address and
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
-    pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: usize) -> DeviceId {
+    pub(crate) fn add_ethernet_device(&mut self, mac: Mac, mtu: u32) -> DeviceId {
         let id = self.allocate_id();
         self.ethernet.insert(id, EthernetDeviceState::new(mac, mtu));
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
@@ -169,5 +169,12 @@ pub fn set_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
 ) {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::set_ip_addr_subnet(ctx, device.id, addr_sub),
+    }
+}
+
+/// Get the MTU associated with this device.
+pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) -> u32 {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::get_mtu(ctx, device.id),
     }
 }

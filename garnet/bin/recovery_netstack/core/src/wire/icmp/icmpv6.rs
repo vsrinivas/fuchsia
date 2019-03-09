@@ -158,6 +158,14 @@ pub(crate) struct Icmpv6PacketTooBig {
     mtu: [u8; 4],
 }
 
+impl Icmpv6PacketTooBig {
+    pub(crate) fn new(mtu: u32) -> Icmpv6PacketTooBig {
+        let mut buf = [0u8; 4];
+        NetworkEndian::write_u32(&mut buf[..], mtu);
+        Icmpv6PacketTooBig { mtu: buf }
+    }
+}
+
 impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {

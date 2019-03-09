@@ -235,10 +235,8 @@ impl EventLoop {
             match await!(self.event_recv.next()) {
                 Some(Event::EthSetupEvent(setup)) => {
                     let (mut state, mut disp) = self.ctx.state_and_dispatcher();
-                    let eth_id = state.add_ethernet_device(
-                        Mac::new(setup.info.mac.octets),
-                        setup.info.mtu as usize,
-                    );
+                    let eth_id =
+                        state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);
                     let eth_worker = EthernetWorker::new(eth_id, setup.client.get_stream());
                     disp.devices.push(DeviceInfo {
                         id: eth_id,

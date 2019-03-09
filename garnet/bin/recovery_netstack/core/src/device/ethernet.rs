@@ -159,7 +159,7 @@ impl Debug for EtherType {
 /// The state associated with an Ethernet device.
 pub(crate) struct EthernetDeviceState {
     mac: Mac,
-    mtu: usize,
+    mtu: u32,
     ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
     ipv6_addr_sub: Option<AddrSubnet<Ipv6Addr>>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
@@ -171,7 +171,7 @@ impl EthernetDeviceState {
     /// `new` constructs a new `EthernetDeviceState` with the given MAC address
     /// and MTU. The MTU will be taken as a limit on the size of Ethernet
     /// payloads - the Ethernet header is not counted towards the MTU.
-    pub(crate) fn new(mac: Mac, mtu: usize) -> EthernetDeviceState {
+    pub(crate) fn new(mac: Mac, mtu: u32) -> EthernetDeviceState {
         // TODO(joshlf): Ensure that the configured MTU meets the minimum IPv6
         // MTU requirement. A few questions:
         // - How do we wire error information back up the call stack? Should
@@ -237,7 +237,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
 
     if let Some(dst_mac) = dst_mac {
         let buffer = body
-            .with_mtu(mtu)
+            .with_mtu(mtu as usize)
             .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
             .serialize_outer()
             .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))?;
@@ -309,6 +309,11 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     get_device_state(ctx, device_id).ipv4_addr_sub = Some(addr_sub);
     #[ipv6addr]
     get_device_state(ctx, device_id).ipv6_addr_sub = Some(addr_sub);
+}
+
+/// Get the MTU associated with this device.
+pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> u32 {
+    get_device_state(ctx, device_id).mtu
 }
 
 /// Insert an entry into this device's ARP table.
@@ -428,7 +433,7 @@ mod tests {
         }
 
         // The Ethernet device MTU currently defaults to IPV6_MIN_MTU.
-        test(crate::ip::IPV6_MIN_MTU, 1);
-        test(crate::ip::IPV6_MIN_MTU + 1, 0);
+        test(crate::ip::IPV6_MIN_MTU as usize, 1);
+        test(crate::ip::IPV6_MIN_MTU as usize + 1, 0);
     }
 }

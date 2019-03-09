@@ -13,11 +13,13 @@ use specialize_ip_macro::specialize_ip_address;
 use crate::device::DeviceId;
 use crate::ip::{
     send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+    IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
-    IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
+    IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode,
     Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode,
-    Icmpv6Packet, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
+    Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode,
+    Icmpv6TimeExceededCode,
 };
 use crate::{Context, EventDispatcher};
 
@@ -152,7 +154,7 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
         // Per RFC 4443, body contains as much of the original body as
         // possible without exceeding IPv6 minimum MTU.
         let mut original_packet = original_packet;
-        original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+        original_packet.shrink_back_to(IPV6_MIN_MTU as usize);
         // TODO(joshlf): Do something if send_icmp_response returns an error?
         send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
@@ -317,7 +319,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
         // Per RFC 4443, body contains as much of the original body as
         // possible without exceeding IPv6 minimum MTU.
         let mut original_packet = original_packet;
-        original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+        original_packet.shrink_back_to(IPV6_MIN_MTU as usize);
         // TODO(joshlf): Do something if send_icmp_response returns an error?
         send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
@@ -332,6 +334,40 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
             ))
         });
     }
+}
+
+// TODO(joshlf): Test send_icmpv6_packet_too_big once we support dummy IPv6 test
+// setups.
+
+/// Send an ICMPv6 message in response to receiving a packet whose size exceeds
+/// the MTU of the next hop interface.
+///
+/// `send_icmpv6_packet_too_big` sends an ICMPv6 "packet too big" message in
+/// response to receiving an IP packet from `src_ip` to `dst_ip` whose size
+/// exceeds the `mtu` of the next hop interface.
+pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
+    mtu: u32,
+    mut original_packet: B,
+) {
+    increment_counter!(ctx, "send_icmpv6_packet_too_big");
+
+    // Per RFC 4443, body contains as much of the original body as possible
+    // without exceeding IPv6 minimum MTU.
+    original_packet.shrink_back_to(IPV6_MIN_MTU as usize);
+    send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
+        BufferSerializer::new_vec(original_packet).encapsulate(
+            IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                local_ip,
+                src_ip,
+                IcmpUnusedCode,
+                Icmpv6PacketTooBig::new(mtu),
+            ),
+        )
+    });
 }
 
 fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
@@ -371,7 +407,7 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     // Per RFC 4443, body contains as much of the original body as possible
     // without exceeding IPv6 minimum MTU.
     let mut original_packet = original_packet;
-    original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+    original_packet.shrink_back_to(IPV6_MIN_MTU as usize);
     // TODO(joshlf): Do something if send_icmp_response returns an error?
     send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmpv6, |local_ip| {
         BufferSerializer::new_vec(original_packet).encapsulate(

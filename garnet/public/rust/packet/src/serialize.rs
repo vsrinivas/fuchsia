@@ -487,6 +487,18 @@ pub enum MtuError<E> {
     Mtu,
 }
 
+impl<E> MtuError<E> {
+    /// Is this an MTU error?
+    ///
+    /// `is_mtu` returns true if `self` is `MtuError::Mtu`.
+    pub fn is_mtu(&self) -> bool {
+        match self {
+            MtuError::Mtu => true,
+            _ => false,
+        }
+    }
+}
+
 impl<E> From<E> for MtuError<E> {
     fn from(err: E) -> MtuError<E> {
         MtuError::Err(err)
@@ -906,6 +918,11 @@ impl<B, F> BufferSerializer<B, F> {
     /// `get_buf` accepts a `usize`, and produces a buffer of that length.
     pub fn new(buffer: B, get_buf: F) -> BufferSerializer<B, F> {
         BufferSerializer { buf: buffer, get_buf }
+    }
+
+    /// Consume this `BufferSerializer` and return the encapsulated buffer.
+    pub fn into_buffer(self) -> B {
+        self.buf
     }
 }
 

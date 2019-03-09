@@ -30,8 +30,8 @@ use crate::{Context, EventDispatcher};
 // default IPv4 TTL or IPv6 hops
 const DEFAULT_TTL: u8 = 64;
 
-// minimum MTU required by all IPv6 devices
-pub(crate) const IPV6_MIN_MTU: usize = 1280;
+// Minimum MTU required by all IPv6 devices.
+pub(crate) const IPV6_MIN_MTU: u32 = 1280;
 
 /// The state associated with the IP layer.
 #[derive(Default)]
@@ -193,13 +193,48 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
             packet.set_ttl(ttl - 1);
-            drop_packet_and_undo_parse!(packet, buffer);
-            crate::device::send_ip_frame(
+            let (src_ip, dst_ip, _, _) = drop_packet_and_undo_parse!(packet, buffer);
+            if let Err((err, ser)) = crate::device::send_ip_frame(
                 ctx,
                 dest.device,
                 dest.next_hop,
                 BufferSerializer::new_vec(buffer),
-            );
+            ) {
+                #[specialize_ip_address]
+                fn send_packet_too_big<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+                    ctx: &mut Context<D>,
+                    device: DeviceId,
+                    src_ip: A,
+                    dst_ip: A,
+                    mtu: u32,
+                    original_packet: B,
+                ) {
+                    #[ipv6addr]
+                    crate::ip::icmp::send_icmpv6_packet_too_big(
+                        ctx,
+                        device,
+                        src_ip,
+                        dst_ip,
+                        mtu,
+                        original_packet,
+                    );
+                }
+
+                debug!("failed to forward IP packet: {:?}", err);
+                if err.is_mtu() {
+                    trace!("receive_ip_packet: Sending ICMPv6 Packet Too Big");
+                    // TODO(joshlf): Increment the TTL since we just decremented
+                    // it. The fact that we don't do this is technically a
+                    // violation of the ICMP spec (we're not encapsulating the
+                    // original packet that caused the issue, but a slightly
+                    // modified version of it), but it's not that big of a deal
+                    // because it won't affect the sender's ability to figure
+                    // out the minimum path MTU. This may break other logic,
+                    // though, so we should still fix it eventually.
+                    let mtu = crate::device::get_mtu(ctx, device);
+                    send_packet_too_big(ctx, device, src_ip, dst_ip, mtu, ser.into_buffer());
+                }
+            }
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
