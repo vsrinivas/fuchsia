@@ -29,17 +29,25 @@ func NewClient(ctx context.Context) (*ArtifactsClient, error) {
 }
 
 // List lists all objects in the artifact directory for the given build. bucket is the
-// Cloud Storage bucket the builder uploaded artifacts to.
+// Cloud Storage bucket for the given build.
 func (c *ArtifactsClient) List(ctx context.Context, bucket, build string) ([]string, error) {
 	dir := c.openDir(ctx, bucket, build)
 	return dir.list(ctx)
 }
 
 // Open returns a reader for an object in the artifact directory for the given build.
-// bucket is the Cloud Storage bucket the builder uploaded artifacts to.
+// bucket is the Cloud Storage bucket for the given build.
 func (c *ArtifactsClient) Open(ctx context.Context, bucket, build, path string) (io.Reader, error) {
 	dir := c.openDir(ctx, bucket, build)
 	return dir.open(ctx, path)
+}
+
+// Create returns a storage.Writer for an object in the artifact directory. bucket is the
+// Cloud Storage bucket for the given build. build is the string Buildbucket build ID.
+// path is the object path relative to the root of the build artifact directory.
+func (c *ArtifactsClient) Create(ctx context.Context, bucket, build, path string) *storage.Writer {
+	dir := c.openDir(ctx, bucket, build)
+	return dir.create(ctx, path)
 }
 
 // openDir returns a Handle to a build's artifact directory within some bucket.
@@ -62,10 +70,16 @@ type directory struct {
 	build  string
 }
 
-// openDir returns an io.Reader for the object at the given object in this directory.
+// open returns an io.Reader for the given object in this directory.
 func (d *directory) open(ctx context.Context, object string) (io.Reader, error) {
 	object = strings.Join([]string{"builds", d.build, object}, "/")
 	return d.bucket.Object(object).NewReader(ctx)
+}
+
+// create returns a storage.Writer for the given object in this directory.
+func (d *directory) create(ctx context.Context, object string) *storage.Writer {
+	object = strings.Join([]string{"builds", d.build, object}, "/")
+	return d.bucket.Object(object).NewWriter(ctx)
 }
 
 // List lists all of the objects in this directory.
