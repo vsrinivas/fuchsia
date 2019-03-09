@@ -66,13 +66,14 @@ func (cmd *ListCommand) validateAndExecute(ctx context.Context) error {
 	return cmd.execute(ctx, buildsCli, artifactsCli)
 }
 
-func (cmd *ListCommand) execute(ctx context.Context, buildsCli buildsClient, artifactsCli artifactsClient) error {
+func (cmd *ListCommand) execute(ctx context.Context, buildsCli buildsClient, artifactsCli *artifacts.Client) error {
 	bucket, err := getStorageBucket(ctx, buildsCli, cmd.build)
 	if err != nil {
 		return err
 	}
 
-	items, err := artifactsCli.List(ctx, bucket, cmd.build)
+	dir := artifactsCli.GetBuildDir(bucket, cmd.build)
+	items, err := dir.List(ctx)
 	if err != nil {
 		return err
 	}

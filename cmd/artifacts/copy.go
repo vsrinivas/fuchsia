@@ -84,13 +84,15 @@ func (cmd *CopyCommand) validateAndExecute(ctx context.Context) error {
 	return cmd.execute(ctx, buildsCli, artifactsCli)
 }
 
-func (cmd *CopyCommand) execute(ctx context.Context, buildsCli buildsClient, artifactsCli artifactsClient) error {
+func (cmd *CopyCommand) execute(ctx context.Context, buildsCli buildsClient, artifactsCli *artifacts.Client) error {
 	bucket, err := getStorageBucket(ctx, buildsCli, cmd.build)
 	if err != nil {
 		return err
 	}
 
-	input, err := artifactsCli.Open(ctx, bucket, cmd.build, cmd.source)
+	dir := artifactsCli.GetBuildDir(bucket, cmd.build)
+	obj := dir.Object(cmd.source)
+	input, err := obj.NewReader(ctx)
 	if err != nil {
 		return err
 	}
@@ -102,10 +104,4 @@ func (cmd *CopyCommand) execute(ctx context.Context, buildsCli buildsClient, art
 
 	_, err = io.Copy(output, input)
 	return err
-}
-
-// artifactsClient fetches artifacts produced by Fuchsia builds.
-type artifactsClient interface {
-	List(ctx context.Context, bucket, build string) ([]string, error)
-	Open(ctx context.Context, bucket, build, path string) (io.Reader, error)
 }
