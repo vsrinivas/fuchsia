@@ -27,9 +27,9 @@ rustc_library("fuchsia-bluetooth") {
   ]
 }
 
-# TODO(BLD-338): Rename target to the less-redundant "tests" when target names
-# no longer have to match package names.
-test_package("bluetooth-crate-tests") {
+test_package("tests") {
+  package_name = "bluetooth-crate-tests"
+
   deps = [
     ":fuchsia-bluetooth",
   ]

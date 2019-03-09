@@ -25,7 +25,9 @@ rustc_library("bt-avdtp") {
   ]
 }
 
-test_package("bt-avdtp-tests") {
+test_package("tests") {
+  package_name = "bt-avdtp-tests"
+
   deps = [
     ":bt-avdtp",
   ]

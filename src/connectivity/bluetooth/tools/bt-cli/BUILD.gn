@@ -10,10 +10,10 @@ rustc_binary("bt-cli") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fuchsia-bluetooth",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:parking_lot",

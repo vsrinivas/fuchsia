@@ -8,7 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
-#include "garnet/lib/bluetooth/c/bt_host.h"
+#include "src/connectivity/bluetooth/lib/c/bt_host.h"
 
 #include "host.h"
 

@@ -7,8 +7,8 @@
         "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
         "//src/connectivity/bluetooth/tools/bt-snoop:tests",
         "//src/connectivity/bluetooth/tests",
-        "//garnet/drivers/bluetooth/hci/fake",
-        "//garnet/lib/rust/bt-avdtp:bt-avdtp-tests",
-        "//garnet/lib/rust/fuchsia-bluetooth:bluetooth-crate-tests"
+        "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
+        "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
+        "//garnet/drivers/bluetooth/hci/fake"
     ]
 }

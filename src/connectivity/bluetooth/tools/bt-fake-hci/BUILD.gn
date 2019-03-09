@@ -10,7 +10,7 @@ rustc_binary("bt-fake-hci") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:failure",
   ]
 }

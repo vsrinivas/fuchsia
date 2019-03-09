@@ -9,12 +9,12 @@ rustc_binary("bt-le-battery-service") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fuchsia-bluetooth",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:parking_lot",

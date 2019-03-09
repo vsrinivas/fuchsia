@@ -51,13 +51,13 @@ source_set("sources") {
 
   deps = [
     "//garnet/drivers/bluetooth/lib",
-    "//garnet/lib/bluetooth/c",
     "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.bluetooth.gatt",
     "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host",
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.bluetooth",
+    "//src/connectivity/bluetooth/lib/c",
     "//zircon/public/banjo/ddk-protocol-bt-gattsvc",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
