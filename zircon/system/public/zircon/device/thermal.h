@@ -2,32 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_THERMAL_H_
+#define SYSROOT_ZIRCON_DEVICE_THERMAL_H_
 
-#include <zircon/device/ioctl.h>
-#include <zircon/device/ioctl-wrapper.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/scpi.h>
+#include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/ioctl.h>
 
 // Unique numbers to represent correct metadata.
 // 0x564f4c00 is the string representation of VOL.
-#define VOLTAGE_DUTY_CYCLE_METADATA          (0x564f4c00 | DEVICE_METADATA_PRIVATE)
+#define VOLTAGE_DUTY_CYCLE_METADATA (0x564f4c00 | DEVICE_METADATA_PRIVATE)
 
 // 0x54485200 is the string representation of THR.
-#define THERMAL_CONFIG_METADATA              (0x54485200 | DEVICE_METADATA_PRIVATE)
+#define THERMAL_CONFIG_METADATA (0x54485200 | DEVICE_METADATA_PRIVATE)
 
-#define MAX_TRIP_POINTS                      16
-#define MAX_DVFS_DOMAINS                     2
-#define MAX_VOLTAGE_TABLE                    31
+#define MAX_TRIP_POINTS 16
+#define MAX_DVFS_DOMAINS 2
+#define MAX_VOLTAGE_TABLE 31
 // temperature units are in 10th of a degree kelvin
 typedef struct {
     // state is a bitmask
     uint32_t state;
     // trip points for below states are defined below
-#define THERMAL_STATE_NORMAL                 0
-#define THERMAL_STATE_TRIP_VIOLATION         1
-#define BIG_CLUSTER_POWER_DOMAIN             0
-#define LITTLE_CLUSTER_POWER_DOMAIN          1
+#define THERMAL_STATE_NORMAL 0
+#define THERMAL_STATE_TRIP_VIOLATION 1
+#define BIG_CLUSTER_POWER_DOMAIN 0
+#define LITTLE_CLUSTER_POWER_DOMAIN 1
 
     // the sensor temperature at which the system should activate
     // passive cooling policy
@@ -157,7 +158,7 @@ IOCTL_WRAPPER_OUT(ioctl_thermal_get_state_change_port,
 
 // ssize_t ioctl_thermal_get_device_info(int fd, thermal_info_t* out)
 IOCTL_WRAPPER_OUT(ioctl_thermal_get_device_info,
-                 IOCTL_THERMAL_GET_DEVICE_INFO, thermal_device_info_t);
+                  IOCTL_THERMAL_GET_DEVICE_INFO, thermal_device_info_t);
 
 // ssize_t ioctl_thermal_set_fan_level(int fd, uint32_t fan_level)
 IOCTL_WRAPPER_IN(ioctl_thermal_set_fan_level, IOCTL_THERMAL_SET_FAN_LEVEL, uint32_t);
@@ -180,4 +181,4 @@ IOCTL_WRAPPER_INOUT(ioctl_thermal_get_dvfs_opp, IOCTL_THERMAL_GET_DVFS_OPP,
 // ssize_t ioctl_thermal_get_fan_level(int fd, uint32_t* fan_level)
 IOCTL_WRAPPER_OUT(ioctl_thermal_get_fan_level, IOCTL_THERMAL_GET_FAN_LEVEL, uint32_t);
 
-
+#endif  // SYSROOT_ZIRCON_DEVICE_THERMAL_H_

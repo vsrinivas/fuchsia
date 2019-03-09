@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_BOOT_NETBOOT_H_
+#define SYSROOT_ZIRCON_BOOT_NETBOOT_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -114,3 +115,5 @@ typedef struct logpacket {
     char nodename[MAX_NODENAME_LENGTH];
     char data[MAX_LOG_DATA];
 } logpacket_t;
+
+#endif  // SYSROOT_ZIRCON_BOOT_NETBOOT_H_

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_LISTNODE_H_
+#define SYSROOT_ZIRCON_LISTNODE_H_
 
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -302,3 +303,5 @@ static inline void list_move(list_node_t* old_list, list_node_t* new_list) {
 }
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_LISTNODE_H_

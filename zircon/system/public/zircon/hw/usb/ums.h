@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_HW_USB_UMS_H_
+#define SYSROOT_ZIRCON_HW_USB_UMS_H_
 
 // clang-format off
 
@@ -154,3 +155,5 @@ typedef struct {
     uint8_t     bmCSWStatus;
 } __PACKED ums_csw_t;
 static_assert(sizeof(ums_csw_t) == 13, "");
+
+#endif  // SYSROOT_ZIRCON_HW_USB_UMS_H_

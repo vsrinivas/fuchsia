@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_BOOT_BOOTDATA_H_
+#define SYSROOT_ZIRCON_BOOT_BOOTDATA_H_
 
 #ifndef __ASSEMBLER__
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 #endif
 
 // lsw of sha256("bootdata")
@@ -22,100 +23,99 @@
 #define BOOTITEM_NO_CRC32 (0x4a87e8d6)
 
 // This flag is required.
-#define BOOTDATA_FLAG_V2         (0x00010000)
+#define BOOTDATA_FLAG_V2 (0x00010000)
 
 // Bootdata items with the CRC32 flag must have a valid crc32.
 // Otherwise their crc32 field must contain BOOTITEM_NO_CRC32
-#define BOOTDATA_FLAG_CRC32      (0x00020000)
+#define BOOTDATA_FLAG_CRC32 (0x00020000)
 
 // Bootdata types that have least significant byte set to 'm'
 // are reserved for driver metadata
-#define BOOTDATA_KIND_METADATA   (0x0000006D)
-#define BOOTDATA_KIND_MASK       (0x000000FF)
+#define BOOTDATA_KIND_METADATA (0x0000006D)
+#define BOOTDATA_KIND_MASK (0x000000FF)
 
 // Containers are used to wrap a set of bootdata items
 // written to a file or partition.  The "length" is the
 // length of the set of following bootdata items.  The
 // "extra" is the value BOOTDATA_MAGIC and "flags" is
 // set to 0.
-#define BOOTDATA_CONTAINER        (0x544f4f42) // BOOT
+#define BOOTDATA_CONTAINER (0x544f4f42) // BOOT
 
 // BOOTFS images.  The "extra" field is the decompressed
 // size of the image, if compressed, otherwise the same
 // as the "length" field.
-#define BOOTDATA_BOOTFS_BOOT      (0x42534642) // BFSB
-#define BOOTDATA_BOOTFS_SYSTEM    (0x53534642) // BFSS
-#define BOOTDATA_BOOTFS_DISCARD   (0x58534642) // BFSX
+#define BOOTDATA_BOOTFS_BOOT (0x42534642)    // BFSB
+#define BOOTDATA_BOOTFS_SYSTEM (0x53534642)  // BFSS
+#define BOOTDATA_BOOTFS_DISCARD (0x58534642) // BFSX
 
-#define BOOTDATA_BOOTFS_MASK      (0x00FFFFFF)
-#define BOOTDATA_BOOTFS_TYPE      (0x00534642) // BFS\0
+#define BOOTDATA_BOOTFS_MASK (0x00FFFFFF)
+#define BOOTDATA_BOOTFS_TYPE (0x00534642) // BFS\0
 
 // Virtual disk images.  The header fields and compression protocol
 // are the same as for the BOOTFS types, but the payload before
 // compression is a raw disk image rather than BOOTFS format.
-#define BOOTDATA_RAMDISK          (0x4b534452) // RDSK
+#define BOOTDATA_RAMDISK (0x4b534452) // RDSK
 
 // A Zircon Kernel Image
 // Content: bootdata_kernel_t
-#define BOOTDATA_KERNEL           (0x4c4e524b) // KRNL
+#define BOOTDATA_KERNEL (0x4c4e524b) // KRNL
 
 // A Zircon Partition Map
 // Content: bootdata_partition_map_t
 // The bootdata_t.extra field is used as a board specific index
 // to specify which device the partition map applies to.
-#define BOOTDATA_PARTITION_MAP    (0x5452506D) // mPRT
+#define BOOTDATA_PARTITION_MAP (0x5452506D) // mPRT
 
 // MAC Address for Ethernet, Wifi, Bluetooth, etc.
 // Content: uint8_t[] (variable length based on type of MAC address)
 // The bootdata_t.extra field is used as a board specific index
 // to specify which device the MAC address applies to.
-#define BOOTDATA_MAC_ADDRESS      (0x43414D6D) // mMAC
+#define BOOTDATA_MAC_ADDRESS (0x43414D6D) // mMAC
 
 // Flag indicating that the bootfs is compressed.
-#define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
-
+#define BOOTDATA_BOOTFS_FLAG_COMPRESSED (1 << 0)
 
 // These items are for passing from bootloader to kernel
 
 // Kernel Command Line String
 // Content: uint8_t[]
-#define BOOTDATA_CMDLINE          (0x4c444d43) // CMDL
+#define BOOTDATA_CMDLINE (0x4c444d43) // CMDL
 
 // ACPI Root Table Pointer
 // Content: uint64_t phys addr
-#define BOOTDATA_ACPI_RSDP        (0x50445352) // RSDP
+#define BOOTDATA_ACPI_RSDP (0x50445352) // RSDP
 
 // SMBIOS entry point pointer
 // Content: uint64_t phys addr
-#define BOOTDATA_SMBIOS           (0x49424d53) // SMBI
+#define BOOTDATA_SMBIOS (0x49424d53) // SMBI
 
 // Framebuffer Parameters
 // Content: bootdata_swfb_t
-#define BOOTDATA_FRAMEBUFFER      (0x42465753) // SWFB
+#define BOOTDATA_FRAMEBUFFER (0x42465753) // SWFB
 
 // Debug Serial Port
 // Content: bootdata_uart_t
-#define BOOTDATA_DEBUG_UART       (0x54524155) // UART
+#define BOOTDATA_DEBUG_UART (0x54524155) // UART
 
 // Platform ID Information
 // Content: bootdata_platform_id_t
-#define BOOTDATA_PLATFORM_ID      (0x44494C50) // PLID
+#define BOOTDATA_PLATFORM_ID (0x44494C50) // PLID
 
 // Memory which will persist across warm boots
 // Content bootdata_lastlog_nvram_t
-#define BOOTDATA_LASTLOG_NVRAM    (0x4c4c564e) // NVLL
+#define BOOTDATA_LASTLOG_NVRAM (0x4c4c564e) // NVLL
 
 // This reflects a typo we need to support for a while
-#define BOOTDATA_LASTLOG_NVRAM2   (0x4c4c5643) // CVLL
+#define BOOTDATA_LASTLOG_NVRAM2 (0x4c4c5643) // CVLL
 
 // E820 Memory Table
 // Content: e820entry[]
-#define BOOTDATA_E820_TABLE       (0x30323845) // E820
+#define BOOTDATA_E820_TABLE (0x30323845) // E820
 
 // EFI Memory Map
 // Content: a uint64_t entrysz followed by a set of
 // efi_memory_descriptor aligned on entrysz
-#define BOOTDATA_EFI_MEMORY_MAP   (0x4d494645) // EFIM
+#define BOOTDATA_EFI_MEMORY_MAP (0x4d494645) // EFIM
 
 // EFI System Table
 // Content: a uint64_t physical address of the table
@@ -123,21 +123,21 @@
 
 // Last crashlog
 // Content: ascii/utf8 log data from previous boot
-#define BOOTDATA_LAST_CRASHLOG    (0x4d4f4f42) // BOOM
+#define BOOTDATA_LAST_CRASHLOG (0x4d4f4f42) // BOOM
 
 // CPU configuration
 // Content: bootdata_cpu_config_t
-#define BOOTDATA_CPU_CONFIG       (0x43555043) // CPUC
+#define BOOTDATA_CPU_CONFIG (0x43555043) // CPUC
 
 // Memory configuration
 // Content: one or more of bootdata_mem_range_t (count determined by bootdata_t length)
-#define BOOTDATA_MEM_CONFIG       (0x434D454D) // MEMC
+#define BOOTDATA_MEM_CONFIG (0x434D454D) // MEMC
 
 // Kernel driver configuration
 // Content: driver specific struct, with type determined by bootdata "extra" field
-#define BOOTDATA_KERNEL_DRIVER    (0x5652444B) // KDRV
+#define BOOTDATA_KERNEL_DRIVER (0x5652444B) // KDRV
 
-#define BOOTDATA_IGNORE           (0x50494b53) // SKIP
+#define BOOTDATA_IGNORE (0x50494b53) // SKIP
 
 #ifndef __ASSEMBLER__
 __BEGIN_CDECLS;
@@ -231,9 +231,9 @@ typedef struct {
 } bootdata_platform_id_t;
 
 typedef struct {
-    uint32_t cpu_count;     // number of CPU cores in the cluster
-    uint32_t type;          // for future use
-    uint32_t flags;         // for future use
+    uint32_t cpu_count; // number of CPU cores in the cluster
+    uint32_t type;      // for future use
+    uint32_t flags;     // for future use
     uint32_t reserved;
 } bootdata_cpu_cluster_t;
 
@@ -243,18 +243,17 @@ typedef struct {
     bootdata_cpu_cluster_t clusters[];
 } bootdata_cpu_config_t;
 
-#define BOOTDATA_MEM_RANGE_RAM          1
-#define BOOTDATA_MEM_RANGE_PERIPHERAL   2
-#define BOOTDATA_MEM_RANGE_RESERVED     3
+#define BOOTDATA_MEM_RANGE_RAM 1
+#define BOOTDATA_MEM_RANGE_PERIPHERAL 2
+#define BOOTDATA_MEM_RANGE_RESERVED 3
 typedef struct {
-    uint64_t    paddr;
-    uint64_t    length;
-    uint32_t    type;
-    uint32_t    reserved;
+    uint64_t paddr;
+    uint64_t length;
+    uint32_t type;
+    uint32_t reserved;
 } bootdata_mem_range_t;
 
 __END_CDECLS;
-
 
 // BOOTFS is a trivial "filesystem" format
 //
@@ -307,3 +306,5 @@ static inline bool bootdata_is_metadata(uint32_t type) {
 }
 
 #endif
+
+#endif  // SYSROOT_ZIRCON_BOOT_BOOTDATA_H_

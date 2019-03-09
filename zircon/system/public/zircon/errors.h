@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_ERRORS_H_
+#define SYSROOT_ZIRCON_ERRORS_H_
 
 // Zircon statuses are signed 32 bit integers. The space of values is
 // divided as follows:
@@ -107,7 +108,6 @@
 // observe when the subject will be able to perform the operation
 // and should thus retry.
 #define ZX_ERR_UNAVAILABLE (-28)
-
 
 // ======= Permission check errors =======
 // ZX_ERR_ACCESS_DENIED: The caller did not have permission to perform
@@ -229,3 +229,5 @@
 
 // ZX_ERR_CONNECTION_ABORTED: Connection was aborted.
 #define ZX_ERR_CONNECTION_ABORTED (-76)
+
+#endif  // SYSROOT_ZIRCON_ERRORS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_QMI_TRANSPORT_H_
+#define SYSROOT_ZIRCON_DEVICE_QMI_TRANSPORT_H_
 
 // clang-format off
 
@@ -30,3 +31,5 @@ IOCTL_WRAPPER_OUT(ioctl_qmi_get_channel, IOCTL_QMI_GET_CHANNEL, zx_handle_t);
 IOCTL_WRAPPER_IN(ioctl_qmi_set_network, IOCTL_QMI_SET_NETWORK, bool);
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_DEVICE_QMI_TRANSPORT_H_

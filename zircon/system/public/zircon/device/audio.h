@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_AUDIO_H_
+#define SYSROOT_ZIRCON_DEVICE_AUDIO_H_
 
 #include <assert.h>
 #include <zircon/compiler.h>
-#include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/ioctl.h>
 #include <zircon/types.h>
 
 // When communicating with an Audio driver using zx_channel_call, do not use
@@ -20,32 +21,32 @@ __BEGIN_CDECLS
 typedef uint32_t audio_cmd_t;
 
 // Commands sent on the stream channel
-#define AUDIO_STREAM_CMD_GET_FORMATS    ((audio_cmd_t)0x1000)
-#define AUDIO_STREAM_CMD_SET_FORMAT     ((audio_cmd_t)0x1001)
-#define AUDIO_STREAM_CMD_GET_GAIN       ((audio_cmd_t)0x1002)
-#define AUDIO_STREAM_CMD_SET_GAIN       ((audio_cmd_t)0x1003)
-#define AUDIO_STREAM_CMD_PLUG_DETECT    ((audio_cmd_t)0x1004)
-#define AUDIO_STREAM_CMD_GET_UNIQUE_ID  ((audio_cmd_t)0x1005)
-#define AUDIO_STREAM_CMD_GET_STRING     ((audio_cmd_t)0x1006)
+#define AUDIO_STREAM_CMD_GET_FORMATS ((audio_cmd_t)0x1000)
+#define AUDIO_STREAM_CMD_SET_FORMAT ((audio_cmd_t)0x1001)
+#define AUDIO_STREAM_CMD_GET_GAIN ((audio_cmd_t)0x1002)
+#define AUDIO_STREAM_CMD_SET_GAIN ((audio_cmd_t)0x1003)
+#define AUDIO_STREAM_CMD_PLUG_DETECT ((audio_cmd_t)0x1004)
+#define AUDIO_STREAM_CMD_GET_UNIQUE_ID ((audio_cmd_t)0x1005)
+#define AUDIO_STREAM_CMD_GET_STRING ((audio_cmd_t)0x1006)
 
 // Async notifications sent on the stream channel.
 #define AUDIO_STREAM_PLUG_DETECT_NOTIFY ((audio_cmd_t)0x2000)
 
 // Commands sent on the ring buffer channel
-#define AUDIO_RB_CMD_GET_FIFO_DEPTH     ((audio_cmd_t)0x3000)
-#define AUDIO_RB_CMD_GET_BUFFER         ((audio_cmd_t)0x3001)
-#define AUDIO_RB_CMD_START              ((audio_cmd_t)0x3002)
-#define AUDIO_RB_CMD_STOP               ((audio_cmd_t)0x3003)
+#define AUDIO_RB_CMD_GET_FIFO_DEPTH ((audio_cmd_t)0x3000)
+#define AUDIO_RB_CMD_GET_BUFFER ((audio_cmd_t)0x3001)
+#define AUDIO_RB_CMD_START ((audio_cmd_t)0x3002)
+#define AUDIO_RB_CMD_STOP ((audio_cmd_t)0x3003)
 
 // Async notifications sent on the ring buffer channel.
-#define AUDIO_RB_POSITION_NOTIFY        ((audio_cmd_t)0x4000)
+#define AUDIO_RB_POSITION_NOTIFY ((audio_cmd_t)0x4000)
 
 // Flags used to modify commands.
 // The NO_ACK flag can be used with the SET_GAIN and PLUG_DETECT commands.
-#define AUDIO_FLAG_NO_ACK               ((audio_cmd_t)0x80000000)
+#define AUDIO_FLAG_NO_ACK ((audio_cmd_t)0x80000000)
 
 typedef struct audio_cmd_hdr {
-    zx_txid_t   transaction_id;
+    zx_txid_t transaction_id;
     audio_cmd_t cmd;
 } audio_cmd_hdr_t;
 
@@ -57,16 +58,16 @@ static_assert(sizeof(audio_cmd_hdr_t) == 8,
 // Bitfield which describes audio sample format as they reside in memory.
 //
 typedef uint32_t audio_sample_format_t;
-#define AUDIO_SAMPLE_FORMAT_BITSTREAM          ((audio_sample_format_t)(1u << 0))
-#define AUDIO_SAMPLE_FORMAT_8BIT               ((audio_sample_format_t)(1u << 1))
-#define AUDIO_SAMPLE_FORMAT_16BIT              ((audio_sample_format_t)(1u << 2))
-#define AUDIO_SAMPLE_FORMAT_20BIT_PACKED       ((audio_sample_format_t)(1u << 4))
-#define AUDIO_SAMPLE_FORMAT_24BIT_PACKED       ((audio_sample_format_t)(1u << 5))
-#define AUDIO_SAMPLE_FORMAT_20BIT_IN32         ((audio_sample_format_t)(1u << 6))
-#define AUDIO_SAMPLE_FORMAT_24BIT_IN32         ((audio_sample_format_t)(1u << 7))
-#define AUDIO_SAMPLE_FORMAT_32BIT              ((audio_sample_format_t)(1u << 8))
-#define AUDIO_SAMPLE_FORMAT_32BIT_FLOAT        ((audio_sample_format_t)(1u << 9))
-#define AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED      ((audio_sample_format_t)(1u << 30))
+#define AUDIO_SAMPLE_FORMAT_BITSTREAM ((audio_sample_format_t)(1u << 0))
+#define AUDIO_SAMPLE_FORMAT_8BIT ((audio_sample_format_t)(1u << 1))
+#define AUDIO_SAMPLE_FORMAT_16BIT ((audio_sample_format_t)(1u << 2))
+#define AUDIO_SAMPLE_FORMAT_20BIT_PACKED ((audio_sample_format_t)(1u << 4))
+#define AUDIO_SAMPLE_FORMAT_24BIT_PACKED ((audio_sample_format_t)(1u << 5))
+#define AUDIO_SAMPLE_FORMAT_20BIT_IN32 ((audio_sample_format_t)(1u << 6))
+#define AUDIO_SAMPLE_FORMAT_24BIT_IN32 ((audio_sample_format_t)(1u << 7))
+#define AUDIO_SAMPLE_FORMAT_32BIT ((audio_sample_format_t)(1u << 8))
+#define AUDIO_SAMPLE_FORMAT_32BIT_FLOAT ((audio_sample_format_t)(1u << 9))
+#define AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED ((audio_sample_format_t)(1u << 30))
 #define AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN ((audio_sample_format_t)(1u << 31))
 #define AUDIO_SAMPLE_FORMAT_FLAG_MASK                            \
     ((audio_sample_format_t)(AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED | \
@@ -76,16 +77,16 @@ typedef uint32_t audio_sample_format_t;
 //
 // A structure used along with the AUDIO_STREAM_CMD_GET_FORMATS command in order
 // to describe the formats supported by an audio stream.
-#define ASF_RANGE_FLAG_FPS_CONTINUOUS   ((uint16_t)(1u << 0))
+#define ASF_RANGE_FLAG_FPS_CONTINUOUS ((uint16_t)(1u << 0))
 #define ASF_RANGE_FLAG_FPS_48000_FAMILY ((uint16_t)(1u << 1))
 #define ASF_RANGE_FLAG_FPS_44100_FAMILY ((uint16_t)(1u << 2))
 typedef struct audio_stream_format_range {
     audio_sample_format_t sample_formats;
-    uint32_t              min_frames_per_second;
-    uint32_t              max_frames_per_second;
-    uint8_t               min_channels;
-    uint8_t               max_channels;
-    uint16_t              flags;
+    uint32_t min_frames_per_second;
+    uint32_t max_frames_per_second;
+    uint8_t min_channels;
+    uint8_t max_channels;
+    uint16_t flags;
 } __PACKED audio_stream_format_range_t;
 
 static_assert(sizeof(audio_stream_format_range_t) == 16,
@@ -96,11 +97,11 @@ static_assert(sizeof(audio_stream_format_range_t) == 16,
 // Flags used by the AUDIO_STREAM_CMD_SET_GAIN message.
 //
 typedef uint32_t audio_set_gain_flags_t;
-#define AUDIO_SGF_MUTE_VALID ((audio_set_gain_flags_t)0x1)        // Whether or not the mute flag is valid.
-#define AUDIO_SGF_AGC_VALID  ((audio_set_gain_flags_t)0x2)        // Whether or not the agc flag is valid.
-#define AUDIO_SGF_GAIN_VALID ((audio_set_gain_flags_t)0x4)        // Whether or not the gain float is valid.
-#define AUDIO_SGF_MUTE       ((audio_set_gain_flags_t)0x40000000) // Whether or not to mute the stream.
-#define AUDIO_SGF_AGC        ((audio_set_gain_flags_t)0x80000000) // Whether or not enable AGC for the stream.
+#define AUDIO_SGF_MUTE_VALID ((audio_set_gain_flags_t)0x1)  // Whether or not the mute flag is valid.
+#define AUDIO_SGF_AGC_VALID ((audio_set_gain_flags_t)0x2)   // Whether or not the agc flag is valid.
+#define AUDIO_SGF_GAIN_VALID ((audio_set_gain_flags_t)0x4)  // Whether or not the gain float is valid.
+#define AUDIO_SGF_MUTE ((audio_set_gain_flags_t)0x40000000) // Whether or not to mute the stream.
+#define AUDIO_SGF_AGC ((audio_set_gain_flags_t)0x80000000)  // Whether or not enable AGC for the stream.
 
 // audio_pd_flags_t
 //
@@ -108,8 +109,8 @@ typedef uint32_t audio_set_gain_flags_t;
 // asynchronous plug detect notifications.
 //
 typedef uint32_t audio_pd_flags_t;
-#define AUDIO_PDF_NONE                  ((audio_pd_flags_t)0)
-#define AUDIO_PDF_ENABLE_NOTIFICATIONS  ((audio_pd_flags_t)0x40000000)
+#define AUDIO_PDF_NONE ((audio_pd_flags_t)0)
+#define AUDIO_PDF_ENABLE_NOTIFICATIONS ((audio_pd_flags_t)0x40000000)
 #define AUDIO_PDF_DISABLE_NOTIFICATIONS ((audio_pd_flags_t)0x80000000)
 
 // audio_pd_notify_flags_t
@@ -118,9 +119,9 @@ typedef uint32_t audio_pd_flags_t;
 // message, and by AUDIO_STREAM_PLUG_DETECT_NOTIFY messages.
 //
 typedef uint32_t audio_pd_notify_flags_t;
-#define AUDIO_PDNF_HARDWIRED  ((audio_pd_notify_flags_t)0x1)        // Stream is hardwired (will always be plugged in)
-#define AUDIO_PDNF_CAN_NOTIFY ((audio_pd_notify_flags_t)0x2)        // Stream is able to notify of plug state changes.
-#define AUDIO_PDNF_PLUGGED    ((audio_pd_notify_flags_t)0x80000000) // Stream is currently plugged in.
+#define AUDIO_PDNF_HARDWIRED ((audio_pd_notify_flags_t)0x1)      // Stream is hardwired (will always be plugged in)
+#define AUDIO_PDNF_CAN_NOTIFY ((audio_pd_notify_flags_t)0x2)     // Stream is able to notify of plug state changes.
+#define AUDIO_PDNF_PLUGGED ((audio_pd_notify_flags_t)0x80000000) // Stream is currently plugged in.
 
 // AUDIO_STREAM_CMD_GET_FORMATS
 //
@@ -135,10 +136,10 @@ typedef struct audio_stream_cmd_get_formats_req {
 // a _pad field, or repurpose it for some flags of some form.  Right now, we use
 // it to make sure that format_ranges is aligned to a 16 byte boundary.
 typedef struct audio_stream_cmd_get_formats_resp {
-    audio_cmd_hdr_t             hdr;
-    uint32_t                    _pad;
-    uint16_t                    format_range_count;
-    uint16_t                    first_format_range_ndx;
+    audio_cmd_hdr_t hdr;
+    uint32_t _pad;
+    uint16_t format_range_count;
+    uint16_t first_format_range_ndx;
     audio_stream_format_range_t format_ranges[AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE];
 } audio_stream_cmd_get_formats_resp_t;
 
@@ -149,16 +150,16 @@ static_assert(sizeof(audio_stream_cmd_get_formats_resp_t) == 256,
 //
 // May not be used with the NO_ACK flag.
 typedef struct audio_stream_cmd_set_format_req {
-    audio_cmd_hdr_t        hdr;
-    uint32_t               frames_per_second;
-    audio_sample_format_t  sample_format;
-    uint16_t               channels;
+    audio_cmd_hdr_t hdr;
+    uint32_t frames_per_second;
+    audio_sample_format_t sample_format;
+    uint16_t channels;
 } audio_stream_cmd_set_format_req_t;
 
 typedef struct audio_stream_cmd_set_format_resp {
     audio_cmd_hdr_t hdr;
-    zx_status_t     result;
-    uint64_t        external_delay_nsec;
+    zx_status_t result;
+    uint64_t external_delay_nsec;
 
     // Note: Upon success, a channel used to control the audio buffer will also
     // be returned.
@@ -180,15 +181,15 @@ typedef struct audio_stream_cmd_get_gain_resp {
     // behave as if they have continuous control at all times?
     audio_cmd_hdr_t hdr;
 
-    bool            cur_mute;  // True if the stream is currently muted.
-    bool            cur_agc;   // True if the stream has AGC currently enabled.
-    float           cur_gain;  // The current setting gain of the stream in dB
+    bool cur_mute;  // True if the stream is currently muted.
+    bool cur_agc;   // True if the stream has AGC currently enabled.
+    float cur_gain; // The current setting gain of the stream in dB
 
-    bool            can_mute;  // True if the stream is capable of muting
-    bool            can_agc;   // True if the stream has support for AGC
-    float           min_gain;  // The minimum valid gain setting, in dB
-    float           max_gain;  // The maximum valid gain setting, in dB
-    float           gain_step; // The smallest valid gain increment, counted from the minimum gain.
+    bool can_mute;   // True if the stream is capable of muting
+    bool can_agc;    // True if the stream has support for AGC
+    float min_gain;  // The minimum valid gain setting, in dB
+    float max_gain;  // The maximum valid gain setting, in dB
+    float gain_step; // The smallest valid gain increment, counted from the minimum gain.
 } audio_stream_cmd_get_gain_resp_t;
 
 // AUDIO_STREAM_CMD_SET_GAIN
@@ -213,19 +214,19 @@ typedef struct audio_stream_cmd_get_gain_resp {
 //
 // May be used with the NO_ACK flag.
 typedef struct audio_stream_cmd_set_gain_req {
-    audio_cmd_hdr_t        hdr;
+    audio_cmd_hdr_t hdr;
     audio_set_gain_flags_t flags;
-    float                  gain;
+    float gain;
 } audio_stream_cmd_set_gain_req_t;
 
 typedef struct audio_stream_cmd_set_gain_resp {
     audio_cmd_hdr_t hdr;
-    zx_status_t     result;
+    zx_status_t result;
     // The current gain settings observed immediately after processing the set
     // gain request.
-    bool             cur_mute;
-    bool             cur_agc;
-    float            cur_gain;
+    bool cur_mute;
+    bool cur_agc;
+    float cur_gain;
 } audio_stream_cmd_set_gain_resp_t;
 
 // AUDIO_STREAM_CMD_PLUG_DETECT
@@ -234,14 +235,14 @@ typedef struct audio_stream_cmd_set_gain_resp {
 // detect notifications.
 //
 typedef struct audio_stream_cmd_plug_detect_req {
-    audio_cmd_hdr_t  hdr;
-    audio_pd_flags_t flags;  // Options used to enable or disable notifications
+    audio_cmd_hdr_t hdr;
+    audio_pd_flags_t flags; // Options used to enable or disable notifications
 } audio_stream_cmd_plug_detect_req_t;
 
 typedef struct audio_stream_cmd_plug_detect_resp {
-    audio_cmd_hdr_t         hdr;
-    audio_pd_notify_flags_t flags;           // The current plug state and capabilities
-    zx_time_t               plug_state_time; // The time of the plug state last change.
+    audio_cmd_hdr_t hdr;
+    audio_pd_notify_flags_t flags; // The current plug state and capabilities
+    zx_time_t plug_state_time;     // The time of the plug state last change.
 } audio_stream_cmd_plug_detect_resp_t;
 
 // AUDIO_STREAM_PLUG_DETECT_NOTIFY
@@ -279,20 +280,36 @@ typedef audio_stream_cmd_plug_detect_resp_t audio_stream_plug_detect_notify_t;
 // being perfectly unique, and should be prepared to take steps to de-dupe
 // identifiers when needed.
 typedef struct audio_stream_cmd_get_unique_id_req {
-    audio_cmd_hdr_t  hdr;
+    audio_cmd_hdr_t hdr;
 } audio_stream_cmd_get_unique_id_req_t;
 
 typedef struct audio_stream_unique_id {
     uint8_t data[16];
 } audio_stream_unique_id_t;
 
-#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS         { .data = { 0x01, 0x00 } }
-#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK   { .data = { 0x02, 0x00 } }
-#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE       { .data = { 0x03, 0x00 } }
-#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADSET_JACK     { .data = { 0x04, 0x00 } }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS \
+    {                                           \
+        .data = { 0x01,                         \
+                  0x00 }                        \
+    }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK \
+    {                                                 \
+        .data = { 0x02,                               \
+                  0x00 }                              \
+    }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE \
+    {                                             \
+        .data = { 0x03,                           \
+                  0x00 }                          \
+    }
+#define AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADSET_JACK \
+    {                                               \
+        .data = { 0x04,                             \
+                  0x00 }                            \
+    }
 
 typedef struct audio_stream_cmd_get_unique_id_resp {
-    audio_cmd_hdr_t          hdr;
+    audio_cmd_hdr_t hdr;
     audio_stream_unique_id_t unique_id;
 } audio_stream_cmd_get_unique_id_resp_t;
 
@@ -310,19 +327,19 @@ typedef struct audio_stream_cmd_get_unique_id_resp {
 //
 typedef uint32_t audio_stream_string_id_t;
 #define AUDIO_STREAM_STR_ID_MANUFACTURER ((audio_stream_string_id_t)0x80000000)
-#define AUDIO_STREAM_STR_ID_PRODUCT      ((audio_stream_string_id_t)0x80000001)
+#define AUDIO_STREAM_STR_ID_PRODUCT ((audio_stream_string_id_t)0x80000001)
 
 typedef struct audio_stream_cmd_get_string_req {
-    audio_cmd_hdr_t  hdr;
+    audio_cmd_hdr_t hdr;
     audio_stream_string_id_t id;
 } audio_stream_cmd_get_string_req_t;
 
 typedef struct audio_stream_cmd_get_string_resp {
-    audio_cmd_hdr_t          hdr;
-    zx_status_t              result;
+    audio_cmd_hdr_t hdr;
+    zx_status_t result;
     audio_stream_string_id_t id;
-    uint32_t                 strlen;
-    uint8_t                  str[256 - sizeof(audio_cmd_hdr_t) - (3 *sizeof(uint32_t))];
+    uint32_t strlen;
+    uint8_t str[256 - sizeof(audio_cmd_hdr_t) - (3 * sizeof(uint32_t))];
 } audio_stream_cmd_get_string_resp_t;
 
 static_assert(sizeof(audio_stream_cmd_get_string_resp_t) == 256,
@@ -341,7 +358,7 @@ typedef struct audio_rb_cmd_get_fifo_depth_req {
 
 typedef struct audio_rb_cmd_get_fifo_depth_resp {
     audio_cmd_hdr_t hdr;
-    zx_status_t     result;
+    zx_status_t result;
 
     // A representation (in bytes) of how far ahead audio hardware may read
     // into the stream (in the case of output) or may hold onto audio before
@@ -359,8 +376,8 @@ typedef struct audio_rb_cmd_get_buffer_req {
 
 typedef struct audio_rb_cmd_get_buffer_resp {
     audio_cmd_hdr_t hdr;
-    zx_status_t     result;
-    uint32_t        num_ring_buffer_frames;
+    zx_status_t result;
+    uint32_t num_ring_buffer_frames;
 
     // NOTE: If result == ZX_OK, a VMO handle representing the ring buffer to
     // be used will be returned as well.  Clients may map this buffer with
@@ -381,8 +398,8 @@ typedef struct audio_rb_cmd_start_req {
 
 typedef struct audio_rb_cmd_start_resp {
     audio_cmd_hdr_t hdr;
-    zx_status_t     result;
-    uint64_t        start_time;
+    zx_status_t result;
+    uint64_t start_time;
 } audio_rb_cmd_start_resp_t;
 
 // AUDIO_RB_CMD_STOP
@@ -392,7 +409,7 @@ typedef struct audio_rb_cmd_stop_req {
 
 typedef struct audio_rb_cmd_stop_resp {
     audio_cmd_hdr_t hdr;
-    zx_status_t     result;
+    zx_status_t result;
 } audio_rb_cmd_stop_resp_t;
 
 // AUDIO_RB_POSITION_NOTIFY
@@ -405,3 +422,5 @@ typedef struct audio_rb_position_notify {
 } audio_rb_position_notify_t;
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_DEVICE_AUDIO_H_

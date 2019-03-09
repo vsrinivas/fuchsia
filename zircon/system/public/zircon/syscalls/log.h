@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_SYSCALLS_LOG_H_
+#define SYSROOT_ZIRCON_SYSCALLS_LOG_H_
 
 #include <zircon/types.h>
 
@@ -53,3 +54,5 @@ typedef struct zx_log_record {
 #define ZX_LOG_FLAG_READABLE  0x40000000
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_SYSCALLS_LOG_H_

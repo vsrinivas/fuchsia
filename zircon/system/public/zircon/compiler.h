@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_COMPILER_H_
+#define SYSROOT_ZIRCON_COMPILER_H_
 
 #ifndef __ASSEMBLER__
 
@@ -10,14 +11,14 @@
 #error "Unrecognized compiler!"
 #endif
 
-#define likely(x)       __builtin_expect(!!(x), 1)
-#define unlikely(x)     __builtin_expect(!!(x), 0)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 #define __UNUSED __attribute__((__unused__))
 #define __USED __attribute__((__used__))
 #define __PACKED __attribute__((packed))
 #define __ALIGNED(x) __attribute__((aligned(x)))
-#define __PRINTFLIKE(__fmt,__varargs) __attribute__((__format__ (__printf__, __fmt, __varargs)))
-#define __SCANFLIKE(__fmt,__varargs) __attribute__((__format__ (__scanf__, __fmt, __varargs)))
+#define __PRINTFLIKE(__fmt, __varargs) __attribute__((__format__(__printf__, __fmt, __varargs)))
+#define __SCANFLIKE(__fmt, __varargs) __attribute__((__format__(__scanf__, __fmt, __varargs)))
 #define __SECTION(x) __attribute__((__section__(x)))
 #define __PURE __attribute__((__pure__))
 #define __CONST __attribute__((__const__))
@@ -60,8 +61,8 @@
 #define __UNREACHABLE __builtin_unreachable()
 #define __WEAK_ALIAS(x) __attribute__((__weak__, __alias__(x)))
 #define __ALIAS(x) __attribute__((__alias__(x)))
-#define __EXPORT __attribute__ ((__visibility__("default")))
-#define __LOCAL  __attribute__ ((__visibility__("hidden")))
+#define __EXPORT __attribute__((__visibility__("default")))
+#define __LOCAL __attribute__((__visibility__("hidden")))
 #define __THREAD __thread
 #define __offsetof(type, field) __builtin_offsetof(type, field)
 
@@ -72,7 +73,9 @@
 #elif __GNUC__ >= 7
 #define __FALLTHROUGH __attribute__((__fallthrough__))
 #else
-#define __FALLTHROUGH do {} while (0)
+#define __FALLTHROUGH \
+    do {              \
+    } while (0)
 #endif
 
 // Publicly exposed thread annotation macros. These have a long and ugly name to
@@ -93,7 +96,7 @@
 #define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(__scoped_lockable__)
 #define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(__no_thread_safety_analysis__)
 
-#endif  // ifndef __ASSEMBLER__
+#endif // ifndef __ASSEMBLER__
 
 #if !defined(__DEPRECATE)
 #define __DEPRECATE __attribute__((__deprecated__))
@@ -106,8 +109,8 @@
 
 /* CPP header guards */
 #ifdef __cplusplus
-#define __BEGIN_CDECLS  extern "C" {
-#define __END_CDECLS    }
+#define __BEGIN_CDECLS extern "C" {
+#define __END_CDECLS }
 #else
 #define __BEGIN_CDECLS
 #define __END_CDECLS
@@ -123,3 +126,5 @@
 #define add_overflow(a, b, c) __builtin_add_overflow(a, b, c)
 #define sub_overflow(a, b, c) __builtin_sub_overflow(a, b, c)
 #define mul_overflow(a, b, c) __builtin_mul_overflow(a, b, c)
+
+#endif  // SYSROOT_ZIRCON_COMPILER_H_

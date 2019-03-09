@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_H_
+#define SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_H_
 
 #include <stdint.h>
 
@@ -17,3 +18,5 @@
 
 // USB Product ID for Zircon USB Function Test.
 #define GOOGLE_USB_PERIPHERAL_TEST_PID 0xA022
+
+#endif  // SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_H_

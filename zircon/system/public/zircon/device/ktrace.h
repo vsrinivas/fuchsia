@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_KTRACE_H_
+#define SYSROOT_ZIRCON_DEVICE_KTRACE_H_
 
 #include <string.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/ioctl.h>
 
 // return a handle usable with zx_ktrace_write()
 #define IOCTL_KTRACE_GET_HANDLE \
@@ -44,3 +45,5 @@ static inline zx_status_t ioctl_ktrace_add_probe(int fd, const char* name, uint3
 IOCTL_WRAPPER_IN(ioctl_ktrace_start, IOCTL_KTRACE_START, uint32_t);
 IOCTL_WRAPPER(ioctl_ktrace_stop, IOCTL_KTRACE_STOP);
 IOCTL_WRAPPER(ioctl_ktrace_rewind, IOCTL_KTRACE_REWIND);
+
+#endif  // SYSROOT_ZIRCON_DEVICE_KTRACE_H_

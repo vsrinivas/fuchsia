@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_BOOT_E820_H_
+#define SYSROOT_ZIRCON_BOOT_E820_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -18,3 +19,5 @@ typedef struct e820entry {
     uint64_t size;
     uint32_t type;
 } __PACKED e820entry_t;
+
+#endif  // SYSROOT_ZIRCON_BOOT_E820_H_

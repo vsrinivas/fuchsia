@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_SYSCALLS_PROFILE_H_
+#define SYSROOT_ZIRCON_SYSCALLS_PROFILE_H_
 
 #include <zircon/types.h>
 
@@ -35,3 +36,5 @@ typedef struct zx_profile_info {
 
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_SYSCALLS_PROFILE_H_

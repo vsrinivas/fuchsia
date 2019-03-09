@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_SYSCALLS_HYPERVISOR_H_
+#define SYSROOT_ZIRCON_SYSCALLS_HYPERVISOR_H_
 
 #include <assert.h>
 
@@ -65,3 +66,5 @@ typedef struct zx_vcpu_io {
 } zx_vcpu_io_t;
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_SYSCALLS_HYPERVISOR_H_

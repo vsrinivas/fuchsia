@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_DISPLAY_CONTROLLER_H_
+#define SYSROOT_ZIRCON_DEVICE_DISPLAY_CONTROLLER_H_
 
 #include <stdint.h>
-#include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/ioctl.h>
 #include <zircon/types.h>
 
 #define IOCTL_DISPLAY_CONTROLLER_GET_HANDLE \
@@ -17,3 +18,5 @@ IOCTL_WRAPPER_OUT(ioctl_display_controller_get_handle,
 
 #define IMAGE_TYPE_SIMPLE UINT32_C(0)
 #define INVALID_ID 0
+
+#endif  // SYSROOT_ZIRCON_DEVICE_DISPLAY_CONTROLLER_H_

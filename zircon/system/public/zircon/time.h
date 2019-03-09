@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_TIME_H_
+#define SYSROOT_ZIRCON_TIME_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -55,7 +56,6 @@ __CONSTEXPR static inline zx_time_t zx_time_sub_duration(zx_time_t time, zx_dura
         } else {
             return ZX_TIME_INFINITE;
         }
-
     }
     return x;
 }
@@ -151,3 +151,5 @@ __CONSTEXPR static inline zx_duration_t zx_duration_from_hour(int64_t n) {
     (__ISCONSTANT(n) ? ((zx_duration_t)(3600LL * 1000000000LL * (n))) : (zx_duration_from_hour(n)))
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_TIME_H_

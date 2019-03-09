@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_BLOCK_H_
+#define SYSROOT_ZIRCON_DEVICE_BLOCK_H_
 
 #include <assert.h>
 #include <limits.h>
@@ -55,15 +56,15 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 16)
 // Prints stats about the block device to the provided buffer and optionally
 // clears the counters
-#define IOCTL_BLOCK_GET_STATS   \
+#define IOCTL_BLOCK_GET_STATS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 18)
 
 // Block Impl ioctls (specific to each block device):
 
 #define BLOCK_FLAG_READONLY 0x00000001
 #define BLOCK_FLAG_REMOVABLE 0x00000002
-#define BLOCK_FLAG_BOOTPART 0x00000004  // block device has bootdata partition map
-                                        // provided by device metadata
+#define BLOCK_FLAG_BOOTPART 0x00000004 // block device has bootdata partition map
+                                       // provided by device metadata
 
 #define BLOCK_MAX_TRANSFER_UNBOUNDED 0xFFFFFFFF
 
@@ -78,8 +79,8 @@ typedef struct {
 } block_info_t;
 
 typedef struct {
-    size_t total_ops;       // Total number of block ops processed
-    size_t total_blocks;    // Total number of blocks processed
+    size_t total_ops;    // Total number of block ops processed
+    size_t total_blocks; // Total number of blocks processed
     size_t total_reads;
     size_t total_blocks_read;
     size_t total_writes;
@@ -147,24 +148,24 @@ IOCTL_WRAPPER(ioctl_block_fvm_destroy_partition, IOCTL_BLOCK_FVM_DESTROY_PARTITI
 
 typedef struct {
     bool allocated; // true if vslices are allocated, false otherwise
-    size_t count; // number of contiguous vslices
+    size_t count;   // number of contiguous vslices
 } vslice_range_t;
 
 typedef struct {
-    size_t count; // number of elements in vslice_start
+    size_t count;                                 // number of elements in vslice_start
     size_t vslice_start[MAX_FVM_VSLICE_REQUESTS]; // vslices to query from
 } query_request_t;
 
 typedef struct {
-    size_t count; // number of elements in vslice_range
+    size_t count;                                         // number of elements in vslice_range
     vslice_range_t vslice_range[MAX_FVM_VSLICE_REQUESTS]; // number of contiguous vslices
                                                           // that are allocated (or unallocated)
 } query_response_t;
 
 typedef struct {
-    size_t slice_size;   // Size of a single slice, in bytes.
-    size_t vslice_count; // Number of addressable slices.
-    size_t pslice_total_count; // Total number of allocatable slices.
+    size_t slice_size;             // Size of a single slice, in bytes.
+    size_t vslice_count;           // Number of addressable slices.
+    size_t pslice_total_count;     // Total number of allocatable slices.
     size_t pslice_allocated_count; // Total number of currently allocated slices.
 } fvm_info_t;
 
@@ -242,40 +243,40 @@ typedef uint32_t reqid_t;
 typedef uint16_t groupid_t;
 
 // Reads from the Block device into the VMO
-#define BLOCKIO_READ           0x00000001
+#define BLOCKIO_READ 0x00000001
 
 // Writes to the Block device from the VMO
-#define BLOCKIO_WRITE          0x00000002
+#define BLOCKIO_WRITE 0x00000002
 
 // Writes any cached data to nonvolatile storage.
 // Implies BARRIER_BEFORE and BARRIER_AFTER.
-#define BLOCKIO_FLUSH          0x00000003
+#define BLOCKIO_FLUSH 0x00000003
 
 // Marks data on the backing storage as invalid.
-#define BLOCKIO_TRIM           0x00000004
+#define BLOCKIO_TRIM 0x00000004
 
 // Detaches the VMO from the block device.
-#define BLOCKIO_CLOSE_VMO      0x00000005
-#define BLOCKIO_OP_MASK        0x000000FF
+#define BLOCKIO_CLOSE_VMO 0x00000005
+#define BLOCKIO_OP_MASK 0x000000FF
 
 // Require that this operation will not begin until all prior operations
 // have completed.
 #define BLOCKIO_BARRIER_BEFORE 0x00000100
 
 // Require that this operation must complete before additional operations begin.
-#define BLOCKIO_BARRIER_AFTER  0x00000200
+#define BLOCKIO_BARRIER_AFTER 0x00000200
 
 // Associate the following request with |group|.
-#define BLOCKIO_GROUP_ITEM     0x00000400
+#define BLOCKIO_GROUP_ITEM 0x00000400
 
 // Only respond after this request (and all previous within group) have completed.
 // Only valid with BLOCKIO_GROUP_ITEM.
-#define BLOCKIO_GROUP_LAST     0x00000800
-#define BLOCKIO_FLAG_MASK      0x0000FF00
+#define BLOCKIO_GROUP_LAST 0x00000800
+#define BLOCKIO_FLAG_MASK 0x0000FF00
 
 typedef struct {
     uint32_t opcode;
-    reqid_t reqid; // Transmitted in the block_fifo_response_t.
+    reqid_t reqid;   // Transmitted in the block_fifo_response_t.
     groupid_t group; // Only used if opcode & BLOCKIO_GROUP_ITEM.
     vmoid_t vmoid;
     uint32_t length;
@@ -298,3 +299,5 @@ static_assert(sizeof(block_fifo_request_t) == sizeof(block_fifo_response_t),
 
 #define BLOCK_FIFO_ESIZE (sizeof(block_fifo_request_t))
 #define BLOCK_FIFO_MAX_DEPTH (4096 / BLOCK_FIFO_ESIZE)
+
+#endif  // SYSROOT_ZIRCON_DEVICE_BLOCK_H_

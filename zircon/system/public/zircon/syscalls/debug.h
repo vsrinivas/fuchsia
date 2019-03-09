@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSCALLS_DEBUG_
-#define ZIRCON_SYSCALLS_DEBUG_
+#ifndef SYSROOT_ZIRCON_SYSCALLS_DEBUG_
+#define SYSROOT_ZIRCON_SYSCALLS_DEBUG_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -73,15 +73,15 @@ typedef struct zx_thread_state_vector_regs {
 
 // Value for ZX_THREAD_STATE_DEBUG_REGS on x64 platforms.
 typedef struct zx_thread_state_debug_regs {
-  uint64_t dr[4];
-  // DR4 and D5 are not used.
-  uint64_t dr6;         // Status register.
-  uint64_t dr7;         // Control register.
-  // TODO(donosoc): These values are deprecated but are still used by zxdb. We debine both values
-  //                in order to do a soft transition. Delete these values once zxdb has made the
-  //                update.
-  uint64_t dr6_status;  // Status register.
-  uint64_t dr7_control; // Control register.
+    uint64_t dr[4];
+    // DR4 and D5 are not used.
+    uint64_t dr6; // Status register.
+    uint64_t dr7; // Control register.
+    // TODO(donosoc): These values are deprecated but are still used by zxdb. We debine both values
+    //                in order to do a soft transition. Delete these values once zxdb has made the
+    //                update.
+    uint64_t dr6_status;  // Status register.
+    uint64_t dr7_control; // Control register.
 } zx_thread_state_debug_regs_t;
 
 #elif defined(__aarch64__)
@@ -121,20 +121,20 @@ typedef struct zx_thread_state_vector_regs {
 
 // Value for XZ_THREAD_STATE_DEBUG_REGS for ARM64 platforms.
 typedef struct zx_thread_state_debug_regs {
-  struct {
-    uint64_t dbgbvr;      //  HW Breakpoint Value register.
-    uint32_t dbgbcr;      //  HW Breakpoint Control register.
-  } hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
-  // Number of HW Breakpoints in the platform.
-  // Will be set on read and ignored on write.
-  uint8_t hw_bps_count;
-  struct {
-    uint64_t dbgwvr;      // HW Watchpoint Value register.
-    uint32_t dbgwcr;      // HW Watchpoint Control register.
-  } hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
-  // Number of HW Watchpoints in the platform.
-  // Will be set on read and ignored on write.
-  uint8_t hw_wps_count;
+    struct {
+        uint64_t dbgbvr; //  HW Breakpoint Value register.
+        uint32_t dbgbcr; //  HW Breakpoint Control register.
+    } hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
+    // Number of HW Breakpoints in the platform.
+    // Will be set on read and ignored on write.
+    uint8_t hw_bps_count;
+    struct {
+        uint64_t dbgwvr; // HW Watchpoint Value register.
+        uint32_t dbgwcr; // HW Watchpoint Control register.
+    } hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
+    // Number of HW Watchpoints in the platform.
+    // Will be set on read and ignored on write.
+    uint8_t hw_wps_count;
 } zx_thread_state_debug_regs_t;
 
 #endif
@@ -149,14 +149,14 @@ typedef uint64_t zx_thread_x86_register_gs_t;
 
 // Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
 typedef uint32_t zx_thread_state_topic_t;
-#define ZX_THREAD_STATE_GENERAL_REGS  ((uint32_t)0) // zx_thread_state_general_regs_t value.
-#define ZX_THREAD_STATE_FP_REGS       ((uint32_t)1) // zx_thread_state_fp_regs_t value.
-#define ZX_THREAD_STATE_VECTOR_REGS   ((uint32_t)2) // zx_thread_state_vector_regs_t value.
-#define ZX_THREAD_STATE_DEBUG_REGS    ((uint32_t)4) // zx_thread_state_debug_regs_t value.
-#define ZX_THREAD_STATE_SINGLE_STEP   ((uint32_t)5) // zx_thread_state_single_step_t value.
-#define ZX_THREAD_X86_REGISTER_FS     ((uint32_t)6) // zx_thread_x86_register_fs_t value.
-#define ZX_THREAD_X86_REGISTER_GS     ((uint32_t)7) // zx_thread_x86_register_gs_t value.
+#define ZX_THREAD_STATE_GENERAL_REGS ((uint32_t)0) // zx_thread_state_general_regs_t value.
+#define ZX_THREAD_STATE_FP_REGS ((uint32_t)1)      // zx_thread_state_fp_regs_t value.
+#define ZX_THREAD_STATE_VECTOR_REGS ((uint32_t)2)  // zx_thread_state_vector_regs_t value.
+#define ZX_THREAD_STATE_DEBUG_REGS ((uint32_t)4)   // zx_thread_state_debug_regs_t value.
+#define ZX_THREAD_STATE_SINGLE_STEP ((uint32_t)5)  // zx_thread_state_single_step_t value.
+#define ZX_THREAD_X86_REGISTER_FS ((uint32_t)6)    // zx_thread_x86_register_fs_t value.
+#define ZX_THREAD_X86_REGISTER_GS ((uint32_t)7)    // zx_thread_x86_register_gs_t value.
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSCALLS_DEBUG_
+#endif // SYSROOT_ZIRCON_SYSCALLS_DEBUG_

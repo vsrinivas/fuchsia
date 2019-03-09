@@ -5,19 +5,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __PLATFORM_MULTIBOOT_H
-#define __PLATFORM_MULTIBOOT_H
+#ifndef SYSROOT_ZIRCON_MULTIBOOT_H_
+#define SYSROOT_ZIRCON_MULTIBOOT_H_
 
 /* magic number for multiboot header */
-#define MULTIBOOT_HEADER_MAGIC      0x1BADB002
+#define MULTIBOOT_HEADER_MAGIC 0x1BADB002
 
 // Flags for multiboot header:
 //   0x00000002: Boot loader should provide memory map.
 //   0x00010000: *_addr fields in multiboot_header_t are used.
-#define MULTIBOOT_HEADER_FLAGS      0x00010002
+#define MULTIBOOT_HEADER_FLAGS 0x00010002
 
 /* magic number passed by multiboot-compliant boot loaders */
-#define MULTIBOOT_BOOTLOADER_MAGIC  0x2BADB002
+#define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
 
 #ifndef __ASSEMBLER__
 
@@ -112,4 +112,4 @@ typedef struct memory_map {
 
 #endif
 
-#endif
+#endif  // SYSROOT_ZIRCON_BOOT_MULTIBOOT_

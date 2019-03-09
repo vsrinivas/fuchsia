@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_HW_USB_VIDEO_H_
+#define SYSROOT_ZIRCON_HW_USB_VIDEO_H_
 
 // clang-format off
 
@@ -302,3 +303,5 @@ typedef struct {
 
 __END_CDECLS;
 
+
+#endif  // SYSROOT_ZIRCON_HW_USB_VIDEO_H_

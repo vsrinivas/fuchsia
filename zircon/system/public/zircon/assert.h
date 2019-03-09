@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_ASSERT_
-#define ZIRCON_ASSERT_
+#ifndef SYSROOT_ZIRCON_ASSERT_
+#define SYSROOT_ZIRCON_ASSERT_
 
 #ifdef _KERNEL
 #include <assert.h>
@@ -78,9 +78,13 @@
 #define ZX_DEBUG_ASSERT_COND(x) ZX_DEBUG_ASSERT(x)
 #define ZX_DEBUG_ASSERT_MSG_COND(x, msg, msgargs...) ZX_DEBUG_ASSERT_MSG(x, msg, msgargs)
 #else
-#define ZX_DEBUG_ASSERT_COND(x) do { } while (0)
-#define ZX_DEBUG_ASSERT_MSG_COND(x, msg, msgargs...) do { } while (0)
+#define ZX_DEBUG_ASSERT_COND(x) \
+    do {                        \
+    } while (0)
+#define ZX_DEBUG_ASSERT_MSG_COND(x, msg, msgargs...) \
+    do {                                             \
+    } while (0)
 #endif
 #endif // #ifdef _KERNEL
 
-#endif // ZIRCON_ASSERT_
+#endif // SYSROOT_ZIRCON_ASSERT_

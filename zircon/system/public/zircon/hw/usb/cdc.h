@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_HW_USB_CDC_H_
+#define SYSROOT_ZIRCON_HW_USB_CDC_H_
 
 // clang-format off
 
@@ -136,3 +137,5 @@ typedef struct {
  } __attribute__ ((packed)) usb_cdc_speed_change_notification_t;
 
 __END_CDECLS;
+
+#endif  // SYSROOT_ZIRCON_HW_USB_CDC_H_

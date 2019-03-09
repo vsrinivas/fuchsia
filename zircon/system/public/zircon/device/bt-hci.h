@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_BT_HCI_H_
+#define SYSROOT_ZIRCON_DEVICE_BT_HCI_H_
 
 // clang-format off
 
@@ -67,3 +68,5 @@ IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_snoop_channel, IOCTL_BT_HCI_GET_SNOOP_CHANNEL
 // TODO(jamuraa): Add ioctl for SCO
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_DEVICE_BT_HCI_H_

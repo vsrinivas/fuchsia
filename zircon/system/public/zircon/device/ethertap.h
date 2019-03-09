@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_ETHERTAP_H_
+#define SYSROOT_ZIRCON_DEVICE_ETHERTAP_H_
 
-#include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/ioctl.h>
 
 #include <stdint.h>
 
@@ -19,15 +20,15 @@
 // device is both online and offline; the device will be shutdown. A device is in the offline state
 // when it is created.
 // ZX_USER_SIGNAL_7 is reserved for internal ethertap use.
-#define ETHERTAP_SIGNAL_ONLINE  ZX_USER_SIGNAL_0
+#define ETHERTAP_SIGNAL_ONLINE ZX_USER_SIGNAL_0
 #define ETHERTAP_SIGNAL_OFFLINE ZX_USER_SIGNAL_1
 
 // Enables tracing of the ethertap device itself
-#define ETHERTAP_OPT_TRACE         (1u << 0)
+#define ETHERTAP_OPT_TRACE (1u << 0)
 #define ETHERTAP_OPT_TRACE_PACKETS (1u << 1)
 // Report EthmacSetParam() over Control channel of socket, and return success from EthmacSetParam().
 // If this option is not set, EthmacSetParam() will return ZX_ERR_NOT_SUPPORTED.
-#define ETHERTAP_OPT_REPORT_PARAM  (1u << 2)
+#define ETHERTAP_OPT_REPORT_PARAM (1u << 2)
 
 // An ethertap device has a fixed mac address and mtu, and transfers ethernet frames over the
 // returned data socket. To destroy the device, close the socket.
@@ -76,5 +77,7 @@ typedef struct ethertap_setparam_report {
 } ethertap_setparam_report_t;
 
 // ssize_t ioctl_ethertap_config(int fd, const ethertap_ioctl_config_t* in, zx_handle_t* out);
-IOCTL_WRAPPER_INOUT(ioctl_ethertap_config, IOCTL_ETHERTAP_CONFIG, \
-        ethertap_ioctl_config_t, zx_handle_t);
+IOCTL_WRAPPER_INOUT(ioctl_ethertap_config, IOCTL_ETHERTAP_CONFIG,
+                    ethertap_ioctl_config_t, zx_handle_t);
+
+#endif  // SYSROOT_ZIRCON_DEVICE_ETHERTAP_H_

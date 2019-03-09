@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_SYSCALLS_PCI_H_
+#define SYSROOT_ZIRCON_SYSCALLS_PCI_H_
 
 #include <zircon/types.h>
 
@@ -122,3 +123,5 @@ typedef uint32_t zx_pci_irq_mode_t;
 #define ZX_PCIE_IRQ_MODE_MSI_X ((zx_pci_irq_mode_t) 3u)
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_SYSCALLS_PCI_H_

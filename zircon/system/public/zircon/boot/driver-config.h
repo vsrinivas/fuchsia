@@ -2,23 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
+#define SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
 
-#include <zircon/compiler.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 // BOOTDATA_KERNEL_DRIVER bootdata types
-#define KDRV_ARM_PSCI           0x49435350  // 'PSCI'
-#define KDRV_ARM_GIC_V2         0x32434947  // 'GIC2'
-#define KDRV_ARM_GIC_V3         0x33434947  // 'GIC3'
-#define KDRV_ARM_GENERIC_TIMER  0x4D495441  // 'ATIM'
-#define KDRV_PL011_UART         0x55304C50  // 'PL0U'
-#define KDRV_AMLOGIC_UART       0x554C4D41  // 'AMLU'
-#define KDRV_NXP_IMX_UART       0x55584D49  // 'IMXU'
-#define KDRV_MT8167_UART        0x5538544D  // 'MT8U'
-#define KDRV_HISILICON_POWER    0x4F505348  // 'HSPO'
-#define KDRV_AMLOGIC_HDCP       0x484C4D41  // 'AMLH'
-#define KDRV_MSM_UART           0x554D534D  // 'MSMU'
+#define KDRV_ARM_PSCI 0x49435350          // 'PSCI'
+#define KDRV_ARM_GIC_V2 0x32434947        // 'GIC2'
+#define KDRV_ARM_GIC_V3 0x33434947        // 'GIC3'
+#define KDRV_ARM_GENERIC_TIMER 0x4D495441 // 'ATIM'
+#define KDRV_PL011_UART 0x55304C50        // 'PL0U'
+#define KDRV_AMLOGIC_UART 0x554C4D41      // 'AMLU'
+#define KDRV_NXP_IMX_UART 0x55584D49      // 'IMXU'
+#define KDRV_MT8167_UART 0x5538544D       // 'MT8U'
+#define KDRV_HISILICON_POWER 0x4F505348   // 'HSPO'
+#define KDRV_AMLOGIC_HDCP 0x484C4D41      // 'AMLH'
+#define KDRV_MSM_UART 0x554D534D          // 'MSMU'
 
 // kernel driver struct that can be used for simple drivers
 // used by KDRV_PL011_UART, KDRV_AMLOGIC_UART and KDRV_NXP_IMX_UART
@@ -87,3 +88,5 @@ typedef struct {
     uint64_t hiu_phys;
     uint64_t hdmitx_phys;
 } dcfg_amlogic_hdcp_driver_t;
+
+#endif  // SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_

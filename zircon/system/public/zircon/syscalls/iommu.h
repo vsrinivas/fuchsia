@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_SYSCALLS_IOMMU_H_
+#define SYSROOT_ZIRCON_SYSCALLS_IOMMU_H_
 
 #include <assert.h>
-#include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -22,14 +23,13 @@ typedef struct zx_iommu_desc_dummy {
     uint8_t reserved;
 } zx_iommu_desc_dummy_t;
 
-
 // Data structures for creating an Intel IOMMU instance
 
 // This scope represents a single PCI endpoint device
 #define ZX_IOMMU_INTEL_SCOPE_ENDPOINT 0
 // This scope represents a PCI-PCI bridge.  The bridge and all of its downstream
 // devices will be included in this scope.
-#define ZX_IOMMU_INTEL_SCOPE_BRIDGE   1
+#define ZX_IOMMU_INTEL_SCOPE_BRIDGE 1
 
 // TODO(teisenbe): Investigate FIDL for this.  Multiple embedded lists seems
 // right up its alley.
@@ -50,7 +50,7 @@ typedef struct zx_iommu_desc_intel_scope {
 
 typedef struct zx_iommu_desc_intel_reserved_memory {
     uint64_t base_addr; // Physical address of the base of reserved memory.
-    uint64_t len; // Number of bytes of reserved memory.
+    uint64_t len;       // Number of bytes of reserved memory.
 
     // The number of bytes of zx_iommu_desc_intel_scope_t's that follow this descriptor.
     uint8_t scope_bytes;
@@ -64,7 +64,7 @@ typedef struct zx_iommu_desc_intel_reserved_memory {
 
 typedef struct zx_iommu_desc_intel {
     uint64_t register_base; // Physical address of registers
-    uint16_t pci_segment; // The PCI segment associated with this IOMMU
+    uint16_t pci_segment;   // The PCI segment associated with this IOMMU
 
     // If true, this IOMMU has all PCI devices in its segment under its scope.
     // In this case, the list of scopes acts as a blacklist.
@@ -93,3 +93,5 @@ typedef struct zx_iommu_desc_intel {
 } zx_iommu_desc_intel_t;
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_SYSCALLS_IOMMU_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_BOOT_SYSCONFIG_H_
+#define SYSROOT_ZIRCON_BOOT_SYSCONFIG_H_
 
 // Zircon sysconfig partition format
 //
@@ -19,8 +20,10 @@
 //                  If present, this overrides boot-default, and the bootloader
 //                  deletes this section after use.
 
-#define ZX_SYSCONFIG_KVSTORE_SIZE           32768
-#define ZX_SYSCONFIG_VERSION_A_OFFSET       (0 * ZX_SYSCONFIG_KVSTORE_SIZE)
-#define ZX_SYSCONFIG_VERSION_B_OFFSET       (1 * ZX_SYSCONFIG_KVSTORE_SIZE)
-#define ZX_SYSCONFIG_BOOT_DEFAULT_OFFSET    (2 * ZX_SYSCONFIG_KVSTORE_SIZE)
-#define ZX_SYSCONFIG_BOOT_ONESHOT_OFFSET    (3 * ZX_SYSCONFIG_KVSTORE_SIZE)
+#define ZX_SYSCONFIG_KVSTORE_SIZE 32768
+#define ZX_SYSCONFIG_VERSION_A_OFFSET (0 * ZX_SYSCONFIG_KVSTORE_SIZE)
+#define ZX_SYSCONFIG_VERSION_B_OFFSET (1 * ZX_SYSCONFIG_KVSTORE_SIZE)
+#define ZX_SYSCONFIG_BOOT_DEFAULT_OFFSET (2 * ZX_SYSCONFIG_KVSTORE_SIZE)
+#define ZX_SYSCONFIG_BOOT_ONESHOT_OFFSET (3 * ZX_SYSCONFIG_KVSTORE_SIZE)
+
+#endif  // SYSROOT_ZIRCON_BOOT_SYSCONFIG_H_

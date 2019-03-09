@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_SERIAL_H_
+#define SYSROOT_ZIRCON_DEVICE_SERIAL_H_
 
 #include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/device/ioctl.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -45,11 +46,13 @@ typedef struct {
 } serial_config_t;
 
 // Sets the configuration for a serial device
-#define IOCTL_SERIAL_CONFIG         IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SERIAL, 0)
+#define IOCTL_SERIAL_CONFIG IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SERIAL, 0)
 
-#define IOCTL_SERIAL_GET_CLASS      IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SERIAL, 1)
+#define IOCTL_SERIAL_GET_CLASS IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_SERIAL, 1)
 
 IOCTL_WRAPPER_IN(ioctl_serial_config, IOCTL_SERIAL_CONFIG, serial_config_t)
 IOCTL_WRAPPER_OUT(ioctl_serial_get_class, IOCTL_SERIAL_GET_CLASS, uint32_t)
 
 __END_CDECLS;
+
+#endif  // SYSROOT_ZIRCON_DEVICE_SERIAL_H_

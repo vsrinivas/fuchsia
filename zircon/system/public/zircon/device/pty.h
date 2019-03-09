@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_PTY_H_
+#define SYSROOT_ZIRCON_DEVICE_PTY_H_
 
 #include <stdint.h>
 #include <zircon/device/ioctl-wrapper.h>
@@ -69,10 +70,10 @@ typedef struct {
 #define IOCTL_PTY_READ_EVENTS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PTY, 0x13)
 
-#define PTY_EVENT_HANGUP    (1u) // no active client
+#define PTY_EVENT_HANGUP (1u)    // no active client
 #define PTY_EVENT_INTERRUPT (2u) // ^c
-#define PTY_EVENT_SUSPEND   (4u) // ^z
-#define PTY_EVENT_MASK      (7u) // all events
+#define PTY_EVENT_SUSPEND (4u)   // ^z
+#define PTY_EVENT_MASK (7u)      // all events
 
 // When an event is pending, this signal is asserted
 // On the Controlling Client PTY
@@ -95,3 +96,5 @@ IOCTL_WRAPPER_IN(ioctl_pty_make_active, IOCTL_PTY_MAKE_ACTIVE, uint32_t);
 IOCTL_WRAPPER_OUT(ioctl_pty_read_events, IOCTL_PTY_READ_EVENTS, uint32_t);
 
 IOCTL_WRAPPER_IN(ioctl_pty_set_window_size, IOCTL_PTY_SET_WINDOW_SIZE, pty_window_size_t);
+
+#endif  // SYSROOT_ZIRCON_DEVICE_PTY_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSCALLS_PORT_H_
-#define ZIRCON_SYSCALLS_PORT_H_
+#ifndef SYSROOT_ZIRCON_SYSCALLS_PORT_H_
+#define SYSROOT_ZIRCON_SYSCALLS_PORT_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -172,4 +172,4 @@ typedef struct zx_port_packet {
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSCALLS_PORT_H_
+#endif // SYSROOT_ZIRCON_SYSCALLS_PORT_H_

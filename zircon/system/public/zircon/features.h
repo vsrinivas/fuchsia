@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_FEATURES_H_
-#define ZIRCON_FEATURES_H_
+#ifndef SYSROOT_ZIRCON_FEATURES_H_
+#define SYSROOT_ZIRCON_FEATURES_H_
 
 // clang-format off
 
@@ -44,4 +44,4 @@
 
 #endif
 
-#endif // ZIRCON_FEATURES_H_
+#endif // SYSROOT_ZIRCON_FEATURES_H_

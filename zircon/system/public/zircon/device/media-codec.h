@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_PUBLIC_ZIRCON_DEVICE_MEDIA_CODEC_H_
-#define ZIRCON_SYSTEM_PUBLIC_ZIRCON_DEVICE_MEDIA_CODEC_H_
+#ifndef SYSROOT_ZIRCON_DEVICE_MEDIA_CODEC_H_
+#define SYSROOT_ZIRCON_DEVICE_MEDIA_CODEC_H_
 
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/device/ioctl.h>
@@ -16,4 +16,4 @@ IOCTL_WRAPPER_OUT(
     MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL,
     zx_handle_t);
 
-#endif // ZIRCON_SYSTEM_PUBLIC_ZIRCON_DEVICE_MEDIA_CODEC_H_
+#endif  // SYSROOT_ZIRCON_DEVICE_MEDIA_CODEC_H_

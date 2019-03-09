@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_BOOT_IMAGE_H_
+#define SYSROOT_ZIRCON_BOOT_IMAGE_H_
+
+// This file contains assembly code that cannot be clang formatted.
+// clang-format off
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>
@@ -646,3 +650,5 @@ typedef struct {
     zbi_partition_t partitions[];
 } zbi_partition_map_t;
 #endif
+
+#endif  // SYSROOT_ZIRCON_BOOT_IMAGE_H_

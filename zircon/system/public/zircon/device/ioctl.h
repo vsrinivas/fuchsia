@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_IOCTL_H_
+#define SYSROOT_ZIRCON_DEVICE_IOCTL_H_
 
 // clang-format off
 
@@ -92,3 +93,5 @@
 #define IOCTL_KIND(n) (((n) >> 20) & 0xF)
 #define IOCTL_FAMILY(n) (((n) >> 8) & 0xFF)
 #define IOCTL_NUMBER(n) ((n) & 0xFF)
+
+#endif  // SYSROOT_ZIRCON_DEVICE_IOCTL_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_MIDI_H_
+#define SYSROOT_ZIRCON_DEVICE_MIDI_H_
 
 // clang-format off
 
@@ -27,3 +28,5 @@ __BEGIN_CDECLS
 IOCTL_WRAPPER_OUT(ioctl_midi_get_device_type, IOCTL_MIDI_GET_DEVICE_TYPE, int);
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_DEVICE_MIDI_H_

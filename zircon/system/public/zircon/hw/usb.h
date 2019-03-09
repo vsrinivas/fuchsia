@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_HW_USB_H_
+#define SYSROOT_ZIRCON_HW_USB_H_
 
 // clang-format off
 
@@ -256,3 +257,5 @@ typedef struct {
 } __attribute__ ((packed)) usb_string_desc_t;
 
 __END_CDECLS
+
+#endif  // SYSROOT_ZIRCON_HW_USB_H_

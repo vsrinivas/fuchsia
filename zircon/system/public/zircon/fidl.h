@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_FIDL_H_
-#define ZIRCON_FIDL_H_
+#ifndef SYSROOT_ZIRCON_FIDL_H_
+#define SYSROOT_ZIRCON_FIDL_H_
 
 #include <assert.h>   // NOLINT(modernize-deprecated-headers, foobar)
 #include <stdalign.h> // NOLINT(modernize-deprecated-headers)
@@ -426,4 +426,4 @@ static_assert(alignof(fidl_message_header_t) <= FIDL_ALIGNMENT, "");
 
 __END_CDECLS
 
-#endif // ZIRCON_FIDL_H_
+#endif // SYSROOT_ZIRCON_FIDL_H_

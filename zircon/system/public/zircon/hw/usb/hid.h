@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_HW_USB_HID_H_
+#define SYSROOT_ZIRCON_HW_USB_HID_H_
 
 // clang-format off
 
@@ -31,3 +32,5 @@ typedef struct {
 } __attribute__((packed)) usb_hid_descriptor_t;
 
 __END_CDECLS;
+
+#endif  // SYSROOT_ZIRCON_HW_USB_HID_H_

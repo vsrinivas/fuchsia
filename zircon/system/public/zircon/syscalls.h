@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSCALLS_H_
-#define ZIRCON_SYSCALLS_H_
+#ifndef SYSROOT_ZIRCON_SYSCALLS_H_
+#define SYSROOT_ZIRCON_SYSCALLS_H_
 
-#include <zircon/types.h>
 #include <zircon/syscalls/types.h>
+#include <zircon/types.h>
 
-#include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/profile.h>
 
 __BEGIN_CDECLS
 
 #if defined(__clang__)
-#define ZX_SYSCALL_PARAM_ATTR(x)   __attribute__((annotate("zx_" #x)))
+#define ZX_SYSCALL_PARAM_ATTR(x) __attribute__((annotate("zx_" #x)))
 #else
-#define ZX_SYSCALL_PARAM_ATTR(x)   // no-op
+#define ZX_SYSCALL_PARAM_ATTR(x) // no-op
 #endif
 
 #include <zircon/syscalls/definitions.h>
@@ -27,4 +27,4 @@ __BEGIN_CDECLS
 
 __END_CDECLS
 
-#endif // ZIRCON_SYSCALLS_H_
+#endif // SYSROOT_ZIRCON_SYSCALLS_H_

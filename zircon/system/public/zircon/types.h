@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TYPES_H_
-#define ZIRCON_TYPES_H_
+#ifndef SYSROOT_ZIRCON_TYPES_H_
+#define SYSROOT_ZIRCON_TYPES_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -386,4 +386,4 @@ typedef atomic_int zx_futex_t;
 
 __END_CDECLS
 
-#endif // ZIRCON_TYPES_H_
+#endif // SYSROOT_ZIRCON_TYPES_H_

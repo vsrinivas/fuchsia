@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_TEST_H_
+#define SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_TEST_H_
 
 // This file contains definitions for the USB Peripheral Test driver.
 // The driver implements three endpoints: bulk out, bulk in and interrupt.
@@ -27,3 +28,4 @@
 // containing the data set via USB_PERIPHERAL_TEST_SET_DATA.
 #define USB_PERIPHERAL_TEST_SEND_INTERUPT 3
 
+#endif  // SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_TEST_H_

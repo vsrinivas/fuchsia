@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_DEVICE_ETHERNET_H_
-#define ZIRCON_DEVICE_ETHERNET_H_
+#ifndef SYSROOT_ZIRCON_DEVICE_ETHERNET_H_
+#define SYSROOT_ZIRCON_DEVICE_ETHERNET_H_
 
 #include <stdint.h>
 
@@ -23,4 +23,4 @@ typedef struct eth_fifo_entry {
     uint64_t cookie;
 } eth_fifo_entry_t;
 
-#endif // ZIRCON_DEVICE_ETHERNET_H_
+#endif // SYSROOT_ZIRCON_DEVICE_ETHERNET_H_
