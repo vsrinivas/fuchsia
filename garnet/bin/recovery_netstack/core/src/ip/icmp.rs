@@ -246,11 +246,6 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
 ) {
     increment_counter!(ctx, "send_icmp_net_unreachable");
 
-    // TODO(joshlf): When we finally get around to setting src_ip properly (see
-    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
-    // source IP rather than the original packet's destination IP (which won't
-    // necessarily be the same if we have forwarding enabled).
-
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
         ctx,
@@ -296,11 +291,6 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
     ipv4_header_len: usize,
 ) {
     increment_counter!(ctx, "send_icmp_ttl_expired");
-
-    // TODO(joshlf): When we finally get around to setting src_ip properly (see
-    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
-    // source IP rather than the original packet's destination IP (which won't
-    // necessarily be the same if we have forwarding enabled).
 
     #[ipv4addr]
     {
