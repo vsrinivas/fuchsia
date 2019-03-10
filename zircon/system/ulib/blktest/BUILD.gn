@@ -9,13 +9,16 @@ library("blktest") {
     "blktest.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
 }
