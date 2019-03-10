@@ -194,7 +194,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
                                    const char* path_data, size_t path_size, zx::channel c);
 
 // Attaches channel |c| to new state representing an open connection to |dev|.
-void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, zx::channel c);
+void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c);
 
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> ios, zx::channel h);
 

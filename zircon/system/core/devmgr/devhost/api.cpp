@@ -7,6 +7,7 @@
 #include "devhost.h"
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <zircon/device/vfs.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -102,7 +103,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
     // This needs to be called outside the ApiAutoLock, as device_open_at will be called.
     if (dev && client_remote.is_valid()) {
-        devhost_device_connect(dev, std::move(client_remote));
+        devhost_device_connect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                               std::move(client_remote));
     }
 
     // Leak the reference that was written to |out|, it will be recovered in

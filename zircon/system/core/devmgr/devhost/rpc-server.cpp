@@ -207,8 +207,8 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
     return ZX_OK;
 }
 
-void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, zx::channel c) {
-    devhost_get_handles(std::move(c), dev, nullptr /* path */, 0 /* flags */);
+void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c) {
+    devhost_get_handles(std::move(c), dev, nullptr /* path */, flags);
 }
 
 static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
