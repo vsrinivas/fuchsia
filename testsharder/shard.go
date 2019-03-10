@@ -27,7 +27,7 @@ type Shard struct {
 //
 // This is the most naive algorithm at the moment. It just merges all tests together which
 // have the same environment setting into the same shard.
-func MakeShards(specs []TestSpec, tags []string) []*Shard {
+func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 	// Collect the order of the shards so our shard ordering is deterministic with
 	// respect to the input.
 	envToSuites := newEnvMap()
@@ -39,6 +39,9 @@ func MakeShards(specs []TestSpec, tags []string) []*Shard {
 				envTags = append(envTags, env.Label)
 			}
 			if !stringSlicesEq(tags, envTags) {
+				continue
+			}
+			if mode == Restricted && env.ServiceAccount != "" {
 				continue
 			}
 

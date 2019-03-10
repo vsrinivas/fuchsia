@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"fuchsia.googlesource.com/tools/build"
 )
@@ -30,16 +31,29 @@ type Environment struct {
 
 	// Tags are keys given to an environment on which the testsharder may filter.
 	Tags []string `json:"tags,omitempty"`
+
+	// ServiceAccount gives a service account to attach to Swarming task.
+	ServiceAccount string `json:"service_account,omitempty"`
 }
 
 // Name returns a name calculated from its specfied properties.
 func (env Environment) Name() string {
-	// For now, this just returns the device type or OS; later it will be more clever.
-	if env.Dimensions.DeviceType != "" {
-		return env.Dimensions.DeviceType
-	} else {
-		return env.Dimensions.OS
+	tokens := []string{}
+	addToken := func(s string) {
+		if s != "" {
+			// s/-/_, so there is no ambiguity among the tokens
+			// making up a name.
+			s = strings.Replace(s, "-", "_", -1)
+			tokens = append(tokens, s)
+		}
 	}
+
+	addToken(env.Dimensions.DeviceType)
+	addToken(env.Dimensions.OS)
+	if env.ServiceAccount != "" {
+		addToken(strings.Split(env.ServiceAccount, "@")[0])
+	}
+	return strings.Join(tokens, "-")
 }
 
 // DimensionSet encapsulate the Swarming dimensions a test wishes to target.

@@ -71,6 +71,7 @@ func TestMakeShards(t *testing.T) {
 	t.Run("tests of same environment are grouped", func(t *testing.T) {
 		actual := MakeShards(
 			[]TestSpec{spec(1, env1, env2), spec(2, env1, env3), spec(3, env3)},
+			Normal,
 			[]string{},
 		)
 		expected := []*Shard{shard(env1, 1, 2), shard(env2, 1), shard(env3, 2, 3)}
@@ -80,6 +81,7 @@ func TestMakeShards(t *testing.T) {
 	t.Run("there is no deduplication of tests", func(t *testing.T) {
 		actual := MakeShards(
 			[]TestSpec{spec(1, env1), spec(1, env1), spec(1, env1)},
+			Normal,
 			[]string{},
 		)
 		expected := []*Shard{shard(env1, 1, 1, 1)}
@@ -92,6 +94,7 @@ func TestMakeShards(t *testing.T) {
 	t.Run("shards are ordered", func(t *testing.T) {
 		actual := MakeShards(
 			[]TestSpec{spec(1, env2, env3), spec(2, env1), spec(3, env3)},
+			Normal,
 			[]string{},
 		)
 		expected := []*Shard{shard(env2, 1), shard(env3, 1, 3), shard(env1, 2)}
@@ -113,11 +116,58 @@ func TestMakeShards(t *testing.T) {
 				spec(4, tagger(env3, "C", "A")),
 				spec(5, tagger(env3, "A", "C")),
 			},
+			Normal,
 			[]string{"A", "C"},
 		)
 		expected := []*Shard{
 			// "C", "A" and "A", "C" should define the same tags.
 			shard(tagger(env3, "A", "C"), 4, 5),
+		}
+		assertEqual(t, expected, actual)
+	})
+
+	t.Run("different service accounts get different shards", func(t *testing.T) {
+		withAcct := func(env Environment, acct string) Environment {
+			env2 := env
+			env2.ServiceAccount = acct
+			return env2
+		}
+
+		actual := MakeShards(
+			[]TestSpec{
+				spec(1, env1),
+				spec(1, withAcct(env1, "acct1")),
+				spec(1, withAcct(env1, "acct2")),
+			},
+			Normal,
+			[]string{},
+		)
+		expected := []*Shard{
+			shard(env1, 1),
+			shard(withAcct(env1, "acct1"), 1),
+			shard(withAcct(env1, "acct2"), 1),
+		}
+		assertEqual(t, expected, actual)
+	})
+
+	t.Run("restricted mode is respected", func(t *testing.T) {
+		withAcct := func(env Environment, acct string) Environment {
+			env2 := env
+			env2.ServiceAccount = acct
+			return env2
+		}
+
+		actual := MakeShards(
+			[]TestSpec{
+				spec(1, env1),
+				spec(2, withAcct(env1, "acct1")),
+				spec(3, withAcct(env1, "acct2")),
+			},
+			Restricted,
+			[]string{},
+		)
+		expected := []*Shard{
+			shard(env1, 1),
 		}
 		assertEqual(t, expected, actual)
 	})
