@@ -20,6 +20,18 @@ executable("garnet_benchmarks_bin") {
   ]
 }
 
+executable("garnet_benchmarks_perfcompare_bin") {
+  output_name = "garnet_benchmarks_perfcompare"
+
+  sources = [
+    "benchmarks_perfcompare.cc",
+  ]
+
+  deps = [
+    "//garnet/testing/benchmarking:benchmarking",
+  ]
+}
+
 zircon_tests = [
   "test/fs/fs-bench-test",
   "test/sys/blobfs-bench-test",
@@ -56,6 +68,7 @@ package("garnet_benchmarks") {
 
   deps = [
     ":garnet_benchmarks_bin",
+    ":garnet_benchmarks_perfcompare_bin",
     ":zircon-test-manifest",
   ]
 
@@ -73,6 +86,10 @@ package("garnet_benchmarks") {
     {
       name = rebase_path("benchmarks_perfcompare.sh")
       dest = "benchmarks_perfcompare.sh"
+    },
+    {
+      shell = true
+      name = "garnet_benchmarks_perfcompare"
     },
   ]
 }
