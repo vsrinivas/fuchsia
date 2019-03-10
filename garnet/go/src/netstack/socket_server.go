@@ -532,6 +532,8 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 		logger.VLogf(logger.DebugVerbosity, errStr)
 	}
 	switch err {
+	case tcpip.ErrUnknownDevice:
+		return C.ENODEV
 	case tcpip.ErrUnknownProtocol:
 		return C.EINVAL
 	case tcpip.ErrUnknownNICID:

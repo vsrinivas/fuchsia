@@ -286,6 +286,18 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 
 		return encodeAddr(ipv4.ProtocolNumber, tcpip.FullAddress{Addr: v.InterfaceAddr}), nil
 
+	case C.IP_MULTICAST_LOOP:
+		var v tcpip.MulticastLoopOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		if v {
+			return int32(1), nil
+		}
+
+		return int32(0), nil
+
 	default:
 		logger.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
 
@@ -579,6 +591,21 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 		}
 
+	case C.IP_MULTICAST_LOOP:
+		if len(optVal) == 0 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		if len(optVal) > sizeOfInt32 {
+			optVal = optVal[:sizeOfInt32]
+		}
+		var v int32
+		for i, b := range optVal {
+			v += int32(b) << uint(i*8)
+		}
+
+		return ep.SetSockOpt(tcpip.MulticastLoopOption(v != 0))
+
 	case C.MCAST_JOIN_GROUP:
 		// FIXME: Disallow IP-level multicast group options by
 		// default. These will need to be supported by appropriately plumbing
@@ -599,7 +626,6 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.IP_MSFILTER,
 		C.IP_MTU_DISCOVER,
 		C.IP_MULTICAST_ALL,
-		C.IP_MULTICAST_LOOP,
 		C.IP_NODEFRAG,
 		C.IP_OPTIONS,
 		C.IP_PASSSEC,
