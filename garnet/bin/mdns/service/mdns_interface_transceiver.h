@@ -78,6 +78,7 @@ class MdnsInterfaceTransceiver {
 
   const fxl::UniqueFD& socket_fd() const { return socket_fd_; }
 
+  virtual int SetOptionDisableMulticastLoop() = 0;
   virtual int SetOptionJoinMulticastGroup() = 0;
   virtual int SetOptionOutboundInterface() = 0;
   virtual int SetOptionUnicastTtl() = 0;

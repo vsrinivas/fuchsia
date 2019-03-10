@@ -19,6 +19,7 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
 
  protected:
   // MdnsInterfaceTransceiver overrides.
+  int SetOptionDisableMulticastLoop() override;
   int SetOptionJoinMulticastGroup() override;
   int SetOptionOutboundInterface() override;
   int SetOptionUnicastTtl() override;

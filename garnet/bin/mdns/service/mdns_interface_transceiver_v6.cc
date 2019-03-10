@@ -20,6 +20,24 @@ MdnsInterfaceTransceiverV6::MdnsInterfaceTransceiverV6(inet::IpAddress address,
 
 MdnsInterfaceTransceiverV6::~MdnsInterfaceTransceiverV6() {}
 
+int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
+  char param = 0;
+  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_LOOP,
+                          &param, sizeof(param));
+  if (result < 0) {
+    if (errno == EOPNOTSUPP) {
+      FXL_LOG(WARNING)
+          << "IPV6_MULTICAST_LOOP is not supported. Proceeding anyway.";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_LOOP, "
+                     << strerror(errno);
+    }
+  }
+
+  return result;
+}
+
 int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   ipv6_mreq param;
   param.ipv6mr_multiaddr =

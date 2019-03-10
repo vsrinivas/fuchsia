@@ -50,6 +50,7 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
 
  protected:
   // MdnsInterfaceTransceiver overrides.
+  int SetOptionDisableMulticastLoop() override { return 0; }
   int SetOptionJoinMulticastGroup() override { return 0; }
   int SetOptionOutboundInterface() override { return 0; }
   int SetOptionUnicastTtl() override { return 0; }

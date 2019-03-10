@@ -61,10 +61,10 @@ bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
   }
 
   // Set socket options and bind.
-  if (SetOptionSharePort() != 0 || SetOptionJoinMulticastGroup() != 0 ||
-      SetOptionOutboundInterface() != 0 || SetOptionUnicastTtl() != 0 ||
-      SetOptionMulticastTtl() != 0 || SetOptionFamilySpecific() != 0 ||
-      Bind() != 0) {
+  if (SetOptionSharePort() != 0 || SetOptionDisableMulticastLoop() != 0 ||
+      SetOptionJoinMulticastGroup() != 0 || SetOptionOutboundInterface() != 0 ||
+      SetOptionUnicastTtl() != 0 || SetOptionMulticastTtl() != 0 ||
+      SetOptionFamilySpecific() != 0 || Bind() != 0) {
     socket_fd_.reset();
     return false;
   }
