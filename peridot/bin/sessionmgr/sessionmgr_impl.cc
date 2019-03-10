@@ -12,6 +12,7 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
@@ -19,6 +20,8 @@
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 
@@ -225,9 +228,9 @@ void SessionmgrImpl::Initialize(
   AtEnd(Reset(&session_context_));
 
   InitializeUser(std::move(account), std::move(agent_token_manager));
-  InitializeSessionShell(
-      std::move(session_shell_config),
-      zx::eventpair(view_owner_request.TakeChannel().release()));
+  InitializeSessionShell(std::move(session_shell_config),
+                         scenic::ToViewToken(zx::eventpair(
+                             view_owner_request.TakeChannel().release())));
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
@@ -688,7 +691,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 
 void SessionmgrImpl::InitializeSessionShell(
     fuchsia::modular::AppConfig session_shell_config,
-    zx::eventpair view_token) {
+    fuchsia::ui::views::ViewToken view_token) {
   // We setup our own view and make the fuchsia::modular::SessionShell a child
   // of it.
   auto scenic =
@@ -697,7 +700,7 @@ void SessionmgrImpl::InitializeSessionShell(
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = std::move(view_token),
+      .view_token2 = std::move(view_token),
       .startup_context = startup_context_,
   };
   session_shell_view_host_ =
@@ -777,11 +780,12 @@ void SessionmgrImpl::RunSessionShell(
     Shutdown();
   });
 
-  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
+  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
   fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
-  session_shell_view_host_->ConnectView(std::move(view_owner));
+  session_shell_view_host_->ConnectView(scenic::ToViewHolderToken(
+      zx::eventpair(view_owner.TakeChannel().release())));
 }
 
 void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {

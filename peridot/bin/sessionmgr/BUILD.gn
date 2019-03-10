@@ -66,8 +66,12 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.speech",
     "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//zircon/public/lib/async-loop-cpp",
@@ -110,9 +114,11 @@ executable_package("dev_session_shell") {
     "//peridot/lib/testing:test_driver",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
   ]
 }
 
