@@ -1,0 +1,65 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.ethertap;
+
+using zx;
+using fuchsia.hardware.ethernet;
+
+/// Enables tracing of the ethertap device itself.
+const uint32 OPT_TRACE = 0x00000001;
+/// Enables tracing of individual packets.
+const uint32 OPT_TRACE_PACKETS = 0x00000002;
+/// Report EthmacSetParam() over EthertapController, and return success from EthmacSetParam().
+/// If this option is not set, EthmacSetParam() will return ZX_ERR_NOT_SUPPORTED.
+const uint32 OPT_REPORT_PARAM = 0x00000004;
+/// Starts ethertap device with link online.
+const uint32 OPT_ONLINE = 0x00000008;
+
+/// Maximum MTU supported by ethertap driver.
+const uint32 MAX_MTU = 2000;
+/// Maximum size of trailing data on params report.
+const uint32 MAX_PARAM_DATA = 64;
+/// Maximum length of tap device name.
+const uint32 MAX_NAME_LENGTH = 30;
+
+/// Configuration of an ethertap device.
+struct Config {
+    /// Ethertap options, a bit mask of OPT_* constants.
+    uint32 options;
+    /// Features that will be reported to Ethernet protocol.
+    uint32 features;
+    /// Ethertap device mtu. If a value greater than MAX_MTU is provided, creating an ethertap device
+    /// will fail.
+    uint32 mtu;
+    /// MAC address to report.
+    fuchsia.hardware.ethernet.MacAddress mac;
+};
+
+/// Provides control over the created tap device. The lifetime of the device itself is tied to the
+/// channel over which this protocol is served, closing a |TapDevice| channel will trigger the
+/// destruction and deallocation of the underlying tap device.
+[Layout = "Simple"]
+protocol TapDevice {
+    /// Writes data to the tap device. If device is offline, data will just be discarded.
+    WriteFrame(vector<uint8>:MAX_MTU data);
+    /// Triggered when data is sent on this tap device.
+    // TODO(brunodalbo) consider adding flow control mechanisms for the data passing.
+    -> OnFrame(vector<uint8>:MAX_MTU data);
+    /// Sets online status of ethertap device.
+    SetOnline(bool online);
+    /// If |OPT_REPORT_PARAM| is set on |options|, calls to EthmacSetParam will be routed to this
+    /// event, containing the set parameters request arguments.
+    -> OnReportParams(uint32 param, int32 value, vector<uint8>:MAX_PARAM_DATA? data);
+};
+
+/// Ethertap driver interface.
+[Layout = "Simple"]
+protocol TapControl {
+    /// Opens a named device with given |name| and |config|.
+    /// |name| is only used for debugging purposes.
+    /// If |config| is not valid or the tap device could not be created, an error status is returned
+    /// and no |device| is created.
+    OpenDevice(string:MAX_NAME_LENGTH name, Config config, request<TapDevice> device) -> (zx.status s);
+};

@@ -6,6 +6,7 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
+#include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <pretty/hexdump.h>
 #include <zircon/compiler.h>
 
