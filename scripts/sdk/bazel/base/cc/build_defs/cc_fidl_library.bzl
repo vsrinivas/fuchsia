@@ -120,10 +120,8 @@ def cc_fidl_library(name, library, deps=[], tags=[], visibility=None):
             # For the coding tables.
             library,
         ],
-        includes = [
-            # This is necessary in order to locate generated headers.
-            gen_name + ".cc",
-        ],
+        # This is necessary in order to locate generated headers.
+        strip_include_prefix = gen_name + ".cc",
         deps = deps + [
             Label("//pkg/fidl_cpp"),
         ],
