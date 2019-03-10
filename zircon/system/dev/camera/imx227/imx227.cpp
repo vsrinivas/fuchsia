@@ -176,7 +176,7 @@ zx_status_t Imx227Device::IspCallbacksInit() {
     ctx_.param.integration_time_apply_delay = 2;
     ctx_.param.isp_exposure_channel_delay = 0;
 
-    zxlogf(INFO, "%s IMX227 Camera Sensor Brought out of reset\n",__func__);
+    zxlogf(INFO, "%s IMX227 Camera Sensor Brought out of reset\n", __func__);
     return ZX_OK;
 }
 
@@ -193,7 +193,25 @@ zx_status_t Imx227Device::IspCallbacksGetInfo(sensor_info_t* out_info) {
     return ZX_OK;
 }
 
+zx_status_t Imx227Device::IspCallbacksGetSupportedModes(sensor_mode_t* out_modes_list,
+                                                        size_t modes_count,
+                                                        size_t* out_modes_actual) {
+    if (out_modes_list == nullptr || out_modes_actual == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (modes_count > countof(supported_modes)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    memcpy(out_modes_list, &supported_modes, sizeof(sensor_mode_t) * countof(supported_modes));
+    *out_modes_actual = countof(supported_modes);
+    return ZX_OK;
+}
+
 zx_status_t Imx227Device::IspCallbacksSetMode(uint8_t mode) {
+    zxlogf(INFO, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
+
     // Get Sensor ID to see if sensor is initialized.
     if (!ValidateSensorID()) {
         return ZX_ERR_INTERNAL;
@@ -204,7 +222,7 @@ zx_status_t Imx227Device::IspCallbacksSetMode(uint8_t mode) {
     }
 
     switch (supported_modes[mode].wdr_mode) {
-    case kWDR_MODE_LINEAR: {
+    case WDR_MODE_LINEAR: {
 
         InitSensor(supported_modes[mode].idx);
 
@@ -289,8 +307,8 @@ int32_t Imx227Device::IspCallbacksSetDigitalGain(int32_t gain) {
 }
 
 void Imx227Device::IspCallbacksSetIntegrationTime(int32_t int_time,
-                                      int32_t int_time_M,
-                                      int32_t int_time_L) {
+                                                  int32_t int_time_M,
+                                                  int32_t int_time_L) {
 }
 
 zx_status_t Imx227Device::IspCallbacksUpdate() {
@@ -317,7 +335,6 @@ zx_status_t Imx227Device::Create(zx_device_t* parent) {
 
     // sensor_device intentionally leaked as it is now held by DevMgr.
     auto* dev = sensor_device.release();
-
     return dev->ispimpl_.RegisterCallbacks(dev->proto());
 }
 

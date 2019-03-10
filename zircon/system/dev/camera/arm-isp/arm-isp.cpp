@@ -173,6 +173,9 @@ zx_status_t ArmIspDevice::IspContextInit() {
         return ZX_ERR_NO_MEMORY;
     }
 
+    // We are setting up assuming kWDR_MODE_LINEAR as default mode
+    IspLoadSeq_linear();
+
     // Call custom_init()
     IspLoadCustomSequence();
 

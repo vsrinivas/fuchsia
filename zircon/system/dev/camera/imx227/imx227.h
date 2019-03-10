@@ -80,7 +80,9 @@ public:
     void IspCallbacksSetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
     zx_status_t IspCallbacksUpdate();
     zx_status_t IspCallbacksGetInfo(sensor_info_t* out_info);
-    void GetSupportedModes(void* out_buf, size_t* out_actual);
+    zx_status_t IspCallbacksGetSupportedModes(sensor_mode_t* out_modes_list,
+                                              size_t modes_count,
+                                              size_t* out_modes_actual);
 
 private:
     // Sensor Context

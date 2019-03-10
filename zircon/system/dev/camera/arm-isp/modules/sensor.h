@@ -8,6 +8,11 @@
 
 namespace camera {
 
+namespace {
+
+constexpr uint32_t kNumModes = 3;
+
+}
 // This class controls all sensor functionality.
 class Sensor {
 public:
@@ -24,10 +29,30 @@ public:
                                           isp_callbacks_t sensor_callbacks);
     zx_status_t Init();
 
+    // Sensor APIs for Camera manager to use
+    zx_status_t Update();
+    zx_status_t SetMode(uint8_t mode);
+    zx_status_t GetInfo(sensor_info_t* out_info);
+    zx_status_t GetSupportedModes(sensor_mode_t* out_modes_list,
+                                  size_t modes_count);
+    int32_t SetAnalogGain(int32_t gain);
+    int32_t SetDigitalGain(int32_t gain);
+    void StartStreaming();
+    void StopStreaming();
+    void SetIntegrationTime(int32_t int_time,
+                            int32_t int_time_M,
+                            int32_t int_time_L);
+
 private:
+    zx_status_t HwInit();
+    zx_status_t SwInit();
+
     ddk::MmioView isp_mmio_;
     ddk::MmioView isp_mmio_local_;
     ddk::IspCallbacksClient sensor_callbacks_;
+
+    uint8_t current_sensor_mode_;
+    sensor_mode_t sensor_modes_[kNumModes];
 };
 
 } // namespace camera

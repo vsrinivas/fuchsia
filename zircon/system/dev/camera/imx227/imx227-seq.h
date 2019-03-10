@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddktl/protocol/ispimpl.h>
+
 namespace camera {
 
 typedef struct init_seq_fmt {
@@ -10,25 +12,6 @@ typedef struct init_seq_fmt {
     uint8_t mask;
     uint8_t len;
 } init_seq_fmt_t;
-
-// -----------------------//
-//      WDR MODES
-// -----------------------//
-
-constexpr uint8_t kWDR_MODE_LINEAR = 0x00000000;
-constexpr uint8_t kWDR_MODE_NATIVE = 0x00000001;
-constexpr uint8_t kWDR_MODE_FS_LIN = 0x00000002;
-constexpr uint8_t kWDR_MODE_COUNT = 0x00000003;
-
-// -----------------------//
-//      BAYER PATTERNS
-// -----------------------//
-// it is used in arm isp color pattern
-
-constexpr uint8_t kBAYER_RGGB = 0;
-constexpr uint8_t kBAYER_GRBG = 1;
-constexpr uint8_t kBAYER_GBRG = 2;
-constexpr uint8_t kBAYER_BGGR = 3;
 
 // -----------------------//
 //      INIT SEQUENCES
@@ -599,12 +582,12 @@ constexpr sensor_mode_t supported_modes[] = {
             .height = 2720,
         },
         .exposures = 1,
-        .wdr_mode = kWDR_MODE_LINEAR,
+        .wdr_mode = WDR_MODE_LINEAR,
         .bits = 10,
         .lanes = 2,
         .mbps = 1000,
         .idx = kSENSOR_IMX227_SEQUENCE_DEFAULT_PREVIEW,
-        .bayer = kBAYER_RGGB,
+        .bayer = BAYER_RGGB,
     },
     {
         // NOTE: SW reference consumes this as (30fps * 256)
@@ -616,12 +599,12 @@ constexpr sensor_mode_t supported_modes[] = {
             .height = 1080,
         },
         .exposures = 1,
-        .wdr_mode = kWDR_MODE_LINEAR,
+        .wdr_mode = WDR_MODE_LINEAR,
         .bits = 10,
         .lanes = 2,
         .mbps = 1000,
         .idx = kSENSOR_IMX227_SEQUENCE_1080P_PREVIEW,
-        .bayer = kBAYER_RGGB,
+        .bayer = BAYER_RGGB,
     },
     {
         // NOTE: SW reference consumes this as (28fps * 256)
@@ -633,12 +616,12 @@ constexpr sensor_mode_t supported_modes[] = {
             .height = 2720,
         },
         .exposures = 1,
-        .wdr_mode = kWDR_MODE_LINEAR,
+        .wdr_mode = WDR_MODE_LINEAR,
         .bits = 10,
         .lanes = 2,
         .mbps = 1000,
         .idx = kSENSOR_IMX227_SEQUENCE_DEFAULT_FULLSENSOR_PREVIEW,
-        .bayer = kBAYER_RGGB,
+        .bayer = BAYER_RGGB,
     },
 };
 

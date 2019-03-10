@@ -5,7 +5,17 @@
 library ddk.protocol.ispimpl;
 using zx;
 
-// This structure represents image resolution.
+const uint8 WDR_MODE_LINEAR = 0x00000000;
+const uint8 WDR_MODE_NATIVE = 0x00000001;
+const uint8 WDR_MODE_FS_LIN = 0x00000002;
+const uint8 WDR_MODE_COUNT = 0x00000003;
+
+const uint8 BAYER_RGGB = 0;
+const uint8 BAYER_GRBG = 1;
+const uint8 BAYER_GBRG = 2;
+const uint8 BAYER_BGGR = 3;
+
+/// This structure represents image resolution.
 struct ImageResolution {
     uint32 width;
     uint32 height;
@@ -101,7 +111,7 @@ interface IspCallbacks {
     // Gets the Sensor Parameters.
     GetInfo() -> (zx.status s, SensorInfo info);
     // Get the supported modes.
-    // GetSupportedModes() ->()
+    GetSupportedModes() ->(zx.status s, vector<SensorMode> modes);
 };
 
 [Layout = "ddk-protocol"]
