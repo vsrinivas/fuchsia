@@ -19,7 +19,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fit/defer.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_loop_fixture.h"
 

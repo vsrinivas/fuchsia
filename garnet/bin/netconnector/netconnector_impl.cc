@@ -14,7 +14,6 @@
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/host_name.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {

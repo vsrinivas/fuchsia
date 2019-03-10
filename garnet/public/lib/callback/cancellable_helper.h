@@ -11,7 +11,6 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/cancellable.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace callback {

@@ -20,7 +20,6 @@
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "garnet/bin/mediaplayer/util/incident.h"
 #include "garnet/bin/mediaplayer/util/safe_clone.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/media/timeline/timeline_rate.h"

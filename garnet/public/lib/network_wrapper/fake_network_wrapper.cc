@@ -11,7 +11,6 @@
 #include "lib/callback/cancellable_helper.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace network_wrapper {
 

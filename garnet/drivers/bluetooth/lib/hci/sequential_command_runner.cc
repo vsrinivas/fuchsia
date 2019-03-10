@@ -8,8 +8,6 @@
 #include "hci.h"
 #include "transport.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-
 namespace btlib {
 namespace hci {
 

@@ -22,7 +22,6 @@
 
 #include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/host_memory.h"

@@ -6,7 +6,6 @@
 
 #include "garnet/bin/mediaplayer/core/conversion_pipeline_builder.h"
 #include "garnet/bin/mediaplayer/graph/types/stream_type.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {

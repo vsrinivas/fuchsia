@@ -9,8 +9,6 @@
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-
 #include "gatt_remote_service_server.h"
 #include "helpers.h"
 

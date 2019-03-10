@@ -6,14 +6,13 @@
 
 #include <fs/managed-vfs.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace sysmgr {

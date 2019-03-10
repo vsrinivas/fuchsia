@@ -49,7 +49,8 @@ class WeakPtr {
   WeakPtr(WeakPtr<T>&& r) = default;
 
   template <typename U>
-  WeakPtr(WeakPtr<U>&& r) : ptr_(r.ptr_), flag_(std::move(r.flag_)) {}
+  WeakPtr(WeakPtr<U>&& r)
+      : ptr_(std::exchange(r.ptr_, nullptr)), flag_(std::move(r.flag_)) {}
 
   ~WeakPtr() = default;
 
