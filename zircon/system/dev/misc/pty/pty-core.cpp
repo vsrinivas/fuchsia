@@ -5,10 +5,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
+#include <utility>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <lib/zx/channel.h>
 #include <zircon/device/pty.h>
 #include <zircon/errors.h>
 
@@ -37,7 +39,7 @@ struct pty_client {
     list_node_t node;
 };
 
-static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, uint32_t flags);
+static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel channel);
 
 // pty client device operations
 
@@ -249,10 +251,10 @@ static void pty_client_release(void* ctx) {
     free(pc);
 }
 
-zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t pty_client_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle, fidl_txn_t* txn) {
     auto pc = static_cast<pty_client_t*>(ctx);
     auto ps = static_cast<pty_server_t*>(pc->srv);
-    uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
+    zx::channel channel(handle);
     zxlogf(TRACE, "PTY Client %p (id=%u) openat %u\n", pc, pc->id, id);
     // only controlling clients may create additional clients
     if (!(pc->flags & PTY_CLI_CONTROL)) {
@@ -262,24 +264,31 @@ zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, ui
     if (id == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return pty_openat(ps, out, id, flags);
+    zx_status_t status = pty_open_client(ps, id, std::move(channel));
+    return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, status);
+}
+
+static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
+    .OpenClient = pty_client_fidl_OpenClient,
+};
+
+zx_status_t pty_client_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 zx_protocol_device_t pc_ops = []() {
     zx_protocol_device_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
     // ops.open = default, allow cloning
-    ops.open_at = pty_client_openat;
     ops.release = pty_client_release;
     ops.read = pty_client_read;
     ops.write = pty_client_write;
     ops.ioctl = pty_client_ioctl;
+    ops.message = pty_client_message;
     return ops;
 }();
 
-// used by both client and server ptys to create new client ptys
-
-static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, uint32_t flags) {
+static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel channel) {
     auto pc = static_cast<pty_client_t*>(calloc(1, sizeof(pty_client_t)));
     if (!pc) {
         return ZX_ERR_NO_MEMORY;
@@ -316,6 +325,7 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
     args.ctx = pc;
     args.ops = &pc_ops;
     args.flags = DEVICE_ADD_INSTANCE;
+    args.client_remote = channel.release();
 
     status = device_add(ps->zxdev, &args, &pc->zxdev);
     if (status < 0) {
@@ -343,7 +353,6 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
     pty_adjust_signals_locked(pc);
     mtx_unlock(&ps->lock);
 
-    *out = pc->zxdev;
     return ZX_OK;
 }
 
@@ -417,11 +426,12 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
     mtx_unlock(&ps->lock);
 }
 
-zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
+zx_status_t pty_server_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle, fidl_txn_t* txn) {
     auto ps = static_cast<pty_server_t*>(ctx);
-    uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
-    zxlogf(TRACE, "PTY Server %p openat %u\n", ps, id);
-    return pty_openat(ps, out, id, flags);
+    zx::channel channel(handle);
+    zxlogf(TRACE, "PTY Server %p OpenClient %u\n", ps, id);
+    zx_status_t status = pty_open_client(ps, id, std::move(channel));
+    return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, status);
 }
 
 void pty_server_release(void* ctx) {

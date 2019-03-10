@@ -9,6 +9,7 @@
 #include <threads.h>
 
 #include <ddk/device.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
 
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
@@ -72,9 +73,8 @@ void pty_server_resume_locked(pty_server_t* ps);
 
 void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h);
 
-// device ops for pty_server
-// the zx_device_t here must be the one embedded in pty_server_t
-zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags);
+// Device ops for pty_server. The |ctx| here must be the zx_device_t embedded in pty_server_t.
+zx_status_t pty_server_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle, fidl_txn_t* txn);
 void pty_server_release(void* ctx);
 
 #endif // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_CORE_H_
