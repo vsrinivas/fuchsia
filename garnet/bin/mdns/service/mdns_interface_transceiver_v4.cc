@@ -25,14 +25,8 @@ int MdnsInterfaceTransceiverV4::SetOptionDisableMulticastLoop() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_MULTICAST_LOOP,
                           &param, sizeof(param));
   if (result < 0) {
-    if (errno == EOPNOTSUPP) {
-      FXL_LOG(WARNING)
-          << "IP_MULTICAST_LOOP is not supported. Proceeding anyway.";
-      result = 0;
-    } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_LOOP, "
-                     << strerror(errno);
-    }
+    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_LOOP, "
+                   << strerror(errno);
   }
 
   return result;
