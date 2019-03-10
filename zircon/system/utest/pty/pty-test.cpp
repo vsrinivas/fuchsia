@@ -10,7 +10,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
+#include <lib/fzl/fdio.h>
 
 #include <zircon/device/pty.h>
 
@@ -65,13 +68,50 @@ static ssize_t read_all(int fd) {
     return total;
 }
 
+static zx_status_t open_client(int fd, uint32_t client_id, int* out_fd) {
+    if (!out_fd) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    if (!io) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    zx::channel device_channel, client_channel;
+    zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t fidl_status = fuchsia_hardware_pty_DeviceOpenClient(
+        fdio_unsafe_borrow_channel(io), client_id, device_channel.release(), &status);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fdio_unsafe_release(io);
+    if (fidl_status != ZX_OK) {
+        return fidl_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = fdio_fd_create(client_channel.release(), out_fd);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fcntl(*out_fd, F_SETFL, O_NONBLOCK);
+}
+
 static bool pty_test(void) {
     BEGIN_TEST;
 
     int ps = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK);
     ASSERT_GE(ps, 0, "");
 
-    int pc = openat(ps, "0", O_RDWR | O_NONBLOCK);
+    int pc;
+    ASSERT_EQ(open_client(ps, 0, &pc), ZX_OK);
     ASSERT_GE(pc, 0, "");
 
     char tmp[32];
@@ -140,7 +180,6 @@ static bool pty_test(void) {
     ASSERT_EQ(ioctl_pty_read_events(pc, &events), (ssize_t)sizeof(events), "");
     ASSERT_EQ(events, PTY_EVENT_INTERRUPT, "");
 
-
     pty_window_size_t ws;
     ASSERT_EQ(ioctl_pty_get_window_size(pc, &ws), (ssize_t)sizeof(ws), "");
     ASSERT_EQ(ws.width, 0u, "");
@@ -165,7 +204,8 @@ static bool pty_test(void) {
     ASSERT_EQ(events, 0u, "");
 
     // create a second client
-    int pc1 = openat(pc, "1", O_RDWR | O_NONBLOCK);
+    int pc1;
+    ASSERT_EQ(open_client(pc, 1, &pc1), ZX_OK);
     ASSERT_GE(pc1, 0, "");
 
     // reads/writes to non-active client should block

@@ -12,6 +12,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
@@ -157,52 +158,70 @@ fail:
 }
 
 static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
-    int fd;
-
     // The ptmx device can start later than these threads
     int retry = 30;
-    while ((fd = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK)) < 0) {
+    int raw_fd;
+    while ((raw_fd = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK)) < 0) {
         if (--retry == 0) {
             return ZX_ERR_IO;
         }
         usleep(100000);
     }
+    fbl::unique_fd fd(raw_fd);
 
-    int client_fd = openat(fd, "0", O_RDWR);
-    if (client_fd < 0) {
-        close(fd);
-        return ZX_ERR_IO;
+    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+    if (io == nullptr) {
+        return ZX_ERR_INTERNAL;
     }
+
+    zx::channel device_channel, client_channel;
+    zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t fidl_status = fuchsia_hardware_pty_DeviceOpenClient(
+        fdio_unsafe_borrow_channel(io), 0, device_channel.release(), &status);
+    fdio_unsafe_release(io);
+    if (fidl_status != ZX_OK) {
+        return fidl_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    int raw_client_fd;
+    status = fdio_fd_create(client_channel.release(), &raw_client_fd);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fbl::unique_fd client_fd(raw_client_fd);
 
     vc_t* vc;
     if (vc_create(&vc, special)) {
-        close(fd);
-        close(client_fd);
         return ZX_ERR_INTERNAL;
     }
     zx_status_t r;
-    if ((r = port_fd_handler_init(&vc->fh, fd, POLLIN | POLLRDHUP | POLLHUP)) < 0) {
+    if ((r = port_fd_handler_init(&vc->fh, fd.get(), POLLIN | POLLRDHUP | POLLHUP)) < 0) {
         vc_destroy(vc);
-        close(fd);
-        close(client_fd);
         return r;
-    }
-    vc->fd = fd;
-
-    if (make_active) {
-        vc_set_active(-1, vc);
     }
 
     pty_window_size_t wsz = {
         .width = vc->columns,
         .height = vc->rows,
     };
-    ioctl_pty_set_window_size(fd, &wsz);
+    ioctl_pty_set_window_size(fd.get(), &wsz);
+
+    vc->fd = fd.release();
+    if (make_active) {
+        vc_set_active(-1, vc);
+    }
 
     vc->fh.func = session_io_cb;
 
     *out = vc;
-    *out_fd = client_fd;
+    *out_fd = client_fd.release();
     return ZX_OK;
 }
 
