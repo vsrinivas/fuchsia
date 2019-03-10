@@ -15,6 +15,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/client.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/fd.h>
@@ -274,9 +275,12 @@ disk_format_t detect_disk_format(int fd) {
         return DISK_FORMAT_UNKNOWN;
     }
 
-    block_info_t info;
-    ssize_t r;
-    if ((r = ioctl_block_get_info(fd, &info)) < 0) {
+    fuchsia_hardware_block_BlockInfo info;
+    fzl::UnownedFdioCaller caller(fd);
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
+                                                                &info);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "detect_disk_format: Could not acquire block device info\n");
         return DISK_FORMAT_UNKNOWN;
     }

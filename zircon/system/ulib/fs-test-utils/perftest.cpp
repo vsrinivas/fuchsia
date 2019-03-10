@@ -11,6 +11,8 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-test-utils/perftest.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
@@ -141,15 +143,17 @@ bool HasEnoughSpace(const fbl::String& block_device_path, size_t required_space)
     }
 
     fbl::unique_fd fd(open(block_device_path.c_str(), O_RDONLY));
-    block_info_t block_device_info;
-    ssize_t result = ioctl_block_get_info(fd.get(), &block_device_info);
-    zx_status_t status = (result > 0) ? ZX_OK : static_cast<zx_status_t>(result);
-    if (status != ZX_OK) {
+    fzl::FdioCaller disk_caller(std::move(fd));
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t io_status, status;
+    io_status = fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status,
+                                                    &block_info);
+    if (io_status != ZX_OK || status != ZX_OK) {
         LOG_ERROR(status, "Failed to verify block_device size.\n %s\n", block_device_path.c_str());
         return false;
     }
 
-    if (required_space > block_device_info.block_count * block_device_info.block_size) {
+    if (required_space > block_info.block_count * block_info.block_size) {
         return false;
     }
     return true;

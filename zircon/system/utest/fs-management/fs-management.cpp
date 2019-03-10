@@ -21,6 +21,8 @@
 #include <fbl/unique_fd.h>
 #include <fs-test-utils/fixture.h>
 #include <fs-test-utils/unittest.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
@@ -710,19 +712,19 @@ bool StatvfsTest() {
 }
 
 // Verifies that the values in stats match the other parameters
-bool CheckStats(block_stats_t stats, size_t total_ops, size_t total_blocks, size_t total_reads,
-                size_t total_blocks_read, size_t total_writes, size_t total_blocks_written) {
+bool CheckStats(fuchsia_hardware_block_BlockStats stats, int64_t total_ops, int64_t total_blocks,
+                int64_t total_reads, int64_t total_blocks_read, int64_t total_writes,
+                int64_t total_blocks_written) {
     BEGIN_HELPER;
-    ASSERT_EQ(stats.total_ops, total_ops);
-    ASSERT_EQ(stats.total_blocks, total_blocks);
-    ASSERT_EQ(stats.total_reads, total_reads);
-    ASSERT_EQ(stats.total_blocks_read, total_blocks_read);
-    ASSERT_EQ(stats.total_writes, total_writes);
-    ASSERT_EQ(stats.total_blocks_written, total_blocks_written);
+    ASSERT_EQ(stats.ops, total_ops);
+    ASSERT_EQ(stats.blocks, total_blocks);
+    ASSERT_EQ(stats.reads, total_reads);
+    ASSERT_EQ(stats.blocks_read, total_blocks_read);
+    ASSERT_EQ(stats.writes, total_writes);
+    ASSERT_EQ(stats.blocks_written, total_blocks_written);
     END_HELPER;
 }
 
-// Tests functionality of IOCTL_BLOCK_GET_STATS
 bool GetStatsTest(fs_test_utils::Fixture* fixture) {
     fbl::StringBuffer<512> test_data;
     test_data.Resize(512, 'c');
@@ -731,12 +733,16 @@ bool GetStatsTest(fs_test_utils::Fixture* fixture) {
     BEGIN_TEST;
     fbl::unique_fd ram_fd(open(fixture->block_device_path().c_str(), O_RDONLY));
     ASSERT_TRUE(ram_fd);
-    block_stats_t block_stats;
-    bool clear = true;
+    fzl::FdioCaller caller(std::move(ram_fd));
+    fuchsia_hardware_block_BlockStats block_stats;
     // Clear stats from creating ramdisk
-    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    bool clear = true;
+    zx_status_t status;
+    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                   &status, &block_stats));
     // Retrieve cleared stats
-    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                   &status, &block_stats));
     ASSERT_TRUE(CheckStats(block_stats, 0, 0, 0, 0, 0, 0));
 
     fbl::StringBuffer<fs_test_utils::kPathSize> myfile;
@@ -745,10 +751,12 @@ bool GetStatsTest(fs_test_utils::Fixture* fixture) {
     fsync(file_to_create.get());
 
     // Clear stats from creating file
-    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                   &status, &block_stats));
     ASSERT_EQ(write(file_to_create.get(), test_data.data(), 512), 512);
     fsync(file_to_create.get());
-    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                   &status, &block_stats));
     // 5 ops total, 4 for the write and 1 for the sync, 64 blocks written by 4 16 block writes
     ASSERT_TRUE(CheckStats(block_stats, 5, 64, 0, 0, 4, 64));
     ASSERT_EQ(lseek(file_to_create.get(), 0, SEEK_SET), 0);
@@ -757,36 +765,42 @@ bool GetStatsTest(fs_test_utils::Fixture* fixture) {
     fixture->Remount();
     file_to_create.reset(open(myfile.c_str(), O_RDONLY));
     // Clear the stats from reseting the file
-    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                   &status, &block_stats));
     ASSERT_EQ(read(file_to_create.get(), test_read, 512), 512);
-    ASSERT_GE(ioctl_block_get_stats(ram_fd.get(), &clear, &block_stats), ZX_OK);
+    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                   &status, &block_stats));
     // 1 op for reading 16 blocks, no writes
     ASSERT_TRUE(CheckStats(block_stats, 1, 16, 1, 16, 0, 0));
     END_TEST;
 }
 
-bool GetPartitionSliceCount(int partition_fd, size_t* out_count) {
+bool GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_count) {
     BEGIN_HELPER;
 
-    fvm_info_t fvm_info;
-    ASSERT_GE(ioctl_block_fvm_query(partition_fd, &fvm_info), ZX_OK);
-
-    query_request_t request;
-    query_response_t response;
-    memset(&request, 0, sizeof(request));
-    memset(&response, 0, sizeof(response));
-    request.count = 1;
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+    zx_status_t status;
+    ASSERT_OK(fuchsia_hardware_block_volume_VolumeQuery(channel->get(), &status, &fvm_info));
+    ASSERT_OK(status);
 
     size_t allocated_slices = 0;
-    size_t end = 0;
-    for (size_t curr_slice = 0; curr_slice < fvm_info.vslice_count; curr_slice = end) {
-        request.vslice_start[0] = curr_slice;
-        ASSERT_GE(ioctl_block_fvm_vslice_query(partition_fd, &request, &response), ZX_OK);
-        end = curr_slice + response.vslice_range[0].count;
-        if (response.vslice_range[0].allocated) {
-            allocated_slices += response.vslice_range[0].count;
+    uint64_t start_slices[1];
+    start_slices[0] = 0;
+    while (start_slices[0] < fvm_info.vslice_count) {
+        fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+        size_t actual_ranges_count;
+        ASSERT_OK(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                    channel->get(), start_slices, fbl::count_of(start_slices), &status,
+                    ranges, &actual_ranges_count));
+        ASSERT_OK(status);
+        ASSERT_EQ(1, actual_ranges_count);
+        start_slices[0] += ranges[0].count;
+        if (ranges[0].allocated) {
+            allocated_slices += ranges[0].count;
         }
     }
+
     *out_count = allocated_slices;
     END_HELPER;
 }
@@ -802,15 +816,15 @@ bool MkfsMinfsWithMinFvmSlices(fs_test_utils::Fixture* fixture) {
              &default_mkfs_options));
     fbl::unique_fd partition_fd(open(fixture->partition_path().c_str(), O_RDONLY));
     ASSERT_TRUE(partition_fd);
-    ASSERT_TRUE(GetPartitionSliceCount(partition_fd.get(), &base_slices));
+    fzl::UnownedFdioCaller caller(partition_fd.get());
+    ASSERT_TRUE(GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
     options.fvm_data_slices += 10;
-
-    ASSERT_TRUE(partition_fd);
 
     ASSERT_OK(
         mkfs(fixture->partition_path().c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
     size_t allocated_slices = 0;
-    ASSERT_TRUE(GetPartitionSliceCount(partition_fd.get(), &allocated_slices));
+    ASSERT_TRUE(GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()),
+                                       &allocated_slices));
     EXPECT_GE(allocated_slices, base_slices + 10);
 
     disk_format_t actual_format = detect_disk_format(partition_fd.get());

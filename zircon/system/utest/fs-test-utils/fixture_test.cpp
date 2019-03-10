@@ -10,8 +10,10 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <ramdevice-client/ramdisk.h>
 #include <fs-test-utils/fixture.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -19,12 +21,18 @@
 namespace fs_test_utils {
 namespace {
 
-zx_status_t
-GetBlockDeviceInfo(const fbl::String& block_device_path, block_info_t* blk_info) {
+zx_status_t GetBlockDeviceInfo(const fbl::String& block_device_path,
+                               fuchsia_hardware_block_BlockInfo* blk_info) {
     fbl::unique_fd fd(open(block_device_path.c_str(), O_RDONLY));
-    ssize_t result = ioctl_block_get_info(fd.get(), blk_info);
-    if (result < 0) {
-        return static_cast<zx_status_t>(result);
+    fzl::FdioCaller disk_caller(std::move(fd));
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(),
+                                                                &status, blk_info);
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    if (status != ZX_OK) {
+        return status;
     }
     return ZX_OK;
 }
@@ -167,7 +175,7 @@ bool RamdiskSetupAndCleanup() {
     Fixture fixture(options);
     fixture.SetUpTestCase();
     ASSERT_TRUE(!fixture.block_device_path().empty());
-    block_info_t ramdisk_info;
+    fuchsia_hardware_block_BlockInfo ramdisk_info;
     ASSERT_EQ(GetBlockDeviceInfo(fixture.block_device_path(), &ramdisk_info), ZX_OK);
     ASSERT_EQ(ramdisk_info.block_count, options.ramdisk_block_count);
     ASSERT_EQ(ramdisk_info.block_size, options.ramdisk_block_size);
