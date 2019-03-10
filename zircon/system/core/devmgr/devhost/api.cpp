@@ -101,15 +101,21 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
         }
     }
 
-    // This needs to be called outside the ApiAutoLock, as device_open_at will be called.
     if (dev && client_remote.is_valid()) {
+        // This needs to be called outside the ApiAutoLock, as device_open_at will be called
         devhost_device_connect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                                std::move(client_remote));
-    }
 
-    // Leak the reference that was written to |out|, it will be recovered in
-    // device_remove().
-    __UNUSED auto ptr = dev.leak_ref();
+        // Leak the reference that was written to |out|, it will be recovered in device_remove().
+        // For device instances we mimic the behavior of |open| by not leaking the reference,
+        // effectively passing owenership to the new connection.
+        if (!(args->flags & DEVICE_ADD_INSTANCE)) {
+            __UNUSED auto ptr = dev.leak_ref();
+        }
+    } else {
+        // Leak the reference that was written to |out|, it will be recovered in device_remove().
+        __UNUSED auto ptr = dev.leak_ref();
+    }
 
     return r;
 }
