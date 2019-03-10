@@ -40,14 +40,8 @@ int MdnsInterfaceTransceiverV4::SetOptionOutboundInterface() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_MULTICAST_IF,
                           &address().as_in_addr(), sizeof(struct in_addr));
   if (result < 0) {
-    if (errno == EOPNOTSUPP) {
-      FXL_LOG(WARNING)
-          << "IP_MULTICAST_IF is not supported. Proceeding anyway.";
-      result = 0;
-    } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, "
-                     << strerror(errno);
-    }
+    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, "
+                   << strerror(errno);
   }
 
   return result;

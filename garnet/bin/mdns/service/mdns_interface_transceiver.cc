@@ -19,9 +19,9 @@
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v6.h"
 #include "lib/fostr/hex_dump.h"
-#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace mdns {
 
@@ -180,8 +180,9 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to recvfrom, " << strerror(errno);
     // Wait a bit before trying again to avoid spamming the log.
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this]() { WaitForInbound(); }, zx::sec(10));
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [this]() { WaitForInbound(); },
+        zx::sec(10));
     return;
   }
 

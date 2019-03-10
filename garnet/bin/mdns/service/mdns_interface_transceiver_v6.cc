@@ -40,8 +40,14 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF,
                           &index, sizeof(index));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, "
-                   << strerror(errno);
+    if (errno == EOPNOTSUPP) {
+      FXL_LOG(WARNING)
+          << "IPV6_MULTICAST_IF is not supported. Proceeding anyway.";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_IF, "
+                     << strerror(errno);
+    }
   }
 
   return result;
