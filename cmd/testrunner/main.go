@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -43,51 +42,8 @@ var (
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
 const (
 	nodenameEnvVar = "FUCHSIA_NODENAME"
-	ipv4EnvVar     = "FUCHSIA_IPV4_ADDR"
 	sshKeyEnvVar   = "FUCHSIA_SSH_KEY"
 )
-
-// FuchsiaDevice represents an ambient Fuchsia device for whose properties may be supplied in the environment.
-type FuchsiaDevice struct {
-	propertyNames []string
-}
-
-// InferFuchsiaDevice returns an ambient FuchsiaDevice if properties are set in the
-// environment; else it returns nil.
-func InferFuchsiaDevice() *FuchsiaDevice {
-	device := FuchsiaDevice{
-		propertyNames: []string{
-			nodenameEnvVar,
-			ipv4EnvVar,
-			sshKeyEnvVar,
-		},
-	}
-	if len(device.Environ()) == 0 {
-		return nil
-	}
-	return &device
-}
-
-// SSHKey returns the private SSH key corresponding to the paved authorized key, if set.
-func (device FuchsiaDevice) SSHKey() string {
-	return os.Getenv(sshKeyEnvVar)
-}
-
-// Nodename returns the nodename of the device, if set.
-func (device FuchsiaDevice) Nodename() string {
-	return os.Getenv(nodenameEnvVar)
-}
-
-// Environ returns the full environment list of device properties set.
-func (device FuchsiaDevice) Environ() []string {
-	var environ []string
-	for _, name := range device.propertyNames {
-		if prop := os.Getenv(name); prop != "" {
-			environ = append(environ, fmt.Sprintf("%s=%s", name, prop))
-		}
-	}
-	return environ
-}
 
 func usage() {
 	fmt.Printf(`testrunner [flags] tests-file
@@ -134,12 +90,14 @@ func main() {
 	}
 
 	// Execute.
-	if err := execute(tests, output, InferFuchsiaDevice()); err != nil {
+	nodename := os.Getenv(nodenameEnvVar)
+	sshKey := os.Getenv(sshKeyEnvVar)
+	if err := execute(tests, output, nodename, sshKey); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(tests []testsharder.Test, output *Output, device *FuchsiaDevice) error {
+func execute(tests []testsharder.Test, output *Output, nodename, sshKey string) error {
 	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
@@ -160,9 +118,7 @@ func execute(tests []testsharder.Test, output *Output, device *FuchsiaDevice) er
 
 	localTester := &SubprocessTester{
 		wd: localWD,
-	}
-	if device != nil {
-		localTester.env = append(localTester.env, device.Environ()...)
+		env: os.Environ(),
 	}
 
 	if err := runTests(linux, localTester.Test, output); err != nil {
@@ -173,21 +129,19 @@ func execute(tests []testsharder.Test, output *Output, device *FuchsiaDevice) er
 		return err
 	}
 
-	return runFuchsiaTests(fuchsia, output, device)
+	return runFuchsiaTests(fuchsia, output, nodename, sshKey)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, output *Output, device *FuchsiaDevice) error {
+func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKey string) error {
 	if len(tests) == 0 {
 		return nil
-	} else if device == nil {
-		return errors.New("no fuchsia device present")
-	} else if device.Nodename() == "" {
+	} else if nodename == "" {
 		return fmt.Errorf("%s must be set", nodenameEnvVar)
-	} else if device.SSHKey() == "" {
+	} else if sshKey == "" {
 		return fmt.Errorf("%s must be set", sshKeyEnvVar)
 	}
 
-	tester, err := NewFuchsiaTester(device.Nodename(), device.SSHKey())
+	tester, err := NewFuchsiaTester(nodename, sshKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
 	}
