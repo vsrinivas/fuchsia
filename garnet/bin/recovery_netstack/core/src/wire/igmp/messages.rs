@@ -25,6 +25,44 @@ create_net_enum! {
     LeaveGroup: LEAVE_GROUP = 0x17,
 }
 
+macro_rules! impl_igmp_simple_message_type {
+    ($type:ident, $code:tt, $fixed_header:ident) => {
+        impl<B> MessageType<B> for $type {
+            type FixedHeader = $fixed_header;
+            const TYPE: IgmpMessageType = IgmpMessageType::$code;
+            type MaxRespTime = ();
+            declare_no_body!();
+        }
+    };
+}
+
+macro_rules! declare_no_body {
+    () => {
+        type VariableBody = ();
+
+        fn parse_body<BV: BufferView<B>>(
+            header: &Self::FixedHeader,
+            mut bytes: BV,
+        ) -> Result<Self::VariableBody, ParseError>
+        where
+            B: ByteSlice,
+        {
+            if bytes.len() != 0 {
+                Err(ParseError::NotExpected)
+            } else {
+                Ok(())
+            }
+        }
+
+        fn body_bytes(body: &Self::VariableBody) -> &[u8]
+        where
+            B: ByteSlice,
+        {
+            &[]
+        }
+    };
+}
+
 /// IGMPv2 Membership Query message.
 ///
 /// `IgmpMembershipQueryV2` implements `MessageType`, providing the intended
@@ -46,30 +84,10 @@ pub(crate) struct IgmpMembershipQueryV2;
 
 impl<B> MessageType<B> for IgmpMembershipQueryV2 {
     type FixedHeader = Ipv4Addr;
-    type VariableBody = ();
     type MaxRespTime = IgmpResponseTimeV2;
     const TYPE: IgmpMessageType = IgmpMessageType::MembershipQuery;
 
-    fn parse_body<BV: BufferView<B>>(
-        header: &Self::FixedHeader,
-        mut bytes: BV,
-    ) -> Result<Self::VariableBody, ParseError>
-    where
-        B: ByteSlice,
-    {
-        if bytes.len() != 0 {
-            Err(ParseError::NotExpected)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn body_bytes(body: &Self::VariableBody) -> &[u8]
-    where
-        B: ByteSlice,
-    {
-        &[]
-    }
+    declare_no_body!();
 }
 
 /// Fixed information in IGMPv3 Membership Queries.
@@ -374,6 +392,62 @@ impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
     }
 }
 
+/// IGMPv1 Membership Report message.
+///
+/// `IgmpMembershipReportV1` implements `MessageType`, providing the intended
+/// behavior for IGMPv1 Membership Reports as defined in [RFC 1112].
+///
+/// In a Host Membership Report message, the group address field (expressed in
+/// `FixedHeader`) holds the IP host group address of the group being reported.
+///
+/// Hosts respond to a Query by generating Host Membership Reports, reporting
+/// each host group to which they belong on the network interface from which the
+/// Query was received.
+///
+/// [RFC 1112]: https://tools.ietf.org/html/rfc1112
+#[derive(Debug)]
+pub(crate) struct IgmpMembershipReportV1;
+
+impl_igmp_simple_message_type!(IgmpMembershipReportV1, MembershipReportV1, Ipv4Addr);
+
+/// IGMPv2 Membership Report message.
+///
+/// `IgmpMembershipReportV2` implements `MessageType`, providing the intended
+/// behavior for IGMPv2 Membership Reports as defined in [RFC 2236].
+///
+/// In a Membership Report message, the group address field (expressed in
+/// `FixedHeader`) holds the IP multicast group address of the group being
+/// reported.
+///
+/// Hosts respond to a Query by generating Host Membership Reports, reporting
+/// each host group to which they belong on the network interface from which the
+/// Query was received.
+///
+/// [RFC 2236]: https://tools.ietf.org/html/rfc2236
+#[derive(Debug)]
+pub(crate) struct IgmpMembershipReportV2;
+
+impl_igmp_simple_message_type!(IgmpMembershipReportV2, MembershipReportV2, Ipv4Addr);
+
+/// IGMP Leave Group message.
+///
+/// `IgmpLeaveGroup` implements `MessageType`, providing the intended behavior
+/// for IGMP LeaveGroup as defined in [RFC 2236].
+///
+/// In a Leave Group message, the group address field (expressed in
+/// `FixedHeader`) holds the IP multicast group address of the group being
+/// left.
+///
+/// When a host leaves a multicast group, if it was the last host to reply to a
+/// Query with a Membership Report for that group, it SHOULD send a Leave Group
+/// message to the all-routers multicast group (224.0.0.2).
+///
+/// [RFC 2236]: https://tools.ietf.org/html/rfc2236
+#[derive(Debug)]
+pub(crate) struct IgmpLeaveGroup;
+
+impl_igmp_simple_message_type!(IgmpLeaveGroup, LeaveGroup, Ipv4Addr);
+
 /// An IGMP packet with a dynamic message type.
 ///
 /// Each enum variant contains an `IgmpMessage` of
@@ -383,7 +457,10 @@ impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
 pub(crate) enum IgmpPacket<B> {
     MembershipQueryV2(IgmpMessage<B, IgmpMembershipQueryV2>),
     MembershipQueryV3(IgmpMessage<B, IgmpMembershipQueryV3>),
+    MembershipReportV1(IgmpMessage<B, IgmpMembershipReportV1>),
+    MembershipReportV2(IgmpMessage<B, IgmpMembershipReportV2>),
     MembershipReportV3(IgmpMessage<B, IgmpMembershipReportV3>),
+    LeaveGroup(IgmpMessage<B, IgmpLeaveGroup>),
 }
 
 impl<B: ByteSlice> ParsablePacket<B, ()> for IgmpPacket<B> {
@@ -394,19 +471,21 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for IgmpPacket<B> {
         match self {
             MembershipQueryV2(p) => p.parse_metadata(),
             MembershipQueryV3(p) => p.parse_metadata(),
+            MembershipReportV1(p) => p.parse_metadata(),
+            MembershipReportV2(p) => p.parse_metadata(),
             MembershipReportV3(p) => p.parse_metadata(),
+            LeaveGroup(p) => p.parse_metadata(),
         }
     }
 
     fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
         macro_rules! mtch {
-            ($buffer:expr, $args:expr, $( ($code:ident, $long:ident) => $type:ty, $variant:ident )*) => {
+            ($buffer:expr, $args:expr, $( ($code:ident, $long:tt) => $type:ty, $variant:ident )*) => {
                 match peek_message_type($buffer.as_ref())? {
                     $( (IgmpMessageType::$code, $long) => {
                         let packet = <IgmpMessage<B,$type> as ParsablePacket<_, _>>::parse($buffer, $args)?;
                         IgmpPacket::$variant(packet)
                     })*,
-                    _ => unimplemented!()
                 }
             }
         }
@@ -416,6 +495,10 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for IgmpPacket<B> {
             args,
             (MembershipQuery, false) => IgmpMembershipQueryV2, MembershipQueryV2
             (MembershipQuery, true) => IgmpMembershipQueryV3, MembershipQueryV3
+            (MembershipReportV1, _) => IgmpMembershipReportV1, MembershipReportV1
+            (MembershipReportV2, _) => IgmpMembershipReportV2, MembershipReportV2
+            (MembershipReportV3, _) => IgmpMembershipReportV3, MembershipReportV3
+            (LeaveGroup, _) => IgmpLeaveGroup, LeaveGroup
         ))
     }
 }
@@ -431,6 +514,15 @@ mod tests {
     use crate::testutil::set_logger_for_test;
     use crate::wire::igmp::testdata::*;
     use std::fmt::Debug;
+
+    const ALL_BUFFERS: [&'static [u8]; 6] = [
+        igmp_router_queries::v2::QUERY,
+        igmp_router_queries::v3::QUERY,
+        igmp_reports::v1::MEMBER_REPORT,
+        igmp_reports::v2::MEMBER_REPORT,
+        igmp_reports::v3::MEMBER_REPORT,
+        igmp_leave_group::LEAVE_GROUP,
+    ];
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: MessageType<B> + Debug>(
         igmp: &IgmpMessage<B, M>,
@@ -536,5 +628,70 @@ mod tests {
             // assert that no other records came in:
             assert_eq!(iter.next().is_none(), true);
         });
+    }
+
+    #[test]
+    fn membership_report_v1_parse_and_serialize() {
+        use igmp_reports::v1;
+        set_logger_for_test();
+        test_parse_and_serialize::<IgmpMembershipReportV1, _>(v1::MEMBER_REPORT, |igmp| {
+            assert_eq!(*igmp.header, Ipv4Addr::new(v1::GROUP_ADDRESS));
+        });
+    }
+
+    #[test]
+    fn membership_report_v2_parse_and_serialize() {
+        use igmp_reports::v2;
+        set_logger_for_test();
+        test_parse_and_serialize::<IgmpMembershipReportV2, _>(v2::MEMBER_REPORT, |igmp| {
+            assert_eq!(*igmp.header, Ipv4Addr::new(v2::GROUP_ADDRESS));
+        });
+    }
+
+    #[test]
+    fn leave_group_parse_and_serialize() {
+        set_logger_for_test();
+        test_parse_and_serialize::<IgmpLeaveGroup, _>(igmp_leave_group::LEAVE_GROUP, |igmp| {
+            assert_eq!(*igmp.header, Ipv4Addr::new(igmp_leave_group::GROUP_ADDRESS));
+        });
+    }
+
+    #[test]
+    fn test_unknown_type() {
+        let mut buff = &mut igmp_invalid_buffers::UNKNOWN_TYPE;
+        let packet = buff.parse_with::<_, IgmpPacket<_>>(());
+        // we don't use expect_err here because IgmpPacket does not implement
+        // std::fmt::Debug
+        assert_eq!(packet.is_err(), true);
+    }
+
+    #[test]
+    fn test_full_parses() {
+        for buff in ALL_BUFFERS.iter_mut() {
+            let orig_req = &buff[..];
+            let packet = buff.parse_with::<_, IgmpPacket<_>>(()).unwrap();
+            let msg_type = match (packet) {
+                IgmpPacket::MembershipQueryV2(p) => p.prefix.msg_type,
+                IgmpPacket::MembershipQueryV3(p) => p.prefix.msg_type,
+                IgmpPacket::MembershipReportV1(p) => p.prefix.msg_type,
+                IgmpPacket::MembershipReportV2(p) => p.prefix.msg_type,
+                IgmpPacket::MembershipReportV3(p) => p.prefix.msg_type,
+                IgmpPacket::LeaveGroup(p) => p.prefix.msg_type,
+            };
+            assert_eq!(msg_type, orig_req[0]);
+        }
+    }
+
+    #[test]
+    fn test_partial_parses() {
+        // parsing a part of the buffer should always result in errors and
+        // nothing panics.
+        for buff in ALL_BUFFERS.iter() {
+            for i in 0..buff.len() {
+                let partial_buff = &mut &buff[0..i];
+                let packet = partial_buff.parse_with::<_, IgmpPacket<_>>(());
+                assert_eq!(packet.is_err(), true)
+            }
+        }
     }
 }
