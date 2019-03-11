@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <fbl/array.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <soc/msm8x53/msm8x53-hw.h>
@@ -89,6 +92,19 @@ zx_status_t Msm8x53GpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t f
         return ZX_ERR_OUT_OF_RANGE;
     }
     GpioCfgReg::SetMode(&gpio_mmio_, index, static_cast<uint32_t>(function));
+    return ZX_OK;
+}
+
+zx_status_t Msm8x53GpioDevice::GpioImplSetDriveStrength(uint32_t index, uint8_t mA) {
+    if (index >= msm8x53::kGpioMax) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    uint8_t supported_mAs[] = {2, 4, 6, 8, 10, 12, 14, 16};
+    if (std::find(std::begin(supported_mAs), std::end(supported_mAs), mA) ==
+        std::end(supported_mAs)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    GpioCfgReg::SetStrength(&gpio_mmio_, index, mA);
     return ZX_OK;
 }
 

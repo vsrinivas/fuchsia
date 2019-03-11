@@ -213,6 +213,40 @@ TEST(GpioTest, InterruptSetPolarityLevel) {
     gpios_mock.VerifyAll();
 }
 
+TEST(GpioTest, SetDriveStrength2) {
+    fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
+        fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
+    ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
+    Msm8x53GpioDeviceTest gpio(gpios_mock);
+
+    gpios_mock[0x87000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFE3F); // strength to 0x0.
+    EXPECT_OK(gpio.GpioImplSetDriveStrength(0x87, 2));
+    gpios_mock.VerifyAll();
+}
+
+TEST(GpioTest, SetDriveStrength16) {
+    fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
+        fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
+    ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
+    Msm8x53GpioDeviceTest gpio(gpios_mock);
+
+    gpios_mock[0x86000].ExpectRead(0x00000000).ExpectWrite(0x000001C0); // strength to 0x7.
+    EXPECT_OK(gpio.GpioImplSetDriveStrength(0x86, 16));
+    gpios_mock.VerifyAll();
+}
+
+TEST(GpioTest, SetDriveStrengthOdd) {
+    ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
+    Msm8x53GpioDeviceTest gpio(unused);
+    EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x85, 1));
+}
+
+TEST(GpioTest, SetDriveStrengthLarge) {
+    ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
+    Msm8x53GpioDeviceTest gpio(unused);
+    EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x84, 17));
+}
+
 } // namespace gpio
 
 int main(int argc, char** argv) {

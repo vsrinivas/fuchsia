@@ -43,6 +43,9 @@ public:
     zx_status_t GpioImplGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
     zx_status_t GpioImplReleaseInterrupt(uint32_t index);
     zx_status_t GpioImplSetPolarity(uint32_t index, uint32_t polarity);
+    zx_status_t GpioImplSetDriveStrength(uint32_t index, uint8_t mA) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 };
 
 zx_status_t TestGpioDevice::Init() {

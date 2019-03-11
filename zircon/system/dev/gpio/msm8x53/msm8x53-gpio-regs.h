@@ -28,6 +28,9 @@ public:
     static void SetPullNone(ddk::MmioBuffer* mmio, size_t idx) { SetPull(mmio, idx, 0); }
     static void SetPullDown(ddk::MmioBuffer* mmio, size_t idx) { SetPull(mmio, idx, 1); }
     static void SetPullUp(ddk::MmioBuffer* mmio, size_t idx) { SetPull(mmio, idx, 3); }
+    static void SetStrength(ddk::MmioBuffer* mmio, size_t idx, uint8_t mA) {
+        Read(mmio, idx).set_DRV_STRENGTH(mA / 2 - 1).WriteTo(mmio);
+    }
 
 protected:
     // Registers are separated by 0x1000 bytes.
