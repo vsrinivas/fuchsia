@@ -50,7 +50,12 @@ package("wlancfg") {
     ":bin",
   ]
 
-  binary = "rust_crates/wlancfg"
+  binaries = [
+    {
+      path = "rust_crates/wlancfg"
+      name = "wlancfg"
+    },
+  ]
 
   meta = [
     {
