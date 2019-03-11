@@ -926,10 +926,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
-    devfs_publish(&coordinator.root_device(), &coordinator.misc_device());
-    devfs_publish(&coordinator.root_device(), &coordinator.sys_device());
-    devfs_publish(&coordinator.root_device(), &coordinator.test_device());
+    devmgr::devfs_init(coordinator.root_device(), loop.dispatcher());
+    devfs_publish(coordinator.root_device(), coordinator.misc_device());
+    devfs_publish(coordinator.root_device(), coordinator.sys_device());
+    devfs_publish(coordinator.root_device(), coordinator.test_device());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
     // This is for use in tests to let the test environment see devfs.
@@ -1035,8 +1035,8 @@ int main(int argc, char** argv) {
         coordinator.UseFallbackDrivers();
     }
 
-    coordinator.PrepareProxy(&coordinator.sys_device());
-    coordinator.PrepareProxy(&coordinator.test_device());
+    coordinator.PrepareProxy(coordinator.sys_device());
+    coordinator.PrepareProxy(coordinator.test_device());
     // Initial bind attempt for drivers enumerated at startup.
     coordinator.BindDrivers();
 

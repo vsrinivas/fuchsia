@@ -234,32 +234,37 @@ public:
     // Attempts to bind the given driver to the given device.  Returns ZX_OK on
     // success, ZX_ERR_NEXT if the driver is not capable of binding to the device,
     // and a different error if the driver was capable of binding but failed to bind.
-    zx_status_t BindDriverToDevice(Device* dev, const Driver* drv, bool autobind);
+    zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
+                                   bool autobind);
 
     // Used to implement fuchsia::device::manager::Coordinator.
-    zx_status_t AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
-                          size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
-                          fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
-                          zx::channel client_remote);
-    zx_status_t RemoveDevice(Device* dev, bool forced);
-    zx_status_t MakeVisible(Device* dev);
-    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname, bool new_device);
-    zx_status_t GetTopologicalPath(const Device* dev, char* out, size_t max) const;
-    zx_status_t LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size);
+    zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
+                          const uint64_t* props_data, size_t props_count, fbl::StringPiece name,
+                          uint32_t protocol_id, fbl::StringPiece driver_path, fbl::StringPiece args,
+                          bool invisible, zx::channel client_remote);
+    zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
+    zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
+    zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
+                           bool new_device);
+    zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
+                                   size_t max) const;
+    zx_status_t LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path, zx::vmo* vmo,
+                             size_t* size);
 
-    zx_status_t GetMetadata(Device* dev, uint32_t type, void* buffer, size_t buflen,
-                            size_t* actual);
-    zx_status_t GetMetadataSize(Device* dev, uint32_t type, size_t* size);
-    zx_status_t AddMetadata(Device* dev, uint32_t type, const void* data, uint32_t length);
-    zx_status_t PublishMetadata(Device* dev, const char* path, uint32_t type, const void* data,
-                                uint32_t length);
+    zx_status_t GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
+                            size_t buflen, size_t* actual);
+    zx_status_t GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_t type, size_t* size);
+    zx_status_t AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, const void* data,
+                            uint32_t length);
+    zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
+                                const void* data, uint32_t length);
     zx_status_t DmCommand(size_t len, const char* cmd);
     zx_status_t DmOpenVirtcon(zx::channel virtcon_receiver) const;
     void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
-    zx_status_t HandleDeviceRead(Device* dev);
-    void HandleNewDevice(Device* dev);
-    zx_status_t PrepareProxy(Device* dev);
+    zx_status_t HandleDeviceRead(const fbl::RefPtr<Device>& dev);
+    void HandleNewDevice(const fbl::RefPtr<Device>& dev);
+    zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev);
 
     void DumpState(VmoWriter* vmo) const;
     void DumpDrivers(VmoWriter* vmo) const;
@@ -286,15 +291,21 @@ public:
 
     fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; }
     const fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() const { return drivers_; }
-    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
-    const fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() const {
+    fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode>& devices() {
+        return devices_;
+    }
+    const fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode>& devices() const {
         return devices_;
     }
 
-    Device& root_device() { return root_device_; }
-    Device& misc_device() { return misc_device_; }
-    Device& sys_device() { return sys_device_; }
-    Device& test_device() { return test_device_; }
+    void AppendPublishedMetadata(fbl::unique_ptr<Metadata> metadata) {
+        published_metadata_.push_back(std::move(metadata));
+    }
+
+    const fbl::RefPtr<Device>& root_device() { return root_device_; }
+    const fbl::RefPtr<Device>& misc_device() { return misc_device_; }
+    const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
+    const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
     SuspendContext& suspend_context() { return suspend_context_; }
     const SuspendContext& suspend_context() const { return suspend_context_; }
@@ -327,15 +338,15 @@ private:
     fbl::DoublyLinkedList<Driver*, Driver::Node> system_drivers_;
 
     // All Devices (excluding static immortal devices)
-    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode> devices_;
+    fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode> devices_;
 
     // All DevHosts
     fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> devhosts_;
 
-    Device root_device_{this};
-    Device misc_device_{this};
-    Device sys_device_{this};
-    Device test_device_{this};
+    fbl::RefPtr<Device> root_device_;
+    fbl::RefPtr<Device> misc_device_;
+    fbl::RefPtr<Device> sys_device_;
+    fbl::RefPtr<Device> test_device_;
 
     SuspendContext suspend_context_;
 
@@ -353,10 +364,9 @@ private:
 
     zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
     void ReleaseDevhost(Devhost* dh);
-    void ReleaseDevice(Device* dev);
 
     zx_status_t BindDriver(Driver* drv);
-    zx_status_t AttemptBind(const Driver* drv, Device* dev);
+    zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
     void BindSystemDrivers();
     void DriverAddedSys(Driver* drv, const char* version);
 };
@@ -369,7 +379,7 @@ zx_status_t dh_send_remove_device(const Device* dev);
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy);
 zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t protocol_id);
-zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver);
+zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo driver);
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy);
 zx_status_t dh_send_suspend(const Device* dev, uint32_t flags);
 

@@ -127,7 +127,7 @@ Match SumMatchCounts(Match m1, Match m2) {
 }
 
 // Instantiate MatchParts<Device>
-template Match MatchParts(Device* device, DeviceComponentPartDescriptor* parts,
+template Match MatchParts(const fbl::RefPtr<Device>& device, DeviceComponentPartDescriptor* parts,
                           uint32_t parts_count);
 
 } // namespace internal

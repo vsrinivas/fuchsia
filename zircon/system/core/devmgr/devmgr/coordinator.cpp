@@ -187,67 +187,68 @@ bool Coordinator::InSuspend() const {
 }
 
 zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
+    root_device_ = fbl::MakeRefCounted<Device>(this);
+    misc_device_ = fbl::MakeRefCounted<Device>(this);
+    sys_device_ = fbl::MakeRefCounted<Device>(this);
+    test_device_ = fbl::MakeRefCounted<Device>(this);
+
     fbl::AllocChecker ac;
     {
-        root_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        root_device_.set_protocol_id(ZX_PROTOCOL_ROOT);
-        root_device_.name = fbl::String("root", &ac);
+        root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+        root_device_->set_protocol_id(ZX_PROTOCOL_ROOT);
+        root_device_->name = fbl::String("root", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        root_device_.args = fbl::String("root,", &ac);
+        root_device_->args = fbl::String("root,", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        root_device_.AddRef();
     }
 
     {
-        misc_device_.set_parent(&root_device_);
-        misc_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        misc_device_.set_protocol_id(ZX_PROTOCOL_MISC_PARENT);
-        misc_device_.name = fbl::String("misc", &ac);
+        misc_device_->set_parent(root_device_);
+        misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+        misc_device_->set_protocol_id(ZX_PROTOCOL_MISC_PARENT);
+        misc_device_->name = fbl::String("misc", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        misc_device_.args = fbl::String("misc,", &ac);
+        misc_device_->args = fbl::String("misc,", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        misc_device_.AddRef();
     }
 
     {
-        sys_device_.set_parent(&root_device_);
-        sys_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
-        sys_device_.name = fbl::String("sys", &ac);
+        sys_device_->set_parent(root_device_);
+        sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
+        sys_device_->name = fbl::String("sys", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        sys_device_.libname = fbl::String(sys_device_driver, &ac);
+        sys_device_->libname = fbl::String(sys_device_driver, &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        sys_device_.args = fbl::String("sys,", &ac);
+        sys_device_->args = fbl::String("sys,", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        sys_device_.AddRef();
     }
 
     {
-        test_device_.set_parent(&root_device_);
-        test_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-        test_device_.set_protocol_id(ZX_PROTOCOL_TEST_PARENT);
-        test_device_.name = fbl::String("test", &ac);
+        test_device_->set_parent(root_device_);
+        test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+        test_device_->set_protocol_id(ZX_PROTOCOL_TEST_PARENT);
+        test_device_->name = fbl::String("test", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        test_device_.args = fbl::String("test,", &ac);
+        test_device_->args = fbl::String("test,", &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        test_device_.AddRef();
     }
     return ZX_OK;
 }
@@ -365,7 +366,7 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
     zx_koid_t pid = dev->host ? dev->host->koid() : 0;
     char extra[256];
     if (log_flags & LOG_DEVLC) {
-        snprintf(extra, sizeof(extra), " dev=%p ref=%d", dev, dev->refcount_);
+        snprintf(extra, sizeof(extra), " dev=%p ", dev);
     } else {
         extra[0] = 0;
     }
@@ -378,7 +379,7 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
     }
     if (dev->proxy) {
         indent++;
-        DumpDevice(vmo, dev->proxy, indent);
+        DumpDevice(vmo, dev->proxy.get(), indent);
     }
     for (const auto& child : dev->children) {
         DumpDevice(vmo, &child, indent + 1);
@@ -386,10 +387,10 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
 }
 
 void Coordinator::DumpState(VmoWriter* vmo) const {
-    DumpDevice(vmo, &root_device_, 0);
-    DumpDevice(vmo, &misc_device_, 1);
-    DumpDevice(vmo, &sys_device_, 1);
-    DumpDevice(vmo, &test_device_, 1);
+    DumpDevice(vmo, root_device_.get(), 0);
+    DumpDevice(vmo, misc_device_.get(), 1);
+    DumpDevice(vmo, sys_device_.get(), 1);
+    DumpDevice(vmo, test_device_.get(), 1);
 }
 
 void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
@@ -401,7 +402,6 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
                     dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
                     dev->flags & DEV_CTX_BOUND ? " Bound" : "",
                     dev->flags & DEV_CTX_DEAD ? " Dead" : "",
-                    dev->flags & DEV_CTX_ZOMBIE ? " Zombie" : "",
                     dev->flags & DEV_CTX_PROXY ? " Proxy" : "");
 
         char a = (char)((dev->protocol_id() >> 24) & 0xFF);
@@ -430,7 +430,7 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     }
 
     if (dev->proxy) {
-        DumpDeviceProps(vmo, dev->proxy);
+        DumpDeviceProps(vmo, dev->proxy.get());
     }
     for (const auto& child : dev->children) {
         DumpDeviceProps(vmo, &child);
@@ -438,10 +438,10 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
 }
 
 void Coordinator::DumpGlobalDeviceProps(VmoWriter* vmo) const {
-    DumpDeviceProps(vmo, &root_device_);
-    DumpDeviceProps(vmo, &misc_device_);
-    DumpDeviceProps(vmo, &sys_device_);
-    DumpDeviceProps(vmo, &test_device_);
+    DumpDeviceProps(vmo, root_device_.get());
+    DumpDeviceProps(vmo, misc_device_.get());
+    DumpDeviceProps(vmo, sys_device_.get());
+    DumpDeviceProps(vmo, test_device_.get());
 }
 
 void Coordinator::DumpDrivers(VmoWriter* vmo) const {
@@ -478,21 +478,23 @@ static const char* get_devhost_bin(bool asan_drivers) {
 
 zx_handle_t get_service_root();
 
-zx_status_t Coordinator::GetTopologicalPath(const Device* dev, char* out, size_t max) const {
+zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
+                                            size_t max) const {
     // TODO: Remove VLA.
     char tmp[max];
     char* path = tmp + max - 1;
     *path = 0;
     size_t total = 1;
 
-    while (dev != nullptr) {
-        if (dev->flags & DEV_CTX_PROXY) {
-            dev = dev->parent();
+    fbl::RefPtr<const Device> itr = dev;
+    while (itr != nullptr) {
+        if (itr->flags & DEV_CTX_PROXY) {
+            itr = itr->parent();
         }
 
         const char* name;
-        if (dev->parent()) {
-            name = dev->name.data();
+        if (itr->parent()) {
+            name = itr->name.data();
         } else {
             name = "dev";
         }
@@ -506,7 +508,7 @@ zx_status_t Coordinator::GetTopologicalPath(const Device* dev, char* out, size_t
         path -= len;
         *path = '/';
         total += len;
-        dev = dev->parent();
+        itr = itr->parent();
     }
 
     memcpy(out, path, total);
@@ -666,50 +668,12 @@ void Coordinator::ReleaseDevhost(Devhost* dh) {
     delete dh;
 }
 
-// called when device children or proxys are removed
-void Coordinator::ReleaseDevice(Device* dev) {
-    log(DEVLC, "devcoord: release dev %p name='%s' ref=%d\n", dev, dev->name.data(),
-        dev->refcount_);
-
-    if (!dev->Release()) {
-        return;
-    }
-
-    // Immortal devices are never destroyed
-    if (dev->flags & DEV_CTX_IMMORTAL) {
-        return;
-    }
-
-    log(DEVLC, "devcoord: destroy dev %p name='%s'\n", dev, dev->name.data());
-
-    devfs_unpublish(dev);
-
-    if (dev->hrpc.is_valid()) {
-        dev->wait.set_object(ZX_HANDLE_INVALID);
-        dev->hrpc.reset();
-    }
-    dev->host = nullptr;
-
-    fbl::unique_ptr<Metadata> md;
-    while ((md = dev->metadata.pop_front()) != nullptr) {
-        if (md->has_path) {
-            // return to published_metadata_ list
-            published_metadata_.push_back(std::move(md));
-        } else {
-            // metadata was attached directly to this device, so we release it now
-        }
-    }
-
-    // TODO: cancel any pending rpc responses
-    // TODO: Have dtor assert that DEV_CTX_IMMORTAL set on flags
-    delete dev;
-}
-
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
-                                   size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
+zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
+                                   const uint64_t* props_data, size_t props_count,
+                                   fbl::StringPiece name, uint32_t protocol_id,
                                    fbl::StringPiece driver_path, fbl::StringPiece args,
                                    bool invisible, zx::channel client_remote) {
     // If this is true, then |name_data|'s size is properly bounded.
@@ -725,7 +689,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
     log(RPC_IN, "devcoord: rpc: add-device '%.*s' args='%.*s'\n", static_cast<int>(name.size()),
         name.data(), static_cast<int>(args.size()), args.data());
 
-    auto dev = fbl::make_unique<Device>(this);
+    auto dev = fbl::MakeRefCounted<Device>(this);
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -754,7 +718,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
         return status;
     }
 
-    dev->hrpc = std::move(rpc);
+    dev->set_channel(std::move(rpc));
     dev->set_protocol_id(protocol_id);
 
     // If we have bus device args we are, by definition, a bus device.
@@ -765,13 +729,16 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
     // We exist within our parent's device host
     dev->host = parent->host;
 
+    fbl::RefPtr<Device> real_parent;
     // If our parent is a proxy, for the purpose
     // of devicefs, we need to work with *its* parent
     // which is the device that it is proxying.
     if (parent->flags & DEV_CTX_PROXY) {
-        parent = parent->parent();
+        real_parent = parent->parent();
+    } else {
+        real_parent = parent;
     }
-    dev->set_parent(parent);
+    dev->set_parent(real_parent);
 
     // We must mark the device as invisible before publishing so
     // that we don't send "device added" notifications.
@@ -779,13 +746,11 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
         dev->flags |= DEV_CTX_INVISIBLE;
     }
 
-    if ((status = devfs_publish(parent, dev.get())) < 0) {
+    if ((status = devfs_publish(real_parent, dev)) < 0) {
         return status;
     }
 
-    dev->wait.set_object(dev->hrpc.get());
-    dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((status = dev->wait.Begin(dispatcher())) != ZX_OK) {
+    if ((status = Device::BeginWait(dev, dispatcher())) != ZX_OK) {
         devfs_unpublish(dev.get());
         return status;
     }
@@ -795,19 +760,16 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
         dev->host->AddRef();
         dev->host->devices().push_back(dev.get());
     }
-    dev->AddRef();
-    parent->children.push_back(dev.get());
-    parent->AddRef();
+    real_parent->children.push_back(dev.get());
 
     dev->client_remote = std::move(client_remote);
 
-    devices_.push_back(dev.get());
+    devices_.push_back(dev);
 
-    log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (child)\n", parent, parent->name.data(),
-        parent->refcount_);
+    log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name.data());
 
     log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
-        dev->name.data(), dev->props().size(), dev->args.data(), dev->parent());
+        dev->name.data(), dev->props().size(), dev->args.data(), dev->parent().get());
 
     if (!invisible) {
         status = dev->publish_task.Post(dispatcher());
@@ -815,13 +777,10 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc, const uint64
             return status;
         }
     }
-    // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
-    // here
-    __UNUSED auto ptr = dev.release();
     return ZX_OK;
 }
 
-zx_status_t Coordinator::MakeVisible(Device* dev) {
+zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
     if (dev->flags & DEV_CTX_DEAD) {
         return ZX_ERR_BAD_STATE;
     }
@@ -840,34 +799,29 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
 // forced indicates this is removal due to a channel close
 // or process exit, which means we should remove all other
 // devices that share the devhost at the same time
-zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
-    if (dev->flags & DEV_CTX_ZOMBIE) {
-        // This device was removed due to its devhost dying
-        // (process exit or some other channel on that devhost
-        // closing), and is now receiving the final remove call
-        dev->flags &= (~DEV_CTX_ZOMBIE);
-        ReleaseDevice(dev);
-        return ZX_OK;
-    }
+zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced) {
     if (dev->flags & DEV_CTX_DEAD) {
         // This should not happen
-        log(ERROR, "devcoord: cannot remove dev %p name='%s' twice!\n", dev, dev->name.data());
+        log(ERROR, "devcoord: cannot remove dev %p name='%s' twice!\n", dev.get(),
+            dev->name.data());
         return ZX_ERR_BAD_STATE;
     }
     if (dev->flags & DEV_CTX_IMMORTAL) {
         // This too should not happen
-        log(ERROR, "devcoord: cannot remove dev %p name='%s' (immortal)\n", dev, dev->name.data());
+        log(ERROR, "devcoord: cannot remove dev %p name='%s' (immortal)\n", dev.get(),
+            dev->name.data());
         return ZX_ERR_BAD_STATE;
     }
 
-    log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name.data(), dev->parent());
+    log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev.get(), dev->name.data(),
+        dev->parent().get());
     dev->flags |= DEV_CTX_DEAD;
 
     // remove from devfs, preventing further OPEN attempts
-    devfs_unpublish(dev);
+    devfs_unpublish(dev.get());
 
     if (dev->proxy) {
-        zx_status_t r = dh_send_remove_device(dev->proxy);
+        zx_status_t r = dh_send_remove_device(dev->proxy.get());
         if (r != ZX_OK) {
             log(ERROR, "devcoord: failed to send message in dc_remove_device: %d\n", r);
         }
@@ -886,17 +840,18 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
         if (forced) {
             dh->flags() |= Devhost::Flags::kDying;
 
-            Device* next;
-            Device* last = nullptr;
+            fbl::RefPtr<Device> next;
+            fbl::RefPtr<Device> last;
             while (!dh->devices().is_empty()) {
-                next = &dh->devices().front();
+                next = fbl::WrapRefPtr(&dh->devices().front());
                 if (last == next) {
                     // This shouldn't be possible, but let's not infinite-loop if it happens
-                    log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n", next);
-                    exit(1);
+                    log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n",
+                        next.get());
+                    abort();
                 }
                 RemoveDevice(next, false);
-                last = next;
+                last = std::move(next);
             }
 
             // TODO: set a timer so if this devhost does not finish dying
@@ -907,7 +862,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
     }
 
     // if we have a parent, disconnect and downref it
-    Device* parent = dev->parent();
+    fbl::RefPtr<Device> parent = dev->parent();
     if (parent != nullptr) {
         dev->set_parent(nullptr);
         if (dev->flags & DEV_CTX_PROXY) {
@@ -931,7 +886,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
                     ((parent->host == nullptr) ||
                      !(parent->host->flags() & Devhost::Flags::kDying))) {
 
-                    log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n", parent,
+                    log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n", parent.get(),
                         parent->name.data());
 
                     if (parent->retries > 0) {
@@ -947,7 +902,6 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
                 }
             }
         }
-        ReleaseDevice(parent);
     }
 
     if (!(dev->flags & DEV_CTX_PROXY)) {
@@ -955,20 +909,11 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
         devices_.erase(*dev);
     }
 
-    if (forced) {
-        // release the ref held by the devhost
-        ReleaseDevice(dev);
-    } else {
-        // Mark the device as a zombie but don't drop the
-        // (likely) final reference.  The caller needs to
-        // finish replying to the RPC and dropping the
-        // reference would close the RPC channel.
-        dev->flags |= DEV_CTX_ZOMBIE;
-    }
     return ZX_OK;
 }
 
-zx_status_t Coordinator::LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size) {
+zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path,
+                                      zx::vmo* vmo, size_t* size) {
     static const char* fwdirs[] = {
         kBootFirmwareDir,
         kSystemFirmwareDir,
@@ -1006,10 +951,10 @@ static bool path_is_child(const char* parent_path, const char* child_path) {
             (child_path[parent_length] == 0 || child_path[parent_length] == '/'));
 }
 
-zx_status_t Coordinator::GetMetadata(Device* dev, uint32_t type, void* buffer, size_t buflen,
-                                     size_t* actual) {
+zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
+                                     size_t buflen, size_t* actual) {
     // search dev and its parent devices for a match
-    Device* test = dev;
+    fbl::RefPtr<Device> test = dev;
     while (test) {
         for (const auto& md : test->metadata) {
             if (md.type == type) {
@@ -1046,9 +991,10 @@ zx_status_t Coordinator::GetMetadata(Device* dev, uint32_t type, void* buffer, s
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t Coordinator::GetMetadataSize(Device* dev, uint32_t type, size_t* size) {
+zx_status_t Coordinator::GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_t type,
+                                         size_t* size) {
     // search dev and its parent devices for a match
-    Device* test = dev;
+    fbl::RefPtr<Device> test = dev;
     while (test) {
         for (const auto& md : test->metadata) {
             if (md.type == type) {
@@ -1077,8 +1023,8 @@ zx_status_t Coordinator::GetMetadataSize(Device* dev, uint32_t type, size_t* siz
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t Coordinator::AddMetadata(Device* dev, uint32_t type, const void* data,
-                                     uint32_t length) {
+zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t type,
+                                     const void* data, uint32_t length) {
     fbl::unique_ptr<Metadata> md;
     zx_status_t status = Metadata::Create(length, &md);
     if (status != ZX_OK) {
@@ -1092,8 +1038,8 @@ zx_status_t Coordinator::AddMetadata(Device* dev, uint32_t type, const void* dat
     return ZX_OK;
 }
 
-zx_status_t Coordinator::PublishMetadata(Device* dev, const char* path, uint32_t type,
-                                         const void* data, uint32_t length) {
+zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path,
+                                         uint32_t type, const void* data, uint32_t length) {
     char caller_path[fuchsia_device_manager_DEVICE_PATH_MAX];
     zx_status_t status = GetTopologicalPath(dev, caller_path, sizeof(caller_path));
     if (status != ZX_OK) {
@@ -1104,15 +1050,16 @@ zx_status_t Coordinator::PublishMetadata(Device* dev, const char* path, uint32_t
     if (path_is_child(caller_path, path)) {
         // Caller is adding a path that matches itself or one of its children, which is allowed.
     } else {
+        fbl::RefPtr<Device> itr = dev;
         // Adding metadata to arbitrary paths is restricted to drivers running in the sys devhost.
-        while (dev && dev != &sys_device_) {
-            if (dev->proxy) {
+        while (itr && itr != sys_device_) {
+            if (itr->proxy) {
                 // this device is in a child devhost
                 return ZX_ERR_ACCESS_DENIED;
             }
-            dev = dev->parent();
+            itr = itr->parent();
         }
-        if (!dev) {
+        if (!itr) {
             return ZX_ERR_ACCESS_DENIED;
         }
     }
@@ -1137,7 +1084,7 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc, const uint64_t
                                   uint32_t protocol_id, const char* driver_path_data,
                                   size_t driver_path_size, const char* args_data, size_t args_size,
                                   zx_handle_t raw_client_remote, fidl_txn_t* txn) {
-    auto parent = static_cast<Device*>(ctx);
+    auto parent = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     zx::channel rpc(raw_rpc);
     fbl::StringPiece name(name_data, name_size);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
@@ -1157,7 +1104,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
                                            size_t driver_path_size, const char* args_data,
                                            size_t args_size, zx_handle_t raw_client_remote,
                                            fidl_txn_t* txn) {
-    auto parent = static_cast<Device*>(ctx);
+    auto parent = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     zx::channel rpc(raw_rpc);
     fbl::StringPiece name(name_data, name_size);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
@@ -1171,7 +1118,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
 }
 
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     if (dev->coordinator->InSuspend()) {
         log(ERROR, "devcoord: rpc: remove-device '%s' forbidden in suspend\n", dev->name.data());
         return fuchsia_device_manager_CoordinatorRemoveDevice_reply(txn, ZX_ERR_BAD_STATE);
@@ -1188,7 +1135,7 @@ static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     if (dev->coordinator->InSuspend()) {
         log(ERROR, "devcoord: rpc: make-visible '%s' forbidden in suspend\n", dev->name.data());
         return fuchsia_device_manager_CoordinatorMakeVisible_reply(txn, ZX_ERR_BAD_STATE);
@@ -1202,7 +1149,7 @@ static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size_t driver_path_size,
                                    fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     if (dev->coordinator->InSuspend()) {
         log(ERROR, "devcoord: rpc: bind-device '%s' forbidden in suspend\n", dev->name.data());
@@ -1216,7 +1163,7 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
 static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn) {
     char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
 
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     zx_status_t status;
     if ((status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path))) != ZX_OK) {
         return fuchsia_device_manager_CoordinatorGetTopologicalPath_reply(txn, status, nullptr, 0);
@@ -1227,7 +1174,7 @@ static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_LoadFirmware(void* ctx, const char* fw_path_data, size_t fw_path_size,
                                      fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
 
     char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
     memcpy(fw_path, fw_path_data, fw_path_size);
@@ -1245,7 +1192,7 @@ static zx_status_t fidl_LoadFirmware(void* ctx, const char* fw_path_data, size_t
 }
 
 static zx_status_t fidl_GetMetadata(void* ctx, uint32_t key, fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
 
     uint8_t data[fuchsia_device_manager_METADATA_MAX];
     size_t actual = 0;
@@ -1257,7 +1204,7 @@ static zx_status_t fidl_GetMetadata(void* ctx, uint32_t key, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_GetMetadataSize(void* ctx, uint32_t key, fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     size_t size;
     zx_status_t status = dev->coordinator->GetMetadataSize(dev, key, &size);
     if (status != ZX_OK) {
@@ -1270,7 +1217,7 @@ static zx_status_t fidl_AddMetadata(void* ctx, uint32_t key, const uint8_t* data
                                     size_t data_count, fidl_txn_t* txn) {
     static_assert(fuchsia_device_manager_METADATA_MAX <= UINT32_MAX);
 
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     zx_status_t status =
         dev->coordinator->AddMetadata(dev, key, data_data, static_cast<uint32_t>(data_count));
     return fuchsia_device_manager_CoordinatorAddMetadata_reply(txn, status);
@@ -1280,7 +1227,7 @@ static zx_status_t fidl_PublishMetadata(void* ctx, const char* device_path_data,
                                         size_t device_path_size, uint32_t key,
                                         const uint8_t* data_data, size_t data_count,
                                         fidl_txn_t* txn) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
 
     char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
     memcpy(path, device_path_data, device_path_size);
@@ -1295,7 +1242,7 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const c
                                   size_t command_size, fidl_txn_t* txn) {
     zx::socket log_socket(raw_log_socket);
 
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     if (log_socket.is_valid()) {
         dev->coordinator->set_dmctl_socket(std::move(log_socket));
     }
@@ -1306,7 +1253,7 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const c
 }
 
 static zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
-    auto dev = static_cast<Device*>(ctx);
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
     return dev->coordinator->DmOpenVirtcon(zx::channel(raw_vc_receiver));
 }
 
@@ -1413,19 +1360,19 @@ static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .DirectoryWatch = fidl_DirectoryWatch,
 };
 
-zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
+zx_status_t Coordinator::HandleDeviceRead(const fbl::RefPtr<Device>& dev) {
     uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = fbl::count_of(hin);
 
     if (dev->flags & DEV_CTX_DEAD) {
-        log(ERROR, "devcoord: dev %p already dead (in read)\n", dev);
+        log(ERROR, "devcoord: dev %p already dead (in read)\n", dev.get());
         return ZX_ERR_INTERNAL;
     }
 
     zx_status_t r;
-    if ((r = dev->hrpc.read(0, &msg, msize, &msize, hin, hcount, &hcount)) != ZX_OK) {
+    if ((r = dev->channel()->read(0, &msg, msize, &msize, hin, hcount, &hcount)) != ZX_OK) {
         return r;
     }
 
@@ -1444,8 +1391,8 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
     auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
     // Check if we're receiving a Coordinator request
     {
-        FidlTxn txn(dev->hrpc, hdr->txid);
-        r = fuchsia_device_manager_Coordinator_try_dispatch(dev, txn.fidl_txn(), &fidl_msg,
+        FidlTxn txn(*dev->channel(), hdr->txid);
+        r = fuchsia_device_manager_Coordinator_try_dispatch(dev.get(), txn.fidl_txn(), &fidl_msg,
                                                             &fidl_ops);
         if (r != ZX_ERR_NOT_SUPPORTED) {
             return r;
@@ -1500,7 +1447,7 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
 }
 
 // send message to devhost, requesting the creation of a device
-static zx_status_t dh_create_device(Device* dev, Devhost* dh, const char* args,
+static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh, const char* args,
                                     zx::handle rpc_proxy) {
     zx_status_t r;
 
@@ -1515,7 +1462,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh, const char* args,
             return r;
         }
 
-        r = dh_send_create_device(dev, dh, std::move(hrpc_remote), std::move(vmo), args,
+        r = dh_send_create_device(dev.get(), dh, std::move(hrpc_remote), std::move(vmo), args,
                                   std::move(rpc_proxy));
         if (r != ZX_OK) {
             return r;
@@ -1527,24 +1474,22 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh, const char* args,
         }
     }
 
-    dev->wait.set_object(hrpc.get());
-    dev->hrpc = std::move(hrpc);
-    dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(dev->coordinator->dispatcher())) != ZX_OK) {
+    dev->set_channel(std::move(hrpc));
+    if ((r = Device::BeginWait(dev, dev->coordinator->dispatcher())) != ZX_OK) {
         return r;
     }
     dev->host = dh;
     dh->AddRef();
-    dh->devices().push_back(dev);
+    dh->devices().push_back(dev.get());
     return ZX_OK;
 }
 
-static zx_status_t dc_create_proxy(Coordinator* coordinator, Device* parent) {
+static zx_status_t dc_create_proxy(Coordinator* coordinator, const fbl::RefPtr<Device>& parent) {
     if (parent->proxy != nullptr) {
         return ZX_OK;
     }
 
-    auto dev = fbl::make_unique<Device>(coordinator);
+    auto dev = fbl::MakeRefCounted<Device>(coordinator);
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1566,25 +1511,19 @@ static zx_status_t dc_create_proxy(Coordinator* coordinator, Device* parent) {
     dev->flags = DEV_CTX_PROXY;
     dev->set_protocol_id(parent->protocol_id());
     dev->set_parent(parent);
-    dev->AddRef();
-    parent->proxy = dev.get();
-    parent->AddRef();
-    log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (proxy)\n", parent, parent->name.data(),
-        parent->refcount_);
-    // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
-    // here
-    __UNUSED auto ptr = dev.release();
+    parent->proxy = std::move(dev);
+    log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", parent.get(), parent->name.data());
     return ZX_OK;
 }
 
 // send message to devhost, requesting the binding of a driver to a device
-static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
+static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* libname) {
     zx::vmo vmo;
     zx_status_t status = dev->coordinator->LibnameToVmo(libname, &vmo);
     if (status != ZX_OK) {
         return status;
     }
-    status = dh_send_bind_driver(dev, libname, std::move(vmo));
+    status = dh_send_bind_driver(dev.get(), libname, std::move(vmo));
     if (status != ZX_OK) {
         return status;
     }
@@ -1592,7 +1531,7 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
     return ZX_OK;
 }
 
-zx_status_t Coordinator::PrepareProxy(Device* dev) {
+zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev) {
     if (dev->flags & DEV_CTX_PROXY) {
         log(ERROR, "devcoord: cannot proxy a proxy: %s\n", dev->name.data());
         return ZX_ERR_INTERNAL;
@@ -1633,7 +1572,7 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
                 return r;
             }
             h1 = std::move(c1);
-        } else if (dev == &sys_device_) {
+        } else if (dev == sys_device_) {
             // pass bootdata VMO handle to sys device
             h1 = std::move(bootdata_vmo_);
         }
@@ -1641,17 +1580,18 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
             log(ERROR, "devcoord: dc_new_devhost: %d\n", r);
             return r;
         }
-        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1, std::move(h1))) < 0) {
+        if ((r = dh_create_device(dev->proxy, dev->proxy->host, arg1,
+                                  std::move(h1))) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
             return r;
         }
         if (need_proxy_rpc) {
-            if ((r = dh_send_connect_proxy(dev, std::move(h0))) < 0) {
+            if ((r = dh_send_connect_proxy(dev.get(), std::move(h0))) < 0) {
                 log(ERROR, "devcoord: dh_send_connect_proxy: %d\n", r);
             }
         }
         if (dev->client_remote.is_valid()) {
-            if ((r = devfs_connect(dev->proxy, std::move(dev->client_remote))) != ZX_OK) {
+            if ((r = devfs_connect(dev->proxy.get(), std::move(dev->client_remote))) != ZX_OK) {
                 log(ERROR, "devcoord: devfs_connnect: %d\n", r);
             }
         }
@@ -1660,7 +1600,7 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
     return ZX_OK;
 }
 
-zx_status_t Coordinator::AttemptBind(const Driver* drv, Device* dev) {
+zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev) {
     // cannot bind driver to already bound device
     if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
         return ZX_ERR_BAD_STATE;
@@ -1687,11 +1627,11 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, Device* dev) {
     return r;
 }
 
-void Coordinator::HandleNewDevice(Device* dev) {
+void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
     // If the device has a proxy, we actually want to wait for the proxy device to be
     // created and connect to that.
     if (dev->client_remote.is_valid() && !(dev->flags & DEV_CTX_MUST_ISOLATE)) {
-        zx_status_t status = devfs_connect(dev, std::move(dev->client_remote));
+        zx_status_t status = devfs_connect(dev.get(), std::move(dev->client_remote));
         if (status != ZX_OK) {
             log(ERROR, "devcoord: devfs_connnect: %d\n", status);
         }
@@ -1717,14 +1657,14 @@ void Coordinator::BuildSuspendList() {
 
     // sys_device must suspend last as on x86 it invokes
     // ACPI S-state transition
-    devhosts.push_front(sys_device_.proxy->host);
-    append_suspend_list(&suspend_context(), sys_device_.proxy->host);
+    devhosts.push_front(sys_device_->proxy->host);
+    append_suspend_list(&suspend_context(), sys_device_->proxy->host);
 
-    devhosts.push_front(root_device_.proxy->host);
-    append_suspend_list(&suspend_context(), root_device_.proxy->host);
+    devhosts.push_front(root_device_->proxy->host);
+    append_suspend_list(&suspend_context(), root_device_->proxy->host);
 
-    devhosts.push_front(misc_device_.proxy->host);
-    append_suspend_list(&suspend_context(), misc_device_.proxy->host);
+    devhosts.push_front(misc_device_->proxy->host);
+    append_suspend_list(&suspend_context(), misc_device_->proxy->host);
 
     // test devices do not (yet) participate in suspend
 
@@ -1754,7 +1694,7 @@ void Coordinator::Suspend(SuspendContext ctx) {
     // these top level devices should all have proxies. if not,
     // the system hasn't fully initialized yet and cannot go to
     // suspend.
-    if (!sys_device_.proxy || !root_device_.proxy || !misc_device_.proxy) {
+    if (!sys_device_->proxy || !root_device_->proxy || !misc_device_->proxy) {
         return;
     }
     if (suspend_context().flags() == SuspendContext::Flags::kSuspend) {
@@ -1891,7 +1831,8 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     }
 }
 
-zx_status_t Coordinator::BindDriverToDevice(Device* dev, const Driver* drv, bool autobind) {
+zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
+                                            bool autobind) {
     if (!dev->is_bindable()) {
         return ZX_ERR_NEXT;
     }
@@ -1917,17 +1858,17 @@ zx_status_t Coordinator::BindDriverToDevice(Device* dev, const Driver* drv, bool
 // new driver is bindable to them (unless they are already bound).
 zx_status_t Coordinator::BindDriver(Driver* drv) {
     if (is_root_driver(drv)) {
-        return AttemptBind(drv, &root_device_);
+        return AttemptBind(drv, root_device_);
     } else if (is_misc_driver(drv)) {
-        return AttemptBind(drv, &misc_device_);
+        return AttemptBind(drv, misc_device_);
     } else if (is_test_driver(drv)) {
-        return AttemptBind(drv, &test_device_);
+        return AttemptBind(drv, test_device_);
     } else if (!running_) {
         return ZX_ERR_UNAVAILABLE;
     }
     printf("devcoord: driver '%s' added\n", drv->name.data());
     for (auto& dev : devices_) {
-        zx_status_t status = BindDriverToDevice(&dev, drv, true /* autobind */);
+        zx_status_t status = BindDriverToDevice(fbl::WrapRefPtr(&dev), drv, true /* autobind */);
         if (status == ZX_ERR_NEXT) {
             continue;
         }
@@ -1938,7 +1879,8 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
     return ZX_OK;
 }
 
-zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname, bool new_device) {
+zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
+                                    bool new_device) {
     // shouldn't be possible to get a bind request for a proxy device
     if (dev->flags & DEV_CTX_PROXY) {
         return ZX_ERR_NOT_SUPPORTED;

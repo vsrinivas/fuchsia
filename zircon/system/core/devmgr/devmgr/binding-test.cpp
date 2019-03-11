@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <unittest/unittest.h>
 #include <zircon/driver/binding.h>
 
@@ -10,11 +12,11 @@
 
 namespace {
 
-class MockDevice {
+class MockDevice : public fbl::RefCounted<MockDevice> {
 public:
-    MockDevice(MockDevice* parent, const zx_device_prop_t* props, size_t props_count,
+    MockDevice(fbl::RefPtr<MockDevice> parent, const zx_device_prop_t* props, size_t props_count,
                uint32_t protocol_id)
-            : parent_(parent), protocol_id_(protocol_id) {
+            : parent_(std::move(parent)), protocol_id_(protocol_id) {
         fbl::Array<zx_device_prop_t> props_array(new zx_device_prop_t[props_count], props_count);
         memcpy(props_array.get(), props, sizeof(props[0]) * props_count);
         props_ = std::move(props_array);
@@ -31,13 +33,13 @@ public:
     MockDevice(const MockDevice&) = delete;
     MockDevice(MockDevice&&) = delete;
 
-    MockDevice* parent() { return parent_; }
+    const fbl::RefPtr<MockDevice>& parent() { return parent_; }
     const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
     const zx_device_prop_t* topo_prop() const { return topo_prop_; }
     uint32_t protocol_id() const { return protocol_id_; }
 
 private:
-    MockDevice* parent_ = nullptr;
+    const fbl::RefPtr<MockDevice> parent_;
     fbl::Array<const zx_device_prop_t> props_;
     const zx_device_prop_t* topo_prop_ = nullptr;
     uint32_t protocol_id_ = 0;
@@ -57,9 +59,9 @@ fbl::Array<const zx_bind_inst_t> MakeBindProgram(const zx_bind_inst_t (&insts)[N
 bool composite_match_zero_parts() {
     BEGIN_TEST;
 
-    MockDevice device(nullptr, nullptr, 0, 0);
+    auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, 0);
 
-    Match match = MatchParts(&device, nullptr, 0);
+    Match match = MatchParts(device, nullptr, 0);
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -69,7 +71,7 @@ bool composite_match_one_part_one_device_fail() {
     BEGIN_TEST;
 
     constexpr uint32_t kProtocolId = 1;
-    MockDevice device(nullptr, nullptr, 0, kProtocolId);
+    auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId);
 
     auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 2),
@@ -78,7 +80,7 @@ bool composite_match_one_part_one_device_fail() {
         { std::move(part) },
     };
 
-    Match match = MatchParts(&device, parts, fbl::count_of(parts));
+    Match match = MatchParts(device, parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -88,7 +90,7 @@ bool composite_match_one_part_one_device_succeed() {
     BEGIN_TEST;
 
     constexpr uint32_t kProtocolId = 1;
-    MockDevice device(nullptr, nullptr, 0, kProtocolId);
+    auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId);
 
     auto part = MakeBindProgram({
         BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
@@ -97,7 +99,7 @@ bool composite_match_one_part_one_device_succeed() {
         { std::move(part) },
     };
 
-    Match match = MatchParts(&device, parts, fbl::count_of(parts));
+    Match match = MatchParts(device, parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -107,7 +109,7 @@ bool composite_match_two_part_one_device() {
     BEGIN_TEST;
 
     constexpr uint32_t kProtocolId = 1;
-    MockDevice device(nullptr, nullptr, 0, kProtocolId);
+    auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId);
 
     // Both parts can match the only device, but only one part is allowed to
     // match to a given device.
@@ -122,7 +124,7 @@ bool composite_match_two_part_one_device() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&device, parts, fbl::count_of(parts));
+    Match match = MatchParts(device, parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -131,12 +133,12 @@ bool composite_match_two_part_one_device() {
 bool composite_match_zero_parts_two_devices() {
     BEGIN_TEST;
 
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, 0),
-        MockDevice(&devices[0], nullptr, 0, 0),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, 0),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, 0),
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], nullptr, 0);
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], nullptr, 0);
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -146,9 +148,9 @@ bool composite_match_one_part_two_devices() {
     BEGIN_TEST;
 
     constexpr uint32_t kProtocolId = 1;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId),
     };
 
     // This program matches both devices
@@ -159,7 +161,7 @@ bool composite_match_one_part_two_devices() {
         { std::move(part) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -170,9 +172,9 @@ bool composite_match_two_parts_two_devices_fail() {
 
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId2),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId2),
     };
 
     auto part1 = MakeBindProgram({
@@ -188,7 +190,7 @@ bool composite_match_two_parts_two_devices_fail() {
         { std::move(part1) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -199,9 +201,9 @@ bool composite_match_two_parts_two_devices_succeed() {
 
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId2),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId2),
     };
 
     auto part1 = MakeBindProgram({
@@ -215,7 +217,7 @@ bool composite_match_two_parts_two_devices_succeed() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -226,9 +228,9 @@ bool composite_match_three_parts_two_devices() {
 
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId2),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId2),
     };
 
     auto part1 = MakeBindProgram({
@@ -246,7 +248,7 @@ bool composite_match_three_parts_two_devices() {
         { std::move(part3) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -263,10 +265,10 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail1() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -281,7 +283,7 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail1() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -298,10 +300,10 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail2() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -316,7 +318,7 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail2() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -333,10 +335,10 @@ bool composite_match_two_parts_three_devices_no_mid_topo_success() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -350,7 +352,7 @@ bool composite_match_two_parts_three_devices_no_mid_topo_success() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -368,10 +370,10 @@ bool composite_match_two_parts_three_devices_mid_topo() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -387,7 +389,7 @@ bool composite_match_two_parts_three_devices_mid_topo() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -405,10 +407,10 @@ bool composite_match_three_parts_three_devices_mid_topo() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -426,7 +428,7 @@ bool composite_match_three_parts_three_devices_mid_topo() {
         { std::move(part3) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -445,11 +447,11 @@ bool composite_match_two_parts_four_devices_one_topo() {
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
     constexpr uint32_t kProtocolId4 = 4;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId4),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId4),
     };
 
     auto part1 = MakeBindProgram({
@@ -463,7 +465,7 @@ bool composite_match_two_parts_four_devices_one_topo() {
         { std::move(part2) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
 
     END_TEST;
@@ -482,11 +484,11 @@ bool composite_match_three_parts_four_devices_one_topo() {
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
     constexpr uint32_t kProtocolId4 = 4;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId4),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId4),
     };
 
     auto part1 = MakeBindProgram({
@@ -504,7 +506,7 @@ bool composite_match_three_parts_four_devices_one_topo() {
         { std::move(part3) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -523,11 +525,11 @@ bool composite_match_four_parts_four_devices_one_topo() {
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
     constexpr uint32_t kProtocolId4 = 4;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId4),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], mid_props, fbl::count_of(mid_props), kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId4),
     };
 
     auto part1 = MakeBindProgram({
@@ -549,7 +551,7 @@ bool composite_match_four_parts_four_devices_one_topo() {
         { std::move(part4) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -561,11 +563,11 @@ bool composite_match_three_parts_four_devices_ambiguous() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -584,7 +586,7 @@ bool composite_match_three_parts_four_devices_ambiguous() {
         { std::move(part3) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::Many);
 
     END_TEST;
@@ -596,11 +598,11 @@ bool composite_match_three_parts_four_devices_ambiguous_against_leaf() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId3),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId3),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -620,7 +622,7 @@ bool composite_match_three_parts_four_devices_ambiguous_against_leaf() {
         { std::move(part3) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -632,11 +634,11 @@ bool composite_match_three_parts_four_devices_ambiguous_against_root() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId1),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -656,7 +658,7 @@ bool composite_match_three_parts_four_devices_ambiguous_against_root() {
         { std::move(part3) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -676,16 +678,16 @@ bool composite_match_complex_topology() {
     };
 
     constexpr uint32_t kProtocolId = 1;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, 0),
-        MockDevice(&devices[0], props1, fbl::count_of(props1), 0),
-        MockDevice(&devices[1], nullptr, 0, 0),
-        MockDevice(&devices[2], props2, fbl::count_of(props2), 0),
-        MockDevice(&devices[3], nullptr, 0, 0),
-        MockDevice(&devices[4], nullptr, 0, 0),
-        MockDevice(&devices[5], props3, fbl::count_of(props3), 0),
-        MockDevice(&devices[6], nullptr, 0, 0),
-        MockDevice(&devices[7], nullptr, 0, kProtocolId),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, 0),
+        fbl::MakeRefCounted<MockDevice>(devices[0], props1, fbl::count_of(props1), 0),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, 0),
+        fbl::MakeRefCounted<MockDevice>(devices[2], props2, fbl::count_of(props2), 0),
+        fbl::MakeRefCounted<MockDevice>(devices[3], nullptr, 0, 0),
+        fbl::MakeRefCounted<MockDevice>(devices[4], nullptr, 0, 0),
+        fbl::MakeRefCounted<MockDevice>(devices[5], props3, fbl::count_of(props3), 0),
+        fbl::MakeRefCounted<MockDevice>(devices[6], nullptr, 0, 0),
+        fbl::MakeRefCounted<MockDevice>(devices[7], nullptr, 0, kProtocolId),
     };
 
     auto part1 = MakeBindProgram({
@@ -711,7 +713,7 @@ bool composite_match_complex_topology() {
         { std::move(part5) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
 
     END_TEST;
@@ -723,12 +725,12 @@ bool composite_match_complex_ambiguity() {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
-    MockDevice devices[] = {
-        MockDevice(nullptr, nullptr, 0, kProtocolId1),
-        MockDevice(&devices[0], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[1], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[2], nullptr, 0, kProtocolId2),
-        MockDevice(&devices[3], nullptr, 0, kProtocolId3),
+    fbl::RefPtr<MockDevice> devices[] = {
+        fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId1),
+        fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[1], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[2], nullptr, 0, kProtocolId2),
+        fbl::MakeRefCounted<MockDevice>(devices[3], nullptr, 0, kProtocolId3),
     };
 
     auto part1 = MakeBindProgram({
@@ -751,7 +753,7 @@ bool composite_match_complex_ambiguity() {
         { std::move(part4) },
     };
 
-    Match match = MatchParts(&devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
+    Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::Many);
 
     END_TEST;

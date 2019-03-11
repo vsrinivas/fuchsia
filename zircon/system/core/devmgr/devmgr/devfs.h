@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/ref_ptr.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
@@ -14,7 +15,7 @@ struct Device;
 struct Devnode;
 
 // Initializes a devfs directory from |device|.
-void devfs_init(Device* device, async_dispatcher_t* dispatcher);
+void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher);
 
 // Watches the devfs directory |dn|, and sends events to |watcher|.
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
@@ -25,10 +26,10 @@ zx::unowned_channel devfs_root_borrow();
 // Clones the channel connected to the root of devfs.
 zx::channel devfs_root_clone();
 
-zx_status_t devfs_publish(Device* parent, Device* dev);
+zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<Device>& dev);
 void devfs_unpublish(Device* dev);
-void devfs_advertise(Device* dev);
-void devfs_advertise_modified(Device* dev);
-zx_status_t devfs_connect(Device* dev, zx::channel client_remote);
+void devfs_advertise(const fbl::RefPtr<Device>& dev);
+void devfs_advertise_modified(const fbl::RefPtr<Device>& dev);
+zx_status_t devfs_connect(const Device* dev, zx::channel client_remote);
 
 } // namespace devmgr

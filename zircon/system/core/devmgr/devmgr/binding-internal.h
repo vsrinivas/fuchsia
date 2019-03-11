@@ -31,7 +31,7 @@ uint32_t LookupBindProperty(BindProgramContext* ctx, uint32_t id);
 bool EvaluateBindProgram(BindProgramContext* ctx);
 
 template <typename T>
-bool EvaluateBindProgram(T* device, const char* drv_name,
+bool EvaluateBindProgram(const fbl::RefPtr<T>& device, const char* drv_name,
                          const fbl::Array<const zx_bind_inst_t>& bind_program, bool autobind) {
     BindProgramContext ctx;
     ctx.props = &device->props();
@@ -102,15 +102,15 @@ private:
 // itself, the 1st is its parent, etc.  Composite devices have no ancestors for the
 // purpose of this function.
 template <typename T>
-void MakeDeviceList(T* device, fbl::Array<T*>* out) {
+void MakeDeviceList(const fbl::RefPtr<T>& device, fbl::Array<fbl::RefPtr<T>>* out) {
     size_t device_count = 0;
-    T* dev = device;
+    fbl::RefPtr<T> dev = device;
     while (dev) {
         ++device_count;
         dev = dev->parent();
     }
 
-    fbl::Array<T*> devices(new T*[device_count], device_count);
+    fbl::Array<fbl::RefPtr<T>> devices(new fbl::RefPtr<T>[device_count], device_count);
     size_t i = 0;
     for (dev = device; dev != nullptr; ++i, dev = dev->parent()) {
         devices[i] = dev;
@@ -123,7 +123,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_props, props,
                                      const fbl::Array<const zx_device_prop_t>& (C::*)() const);
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_topo_prop, topo_prop,
                                      const zx_device_prop_t* (C::*)() const);
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_parent, parent, T* (C::*)());
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_parent, parent, const fbl::RefPtr<T>& (C::*)());
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::*)() const);
 
 // Evaluates whether |device| and its ancestors match the sequence of binding
@@ -151,7 +151,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::
 // the properties except for property 6 hold, it returns Match::Many.
 // Otherwise, it returns Match::None.
 template <typename T>
-Match MatchParts(T* device, DeviceComponentPartDescriptor* parts, uint32_t parts_count) {
+Match MatchParts(const fbl::RefPtr<T>& device, DeviceComponentPartDescriptor* parts,
+                 uint32_t parts_count) {
     static_assert(has_props<T>::value && has_topo_prop<T>::value && has_parent<T>::value &&
                   has_protocol_id<T>::value);
 
@@ -168,7 +169,7 @@ Match MatchParts(T* device, DeviceComponentPartDescriptor* parts, uint32_t parts
         return Match::None;
     }
 
-    fbl::Array<T*> device_list;
+    fbl::Array<fbl::RefPtr<T>> device_list;
     MakeDeviceList(device, &device_list);
 
     // If we have fewer device nodes than parts, we can't possibly match

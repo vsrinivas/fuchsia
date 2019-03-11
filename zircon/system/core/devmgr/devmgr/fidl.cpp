@@ -23,7 +23,7 @@ zx_status_t dh_send_remove_device(const Device* dev) {
     req->hdr.txid = 1;
 
     fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
-    return msg.Write(dev->hrpc.get(), 0);
+    return msg.Write(dev->channel()->get(), 0);
 }
 
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx::vmo driver,
@@ -87,7 +87,7 @@ zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t pr
     return msg.Write(dh->hrpc(), 0);
 }
 
-zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver) {
+zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo driver) {
     size_t libname_size = strlen(libname);
     uint32_t wr_num_bytes = static_cast<uint32_t>(
         sizeof(fuchsia_device_manager_ControllerBindDriverRequest) + FIDL_ALIGN(libname_size));
@@ -110,7 +110,7 @@ zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver
     zx_handle_t handles[] = {driver.release()};
     fidl::Message msg(builder.Finalize(),
                       fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
-    return msg.Write(dev->hrpc.get(), 0);
+    return msg.Write(dev->channel()->get(), 0);
 }
 
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
@@ -128,7 +128,7 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
     zx_handle_t handles[] = {proxy.release()};
     fidl::Message msg(builder.Finalize(),
                       fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
-    return msg.Write(dev->hrpc.get(), 0);
+    return msg.Write(dev->channel()->get(), 0);
 }
 
 zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
@@ -143,7 +143,7 @@ zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
     req->flags = flags;
 
     fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
-    return msg.Write(dev->hrpc.get(), 0);
+    return msg.Write(dev->channel()->get(), 0);
 }
 
 } // namespace devmgr

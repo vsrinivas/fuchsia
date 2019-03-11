@@ -180,7 +180,7 @@ void describe_error(zx::channel h, zx_status_t status) {
 // its device has no rpc handle
 bool devnode_is_dir(const Devnode* dn) {
     if (dn->children.is_empty()) {
-        return (dn->device == nullptr) || (dn->device->hrpc == ZX_HANDLE_INVALID);
+        return (dn->device == nullptr) || (!dn->device->channel()->is_valid());
     }
     return true;
 }
@@ -191,7 +191,7 @@ bool devnode_is_local(Devnode* dn) {
     if (dn->device == nullptr) {
         return true;
     }
-    if (dn->device->hrpc == ZX_HANDLE_INVALID) {
+    if (!dn->device->channel()->is_valid()) {
         return true;
     }
     if (dn->device->flags & DEV_CTX_MUST_ISOLATE) {
@@ -296,13 +296,14 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
 
 namespace {
 
-fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const fbl::String& name) {
+fbl::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl::String& name) {
     auto dn = fbl::make_unique<Devnode>(name);
     if (!dn) {
         return nullptr;
     }
     dn->ino = next_ino++;
-    dn->device = dev;
+    // TODO(teisenbe): This should probably be refcounted
+    dn->device = dev.get();
     return dn;
 }
 
@@ -426,7 +427,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
 
     bool describe = flags & ZX_FS_FLAG_DESCRIBE;
 
-    bool no_remote = (dn->device == nullptr) || (dn->device->hrpc == ZX_HANDLE_INVALID);
+    bool no_remote = (dn->device == nullptr) || (!dn->device->channel()->is_valid());
     bool local_required = devnode_is_local(dn);
     bool local_requested = flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY);
 
@@ -480,7 +481,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     }
 
     // Otherwise we will pass the request on to the remote.
-    fuchsia_io_DirectoryOpen(dn->device->hrpc.get(), flags, 0, path, strlen(path), ipc.release());
+    fuchsia_io_DirectoryOpen(dn->device->channel()->get(), flags, 0, path, strlen(path),
+                             ipc.release());
 }
 
 void devfs_remove(Devnode* dn) {
@@ -568,7 +570,7 @@ zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::c
     return status;
 }
 
-void devfs_advertise(Device* dev) {
+void devfs_advertise(const fbl::RefPtr<Device>& dev) {
     if (dev->link) {
         Devnode* dir = proto_dir(dev->protocol_id());
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_ADDED);
@@ -579,7 +581,7 @@ void devfs_advertise(Device* dev) {
 }
 
 // TODO: generate a MODIFIED event rather than back to back REMOVED and ADDED
-void devfs_advertise_modified(Device* dev) {
+void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
     if (dev->link) {
         Devnode* dir = proto_dir(dev->protocol_id());
         devfs_notify(dir, dev->link->name, fuchsia_io_WATCH_EVENT_REMOVED);
@@ -591,7 +593,7 @@ void devfs_advertise_modified(Device* dev) {
     }
 }
 
-zx_status_t devfs_publish(Device* parent, Device* dev) {
+zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<Device>& dev) {
     if ((parent->self == nullptr) || (dev->self != nullptr) || (dev->link != nullptr)) {
         return ZX_ERR_INTERNAL;
     }
@@ -654,6 +656,8 @@ done:
     return ZX_OK;
 }
 
+// TODO(teisenbe): Ideally this would take a RefPtr, but currently this is
+// invoked in the dtor for Device.
 void devfs_unpublish(Device* dev) {
     if (dev->self != nullptr) {
         delete dev->self;
@@ -665,11 +669,11 @@ void devfs_unpublish(Device* dev) {
     }
 }
 
-zx_status_t devfs_connect(Device* dev, zx::channel client_remote) {
+zx_status_t devfs_connect(const Device* dev, zx::channel client_remote) {
     if (!client_remote.is_valid()) {
         return ZX_ERR_BAD_HANDLE;
     }
-    fuchsia_io_DirectoryOpen(dev->hrpc.get(), 0 /* flags */, 0 /* mode */, ".", 1,
+    fuchsia_io_DirectoryOpen(dev->channel()->get(), 0 /* flags */, 0 /* mode */, ".", 1,
                              client_remote.release());
     return ZX_OK;
 }
@@ -842,7 +846,7 @@ zx::channel devfs_root_clone() {
     return zx::channel(fdio_service_clone(g_devfs_root.get()));
 }
 
-void devfs_init(Device* device, async_dispatcher_t* dispatcher) {
+void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
     printf("devmgr: init\n");
 
     root_devnode = fbl::make_unique<Devnode>("");
@@ -854,7 +858,8 @@ void devfs_init(Device* device, async_dispatcher_t* dispatcher) {
 
     prepopulate_protocol_dirs();
 
-    root_devnode->device = device;
+    // TODO(teisenbe): Should this take a reference?
+    root_devnode->device = device.get();
     root_devnode->device->self = root_devnode.get();
 
     zx::channel h0, h1;
@@ -865,6 +870,8 @@ void devfs_init(Device* device, async_dispatcher_t* dispatcher) {
     }
 
     g_devfs_root = std::move(h1);
+    // This is actually owned by |device| and will be freed in unpublish
+    __UNUSED auto ptr = root_devnode.release();
 }
 
 } // namespace devmgr

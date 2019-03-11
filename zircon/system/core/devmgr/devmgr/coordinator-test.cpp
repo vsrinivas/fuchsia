@@ -146,8 +146,8 @@ bool bind_devices() {
     ASSERT_EQ(ZX_OK, status);
 
     // Initialize devfs.
-    devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
-    status = devmgr::devfs_publish(&coordinator.root_device(), &coordinator.test_device());
+    devmgr::devfs_init(coordinator.root_device(), loop.dispatcher());
+    status = devmgr::devfs_publish(coordinator.root_device(), coordinator.test_device());
     ASSERT_EQ(ZX_OK, status);
     coordinator.set_running(true);
 
@@ -155,7 +155,7 @@ bool bind_devices() {
     zx::channel local, remote;
     status = zx::channel::create(0, &local, &remote);
     ASSERT_EQ(ZX_OK, status);
-    status = coordinator.AddDevice(&coordinator.test_device(), std::move(local),
+    status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
                                    nullptr /* props_data */, 0 /* props_count */, "mock-device",
                                    ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
                                    false /* invisible */, zx::channel() /* client_remote */);
@@ -169,7 +169,7 @@ bool bind_devices() {
     ASSERT_FALSE(coordinator.drivers().is_empty());
 
     // Bind the device to a fake devhost.
-    devmgr::Device* dev = &coordinator.devices().front();
+    fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
     devmgr::Devhost host;
     dev->host = &host;
     status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
