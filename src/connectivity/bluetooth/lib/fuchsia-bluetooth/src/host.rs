@@ -4,12 +4,10 @@
 
 use {
     failure::Error,
-    fdio::{fdio_sys, ioctl, make_ioctl},
-    fuchsia_zircon::{self as zircon, Handle},
+    fidl_fuchsia_hardware_bluetooth::HostSynchronousProxy,
+    fuchsia_zircon as zx,
     std::{
         fs::{File, read_dir},
-        mem,
-        os::raw,
         path::PathBuf,
     },
 };
@@ -22,24 +20,11 @@ pub fn list_host_devices() -> Vec<PathBuf> {
         .collect::<Vec<PathBuf>>()
 }
 
-/// Opens a Host Fidl interface on a bt-host device using an Ioctl
-pub fn open_host_channel(device: &File) -> Result<zircon::Handle, Error> {
-    let mut handle = zircon::sys::ZX_HANDLE_INVALID;
-    unsafe {
-        ioctl(
-            device,
-            IOCTL_BT_HOST_OPEN_CHANNEL,
-            ::std::ptr::null_mut() as *mut raw::c_void,
-            0,
-            &mut handle as *mut _ as *mut raw::c_void,
-            mem::size_of::<zircon::sys::zx_handle_t>(),
-        ).map(|_| Handle::from_raw(handle))
-        .map_err(|e| e.into())
-    }
+/// Opens a Host Fidl interface on a bt-host device using a Fidl message
+pub fn open_host_channel(device: &File) -> Result<zx::Channel, Error> {
+    let dev_channel = fdio::clone_channel(device)?;
+    let mut host = HostSynchronousProxy::new(dev_channel);
+    let (ours, theirs) = zx::Channel::create()?;
+    host.open(theirs)?;
+    Ok(ours)
 }
-
-const IOCTL_BT_HOST_OPEN_CHANNEL: raw::c_int = make_ioctl(
-    fdio_sys::IOCTL_KIND_GET_HANDLE,
-    fdio_sys::IOCTL_FAMILY_BT_HOST,
-    0
-);

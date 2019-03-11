@@ -53,7 +53,7 @@ pub fn lifecycle_test() -> Result<(), Error> {
     let device_topo = fdio::device_get_topo_path(&found_device).unwrap();
     assert!(device_topo.contains("bt-hci"));
 
-    // Open a host channel using an ioctl and check the device is responsive
+    // Open a host channel using a fidl call and check the device is responsive
     let mut executor = fasync::Executor::new().unwrap();
     let handle = host::open_host_channel(&found_device).unwrap();
     let host = HostProxy::new(fasync::Channel::from_channel(handle.into()).unwrap());
