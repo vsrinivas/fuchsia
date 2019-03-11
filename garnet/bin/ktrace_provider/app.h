@@ -23,7 +23,7 @@ class App {
  private:
   void UpdateState();
 
-  void StartKTrace(uint32_t group_mask);
+  void StartKTrace(uint32_t group_mask, bool retain_current_data);
   void StopKTrace();
 
   std::unique_ptr<component::StartupContext> startup_context_;

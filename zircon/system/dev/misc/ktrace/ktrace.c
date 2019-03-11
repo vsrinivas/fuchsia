@@ -74,6 +74,9 @@ static zx_status_t ktrace_ioctl(void* ctx, uint32_t op,
     }
     case IOCTL_KTRACE_STOP: {
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
+        return ZX_OK;
+    }
+    case IOCTL_KTRACE_REWIND: {
         zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
         return ZX_OK;
     }

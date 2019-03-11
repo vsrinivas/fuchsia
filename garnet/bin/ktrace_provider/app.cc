@@ -41,6 +41,9 @@ constexpr KTraceCategory kGroupCategories[] = {
     {"kernel:arch", KTRACE_GRP_ARCH},
 };
 
+// Meta category to retain current contents of ktrace buffer.
+constexpr char kRetainCategory[] = "kernel:retain";
+
 constexpr char kLogCategory[] = "log";
 
 fxl::UniqueFD OpenKTrace() {
@@ -55,6 +58,12 @@ void IoctlKtraceStop(int fd) {
   zx_status_t status = ioctl_ktrace_stop(fd);
   if (status != ZX_OK)
     FXL_LOG(ERROR) << "ioctl_ktrace_stop failed: status=" << status;
+}
+
+void IoctlKtraceRewind(int fd) {
+  zx_status_t status = ioctl_ktrace_rewind(fd);
+  if (status != ZX_OK)
+    FXL_LOG(ERROR) << "ioctl_ktrace_rewind failed: status=" << status;
 }
 
 void IoctlKtraceStart(int fd, uint32_t group_mask) {
@@ -76,6 +85,7 @@ App::~App() {}
 void App::UpdateState() {
   uint32_t group_mask = 0;
   bool capture_log = false;
+  bool retain_current_data = false;
   if (trace_state() == TRACE_STARTED) {
     size_t num_enabled_categories = 0;
     for (size_t i = 0; i < arraysize(kGroupCategories); i++) {
@@ -85,15 +95,22 @@ void App::UpdateState() {
         ++num_enabled_categories;
       }
     }
+
     // Avoid capturing log traces in the default case by detecting whether all
     // categories are enabled or not.
     capture_log = trace_is_category_enabled(kLogCategory) &&
                   num_enabled_categories != arraysize(kGroupCategories);
+
+    // The default case is everything is enabled, but |kRetainCategory| must be
+    // explicitly passed.
+    retain_current_data =
+        trace_is_category_enabled(kRetainCategory) &&
+        num_enabled_categories != arraysize(kGroupCategories);
   }
 
   if (current_group_mask_ != group_mask) {
     StopKTrace();
-    StartKTrace(group_mask);
+    StartKTrace(group_mask, retain_current_data);
   }
 
   if (capture_log) {
@@ -103,7 +120,7 @@ void App::UpdateState() {
   }
 }
 
-void App::StartKTrace(uint32_t group_mask) {
+void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
   FXL_DCHECK(!context_);
   if (!group_mask) {
     return;  // nothing to trace
@@ -124,6 +141,9 @@ void App::StartKTrace(uint32_t group_mask) {
   current_group_mask_ = group_mask;
 
   IoctlKtraceStop(fd.get());
+  if (!retain_current_data) {
+    IoctlKtraceRewind(fd.get());
+  }
   IoctlKtraceStart(fd.get(), group_mask);
 
   FXL_LOG(INFO) << "Started ktrace";

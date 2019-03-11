@@ -32,6 +32,10 @@ IOCTL_WRAPPER_OUT(ioctl_ktrace_get_handle, IOCTL_KTRACE_GET_HANDLE, zx_handle_t)
 #define IOCTL_KTRACE_STOP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_KTRACE, 4)
 
+// Rewind
+#define IOCTL_KTRACE_REWIND \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_KTRACE, 5)
+
 static inline zx_status_t ioctl_ktrace_add_probe(int fd, const char* name, uint32_t* probe_id) {
     return fdio_ioctl(fd, IOCTL_KTRACE_ADD_PROBE,
                       name, strlen(name), probe_id, sizeof(uint32_t));
@@ -39,3 +43,4 @@ static inline zx_status_t ioctl_ktrace_add_probe(int fd, const char* name, uint3
 
 IOCTL_WRAPPER_IN(ioctl_ktrace_start, IOCTL_KTRACE_START, uint32_t);
 IOCTL_WRAPPER(ioctl_ktrace_stop, IOCTL_KTRACE_STOP);
+IOCTL_WRAPPER(ioctl_ktrace_rewind, IOCTL_KTRACE_REWIND);
