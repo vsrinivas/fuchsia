@@ -4,10 +4,10 @@
 
 enable_netboot = true
 
+meta_package_labels = [ "//build/images:config-data" ]
+
 monolith = []
 
 preinstall = []
 
-available = [
-  "garnet/packages/prod/vboot_reference",
-]
+available = [ "garnet/packages/prod/vboot_reference" ]

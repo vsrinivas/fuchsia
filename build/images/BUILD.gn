@@ -43,13 +43,6 @@ declare_args() {
   signed_image = false
 }
 
-config_package("config-data") {
-  visibility = [ ":*" ]
-  testonly = true
-  deps = available_package_labels
-}
-monolith_package_labels += [ ":config-data" ]
-
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
 images = [
@@ -88,6 +81,12 @@ images = [
   },
 ]
 
+group("meta_packages") {
+  testonly = true
+  visibility = [ ":*" ]
+  public_deps = meta_package_labels
+}
+
 group("monolith_packages") {
   testonly = true
   visibility = [ ":*" ]
@@ -113,6 +112,7 @@ group("packages") {
   testonly = true
   public_deps = [
     ":available_packages",
+    ":meta_packages",
   ]
   data_deps = package_data_deps
 
@@ -145,6 +145,7 @@ template("package_list") {
 package_list("monolith_packages.list") {
   visibility = [ ":*" ]
   deps = [
+    ":meta_packages",
     ":monolith_packages",
   ]
 }
@@ -174,11 +175,20 @@ group("package_lists") {
   ]
 }
 
+config_package("config-data") {
+  testonly = true
+  visibility = [ ":*" ]
+  deps = [
+    ":available_packages",
+  ]
+}
+
 shell_commands("shell-commands") {
   testonly = true
-  deps = available_package_labels
-  deps += [ "//build/images:shell-commands" ]
-  deps -= [ "//build/images:shell-commands" ]
+  visibility = [ ":*" ]
+  deps = [
+    ":available_packages",
+  ]
 }
 
 ###
@@ -218,6 +228,7 @@ package_metadata_list("monolith_meta_far_merkle_index") {
   ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
+    ":meta_packages",
     ":monolith_packages",
   ]
 }
@@ -306,6 +317,7 @@ generated_file(system_image_manifest_args) {
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "package_barrier" ]
   deps = [
+    ":meta_packages",
     ":monolith_packages",
   ]
 }
@@ -375,6 +387,7 @@ collect_blob_manifest("blob.manifest") {
     blob_manifest,
   ]
   deps = [
+    ":meta_packages",
     ":monolith_packages",
     ":preinstall_packages",
     ":system_image.meta",
@@ -1177,6 +1190,7 @@ package_metadata_list("update_meta_far_merkle_index") {
   ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
+    ":meta_packages",
     ":monolith_packages",
     ":system_image.meta",
   ]
@@ -1352,6 +1366,7 @@ tagged_snapshot_manifests = [
   {
     tag = "monolith"
     deps = [
+      ":meta_packages",
       ":monolith_packages",
       ":system_image.meta",
       ":update.meta",
