@@ -12,7 +12,7 @@
     {
       "name": "test.name/Union",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
         "line": 3,
         "column": 6
       },
@@ -24,7 +24,7 @@
           },
           "name": "Primitive",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 4,
             "column": 10
           },
@@ -40,7 +40,7 @@
           },
           "name": "StringNeedsConstructor",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 5,
             "column": 11
           },
@@ -60,7 +60,7 @@
           },
           "name": "VectorStringAlsoNeedsConstructor",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 6,
             "column": 19
           },

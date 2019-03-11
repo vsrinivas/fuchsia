@@ -1,13 +1,8 @@
 
-#include <doc_comments.fidl.json.overnet_internal.h>
+#include <empty_struct.test.fidl.json.overnet_internal.h>
 #include "lib/fidl/cpp/internal/implementation.h"
   namespace test {
   namespace name {
-  
-      
-  
-  
-  
   
   
   }  // namespace name

@@ -24,8 +24,8 @@ func (s example) source() string {
 }
 
 var excludedCases = map[string]bool{
-	"tables.fidl.json": true,
-	"xunion.fidl.json": true,
+	"tables.test.fidl.json": true,
+	"xunion.test.fidl.json": true,
 }
 
 var cases = func() []string {

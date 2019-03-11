@@ -10,7 +10,7 @@
     {
       "name": "test.name/Empty",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/empty_struct.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/empty_struct.test.fidl",
         "line": 3,
         "column": 7
       },

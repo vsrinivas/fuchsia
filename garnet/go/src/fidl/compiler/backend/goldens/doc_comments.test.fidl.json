@@ -7,7 +7,7 @@
     {
       "name": "test.name/C",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 9,
         "column": 12
       },
@@ -35,7 +35,7 @@
     {
       "name": "test.name/Interface",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 44,
         "column": 9
       },
@@ -51,7 +51,7 @@
           "generated_ordinal": 1061382220,
           "name": "Method",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 48,
             "column": 4
           },
@@ -74,7 +74,7 @@
     {
       "name": "test.name/Struct",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 14,
         "column": 7
       },
@@ -93,7 +93,7 @@
           },
           "name": "Field",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 18,
             "column": 10
           },
@@ -120,7 +120,7 @@
     {
       "name": "test.name/Table",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 34,
         "column": 6
       },
@@ -140,7 +140,7 @@
           },
           "name": "Field",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 38,
             "column": 13
           },
@@ -166,7 +166,7 @@
     {
       "name": "test.name/Union",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
         "line": 24,
         "column": 6
       },
@@ -184,7 +184,7 @@
           },
           "name": "Field",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 28,
             "column": 10
           },

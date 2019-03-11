@@ -13,7 +13,7 @@
     {
       "name": "test.name/OlderSimpleUnion",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
         "line": 3,
         "column": 7
       },
@@ -26,7 +26,7 @@
           },
           "name": "i",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 4,
             "column": 8
           },
@@ -43,7 +43,7 @@
           },
           "name": "f",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 5,
             "column": 10
           },
@@ -61,7 +61,7 @@
     {
       "name": "test.name/NewerSimpleUnion",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
         "line": 8,
         "column": 7
       },
@@ -74,7 +74,7 @@
           },
           "name": "i",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 11,
             "column": 8
           },
@@ -91,7 +91,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 13,
             "column": 9
           },
@@ -112,7 +112,7 @@
           },
           "name": "v",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 14,
             "column": 17
           },

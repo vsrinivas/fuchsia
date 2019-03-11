@@ -9,7 +9,7 @@
     {
       "name": "test.name/SwitchingOrdinals",
       "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
         "line": 3,
         "column": 9
       },
@@ -19,7 +19,7 @@
           "generated_ordinal": 2005164903,
           "name": "OrdinalFive",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
             "line": 4,
             "column": 4
           },
@@ -34,7 +34,7 @@
           "generated_ordinal": 667506719,
           "name": "OnlyGeneratedOrdinal",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
             "line": 5,
             "column": 4
           },
@@ -49,7 +49,7 @@
           "generated_ordinal": 1467258273,
           "name": "EventOrdinalFifteen",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
             "line": 6,
             "column": 7
           },
@@ -64,7 +64,7 @@
           "generated_ordinal": 2146190926,
           "name": "EventOnlyGeneratedOrdinal",
           "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.test.fidl",
             "line": 7,
             "column": 7
           },
