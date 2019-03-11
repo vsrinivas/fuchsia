@@ -122,10 +122,9 @@ zx_status_t AudioDeviceStream::Open() {
 
     if (res != ZX_OK) {
         printf("Failed to obtain channel (res %d)\n", res);
-        return static_cast<zx_status_t>(res);
     }
 
-    return ZX_OK;
+    return res;
 }
 
 zx_status_t AudioDeviceStream::GetSupportedFormats(
