@@ -56,8 +56,6 @@ class ClipboardStorage::PushCall : public Operation<> {
 
   ClipboardStorage* const impl_;  // not owned
   const fidl::StringPtr text_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PushCall);
 };
 
 class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
@@ -95,8 +93,6 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
   ClipboardStorage* const impl_;  // not owned
   fuchsia::ledger::PageSnapshotPtr snapshot_;
   fidl::StringPtr text_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PeekCall);
 };
 
 ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client,
@@ -106,11 +102,11 @@ ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client,
 ClipboardStorage::~ClipboardStorage() = default;
 
 void ClipboardStorage::Push(const fidl::StringPtr& text) {
-  operation_queue_.Add(new PushCall(this, text));
+  operation_queue_.Add(std::make_unique<PushCall>(this, text));
 }
 
 void ClipboardStorage::Peek(fit::function<void(fidl::StringPtr)> callback) {
-  operation_queue_.Add(new PeekCall(this, std::move(callback)));
+  operation_queue_.Add(std::make_unique<PeekCall>(this, std::move(callback)));
 }
 
 }  // namespace modular

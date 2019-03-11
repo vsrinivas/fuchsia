@@ -61,7 +61,7 @@ void SetKindOfProtoStoryOptionCommandRunner::Execute(
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_kind_of_proto_story_option());
 
-  operation_queue_.Add(new SetKindOfProtoStoryOptionCall(
+  operation_queue_.Add(std::make_unique<SetKindOfProtoStoryOptionCall>(
       session_storage_, story_id,
       command.set_kind_of_proto_story_option().value, std::move(done)));
 }

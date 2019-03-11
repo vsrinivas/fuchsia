@@ -94,7 +94,7 @@ void StoryPuppetMasterImpl::Enqueue(
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   // First ensure that the story is created.
-  operations_->Add(new ExecuteOperation(
+  operations_->Add(std::make_unique<ExecuteOperation>(
       session_storage_, executor_, story_name_, std::move(story_options_),
       std::move(enqueued_commands_), std::move(done)));
 }

@@ -26,12 +26,12 @@ class TestContainer : public OperationContainer {
   int hold_count{0};
   int drop_count{0};
   int cont_count{0};
-  OperationBase* last_held = nullptr;
+  std::unique_ptr<OperationBase> last_held = nullptr;
   OperationBase* last_dropped = nullptr;
 
-  void Hold(OperationBase* o) override {
+  void Hold(std::unique_ptr<OperationBase> o) override {
     ++hold_count;
-    last_held = o;
+    last_held = std::move(o);
   }
 
   void Drop(OperationBase* o) override {
@@ -56,6 +56,7 @@ template <typename... Args>
 class TestOperation : public Operation<Args...> {
  public:
   using ResultCall = fit::function<void(Args...)>;
+
   TestOperation(fit::function<void()> task, ResultCall done)
       : Operation<Args...>("Test Operation", std::move(done)),
         task_(std::move(task)) {}
@@ -102,9 +103,10 @@ TEST_F(OperationTest, Lifecycle) {
   // operation.
   // TODO(thatguy): TestContainer does not manage memory yet, so passing a
   // naked pointer backed by a unique_ptr<> is safe.
-  container.Add(op.get());
+  auto weak_op = op->GetWeakPtr();
+  container.Add(std::move(op));
   EXPECT_EQ(1, container.hold_count);
-  EXPECT_EQ(op.get(), container.last_held);
+  EXPECT_EQ(weak_op.get(), container.last_held.get());
   EXPECT_EQ(0, container.drop_count);
   EXPECT_EQ(0, container.cont_count);
   EXPECT_FALSE(op_ran);
@@ -121,7 +123,7 @@ TEST_F(OperationTest, Lifecycle) {
 
   // OperationContainer impls opt to call Schedule() when they are ready to
   // have an operation enqueued.
-  container.Schedule(op.get());
+  container.Schedule(weak_op.get());
 
   // So when we advance the async loop, we should see that it started running.
   RunLoopUntilIdle();
@@ -134,12 +136,14 @@ TEST_F(OperationTest, Lifecycle) {
   // When the operation reports being done, we expect it to be dropped, our
   // done callback run, and the OperationContainer told to continue. These
   // happen in order. The order is verified in our done callback.
-  op->SayDone();
+  if (weak_op) {
+    static_cast<TestOperation<>*>(weak_op.get())->SayDone();
+  }
   EXPECT_TRUE(op_ran);
   EXPECT_TRUE(op_done);
   EXPECT_EQ(1, container.hold_count);
   EXPECT_EQ(1, container.drop_count);
-  EXPECT_EQ(op.get(), container.last_dropped);
+  EXPECT_EQ(weak_op.get(), container.last_dropped);
   EXPECT_EQ(1, container.cont_count);
 }
 
@@ -153,18 +157,21 @@ TEST_F(OperationTest, Lifecycle_ContainerGoesAway) {
       [&op_ran]() { op_ran = true; },
       [&container]() { container.PretendToDie(); });
 
-  container.Add(op.get());
-  container.Schedule(op.get());
+  auto weak_op = op->GetWeakPtr();
+  container.Add(std::move(op));
+  container.Schedule(weak_op.get());
   RunLoopUntilIdle();
 
   // When the operation reports being done, we expect it to be dropped, our
   // done callback run, and the OperationContainer told to continue. These
   // happen in order. The order is verified in our done callback.
-  op->SayDone();
+  if (weak_op) {
+    static_cast<TestOperation<>*>(weak_op.get())->SayDone();
+  }
   EXPECT_TRUE(op_ran);
   EXPECT_EQ(1, container.hold_count);
   EXPECT_EQ(1, container.drop_count);
-  EXPECT_EQ(op.get(), container.last_dropped);
+  EXPECT_EQ(weak_op.get(), container.last_dropped);
   EXPECT_EQ(0, container.cont_count);
 }
 
@@ -176,10 +183,13 @@ TEST_F(OperationTest, ResultsAreReceived) {
   auto op = std::make_unique<TestOperation<int>>(
       [] {}, [](int result) { EXPECT_EQ(42, result); });
 
-  container.Add(op.get());
-  container.Schedule(op.get());
+  auto weak_op = op->GetWeakPtr();
+  container.Add(std::move(op));
+  container.Schedule(weak_op.get());
   RunLoopUntilIdle();
-  op->SayDone(42);
+  if (weak_op) {
+    static_cast<TestOperation<int>*>(weak_op.get())->SayDone(42);
+  }
 }
 
 class TestFlowTokenOperation : public Operation<int> {
@@ -224,10 +234,13 @@ TEST_F(OperationTest, Lifecycle_FlowToken) {
         result = r;
       });
 
-  container.Add(op.get());
-  container.Schedule(op.get());
+  auto weak_op = op->GetWeakPtr();
+  container.Add(std::move(op));
+  container.Schedule(weak_op.get());
   RunLoopUntilIdle();
-  op->SayDone(42);
+  if (weak_op) {
+    static_cast<TestFlowTokenOperation*>(weak_op.get())->SayDone(42);
+  }
   // TestFlowTokenOperation posts to the async loop in SayDone(). We shouldn't
   // see Done() called until we run the loop and the FlowToken on the capture
   // list of the callback goes out of scope.
@@ -247,11 +260,16 @@ TEST_F(OperationTest, Lifecycle_FlowToken_OperationGoesAway) {
   auto op = std::make_unique<TestFlowTokenOperation>(
       [&done_called](int result) { done_called = true; });
 
-  container.Add(op.get());
-  container.Schedule(op.get());
+  auto weak_op = op->GetWeakPtr();
+  container.Add(std::move(op));
+  container.Schedule(weak_op.get());
   RunLoopUntilIdle();
-  op->SayDone(42,
-              [&container, &op]() { container.InvalidateWeakPtrs(op.get()); });
+  if (weak_op) {
+    static_cast<TestFlowTokenOperation*>(weak_op.get())
+        ->SayDone(42, [&container, weak_op]() {
+          container.InvalidateWeakPtrs(weak_op.get());
+        });
+  }
   RunLoopUntilIdle();
   EXPECT_FALSE(done_called);
 }
@@ -265,17 +283,18 @@ TEST_F(OperationTest, OperationQueue) {
   // OperationQueue, unlike TestContainer, does own the Operations.
   bool op1_ran = false;
   bool op1_done = false;
-  auto* op1 = new TestOperation<>([&op1_ran]() { op1_ran = true; },
-                                  [&op1_done]() { op1_done = true; });
+  auto op1 = std::make_unique<TestOperation<>>(
+      [&op1_ran]() { op1_ran = true; }, [&op1_done]() { op1_done = true; });
 
   bool op3_ran = false;
   bool op3_done = false;
-  auto* op3 = new TestOperation<>([&op3_ran]() { op3_ran = true; },
-                                  [&op3_done]() { op3_done = true; });
+  auto op3 = std::make_unique<TestOperation<>>(
+      [&op3_ran]() { op3_ran = true; }, [&op3_done]() { op3_done = true; });
 
   // We'll queue |op1|, then a fit::promise ("op2") and another Operation,
   // |op3|.
-  container.Add(op1);
+  auto weak_op1 = op1->GetWeakPtr();
+  container.Add(std::move(op1));
 
   bool op2_ran = false;
   bool op2_done = false;
@@ -291,7 +310,7 @@ TEST_F(OperationTest, OperationQueue) {
         return fit::pending();
       }));
 
-  container.Add(op3);
+  container.Add(std::move(op3));
 
   // Nothing has run yet because we haven't run the async loop.
   EXPECT_FALSE(op1_ran);
@@ -320,7 +339,9 @@ TEST_F(OperationTest, OperationQueue) {
   EXPECT_FALSE(op3_done);
 
   // If op1 says it's Done(), we expect op2 to run.
-  op1->SayDone();
+  if (weak_op1) {
+    static_cast<TestOperation<>*>(weak_op1.get())->SayDone();
+  }
   RunLoopUntilIdle();
   EXPECT_TRUE(op1_done);
   EXPECT_TRUE(op2_ran);
@@ -353,16 +374,16 @@ TEST_F(OperationTest, OperationCollection) {
   // OperationQueue, unlike TestContainer, does manage its memory.
   bool op1_ran = false;
   bool op1_done = false;
-  auto* op1 = new TestOperation<>([&op1_ran]() { op1_ran = true; },
-                                  [&op1_done]() { op1_done = true; });
+  auto op1 = std::make_unique<TestOperation<>>(
+      [&op1_ran]() { op1_ran = true; }, [&op1_done]() { op1_done = true; });
 
   bool op2_ran = false;
   bool op2_done = false;
-  auto* op2 = new TestOperation<>([&op2_ran]() { op2_ran = true; },
-                                  [&op2_done]() { op2_done = true; });
+  auto op2 = std::make_unique<TestOperation<>>(
+      [&op2_ran]() { op2_ran = true; }, [&op2_done]() { op2_done = true; });
 
-  container.Add(op1);
-  container.Add(op2);
+  container.Add(std::move(op1));
+  container.Add(std::move(op2));
   bool op3_ran = false;
   container.ScheduleTask(fit::make_promise([&] { op3_ran = true; }));
 
@@ -405,7 +426,8 @@ class TestQueueNotNullPtr : public Operation<> {
   void Run() override {
     // When |flow| goes out of scope, it will call Done() for us.
     FlowToken flow{this};
-    operation_queue_.Add(new TestOperationNotNullPtr(flow /* by ref */));
+    operation_queue_.Add(
+        std::make_unique<TestOperationNotNullPtr>(std::move(flow)));
   }
 
   OperationQueue operation_queue_;
@@ -420,7 +442,8 @@ class TestCollectionNotNullPtr : public Operation<> {
   void Run() override {
     // When |flow| goes out of scope, it will call Done() for us.
     FlowToken flow{this};
-    operation_collection_.Add(new TestOperationNotNullPtr(flow /* by ref */));
+    operation_collection_.Add(
+        std::make_unique<TestOperationNotNullPtr>(std::move(flow)));
   }
 
   OperationCollection operation_collection_;
@@ -431,9 +454,10 @@ TEST_F(OperationTest, TestQueueNotNullPtr) {
   OperationQueue container;
 
   bool done_called{false};
-  auto op = new TestQueueNotNullPtr([&done_called] { done_called = true; });
+  auto op = std::make_unique<TestQueueNotNullPtr>(
+      [&done_called] { done_called = true; });
 
-  container.Add(op);
+  container.Add(std::move(op));
 
   // Nothing has run yet because we haven't run the async loop.
   EXPECT_FALSE(done_called);
@@ -448,10 +472,10 @@ TEST_F(OperationTest, TestCollectionNotNullPtr) {
   OperationQueue container;
 
   bool done_called{false};
-  auto op =
-      new TestCollectionNotNullPtr([&done_called] { done_called = true; });
+  auto op = std::make_unique<TestCollectionNotNullPtr>(
+      [&done_called] { done_called = true; });
 
-  container.Add(op);
+  container.Add(std::move(op));
 
   // Nothing has run yet because we haven't run the async loop.
   EXPECT_FALSE(done_called);

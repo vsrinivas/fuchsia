@@ -67,12 +67,13 @@ void FocusHandler::AddControllerBinding(
 
 // |fuchsia::modular::FocusProvider|
 void FocusHandler::Query(QueryCallback callback) {
-  operation_queue_.Add(new ReadAllDataCall<fuchsia::modular::FocusInfo>(
-      page(), kFocusKeyPrefix, XdrFocusInfo,
-      [callback = std::move(callback)](
-          std::vector<fuchsia::modular::FocusInfo> infos) {
-        callback(std::move(infos));
-      }));
+  operation_queue_.Add(
+      std::make_unique<ReadAllDataCall<fuchsia::modular::FocusInfo>>(
+          page(), kFocusKeyPrefix, XdrFocusInfo,
+          [callback = std::move(callback)](
+              std::vector<fuchsia::modular::FocusInfo> infos) {
+            callback(std::move(infos));
+          }));
 }
 
 // |fuchsia::modular::FocusProvider|
@@ -95,8 +96,10 @@ void FocusHandler::Set(fidl::StringPtr story_id) {
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 
-  operation_queue_.Add(new WriteDataCall<fuchsia::modular::FocusInfo>(
-      page(), MakeFocusKey(device_id_), XdrFocusInfo, std::move(data), [] {}));
+  operation_queue_.Add(
+      std::make_unique<WriteDataCall<fuchsia::modular::FocusInfo>>(
+          page(), MakeFocusKey(device_id_), XdrFocusInfo, std::move(data),
+          [] {}));
 }
 
 // |fuchsia::modular::FocusController|

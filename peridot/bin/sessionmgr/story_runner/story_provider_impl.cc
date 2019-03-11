@@ -96,8 +96,6 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
   const bool bulk_;
   StoryRuntimesMap* const story_runtime_containers_;
   MessageQueueManager* const message_queue_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryCall);
 };
 
 // Loads a StoryRuntimeContainer object and stores it in
@@ -195,8 +193,6 @@ class StoryProviderImpl::LoadStoryRuntimeCall
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LoadStoryRuntimeCall);
 };
 
 class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
@@ -219,7 +215,7 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // complete StopWithoutNotifying(), we will never be called back and the
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
-      operations_.Add(new StopStoryCall(
+      operations_.Add(std::make_unique<StopStoryCall>(
           it.first, true /* bulk */,
           &story_provider_impl_->story_runtime_containers_,
           story_provider_impl_->component_context_info_.message_queue_manager,
@@ -230,8 +226,6 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
   OperationCollection operations_;
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopAllStoriesCall);
 };
 
 class StoryProviderImpl::StopStoryShellCall : public Operation<> {
@@ -257,8 +251,6 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryShellCall);
 };
 
 class StoryProviderImpl::GetStoryEntityProviderCall
@@ -276,7 +268,7 @@ class StoryProviderImpl::GetStoryEntityProviderCall
   void Run() override {
     FlowToken flow{this, &story_entity_provider_};
 
-    operation_queue_.Add(new LoadStoryRuntimeCall(
+    operation_queue_.Add(std::make_unique<LoadStoryRuntimeCall>(
         story_provider_impl_, story_provider_impl_->session_storage_, story_id_,
         [this, flow](StoryRuntimeContainer* story_controller_container) {
           if (story_controller_container) {
@@ -296,8 +288,6 @@ class StoryProviderImpl::GetStoryEntityProviderCall
   OperationQueue operation_queue_;
 
   std::string story_id_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetStoryEntityProviderCall);
 };
 
 StoryProviderImpl::StoryProviderImpl(
@@ -362,7 +352,8 @@ void StoryProviderImpl::Connect(
 }
 
 void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
-  operation_queue_.Add(new StopAllStoriesCall(this, std::move(callback)));
+  operation_queue_.Add(
+      std::make_unique<StopAllStoriesCall>(this, std::move(callback)));
 }
 
 void StoryProviderImpl::SetSessionShell(
@@ -387,8 +378,9 @@ void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   // stories is done on |operation_queue_| since that must strictly happen
   // after all pending messgages have been processed.
   bindings_.CloseAll();
-  operation_queue_.Add(new StopAllStoriesCall(this, [] {}));
-  operation_queue_.Add(new StopStoryShellCall(this, std::move(callback)));
+  operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, [] {}));
+  operation_queue_.Add(
+      std::make_unique<StopStoryShellCall>(this, std::move(callback)));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -477,11 +469,12 @@ void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
       async_get_default_dispatcher(),
       [weak_this = weak_factory_.GetWeakPtr()] {
         if (weak_this) {
-          weak_this->operation_queue_.Add(new SyncCall([weak_this] {
-            if (weak_this) {
-              weak_this->MaybeLoadStoryShell();
-            }
-          }));
+          weak_this->operation_queue_.Add(
+              std::make_unique<SyncCall>([weak_this] {
+                if (weak_this) {
+                  weak_this->MaybeLoadStoryShell();
+                }
+              }));
         }
       },
       zx::sec(5));
@@ -579,7 +572,7 @@ void StoryProviderImpl::NotifyStoryActivityChange(
 void StoryProviderImpl::GetController(
     std::string story_id,
     fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
-  operation_queue_.Add(new LoadStoryRuntimeCall(
+  operation_queue_.Add(std::make_unique<LoadStoryRuntimeCall>(
       this, session_storage_, story_id,
       [request = std::move(request)](
           StoryRuntimeContainer* story_controller_container) mutable {
@@ -666,7 +659,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
-  operation_queue_.Add(new StopStoryCall(
+  operation_queue_.Add(std::make_unique<StopStoryCall>(
       story_id, false /* bulk */, &story_runtime_containers_,
       component_context_info_.message_queue_manager, [this, story_id] {
         for (const auto& i : watchers_.ptrs()) {
@@ -677,7 +670,8 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
 
 // |fuchsia::modular::FocusWatcher|
 void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
-  operation_queue_.Add(new SyncCall([this, info = std::move(info)]() {
+  operation_queue_.Add(std::make_unique<SyncCall>([this,
+                                                   info = std::move(info)]() {
     if (info->device_id != device_id_) {
       return;
     }
@@ -727,7 +721,7 @@ void StoryProviderImpl::CreateEntity(
     fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     fit::function<void(std::string /* entity_reference */)> callback) {
-  operation_queue_.Add(new GetStoryEntityProviderCall(
+  operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
       this, story_id,
       [this, type, story_id, data = std::move(data),
        callback = std::move(callback),
@@ -767,7 +761,7 @@ void StoryProviderImpl::ConnectToStoryEntityProvider(
     const std::string& story_id,
     fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
         entity_provider_request) {
-  operation_queue_.Add(new GetStoryEntityProviderCall(
+  operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
       this, story_id,
       [entity_provider_request = std::move(entity_provider_request)](
           StoryEntityProvider* entity_provider) mutable {

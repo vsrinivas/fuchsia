@@ -110,7 +110,7 @@ void DeviceMapImpl::Connect(
 }
 
 void DeviceMapImpl::Query(QueryCallback callback) {
-  operation_queue_.Add(new ReadAllDeviceDataCall(
+  operation_queue_.Add(std::make_unique<ReadAllDeviceDataCall>(
       page(), kDeviceKeyPrefix, XdrDeviceMapEntry, std::move(callback)));
 }
 
@@ -128,7 +128,7 @@ void DeviceMapImpl::SaveCurrentDevice() {
   auto& device = devices_[current_device_id_];
   device.last_change_timestamp = time(nullptr);
 
-  operation_queue_.Add(new WriteDeviceDataCall(
+  operation_queue_.Add(std::make_unique<WriteDeviceDataCall>(
       page(), MakeDeviceKey(current_device_id_), XdrDeviceMapEntry,
       fidl::MakeOptional(device), [] {}));
 }

@@ -89,8 +89,6 @@ class InitializeChainCall
   fuchsia::modular::ModuleParameterMapPtr parameter_map_;
   fuchsia::modular::ExecuteResult result_;
   OperationCollection operations_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeChainCall);
 };
 
 }  // namespace
@@ -102,7 +100,7 @@ void AddInitializeChainOperation(
     fit::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleParameterMapPtr)>
         result_call) {
-  operation_container->Add(new InitializeChainCall(
+  operation_container->Add(std::make_unique<InitializeChainCall>(
       story_storage, std::move(module_path),
       std::move(create_parameter_map_info), std::move(result_call)));
 }

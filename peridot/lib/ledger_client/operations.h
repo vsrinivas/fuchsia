@@ -184,8 +184,6 @@ class ReadDataCall : public PageOperation<DataPtr> {
   DataFilter const filter_;
   fuchsia::ledger::PageSnapshotPtr page_snapshot_;
   DataPtr result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReadDataCall);
 };
 
 template <typename Data, typename DataArray = std::vector<Data>,
@@ -259,8 +257,6 @@ class ReadAllDataCall : public PageOperation<DataArray> {
   DataFilter const filter_;
   std::vector<fuchsia::ledger::Entry> entries_;
   DataArray data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReadAllDataCall);
 };
 
 template <typename Data, typename DataPtr = std::unique_ptr<Data>,
@@ -316,15 +312,14 @@ class WriteDataCall : public PageOperation<> {
   const std::string key_;
   DataFilter const filter_;
   DataPtr data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
 };
 
 class DumpPageSnapshotCall : public PageOperation<std::string> {
  public:
   DumpPageSnapshotCall(fuchsia::ledger::Page* const page,
                        ResultCall result_call)
-      : PageOperation("DumpPageSnapshotCall", page, std::move(result_call)) {}
+      : PageOperation<std::string>("DumpPageSnapshotCall", page,
+                                   std::move(result_call)) {}
 
  private:
   void Run() override {
@@ -377,8 +372,6 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
   fuchsia::ledger::PageSnapshotPtr page_snapshot_;
   std::vector<fuchsia::ledger::Entry> entries_;
   std::string dump_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DumpPageSnapshotCall);
 };
 
 }  // namespace modular

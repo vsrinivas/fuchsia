@@ -43,19 +43,19 @@ fidl::StringPtr StoryNameToStorySnapshotKey(fidl::StringPtr story_name) {
   return kStorySnapshotKeyPrefix + story_name.get();
 }
 
-OperationBase* MakeGetStoryDataCall(
+std::unique_ptr<OperationBase> MakeGetStoryDataCall(
     fuchsia::ledger::Page* const page, fidl::StringPtr story_name,
     fit::function<void(fuchsia::modular::internal::StoryDataPtr)> result_call) {
-  return new ReadDataCall<fuchsia::modular::internal::StoryData>(
+  return std::make_unique<ReadDataCall<fuchsia::modular::internal::StoryData>>(
       page, StoryNameToStoryDataKey(story_name), true /* not_found_is_ok */,
       XdrStoryData, std::move(result_call));
 };
 
-OperationBase* MakeWriteStoryDataCall(
+std::unique_ptr<OperationBase> MakeWriteStoryDataCall(
     fuchsia::ledger::Page* const page,
     fuchsia::modular::internal::StoryDataPtr story_data,
     fit::function<void()> result_call) {
-  return new WriteDataCall<fuchsia::modular::internal::StoryData>(
+  return std::make_unique<WriteDataCall<fuchsia::modular::internal::StoryData>>(
       page, StoryNameToStoryDataKey(story_data->story_info()->id), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
@@ -124,8 +124,6 @@ class CreateStoryCall
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
 }  // namespace
@@ -136,7 +134,7 @@ FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> SessionStorage::CreateStory(
     fuchsia::modular::StoryOptions story_options) {
   auto ret = Future<fidl::StringPtr, fuchsia::ledger::PageId>::Create(
       "SessionStorage.CreateStory.ret");
-  operation_queue_.Add(new CreateStoryCall(
+  operation_queue_.Add(std::make_unique<CreateStoryCall>(
       ledger_client_->ledger(), page(), std::move(story_name),
       std::move(extra_info), std::move(story_options), ret->Completer()));
   return ret;
@@ -238,15 +236,13 @@ class DeleteStoryCall : public Operation<> {
   OperationQueue operation_queue_;
   fuchsia::modular::internal::StoryData story_data_;
   fuchsia::ledger::PagePtr story_page_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 }  // namespace
 
 FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   auto ret = Future<>::Create("SessionStorage.DeleteStory.ret");
-  operation_queue_.Add(new DeleteStoryCall(ledger_client_->ledger(), page(),
-                                           story_name, ret->Completer()));
+  operation_queue_.Add(std::make_unique<DeleteStoryCall>(
+      ledger_client_->ledger(), page(), story_name, ret->Completer()));
   return ret;
 }
 
@@ -291,8 +287,6 @@ class MutateStoryDataCall : public Operation<> {
       mutate_;
 
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MutateStoryDataCall);
 };
 
 }  // namespace
@@ -308,8 +302,8 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(
   };
 
   auto ret = Future<>::Create("SessionStorage.UpdateLastFocusedTimestamp.ret");
-  operation_queue_.Add(
-      new MutateStoryDataCall(page(), story_name, mutate, ret->Completer()));
+  operation_queue_.Add(std::make_unique<MutateStoryDataCall>(
+      page(), story_name, mutate, ret->Completer()));
   return ret;
 }
 
@@ -328,7 +322,7 @@ SessionStorage::GetAllStoryData() {
   auto ret = Future<std::vector<fuchsia::modular::internal::StoryData>>::Create(
       "SessionStorage.GetAllStoryData.ret");
   operation_queue_.Add(
-      new ReadAllDataCall<fuchsia::modular::internal::StoryData>(
+      std::make_unique<ReadAllDataCall<fuchsia::modular::internal::StoryData>>(
           page(), kStoryDataKeyPrefix, XdrStoryData, ret->Completer()));
   return ret;
 }
@@ -344,7 +338,7 @@ FuturePtr<> SessionStorage::UpdateStoryOptions(
     }
     return false;
   };
-  operation_queue_.Add(new MutateStoryDataCall(
+  operation_queue_.Add(std::make_unique<MutateStoryDataCall>(
       page(), story_name, std::move(mutate), ret->Completer()));
   return ret;
 }
@@ -418,8 +412,6 @@ class WriteSnapshotCall : public Operation<> {
   PageClient* const page_client_;
   fidl::StringPtr key_;
   fuchsia::mem::Buffer snapshot_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(WriteSnapshotCall);
 };
 
 class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
@@ -463,15 +455,13 @@ class ReadSnapshotCall : public Operation<fuchsia::mem::BufferPtr> {
 
   // Return values.
   fuchsia::mem::BufferPtr snapshot_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ReadSnapshotCall);
 };
 }  // namespace
 
 FuturePtr<> SessionStorage::WriteSnapshot(fidl::StringPtr story_name,
                                           fuchsia::mem::Buffer snapshot) {
   auto ret = Future<>::Create("SessionStorage.WriteSnapshot.ret");
-  operation_queue_.Add(new WriteSnapshotCall(
+  operation_queue_.Add(std::make_unique<WriteSnapshotCall>(
       this, story_name, std::move(snapshot), ret->Completer()));
   return ret;
 }
@@ -481,7 +471,7 @@ FuturePtr<fuchsia::mem::BufferPtr> SessionStorage::ReadSnapshot(
   auto ret = Future<fuchsia::mem::BufferPtr>::Create(
       "SessionStorage.ReadSnapshot.ret");
   operation_queue_.Add(
-      new ReadSnapshotCall(this, story_name, ret->Completer()));
+      std::make_unique<ReadSnapshotCall>(this, story_name, ret->Completer()));
   return ret;
 }
 

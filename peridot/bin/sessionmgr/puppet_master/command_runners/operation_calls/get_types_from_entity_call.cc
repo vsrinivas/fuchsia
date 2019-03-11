@@ -30,8 +30,6 @@ class GetTypesFromEntityCall : public Operation<std::vector<std::string>> {
   fuchsia::modular::EntityResolver* const entity_resolver_;
   fidl::StringPtr const entity_reference_;
   fuchsia::modular::EntityPtr entity_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetTypesFromEntityCall);
 };
 
 }  // namespace
@@ -41,7 +39,7 @@ void AddGetTypesFromEntityOperation(
     fuchsia::modular::EntityResolver* const entity_resolver,
     const fidl::StringPtr& entity_reference,
     fit::function<void(std::vector<std::string>)> result_call) {
-  operation_container->Add(new GetTypesFromEntityCall(
+  operation_container->Add(std::make_unique<GetTypesFromEntityCall>(
       entity_resolver, entity_reference, std::move(result_call)));
 }
 

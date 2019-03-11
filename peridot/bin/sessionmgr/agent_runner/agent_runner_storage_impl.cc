@@ -102,8 +102,6 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
   NotificationDelegate* const delegate_;
   fuchsia::ledger::PageSnapshotPtr snapshot_;
   std::vector<fuchsia::ledger::Entry> entries_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
 class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
@@ -141,8 +139,6 @@ class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
   AgentRunnerStorageImpl* const storage_;
   const std::string agent_url_;
   TriggerInfo data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(WriteTaskCall);
 };
 
 class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
@@ -178,8 +174,6 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
   AgentRunnerStorageImpl* const storage_;
   const std::string agent_url_;
   const std::string task_id_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteTaskCall);
 };
 
 AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
@@ -193,28 +187,28 @@ void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
                                         fit::function<void()> done) {
   FXL_DCHECK(!delegate_);
   delegate_ = delegate;
-  operation_queue_.Add(
-      new InitializeCall(delegate_, NewSnapshot(), std::move(done)));
+  operation_queue_.Add(std::make_unique<InitializeCall>(
+      delegate_, NewSnapshot(), std::move(done)));
 }
 
 void AgentRunnerStorageImpl::WriteTask(const std::string& agent_url,
                                        const TriggerInfo data,
                                        fit::function<void(bool)> done) {
   operation_queue_.Add(
-      new WriteTaskCall(this, agent_url, data, std::move(done)));
+      std::make_unique<WriteTaskCall>(this, agent_url, data, std::move(done)));
 }
 
 void AgentRunnerStorageImpl::DeleteTask(const std::string& agent_url,
                                         const std::string& task_id,
                                         fit::function<void(bool)> done) {
-  operation_queue_.Add(
-      new DeleteTaskCall(this, agent_url, task_id, std::move(done)));
+  operation_queue_.Add(std::make_unique<DeleteTaskCall>(
+      this, agent_url, task_id, std::move(done)));
 }
 
 void AgentRunnerStorageImpl::OnPageChange(const std::string& key,
                                           const std::string& value) {
   FXL_DCHECK(delegate_ != nullptr);
-  operation_queue_.Add(new SyncCall([this, key, value] {
+  operation_queue_.Add(std::make_unique<SyncCall>([this, key, value] {
     TriggerInfo data;
     if (!XdrRead(value, &data, XdrTriggerInfo)) {
       return;
@@ -226,7 +220,7 @@ void AgentRunnerStorageImpl::OnPageChange(const std::string& key,
 void AgentRunnerStorageImpl::OnPageDelete(const std::string& key) {
   FXL_DCHECK(delegate_ != nullptr);
   operation_queue_.Add(
-      new SyncCall([this, key] { delegate_->DeletedTask(key); }));
+      std::make_unique<SyncCall>([this, key] { delegate_->DeletedTask(key); }));
 }
 
 }  // namespace modular

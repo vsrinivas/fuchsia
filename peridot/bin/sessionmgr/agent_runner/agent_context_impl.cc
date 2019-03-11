@@ -111,8 +111,6 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   AgentContextImpl* const agent_context_impl_;
   fuchsia::sys::Launcher* const launcher_;
   fuchsia::modular::AppConfig agent_config_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
 // If |terminating| is set to true, the agent will be torn down irrespective
@@ -169,8 +167,6 @@ class AgentContextImpl::StopCall : public Operation<bool> {
   bool stopped_ = false;
   AgentContextImpl* const agent_context_impl_;
   const bool terminating_;  // is the agent runner terminating?
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
@@ -192,8 +188,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       [this](fidl::InterfaceRequest<fuchsia::modular::AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
-  operation_queue_.Add(
-      new InitializeCall(this, info.launcher, std::move(agent_config)));
+  operation_queue_.Add(std::make_unique<InitializeCall>(
+      this, info.launcher, std::move(agent_config)));
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
@@ -205,7 +201,7 @@ void AgentContextImpl::NewAgentConnection(
     fidl::InterfaceRequest<fuchsia::modular::AgentController>
         agent_controller_request) {
   // Queue adding the connection
-  operation_queue_.Add(new SyncCall(
+  operation_queue_.Add(std::make_unique<SyncCall>(
       [this, requestor_url,
        incoming_services_request = std::move(incoming_services_request),
        agent_controller_request =
@@ -226,7 +222,7 @@ void AgentContextImpl::NewEntityProviderConnection(
         entity_provider_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController>
         agent_controller_request) {
-  operation_queue_.Add(new SyncCall(
+  operation_queue_.Add(std::make_unique<SyncCall>(
       [this, entity_provider_request = std::move(entity_provider_request),
        agent_controller_request =
            std::move(agent_controller_request)]() mutable {
@@ -239,7 +235,7 @@ void AgentContextImpl::NewEntityProviderConnection(
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {
-  operation_queue_.Add(new SyncCall([this, task_id] {
+  operation_queue_.Add(std::make_unique<SyncCall>([this, task_id] {
     FXL_CHECK(state_ == State::RUNNING);
     // Increment the counter for number of incomplete tasks. Decrement it when
     // we receive its callback;
@@ -341,27 +337,27 @@ void AgentContextImpl::ListProfileIds(fuchsia::auth::AppConfig app_config,
 }
 
 void AgentContextImpl::StopAgentIfIdle() {
-  operation_queue_.Add(new StopCall(false /* is agent runner terminating? */,
-                                    this, [this](bool stopped) {
-                                      if (stopped) {
-                                        agent_runner_->RemoveAgent(url_);
-                                        // |this| is no longer valid at this
-                                        // point.
-                                      }
-                                    }));
+  operation_queue_.Add(std::make_unique<StopCall>(
+      false /* is agent runner terminating? */, this, [this](bool stopped) {
+        if (stopped) {
+          agent_runner_->RemoveAgent(url_);
+          // |this| is no longer valid at this
+          // point.
+        }
+      }));
 }
 
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
   FXL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
-  operation_queue_.Add(
-      new StopCall(true /* is agent runner terminating? */, this,
-                   [this, callback = std::move(callback)](bool stopped) {
-                     FXL_DCHECK(stopped);
-                     agent_runner_->RemoveAgent(url_);
-                     callback();
-                     // |this| is no longer valid at this
-                     // point.
-                   }));
+  operation_queue_.Add(std::make_unique<StopCall>(
+      true /* is agent runner terminating? */, this,
+      [this, callback = std::move(callback)](bool stopped) {
+        FXL_DCHECK(stopped);
+        agent_runner_->RemoveAgent(url_);
+        callback();
+        // |this| is no longer valid at this
+        // point.
+      }));
 }
 
 }  // namespace modular

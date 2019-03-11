@@ -52,8 +52,6 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
   fidl::StringPtr story_id_;
   fuchsia::modular::RemoveMod command_;
   fuchsia::modular::ExecuteResult result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(RemoveModCall);
 };
 
 }  // namespace
@@ -67,9 +65,9 @@ void RemoveModCommandRunner::Execute(
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_remove_mod());
 
-  operation_queue_.Add(new RemoveModCall(story_storage, std::move(story_id),
-                                         std::move(command.remove_mod()),
-                                         std::move(done)));
+  operation_queue_.Add(std::make_unique<RemoveModCall>(
+      story_storage, std::move(story_id), std::move(command.remove_mod()),
+      std::move(done)));
 }
 
 }  // namespace modular

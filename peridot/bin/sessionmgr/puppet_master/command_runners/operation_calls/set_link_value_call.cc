@@ -40,8 +40,6 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
   fuchsia::modular::LinkPath link_path_;
   fit::function<void(fidl::StringPtr*)> mutate_fn_;
   fuchsia::modular::ExecuteResult result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SetLinkValueCall);
 };
 
 }  // namespace
@@ -51,9 +49,9 @@ void AddSetLinkValueOperation(
     StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
     fit::function<void(fidl::StringPtr*)> mutate_fn,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
-  operation_container->Add(
-      new SetLinkValueCall(story_storage, std::move(link_path),
-                           std::move(mutate_fn), std::move(done)));
+  operation_container->Add(std::make_unique<SetLinkValueCall>(
+      story_storage, std::move(link_path), std::move(mutate_fn),
+      std::move(done)));
 }
 
 }  // namespace modular

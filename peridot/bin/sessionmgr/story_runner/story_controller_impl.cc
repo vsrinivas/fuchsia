@@ -257,8 +257,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
   const zx_time_t start_time_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
 };
 
 // KillModuleCall tears down the module by the given module_data. It is enqueued
@@ -342,8 +340,6 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
   fit::function<void()> done_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
 };
 
 // Calls LaunchModuleCall to get a running instance, and delegates visual
@@ -371,7 +367,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     // ModuleControllerImpl. In that case, the view owner request is
     // closed, and the view owner should not be sent to the story
     // shell.
-    operation_queue_.Add(new LaunchModuleCall(
+    operation_queue_.Add(std::make_unique<LaunchModuleCall>(
         story_controller_impl_, fidl::Clone(module_data_),
         std::move(module_controller_request_),
         fuchsia::ui::views::ViewToken({
@@ -466,7 +462,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     story_controller_impl_->story_shell_->FocusSurface(surface_id);
   }
 
-  StoryControllerImpl* const story_controller_impl_;
+  StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
@@ -477,8 +473,6 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   fuchsia::modular::ModuleManifestPtr module_manifest_;
 
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleInShellCall);
 };
 
 class StoryControllerImpl::StopCall : public Operation<> {
@@ -614,8 +608,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
   // Whether this Stop operation is part of stopping all stories at once. In
   // that case, DetachView() is not called.
   const bool bulk_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
 class StoryControllerImpl::StopModuleCall : public Operation<> {
@@ -644,8 +636,6 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
 
   StoryStorage* const story_storage_;  // not owned
   const std::vector<std::string> module_path_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleCall);
 };
 
 class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
@@ -667,11 +657,11 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
         story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info &&
         story_controller_impl_->running_mod_infos_.size() == 1) {
-      operation_queue_.Add(
-          new StopCall(story_controller_impl_, false /* bulk */, [flow] {}));
+      operation_queue_.Add(std::make_unique<StopCall>(
+          story_controller_impl_, false /* bulk */, [flow] {}));
     } else {
       // Otherwise, stop this one module.
-      operation_queue_.Add(new StopModuleCall(
+      operation_queue_.Add(std::make_unique<StopModuleCall>(
           story_controller_impl_->story_storage_, module_path_, [flow] {}));
     }
   }
@@ -680,8 +670,6 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
   const std::vector<std::string> module_path_;
 
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StopModuleAndStoryIfEmptyCall);
 };
 
 class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
@@ -705,7 +693,7 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     if (module_data_.module_deleted) {
       // If the module is running, kill it.
       if (running_mod_info) {
-        operation_queue_.Add(new KillModuleCall(
+        operation_queue_.Add(std::make_unique<KillModuleCall>(
             story_controller_impl_, std::move(module_data_), [flow] {}));
       }
       return;
@@ -725,7 +713,7 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
 
     // We reach this point only if we want to start or update an existing
     // external module.
-    operation_queue_.Add(new LaunchModuleInShellCall(
+    operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
         story_controller_impl_, std::move(module_data_),
         nullptr /* module_controller_request */, [flow] {}));
   }
@@ -733,8 +721,6 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OnModuleDataUpdatedCall);
 };
 
 class StoryControllerImpl::FocusCall : public Operation<> {
@@ -760,8 +746,6 @@ class StoryControllerImpl::FocusCall : public Operation<> {
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const std::vector<std::string> module_path_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FocusCall);
 };
 
 class StoryControllerImpl::DefocusCall : public Operation<> {
@@ -789,8 +773,6 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const std::vector<std::string> module_path_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
 };
 
 // An operation that first performs module resolution with the provided
@@ -841,11 +823,11 @@ class StoryControllerImpl::AddIntentCall
     if (story_controller_impl_->IsRunning()) {
       // TODO(thatguy): Should we be checking surface_relation also?
       if (!view_token_.value) {
-        operation_queue_.Add(new LaunchModuleInShellCall(
+        operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
             story_controller_impl_, std::move(module_data_),
             std::move(module_controller_request_), [flow] {}));
       } else {
-        operation_queue_.Add(new LaunchModuleCall(
+        operation_queue_.Add(std::make_unique<LaunchModuleCall>(
             story_controller_impl_, std::move(module_data_),
             std::move(module_controller_request_), std::move(view_token_),
             [this, flow] {
@@ -868,7 +850,7 @@ class StoryControllerImpl::AddIntentCall
   }
 
   OperationQueue operation_queue_;
-  StoryControllerImpl* const story_controller_impl_;
+  StoryControllerImpl* const story_controller_impl_;  // not owned
 
   // Some of the fields in add_mod_params_ are used to initializel
   // module_data_ in AddModuleFromResult().
@@ -882,8 +864,6 @@ class StoryControllerImpl::AddIntentCall
 
   fuchsia::modular::StartModuleStatus start_module_status_{
       fuchsia::modular::StartModuleStatus::NO_MODULES_FOUND};
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AddIntentCall);
 };
 
 class StoryControllerImpl::StartCall : public Operation<> {
@@ -919,7 +899,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
               continue;
             }
             FXL_CHECK(module_data.intent);
-            operation_queue_.Add(new LaunchModuleInShellCall(
+            operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
                 story_controller_impl_, std::move(module_data),
                 nullptr /* module_controller_request */, [flow] {}));
           }
@@ -933,8 +913,6 @@ class StoryControllerImpl::StartCall : public Operation<> {
   StoryStorage* const storage_;                       // not owned
 
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
 class StoryControllerImpl::UpdateSnapshotCall : public Operation<> {
@@ -1015,8 +993,6 @@ class StoryControllerImpl::UpdateSnapshotCall : public Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(UpdateSnapshotCall);
 };
 
 class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
@@ -1053,8 +1029,6 @@ class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartSnapshotLoaderCall);
 };
 
 StoryControllerImpl::StoryControllerImpl(
@@ -1119,23 +1093,23 @@ StoryControllerImpl::GetOngoingActivities() {
 }
 
 void StoryControllerImpl::Sync(fit::function<void()> done) {
-  operation_queue_.Add(new SyncCall(std::move(done)));
+  operation_queue_.Add(std::make_unique<SyncCall>(std::move(done)));
 }
 
 void StoryControllerImpl::FocusModule(
     const std::vector<std::string>& module_path) {
-  operation_queue_.Add(new FocusCall(this, module_path));
+  operation_queue_.Add(std::make_unique<FocusCall>(this, module_path));
 }
 
 void StoryControllerImpl::DefocusModule(
     const std::vector<std::string>& module_path) {
-  operation_queue_.Add(new DefocusCall(this, module_path));
+  operation_queue_.Add(std::make_unique<DefocusCall>(this, module_path));
 }
 
 void StoryControllerImpl::StopModule(
     const std::vector<std::string>& module_path, fit::function<void()> done) {
-  operation_queue_.Add(
-      new StopModuleCall(story_storage_, module_path, std::move(done)));
+  operation_queue_.Add(std::make_unique<StopModuleCall>(
+      story_storage_, module_path, std::move(done)));
 }
 
 void StoryControllerImpl::ReleaseModule(
@@ -1213,7 +1187,7 @@ void StoryControllerImpl::EmbedModule(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
-  operation_queue_.Add(new AddIntentCall(
+  operation_queue_.Add(std::make_unique<AddIntentCall>(
       this, std::move(add_mod_params), std::move(module_controller_request),
       fuchsia::ui::views::ViewToken({
           .value = zx::eventpair(view_owner_request.TakeChannel().release()),
@@ -1226,7 +1200,7 @@ void StoryControllerImpl::AddModuleToStory(
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
     fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
-  operation_queue_.Add(new AddIntentCall(
+  operation_queue_.Add(std::make_unique<AddIntentCall>(
       this, std::move(add_mod_params), std::move(module_controller_request),
       fuchsia::ui::views::ViewToken() /* view_token */, std::move(callback)));
 }
@@ -1300,7 +1274,7 @@ StoryControllerImpl::GetActiveLinksInternal() {
 void StoryControllerImpl::OnModuleDataUpdated(
     fuchsia::modular::ModuleData module_data) {
   operation_queue_.Add(
-      new OnModuleDataUpdatedCall(this, std::move(module_data)));
+      std::make_unique<OnModuleDataUpdatedCall>(this, std::move(module_data)));
 }
 
 void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
@@ -1309,23 +1283,26 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   //
   // If this call enters a race with a StoryProvider.DeleteStory() call,
   // resulting in |this| being destroyed, |callback| will be dropped.
-  operation_queue_.Add(new SyncCall([this, callback = std::move(callback)] {
-    auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
-    FXL_CHECK(story_info);
-    callback(std::move(*story_info), *story_observer_->model().runtime_state());
-  }));
+  operation_queue_.Add(
+      std::make_unique<SyncCall>([this, callback = std::move(callback)] {
+        auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
+        FXL_CHECK(story_info);
+        callback(std::move(*story_info),
+                 *story_observer_->model().runtime_state());
+      }));
 }
 
 void StoryControllerImpl::RequestStart() {
-  operation_queue_.Add(new StartCall(this, story_storage_));
+  operation_queue_.Add(std::make_unique<StartCall>(this, story_storage_));
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(new StopCall(this, false /* bulk */, std::move(done)));
+  operation_queue_.Add(
+      std::make_unique<StopCall>(this, false /* bulk */, std::move(done)));
 }
 
 void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
-  operation_queue_.Add(new StopCall(this, bulk, std::move(done)));
+  operation_queue_.Add(std::make_unique<StopCall>(this, bulk, std::move(done)));
 }
 
 void StoryControllerImpl::TakeAndLoadSnapshot(
@@ -1334,8 +1311,10 @@ void StoryControllerImpl::TakeAndLoadSnapshot(
   // Currently we start a new snapshot view on every TakeAndLoadSnapshot
   // invocation. We can optimize later by connecting the snapshot loader on
   // start and re-using it for the lifetime of the story.
-  operation_queue_.Add(new StartSnapshotLoaderCall(this, std::move(request)));
-  operation_queue_.Add(new UpdateSnapshotCall(this, std::move(done)));
+  operation_queue_.Add(
+      std::make_unique<StartSnapshotLoaderCall>(this, std::move(request)));
+  operation_queue_.Add(
+      std::make_unique<UpdateSnapshotCall>(this, std::move(done)));
 }
 
 void StoryControllerImpl::Watch(
@@ -1349,8 +1328,8 @@ void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
   // We execute this in a SyncCall so that we are sure we don't fall in a
   // crack between a module being created and inserted in the connections
   // collection during some Operation.
-  operation_queue_.Add(
-      new SyncCall([this, callback = std::move(callback)]() mutable {
+  operation_queue_.Add(std::make_unique<SyncCall>(
+      [this, callback = std::move(callback)]() mutable {
         std::vector<fuchsia::modular::ModuleData> result;
 
         result.resize(running_mod_infos_.size());
@@ -1372,18 +1351,20 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
 void StoryControllerImpl::GetModuleController(
     std::vector<std::string> module_path,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
-  operation_queue_.Add(new SyncCall([this, module_path = std::move(module_path),
-                                     request = std::move(request)]() mutable {
-    for (auto& running_mod_info : running_mod_infos_) {
-      if (module_path == running_mod_info.module_data->module_path) {
-        running_mod_info.module_controller_impl->Connect(std::move(request));
-        return;
-      }
-    }
+  operation_queue_.Add(
+      std::make_unique<SyncCall>([this, module_path = std::move(module_path),
+                                  request = std::move(request)]() mutable {
+        for (auto& running_mod_info : running_mod_infos_) {
+          if (module_path == running_mod_info.module_data->module_path) {
+            running_mod_info.module_controller_impl->Connect(
+                std::move(request));
+            return;
+          }
+        }
 
-    // Trying to get a controller for a module that is not active just
-    // drops the connection request.
-  }));
+        // Trying to get a controller for a module that is not active just
+        // drops the connection request.
+      }));
 }
 
 void StoryControllerImpl::GetLink(
@@ -1470,8 +1451,8 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
 
 void StoryControllerImpl::RemoveModuleFromStory(
     const std::vector<std::string>& module_path) {
-  operation_queue_.Add(
-      new StopModuleAndStoryIfEmptyCall(this, module_path, [] {}));
+  operation_queue_.Add(std::make_unique<StopModuleAndStoryIfEmptyCall>(
+      this, module_path, [] {}));
 }
 
 void StoryControllerImpl::InitStoryEnvironment() {

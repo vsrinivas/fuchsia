@@ -226,8 +226,6 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
   std::vector<fuchsia::ledger::Entry> common_entries_;
 
   std::map<std::string, PageClient::Conflict> conflicts_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ResolveCall);
 };
 
 LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger)
@@ -393,9 +391,9 @@ void LedgerClient::ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> common_version,
     fidl::InterfaceHandle<fuchsia::ledger::MergeResultProvider>
         result_provider) {
-  operation_queue_.Add(
-      new ResolveCall(this, result_provider.Bind(), left_version.Bind(),
-                      right_version.Bind(), common_version.Bind()));
+  operation_queue_.Add(std::make_unique<ResolveCall>(
+      this, result_provider.Bind(), left_version.Bind(), right_version.Bind(),
+      common_version.Bind()));
 }
 
 void LedgerClient::ConflictResolverImpl::GetPageClients(

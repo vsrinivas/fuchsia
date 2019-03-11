@@ -23,10 +23,10 @@ OperationContainer::OperationContainer() = default;
 
 OperationContainer::~OperationContainer() = default;
 
-void OperationContainer::Add(OperationBase* const o) {
+void OperationContainer::Add(std::unique_ptr<OperationBase> o) {
   FXL_DCHECK(o != nullptr);
   o->SetOwner(this);
-  Hold(o);  // Takes ownership.
+  Hold(std::move(o));  // Takes ownership.
 }
 
 void OperationContainer::Schedule(OperationBase* const o) { o->Schedule(); }
@@ -52,9 +52,10 @@ fxl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-void OperationCollection::Hold(OperationBase* const o) {
-  operations_.emplace_back(o);
-  Schedule(o);
+void OperationCollection::Hold(std::unique_ptr<OperationBase> o) {
+  auto o_ptr = o.get();
+  operations_.push_back(std::move(o));
+  Schedule(o_ptr);
 }
 
 void OperationCollection::Drop(OperationBase* const o) {
@@ -113,12 +114,13 @@ fxl::WeakPtr<OperationContainer> OperationQueue::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-void OperationQueue::Hold(OperationBase* const o) {
-  operations_.emplace(o);
+void OperationQueue::Hold(std::unique_ptr<OperationBase> o) {
+  auto o_ptr = o.get();
+  operations_.push(std::move(o));
   if (idle_) {
     FXL_DCHECK(operations_.size() == 1);
     idle_ = false;
-    Schedule(o);
+    Schedule(o_ptr);
   }
 }
 
@@ -176,19 +178,23 @@ void OperationQueue::ScheduleTask(fit::pending_task task) {
   // a) it is abandoned or b) it is completed successfully or with an error. In
   // either case we want to unblock the next operation in the queue.
   fit::bridge start;
-  auto wrapper = new PromiseWrapperCall(std::move(start.completer));
+  auto wrapper =
+      std::make_unique<PromiseWrapperCall>(std::move(start.completer));
   executor_.schedule_task(start.consumer.promise().then(
-      [p = task.take_promise(), wrapper](fit::result<>&) mutable {
+      [p = task.take_promise(),
+       weak_wrapper = wrapper->GetWeakPtr()](fit::result<>&) mutable {
         // It is safe to call SayDone() on |wrapper| because we know that
         // |wrapper| will be alive so long as this promise is being executed.
         //
         // We use a fit::defer on the capture list of .then() so that if |p| is
         // abandoned, we still unblock the queue.
-        return p.then([defer = fit::defer([wrapper] { wrapper->SayDone(); })](
-                          fit::result<>&) {});
+        return p.then(
+            [defer = fit::defer([weak_wrapper] {
+               static_cast<PromiseWrapperCall*>(weak_wrapper.get())->SayDone();
+             })](fit::result<>&) {});
       }));
 
-  Add(wrapper);
+  Add(std::move(wrapper));
 }
 
 OperationBase::OperationBase(const char* const trace_name,

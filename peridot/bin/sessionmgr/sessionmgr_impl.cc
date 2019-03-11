@@ -813,14 +813,12 @@ class SessionmgrImpl::SwapSessionShellOperation : public Operation<> {
 
   SessionmgrImpl* const sessionmgr_impl_;
   fuchsia::modular::AppConfig session_shell_config_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SwapSessionShellOperation);
 };
 
 void SessionmgrImpl::SwapSessionShell(
     fuchsia::modular::AppConfig session_shell_config,
     SwapSessionShellCallback callback) {
-  operation_queue_.Add(new SwapSessionShellOperation(
+  operation_queue_.Add(std::make_unique<SwapSessionShellOperation>(
       this, std::move(session_shell_config), std::move(callback)));
 }
 

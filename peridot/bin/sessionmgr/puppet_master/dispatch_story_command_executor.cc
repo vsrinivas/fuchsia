@@ -104,7 +104,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
           Future<fuchsia::modular::ExecuteResult>::Create(
               "DispatchStoryCommandExecutor.ExecuteStoryCommandsCall.Run.did_"
               "execute_command");
-      queue_.Add(new RunStoryCommandCall(
+      queue_.Add(std::make_unique<RunStoryCommandCall>(
           tag_string, command_runner, story_storage_.get(), story_id_,
           std::move(command), did_execute_command->Completer()));
       auto did_execute_command_callback = did_execute_command->Then(
@@ -168,7 +168,7 @@ void DispatchStoryCommandExecutor::ExecuteCommandsInternal(
     fidl::StringPtr story_id,
     std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
-  operation_queues_[story_id].Add(new ExecuteStoryCommandsCall(
+  operation_queues_[story_id].Add(std::make_unique<ExecuteStoryCommandsCall>(
       this, std::move(story_id), std::move(commands), std::move(done)));
 }
 

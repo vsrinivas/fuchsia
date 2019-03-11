@@ -217,8 +217,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   OperationCollection operations_;
   // Used to enqueue sub-operations that should be executed sequentially.
   OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AddModCall);
 };
 
 }  // namespace
@@ -231,8 +229,9 @@ void AddAddModOperation(OperationContainer* const container,
                         fit::function<void(fuchsia::modular::ExecuteResult,
                                            fuchsia::modular::ModuleData)>
                             done) {
-  container->Add(new AddModCall(story_storage, module_resolver, entity_resolver,
-                                std::move(add_mod_params), std::move(done)));
+  container->Add(std::make_unique<AddModCall>(
+      story_storage, module_resolver, entity_resolver,
+      std::move(add_mod_params), std::move(done)));
 }
 
 }  // namespace modular

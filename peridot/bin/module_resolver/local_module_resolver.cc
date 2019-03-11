@@ -225,8 +225,6 @@ class LocalModuleResolver::FindModulesCall
   fuchsia::modular::FindModulesQuery query_;
 
   std::set<ManifestId> candidates_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
 
 class LocalModuleResolver::FindModulesByTypesCall
@@ -455,21 +453,19 @@ class LocalModuleResolver::FindModulesByTypesCall
   fuchsia::modular::FindModulesByTypesResponse response_;
   // A cache of the parameter types for each parameter name in |query_|.
   std::map<std::string, std::vector<std::string>> parameter_types_cache_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesByTypesCall);
 };
 
 void LocalModuleResolver::FindModules(fuchsia::modular::FindModulesQuery query,
                                       FindModulesCallback callback) {
-  operations_.Add(
-      new FindModulesCall(this, std::move(query), std::move(callback)));
+  operations_.Add(std::make_unique<FindModulesCall>(this, std::move(query),
+                                                    std::move(callback)));
 }
 
 void LocalModuleResolver::FindModulesByTypes(
     fuchsia::modular::FindModulesByTypesQuery query,
     FindModulesByTypesCallback callback) {
-  operations_.Add(
-      new FindModulesByTypesCall(this, std::move(query), std::move(callback)));
+  operations_.Add(std::make_unique<FindModulesByTypesCall>(
+      this, std::move(query), std::move(callback)));
 }
 
 void LocalModuleResolver::GetModuleManifest(

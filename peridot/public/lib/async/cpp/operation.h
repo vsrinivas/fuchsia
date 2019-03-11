@@ -31,7 +31,7 @@ class OperationContainer {
   virtual ~OperationContainer();
 
   // Adds |o| to this container and takes ownership.
-  virtual void Add(OperationBase* o) final;
+  virtual void Add(std::unique_ptr<OperationBase> o) final;
 
   // Adds |task| to be scheduled on |this|. This mirrors
   // the interface in fit::executor, and is here only during
@@ -48,7 +48,7 @@ class OperationContainer {
 
   virtual fxl::WeakPtr<OperationContainer> GetWeakPtr() = 0;
   // Must take ownership of |o|.
-  virtual void Hold(OperationBase* o) = 0;
+  virtual void Hold(std::unique_ptr<OperationBase> o) = 0;
   // Must clean up memory for |o|.
   virtual void Drop(OperationBase* o) = 0;
   virtual void Cont() = 0;
@@ -61,11 +61,15 @@ class OperationCollection : public OperationContainer {
   OperationCollection();
   ~OperationCollection() override;
 
+  // move-only
+  OperationCollection(const OperationCollection&) = delete;
+  OperationCollection& operator=(const OperationCollection&) = delete;
+
   void ScheduleTask(fit::pending_task task) override;
 
  private:
   fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
-  void Hold(OperationBase* o) override;
+  void Hold(std::unique_ptr<OperationBase> o) override;
   void Drop(OperationBase* o) override;
   void Cont() override;
 
@@ -79,8 +83,6 @@ class OperationCollection : public OperationContainer {
   // we need the virtual GetWeakPtr() in the base class, rather than to put the
   // weak ptr factory in the base class.
   fxl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OperationCollection);
 };
 
 // An implementation of |OperationContainer| which runs incoming Operations
@@ -91,11 +93,15 @@ class OperationQueue : public OperationContainer {
   OperationQueue();
   ~OperationQueue() override;
 
+  // move-only
+  OperationQueue(const OperationQueue&) = delete;
+  OperationQueue& operator=(const OperationQueue&) = delete;
+
   void ScheduleTask(fit::pending_task task) override;
 
  private:
   fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
-  void Hold(OperationBase* o) override;
+  void Hold(std::unique_ptr<OperationBase> o) override;
   void Drop(OperationBase* o) override;
   void Cont() override;
 
@@ -115,8 +121,6 @@ class OperationQueue : public OperationContainer {
   // we need the virtual GetWeakPtr() in the base class, rather than to put the
   // weak ptr factory in the base class.
   fxl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OperationQueue);
 };
 
 // Something that can be put in an OperationContainer until it calls Done() on
@@ -124,7 +128,7 @@ class OperationQueue : public OperationContainer {
 // handles until the operation asynchronously completes and returns a value.
 //
 // Held by a unique_ptr<> in the OperationContainer. Instances of derived
-// classes need to be created with new.
+// classes need to be created with |std::make_unique|.
 //
 // Advantages of using an Operation instance to implement asynchronous fidl
 // method invocations:
@@ -156,6 +160,10 @@ class OperationQueue : public OperationContainer {
 class OperationBase {
  public:
   virtual ~OperationBase();
+
+  // move-only
+  OperationBase(const OperationBase&) = delete;
+  OperationBase& operator=(const OperationBase&) = delete;
 
   // Derived classes implement this method. It is called by the container of
   // this Operation when it is ready. At some point after Run() is invoked,
@@ -247,14 +255,16 @@ class OperationBase {
 
   // Additional information added to trace events for this operation.
   const std::string trace_info_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };
 
 template <typename... Args>
 class Operation : public OperationBase {
  public:
   ~Operation() override = default;
+
+  // move-only
+  Operation(const Operation&) = delete;
+  Operation& operator=(const Operation&) = delete;
 
   using ResultCall = fit::function<void(Args...)>;
 
@@ -277,8 +287,6 @@ class Operation : public OperationBase {
 
  private:
   ResultCall result_call_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Operation);
 };
 
 // The instance of FlowToken at which the refcount reaches zero in the
@@ -444,8 +452,6 @@ class FutureOperation : public Operation<Args...> {
 
   FuturePtr<> on_run_;
   FuturePtr<Args...> done_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FutureOperation);
 };
 
 // EXPERIMENTAL
@@ -464,11 +470,11 @@ class FutureOperation : public Operation<Args...> {
 // }
 //
 template <typename... ResultArgs, typename... FutureArgs>
-OperationBase* WrapFutureAsOperation(
+std::unique_ptr<OperationBase> WrapFutureAsOperation(
     const char* const trace_name, FuturePtr<> on_run,
     FuturePtr<FutureArgs...> done,
     fit::function<void(ResultArgs...)> result_call) {
-  return new FutureOperation<ResultArgs...>(
+  return std::make_unique<FutureOperation<ResultArgs...>>(
       trace_name, std::move(on_run), std::move(done), std::move(result_call));
 }
 
@@ -495,8 +501,6 @@ class FutureOperation2 : public Operation<Args...> {
   }
 
   RunOpCall run_op_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FutureOperation2);
 };
 
 // EXPERIMENTAL
@@ -530,12 +534,12 @@ class FutureOperation2 : public Operation<Args...> {
 //      result_call);
 // }
 template <typename... ResultArgs>
-OperationBase* NewCallbackOperation(
+std::unique_ptr<OperationBase> NewCallbackOperation(
     const char* const trace_name,
     typename FutureOperation2<ResultArgs...>::RunOpCall run,
     typename FutureOperation2<ResultArgs...>::ResultCall done) {
-  return new FutureOperation2<ResultArgs...>(trace_name, std::move(run),
-                                             std::move(done));
+  return std::make_unique<FutureOperation2<ResultArgs...>>(
+      trace_name, std::move(run), std::move(done));
 }
 
 // An operation which immediately calls its result callback. This is useful for
@@ -546,9 +550,6 @@ class SyncCall : public Operation<> {
       : Operation("SyncCall", std::move(result_call)) {}
 
   void Run() override { Done(); }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
 };
 
 }  // namespace modular

@@ -316,8 +316,6 @@ class MessageQueueManager::GetQueueTokenCall
   std::string key_;
 
   fidl::StringPtr result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
 
 class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
@@ -395,8 +393,6 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
   std::string key_;
 
   MessageQueueInfo result_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetMessageSenderCall);
 };
 
 class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
@@ -420,7 +416,7 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
   void Run() override {
     FlowToken flow{this};
 
-    operation_collection_.Add(new GetQueueTokenCall(
+    operation_collection_.Add(std::make_unique<GetQueueTokenCall>(
         page(), message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this, flow](fidl::StringPtr token) {
@@ -507,8 +503,6 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
   fuchsia::ledger::PageSnapshotPtr snapshot_;
 
   OperationCollection operation_collection_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ObtainMessageQueueCall);
 };
 
 class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
@@ -531,7 +525,7 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
   void Run() override {
     FlowToken flow{this};
 
-    operation_collection_.Add(new GetQueueTokenCall(
+    operation_collection_.Add(std::make_unique<GetQueueTokenCall>(
         page(), message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this, flow](fidl::StringPtr token) {
@@ -606,8 +600,6 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
   fuchsia::ledger::PageSnapshotPtr snapshot_;
 
   OperationCollection operation_collection_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteMessageQueueCall);
 };
 
 class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
@@ -688,8 +680,6 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
   const std::string component_namespace_;
   const std::string message_queues_key_prefix_;
   std::vector<fuchsia::ledger::Entry> component_entries_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteNamespaceCall);
 };
 
 MessageQueueManager::MessageQueueManager(LedgerClient* const ledger_client,
@@ -704,7 +694,7 @@ void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_namespace,
     const std::string& component_instance_id, const std::string& queue_name,
     fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
-  operation_collection_.Add(new ObtainMessageQueueCall(
+  operation_collection_.Add(std::make_unique<ObtainMessageQueueCall>(
       this, page(), component_namespace, component_instance_id, queue_name,
       std::move(request)));
 }
@@ -851,13 +841,13 @@ void MessageQueueManager::ClearMessageQueueStorage(
 void MessageQueueManager::DeleteMessageQueue(
     const std::string& component_namespace,
     const std::string& component_instance_id, const std::string& queue_name) {
-  operation_collection_.Add(new DeleteMessageQueueCall(
+  operation_collection_.Add(std::make_unique<DeleteMessageQueueCall>(
       this, page(), component_namespace, component_instance_id, queue_name));
 }
 
 void MessageQueueManager::DeleteNamespace(
     const std::string& component_namespace, fit::function<void()> done) {
-  operation_collection_.Add(new DeleteNamespaceCall(
+  operation_collection_.Add(std::make_unique<DeleteNamespaceCall>(
       this, page(), component_namespace, std::move(done)));
 }
 
@@ -871,8 +861,8 @@ void MessageQueueManager::GetMessageSender(
     return;
   }
 
-  operation_collection_.Add(
-      new GetMessageSenderCall(this, page(), queue_token, std::move(request)));
+  operation_collection_.Add(std::make_unique<GetMessageSenderCall>(
+      this, page(), queue_token, std::move(request)));
 }
 
 void MessageQueueManager::RegisterMessageWatcher(

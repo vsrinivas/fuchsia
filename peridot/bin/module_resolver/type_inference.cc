@@ -43,8 +43,6 @@ class ParameterTypeInferenceHelper::GetParameterTypesCall
   fuchsia::modular::EntityResolver* const entity_resolver_;
   fidl::StringPtr const entity_reference_;
   fuchsia::modular::EntityPtr entity_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetParameterTypesCall);
 };
 
 void ParameterTypeInferenceHelper::GetParameterTypes(
@@ -64,7 +62,7 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
       result_callback(types);
     }
   } else if (parameter_constraint.is_entity_reference()) {
-    operation_collection_.Add(new GetParameterTypesCall(
+    operation_collection_.Add(std::make_unique<GetParameterTypesCall>(
         entity_resolver_.get(), parameter_constraint.entity_reference(),
         result_callback));
   } else if (parameter_constraint.is_link_info()) {
@@ -87,7 +85,7 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
       if (EntityReferenceFromJson(
               parameter_constraint.link_info().content_snapshot,
               &entity_reference)) {
-        operation_collection_.Add(new GetParameterTypesCall(
+        operation_collection_.Add(std::make_unique<GetParameterTypesCall>(
             entity_resolver_.get(), entity_reference, result_callback));
       }
     }

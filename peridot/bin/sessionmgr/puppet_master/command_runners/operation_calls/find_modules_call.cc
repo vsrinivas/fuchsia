@@ -157,8 +157,6 @@ class FindModulesCall
   fuchsia::modular::ExecuteResult result_;
   fuchsia::modular::FindModulesResponse response_;
   OperationCollection operations_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
 
 }  // namespace
@@ -172,7 +170,7 @@ void AddFindModulesOperation(
     fit::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::FindModulesResponse)>
         result_call) {
-  operation_container->Add(new FindModulesCall(
+  operation_container->Add(std::make_unique<FindModulesCall>(
       module_resolver, entity_resolver, std::move(intent),
       std::move(requesting_module_path), std::move(result_call)));
 }
