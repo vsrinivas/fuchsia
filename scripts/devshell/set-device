@@ -25,19 +25,27 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-standard-switches "$@"
 fx-config-read
 
+function select_device() {
+  IFS=$'\n' read -rd '' -a devices <<<"$1"
+  select choice in "${devices[@]}"; do
+    echo "${devices[$((REPLY-1))]}"
+    break
+  done
+}
+
 device="$1"
 if [[ -z "$device" ]]; then
   devices="$("${ZIRCON_TOOLS_DIR}/netls" | awk '/device /{print $2}')"
-  if [[ "$(echo "$devices" | wc -l)" -gt 2 ]]; then
-    echo 2>&1 "Multiple devices found, please pick one from the list:"
-    echo "${devices}"
-    exit 1
-  fi
   if [[ -z "${devices}" ]]; then
     echo 2>&1 "No devices discovered, please supply a device name"
     exit 1
   fi
-  device="${devices}"
+  if [[ "$(echo "$devices" | wc -l)" -ge 2 ]]; then
+    echo 2>&1 "Multiple devices found, please pick one from the list:"
+    device=$(select_device "$devices")
+  else
+    device="${devices}"
+  fi
 fi
 
 if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
