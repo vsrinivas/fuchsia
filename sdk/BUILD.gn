@@ -8,6 +8,11 @@ import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("config.gni")
 
+# This default target is empty because there are multiple flavors of SDKs and
+# there is no "default" one. The empty target is still needed so that all the
+# other targets in this file are attached to the build graph.
+group("sdk") {}
+
 sdk_documentation("open_source") {
   name = "open_source"
 
