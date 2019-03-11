@@ -10,7 +10,7 @@ In order to add more events:
 In order to view the recorded data, run:
 
 ```
-cd garnet/bin/cobalt
+cd src/cobalt/bin
 ./download_report_client.py
 ./report_client -project_id=100
 ```
@@ -24,4 +24,4 @@ Command or 'help': run range -4 0 2
 
 [Cobalt]: https://fuchsia.googlesource.com/cobalt
 [/bin/ledger/cobalt]: /src/ledger/bin/cobalt/
-[Cobalt client]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/cobalt/
+[Cobalt client]: https://fuchsia.googlesource.com/fuchsia/+/master/src/cobalt/bin/

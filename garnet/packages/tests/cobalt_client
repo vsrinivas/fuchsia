@@ -3,6 +3,6 @@
         "garnet/packages/prod/cobalt_client"
     ],
     "packages": [
-        "//garnet/bin/cobalt:cobalt_tests"
+        "//src/cobalt/bin:cobalt_tests"
     ]
 }

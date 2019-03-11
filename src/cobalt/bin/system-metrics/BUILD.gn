@@ -1,0 +1,78 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+metrics_registry("metrics_registry") {
+  project_name = "fuchsia_system_metrics"
+  namespace = "fuchsia_system_metrics"
+  generate_cc = true
+  generate_binarypb = false
+}
+
+source_set("system_metrics_daemon_lib") {
+  sources = [
+    "system_metrics_daemon.cc",
+    "system_metrics_daemon.h",
+  ]
+
+  public_deps = [
+    ":metrics_registry_cc",
+    "//garnet/public/lib/fsl",
+    "//sdk/lib/sys/cpp",
+    "//src/cobalt/bin/utils:clock",
+    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("system-metrics") {
+  output_name = "cobalt_system_metrics_bin"
+
+  sources = [
+    "system_metrics_main.cc",
+  ]
+
+  deps = [
+    ":system_metrics_daemon_lib",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+package("cobalt_system_metrics") {
+  deps = [
+    ":system-metrics",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/cobalt_system_metrics.cmx")
+      dest = "cobalt_system_metrics.cmx"
+    },
+  ]
+
+  binary = "cobalt_system_metrics_bin"
+}
+
+executable("cobalt_system_metrics_unittests") {
+  testonly = true
+
+  sources = [
+    "system_metrics_daemon_test.cc",
+  ]
+
+  deps = [
+    ":system_metrics_daemon_lib",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing",
+    "//src/cobalt/bin/testing:fake_clock_lib",
+    "//src/cobalt/bin/testing:fake_logger_lib",
+    "//src/cobalt/bin/utils:clock",
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
+}

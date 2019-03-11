@@ -1,0 +1,130 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+# Generate the global_metrics_registry.pb file to be used in constructing
+# loggers when the user doesn't provide their own config.
+metrics_registry("global_metrics_registry") {
+  global = true
+}
+
+source_set("lib") {
+  sources = [
+    "cobalt_app.cc",
+    "cobalt_app.h",
+    "cobalt_controller_impl.cc",
+    "cobalt_controller_impl.h",
+    "legacy_logger_impl.cc",
+    "legacy_logger_impl.h",
+    "logger_factory_impl.cc",
+    "logger_factory_impl.h",
+    "logger_impl.cc",
+    "logger_impl.h",
+    "product_hack.h",
+    "system_data_updater_impl.cc",
+    "system_data_updater_impl.h",
+    "timer_manager.cc",
+    "timer_manager.h",
+    "utils.cc",
+    "utils.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/wlan/mlme:mlme",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network_wrapper",
+    "//sdk/lib/sys/cpp",
+    "//src/cobalt/bin/utils:fuchsia_http_client",
+    "//third_party/cobalt/encoder",
+    "//third_party/cobalt/logger",
+    "//third_party/cobalt/logger:event_aggregator",
+    "//third_party/cobalt/logger:project_context_factory",
+    "//third_party/cobalt/util:pem_util",
+    "//third_party/cobalt/util:posix_file_system",
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_lite",
+    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("app") {
+  output_name = "cobalt"
+
+  sources = [
+    "cobalt_main.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+}
+
+package("cobalt") {
+  deps = [
+    ":app",
+    ":global_metrics_registry",
+  ]
+
+  binary = "cobalt"
+
+  meta = [
+    {
+      path = rebase_path("meta/cobalt.cmx")
+      dest = "cobalt.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/analyzer_public.pem")
+      dest = "certs/cobaltv0.1/analyzer_public.pem"
+    },
+    {
+      path = rebase_path(
+              "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/shuffler_public.pem")
+      dest = "certs/cobaltv0.1/shuffler_public.pem"
+    },
+    {
+      # Cobalt 1.0 analyzer public key.
+      path = rebase_path("//third_party/cobalt/keys/analyzer_public_key.tink")
+      dest = "keys/analyzer_public"
+    },
+    {
+      # Cobalt 1.0 shuffler public key.
+      path = rebase_path("//third_party/cobalt/keys/shuffler_public_key.tink")
+      dest = "keys/shuffler_public"
+    },
+    {
+      path = rebase_path(
+              get_label_info(":global_metrics_registry", "target_gen_dir") +
+              "/global_metrics_registry.pb")
+      dest = "global_metrics_registry.pb"
+    },
+  ]
+}
+
+executable("cobalt_app_unittests") {
+  testonly = true
+
+  sources = [
+    "system_data_updater_impl_test.cc",
+    "timer_manager_test.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing",
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
+}
