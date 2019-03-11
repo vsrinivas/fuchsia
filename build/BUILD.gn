@@ -30,7 +30,6 @@ group("deprecated_global_persistent_storage_whitelist") {
     "//garnet/bin/media:audio_core",
     "//garnet/bin/media/camera_manager:camera_manager_cpp",
     "//garnet/bin/netcfg:netcfg",
-    "//garnet/bin/stash:stash",
     "//garnet/bin/timezone:timezone",
     "//garnet/bin/trace:trace",
     "//garnet/bin/wlan/wlancfg:wlancfg",

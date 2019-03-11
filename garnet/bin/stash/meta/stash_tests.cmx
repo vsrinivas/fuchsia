@@ -4,7 +4,7 @@
         "args": [ "--backing_file", "/data/stash_tests.store" ]
     },
     "sandbox": {
-        "features": [ "deprecated-global-persistent-storage" ],
+        "features": [ "isolated-persistent-storage" ],
         "services": [ "fuchsia.logger.LogSink" ]
     }
 }
