@@ -13,12 +13,15 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <gpt/gpt.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -437,31 +440,31 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
     return status;
 }
 
-/*
- * Attempt to mount the device pointed to be the file descriptor at a known
- * location.
- * Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
- * is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
- * GUID of the device does not match a known valid one. Returns
- * ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
- * attempt to mount is made, without checking mount success.
- */
+// Attempt to mount the device pointed to be the file descriptor at a known
+// location.
+//
+// Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
+// is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
+// GUID of the device does not match a known valid one. Returns
+// ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
+// attempt to mount is made, without checking mount success.
 zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_t* options) {
-    uint8_t type_guid[GPT_GUID_LEN];
-
-    // initialize our data for this run
-    ssize_t read_sz = ioctl_block_get_type_guid(fd.get(), type_guid, sizeof(type_guid));
-
-    if (read_sz != GPT_GUID_LEN) {
-        printf("fshost: cannot read GUID from minfs-formatted device\n");
-        return ZX_ERR_INVALID_ARGS;
+    fuchsia_hardware_block_partition_GUID type_guid;
+    {
+        fzl::UnownedFdioCaller disk_connection(fd.get());
+        zx::unowned_channel channel(disk_connection.borrow_channel());
+        zx_status_t io_status, status;
+        io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status,
+                                                                          &type_guid);
+        if (io_status != ZX_OK) return io_status;
+        if (status != ZX_OK) return status;
     }
 
-    if (gpt_is_sys_guid(type_guid, read_sz)) {
+    if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
         return ZX_ERR_NOT_SUPPORTED;
-    } else if (gpt_is_data_guid(type_guid, read_sz)) {
+    } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
         return watcher->MountData(std::move(fd), options);
-    } else if (gpt_is_install_guid(type_guid, read_sz)) {
+    } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
         return watcher->MountInstall(std::move(fd), options);
     }
     printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
@@ -491,17 +494,19 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
     }
 
     disk_format_t df = detect_disk_format(fd.get());
+    fuchsia_hardware_block_partition_GUID guid;
     {
-        fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-        if (io == nullptr) {
+        fzl::UnownedFdioCaller disk_connection(fd.get());
+        zx::unowned_channel disk(disk_connection.borrow_channel());
+
+        fuchsia_hardware_block_BlockInfo info;
+        zx_status_t io_status, call_status;
+        io_status = fuchsia_hardware_block_BlockGetInfo(disk->get(), &call_status, &info);
+        if (io_status != ZX_OK || call_status != ZX_OK) {
             return ZX_OK;
         }
-        auto cleanup = fbl::MakeAutoCall([io]() { fdio_unsafe_release(io); });
-        zx::unowned_channel disk(fdio_unsafe_borrow_channel(io));
 
-        zx_status_t call_status;
-        block_info_t info;
-        if (ioctl_block_get_info(fd.get(), &info) >= 0 && info.flags & BLOCK_FLAG_BOOTPART) {
+        if (info.flags & BLOCK_FLAG_BOOTPART) {
             fuchsia_device_ControllerBind(disk->get(), BOOTPART_DRIVER_LIB,
                                           STRLEN(BOOTPART_DRIVER_LIB), &call_status);
             return ZX_OK;
@@ -542,16 +547,18 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         default:
             break;
         }
-    }
 
-    uint8_t guid[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
-    ioctl_block_get_type_guid(fd.get(), guid, sizeof(guid));
+        io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(disk->get(), &call_status,
+                                                                          &guid);
+        if (io_status != ZX_OK || call_status != ZX_OK) {
+            return ZX_OK;
+        }
+    }
 
     // If we're in netbooting mode, then only bind drivers for partition
     // containers and the install partition, not regular filesystems.
     if (watcher->Netbooting()) {
-        const uint8_t expected_guid[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
-        if (memcmp(guid, expected_guid, sizeof(guid)) == 0) {
+        if (gpt_is_install_guid(guid.value, GPT_GUID_LEN)) {
             printf("fshost: mounting install partition\n");
             mount_options_t options = default_mount_options;
             mount_minfs(watcher, std::move(fd), &options);
@@ -565,7 +572,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
     case DISK_FORMAT_BLOBFS: {
         const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
 
-        if (memcmp(guid, expected_guid, sizeof(guid))) {
+        if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
             return ZX_OK;
         }
         if (watcher->CheckFilesystem(device_path, DISK_FORMAT_BLOBFS) != ZX_OK) {
@@ -595,9 +602,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
     }
     case DISK_FORMAT_FAT: {
         // Use the GUID to avoid auto-mounting the EFI partition
-        uint8_t guid[GPT_GUID_LEN];
-        ssize_t r = ioctl_block_get_type_guid(fd.get(), guid, sizeof(guid));
-        bool efi = gpt_is_efi_guid(guid, r);
+        bool efi = gpt_is_efi_guid(guid.value, GPT_GUID_LEN);
         if (efi) {
             printf("fshost: not automounting efi\n");
             return ZX_OK;
