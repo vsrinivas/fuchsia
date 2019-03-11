@@ -8,15 +8,13 @@
         ],
         "features": [
             "build-info",
+            "config-data",
             "isolated-persistent-storage",
             "root-ssl-certificates"
         ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.SocketProvider"
-        ],
-        "system": [
-            "data/crashpad_analyzer"
         ]
     }
 }

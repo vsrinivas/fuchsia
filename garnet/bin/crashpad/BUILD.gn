@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
 
@@ -78,13 +79,7 @@ source_set("src") {
   ]
 }
 
-package("upload_to_prod_server_config") {
-  deprecated_system_image = true
-
-  resources = [
-    {
-      path = "configs/upload_to_prod_server.json"
-      dest = "crashpad_analyzer/override_config.json"
-    },
-  ]
+config_data("upload_to_prod_server_config") {
+  sources = [ "configs/upload_to_prod_server.json" ]
+  outputs = [ "crashpad_analyzer/override_config.json" ]
 }

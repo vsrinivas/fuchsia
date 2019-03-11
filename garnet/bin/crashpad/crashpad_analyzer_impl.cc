@@ -47,7 +47,7 @@ namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] =
-    "/system/data/crashpad_analyzer/override_config.json";
+    "/config/data/crashpad_analyzer/override_config.json";
 
 }  // namespace
 
