@@ -18,7 +18,7 @@ class ExprToken {
   enum Type : int {
     kInvalid = 0,
     kName,         // random_text
-    kInteger,      // 123
+    kInteger,      // 123, 0x89ab
     kEquals,       // =
     kEquality,     // ==
     kDot,          // .
