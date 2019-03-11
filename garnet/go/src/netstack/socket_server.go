@@ -83,7 +83,7 @@ func (ios *iostate) loopWrite() error {
 			// Success. Pass the data to the endpoint and loop.
 			v = v[:n]
 		case zx.ErrBadState:
-			// This side of the socket is closed.
+			// Reading has been disabled for this socket endpoint.
 			if err := ios.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
 				return fmt.Errorf("Endpoint.Shutdown(ShutdownWrite): %s", err)
 			}
@@ -291,7 +291,7 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 					break writeLoop
 				}
 			case zx.ErrBadState:
-				// This side of the socket is closed.
+				// Writing has been disabled for this socket endpoint.
 				if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
 					return fmt.Errorf("Endpoint.Shutdown(ShutdownRead): %s", err)
 				}
