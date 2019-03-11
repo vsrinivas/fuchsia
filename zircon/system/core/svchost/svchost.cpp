@@ -230,6 +230,9 @@ int main(int argc, char** argv) {
     publish_proxy_service(outgoing.public_dir(),
                           fuchsia_device_manager_DebugDumper_Name,
                           zx::unowned_channel(devmgr_proxy_channel));
+    publish_proxy_service(outgoing.public_dir(),
+                          fuchsia_device_manager_Administrator_Name,
+                          zx::unowned_channel(devmgr_proxy_channel));
 
     start_crashsvc(zx::job(root_job),
         require_system? appmgr_svc : ZX_HANDLE_INVALID);

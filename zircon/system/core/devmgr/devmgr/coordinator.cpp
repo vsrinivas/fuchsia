@@ -264,31 +264,6 @@ zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
             static_cast<uint32_t>(len), cmd);
         return ZX_ERR_BAD_STATE;
     }
-
-    if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
-        vfs_exit(fshost_event());
-        Suspend(DEVICE_SUSPEND_FLAG_REBOOT);
-        return ZX_OK;
-    }
-    if ((len == 17) && !memcmp(cmd, "reboot-bootloader", 17)) {
-        vfs_exit(fshost_event());
-        Suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
-        return ZX_OK;
-    }
-    if ((len == 15) && !memcmp(cmd, "reboot-recovery", 15)) {
-        vfs_exit(fshost_event());
-        Suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
-        return ZX_OK;
-    }
-    if ((len == 7) && !memcmp(cmd, "suspend", 7)) {
-        Suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
-        return ZX_OK;
-    }
-    if (len == 8 && (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8))) {
-        vfs_exit(fshost_event());
-        Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
-        return ZX_OK;
-    }
     if ((len > 11) && !memcmp(cmd, "add-driver:", 11)) {
         len -= 11;
         char path[len + 1];
@@ -1719,6 +1694,10 @@ void Coordinator::Suspend(SuspendContext ctx) {
 }
 
 void Coordinator::Suspend(uint32_t flags) {
+    if (!(flags & DEVICE_SUSPEND_FLAG_SUSPEND_RAM)) {
+        vfs_exit(fshost_event());
+    }
+
     Suspend(SuspendContext(this, SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket_)));
 }
 

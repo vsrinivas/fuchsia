@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <ddk/device.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/directory.h>
@@ -686,6 +687,23 @@ static int send_dump(zx_status_t(*fidl_call)(zx_handle_t, zx_handle_t,
     return status;
 }
 
+static int send_suspend(uint32_t flags) {
+    zx_handle_t channel;
+    zx_status_t status = connect_to_service("/svc/fuchsia.device.manager.Administrator", &channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_device_manager_AdministratorSuspend(channel, flags, &call_status);
+    zx_handle_close(channel);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
 static bool command_cmp(const char* command, const char* input, int* command_length) {
   *command_length = strlen(command);
   const size_t input_length = strlen(input);
@@ -729,6 +747,22 @@ int zxc_dm(int argc, char** argv) {
     } else if (command_cmp("devprops", argv[1], &command_length)) {
         return send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
 
+    } else if (command_cmp("reboot", argv[1], &command_length)) {
+        return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT);
+
+    } else if (command_cmp("reboot-bootloader", argv[1], &command_length)) {
+        return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
+
+    } else if (command_cmp("reboot-recovery", argv[1], &command_length)) {
+        return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
+
+    } else if (command_cmp("suspend", argv[1], &command_length)) {
+        return send_suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
+
+    } else if (command_cmp("poweroff", argv[1], &command_length) ||
+               command_cmp("shutdown", argv[1], &command_length)) {
+        return send_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
+
     }
 
     // Fallback to dmctl.
@@ -768,9 +802,7 @@ int zxc_k(int argc, char** argv) {
     // divert it to devmgr backed one instead.
     if (!strcmp(argv[1], "poweroff") || !strcmp(argv[1], "reboot")
         || !strcmp(argv[1], "reboot-bootloader")) {
-        strcpy(buffer, argv[1]);
-        command_length = strlen(buffer);
-        return send_dmctl(buffer, command_length);
+        return zxc_dm(argc, argv);
     }
 
     char* command_end = join(buffer, sizeof(buffer), argc - 1, &argv[1]);

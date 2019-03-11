@@ -44,6 +44,7 @@ executable("dash") {
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-kernel:c",
+    "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",

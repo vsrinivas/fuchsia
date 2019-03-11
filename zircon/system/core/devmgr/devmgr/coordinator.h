@@ -307,6 +307,7 @@ public:
     const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
     const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
+    void Suspend(uint32_t flags);
     SuspendContext& suspend_context() { return suspend_context_; }
     const SuspendContext& suspend_context() const { return suspend_context_; }
 
@@ -357,7 +358,6 @@ private:
 
     void BuildSuspendList();
     void Suspend(SuspendContext ctx);
-    void Suspend(uint32_t flags);
 
     fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
     const Driver* LibnameToDriver(const fbl::String& libname) const;

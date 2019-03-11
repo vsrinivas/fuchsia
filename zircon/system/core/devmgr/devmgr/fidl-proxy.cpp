@@ -87,6 +87,27 @@ void FidlProxyHandler::HandleClient(async_dispatcher_t* dispatcher, zx_handle_t 
             printf("Failed to bind to client channel: %d \n", status);
             return;
         }
+
+    } else if (fbl::StringPiece(fuchsia_device_manager_Administrator_Name) ==
+               fbl::StringPiece(interface_name, byte_count)) {
+       static constexpr fuchsia_device_manager_Administrator_ops_t kOps = {
+            .Suspend = [](void* ctx, uint32_t flags, fidl_txn_t* txn) {
+                static_cast<Coordinator*>(ctx)->Suspend(flags);
+                return fuchsia_device_manager_AdministratorSuspend_reply(txn, ZX_OK);
+            },
+        };
+
+        status = fidl_bind(dispatcher,
+                           client_channel.release(),
+                           reinterpret_cast<fidl_dispatch_t*>(
+                               fuchsia_device_manager_Administrator_dispatch),
+                           this->coordinator_,
+                           &kOps);
+        if (status != ZX_OK) {
+            printf("Failed to bind to client channel: %d \n", status);
+            return;
+        }
+
     } else {
         printf("Request for unknown interface %s\n", interface_name);
     }
