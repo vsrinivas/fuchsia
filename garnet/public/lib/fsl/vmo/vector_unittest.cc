@@ -15,6 +15,11 @@ TEST(VmoVector, ShortVector) {
   std::vector<char> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
   EXPECT_EQ(v, v_out);
+
+  ::fuchsia::mem::Buffer buf;
+  EXPECT_TRUE(VmoFromVector(v, &buf));
+  EXPECT_TRUE(VectorFromVmo(buf, &v_out));
+  EXPECT_EQ(v, v_out);
 }
 
 TEST(VmoVector, EmptyVector) {
@@ -23,6 +28,11 @@ TEST(VmoVector, EmptyVector) {
   EXPECT_TRUE(VmoFromVector(v, &sb));
   std::vector<char> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
+  EXPECT_EQ(v, v_out);
+
+  ::fuchsia::mem::Buffer buf;
+  EXPECT_TRUE(VmoFromVector(v, &buf));
+  EXPECT_TRUE(VectorFromVmo(buf, &v_out));
   EXPECT_EQ(v, v_out);
 }
 
@@ -33,6 +43,11 @@ TEST(VmoVector, ShortUnsignedVector) {
   std::vector<uint8_t> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
   EXPECT_EQ(v, v_out);
+
+  ::fuchsia::mem::Buffer buf;
+  EXPECT_TRUE(VmoFromVector(v, &buf));
+  EXPECT_TRUE(VectorFromVmo(buf, &v_out));
+  EXPECT_EQ(v, v_out);
 }
 
 TEST(VmoVector, EmptyUnsignedVector) {
@@ -41,6 +56,11 @@ TEST(VmoVector, EmptyUnsignedVector) {
   EXPECT_TRUE(VmoFromVector(v, &sb));
   std::vector<uint8_t> v_out;
   EXPECT_TRUE(VectorFromVmo(std::move(sb), &v_out));
+  EXPECT_EQ(v, v_out);
+
+  ::fuchsia::mem::Buffer buf;
+  EXPECT_TRUE(VmoFromVector(v, &buf));
+  EXPECT_TRUE(VectorFromVmo(buf, &v_out));
   EXPECT_EQ(v, v_out);
 }
 
