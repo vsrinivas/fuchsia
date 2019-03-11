@@ -8,6 +8,9 @@
 
 #include <crypto/cipher.h>
 #include <crypto/secret.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -31,18 +34,27 @@ bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Secret& key, bool fvm,
     BEGIN_HELPER;
 
     char err[128];
-    block_info_t bInfo;
-    ASSERT_GE(ioctl_block_get_info(fd.get(), &bInfo), 0);
+    fzl::UnownedFdioCaller caller(fd.get());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+
     if (fvm) {
-        fvm_info_t fInfo;
-        ASSERT_GE(ioctl_block_fvm_query(fd.get(), &fInfo), 0);
+        fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+        ASSERT_OK(fuchsia_hardware_block_volume_VolumeQuery(caller.borrow_channel(), &status,
+                                                            &fvm_info));
+        ASSERT_OK(status);
+
         snprintf(err, sizeof(err),
                  "details: block size=%" PRIu32 ", block count=%" PRIu64
                  ", slice size=%zu, slice count=%zu",
-                 bInfo.block_size, bInfo.block_count, fInfo.slice_size, fInfo.vslice_count);
+                 block_info.block_size, block_info.block_count, fvm_info.slice_size,
+                 fvm_info.vslice_count);
     } else {
         snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64,
-                 bInfo.block_size, bInfo.block_count);
+                 block_info.block_size, block_info.block_count);
     }
 
     fbl::unique_fd new_fd(dup(fd.get()));

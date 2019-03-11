@@ -28,7 +28,10 @@
 #include <lib/zircon-internal/debug.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -156,6 +159,9 @@ bool TestDevice::Rebind() {
     ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
     if (strlen(fvm_part_path_) != 0) {
         ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_));
+        parent_caller_.reset(fvm_part_.get());
+    } else {
+        parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
     }
     ASSERT_TRUE(Connect());
 
@@ -291,6 +297,7 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
     memset(as_read_.get(), 0, block_size);
 
     ASSERT_EQ(ramdisk_create(block_size, count, &ramdisk_), ZX_OK);
+    parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
 
     block_size_ = block_size;
     block_count_ = count;
@@ -348,15 +355,13 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     snprintf(req.name, NAME_LEN, "data");
     fvm_part_.reset(fvm_allocate_partition(fvm_fd.get(), &req));
     ASSERT_TRUE(fvm_part_);
+    parent_caller_.reset(fvm_part_.get());
 
     // Save the topological path for rebinding
-    io = fdio_unsafe_fd_to_io(fvm_part_.get());
-    ASSERT_NONNULL(io);
     size_t out_len;
-    status = fuchsia_device_ControllerGetTopologicalPath(fdio_unsafe_borrow_channel(io),
+    status = fuchsia_device_ControllerGetTopologicalPath(parent_channel()->get(),
                                                          &call_status, fvm_part_path_,
                                                          sizeof(fvm_part_path_) - 1, &out_len);
-    fdio_unsafe_release(io);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(call_status, ZX_OK);
     fvm_part_path_[out_len] = 0;
@@ -370,22 +375,32 @@ bool TestDevice::Connect() {
 
     ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume_));
     ASSERT_OK(volume_->Open(kTimeout, &zxcrypt_));
+    zxcrypt_caller_.reset(zxcrypt_.get());
 
-    block_info_t blk;
-    ASSERT_OK(ToStatus(ioctl_block_get_info(zxcrypt_.get(), &blk)));
-    block_size_ = blk.block_size;
-    block_count_ = blk.block_count;
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_OK(fuchsia_hardware_block_BlockGetInfo(zxcrypt_channel()->get(), &status,
+                                                  &block_info));
+    ASSERT_OK(status);
+    block_size_ = block_info.block_size;
+    block_count_ = block_info.block_count;
 
-    zx_handle_t fifo;
-    ASSERT_OK(ToStatus(ioctl_block_get_fifos(zxcrypt_.get(), &fifo)));
+    zx::fifo fifo;
+    ASSERT_OK(fuchsia_hardware_block_BlockGetFifo(zxcrypt_channel()->get(), &status,
+                                                  fifo.reset_and_get_address()));
+    ASSERT_OK(status);
     req_.group = 0;
-    ASSERT_OK(block_fifo_create_client(fifo, &client_));
+    ASSERT_OK(block_fifo_create_client(fifo.release(), &client_));
 
     // Create the vmo and get a transferable handle to give to the block server
     ASSERT_OK(zx::vmo::create(size(), 0, &vmo_));
-    zx_handle_t xfer;
-    ASSERT_OK(zx_handle_duplicate(vmo_.get(), ZX_RIGHT_SAME_RIGHTS, &xfer));
-    ASSERT_OK(ToStatus(ioctl_block_attach_vmo(zxcrypt_.get(), &xfer, &req_.vmoid)));
+    zx::vmo xfer_vmo;
+    ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+    fuchsia_hardware_block_VmoID vmoid;
+    ASSERT_OK(fuchsia_hardware_block_BlockAttachVmo(zxcrypt_channel()->get(),
+                                                    xfer_vmo.release(), &status, &vmoid));
+    ASSERT_OK(status);
+    req_.vmoid = vmoid.id;
 
     END_HELPER;
 }

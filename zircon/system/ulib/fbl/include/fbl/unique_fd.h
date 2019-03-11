@@ -41,7 +41,7 @@ public:
     // move semantics only
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(unique_fd);
 
-    fbl::unique_fd duplicate() {
+    fbl::unique_fd duplicate() const {
         return fbl::unique_fd(dup(fd_));
     }
 

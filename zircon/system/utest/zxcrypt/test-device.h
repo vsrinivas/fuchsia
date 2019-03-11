@@ -15,6 +15,8 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fvm/format.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/compiler.h>
@@ -59,12 +61,27 @@ public:
     // Returns a duplicated file descriptor representing the zxcrypt volume's underlying device;
     // that is, the ramdisk or FVM partition.
     fbl::unique_fd parent() const {
-        return fbl::unique_fd(dup(fvm_part_ ? fvm_part_.get() :
-                                              ramdisk_get_block_fd(ramdisk_)));
+        if (fvm_part_) {
+            return fvm_part_.duplicate();
+        } else {
+            return fbl::unique_fd(dup(ramdisk_get_block_fd(ramdisk_)));
+        }
     }
 
     // Returns a duplicated file descriptor representing t the zxcrypt volume.
-    fbl::unique_fd zxcrypt() const { return fbl::unique_fd(dup(zxcrypt_.get())); }
+    fbl::unique_fd zxcrypt() const {
+        return zxcrypt_.duplicate();
+    }
+
+    // Returns a connection to the parent device.
+    const zx::unowned_channel parent_channel() const {
+        return zx::unowned_channel(parent_caller_.borrow_channel());
+    }
+
+    // Returns a connection to the zxcrypt device.
+    const zx::unowned_channel zxcrypt_channel() const {
+        return zx::unowned_channel(zxcrypt_caller_.borrow_channel());
+    }
 
     // Returns the block size of the zxcrypt device.
     size_t block_size() const { return block_size_; }
@@ -185,6 +202,10 @@ private:
 
     // The pathname of the FVM partition.
     char fvm_part_path_[PATH_MAX];
+    // A channel-exposing wrapper around the parent device.
+    fzl::UnownedFdioCaller parent_caller_;
+    // A channel-exposing wrapper around the zxcrypt device.
+    fzl::UnownedFdioCaller zxcrypt_caller_;
     // File descriptor for the (optional) underlying FVM partition.
     fbl::unique_fd fvm_part_;
     // File descriptor for the zxcrypt volume.
