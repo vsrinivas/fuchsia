@@ -6,7 +6,6 @@
 
 #include <efi/protocol/graphics-output.h>
 #include <efi/runtime-services.h>
-#include <efi/zircon.h>
 
 #include <cmdline.h>
 #include <inttypes.h>
