@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_sys2::{ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation, RelativeId};
+use fidl_fuchsia_sys2::{
+    ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation, RelativeId,
+};
+// TODO: rustc generates a false positive?
+#[allow(unused_imports)]
+use fidl_fuchsia_sys2::StartupMode;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
@@ -114,17 +119,10 @@ type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(mut self) -> Result<(), Vec<Error>> {
-        // Validate "children" and get the set of all children.
+        // Validate "children" and build the set of all children.
         if let Some(children) = self.decl.children.as_ref() {
             for child in children.iter() {
-                let name = child.name.as_ref();
-                if self.check_identifier(&NAME_RE, NAME_MAX_LEN, name, "ChildDecl", "name") {
-                    let name: &str = name.unwrap();
-                    if !self.all_children.insert(name) {
-                        self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
-                    }
-                }
-                self.check_identifier(&URI_RE, URI_MAX_LEN, child.uri.as_ref(), "ChildDecl", "uri");
+                self.validate_child(&child);
             }
         }
 
@@ -171,6 +169,20 @@ impl<'a> ValidationContext<'a> {
             Ok(())
         } else {
             Err(self.errors)
+        }
+    }
+
+    fn validate_child(&mut self, child: &'a ChildDecl) {
+        let name = child.name.as_ref();
+        if self.check_identifier(&NAME_RE, NAME_MAX_LEN, name, "ChildDecl", "name") {
+            let name: &str = name.unwrap();
+            if !self.all_children.insert(name) {
+                self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
+            }
+        }
+        self.check_identifier(&URI_RE, URI_MAX_LEN, child.uri.as_ref(), "ChildDecl", "uri");
+        if child.startup.is_none() {
+            self.errors.push(Error::missing_field("ChildDecl", "startup"));
         }
     }
 
@@ -672,6 +684,7 @@ mod tests {
                     ChildDecl{
                         name: Some("netstack".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
                     },
                 ]);
                 decl
@@ -742,6 +755,7 @@ mod tests {
                     ChildDecl{
                         name: Some("netstack".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(StartupMode::Eager),
                     },
                 ]);
                 decl
@@ -821,12 +835,14 @@ mod tests {
                 decl.children = Some(vec![ChildDecl{
                     name: None,
                     uri: None,
+                    startup: None,
                 }]);
                 decl
             },
             result = Err(vec![
                 Error::missing_field("ChildDecl", "name"),
                 Error::missing_field("ChildDecl", "uri"),
+                Error::missing_field("ChildDecl", "startup"),
             ]),
         },
         test_validate_children_invalid_identifiers => {
@@ -835,6 +851,7 @@ mod tests {
                 decl.children = Some(vec![ChildDecl{
                     name: Some("^bad".to_string()),
                     uri: Some("bad-scheme&://blah".to_string()),
+                    startup: Some(StartupMode::Lazy),
                 }]);
                 decl
             },
@@ -849,6 +866,7 @@ mod tests {
                 decl.children = Some(vec![ChildDecl{
                     name: Some("a".repeat(1025)),
                     uri: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
+                    startup: Some(StartupMode::Lazy),
                 }]);
                 decl
             },
@@ -873,6 +891,7 @@ mod tests {
                      ChildDecl{
                         name: Some("abcdefghijklmnopqrstuvwxyz0123456789_-.".to_string()),
                         uri: Some("my+awesome-scheme.2://abc123!@#$%.com".to_string()),
+                        startup: Some(StartupMode::Eager),
                     },
                 ]);
                 decl
@@ -893,6 +912,7 @@ mod tests {
                      ChildDecl{
                         name: Some("a".repeat(100)),
                         uri: Some(format!("fuchsia-pkg://{}", "b".repeat(4082))),
+                        startup: Some(StartupMode::Lazy),
                     },
                 ]);
                 decl

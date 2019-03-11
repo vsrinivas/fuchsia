@@ -7,7 +7,7 @@ use cm_json::{self, cm, Error};
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_sys2::{
     CapabilityType, ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation,
-    RelativeId, UseDecl,
+    RelativeId, StartupMode, UseDecl,
 };
 use serde_json::{Map, Value};
 
@@ -113,7 +113,11 @@ fn translate_offers(offer_in: Vec<cm::Offer>) -> Result<Vec<OfferDecl>, Error> {
 fn translate_children(children_in: Vec<cm::Child>) -> Result<Vec<ChildDecl>, Error> {
     let mut out_children = vec![];
     for child in children_in {
-        out_children.push(ChildDecl { name: Some(child.name), uri: Some(child.uri) });
+        out_children.push(ChildDecl {
+            name: Some(child.name),
+            uri: Some(child.uri),
+            startup: Some(startup_from_str(&child.startup)?),
+        });
     }
     Ok(out_children)
 }
@@ -182,6 +186,14 @@ fn relation_from_str(value: &str) -> Result<Relation, Error> {
         cm::SELF => Ok(Relation::Myself),
         cm::CHILD => Ok(Relation::Child),
         _ => Err(Error::parse(format!("Unknown relation: {}", value))),
+    }
+}
+
+fn startup_from_str(value: &str) -> Result<StartupMode, Error> {
+    match value {
+        cm::LAZY => Ok(StartupMode::Lazy),
+        cm::EAGER => Ok(StartupMode::Eager),
+        _ => Err(Error::parse(format!("Unknown startup mode: {}", value))),
     }
 }
 
@@ -408,7 +420,8 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "startup": "lazy"
                     }
                 ]
             }),
@@ -437,6 +450,7 @@ mod tests {
                     ChildDecl{
                         name: Some("logger".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -496,11 +510,13 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "startup": "lazy",
                     },
                     {
                         "name": "netstack",
-                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+                        "startup": "eager",
                     }
                 ],
             }),
@@ -557,10 +573,12 @@ mod tests {
                     ChildDecl{
                         name: Some("logger".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
                     },
                     ChildDecl{
                         name: Some("netstack".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(StartupMode::Eager),
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -574,11 +592,13 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "startup": "lazy"
                     },
                     {
                         "name": "echo_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
+                        "startup": "eager"
                     }
                 ]
             }),
@@ -587,10 +607,12 @@ mod tests {
                     ChildDecl{
                         name: Some("logger".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
                     },
                     ChildDecl{
                         name: Some("echo_server".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm".to_string()),
+                        startup: Some(StartupMode::Eager),
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -674,11 +696,13 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "startup": "lazy"
                     },
                     {
                         "name": "netstack",
-                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+                        "startup": "eager"
                     }
                 ],
                 "facets": {
@@ -731,10 +755,12 @@ mod tests {
                     ChildDecl{
                         name: Some("logger".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
                     },
                     ChildDecl{
                         name: Some("netstack".to_string()),
                         uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(StartupMode::Eager),
                     },
                 ];
                 let facets = fdata::Dictionary{entries: vec![

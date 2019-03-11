@@ -4,6 +4,13 @@
 
 library fuchsia.sys2;
 
+enum StartupMode {
+    /// Start component instance only when another instance binds to it.
+    LAZY = 0;
+    /// Start component instance as soon as parent starts.
+    EAGER = 1;
+};
+
 // Statically declares a child component instance.
 table ChildDecl {
     /// The name assigned to the child by its parent.
@@ -16,6 +23,9 @@ table ChildDecl {
     ///
     /// Must be non-empty and a well-formed URI.
     2: string:MAX_URI_LENGTH uri;
+
+    /// The startup mode for the component instance.
+    3: StartupMode startup;
 
     // TODO(CP-154): Provide a way to supply parameters to the child, possibly
     // as command-line arguments, by URI, or maybe in some other way which is

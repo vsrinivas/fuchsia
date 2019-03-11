@@ -66,6 +66,8 @@ struct Instance {
     execution: Mutex<Option<Execution>>,
     /// Realms of child instances, indexed by child moniker (name). Evaluated on demand.
     child_realms: Option<ChildRealmMap>,
+    /// The mode of startup (lazy or eager).
+    startup: fsys::StartupMode,
 }
 
 impl Instance {
@@ -90,6 +92,7 @@ impl Instance {
                         component_uri: child_uri,
                         execution: Mutex::new(None),
                         child_realms: None,
+                        startup: child_decl.startup.unwrap(),
                     },
                 }));
                 child_realms.insert(moniker, realm);
@@ -202,27 +205,41 @@ impl Model {
                     component_uri: params.root_component_uri,
                     execution: Mutex::new(None),
                     child_realms: None,
+                    // Started by main().
+                    startup: fsys::StartupMode::Lazy,
                 },
             })),
         }
     }
 
     /// Binds to the component instance with the specified moniker, causing it to start if it is
-    /// not already running.
+    /// not already running. Also binds to any descendant component instances that need to be
+    /// eagerly started.
     pub async fn bind_instance(&self, abs_moniker: AbsoluteMoniker) -> Result<(), ModelError> {
         let realm = await!(self.look_up_realm(abs_moniker))?;
-        await!(self.bind_instance_in_realm(realm))
+        // We may have to bind to multiple instances if this instance has children with the
+        // "eager" startup mode.
+        let mut instances_to_bind = vec![realm];
+        while let Some(realm) = instances_to_bind.pop() {
+            instances_to_bind.append(&mut await!(self.bind_instance_in_realm(realm))?);
+        }
+        Ok(())
     }
 
+    /// Binds to the component instance in the given realm, starting it if it's not
+    /// already running. Returns the list of child realms whose instances need to be eagerly started
+    /// after this function returns.
     async fn bind_instance_in_realm(
         &self,
         realm_cell: Rc<RefCell<Realm>>,
-    ) -> Result<(), ModelError> {
+    ) -> Result<Vec<Rc<RefCell<Realm>>>, ModelError> {
         // There can only be one task manipulating an instance's execution at a time.
         let Realm { ref resolver_registry, ref default_runner, ref mut instance } =
             *realm_cell.borrow_mut();
-        let Instance { ref component_uri, ref execution, ref mut child_realms } = instance;
+        let Instance { ref component_uri, ref execution, ref mut child_realms, startup: _ } =
+            instance;
         let mut execution_lock = await!(execution.lock());
+        let mut started = false;
         match &*execution_lock {
             Some(_) => {}
             None => {
@@ -253,10 +270,23 @@ impl Model {
                     outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
                 };
                 await!(default_runner.start(start_info))?;
+                started = true;
                 *execution_lock = Some(execution);
             }
         }
-        Ok(())
+        // Return children that need eager starting.
+        let mut eager_children = vec![];
+        if started {
+            for child_realm in child_realms.as_ref().unwrap().values() {
+                match child_realm.borrow().instance.startup {
+                    fsys::StartupMode::Eager => {
+                        eager_children.push(child_realm.clone());
+                    }
+                    fsys::StartupMode::Lazy => {}
+                }
+            }
+        }
+        Ok(eager_children)
     }
 
     async fn look_up_realm(
@@ -352,9 +382,14 @@ mod tests {
     use std::collections::HashSet;
     use std::path::PathBuf;
 
+    struct ChildInfo {
+        name: String,
+        startup: fsys::StartupMode,
+    }
+
     struct MockResolver {
         // Map of parent component instance to its children component instances.
-        children: Rc<RefCell<HashMap<String, Vec<String>>>>,
+        children: Rc<RefCell<HashMap<String, Vec<ChildInfo>>>>,
         // Map of component instance to vec of UseDecls of the component instance.
         uses: Rc<RefCell<HashMap<String, UseDeclsOpt>>>,
     }
@@ -377,8 +412,9 @@ mod tests {
                     children
                         .iter()
                         .map(|c| fsys::ChildDecl {
-                            name: Some(c.clone()),
-                            uri: Some(format!("test:///{}", c)),
+                            name: Some(c.name.clone()),
+                            uri: Some(format!("test:///{}", c.name)),
+                            startup: Some(c.startup),
                         })
                         .collect(),
                 );
@@ -508,9 +544,13 @@ mod tests {
             outgoing_dirs: outgoing_dirs.clone(),
         };
         let children = Rc::new(RefCell::new(HashMap::new()));
-        children
-            .borrow_mut()
-            .insert("root".to_string(), vec!["system".to_string(), "echo".to_string()]);
+        children.borrow_mut().insert(
+            "root".to_string(),
+            vec![
+                ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy },
+                ChildInfo { name: "echo".to_string(), startup: fsys::StartupMode::Lazy },
+            ],
+        );
         let uses = Rc::new(RefCell::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
@@ -582,7 +622,10 @@ mod tests {
             outgoing_dirs: outgoing_dirs.clone(),
         };
         let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
+        children.borrow_mut().insert(
+            "root".to_string(),
+            vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
+        );
         let uses = Rc::new(RefCell::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
@@ -622,6 +665,62 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn bind_instance_eager_child() {
+        // Create a hierarchy of children. The two components in the middle enable eager binding.
+        let mut resolver = ResolverRegistry::new();
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let namespaces = Rc::new(RefCell::new(HashMap::new()));
+        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let runner = MockRunner {
+            uris_run: uris_run.clone(),
+            namespaces: namespaces.clone(),
+            outgoing_dirs: outgoing_dirs.clone(),
+        };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        children.borrow_mut().insert(
+            "root".to_string(),
+            vec![ChildInfo { name: "a".to_string(), startup: fsys::StartupMode::Lazy }],
+        );
+        children.borrow_mut().insert(
+            "a".to_string(),
+            vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Eager }],
+        );
+        children.borrow_mut().insert(
+            "b".to_string(),
+            vec![ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Eager }],
+        );
+        children.borrow_mut().insert(
+            "c".to_string(),
+            vec![ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy }],
+        );
+        let uses = Rc::new(RefCell::new(HashMap::new()));
+        resolver.register(
+            "test".to_string(),
+            Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
+        );
+        let model = Model::new(ModelParams {
+            root_component_uri: "test:///root".to_string(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+        });
+
+        // Bind to the top component, and check that it and the eager components were started.
+        {
+            let res = await!(model
+                .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string()),])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec![
+                "test:///a_resolved".to_string(),
+                "test:///b_resolved".to_string(),
+                "test:///c_resolved".to_string(),
+            ];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_recursive_child() {
         let mut resolver = ResolverRegistry::new();
         let uris_run = Rc::new(RefCell::new(vec![]));
@@ -633,10 +732,17 @@ mod tests {
             outgoing_dirs: outgoing_dirs.clone(),
         };
         let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
-        children
-            .borrow_mut()
-            .insert("system".to_string(), vec!["logger".to_string(), "netstack".to_string()]);
+        children.borrow_mut().insert(
+            "root".to_string(),
+            vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
+        );
+        children.borrow_mut().insert(
+            "system".to_string(),
+            vec![
+                ChildInfo { name: "logger".to_string(), startup: fsys::StartupMode::Lazy },
+                ChildInfo { name: "netstack".to_string(), startup: fsys::StartupMode::Lazy },
+            ],
+        );
         let uses = Rc::new(RefCell::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
@@ -732,7 +838,10 @@ mod tests {
             outgoing_dirs: outgoing_dirs.clone(),
         };
         let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
+        children.borrow_mut().insert(
+            "root".to_string(),
+            vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
+        );
         let uses = Rc::new(RefCell::new(HashMap::new()));
 
         // The system component will request namespaces of "/pkg" to its "/root_pkg" and "/foo/bar"

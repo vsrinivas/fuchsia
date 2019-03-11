@@ -21,7 +21,8 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
         Some("cml") => Ok(()),
         _ => Err(Error::invalid_args(BAD_IN_EXTENSION)),
     }?;
-    const BAD_OUT_EXTENSION: &str = "Output file does not have the component manifest extension (.cm)";
+    const BAD_OUT_EXTENSION: &str =
+        "Output file does not have the component manifest extension (.cm)";
     if let Some(ref path) = output {
         match path.extension().and_then(|e| e.to_str()) {
             Some("cm") => Ok(()),
@@ -120,7 +121,14 @@ fn translate_offer(offer_in: &Vec<cml::Offer>) -> Result<Vec<cm::Offer>, Error> 
 fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, Error> {
     let mut out_children = vec![];
     for child in children_in.iter() {
-        out_children.push(cm::Child { name: child.name.clone(), uri: child.uri.clone() });
+        let startup = match child.startup.as_ref().map(|s| s as &str) {
+            Some(cml::LAZY) | None => cm::LAZY.to_string(),
+            Some(cml::EAGER) => cm::EAGER.to_string(),
+            Some(_) => {
+                return Err(Error::internal(format!("invalid startup")));
+            }
+        };
+        out_children.push(cm::Child { name: child.name.clone(), uri: child.uri.clone(), startup });
     }
     Ok(out_children)
 }
@@ -305,7 +313,8 @@ mod tests {
     "children": [
         {
             "name": "logger",
-            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+            "startup": "lazy"
         }
     ]
 }"#,
@@ -381,15 +390,18 @@ mod tests {
     "children": [
         {
             "name": "logger",
-            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+            "startup": "lazy"
         },
         {
             "name": "echo_server",
-            "uri": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
+            "startup": "lazy"
         },
         {
             "name": "netstack",
-            "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+            "startup": "lazy"
         }
     ]
 }"#,
@@ -399,23 +411,36 @@ mod tests {
                 "children": [
                     {
                         "name": "logger",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
                     },
                     {
                         "name": "gmail",
-                        "uri": "https://www.google.com/gmail"
-                    }
+                        "uri": "https://www.google.com/gmail",
+                        "startup": "eager",
+                    },
+                    {
+                        "name": "echo",
+                        "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+                        "startup": "lazy",
+                    },
                 ]
             }),
             output = r#"{
     "children": [
         {
             "name": "logger",
-            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+            "startup": "lazy"
         },
         {
             "name": "gmail",
-            "uri": "https://www.google.com/gmail"
+            "uri": "https://www.google.com/gmail",
+            "startup": "eager"
+        },
+        {
+            "name": "echo",
+            "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+            "startup": "lazy"
         }
     ]
 }"#,
@@ -520,11 +545,13 @@ mod tests {
     "children": [
         {
             "name": "logger",
-            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+            "startup": "lazy"
         },
         {
             "name": "netstack",
-            "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+            "startup": "lazy"
         }
     ],
     "facets": {

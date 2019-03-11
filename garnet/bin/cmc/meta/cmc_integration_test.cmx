@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/cmc_integration_test"
+        "binary": "bin/cmc_integration_test"
     }
 }

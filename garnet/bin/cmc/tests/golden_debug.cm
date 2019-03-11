@@ -38,15 +38,17 @@
     "children": [
         {
             "name": "logger",
-            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+            "startup": "lazy"
         },
         {
             "name": "netstack",
-            "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
+            "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+            "startup": "lazy"
         }
     ],
     "facets": {
         "author": "Fuchsia",
-        "year": 2018.0
+        "year": 2018
     }
 }

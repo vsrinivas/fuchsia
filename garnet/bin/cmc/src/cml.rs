@@ -13,6 +13,8 @@ lazy_static! {
     pub static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
     pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
 }
+pub const LAZY: &str = "lazy";
+pub const EAGER: &str = "eager";
 
 #[derive(Deserialize, Debug)]
 pub struct Document {
@@ -57,6 +59,7 @@ pub struct Target {
 pub struct Child {
     pub name: String,
     pub uri: String,
+    pub startup: Option<String>,
 }
 
 pub trait FromClause {

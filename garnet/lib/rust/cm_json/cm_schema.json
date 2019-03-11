@@ -18,6 +18,10 @@
       "minLength": 1,
       "maxLength": 4096
     },
+    "startup-clause": {
+      "type": "string",
+      "pattern": "^(lazy|eager)$"
+    },
     "name-clause": {
       "type": "string",
       "pattern": "^[0-9a-z_\\-\\.]+$",
@@ -211,7 +215,8 @@
         "type": "object",
         "required": [
           "name",
-          "uri"
+          "uri",
+          "startup"
         ],
         "properties": {
           "name": {
@@ -223,6 +228,11 @@
             "$id": "/properties/children/items/properties/uri",
             "allOf": [{ "$ref": "#/definitions/uri-clause" }],
             "title": "Child component URI"
+          },
+          "startup": {
+            "$id": "/properties/children/items/properties/startup",
+            "allOf": [{ "$ref": "#/definitions/startup-clause" }],
+            "title": "Startup mode"
           }
         }
       }

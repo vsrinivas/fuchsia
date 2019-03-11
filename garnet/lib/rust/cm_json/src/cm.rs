@@ -6,6 +6,8 @@ pub const DIRECTORY: &str = "directory";
 pub const REALM: &str = "realm";
 pub const SELF: &str = "self";
 pub const CHILD: &str = "child";
+pub const LAZY: &str = "lazy";
+pub const EAGER: &str = "eager";
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Document {
@@ -50,6 +52,7 @@ pub struct Offer {
 pub struct Child {
     pub name: String,
     pub uri: String,
+    pub startup: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

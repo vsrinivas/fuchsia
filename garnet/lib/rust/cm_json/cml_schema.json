@@ -19,6 +19,10 @@
       "minLength": 1,
       "maxLength": 4096
     },
+    "startup-clause": {
+      "type": "string",
+      "pattern": "^(lazy|eager)$"
+    },
     "child-name-clause": {
       "type": "string",
       "pattern": "^[0-9a-z_\\-\\.]+$",
@@ -308,6 +312,16 @@
             "allOf": [{ "$ref": "#/definitions/uri-clause" }],
             "examples": [
               "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server.cml"
+            ]
+          },
+          "startup": {
+            "$id": "/properties/children/items/properties/uri",
+            "title": "Startup mode",
+            "description": "Conditions that trigger the component to start (defaults to \"lazy\")",
+            "allOf": [{ "$ref": "#/definitions/startup-clause" }],
+            "examples": [
+              "eager",
+              "lazy"
             ]
           }
         }
