@@ -119,7 +119,7 @@ impl MembershipQueryData {
     pub(crate) const DEFAULT_QUERY_INTERVAL: std::time::Duration =
         std::time::Duration::from_secs(1250);
 
-    pub(crate) fn number_of_sources(&self) -> u16 {
+    pub(crate) fn number_of_sources(self) -> u16 {
         NetworkEndian::read_u16(&self.number_of_sources)
     }
 
@@ -134,7 +134,7 @@ impl MembershipQueryData {
     /// however, suppress the querier election or the normal "host-side"
     /// processing of a Query that a router may be required to perform as a
     /// consequence of itself being a group member.
-    pub(crate) fn suppress_router_side_processing(&self) -> bool {
+    pub(crate) fn suppress_router_side_processing(self) -> bool {
         (self.sqrv & Self::S_FLAG) != 0
     }
 
@@ -159,7 +159,7 @@ impl MembershipQueryData {
     /// configured value.
     ///
     /// [RFC 3376 section 8.1]: https://tools.ietf.org/html/rfc3376#section-8.1
-    fn querier_robustness_variable(&self) -> u8 {
+    fn querier_robustness_variable(self) -> u8 {
         self.sqrv & Self::QRV_MSK
     }
 
@@ -177,10 +177,10 @@ impl MembershipQueryData {
     /// `DEFAULT_QUERY_INTERVAL`.
     ///
     /// [RFC 3376 section 8.2]: https://tools.ietf.org/html/rfc3376#section-8.2
-    pub(crate) fn querier_query_interval(&self) -> std::time::Duration {
+    pub(crate) fn querier_query_interval(self) -> std::time::Duration {
         // qqic is represented in a packed floating point format and interpreted
         // as units of seconds.
-        std::time::Duration::from_secs(parse_v3_possible_floating_point(self.qqic) as u64)
+        std::time::Duration::from_secs(parse_v3_possible_floating_point(self.qqic).into())
     }
 
     /// Sets the querier's query interval to given `itv`.
@@ -246,7 +246,7 @@ pub(crate) struct MembershipReportV3Data {
 }
 
 impl MembershipReportV3Data {
-    pub(crate) fn number_of_group_records(&self) -> u16 {
+    pub(crate) fn number_of_group_records(self) -> u16 {
         NetworkEndian::read_u16(&self.number_of_group_records)
     }
 
@@ -286,7 +286,7 @@ pub(crate) struct GroupRecordHeader {
 }
 
 impl GroupRecordHeader {
-    pub(crate) fn number_of_sources(&self) -> u16 {
+    pub(crate) fn number_of_sources(self) -> u16 {
         NetworkEndian::read_u16(&self.number_of_sources)
     }
 
@@ -294,7 +294,7 @@ impl GroupRecordHeader {
         NetworkEndian::write_u16(&mut self.number_of_sources, val);
     }
 
-    pub(crate) fn record_type(&self) -> Option<IgmpGroupRecordType> {
+    pub(crate) fn record_type(self) -> Option<IgmpGroupRecordType> {
         IgmpGroupRecordType::from_u8(self.record_type)
     }
 

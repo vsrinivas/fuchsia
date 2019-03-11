@@ -112,9 +112,7 @@ impl IgmpMaxRespCode for () {
         0
     }
 
-    fn from_code(code: u8) -> Self {
-        ()
-    }
+    fn from_code(code: u8) {}
 }
 
 /// A builder for IGMP packets.
@@ -138,11 +136,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
         msg_header: M::FixedHeader,
         max_resp_time: M::MaxRespTime,
     ) -> IgmpPacketBuilder<B, M> {
-        IgmpPacketBuilder {
-            max_resp_time: max_resp_time,
-            message_header: msg_header,
-            _marker: PhantomData,
-        }
+        IgmpPacketBuilder { max_resp_time, message_header: msg_header, _marker: PhantomData }
     }
 }
 
@@ -195,7 +189,7 @@ impl<B, M: MessageType<B>> PacketBuilder for IgmpPacketBuilder<B, M> {
         0
     }
 
-    fn serialize<'a>(self, mut buffer: SerializeBuffer<'a>) {
+    fn serialize(self, mut buffer: SerializeBuffer) {
         let (prefix, message_body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         self.serialize_headers(prefix, message_body);
