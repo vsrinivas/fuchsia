@@ -52,6 +52,7 @@ static void WaitPeerClosed() {
   zx_handle_t channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
   // If no channel was passed we're running standalone.
   if (channel == ZX_HANDLE_INVALID) {
+    FXL_LOG(INFO) << "No handle provided";
     return;
   }
   zx_status_t status = zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED,
