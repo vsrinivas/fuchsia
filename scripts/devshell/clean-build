@@ -9,5 +9,10 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
+if [[ "$#" -gt 0 ]]; then
+  fx-error "clean-build no longer takes additional arguments, use fx set to alter build parameters"
+  exit 1
+fi
+
 fx-command-run clean
 fx-command-run full-build
