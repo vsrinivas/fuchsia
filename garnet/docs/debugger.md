@@ -54,7 +54,7 @@ packages to build. This example shows how to add this onto the default peridot
 packages (replace with your build's default or whatever you're using):
 
 ```sh
-fx set x64 --packages="peridot/packages/default,garnet/packages/products/devtools"
+fx set x64 --monolith="peridot/packages/default,garnet/packages/products/devtools"
 fx build
 ```
 

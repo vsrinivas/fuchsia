@@ -125,13 +125,6 @@ if [[ -z "${ZSH_VERSION}" ]]; then
           COMPREPLY=($(compgen -W "x64 arm64" "${cur}"))
           return
         fi
-        case "${prev}" in
-          --packages)
-            COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/*/packages/${cur}* 2>/dev/null | \
-              sed -n "s|^${FUCHSIA_DIR}/\(.*\)\$|\1|p" | xargs echo))
-            return
-            ;;
-        esac
         ;;
 
       set-petal)

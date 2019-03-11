@@ -50,7 +50,7 @@ fx set-petal $layer
 jiri update -gc
 # Benchmarks are not included in production packages, so use $layer/packages/kitchen_sink
 # or they will not be built.
-fx set <arch> --packages $layer/packages/kitchen_sink
+fx set <arch> --monolith $layer/packages/kitchen_sink
 fx full-build && fx run
 ```
 

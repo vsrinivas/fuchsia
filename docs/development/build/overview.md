@@ -81,8 +81,8 @@ For a list of all options, run `build-zircon.sh -h`. See Zircon's
 Then configure the content of the generated image by choosing the top level
 product to build:
 ```
-# --products and --packages can be omitted to use the defaults, which are
-# $layer/products/default.gni and empty, respectively.
+# --product can be omitted to use the defaults, which is
+# $layer/products/default.gni.
 $ buildtools/gn gen out/x64 --args='import("//products/core.gni") monolith+=["garnet/packages/my_stuff"]'
 ```
 
@@ -90,7 +90,7 @@ This will create an `out/x64` directory containing Ninja files.
 
 The equivalent fx set command is:
 ```
-$ scripts/fx set x64 --products core --monolith garnet/packages/my_stuff
+$ scripts/fx set x64 --product core --monolith garnet/packages/my_stuff
 ```
 
 For a list of all GN build arguments, run `buildtools/gn args out/x64 --list`.
@@ -125,12 +125,6 @@ changed. After that, run **C** again.
 
 
 ## Tips and tricks
-
-## Inspecting all packages in a product
-
-```bash
-$ build/gn/preprocess_products.py --products '["garnet/products/default"]'
-```
 
 ### Visualizing the hierarchy of build packages
 

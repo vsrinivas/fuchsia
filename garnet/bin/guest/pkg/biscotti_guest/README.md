@@ -36,8 +36,8 @@ can proceed:
 
 ```
  (host) $ cd $FUCHSIA_DIR
- (host) $ fx set x64 --products "garnet/products/default" \
-                     --packages "garnet/packages/experimental/disabled/biscotti"
+ (host) $ fx set x64 --product "garnet/products/default" \
+                     --monolith "garnet/packages/experimental/disabled/biscotti"
  (host) $ fx full-build
 ```
 

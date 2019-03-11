@@ -12,7 +12,7 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set S{ARCH} --packages garnet/packages/default
+$ fx set S{ARCH} --monolith garnet/packages/default
 $ fx full-build
 $ fx pave
 ```
@@ -73,7 +73,7 @@ $ guest launch (linux_guest|zircon_guest) --gic=3
 ## Running from Topaz
 To run from Topaz, configure the guest package as follows:
 ```
-$ fx set ${ARCH} --packages topaz/packages/topaz,garnet/packages/default
+$ fx set ${ARCH} --monolith topaz/packages/topaz,garnet/packages/default
 ```
 
 After netbooting the guest packages can be launched from the system launcher as

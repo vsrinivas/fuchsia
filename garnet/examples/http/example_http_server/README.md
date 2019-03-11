@@ -6,7 +6,7 @@ a single public directory.
 ## Build
 
 ```
-$ fx set x64 --packages garnet/packages/examples/http
+$ fx set x64 --monolith garnet/packages/examples/http
 $ fx full-build
 ```
 

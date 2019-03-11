@@ -41,7 +41,7 @@ You can build the code via the following:
 # You'll need Topaz for Dart
 fx set-petal topaz
 # Also include garnet examples when building Topaz
-fx set x64 --packages topaz/packages/default,garnet/packages/examples/fidl
+fx set x64
 fx full-build
 ```
 

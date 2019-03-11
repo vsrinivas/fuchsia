@@ -114,26 +114,6 @@
 ##
 ## Deprecated flags:
 ##
-##   --boards              Use the listed board target definition (separated by
-##                         comas) in the build, each board results in an import
-##                         statement and MUST define the `fuchsia_packages`
-##                         variable as well as deal with variable re-definition.
-##                         This flag is deprecated, please use --board instead.
-##   --products            Include the listed products (separated by commas) in
-##                         the build. Defaults to the default product for the
-##                         current layer (e.g., "garnet/packages/default.gni" for
-##                         the Garnet layer). If the --products argument is
-##                         given multiple times, the products configurations
-##                         are merged.
-##                         This flag is deprecated, please use exactly one
-##                         --product and specify packages to add in addition to
-##                         the product with --packages.
-##   --packages            Additional packages to be built and made available.
-##                         If the --packages argument is given multiple times,
-##                         all the specified packages are included in the
-##                         build.
-##                         This flag is deprecated, please use one of
-##                         --available, --preinstall, or --monolith.
 ##   --zircon-arg ARG      Additional arguments to pass to build-zircon.sh.
 ##                         Can be given multiple times.
 ##
@@ -217,7 +197,6 @@ function main {
   local available=()
   local preinstall=()
   local monolith=()
-  local packages=()
   local zircon_args=(-v -g -t "$arch")
   local extra_packages=()
   local build_dir=
@@ -266,36 +245,6 @@ function main {
           return 1
         fi
         IFS=, monolith+=("$2")
-        shift
-        ;;
-      --boards)
-        fx-warn "--boards is deprecated, --board is preferred"
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        # Multiple boards may be comma separated
-        IFS=, boards+=("$2")
-        shift
-        ;;
-      --products)
-        fx-warn "--products is deprecated, --product is preferred"
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        # Multiple products may be comma separated
-        IFS=, products+=("$2")
-        shift
-        ;;
-      --packages)
-        fx-warn "--packages is deprecated, --monolith, --preinstall or --available are preferred"
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        # Multiple packages may be comma separated
-        IFS=, packages+=("$2")
         shift
         ;;
       --zircon-arg)
@@ -397,7 +346,7 @@ function main {
     shift
   done
 
-  if [[ -z "${products}${packages}" ]]; then
+  if [[ -z "${products}" ]]; then
     # This is the default logic GN would use, but if a user specified --netboot
     # we would short-circuit the logic, so repeat it here.
     local vendor_repo
@@ -491,7 +440,7 @@ function main {
 
   # Board configs MUST declare fuchsia_packages, and boards must be non-empty.
   gn_args+=" fuchsia_packages+=["
-  for package in ${packages[@]} ${extra_packages[@]}; do
+  for package in ${extra_packages[@]}; do
     gn_args+="\"${package}\","
   done
   gn_args+="]"

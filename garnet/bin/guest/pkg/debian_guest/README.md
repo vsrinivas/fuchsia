@@ -12,7 +12,7 @@ all writes are volatile and will disappear when the guest shuts down.
 ```
 $ cd $FUCHSIA_DIR
 $ ./garnet/bin/guest/pkg/debian_guest/build-image.sh x64
-$ fx set x64 --packages "garnet/packages/default,garnet/packages/experimental/disabled/debian_guest"
+$ fx set x64 --monolith "garnet/packages/default,garnet/packages/experimental/disabled/debian_guest"
 $ fx full-build
 $ fx pave
 ```

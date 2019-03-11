@@ -260,7 +260,7 @@ __IMPORTANT__: The build system will build the fuzz targets __only__ if it is ex
 instrument them for fuzzing with an appropriate sanitizer.  The easiest way to achieve this is using
 the `--fuzz-with <sanitizer>` flag with `fx set`, e.g:
 ```
-$ fx set x64 --fuzz-with asan --packages garnet/packages/tests/all
+$ fx set x64 --fuzz-with asan --monolith garnet/packages/tests/all
 $ fx full-build
 ```
 
@@ -328,7 +328,7 @@ Build this package as you would any other fuzz package, and finally use the `fx 
 include the correct dependencies for you Zircon fuzzer in a Fuchsia build:
 
 ```sh
-$ fx set x64 --fuzz-with asan --packages garnet/packages/garnet --packages garnet/packages/tests/zircon
+$ fx set x64 --fuzz-with asan --monolith garnet/packages/garnet --monolith garnet/packages/tests/zircon
 $ fx full-build
 $ fx fuzz zbi
 ```
