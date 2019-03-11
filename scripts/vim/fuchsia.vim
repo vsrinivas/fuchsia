@@ -92,6 +92,11 @@ if jiri_manifest != ""
     autocmd BufRead,BufNewFile * call FuchsiaBuffer()
     autocmd FileType cpp call FuchsiaCppBuffer()
     autocmd BufNewFile,BufRead *.cmx set syntax=json
+
+    " If this is a golden file, strip the .golden and run autocommands
+    " This will allow syntax highlighting of FIDL goldens.
+    autocmd BufNewFile *.golden execute "doautocmd BufNewFile " . expand("%:r")
+    autocmd BufRead *.golden execute "doautocmd BufRead " . expand("%:r")
   augroup END
 
 endif
