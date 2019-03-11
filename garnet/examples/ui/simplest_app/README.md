@@ -11,5 +11,5 @@ vsync.
 ## USAGE
 
 ```shell
-$ present_view fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx
+$ run fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx
 ```
