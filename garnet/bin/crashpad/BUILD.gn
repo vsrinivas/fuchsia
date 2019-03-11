@@ -10,7 +10,6 @@ package("crashpad_analyzer") {
 }
 
 fuchsia_component("component") {
-  deprecated_global_persistent_storage = "//build"
   binary = "crashpad_analyzer"
 
   manifest = "meta/crashpad_analyzer.cmx"
