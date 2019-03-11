@@ -13,8 +13,8 @@ sdk_source_set("cpp") {
   sources = [
     "file_descriptor.cc",
     "file_descriptor.h",
-    "outgoing.cc",
-    "outgoing.h",
+    "outgoing_directory.cc",
+    "outgoing_directory.h",
     "service_directory.cc",
     "service_directory.h",
     "startup_context.cc",

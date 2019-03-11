@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/outgoing.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 
 #include "echo_server.h"
 
@@ -17,9 +17,9 @@
 
 namespace {
 
-using OutgoingSetupTest = gtest::RealLoopFixture;
+using OutgoingDirectorySetupTest = gtest::RealLoopFixture;
 
-class OutgoingTest : public gtest::RealLoopFixture {
+class OutgoingDirectoryTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
@@ -52,10 +52,10 @@ class OutgoingTest : public gtest::RealLoopFixture {
 
   EchoImpl echo_impl_;
   zx::channel svc_client_;
-  sys::Outgoing outgoing_;
+  sys::OutgoingDirectory outgoing_;
 };
 
-TEST_F(OutgoingTest, Control) {
+TEST_F(OutgoingDirectoryTest, Control) {
   ASSERT_EQ(ZX_OK,
             outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
@@ -67,7 +67,7 @@ TEST_F(OutgoingTest, Control) {
   TestCanAccessEchoService("public/fidl.examples.echo.Echo", false);
 }
 
-TEST_F(OutgoingTest, AddAndRemove) {
+TEST_F(OutgoingDirectoryTest, AddAndRemove) {
   ASSERT_EQ(ZX_ERR_NOT_FOUND,
             outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
 
@@ -86,7 +86,7 @@ TEST_F(OutgoingTest, AddAndRemove) {
   TestCanAccessEchoService("public/fidl.examples.echo.Echo", false);
 }
 
-TEST_F(OutgoingTest, DebugDir) {
+TEST_F(OutgoingDirectoryTest, DebugDir) {
   AddEchoService(outgoing_.debug_dir());
 
   TestCanAccessEchoService("debug/fidl.examples.echo.Echo");
@@ -95,7 +95,7 @@ TEST_F(OutgoingTest, DebugDir) {
   TestCanAccessEchoService("debug/fidl.examples.echo.Echo", false);
 }
 
-TEST_F(OutgoingTest, CtrlDir) {
+TEST_F(OutgoingDirectoryTest, CtrlDir) {
   AddEchoService(outgoing_.ctrl_dir());
 
   TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo");
@@ -104,7 +104,7 @@ TEST_F(OutgoingTest, CtrlDir) {
   TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo", false);
 }
 
-TEST_F(OutgoingTest, GetOrCreateDirectory) {
+TEST_F(OutgoingDirectoryTest, GetOrCreateDirectory) {
   outgoing_.GetOrCreateDirectory("objects")->AddEntry(
       "test_svc_a",
       std::make_unique<vfs::Service>(echo_impl_.GetHandler(dispatcher())));
@@ -115,19 +115,19 @@ TEST_F(OutgoingTest, GetOrCreateDirectory) {
   TestCanAccessEchoService("objects/test_svc_b");
 }
 
-TEST_F(OutgoingSetupTest, Invalid) {
-  sys::Outgoing outgoing;
+TEST_F(OutgoingDirectorySetupTest, Invalid) {
+  sys::OutgoingDirectory outgoing;
   // TODO: This should return ZX_ERR_BAD_HANDLE.
   ASSERT_EQ(ZX_OK, outgoing.Serve(zx::channel(), dispatcher()));
 }
 
-TEST_F(OutgoingSetupTest, AccessDenied) {
+TEST_F(OutgoingDirectorySetupTest, AccessDenied) {
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
 
   svc_server.replace(ZX_RIGHT_NONE, &svc_server);
 
-  sys::Outgoing outgoing;
+  sys::OutgoingDirectory outgoing;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
             outgoing.Serve(std::move(svc_server), dispatcher()));
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_CPP_OUTGOING_H_
-#define LIB_SYS_CPP_OUTGOING_H_
+#ifndef LIB_SYS_CPP_OUTGOING_DIRECTORY_H_
+#define LIB_SYS_CPP_OUTGOING_DIRECTORY_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
@@ -40,14 +40,14 @@ namespace sys {
 // process argument.
 //
 // Instances of this class are thread-safe.
-class Outgoing final {
+class OutgoingDirectory final {
  public:
-  Outgoing();
-  ~Outgoing();
+  OutgoingDirectory();
+  ~OutgoingDirectory();
 
   // Outgoing objects cannot be copied.
-  Outgoing(const Outgoing&) = delete;
-  Outgoing& operator=(const Outgoing&) = delete;
+  OutgoingDirectory(const OutgoingDirectory&) = delete;
+  OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;
 
   // Start serving the root directory on the given channel.
   //
@@ -166,4 +166,4 @@ class Outgoing final {
 
 }  // namespace sys
 
-#endif  // LIB_SYS_CPP_OUTGOING_H_
+#endif  // LIB_SYS_CPP_OUTGOING_DIRECTORY_H_

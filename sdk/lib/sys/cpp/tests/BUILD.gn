@@ -11,7 +11,7 @@ test("component_cpp_unittests") {
   sources = [
     "echo_server.h",
     "file_descriptor_unittest.cc",
-    "outgoing_unittest.cc",
+    "outgoing_directory_unittest.cc",
     "service_directory_unittest.cc",
   ]
 

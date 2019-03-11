@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/sys/cpp/outgoing.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
 
 namespace sys {
@@ -133,12 +133,12 @@ class StartupContext {
   //   fidl::BindingSet<fuchsia::foo::Controller> bindings_;
   // }
   // ```
-  const Outgoing& outgoing() const { return outgoing_; }
-  Outgoing& outgoing() { return outgoing_; }
+  const OutgoingDirectory& outgoing() const { return outgoing_; }
+  OutgoingDirectory& outgoing() { return outgoing_; }
 
  private:
   std::shared_ptr<ServiceDirectory> svc_;
-  Outgoing outgoing_;
+  OutgoingDirectory outgoing_;
 };
 
 }  // namespace sys
