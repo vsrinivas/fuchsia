@@ -4,12 +4,16 @@
 
 executable("lsblk") {
   sources = [
-    "main.c",
+    "main.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",

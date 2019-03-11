@@ -14,9 +14,17 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zx/vmo.h>
 #include <pretty/hexdump.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
@@ -52,28 +60,22 @@ typedef struct blkinfo {
     char path[128];
     char topo[1024];
     char guid[GPT_GUID_STRLEN];
-    char label[40];
+    char label[fuchsia_hardware_block_partition_NAME_LENGTH + 1];
     char sizestr[6];
 } blkinfo_t;
 
-static void populate_topo_path(int fd, blkinfo_t* info) {
-    fdio_t* io = fdio_unsafe_fd_to_io(fd);
-    if (io == NULL) {
-        goto fail;
-    }
+static void populate_topo_path(const zx::unowned_channel& channel, blkinfo_t* info) {
     zx_status_t call_status;
     size_t path_len;
     zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-            fdio_unsafe_borrow_channel(io), &call_status, info->topo, sizeof(info->topo) - 1,
+            channel->get(), &call_status, info->topo, sizeof(info->topo) - 1,
             &path_len);
-    fdio_unsafe_release(io);
     if (status != ZX_OK || call_status != ZX_OK) {
-        goto fail;
+        strcpy(info->topo, "UNKNOWN");
+        return;
     }
     info->topo[path_len] = 0;
     return;
-fail:
-    strcpy(info->topo, "UNKNOWN");
 }
 
 static int cmd_list_blk(void) {
@@ -83,11 +85,14 @@ static int cmd_list_blk(void) {
         fprintf(stderr, "Error opening %s\n", DEV_BLOCK);
         return -1;
     }
+    auto cleanup = fbl::MakeAutoCall([&dir]() { closedir(dir); });
+
     blkinfo_t info;
     const char* type;
-    int fd;
     printf("%-3s %-4s %-16s %-20s %-6s %s\n",
            "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE");
+    char flags[20] = {0};
+
     while ((de = readdir(dir)) != NULL) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
             continue;
@@ -95,27 +100,42 @@ static int cmd_list_blk(void) {
         memset(&info, 0, sizeof(blkinfo_t));
         type = NULL;
         snprintf(info.path, sizeof(info.path), "%s/%s", DEV_BLOCK, de->d_name);
-        fd = open(info.path, O_RDONLY);
-        if (fd < 0) {
+        fbl::unique_fd fd(open(info.path, O_RDONLY));
+        if (!fd) {
             fprintf(stderr, "Error opening %s\n", info.path);
-            goto devdone;
+            continue;
         }
-        populate_topo_path(fd, &info);
+        fzl::FdioCaller caller(std::move(fd));
+        zx::unowned_channel channel(caller.borrow_channel());
 
-        block_info_t block_info;
-        if (ioctl_block_get_info(fd, &block_info) > 0) {
+        populate_topo_path(channel, &info);
+
+        fuchsia_hardware_block_BlockInfo block_info;
+        zx_status_t status;
+        zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status,
+                                                                    &block_info);
+        if (io_status == ZX_OK && status == ZX_OK) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr),
                             block_info.block_size * block_info.block_count);
         }
-        uint8_t guid[GPT_GUID_LEN];
-        if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) >= 0) {
-            uint8_to_guid_string(info.guid, guid);
+        fuchsia_hardware_block_partition_GUID guid;
+
+        io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status,
+                                                                          &guid);
+        if (io_status == ZX_OK && status == ZX_OK) {
+            uint8_to_guid_string(info.guid, guid.value);
             type = gpt_guid_to_type(info.guid);
         }
-        ioctl_block_get_name(fd, info.label, sizeof(info.label));
 
-        char flags[20] = {0};
-
+        size_t actual;
+        io_status = fuchsia_hardware_block_partition_PartitionGetName(channel->get(), &status,
+                                                                      info.label,
+                                                                      sizeof(info.label), &actual);
+        if (io_status == ZX_OK && status == ZX_OK) {
+            info.label[actual] = '\0';
+        } else {
+            info.label[0] = '\0';
+        }
         if (block_info.flags & BLOCK_FLAG_READONLY) {
             strlcat(flags, "RO ", sizeof(flags));
         }
@@ -125,13 +145,10 @@ static int cmd_list_blk(void) {
         if (block_info.flags & BLOCK_FLAG_BOOTPART) {
             strlcat(flags, "BP ", sizeof(flags));
         }
-        close(fd);
-devdone:
         printf("%-3s %4s %-16s %-20s %-6s %s\n",
                de->d_name, info.sizestr, type ? type : "",
                info.label, flags, info.topo);
     }
-    closedir(dir);
     return 0;
 }
 
@@ -144,7 +161,6 @@ static int cmd_list_skip_blk(void) {
     }
     blkinfo_t info;
     const char* type;
-    int fd;
     while ((de = readdir(dir)) != NULL) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
             continue;
@@ -152,19 +168,19 @@ static int cmd_list_skip_blk(void) {
         memset(&info, 0, sizeof(blkinfo_t));
         type = NULL;
         snprintf(info.path, sizeof(info.path), "%s/%s", DEV_SKIP_BLOCK, de->d_name);
-        fd = open(info.path, O_RDONLY);
-        if (fd < 0) {
+        fbl::unique_fd fd(open(info.path, O_RDONLY));
+        if (!fd) {
             fprintf(stderr, "Error opening %s\n", info.path);
-            goto devdone;
+            continue;
         }
-        populate_topo_path(fd, &info);
-
-        fdio_t* io = fdio_unsafe_fd_to_io(fd);
-        zx_handle_t channel = fdio_unsafe_borrow_channel(io);
+        fzl::FdioCaller caller(std::move(fd));
+        zx::unowned_channel channel(caller.borrow_channel());
+        populate_topo_path(channel, &info);
 
         zx_status_t status;
         fuchsia_hardware_skipblock_PartitionInfo partition_info;
-        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(channel, &status, &partition_info);
+        fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(channel->get(), &status,
+                                                             &partition_info);
         if (status == ZX_OK) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr),
                             partition_info.block_size_bytes * partition_info.partition_block_count);
@@ -172,8 +188,6 @@ static int cmd_list_skip_blk(void) {
             type = gpt_guid_to_type(info.guid);
         }
 
-        close(fd);
-devdone:
         printf("%-3s %4s %-16s %-20s %-6s %s\n",
                de->d_name, info.sizestr, type ? type : "", "", "", info.topo);
     }
@@ -181,15 +195,12 @@ devdone:
     return 0;
 }
 
-static int try_read_skip_blk(int fd, off_t offset, size_t count) {
-    fdio_t* io = fdio_unsafe_fd_to_io(fd);
-    zx_handle_t channel = fdio_unsafe_borrow_channel(io);
-
+static int try_read_skip_blk(const fzl::UnownedFdioCaller& caller, off_t offset, size_t count) {
     // check that count and offset are aligned to block size
     uint64_t blksize;
     zx_status_t status;
     fuchsia_hardware_skipblock_PartitionInfo info;
-    fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(channel, &status, &info);
+    fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status, &info);
     if (status != ZX_OK) {
         return status;
     }
@@ -204,127 +215,123 @@ static int try_read_skip_blk(int fd, off_t offset, size_t count) {
     }
 
     // allocate and map a buffer to read into
-    zx_handle_t vmo, dup;
-    void* buf;
-    if (zx_vmo_create(count, 0, &vmo) != ZX_OK) {
+    zx::vmo vmo ;
+    if (zx::vmo::create(count, 0, &vmo) != ZX_OK) {
         fprintf(stderr, "No memory\n");
         return -1;
     }
-    int rc = 0;
-    if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                    0, vmo, 0, count, (uintptr_t*) &buf) != ZX_OK) {
+
+    fzl::OwnedVmoMapper mapper;
+    status = mapper.Map(std::move(vmo), count);
+    if (status != ZX_OK) {
         fprintf(stderr, "Failed to map vmo\n");
-        rc = -1;
-        goto out;
+        return -1;
     }
-    if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+    zx::vmo dup;
+    if (mapper.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
         fprintf(stderr, "Cannot duplicate handle\n");
-        rc = -1;
-        goto out2;
+        return -1;
     }
 
     // read the data
     fuchsia_hardware_skipblock_ReadWriteOperation op = {
-        .vmo = dup,
+        .vmo = dup.release(),
         .vmo_offset = 0,
-        .block = offset / blksize,
-        .block_count = count / blksize,
+        .block = static_cast<uint32_t>(offset / blksize),
+        .block_count = static_cast<uint32_t>(count / blksize),
     };
 
-    fuchsia_hardware_skipblock_SkipBlockRead(channel, &op, &status);
+    fuchsia_hardware_skipblock_SkipBlockRead(caller.borrow_channel(), &op, &status);
     if (status != ZX_OK) {
         fprintf(stderr, "Error %d in SkipBlockRead()\n", status);
-        rc = status;
-        goto out2;
+        return status;
     }
 
-    hexdump8_ex(buf, count, offset);
+    hexdump8_ex(mapper.start(), count, offset);
 
-out2:
-    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buf, count);
-out:
-    zx_handle_close(vmo);
-    return rc;
+    return ZX_OK;
 }
 
 static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
-    int fd = open(dev, O_RDONLY);
-    if (fd < 0) {
+    fbl::unique_fd fd(open(dev, O_RDONLY));
+    if (!fd) {
         fprintf(stderr, "Error opening %s\n", dev);
-        return fd;
+        return -1;
     }
+    fzl::UnownedFdioCaller caller(fd.get());
 
-    // check that count and offset are aligned to block size
-    uint64_t blksize;
-    block_info_t info;
-    ssize_t rc = ioctl_block_get_info(fd, &info);
-    if (rc < 0) {
-        if (try_read_skip_blk(fd, offset, count) < 0) {
-            fprintf(stderr, "Error getting block size for %s\n", dev);
-        }
-        goto out;
+    // Try querying for block info on a new channel.
+    // lsblk also supports reading from skip block devices, but guessing the "wrong" type
+    // of FIDL protocol will close the communication channel.
+    zx::channel maybe_block(fdio_service_clone(caller.borrow_channel()));
+    fuchsia_hardware_block_BlockInfo info;
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(maybe_block.get(), &status,
+                                                                &info);
+    if (io_status != ZX_OK) {
+        status = io_status;
     }
-    blksize = info.block_size;
+    if (status != ZX_OK) {
+        if (try_read_skip_blk(caller, offset, count) < 0) {
+            fprintf(stderr, "Error getting block size for %s\n", dev);
+            return -1;
+        }
+        return 0;
+    }
+    // Check that count and offset are aligned to block size.
+    uint64_t blksize = info.block_size;
     if (count % blksize) {
         fprintf(stderr, "Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
-        rc = -1;
-        goto out;
+        return -1;
     }
     if (offset % blksize) {
         fprintf(stderr, "Offset must be a multiple of blksize=%" PRIu64 "\n", blksize);
-        rc = -1;
-        goto out;
+        return -1;
     }
 
     // read the data
-    void* buf = malloc(count);
+    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[count]);
     if (offset) {
-        rc = lseek(fd, offset, SEEK_SET);
+        off_t rc = lseek(fd.get(), offset, SEEK_SET);
         if (rc < 0) {
-            fprintf(stderr, "Error %zd seeking to offset %jd\n", rc, (intmax_t)offset);
-            goto out2;
+            fprintf(stderr, "Error %lld seeking to offset %jd\n", rc, (intmax_t)offset);
+            return -1;
         }
     }
-    ssize_t c = read(fd, buf, count);
+    ssize_t c = read(fd.get(), buf.get(), count);
     if (c < 0) {
         fprintf(stderr,"Error %zd in read()\n", c);
-        rc = c;
-        goto out2;
+        return -1;
     }
 
-    hexdump8_ex(buf, c, offset);
-
-out2:
-    free(buf);
-out:
-    close(fd);
-    return rc;
+    hexdump8_ex(buf.get(), c, offset);
+    return 0;
 }
 
 static int cmd_stats(const char* dev, bool clear) {
-    int fd = open(dev, O_RDONLY);
-    if (fd < 0) {
+    fbl::unique_fd fd(open(dev, O_RDONLY));
+    if (!fd) {
         fprintf(stderr, "Error opening %s\n", dev);
-        return fd;
+        return -1;
     }
+    fzl::FdioCaller caller(std::move(fd));
 
-    block_stats_t stats;
-    ssize_t rc = ioctl_block_get_stats(fd, &clear, &stats);
-    if (rc < 0) {
+    fuchsia_hardware_block_BlockStats stats;
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                                 &status, &stats);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "Error getting stats for %s\n", dev);
-        close(fd);
-        goto out;
+        return -1;
     }
 
-    printf("total submitted block ops:      %zu\n", stats.total_ops);
-    printf("total submitted blocks:         %zu\n", stats.total_blocks);
-    printf("total submitted read ops:       %zu\n", stats.total_reads);
-    printf("total submitted blocks read:    %zu\n", stats.total_blocks_read);
-    printf("total submitted write ops:      %zu\n", stats.total_writes);
-    printf("total submitted blocks written: %zu\n", stats.total_blocks_written);
-out:
-    close(fd);
-    return rc;
+    printf("total submitted block ops:      %zu\n", stats.ops);
+    printf("total submitted blocks:         %zu\n", stats.blocks);
+    printf("total submitted read ops:       %zu\n", stats.reads);
+    printf("total submitted blocks read:    %zu\n", stats.blocks_read);
+    printf("total submitted write ops:      %zu\n", stats.writes);
+    printf("total submitted blocks written: %zu\n", stats.blocks_written);
+    return 0;
 }
 
 int main(int argc, const char** argv) {
