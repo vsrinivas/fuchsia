@@ -87,22 +87,22 @@ exec_script("/bin/sh",
             "",
             _preprocessed_products.files_read)
 
-monolith_packages = []
+monolith_package_labels = []
 foreach(pkg, _preprocessed_products.monolith) {
-  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+  monolith_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
 }
-preinstall_packages = []
+preinstall_package_labels = []
 foreach(pkg, _preprocessed_products.preinstall) {
-  preinstall_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+  preinstall_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
 }
-available_packages = []
+available_package_labels = []
 foreach(pkg, _preprocessed_products.available) {
-  available_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+  available_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Additional packages that are specified using labels.
 foreach(pkg, extra_package_labels) {
-  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+  monolith_package_labels += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Every extra GN target the package JSON requests be built on the side.

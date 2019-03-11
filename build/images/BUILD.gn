@@ -41,9 +41,9 @@ declare_args() {
 config_package("config-data") {
   visibility = [ ":*" ]
   testonly = true
-  deps = available_packages
+  deps = available_package_labels
 }
-monolith_packages += [ ":config-data" ]
+monolith_package_labels += [ ":config-data" ]
 
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
@@ -85,27 +85,41 @@ images = [
 
 group("monolith_packages") {
   testonly = true
-  public_deps = monolith_packages
+  visibility = [ ":*" ]
+  public_deps = monolith_package_labels
 }
 
 group("preinstall_packages") {
   testonly = true
-  public_deps = preinstall_packages + [ ":monolith_packages" ]
+  visibility = [ ":*" ]
+  public_deps = preinstall_package_labels
 }
 
 group("available_packages") {
   testonly = true
-  public_deps = available_packages + [ ":preinstall_packages" ]
+  visibility = [ ":*" ]
+  public_deps = available_package_labels + [
+                  ":monolith_packages",
+                  ":preinstall_packages",
+                ]
+}
+
+group("packages") {
+  testonly = true
+  public_deps = [
+    ":available_packages",
+  ]
+  data_deps = package_data_deps
 }
 
 template("package_list") {
   generated_file(target_name) {
     testonly = true
-    visibility = [ ":*" ]
     forward_variables_from(invoker,
                            [
                              "deps",
                              "public_deps",
+                             "visibility",
                            ])
 
     data_keys = [ "package_names" ]
@@ -117,18 +131,21 @@ template("package_list") {
 }
 
 package_list("monolith_packages.list") {
+  visibility = [ ":*" ]
   deps = [
     ":monolith_packages",
   ]
 }
 
 package_list("preinstall_packages.list") {
+  visibility = [ ":*" ]
   deps = [
     ":preinstall_packages",
   ]
 }
 
 package_list("available_packages.list") {
+  visibility = [ ":*" ]
   deps = [
     ":available_packages",
   ]
@@ -147,7 +164,7 @@ group("package_lists") {
 
 shell_commands("shell-commands") {
   testonly = true
-  deps = available_packages
+  deps = available_package_labels
   deps += [ "//build/images:shell-commands" ]
   deps -= [ "//build/images:shell-commands" ]
 }
@@ -228,7 +245,10 @@ package_metadata_list("preinstall_meta_far_merkle_index") {
     preinstall_meta_far_merkle_index,
   ]
   data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = preinstall_packages + [ ":update.meta" ]
+  deps = [
+    ":preinstall_packages",
+    ":update.meta",
+  ]
 }
 
 # preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
@@ -1302,10 +1322,11 @@ package_metadata_list("amber_index") {
     amber_index,
   ]
   data_keys = [ "meta_far_index_entries" ]
-  deps = available_packages + [
-           ":system_image.meta",
-           ":update.meta",
-         ]
+  deps = [
+    ":packages",
+    ":system_image.meta",
+    ":update.meta",
+  ]
 }
 
 # The system index is the index of all available packages, naming each blobs.json
@@ -1325,11 +1346,15 @@ tagged_snapshot_manifests = [
   },
   {
     tag = "preinstall"
-    deps = preinstall_packages
+    deps = [
+      ":preinstall_packages",
+    ]
   },
   {
     tag = "available"
-    deps = available_packages
+    deps = [
+      ":available_packages",
+    ]
   },
 ]
 
@@ -1423,9 +1448,7 @@ collect_blob_manifest("available_blobs.manifest") {
     available_blob_manifest,
   ]
   deps = [
-    ":available_packages",
-    ":monolith_packages",
-    ":preinstall_packages",
+    ":packages",
     ":system_image.meta",
     ":update.meta",
   ]
@@ -1494,7 +1517,9 @@ generated_file("package-build-id-files.list") {
     "$target_gen_dir/package-build-id-files.list",
   ]
 
-  deps = available_packages
+  deps = [
+    ":packages",
+  ]
 }
 
 compiled_action("package-ids.txt") {

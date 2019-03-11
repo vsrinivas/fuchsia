@@ -731,7 +731,6 @@ template("package") {
         # TODO(raggi): tighten build/images visibility once we've
         # finished doing large scale cleanups.
         "//build/images:*",
-        "//build/gn:packages",
         "//build/packages/*",
         "//bundles/*",
         "//garnet/packages/*",

@@ -12,20 +12,15 @@ import("//build/toolchain/goma.gni")
 # Permit dependencies on testonly targets from packages.
 testonly = true
 
-group("packages") {
-  deps = available_packages
-  data_deps = package_data_deps
-}
-
 group("default") {
   deps = [
     ":host_tests",
-    ":packages",
+    "//build/images:packages",
   ]
-  if (preinstall_packages != [] || monolith_packages != []) {
+  if (preinstall_package_labels != [] || monolith_package_labels != []) {
     deps += [ "//build/images" ]
   }
-  if (available_packages != []) {
+  if (available_package_labels != []) {
     deps += [ "//build/images:updates" ]
   }
 }
@@ -69,7 +64,7 @@ generated_file("tests") {
   output_conversion = "json"
   deps = [
     ":host_tests",
-    ":packages",
+    "//build/images:packages",
   ]
 }
 
