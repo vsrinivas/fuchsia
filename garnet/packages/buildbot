@@ -1,6 +1,5 @@
 {
     "imports": [
-        "build/packages/shell-commands",
         "bundles/tools",
         "garnet/packages/all",
         "garnet/packages/config/amber",

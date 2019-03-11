@@ -10,6 +10,4 @@ monolith = []
 
 preinstall = []
 
-available = [
-  "garnet/packages/prod/vboot_reference",
-]
+available = [ "garnet/packages/prod/vboot_reference" ]

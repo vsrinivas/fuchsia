@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//build/images:shell-commands"
-    ]
-}
