@@ -4,6 +4,12 @@
 
 test("crypto") {
   sources = [
+    "aead.cpp",
+    "bytes.cpp",
+    "cipher.cpp",
+    "hkdf.cpp",
+    "hmac.cpp",
+    "secret.cpp",
     "utils.cpp",
   ]
   deps = [
