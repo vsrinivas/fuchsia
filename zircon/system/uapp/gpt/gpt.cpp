@@ -5,15 +5,18 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <gpt/cros.h>
-#include <gpt/gpt.h>
-#include <gpt/guid.h>
 #include <inttypes.h>
 #include <optional>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <gpt/cros.h>
+#include <gpt/gpt.h>
+#include <gpt/guid.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h> // for zx_cprng_draw
@@ -118,20 +121,23 @@ fbl::unique_ptr<GptDevice> Init(const char* dev) {
         return nullptr;
     }
 
-    block_info_t info;
-    ssize_t rc = ioctl_block_get_info(fd.get(), &info);
-    if (rc < 0) {
-        fprintf(stderr, "error getting block info\n");
+    fuchsia_hardware_block_BlockInfo info;
+    fzl::UnownedFdioCaller disk_caller(fd.get());
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(),
+                                                                &status, &info);
+    if (io_status != ZX_OK || status != ZX_OK) {
+        fprintf(stderr, "gpt: error getting block info\n");
         return nullptr;
     }
 
     printf("blocksize=0x%X blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
     fbl::unique_ptr<GptDevice> gpt;
-    rc = GptDevice::Create(fd.get(), info.block_size, info.block_count, &gpt);
-    if (rc < 0) {
+    status = GptDevice::Create(fd.get(), info.block_size, info.block_count, &gpt);
+    if (status != ZX_OK) {
         fprintf(stderr, "error initializing GPT\n");
-        return fbl::unique_ptr<GptDevice>(nullptr);
+        return nullptr;
     }
 
     return gpt;

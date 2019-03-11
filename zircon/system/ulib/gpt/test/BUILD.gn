@@ -15,8 +15,10 @@ test("gpt-unit") {
     "main.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/unittest",
