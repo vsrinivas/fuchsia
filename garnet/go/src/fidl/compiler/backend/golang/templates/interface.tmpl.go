@@ -172,6 +172,10 @@ type {{ .StubName }} struct {
 }
 
 func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *{{ .StubName }}) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}

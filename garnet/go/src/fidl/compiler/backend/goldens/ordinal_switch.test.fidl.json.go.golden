@@ -70,6 +70,10 @@ type SwitchingOrdinalsStub struct {
 }
 
 func (s *SwitchingOrdinalsStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *SwitchingOrdinalsStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case SwitchingOrdinalsOrdinalFiveOrdinal:
 		err_ := s.Impl.OrdinalFive()

@@ -242,6 +242,10 @@ type WithAndWithoutRequestResponseStub struct {
 }
 
 func (s *WithAndWithoutRequestResponseStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *WithAndWithoutRequestResponseStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
 		err_ := s.Impl.NoRequestNoResponse()
@@ -452,6 +456,10 @@ type OvernetInternalProtocolStub struct {
 }
 
 func (s *OvernetInternalProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *OvernetInternalProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case OvernetInternalProtocolMethodAOrdinal:
 		in_ := OvernetInternalProtocolMethodARequest{}
@@ -635,6 +643,10 @@ type SocketControlProtocolStub struct {
 }
 
 func (s *SocketControlProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *SocketControlProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case SocketControlProtocolMethodAOrdinal:
 		in_ := SocketControlProtocolMethodARequest{}
@@ -812,6 +824,10 @@ type ChannelProtocolStub struct {
 }
 
 func (s *ChannelProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *ChannelProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case ChannelProtocolMethodAOrdinal:
 		in_ := ChannelProtocolMethodARequest{}
@@ -1001,6 +1017,10 @@ type KitchenSinkStub struct {
 }
 
 func (s *KitchenSinkStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *KitchenSinkStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case KitchenSinkMethodAOrdinal:
 		in_ := KitchenSinkMethodARequest{}
