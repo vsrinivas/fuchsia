@@ -60,16 +60,16 @@ with the `--no-skip-worktree` flag.
 ## Running
 
 Once you've done this setup, the netstack should be set up. You can run fuchsia
-however you normally would, then use `net-cli` to set up the interface:
+however you normally would, then use `net_cli` to set up the interface:
 
 ```
-run fuchsia-pkg://fuchsia.com/net-cli#meta/net-cli.cmx if add /dev/class/ethernet/000
-run fuchsia-pkg://fuchsia.com/net-cli#meta/net-cli.cmx if addr add 1 192.168.1.39 24
-run fuchsia-pkg://fuchsia.com/net-cli#meta/net-cli.cmx fwd add-device 1 192.168.1.0 24
+net_cli if add /dev/class/ethernet/000
+net_cli if addr add 1 192.168.1.39 24
+net_cli fwd add-device 1 192.168.1.0 24
 ```
 
 If you want, you can take advantage of the dual-interface qemu setup to run the
-`net-cli` commands automatically. For instance, here's a script that automates
+`net_cli` commands automatically. For instance, here's a script that automates
 the build-run-setup loop:
 
 ```
