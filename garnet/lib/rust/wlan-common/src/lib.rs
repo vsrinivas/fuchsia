@@ -19,6 +19,7 @@ pub mod ie;
 pub mod mac;
 pub mod mgmt_writer;
 pub mod sequence;
+pub mod test_utils;
 
 use channel::{Cbw, Phy};
 use fidl_fuchsia_wlan_sme as fidl_sme;

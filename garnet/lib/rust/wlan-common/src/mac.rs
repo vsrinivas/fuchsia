@@ -342,7 +342,7 @@ impl Deref for RawHtControl {
     }
 }
 
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct RawQosControl([u8; 2]);
 
@@ -972,88 +972,7 @@ fn round_up<T: Unsigned + Copy>(value: T, multiple: T) -> T {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::mem::transmute;
-
-    fn make_mgmt_frame(ht_ctrl: bool) -> Vec<u8> {
-        #[rustfmt::skip]
-        let mut bytes = vec![
-            1, if ht_ctrl { 128 } else { 1 }, // fc
-            2, 2, // duration
-            3, 3, 3, 3, 3, 3, // addr1
-            4, 4, 4, 4, 4, 4, // addr2
-            5, 5, 5, 5, 5, 5, // addr3
-            6, 6, // sequence control
-        ];
-        if ht_ctrl {
-            bytes.extend_from_slice(&[8, 8, 8, 8]);
-        }
-        bytes.extend_from_slice(&[9, 9, 9]);
-        bytes
-    }
-
-    fn make_data_hdr(
-        addr4: Option<[u8; 6]>,
-        qos_ctrl: [u8; 2],
-        ht_ctrl: Option<[u8; 4]>,
-    ) -> Vec<u8> {
-        let mut fc = FrameControl(0);
-        fc.set_frame_type(FRAME_TYPE_DATA);
-        fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
-        fc.set_from_ds(addr4.is_some());
-        fc.set_to_ds(addr4.is_some());
-        fc.set_htc_order(ht_ctrl.is_some());
-        let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
-
-        #[rustfmt::skip]
-        let mut bytes = vec![
-            // Data Header
-            fc[0], fc[1], // fc
-            2, 2, // duration
-            3, 3, 3, 3, 3, 3, // addr1
-            4, 4, 4, 4, 4, 4, // addr2
-            5, 5, 5, 5, 5, 5, // addr3
-            6, 6, // sequence control
-        ];
-
-        if let Some(addr4) = addr4 {
-            bytes.extend_from_slice(&addr4);
-        }
-
-        bytes.extend_from_slice(&qos_ctrl);
-
-        if let Some(ht_ctrl) = ht_ctrl {
-            bytes.extend_from_slice(&ht_ctrl);
-        }
-        bytes
-    }
-
-    fn make_data_frame_single_llc(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4]>) -> Vec<u8> {
-        let qos_ctrl = [1, 1];
-        let mut bytes = make_data_hdr(addr4, qos_ctrl, ht_ctrl);
-        #[rustfmt::skip]
-        bytes.extend_from_slice(&[
-            // LLC Header
-            7, 7, 7, // DSAP, SSAP & control
-            8, 8, 8, // OUI
-            9, 10, // eth type
-            // Trailing bytes
-            11, 11, 11,
-        ]);
-        bytes
-    }
-
-    fn make_data_frame_with_padding() -> Vec<u8> {
-        let mut bytes = make_data_hdr(None, [1, 1], None);
-        #[rustfmt::skip]
-        bytes.extend(vec![
-            // Padding
-            2, 2,
-            // Body
-            7, 7, 7,
-        ]);
-        bytes
-    }
+    use {super::*, crate::test_utils::fake_frames::*};
 
     #[test]
     fn mgmt_hdr_len() {
@@ -1195,68 +1114,7 @@ mod tests {
 
     #[test]
     fn parse_data_amsdu() {
-        #[rustfmt::skip]
-        let first_msdu = vec![
-            // LLC header
-            0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
-            // Payload
-            0x33, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04,
-        ];
-        #[rustfmt::skip]
-        let second_msdu = vec![
-            // LLC header
-            0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
-            // Payload
-            0x99, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
-        ];
-
-        let mut qos_ctrl = QosControl(0);
-        qos_ctrl.set_amsdu_present(true);
-        let mut raw_qos_ctrl = RawQosControl([0, 0]);
-        raw_qos_ctrl.set(qos_ctrl.value());
-        let mut amsdu_data_frame = make_data_hdr(None, raw_qos_ctrl.0, None);
-        #[rustfmt::skip]
-        amsdu_data_frame.extend(vec![
-            // A-MSDU Subframe #1
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
-            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
-            0x00, 0x74, // MSDU length
-        ]);
-        amsdu_data_frame.extend(&first_msdu[..]);
-        #[rustfmt::skip]
-        amsdu_data_frame.extend(vec![
-            // Padding
-            0x00, 0x00,
-            // A-MSDU Subframe #2
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
-            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
-            0x00, 0x66, // MSDU length
-        ]);
-        amsdu_data_frame.extend(&second_msdu[..]);
+        let amsdu_data_frame = make_data_frame_amsdu();
 
         match MacFrame::parse(&amsdu_data_frame[..], false) {
             Some(MacFrame::Data { data_hdr, qos_ctrl, body, .. }) => {
@@ -1268,11 +1126,17 @@ mod tests {
                         for msdu in &mut rdr {
                             match found_msdus {
                                 (false, false) => {
-                                    assert_eq!(msdu, &first_msdu[..]);
+                                    let mut expected_msdu = vec![];
+                                    expected_msdu.extend_from_slice(MSDU_1_LLC_HDR);
+                                    expected_msdu.extend_from_slice(MSDU_1_PAYLOAD);
+                                    assert_eq!(msdu, &expected_msdu[..]);
                                     found_msdus = (true, false);
                                 }
                                 (true, false) => {
-                                    assert_eq!(msdu, &second_msdu[..]);
+                                    let mut expected_msdu = vec![];
+                                    expected_msdu.extend_from_slice(MSDU_2_LLC_HDR);
+                                    expected_msdu.extend_from_slice(MSDU_2_PAYLOAD);
+                                    assert_eq!(msdu, &expected_msdu[..]);
                                     found_msdus = (true, true);
                                 }
                                 _ => panic!("unexpected MSDU: {:x?}", msdu),
