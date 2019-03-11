@@ -26,10 +26,10 @@ mod c {
     codegen_test!(simple, CBackend, ["../zx.banjo", "banjo/simple.test.banjo"], "c/simple.h");
     codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");
     codegen_test!(
-        protocol_primative,
+        protocol_primitive,
         CBackend,
-        ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
-        "c/protocol-primative.h"
+        ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
+        "c/protocol-primitive.h"
     );
     codegen_test!(
         protocol_base,
@@ -86,10 +86,10 @@ mod cpp {
         "cpp/view.h"
     );
     codegen_test!(
-        protocol_primative,
+        protocol_primitive,
         CppBackend,
-        ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
-        "cpp/protocol-primative.h"
+        ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
+        "cpp/protocol-primitive.h"
     );
     codegen_test!(
         protocol_base,
@@ -176,10 +176,10 @@ mod cpp_internal {
         "cpp/view-internal.h"
     );
     codegen_test!(
-        protocol_primative,
+        protocol_primitive,
         CppInternalBackend,
-        ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
-        "cpp/protocol-primative-internal.h"
+        ["../zx.banjo", "banjo/protocol-primitive.test.banjo"],
+        "cpp/protocol-primitive-internal.h"
     );
     codegen_test!(
         protocol_base,

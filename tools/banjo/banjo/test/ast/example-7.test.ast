@@ -13,7 +13,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Hello",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example7"
+                    ),
+                    name: "Hello"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(

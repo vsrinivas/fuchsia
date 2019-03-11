@@ -13,7 +13,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "SynchronousHandle",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.handle"
+                    ),
+                    name: "SynchronousHandle"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -586,7 +591,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "AsyncHandle",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.handle"
+                    ),
+                    name: "AsyncHandle"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -1238,98 +1248,6 @@ BanjoAst {
                     }
                 ]
             }
-        ],
-        "zx": [
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "status"
-                },
-                Ident {
-                    namespace: None,
-                    name: "int32"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "time"
-                },
-                Ident {
-                    namespace: None,
-                    name: "int64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "duration"
-                },
-                Ident {
-                    namespace: None,
-                    name: "int64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "koid"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "vaddr"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "paddr"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "paddr32"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint32"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "gpaddr"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "off"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            )
         ]
     }
 }

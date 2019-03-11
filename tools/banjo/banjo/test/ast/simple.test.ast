@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "Point",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.simple"
+                    ),
+                    name: "Point"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -36,7 +41,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "Direction",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.simple"
+                    ),
+                    name: "Direction"
+                },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
@@ -88,7 +98,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Drawing",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.simple"
+                    ),
+                    name: "Drawing"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -100,7 +115,9 @@ BanjoAst {
                                 "p",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.simple"
+                                        ),
                                         name: "Point"
                                     },
                                     reference: false
@@ -110,7 +127,9 @@ BanjoAst {
                                 "d",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.simple"
+                                        ),
                                         name: "Direction"
                                     },
                                     reference: false
@@ -150,7 +169,9 @@ BanjoAst {
                                 "p",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.simple"
+                                        ),
                                         name: "Point"
                                     },
                                     reference: false
@@ -169,7 +190,9 @@ BanjoAst {
                                 Array {
                                     ty: Identifier {
                                         id: Ident {
-                                            namespace: None,
+                                            namespace: Some(
+                                                "banjo.examples.simple"
+                                            ),
                                             name: "Point"
                                         },
                                         reference: false

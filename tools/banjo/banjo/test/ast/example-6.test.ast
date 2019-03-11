@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "x ",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example6"
+                    ),
+                    name: "x"
+                },
                 ty: Int32,
                 value: Constant(
                     "23"
@@ -23,7 +28,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Hello",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example6"
+                    ),
+                    name: "Hello"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(

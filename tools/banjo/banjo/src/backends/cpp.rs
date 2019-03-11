@@ -130,7 +130,7 @@ fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
 fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Interface {
-            return Ok(to_c_name(&id.to_string()) + "_ops_t");
+            return Ok(to_c_name(&id.name()) + "_ops_t");
         }
     }
     Err(format_err!("unknown ident type in interface_to_ops_cpp_str {:?}", ty))
@@ -391,7 +391,7 @@ fn get_out_args(
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-interface".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
-) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-interface" {
@@ -405,7 +405,7 @@ fn filter_interface<'a>(
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
-) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-protocol" {
@@ -493,9 +493,9 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
                 n.1.iter().filter_map(filter_protocol).map(|(name, methods, _)| {
                     Ok(format!(
                         include_str!("templates/cpp/internal_protocol.h"),
-                        protocol_name = to_cpp_name(name),
-                        decls = self.codegen_decls(name, &methods, ast)?,
-                        static_asserts = self.codegen_static_asserts(name, &methods, ast)?
+                        protocol_name = to_cpp_name(name.name()),
+                        decls = self.codegen_decls(name.name(), &methods, ast)?,
+                        static_asserts = self.codegen_static_asserts(name.name(), &methods, ast)?
                     ))
                 })
             })
@@ -737,13 +737,17 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .map(|(name, methods, attributes)| {
                 Ok(format!(
                     include_str!("templates/cpp/interface.h"),
-                    protocol_name = to_cpp_name(name),
-                    protocol_name_snake = to_c_name(name).as_str(),
+                    protocol_name = to_cpp_name(name.name()),
+                    protocol_name_snake = to_c_name(name.name()).as_str(),
                     protocol_docs = get_doc_comment(attributes, 0),
-                    constructor_definition =
-                        self.codegen_interface_constructor_def(name, attributes, methods, ast)?,
-                    protocol_definitions = self.codegen_protocol_defs(name, methods, ast)?,
-                    client_definitions = self.codegen_client_defs(name, methods, ast)?
+                    constructor_definition = self.codegen_interface_constructor_def(
+                        name.name(),
+                        attributes,
+                        methods,
+                        ast
+                    )?,
+                    protocol_definitions = self.codegen_protocol_defs(name.name(), methods, ast)?,
+                    client_definitions = self.codegen_client_defs(name.name(), methods, ast)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -761,14 +765,18 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .map(|(name, methods, attributes)| {
                 Ok(format!(
                     include_str!("templates/cpp/protocol.h"),
-                    protocol_name = to_cpp_name(name),
-                    protocol_name_uppercase = to_c_name(name).to_uppercase(),
-                    protocol_name_snake = to_c_name(name).as_str(),
+                    protocol_name = to_cpp_name(name.name()),
+                    protocol_name_uppercase = to_c_name(name.name()).to_uppercase(),
+                    protocol_name_snake = to_c_name(name.name()).as_str(),
                     protocol_docs = get_doc_comment(attributes, 0),
-                    constructor_definition =
-                        self.codegen_protocol_constructor_def(name, attributes, methods, ast)?,
-                    protocol_definitions = self.codegen_protocol_defs(name, methods, ast)?,
-                    client_definitions = self.codegen_client_defs(name, methods, ast)?
+                    constructor_definition = self.codegen_protocol_constructor_def(
+                        name.name(),
+                        attributes,
+                        methods,
+                        ast
+                    )?,
+                    protocol_definitions = self.codegen_protocol_defs(name.name(), methods, ast)?,
+                    client_definitions = self.codegen_client_defs(name.name(), methods, ast)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -843,7 +851,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let example_decls = methods
                     .iter()
                     .map(|m| {
-                        let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
+                        let (out_params, return_param) =
+                            get_out_params(&m, name.name(), true, ast)?;
                         let in_params = get_in_params(&m, true, false, ast)?;
 
                         let params =
@@ -852,7 +861,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                         Ok(format!(
                             "//     {return_param} {protocol_name}{function_name}({params});",
                             return_param = return_param,
-                            protocol_name = to_cpp_name(name),
+                            protocol_name = to_cpp_name(name.name()),
                             params = params,
                             function_name = to_cpp_name(m.name.as_str())
                         ))
@@ -861,10 +870,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     .join("\n//\n");
                 Ok(format!(
                     include_str!("templates/cpp/example.h"),
-                    protocol_name = to_cpp_name(name),
-                    protocol_name_snake = to_c_name(name),
-                    protocol_name_lisp = to_c_name(name).replace('_', "-"),
-                    protocol_name_uppercase = to_c_name(name).to_uppercase(),
+                    protocol_name = to_cpp_name(name.name()),
+                    protocol_name_snake = to_c_name(name.name()),
+                    protocol_name_lisp = to_c_name(name.name()).replace('_', "-"),
+                    protocol_name_uppercase = to_c_name(name.name()).to_uppercase(),
                     example_decls = example_decls
                 ))
             })

@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "this_is_a_struct",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "this_is_a_struct"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -28,7 +33,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "this_is_a_union",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "this_is_a_union"
+                },
                 fields: [
                     UnionField {
                         attributes: Attrs(
@@ -49,7 +59,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "this_is_an_interface",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "this_is_an_interface"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -85,7 +100,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "interfaces",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "interfaces"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -93,7 +113,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_an_interface"
                             },
                             reference: false
@@ -110,7 +132,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_an_interface"
                             },
                             reference: true
@@ -127,7 +151,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "primitive_types",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "primitive_types"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -256,7 +285,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "default_values",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "default_values"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -432,7 +466,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "arrays_size",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "arrays_size"
+                },
                 ty: UInt32,
                 value: Constant(
                     "32"
@@ -442,7 +481,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "arrays",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "arrays"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -1095,7 +1139,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "vectors_size",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "vectors_size"
+                },
                 ty: UInt32,
                 value: Constant(
                     "32"
@@ -1105,7 +1154,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "vectors",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "vectors"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -3668,7 +3722,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "handles",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "handles"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -4180,7 +4239,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "strings_size",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "strings_size"
+                },
                 ty: UInt32,
                 value: Constant(
                     "32"
@@ -4190,7 +4254,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "strings",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "strings"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -4298,7 +4367,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "default_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "default_enum"
+                },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
@@ -4316,7 +4390,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "i8_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "i8_enum"
+                },
                 ty: Int8,
                 variants: [
                     EnumVariant {
@@ -4334,7 +4413,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "i16_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "i16_enum"
+                },
                 ty: Int16,
                 variants: [
                     EnumVariant {
@@ -4352,7 +4436,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "i32_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "i32_enum"
+                },
                 ty: Int32,
                 variants: [
                     EnumVariant {
@@ -4370,7 +4459,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "i64_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "i64_enum"
+                },
                 ty: Int64,
                 variants: [
                     EnumVariant {
@@ -4388,7 +4482,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "u8_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "u8_enum"
+                },
                 ty: UInt8,
                 variants: [
                     EnumVariant {
@@ -4406,7 +4505,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "u16_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "u16_enum"
+                },
                 ty: UInt16,
                 variants: [
                     EnumVariant {
@@ -4424,7 +4528,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "u32_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "u32_enum"
+                },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
@@ -4442,7 +4551,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "u64_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "u64_enum"
+                },
                 ty: UInt64,
                 variants: [
                     EnumVariant {
@@ -4460,7 +4574,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "structs",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "structs"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -4468,7 +4587,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_a_struct"
                             },
                             reference: false
@@ -4485,7 +4606,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_a_struct"
                             },
                             reference: true
@@ -4502,7 +4625,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "unions",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "unions"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -4510,7 +4638,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_a_union"
                             },
                             reference: false
@@ -4527,7 +4657,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_a_union"
                             },
                             reference: true
@@ -4544,7 +4676,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "interfaces",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.types"
+                    ),
+                    name: "interfaces"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -4552,7 +4689,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_an_interface"
                             },
                             reference: false
@@ -4569,7 +4708,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.types"
+                                ),
                                 name: "this_is_an_interface"
                             },
                             reference: true

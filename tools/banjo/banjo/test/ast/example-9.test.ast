@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "EchoMe",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example9"
+                    ),
+                    name: "EchoMe"
+                },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
@@ -33,7 +38,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "EchoMore",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example9"
+                    ),
+                    name: "EchoMore"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -70,7 +80,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Echo",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example9"
+                    ),
+                    name: "Echo"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -118,7 +133,9 @@ BanjoAst {
                                 "req",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.example9"
+                                        ),
                                         name: "EchoMe"
                                     },
                                     reference: false
@@ -130,7 +147,9 @@ BanjoAst {
                                 "response",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.example9"
+                                        ),
                                         name: "EchoMe"
                                     },
                                     reference: false
@@ -196,7 +215,9 @@ BanjoAst {
                                 "req",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.example9"
+                                        ),
                                         name: "EchoMore"
                                     },
                                     reference: false
@@ -208,7 +229,9 @@ BanjoAst {
                                 "response",
                                 Identifier {
                                     id: Ident {
-                                        namespace: None,
+                                        namespace: Some(
+                                            "banjo.examples.example9"
+                                        ),
                                         name: "EchoMore"
                                     },
                                     reference: false
@@ -222,10 +245,17 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "favorite_echo",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example9"
+                    ),
+                    name: "favorite_echo"
+                },
                 ty: Identifier {
                     id: Ident {
-                        namespace: None,
+                        namespace: Some(
+                            "banjo.examples.example9"
+                        ),
                         name: "EchoMe"
                     },
                     reference: false

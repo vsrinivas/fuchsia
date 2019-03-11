@@ -17,11 +17,8 @@ __BEGIN_CDECLS;
 
 typedef uint32_t this_is_an_enum_t;
 #define THIS_IS_AN_ENUM_X UINT32_C(23)
-
 typedef union this_is_aunion this_is_aunion_t;
-
 typedef struct this_is_astruct this_is_astruct_t;
-
 
 
 typedef struct other_types_protocol other_types_protocol_t;
@@ -29,7 +26,6 @@ typedef struct other_types_async_protocol other_types_async_protocol_t;
 typedef struct other_types_reference_protocol other_types_reference_protocol_t;
 typedef struct other_types_async_reference_protocol other_types_async_reference_protocol_t;
 typedef struct interface_protocol interface_protocol_t;
-
 typedef void (*other_types_async_struct_callback)(void* ctx, const this_is_astruct_t* s);
 typedef void (*other_types_async_union_callback)(void* ctx, const this_is_aunion_t* u);
 typedef void (*other_types_async_enum_callback)(void* ctx, this_is_an_enum_t e);
@@ -47,16 +43,13 @@ typedef void (*interface_async_refernce_callback)(void* ctx, void* intf_ctx, oth
 // Declarations
 
 #define strings_size UINT32_C(32)
-
 union this_is_aunion {
     char* s;
 };
 
-
 struct this_is_astruct {
     char* s;
 };
-
 
 
 

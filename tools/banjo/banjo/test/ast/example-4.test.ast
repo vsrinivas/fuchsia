@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "Point",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example4"
+                    ),
+                    name: "Point"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -25,7 +30,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "Enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example4"
+                    ),
+                    name: "Enum"
+                },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
@@ -50,7 +60,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Interface",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example4"
+                    ),
+                    name: "Interface"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(

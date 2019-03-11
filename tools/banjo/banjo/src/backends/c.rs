@@ -35,7 +35,7 @@ fn to_c_name(name: &str) -> String {
             }
         }
     }
-    accum.to_snake_case()
+    accum.trim().to_snake_case()
 }
 
 fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {
@@ -104,7 +104,7 @@ fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
 fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Interface {
-            return Ok(to_c_name(id.to_string().as_str()) + "_ops_t");
+            return Ok(to_c_name(id.name()) + "_ops_t");
         }
     }
     Err(format_err!("unknown ident type in interface_to_ops_c_str {:?}", ty))
@@ -371,7 +371,7 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
 /// Checks whether a decl is a interface, and if it is a interface, checks that it is a "ddk-callback".
 fn filter_callback<'a>(
     decl: &'a ast::Decl,
-) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+) -> Option<(&'a ast::Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-callback" {
@@ -385,7 +385,7 @@ fn filter_callback<'a>(
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
-) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+) -> Option<(&'a ast::Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-interface" {
@@ -399,7 +399,7 @@ fn filter_interface<'a>(
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
-) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+) -> Option<(&'a ast::Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-callback" || layout == "ddk-interface" {
@@ -436,8 +436,8 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     .map(|v| {
                         Ok(format!(
                             "#define {c_name}_{v_name} {c_size}",
-                            c_name = to_c_name(name).to_uppercase(),
-                            v_name = to_c_name(v.name.as_str()).to_uppercase(),
+                            c_name = to_c_name(name.name()).to_uppercase(),
+                            v_name = v.name.to_uppercase().trim(),
                             c_size = size_to_c_str(ty, &v.size, ast)
                         ))
                     })
@@ -445,7 +445,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     .join("\n");
                 Ok(format!(
                     "typedef {ty} {c_name}_t;\n{enum_defines}",
-                    c_name = to_c_name(name),
+                    c_name = to_c_name(name.name()),
                     ty = ty_to_c_str(ast, ty)?,
                     enum_defines = enum_defines
                 ))
@@ -474,7 +474,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 accum.push_str(
                     format!(
                         "#define {name} {value}",
-                        name = name.trim(),
+                        name = name.name().trim(),
                         value = size_to_c_str(ty, value, ast)
                     )
                     .as_str(),
@@ -499,7 +499,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     None
                 }
             })
-            .map(|name| format!("typedef union {c_name} {c_name}_t;", c_name = to_c_name(name)))
+            .map(|name| {
+                format!("typedef union {c_name} {c_name}_t;", c_name = to_c_name(name.name()))
+            })
             .collect::<Vec<_>>()
             .join("\n"))
     }
@@ -527,7 +529,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                         accum.push_str(
                             format!(
                                 "    {ty} {c_name};",
-                                c_name = to_c_name(f.ident.to_string().as_str()),
+                                c_name = to_c_name(f.ident.name()),
                                 ty = ty_to_c_str(ast, &f.ty)?
                             )
                             .as_str(),
@@ -541,7 +543,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 accum.push_str(
                     format!(
                         include_str!("templates/c/struct.h"),
-                        c_name = to_c_name(name),
+                        c_name = to_c_name(name.name()),
                         decl = "union",
                         members = members
                     )
@@ -566,7 +568,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 }
                 None
             })
-            .map(|name| format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name)))
+            .map(|name| {
+                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name.name()))
+            })
             .collect::<Vec<_>>();
         // deterministic output
         struct_decls.sort();
@@ -595,27 +599,39 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                         accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
                         match f.ty {
                             ast::Ty::Vector { .. } => {
-                                accum.push_str(format!(
+                                accum.push_str(
+                                    format!(
                                         "    {ty}{ptr} {c_name}_buffer;\n\
-                                            uint32_t {c_name}_size;",
-                                        c_name = to_c_name(f.ident.to_string().as_str()),
+                                         uint32_t {c_name}_size;",
+                                        c_name = to_c_name(f.ident.name()),
                                         ptr = if false { "*" } else { "" },
-                                        ty = ty_to_c_str(ast, &f.ty)?).as_str());
-                                },
+                                        ty = ty_to_c_str(ast, &f.ty)?
+                                    )
+                                    .as_str(),
+                                );
+                            }
                             ast::Ty::Array { ref size, .. } => {
-                                accum.push_str(format!(
+                                accum.push_str(
+                                    format!(
                                         "    {ty}{ptr} {c_name}[{size}];",
-                                        c_name = to_c_name(f.ident.to_string().as_str()),
+                                        c_name = to_c_name(f.ident.name()),
                                         ptr = if false { "*" } else { "" },
                                         size = size,
-                                        ty = ty_to_c_str(ast, &f.ty)?).as_str());
-                                },
+                                        ty = ty_to_c_str(ast, &f.ty)?
+                                    )
+                                    .as_str(),
+                                );
+                            }
                             _ => {
-                                accum.push_str(format!(
+                                accum.push_str(
+                                    format!(
                                         "    {ty}{ptr} {c_name};",
-                                        c_name = to_c_name(f.ident.to_string().as_str()),
+                                        c_name = to_c_name(f.ident.name()),
                                         ptr = if false { "*" } else { "" },
-                                        ty = ty_to_c_str(ast, &f.ty)?).as_str());
+                                        ty = ty_to_c_str(ast, &f.ty)?
+                                    )
+                                    .as_str(),
+                                );
                             }
                         }
                         Ok(accum)
@@ -627,7 +643,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 accum.push_str(
                     format!(
                         include_str!("templates/c/struct.h"),
-                        c_name = to_c_name(name),
+                        c_name = to_c_name(name.name()),
                         decl = "struct",
                         members = members
                     )
@@ -772,9 +788,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .map(|(name, methods, _)| {
                 Ok(format!(
                     include_str!("templates/c/protocol.h"),
-                    protocol_name = to_c_name(name),
-                    protocol_def = self.codegen_protocol_def(name, methods, true, ast)?,
-                    helper_def = self.codegen_helper_def(name, methods, true, ast)?
+                    protocol_name = to_c_name(name.name()),
+                    protocol_def = self.codegen_protocol_def(name.name(), methods, true, ast)?,
+                    helper_def = self.codegen_helper_def(name.name(), methods, true, ast)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -792,9 +808,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .map(|(name, methods, _)| {
                 Ok(format!(
                     include_str!("templates/c/interface.h"),
-                    protocol_name = to_c_name(name),
-                    protocol_def = self.codegen_protocol_def(name, methods, false, ast)?,
-                    helper_def = self.codegen_helper_def(name, methods, false, ast)?
+                    protocol_name = to_c_name(name.name()),
+                    protocol_def = self.codegen_protocol_def(name.name(), methods, false, ast)?,
+                    helper_def = self.codegen_helper_def(name.name(), methods, false, ast)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -811,7 +827,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .filter_map(filter_callback)
             .map(|(name, methods, _)| {
                 let m = methods.get(0).ok_or(format_err!("callback has no methods"))?;
-                let (out_params, return_param) = get_out_params(&m, name, ast)?;
+                let (out_params, return_param) = get_out_params(&m, name.name(), ast)?;
                 let in_params = get_in_params(&m, false, ast)?;
 
                 let params = iter::once("void* ctx".to_string())
@@ -827,7 +843,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 );
                 Ok(format!(
                     include_str!("templates/c/callback.h"),
-                    callback_name = to_c_name(name),
+                    callback_name = to_c_name(name.name()),
                     callback = method,
                 ))
             })
@@ -846,7 +862,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .map(|(name, _, _)| {
                 format!(
                     "typedef struct {c_name}_protocol {c_name}_protocol_t;",
-                    c_name = to_c_name(name)
+                    c_name = to_c_name(name.name())
                 )
             })
             .collect::<Vec<_>>()
@@ -862,7 +878,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .into_iter()
             .filter_map(filter_interface)
             .map(|(name, _, _)| {
-                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name))
+                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name.name()))
             })
             .collect::<Vec<_>>()
             .join("\n"))
@@ -877,7 +893,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .into_iter()
             .filter_map(filter_callback)
             .map(|(name, _, _)| {
-                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name))
+                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name.name()))
             })
             .collect::<Vec<_>>()
             .join("\n"))
@@ -912,7 +928,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     .join(", ");
                 Ok(format!(
                     "typedef void (*{protocol_name}_{method_name}_callback)({params});",
-                    protocol_name = to_c_name(name),
+                    protocol_name = to_c_name(name.name()),
                     method_name = to_c_name(method.name.as_str()),
                     params = params
                 ))

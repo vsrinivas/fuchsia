@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "foo",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example8"
+                    ),
+                    name: "foo"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(

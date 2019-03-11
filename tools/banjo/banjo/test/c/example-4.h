@@ -7,6 +7,7 @@
 
 #pragma once
 
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -18,17 +19,25 @@ typedef uint32_t enum_t;
 #define ENUM_X UINT32_C(23)
 
 typedef struct point point_t;
+
+
 typedef struct interface_protocol interface_protocol_t;
 
+
 // Declarations
+
+
 
 struct point {
     uint64_t x;
 };
 
+
+
 typedef struct interface_protocol_ops {
     void (*func)(void* ctx, bool x);
 } interface_protocol_ops_t;
+
 
 struct interface_protocol {
     interface_protocol_ops_t* ops;
@@ -38,5 +47,6 @@ struct interface_protocol {
 static inline void interface_func(const interface_protocol_t* proto, bool x) {
     proto->ops->func(proto->ctx, x);
 }
+
 
 __END_CDECLS;

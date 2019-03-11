@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library banjo.examples.protocol.primative;
+library banjo.examples.protocol.primitive;
 
 [Layout = "ddk-protocol"]
-interface SynchronousPrimative {
+interface SynchronousPrimitive {
     Bool(bool b) -> (bool b, bool b_2);
     Int8(int8 i8) -> (int8 i8, int8 i8_2);
     Int16(int16 i16) -> (int16 i16, int16 i16_2);
@@ -20,7 +20,7 @@ interface SynchronousPrimative {
 };
 
 [Layout = "ddk-protocol"]
-interface AsyncPrimative {
+interface AsyncPrimitive {
     [Async]
     Bool(bool b) -> (bool b, bool b_2);
     [Async]

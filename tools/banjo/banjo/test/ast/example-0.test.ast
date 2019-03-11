@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "Foo",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example0"
+                    ),
+                    name: "Foo"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -14,7 +19,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.example0"
+                                ),
                                 name: "Bar"
                             },
                             reference: false
@@ -31,7 +38,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "Bar",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.example0"
+                    ),
+                    name: "Bar"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -39,7 +51,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.example0"
+                                ),
                                 name: "Foo"
                             },
                             reference: true

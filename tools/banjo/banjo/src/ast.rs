@@ -52,7 +52,21 @@ pub struct Ident {
 }
 
 impl Ident {
-    pub fn new(raw_name: &str) -> Ident {
+    /// Construct an identity. If the second parameter is a fully qualified identity, use that
+    /// if it is not qualified, place it under the passed in namespace
+    pub fn new(namespace: &str, raw_name: &str) -> Ident {
+        let v: Vec<&str> = raw_name.rsplitn(2, '.').collect();
+        if v.len() > 1 {
+            Ident { namespace: Some(v[1].trim().to_string()), name: v[0].trim().to_string() }
+        } else {
+            Ident {
+                namespace: Some(namespace.trim().to_string()),
+                name: raw_name.trim().to_string(),
+            }
+        }
+    }
+
+    pub fn new_raw(raw_name: &str) -> Ident {
         let v: Vec<&str> = raw_name.rsplitn(2, '.').collect();
         if v.len() > 1 {
             Ident { namespace: Some(v[1].trim().to_string()), name: v[0].trim().to_string() }
@@ -75,13 +89,6 @@ impl Ident {
             Some(ref n) => n == "zx",
             None => false,
         }
-    }
-}
-
-impl ToString for Ident {
-    fn to_string(&self) -> String {
-        let ns = self.namespace.clone().unwrap_or("".to_string());
-        format!("{}{}", ns, self.name)
     }
 }
 
@@ -244,7 +251,6 @@ impl Ty {
         }
     }
     pub fn is_reference(&self) -> bool {
-        // TODO(bwb) intent to remove all nullable
         match self {
             Ty::Str { nullable, .. } => *nullable,
             Ty::Vector { nullable, .. } => *nullable,
@@ -254,7 +260,7 @@ impl Ty {
         }
     }
 
-    pub fn from_pair(pair: &Pair<'_, Rule>) -> Result<Self, ParseError> {
+    pub fn from_pair(ns: &str, pair: &Pair<'_, Rule>) -> Result<Self, ParseError> {
         let rule = pair.as_rule();
         match rule {
             Rule::primitive_type => match pair.as_str() {
@@ -332,7 +338,7 @@ impl Ty {
             },
             Rule::array_type => {
                 let vec_contents: Vec<Pair<'_, Rule>> = pair.clone().into_inner().collect();
-                let ty = Box::new(Ty::from_pair(&vec_contents[0])?);
+                let ty = Box::new(Ty::from_pair(ns, &vec_contents[0])?);
                 let size = Constant::from_str(vec_contents[1].as_str());
                 Ok(Ty::Array { ty, size })
             }
@@ -349,7 +355,7 @@ impl Ty {
                 } else {
                     false
                 };
-                Ok(Ty::Identifier { id: Ident::new(id), reference })
+                Ok(Ty::Identifier { id: Ident::new(ns, id), reference })
             }
             Rule::string_type => {
                 let mut size = None;
@@ -371,7 +377,7 @@ impl Ty {
             }
             Rule::vector_type => {
                 let mut iter = pair.clone().into_inner();
-                let ty = Box::new(Ty::from_pair(&iter.next().unwrap())?);
+                let ty = Box::new(Ty::from_pair(ns, &iter.next().unwrap())?);
                 let mut size = None;
                 let mut nullable = false;
                 for inner_pair in iter {
@@ -403,7 +409,7 @@ pub struct StructField {
 }
 
 impl StructField {
-    pub fn from_pair(pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
+    pub fn from_pair(ns: &str, pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
         let mut attributes = Attrs::default();
         let mut ty = None;
         let mut ident = String::default();
@@ -413,13 +419,13 @@ impl StructField {
                 Rule::attributes => attributes = Attrs::from_pair(inner_pair)?,
                 Rule::ident => ident = String::from(inner_pair.as_str()),
                 Rule::constant => val = Some(Constant::from_str(inner_pair.as_str())),
-                _ => ty = Some(Ty::from_pair(&inner_pair)?),
+                _ => ty = Some(Ty::from_pair(ns, &inner_pair)?),
             };
         }
         Ok(StructField {
             attributes: attributes,
             ty: ty.unwrap(),
-            ident: Ident::new(ident.as_str()),
+            ident: Ident::new_raw(ident.as_str()),
             val: val,
         })
     }
@@ -432,13 +438,13 @@ pub struct UnionField {
     pub ident: Ident,
 }
 impl UnionField {
-    pub fn from_pair(pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
+    pub fn from_pair(ns: &str, pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
         let fields: Vec<Pair<'_, Rule>> = pair.into_inner().collect();
         let ty = &fields[1];
         Ok(UnionField {
             attributes: Attrs::from_pair(fields[0].clone())?,
-            ty: Ty::from_pair(ty)?,
-            ident: Ident::new(fields[2].as_str()),
+            ty: Ty::from_pair(ns, ty)?,
+            ident: Ident::new_raw(fields[2].as_str()),
         })
     }
 }
@@ -469,7 +475,7 @@ pub struct Method {
 }
 
 impl Method {
-    pub fn from_pair(pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
+    pub fn from_pair(ns: &str, pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
         let mut attributes = Attrs::default();
         let mut name = String::default();
         let mut in_params = Vec::new();
@@ -488,7 +494,7 @@ impl Method {
                         match in_pair.as_rule() {
                             Rule::parameter => {
                                 let mut param = in_pair.into_inner();
-                                let ty = Ty::from_pair(&param.next().unwrap())?;
+                                let ty = Ty::from_pair(ns, &param.next().unwrap())?;
                                 let name = String::from(param.next().unwrap().as_str());
                                 in_params.push((name, ty));
                             }
@@ -502,7 +508,7 @@ impl Method {
                             match in_pair.as_rule() {
                                 Rule::parameter => {
                                     let mut param = in_pair.into_inner();
-                                    let ty = Ty::from_pair(&param.next().unwrap())?;
+                                    let ty = Ty::from_pair(ns, &param.next().unwrap())?;
                                     let name = String::from(param.next().unwrap().as_str());
                                     out_params.push((name, ty));
                                 }
@@ -520,12 +526,12 @@ impl Method {
 
 #[derive(PartialEq, Eq, Serialize, Debug, Hash)]
 pub enum Decl {
-    Struct { attributes: Attrs, name: String, fields: Vec<StructField> },
-    Interface { attributes: Attrs, name: String, methods: Vec<Method> },
+    Struct { attributes: Attrs, name: Ident, fields: Vec<StructField> },
+    Interface { attributes: Attrs, name: Ident, methods: Vec<Method> },
     Alias(Ident, Ident),
-    Constant { attributes: Attrs, name: String, ty: Ty, value: Constant },
-    Union { attributes: Attrs, name: String, fields: Vec<UnionField> },
-    Enum { attributes: Attrs, name: String, ty: Ty, variants: Vec<EnumVariant> },
+    Constant { attributes: Attrs, name: Ident, ty: Ty, value: Constant },
+    Union { attributes: Attrs, name: Ident, fields: Vec<UnionField> },
+    Enum { attributes: Attrs, name: Ident, ty: Ty, variants: Vec<EnumVariant> },
 }
 
 #[derive(PartialEq, Serialize, Debug)]
@@ -540,22 +546,22 @@ impl BanjoAst {
         for decl in self.namespaces[&namespace.unwrap_or(self.primary_namespace.clone())].iter() {
             match decl {
                 Decl::Interface { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ok(decl);
                     }
                 }
                 Decl::Struct { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ok(decl);
                     }
                 }
                 Decl::Union { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ok(decl);
                     }
                 }
                 Decl::Enum { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ok(decl);
                     }
                 }
@@ -565,7 +571,7 @@ impl BanjoAst {
                     }
                 }
                 Decl::Constant { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ok(decl);
                     }
                 }
@@ -601,27 +607,27 @@ impl BanjoAst {
         for decl in self.namespaces[namespace].iter() {
             match decl {
                 Decl::Interface { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ty::Interface;
                     }
                 }
                 Decl::Struct { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ty::Struct;
                     }
                 }
                 Decl::Union { name, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ty::Union;
                     }
                 }
                 Decl::Enum { name, variants, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Ty::Enum;
                     }
                     for variant in variants.iter() {
                         if variant.name == ident {
-                            return Ty::Identifier { id: Ident::new(name), reference: false };
+                            return Ty::Identifier { id: name.clone(), reference: false };
                         }
                     }
                 }
@@ -631,7 +637,7 @@ impl BanjoAst {
                     }
                 }
                 Decl::Constant { name, ty, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return (*ty).clone();
                     }
                 }
@@ -651,22 +657,22 @@ impl BanjoAst {
         for decl in self.namespaces[namespace].iter() {
             match decl {
                 Decl::Interface { name, attributes, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Struct { name, attributes, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Union { name, attributes, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Enum { name, attributes, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Some(attributes);
                     }
                 }
@@ -676,7 +682,7 @@ impl BanjoAst {
                     }
                 }
                 Decl::Constant { name, attributes, .. } => {
-                    if *name == ident {
+                    if name.name() == ident {
                         return Some(attributes);
                     }
                 }
@@ -687,6 +693,7 @@ impl BanjoAst {
 
     pub fn parse_decl(
         pair: Pair<'_, Rule>,
+        ns: &str,
         _namespaces: &BTreeMap<String, Vec<Decl>>,
     ) -> Result<Decl, ParseError> {
         match pair.as_rule() {
@@ -702,11 +709,11 @@ impl BanjoAst {
                         Rule::ident => {
                             name = String::from(inner_pair.as_str().trim());
                         }
-                        Rule::struct_field => fields.push(StructField::from_pair(inner_pair)?),
+                        Rule::struct_field => fields.push(StructField::from_pair(ns, inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Struct { attributes, name, fields })
+                Ok(Decl::Struct { attributes, name: Ident::new(ns, &name), fields })
             }
             Rule::enum_declaration => {
                 let mut attributes = Attrs::default();
@@ -722,13 +729,13 @@ impl BanjoAst {
                             name = String::from(inner_pair.as_str().trim());
                         }
                         Rule::integer_type => {
-                            ty = Ty::from_pair(&inner_pair)?;
+                            ty = Ty::from_pair(ns, &inner_pair)?;
                         }
                         Rule::enum_field => variants.push(EnumVariant::from_pair(inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Enum { attributes, name, ty, variants })
+                Ok(Decl::Enum { attributes, name: Ident::new(ns, name.as_str()), ty, variants })
             }
             Rule::union_declaration => {
                 let mut attributes = Attrs::default();
@@ -742,11 +749,11 @@ impl BanjoAst {
                         Rule::ident => {
                             name = String::from(inner_pair.as_str().trim());
                         }
-                        Rule::union_field => fields.push(UnionField::from_pair(inner_pair)?),
+                        Rule::union_field => fields.push(UnionField::from_pair(ns, inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Union { attributes, name, fields })
+                Ok(Decl::Union { attributes, name: Ident::new(ns, name.as_str()), fields })
             }
             // TODO extend to be more expressive for banjo
             Rule::interface_declaration => {
@@ -761,11 +768,11 @@ impl BanjoAst {
                         Rule::ident => {
                             name = String::from(inner_pair.as_str());
                         }
-                        Rule::interface_method => methods.push(Method::from_pair(inner_pair)?),
+                        Rule::interface_method => methods.push(Method::from_pair(ns, inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Interface { attributes, name, methods })
+                Ok(Decl::Interface { attributes, name: Ident::new(ns, name.as_str()), methods })
             }
             Rule::const_declaration => {
                 let mut attributes = Attrs::default();
@@ -781,7 +788,7 @@ impl BanjoAst {
                             name = String::from(inner_pair.as_str());
                         }
                         Rule::identifier_type | Rule::primitive_type => {
-                            ty = Ty::from_pair(&inner_pair)?;
+                            ty = Ty::from_pair(ns, &inner_pair)?;
                         }
                         Rule::constant => {
                             value = Constant::from_str(inner_pair.clone().as_span().as_str());
@@ -789,7 +796,7 @@ impl BanjoAst {
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Constant { attributes, name, ty, value })
+                Ok(Decl::Constant { attributes, name: Ident::new(ns, name.as_str()), ty, value })
             }
             e => Err(ParseError::UnexpectedToken(e)),
         }
@@ -808,12 +815,12 @@ impl BanjoAst {
                 let (_, ident) = id.fq();
                 for decl in self.namespaces[&self.primary_namespace].iter() {
                     match decl {
-                        Decl::Interface { name, .. }
-                        | Decl::Struct { name, .. }
-                        | Decl::Union { name, .. }
+                        Decl::Union { name, .. }
+                        | Decl::Constant { name, .. }
+                        | Decl::Interface { name, .. }
                         | Decl::Enum { name, .. }
-                        | Decl::Constant { name, .. } => {
-                            if *name == ident {
+                        | Decl::Struct { name, .. } => {
+                            if name.name() == ident {
                                 return Some(decl);
                             }
                         }
@@ -948,6 +955,10 @@ impl BanjoAst {
             })
         {
             let Constant(string) = constant;
+            if string.len() > 2 && string.get(0..2) == Some("0x") {
+                // TODO(bwb): validate constants if hex as well
+                return Ok(());
+            }
             match ty {
                 Ty::Int8 => {
                     i8::from_str(string)
@@ -991,7 +1002,7 @@ impl BanjoAst {
                     }
                 }
                 _ => {
-                    let ident_ty = self.id_to_type(&Ident::new(string));
+                    let ident_ty = self.id_to_type(&Ident::new_raw(string));
                     if *ty != ident_ty {
                         return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
                     }
@@ -1031,8 +1042,8 @@ impl BanjoAst {
                             let contents: Vec<&str> =
                                 inner_pair.clone().into_inner().map(|p| p.as_str()).collect();
                             namespace.push(Decl::Alias(
-                                Ident::new(contents[0]),
-                                Ident::new(contents[1]),
+                                Ident::new_raw(contents[0]),
+                                Ident::new_raw(contents[1]),
                             ));
                         }
                         Rule::using => {
@@ -1056,7 +1067,8 @@ impl BanjoAst {
                         | Rule::enum_declaration
                         | Rule::interface_declaration
                         | Rule::const_declaration => {
-                            let decl = Self::parse_decl(inner_pair, &namespaces)?;
+                            let decl =
+                                Self::parse_decl(inner_pair, &current_namespace, &namespaces)?;
                             namespace.push(decl)
                         }
                         Rule::EOI => (),
@@ -1068,6 +1080,7 @@ impl BanjoAst {
         }
 
         let ast = BanjoAst { primary_namespace: primary_namespace.unwrap(), namespaces };
+
         ast.validate_declaration_deps()?;
         ast.validate_constants()?;
 

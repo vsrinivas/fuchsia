@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "int8_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "int8_enum"
+                },
                 ty: Int8,
                 variants: [
                     EnumVariant {
@@ -33,7 +38,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "int16_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "int16_enum"
+                },
                 ty: Int16,
                 variants: [
                     EnumVariant {
@@ -69,7 +79,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "int32_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "int32_enum"
+                },
                 ty: Int32,
                 variants: [
                     EnumVariant {
@@ -114,7 +129,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "int64_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "int64_enum"
+                },
                 ty: Int64,
                 variants: [
                     EnumVariant {
@@ -168,7 +188,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "uint8_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "uint8_enum"
+                },
                 ty: UInt8,
                 variants: [
                     EnumVariant {
@@ -222,7 +247,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "uint16_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "uint16_enum"
+                },
                 ty: UInt16,
                 variants: [
                     EnumVariant {
@@ -285,7 +315,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "uint32_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "uint32_enum"
+                },
                 ty: UInt32,
                 variants: [
                     EnumVariant {
@@ -357,7 +392,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "uint64_enum",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.enums"
+                    ),
+                    name: "uint64_enum"
+                },
                 ty: UInt64,
                 variants: [
                     EnumVariant {

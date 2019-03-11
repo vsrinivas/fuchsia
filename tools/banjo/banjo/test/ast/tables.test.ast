@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "A",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.tables"
+                    ),
+                    name: "A"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -14,7 +19,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.tables"
+                                ),
                                 name: "B"
                             },
                             reference: true
@@ -31,7 +38,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "B",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.tables"
+                    ),
+                    name: "B"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -39,7 +51,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.tables"
+                                ),
                                 name: "A"
                             },
                             reference: true
@@ -56,7 +70,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "C",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.tables"
+                    ),
+                    name: "C"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -78,7 +97,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "D",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.tables"
+                    ),
+                    name: "D"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -86,7 +110,9 @@ BanjoAst {
                         ),
                         ty: Identifier {
                             id: Ident {
-                                namespace: None,
+                                namespace: Some(
+                                    "banjo.examples.tables"
+                                ),
                                 name: "C"
                             },
                             reference: false

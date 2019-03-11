@@ -13,7 +13,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Array",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.array"
+                    ),
+                    name: "Array"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -363,7 +368,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "array_size",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.array"
+                    ),
+                    name: "array_size"
+                },
                 ty: UInt32,
                 value: Constant(
                     "32"
@@ -380,7 +390,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "Array2",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.array"
+                    ),
+                    name: "Array2"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -737,7 +752,12 @@ BanjoAst {
                         }
                     ]
                 ),
-                name: "ArrayofArrays",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.protocol.array"
+                    ),
+                    name: "ArrayofArrays"
+                },
                 methods: [
                     Method {
                         attributes: Attrs(
@@ -1203,98 +1223,6 @@ BanjoAst {
                     }
                 ]
             }
-        ],
-        "zx": [
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "status"
-                },
-                Ident {
-                    namespace: None,
-                    name: "int32"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "time"
-                },
-                Ident {
-                    namespace: None,
-                    name: "int64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "duration"
-                },
-                Ident {
-                    namespace: None,
-                    name: "int64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "koid"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "vaddr"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "paddr"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "paddr32"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint32"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "gpaddr"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            ),
-            Alias(
-                Ident {
-                    namespace: None,
-                    name: "off"
-                },
-                Ident {
-                    namespace: None,
-                    name: "uint64"
-                }
-            )
         ]
     }
 }

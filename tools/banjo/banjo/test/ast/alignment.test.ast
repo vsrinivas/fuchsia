@@ -6,7 +6,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "packing_0",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.alignment"
+                    ),
+                    name: "packing_0"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -47,7 +52,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "packing_1",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.alignment"
+                    ),
+                    name: "packing_1"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -99,7 +109,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "packing_2",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.alignment"
+                    ),
+                    name: "packing_2"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -151,7 +166,12 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "packing_3",
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.alignment"
+                    ),
+                    name: "packing_3"
+                },
                 fields: [
                     StructField {
                         attributes: Attrs(
