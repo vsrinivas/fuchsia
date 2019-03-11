@@ -58,13 +58,11 @@ function main {
     source_name="${config_type}"
   fi
 
-  local local_addr="$(fx-command-run netaddr --local "$(get-device-name)")"
+  local local_addr="$(fx-command-run shell 'echo $SSH_CONNECTION' | cut -d ' ' -f 1 | sed 's/%/%25/g')"
   if [[ $? -ne 0 || -z "${local_addr}" ]]; then
-    echo >&2 "Unable to determine host's IP.  Is the target up?"
+    echo >&2 "Unable to determine target's view of amber address.  Is the target up?"
     exit 1
   fi
-  # Strip interface name suffix.
-  local_addr="${local_addr%%%*}"
 
   repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
   if [[ ! -d "${repository_dir}" ]]; then
