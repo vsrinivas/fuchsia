@@ -5,13 +5,18 @@
 #include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 
 #include <lib/fxl/logging.h>
+#include <rapidjson/error/en.h>
 
 namespace rapidjson_utils {
 
 std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(json.data(), json.size()).HasParseError()) {
-    FXL_LOG(ERROR) << "Schema validation spec itself is not valid JSON.";
+    auto offset = schema_document.GetErrorOffset();
+    auto code = schema_document.GetParseError();
+    FXL_LOG(ERROR) << "Schema validation spec itself is not valid JSON"
+                   << ": offset " << offset << ", "
+                   << rapidjson::GetParseError_En(code);
     return nullptr;
   }
   auto schema = std::make_unique<rapidjson::SchemaDocument>(schema_document);
