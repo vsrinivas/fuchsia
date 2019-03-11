@@ -7,6 +7,7 @@ executable("sysconfig") {
     "sysconfig.c",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/ulib/ddk:headers",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/kvstore",

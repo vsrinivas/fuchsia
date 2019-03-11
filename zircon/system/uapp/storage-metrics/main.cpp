@@ -12,6 +12,7 @@
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fzl/fdio.h>
@@ -141,7 +142,7 @@ zx_status_t GetFsMetrics(const char* path, MinfsMetrics* out_metrics) {
     return status;
 }
 
-void PrintBlockMetrics(const char* dev, const block_stats_t& stats) {
+void PrintBlockMetrics(const char* dev, const fuchsia_hardware_block_BlockStats& stats) {
     printf(R"(
 Block Metrics for device path: %s 
 total submitted block ops:      %zu
@@ -151,21 +152,27 @@ total submitted blocks read:    %zu
 total submitted write ops:      %zu
 total submitted blocks written: %zu
 )",
-           dev, stats.total_ops, stats.total_blocks, stats.total_reads,
-           stats.total_blocks_read, stats.total_writes, stats.total_blocks_written);
+           dev, stats.ops, stats.blocks, stats.reads,
+           stats.blocks_read, stats.writes, stats.blocks_written);
 }
 
 // Retrieves metrics for the block device at dev. Clears metrics if clear is true.
-zx_status_t GetBlockMetrics(const char* dev, bool clear, block_stats_t* stats) {
+zx_status_t GetBlockMetrics(const char* dev, bool clear, fuchsia_hardware_block_BlockStats* stats) {
     fbl::unique_fd fd(open(dev, O_RDONLY));
     if (!fd) {
         fprintf(stderr, "Error opening %s, errno %d (%s)\n", dev, errno, strerror(errno));
         return ZX_ERR_IO;
     }
-    ssize_t rc = ioctl_block_get_stats(fd.get(), &clear, stats);
-    if (rc < 0) {
+    fzl::FdioCaller caller(std::move(fd));
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
+                                                                 &status, stats);
+    if (io_status != ZX_OK) {
+        status = io_status;
+    }
+    if (status != ZX_OK) {
         fprintf(stderr, "Error getting stats for %s\n", dev);
-        return static_cast<zx_status_t>(rc);
+        return status;
     }
     return ZX_OK;
 }
@@ -285,7 +292,7 @@ void RunBlockMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetric
     }
 
     zx_status_t rc;
-    block_stats_t stats;
+    fuchsia_hardware_block_BlockStats stats;
     if (device_path != nullptr) {
         rc = GetBlockMetrics(device_path, options.clear_block, &stats);
         if (rc == ZX_OK) {

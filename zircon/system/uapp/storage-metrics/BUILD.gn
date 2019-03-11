@@ -7,6 +7,7 @@ executable("storage-metrics") {
     "main.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-minfs:c",
     "$zx/system/ulib/fbl",

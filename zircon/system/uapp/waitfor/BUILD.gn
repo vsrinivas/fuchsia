@@ -8,6 +8,7 @@ executable("waitfor") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/zircon",

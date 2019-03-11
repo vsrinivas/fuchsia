@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <kvstore/kvstore.h>
+#include <lib/fdio/unsafe.h>
 #include <zircon/boot/sysconfig.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
@@ -60,14 +62,19 @@ static int open_sysconfig(void) {
             fprintf(stderr, "Error opening %s\n", path);
             continue;
         }
+        fdio_t* io = fdio_unsafe_fd_to_io(fd);
+        zx_handle_t device = fdio_unsafe_borrow_channel(io);
+        fuchsia_hardware_block_partition_GUID guid;
+        zx_status_t status;
+        zx_status_t io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(device,
+                                                                                      &status,
+                                                                                      &guid);
+        fdio_unsafe_release(io);
 
-        uint8_t guid[GPT_GUID_LEN];
-        if (ioctl_block_get_type_guid(fd, &guid, sizeof(guid)) < 0) {
-            close(fd);
+        if (io_status != ZX_OK || status != ZX_OK) {
             continue;
         }
-        if (memcmp(guid, sysconfig_guid, sizeof(sysconfig_guid))) {
-            close(fd);
+        if (memcmp(guid.value, sysconfig_guid, sizeof(sysconfig_guid))) {
             continue;
         }
 
