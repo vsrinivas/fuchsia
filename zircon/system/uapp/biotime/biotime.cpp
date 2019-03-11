@@ -11,6 +11,9 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fit/defer.h>
+#include <lib/fzl/fdio.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <perftest/results.h>
@@ -67,9 +70,9 @@ typedef struct {
     zx_handle_t vmo;
     zx_handle_t fifo;
     reqid_t reqid;
-    vmoid_t vmoid;
+    fuchsia_hardware_block_VmoID vmoid;
     size_t bufsz;
-    block_info_t info;
+    fuchsia_hardware_block_BlockInfo info;
 } blkdev_t;
 
 static void blkdev_close(blkdev_t* blk) {
@@ -87,35 +90,44 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
     blk->fd = fd;
     blk->bufsz = bufsz;
 
-    zx_status_t r;
-    if (ioctl_block_get_info(fd, &blk->info) != sizeof(block_info_t)) {
+    auto cleanup = fit::defer([blk]() {
+        blkdev_close(blk);
+    });
+
+    fzl::UnownedFdioCaller caller(fd);
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(),
+                                                                &status, &blk->info);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "error: cannot get block device info for '%s'\n", dev);
-        goto fail;
+        return ZX_ERR_INTERNAL;
     }
-    if (ioctl_block_get_fifos(fd, &blk->fifo) != sizeof(zx_handle_t)) {
+
+    io_status = fuchsia_hardware_block_BlockGetFifo(caller.borrow_channel(), &status, &blk->fifo);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "error: cannot get fifo for '%s'\n", dev);
-        goto fail;
+        return ZX_ERR_INTERNAL;
     }
-    if ((r = zx_vmo_create(bufsz, 0, &blk->vmo)) != ZX_OK) {
-        fprintf(stderr, "error: out of memory %d\n", r);
-        goto fail;
+    if ((status = zx_vmo_create(bufsz, 0, &blk->vmo)) != ZX_OK) {
+        fprintf(stderr, "error: out of memory %d\n", status);
+        return status;
     }
 
     zx_handle_t dup;
-    if ((r = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-        fprintf(stderr, "error: cannot duplicate handle %d\n", r);
-        goto fail;
+    if ((status = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+        fprintf(stderr, "error: cannot duplicate handle %d\n", status);
+        return status;
     }
-    if (ioctl_block_attach_vmo(fd, &dup, &blk->vmoid) != sizeof(vmoid_t)) {
+
+    io_status = fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(), dup, &status,
+                                                      &blk->vmoid);
+    if (io_status != ZX_OK || status != ZX_OK) {
         fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);
-        goto fail;
+        return ZX_ERR_INTERNAL;
     }
 
+    cleanup.cancel();
     return ZX_OK;
-
-fail:
-    blkdev_close(blk);
-    return ZX_ERR_INTERNAL;
 }
 
 typedef struct {
@@ -156,7 +168,7 @@ static int bio_random_thread(void* arg) {
 
         block_fifo_request_t req = {};
         req.reqid = next_reqid.fetch_add(1);
-        req.vmoid = a->blk->vmoid;
+        req.vmoid = a->blk->vmoid.id;
         req.opcode = a->write ? BLOCKIO_WRITE : BLOCKIO_READ;
         req.length = static_cast<uint32_t>(xfer);
         req.vmo_offset = off;
@@ -178,7 +190,7 @@ static int bio_random_thread(void* arg) {
 
 #if 0
         fprintf(stderr, "IO tid=%u vid=%u op=%x len=%zu vof=%zu dof=%zu\n",
-                req.reqid, req.vmoid, req.opcode, req.length, req.vmo_offset, req.dev_offset);
+                req.reqid, req.vmoid.id, req.opcode, req.length, req.vmo_offset, req.dev_offset);
 #endif
         zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, NULL);
         if (r == ZX_ERR_SHOULD_WAIT) {
@@ -214,6 +226,12 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duratio
     zx_time_t t0 = zx_clock_get_monotonic();
     thrd_create(&t, bio_random_thread, a);
 
+    auto cleanup = fit::defer([&a, &t]() {
+        int r;
+        zx_handle_close(a->blk->fifo);
+        thrd_join(t, &r);
+    });
+
     while (count > 0) {
         block_fifo_response_t resp;
         zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, NULL);
@@ -222,23 +240,25 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duratio
                                    ZX_TIME_INFINITE, NULL);
             if (r != ZX_OK) {
                 fprintf(stderr, "failed waiting for fifo: %d\n", r);
-                goto fail;
+                return r;
             }
             continue;
         } else if (r < 0) {
             fprintf(stderr, "error: failed reading fifo: %d\n", r);
-            goto fail;
+            return r;
         }
         if (resp.status != ZX_OK) {
             fprintf(stderr, "error: io txn failed %d (%zu remaining)\n",
                     resp.status, count);
-            goto fail;
+            return resp.status;
         }
         count--;
         if (a->pending.fetch_sub(1) == a->max_pending) {
             sync_completion_signal(&a->signal);
         }
     }
+
+    cleanup.cancel();
 
     zx_time_t t1;
     t1 = zx_clock_get_monotonic();
@@ -249,11 +269,6 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duratio
     *_res = zx_time_sub_time(t1, t0);
     *_total = a->count * a->xfer;
     return ZX_OK;
-
-fail:
-    zx_handle_close(a->blk->fifo);
-    thrd_join(t, &r);
-    return ZX_ERR_IO;
 }
 
 void usage(void) {
