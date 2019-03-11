@@ -256,19 +256,18 @@ bool BlobfsTest::Init(FsTestState state) {
         ASSERT_TRUE(fd, "[FAILED]: Could not open test disk");
         ASSERT_EQ(fvm_init(fd.get(), kTestFvmSliceSize), ZX_OK,
                   "[FAILED]: Could not format disk with FVM");
-        zx::channel fvm_channel;
-        ASSERT_EQ(fdio_get_service_handle(fd.release(), fvm_channel.reset_and_get_address()),
-                  ZX_OK);
-        zx_status_t call_status;
-        zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
-                                                           STRLEN(FVM_DRIVER_LIB), &call_status);
-        ASSERT_EQ(status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
-        ASSERT_EQ(call_status, ZX_OK, "[FAILED]: Could not bind disk to FVM driver");
+        fzl::FdioCaller caller(std::move(fd));
+        zx_status_t status;
+        zx_status_t io_status = fuchsia_device_ControllerBind(caller.borrow_channel(),
+                                                              FVM_DRIVER_LIB,
+                                                              STRLEN(FVM_DRIVER_LIB), &status);
+        ASSERT_EQ(io_status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
+        ASSERT_EQ(status, ZX_OK, "[FAILED]: Could not bind disk to FVM driver");
+        caller.reset();
 
         snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", device_path_);
         ASSERT_EQ(wait_for_device(fvm_path_, ZX_SEC(3)), ZX_OK,
                   "[FAILED]: FVM driver never appeared");
-        fvm_channel.reset();
 
         // Open "fvm" driver.
         fbl::unique_fd fvm_fd(open(fvm_path_, O_RDWR));
@@ -1532,7 +1531,7 @@ static bool RootDirectory(BlobfsTest* blobfsTest) {
     fbl::unique_ptr<fs_test_utils::BlobInfo> info;
     ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 12, &info));
 
-    // Test ioctls which should ONLY operate on Blobs
+    // Test operations which should ONLY operate on Blobs
     ASSERT_LT(ftruncate(dirfd.get(), info->size_data), 0);
 
     char buf[8];
@@ -2296,59 +2295,76 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
 
     fbl::unique_fd fd(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
+    fzl::UnownedFdioCaller caller(fd.get());
 
     // Manually shrink slice so FVM will differ from Blobfs.
-    extend_request_t extend_request;
-    extend_request.offset = blobfs::kFVMNodeMapStart / kBlocksPerSlice;
-    extend_request.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_shrink(fd.get(), &extend_request), 0);
+    uint64_t offset = blobfs::kFVMNodeMapStart / kBlocksPerSlice;
+    uint64_t length = 1;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(caller.borrow_channel(), offset,
+                                                         length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     // Verify that shrink was successful.
-    query_request_t query_request;
-    query_request.count = 1;
-    query_request.vslice_start[0] = extend_request.offset;
-    query_response_t query_response;
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
-    ASSERT_FALSE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count,
+    uint64_t start_slices[1];
+    start_slices[0] = offset;
+    fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    size_t actual_ranges_count;
+
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
+                ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(actual_ranges_count, 1);
+    ASSERT_FALSE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count,
               (blobfs::kFVMJournalStart - blobfs::kFVMNodeMapStart) / kBlocksPerSlice);
 
     // Attempt to mount the VPart. This should fail since slices are missing.
     mount_options_t options = default_mount_options;
     options.enable_journal = gEnableJournal;
+    caller.reset();
     ASSERT_NE(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options,
                     launch_stdio_async), ZX_OK);
 
     fd.reset(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
+    caller.reset(fd.get());
 
     // Manually grow slice count to twice what it was initially.
-    extend_request.length = 2;
-    ASSERT_EQ(ioctl_block_fvm_extend(fd.get(), &extend_request), 0);
+    length = 2;
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
+                                                         length, &status), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     // Verify that extend was successful.
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 2);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
+                ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(actual_ranges_count, 1);
+    ASSERT_TRUE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count, 2);
 
     // Attempt to mount the VPart. This should succeed.
+    caller.reset();
     ASSERT_EQ(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options,
                     launch_stdio_async), ZX_OK);
 
     ASSERT_EQ(umount(MOUNT_PATH), ZX_OK);
     fd.reset(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
+    caller.reset(fd.get());
 
     // Verify that mount automatically removed extra slice.
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(fd.get(), &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_EQ(query_request.count, query_response.count);
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 1);
+    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
+                caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
+                ranges, &actual_ranges_count), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(actual_ranges_count, 1);
+    ASSERT_TRUE(ranges[0].allocated);
+    ASSERT_EQ(ranges[0].count, 1);
     END_HELPER;
 }
 
@@ -2751,19 +2767,14 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "[fs] Could not open block device\n");
                 return -1;
             }
-            fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-            if (io == nullptr) {
-                fprintf(stderr, "[fs] could not convert fd to io\n");
-                return -1;
-            }
-            zx_status_t call_status;
+            fzl::FdioCaller caller(std::move(fd));
+            zx_status_t status;
             size_t path_len;
-            zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-                    fdio_unsafe_borrow_channel(io), &call_status, gRealDiskInfo.disk_path,
+            zx_status_t io_status = fuchsia_device_ControllerGetTopologicalPath(
+                    caller.borrow_channel(), &status, gRealDiskInfo.disk_path,
                     PATH_MAX - 1, &path_len);
-            fdio_unsafe_release(io);
-            if (status == ZX_OK) {
-                status = call_status;
+            if (io_status != ZX_OK) {
+                status = io_status;
             }
             if (status != ZX_OK) {
                 fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
@@ -2776,10 +2787,14 @@ int main(int argc, char** argv) {
             // before re-running.
             fvm_destroy(gRealDiskInfo.disk_path);
 
-            block_info_t block_info;
-            ssize_t rc = ioctl_block_get_info(fd.get(), &block_info);
+            fuchsia_hardware_block_BlockInfo block_info;
+            io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
+                                                            &block_info);
+            if (io_status != ZX_OK) {
+                status = io_status;
+            }
 
-            if (rc < 0 || rc != sizeof(block_info)) {
+            if (status != ZX_OK) {
                 fprintf(stderr, "[fs] Could not query block device info\n");
                 return -1;
             }

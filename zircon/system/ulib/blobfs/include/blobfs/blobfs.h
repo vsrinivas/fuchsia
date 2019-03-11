@@ -31,11 +31,14 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fzl/fdio.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
@@ -183,7 +186,12 @@ public:
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
-    int Fd() const { return blockfd_.get(); }
+    const zx::unowned_channel BlockDevice() const {
+        return zx::unowned_channel(block_device_.borrow_channel());
+    }
+    const fbl::unique_fd& BlockDeviceFd() const {
+        return block_device_.fd();
+    }
 
     // Returns an unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
@@ -261,8 +269,8 @@ private:
 
     BlobCache blob_cache_;
 
-    fbl::unique_fd blockfd_;
-    block_info_t block_info_ = {};
+    fzl::FdioCaller block_device_;
+    fuchsia_hardware_block_BlockInfo block_info_ = {};
     std::atomic<groupid_t> next_group_ = {};
     block_client::Client fifo_client_;
 

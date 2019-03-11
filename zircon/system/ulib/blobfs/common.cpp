@@ -18,7 +18,11 @@
 #include <fs/trace.h>
 
 #ifdef __Fuchsia__
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fvm/client.h>
+#include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
 #endif
 
 #include <blobfs/common.h>
@@ -103,11 +107,18 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
 
 zx_status_t GetBlockCount(int fd, uint64_t* out) {
 #ifdef __Fuchsia__
-    block_info_t info;
-    ssize_t r;
-    if ((r = ioctl_block_get_info(fd, &info)) < 0) {
-        return static_cast<zx_status_t>(r);
+    fzl::UnownedFdioCaller caller(fd);
+    fuchsia_hardware_block_BlockInfo info;
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
+                                                                &info);
+    if (io_status != ZX_OK) {
+        return io_status;
     }
+    if (status != ZX_OK) {
+        return status;
+    }
+
     *out = (info.block_size * info.block_count) / kBlobfsBlockSize;
 #else
     struct stat s;
@@ -195,10 +206,19 @@ int Mkfs(int fd, uint64_t block_count) {
         info.data_block_count = 0;
     }
 
+    zx_status_t status;
 #ifdef __Fuchsia__
-    fvm_info_t fvm_info;
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+    fzl::UnownedFdioCaller caller(fd);
 
-    if (ioctl_block_fvm_query(fd, &fvm_info) >= 0) {
+    // Querying may be used to confirm if the underlying connection is capable of
+    // communicating the FVM protocol. Clone the connection, since if the block
+    // device does NOT speak the Volume protocol, the connection is terminated.
+    zx::channel connection(fdio_service_clone(caller.borrow_channel()));
+
+    zx_status_t io_status;
+    io_status = fuchsia_hardware_block_volume_VolumeQuery(connection.get(), &status, &fvm_info);
+    if (io_status == ZX_OK && status == ZX_OK) {
         info.slice_size = fvm_info.slice_size;
         info.flags |= kBlobFlagFVM;
 
@@ -214,34 +234,41 @@ int Mkfs(int fd, uint64_t block_count) {
 
         const size_t kBlocksPerSlice = info.slice_size / kBlobfsBlockSize;
 
-        extend_request_t request;
-        request.length = 1;
-        request.offset = kFVMBlockMapStart / kBlocksPerSlice;
-        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+        uint64_t offset = kFVMBlockMapStart / kBlocksPerSlice;
+        uint64_t length = 1;
+        io_status = fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
+                                                               length, &status);
+        if (io_status != ZX_OK || status != ZX_OK) {
             FS_TRACE_ERROR("blobfs mkfs: Failed to allocate block map\n");
             return -1;
         }
 
-        request.offset = kFVMNodeMapStart / kBlocksPerSlice;
-        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+        offset = kFVMNodeMapStart / kBlocksPerSlice;
+        io_status = fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
+                                                               length, &status);
+        if (io_status != ZX_OK || status != ZX_OK) {
             FS_TRACE_ERROR("blobfs mkfs: Failed to allocate node map\n");
             return -1;
         }
 
         // Allocate the minimum number of journal blocks in FVM.
-        request.offset = kFVMJournalStart / kBlocksPerSlice;
-        request.length = fbl::round_up(kDefaultJournalBlocks, kBlocksPerSlice) / kBlocksPerSlice;
-        info.journal_slices = static_cast<uint32_t>(request.length);
-        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+        offset = kFVMJournalStart / kBlocksPerSlice;
+        length = fbl::round_up(kDefaultJournalBlocks, kBlocksPerSlice) / kBlocksPerSlice;
+        info.journal_slices = static_cast<uint32_t>(length);
+        io_status = fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
+                                                               length, &status);
+        if (io_status != ZX_OK || status != ZX_OK) {
             FS_TRACE_ERROR("blobfs mkfs: Failed to allocate journal blocks\n");
             return -1;
         }
 
         // Allocate the minimum number of data blocks in the FVM.
-        request.offset = kFVMDataStart / kBlocksPerSlice;
-        request.length = fbl::round_up(kMinimumDataBlocks, kBlocksPerSlice) / kBlocksPerSlice;
-        info.dat_slices = static_cast<uint32_t>(request.length);
-        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+        offset = kFVMDataStart / kBlocksPerSlice;
+        length = fbl::round_up(kMinimumDataBlocks, kBlocksPerSlice) / kBlocksPerSlice;
+        info.dat_slices = static_cast<uint32_t>(length);
+        io_status = fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
+                                                               length, &status);
+        if (io_status != ZX_OK || status != ZX_OK) {
             FS_TRACE_ERROR("blobfs mkfs: Failed to allocate data blocks\n");
             return -1;
         }
@@ -302,7 +329,6 @@ int Mkfs(int fd, uint64_t block_count) {
     }
 
     // All in-memory structures have been created successfully. Dump everything to disk.
-    zx_status_t status;
     char block[kBlobfsBlockSize];
     memset(block, 0, sizeof(block));
 

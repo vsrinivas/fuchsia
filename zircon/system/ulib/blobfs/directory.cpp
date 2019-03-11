@@ -145,19 +145,14 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
 }
 
 zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-    fdio_t* io = fdio_unsafe_fd_to_io(blobfs_->Fd());
-    if (io == NULL) {
-        return ZX_ERR_INTERNAL;
-    }
+    auto device = blobfs_->BlockDevice();
     if (buffer_len == 0) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    zx_handle_t channel = fdio_unsafe_borrow_channel(io);
     zx_status_t call_status;
-    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(channel, &call_status,
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(device->get(), &call_status,
                                                                      out_name, buffer_len - 1,
                                                                      out_len);
-    fdio_unsafe_release(io);
     if (status == ZX_OK) {
         status = call_status;
     }

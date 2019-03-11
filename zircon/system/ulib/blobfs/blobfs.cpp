@@ -25,6 +25,8 @@
 #include <fbl/ref_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/ticker.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/event.h>
@@ -60,16 +62,21 @@ cobalt_client::CollectorOptions MakeCollectorOptions() {
     return options;
 }
 
-zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
+zx_status_t CheckFvmConsistency(const Superblock* info, const zx::unowned_channel channel) {
     if ((info->flags & kBlobFlagFVM) == 0) {
         return ZX_OK;
     }
 
-    fvm_info_t fvm_info;
-    zx_status_t status = static_cast<zx_status_t>(ioctl_block_fvm_query(block_fd, &fvm_info));
-    if (status < ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Unable to query FVM, fd: %d status: 0x%x\n", block_fd, status);
-        return ZX_ERR_UNAVAILABLE;
+    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeQuery(channel->get(), &status,
+                                                                      &fvm_info);
+    if (io_status != ZX_OK) {
+        status = io_status;
+    }
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Unable to query FVM, status: %s\n", zx_status_get_string(status));
+        return status;
     }
 
     if (info->slice_size != fvm_info.slice_size) {
@@ -84,30 +91,36 @@ zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
     expected_count[2] = info->journal_slices;
     expected_count[3] = info->dat_slices;
 
-    query_request_t request;
-    request.count = 4;
-    request.vslice_start[0] = kFVMBlockMapStart / kBlocksPerSlice;
-    request.vslice_start[1] = kFVMNodeMapStart / kBlocksPerSlice;
-    request.vslice_start[2] = kFVMJournalStart / kBlocksPerSlice;
-    request.vslice_start[3] = kFVMDataStart / kBlocksPerSlice;
+    uint64_t start_slices[4];
+    start_slices[0] = kFVMBlockMapStart / kBlocksPerSlice;
+    start_slices[1] = kFVMNodeMapStart / kBlocksPerSlice;
+    start_slices[2] = kFVMJournalStart / kBlocksPerSlice;
+    start_slices[3] = kFVMDataStart / kBlocksPerSlice;
 
-    query_response_t response;
-    status = static_cast<zx_status_t>(ioctl_block_fvm_vslice_query(block_fd, &request, &response));
-    if (status < ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Unable to query slices, status: 0x%x\n", status);
-        return ZX_ERR_UNAVAILABLE;
+    fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    size_t actual_ranges_count;
+    io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
+        channel->get(), start_slices, fbl::count_of(start_slices), &status, ranges,
+        &actual_ranges_count);
+    if (io_status != ZX_OK) {
+        status = io_status;
+    }
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Cannot query slices, status: %s\n", zx_status_get_string(status));
+        return status;
     }
 
-    if (response.count != request.count) {
+    if (actual_ranges_count != fbl::count_of(start_slices)) {
         FS_TRACE_ERROR("blobfs: Missing slice\n");
         return ZX_ERR_BAD_STATE;
     }
 
-    for (size_t i = 0; i < request.count; i++) {
+    for (size_t i = 0; i < fbl::count_of(start_slices); i++) {
         size_t blobfs_count = expected_count[i];
-        size_t fvm_count = response.vslice_range[i].count;
+        size_t fvm_count = ranges[i].count;
 
-        if (!response.vslice_range[i].allocated || fvm_count < blobfs_count) {
+        if (!ranges[i].allocated || fvm_count < blobfs_count) {
             // Currently, since Blobfs can only grow new slices, it should not be possible for
             // the FVM to report a slice size smaller than what is reported by Blobfs. In this
             // case, automatically fail without trying to resolve the situation, as it is
@@ -118,13 +131,17 @@ zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
 
         if (fvm_count > blobfs_count) {
             // If FVM reports more slices than we expect, try to free remainder.
-            extend_request_t shrink;
-            shrink.length = fvm_count - blobfs_count;
-            shrink.offset = request.vslice_start[i] + blobfs_count;
-            ssize_t r;
-            if ((r = ioctl_block_fvm_shrink(block_fd, &shrink)) != ZX_OK) {
-                FS_TRACE_ERROR("blobfs: Unable to shrink to expected size, status: %zd\n", r);
-                return ZX_ERR_IO_DATA_INTEGRITY;
+            uint64_t offset = start_slices[i] + blobfs_count;
+            uint64_t length = fvm_count - blobfs_count;
+            io_status = fuchsia_hardware_block_volume_VolumeShrink(channel->get(), offset, length,
+                                                                   &status);
+            if (io_status != ZX_OK) {
+                status = io_status;
+            }
+            if (status != ZX_OK) {
+                FS_TRACE_ERROR("blobfs: Unable to shrink to expected size: %s\n",
+                               zx_status_get_string(status));
+                return status;
             }
         }
     }
@@ -391,11 +408,18 @@ zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
     if (status != ZX_OK) {
         return status;
     }
-    zx_handle_t raw_vmo = xfer_vmo.release();
-    ssize_t r = ioctl_block_attach_vmo(Fd(), &raw_vmo, out);
-    if (r < 0) {
-        return static_cast<zx_status_t>(r);
+    fuchsia_hardware_block_VmoID vmoid;
+    zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(BlockDevice()->get(),
+                                                                  xfer_vmo.release(), &status,
+                                                                  &vmoid);
+    if (io_status != ZX_OK) {
+        return io_status;
     }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *out = vmoid.id;
     return ZX_OK;
 }
 
@@ -415,17 +439,22 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     }
 
     const size_t kBlocksPerSlice = info_.slice_size / kBlobfsBlockSize;
-    extend_request_t request;
-    request.length = 1;
-    request.offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
-    if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
-        FS_TRACE_ERROR("Blobfs::AddInodes fvm_extend failure");
-        return ZX_ERR_NO_SPACE;
+    uint64_t offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
+    uint64_t length = 1;
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(),
+                                                                       offset, length, &status);
+    if (io_status != ZX_OK) {
+        status = io_status;
+    }
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("Blobfs::AddInodes fvm_extend failure: %s", zx_status_get_string(status));
+        return status;
     }
 
     const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size / kBlobfsInodeSize);
     uint64_t inodes64 =
-        (info_.ino_slices + static_cast<uint32_t>(request.length)) * kInodesPerSlice;
+        (info_.ino_slices + static_cast<uint32_t>(length)) * kInodesPerSlice;
     ZX_DEBUG_ASSERT(inodes64 <= std::numeric_limits<uint32_t>::max());
     uint32_t inodes = static_cast<uint32_t>(inodes64);
     uint32_t inoblks = (inodes + kBlobfsInodesPerBlock - 1) / kBlobfsInodesPerBlock;
@@ -438,8 +467,8 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
         return ZX_ERR_NO_SPACE;
     }
 
-    info_.vslice_count += request.length;
-    info_.ino_slices += static_cast<uint32_t>(request.length);
+    info_.vslice_count += length;
+    info_.ino_slices += static_cast<uint32_t>(length);
     info_.inode_count = inodes;
 
     // Reset new inodes to 0
@@ -447,7 +476,6 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
     memset(reinterpret_cast<void*>(addr + kBlobfsBlockSize * inoblks_old), 0,
            (kBlobfsBlockSize * (inoblks - inoblks_old)));
 
-    zx_status_t status;
     fbl::unique_ptr<WritebackWork> wb;
     if ((status = CreateWork(&wb, nullptr)) != ZX_OK) {
         return status;
@@ -467,12 +495,11 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
     }
 
     const size_t kBlocksPerSlice = info_.slice_size / kBlobfsBlockSize;
-    extend_request_t request;
     // Number of slices required to add nblocks
-    request.length = (nblocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
-    request.offset = (kFVMDataStart / kBlocksPerSlice) + info_.dat_slices;
+    uint64_t offset = (kFVMDataStart / kBlocksPerSlice) + info_.dat_slices;
+    uint64_t length = (nblocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
 
-    uint64_t blocks64 = (info_.dat_slices + request.length) * kBlocksPerSlice;
+    uint64_t blocks64 = (info_.dat_slices + length) * kBlocksPerSlice;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     uint32_t abmblks = (blocks + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
@@ -485,9 +512,15 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
         return ZX_ERR_NO_SPACE;
     }
 
-    if (ioctl_block_fvm_extend(Fd(), &request) < 0) {
-        FS_TRACE_ERROR("Blobfs::AddBlocks FVM Extend failure\n");
-        return ZX_ERR_NO_SPACE;
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeExtend(BlockDevice()->get(),
+                                                                       offset, length, &status);
+    if (io_status != ZX_OK) {
+        status = io_status;
+    }
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("Blobfs::AddBlocks FVM Extend failure: %s\n", zx_status_get_string(status));
+        return status;
     }
 
     // Grow the block bitmap to hold new number of blocks
@@ -498,7 +531,6 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
     // of kBlobfsBlockSize.
     block_map->Shrink(blocks);
 
-    zx_status_t status;
     fbl::unique_ptr<WritebackWork> wb;
     if ((status = CreateWork(&wb, nullptr)) != ZX_OK) {
         return status;
@@ -513,8 +545,8 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
         wb.get()->Enqueue(block_map->StorageUnsafe()->GetVmo(), vmo_offset, dev_offset, length);
     }
 
-    info_.vslice_count += request.length;
-    info_.dat_slices += static_cast<uint32_t>(request.length);
+    info_.vslice_count += length;
+    info_.dat_slices += static_cast<uint32_t>(length);
     info_.data_block_count = blocks;
 
     WriteInfo(wb.get());
@@ -535,7 +567,7 @@ void Blobfs::Sync(SyncCallback closure) {
 }
 
 Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
-    : blockfd_(std::move(fd)), metrics_(),
+    : block_device_(std::move(fd)), metrics_(),
       cobalt_metrics_(MakeCollectorOptions(), false, "blobfs") {
     memcpy(&info_, info, sizeof(Superblock));
 }
@@ -548,8 +580,9 @@ Blobfs::~Blobfs() {
 
     Cache().Reset();
 
-    if (blockfd_) {
-        ioctl_block_fifo_close(Fd());
+    if (block_device_) {
+        zx_status_t status;
+        fuchsia_hardware_block_BlockCloseFifo(block_device_.borrow_channel(), &status);
     }
 }
 
@@ -582,15 +615,28 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
             kCobaltFlushTimer);
     }
 
-    zx::fifo fifo;
-    ssize_t r;
-    if ((r = ioctl_block_get_info(fs->Fd(), &fs->block_info_)) < 0) {
-        return static_cast<zx_status_t>(r);
-    } else if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
+    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(fs->BlockDevice()->get(), &status,
+                                                                &fs->block_info_);
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
         return ZX_ERR_IO;
-    } else if ((r = ioctl_block_get_fifos(fs->Fd(), fifo.reset_and_get_address())) < 0) {
+    }
+
+    zx::fifo fifo;
+    io_status = fuchsia_hardware_block_BlockGetFifo(fs->BlockDevice()->get(), &status,
+                                                    fifo.reset_and_get_address());
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("Failed to mount blobfs: Someone else is using the block device\n");
-        return static_cast<zx_status_t>(r);
+        return status;
     }
 
     if ((status = block_client::Client::Create(std::move(fifo), &fs->fifo_client_)) != ZX_OK) {
@@ -682,7 +728,7 @@ zx_status_t Blobfs::Reload() {
     // Re-read the info block from disk.
     zx_status_t status;
     char block[kBlobfsBlockSize];
-    if ((status = readblk(Fd(), 0, block)) != ZX_OK) {
+    if ((status = readblk(BlockDeviceFd().get(), 0, block)) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: could not read info block\n");
         return status;
     }
@@ -780,7 +826,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
         return status;
     }
 
-    if ((status = CheckFvmConsistency(&fs->Info(), fs->Fd())) != ZX_OK) {
+    if ((status = CheckFvmConsistency(&fs->Info(), fs->BlockDevice())) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: FVM info check failed\n");
         return status;
     }

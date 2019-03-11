@@ -13,8 +13,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/channel.h>
 #include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
 #include <fbl/auto_call.h>
@@ -23,6 +21,10 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -33,9 +35,16 @@ namespace {
 
 int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
     if (!options->readonly) {
-        block_info_t block_info;
-        zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
-        if (status < ZX_OK) {
+        fzl::UnownedFdioCaller caller(fd.get());
+
+        fuchsia_hardware_block_BlockInfo block_info;
+        zx_status_t status;
+        zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(),
+                                                                    &status, &block_info);
+        if (io_status != ZX_OK) {
+            status = io_status;
+        }
+        if (status != ZX_OK) {
             FS_TRACE_ERROR("blobfs: Unable to query block device, fd: %d status: 0x%x\n",
                            fd.get(), status);
             return -1;
