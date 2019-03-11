@@ -1,0 +1,17 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.telephony.transport;
+
+using zx;
+
+[Layout = "Simple"]
+protocol Qmi {
+    /// Give a channel handle that transports bi-directional QMI messages
+    SetChannel(handle<channel> transport) -> () error zx.status;
+
+    /// Configure the network used by the transport
+    /// Currently only sets network up/down
+    SetNetwork(bool connected) -> ();
+};
