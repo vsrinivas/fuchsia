@@ -6,6 +6,9 @@
         "dev": [
             "misc/sysinfo"
         ],
+        "features": [
+            "build-info"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.ui.scenic.Scenic"

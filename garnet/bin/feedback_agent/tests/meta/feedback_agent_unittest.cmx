@@ -7,6 +7,7 @@
             "misc/sysinfo"
         ],
         "features": [
+            "build-info",
             "isolated-persistent-storage"
         ],
         "services": [

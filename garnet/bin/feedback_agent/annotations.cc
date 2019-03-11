@@ -13,9 +13,12 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include "src/lib/files/file.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -69,6 +72,15 @@ std::optional<std::string> GetDeviceBoardName() {
   return out_board_name;
 }
 
+std::optional<std::string> ReadStringFromFile(const std::string& filepath) {
+  std::string content;
+  if (!files::ReadFileToString(filepath, &content)) {
+    FX_LOGS(ERROR) << "failed to read content from " << filepath;
+    return std::nullopt;
+  }
+  return fxl::TrimString(content, "\r\n").ToString();
+}
+
 void PushBackIfValuePresent(const std::string& key,
                             const std::optional<std::string> value,
                             std::vector<Annotation>* annotations) {
@@ -82,6 +94,18 @@ void PushBackIfValuePresent(const std::string& key,
 std::vector<Annotation> GetAnnotations() {
   std::vector<Annotation> annotations;
   PushBackIfValuePresent("device.board-name", GetDeviceBoardName(),
+                         &annotations);
+  PushBackIfValuePresent("build.board",
+                         ReadStringFromFile("/config/build-info/board"),
+                         &annotations);
+  PushBackIfValuePresent("build.product",
+                         ReadStringFromFile("/config/build-info/product"),
+                         &annotations);
+  PushBackIfValuePresent("build.last-update",
+                         ReadStringFromFile("/config/build-info/last-update"),
+                         &annotations);
+  PushBackIfValuePresent("build.version",
+                         ReadStringFromFile("/config/build-info/version"),
                          &annotations);
   return annotations;
 }

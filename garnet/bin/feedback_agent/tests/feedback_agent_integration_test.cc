@@ -70,6 +70,10 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckAnnotationKeys) {
   EXPECT_THAT(*out_result.response().data.annotations(),
               testing::UnorderedElementsAreArray({
                   MatchesAnnotationKey("device.board-name"),
+                  MatchesAnnotationKey("build.last-update"),
+                  MatchesAnnotationKey("build.version"),
+                  MatchesAnnotationKey("build.board"),
+                  MatchesAnnotationKey("build.product"),
               }));
 }
 

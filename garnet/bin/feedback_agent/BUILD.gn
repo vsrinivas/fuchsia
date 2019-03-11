@@ -56,9 +56,11 @@ source_set("src") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/files",
     "//third_party/libpng",
     "//zircon/public/fidl/fuchsia-sysinfo",
     "//zircon/public/lib/fdio",
