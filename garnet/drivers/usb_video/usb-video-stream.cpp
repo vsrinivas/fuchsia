@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <usb/usb-request.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
@@ -15,6 +14,7 @@
 #include <lib/zx/vmar.h>
 #include <stdlib.h>
 #include <string.h>
+#include <usb/usb-request.h>
 
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video-stream.h"
@@ -24,6 +24,12 @@ namespace video {
 namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
+// Device FIDL thunks
+const fuchsia_hardware_camera_Device_ops_t UsbVideoStream::CAMERA_FIDL_THUNKS {
+    .GetChannel = [](void* ctx, zx_handle_t handle) -> zx_status_t {
+      return reinterpret_cast<UsbVideoStream*>(ctx)->GetChannel(handle);
+    },
+};
 
 // Only keep the first 11 bits of the USB SOF (Start of Frame) values.
 // The payload header SOF values only have 11 bits before wrapping around,
@@ -273,19 +279,9 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index,
   return AllocUsbRequestsLocked(send_req_size_);
 }
 
-zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
-                                     size_t in_len, void* out_buf,
-                                     size_t out_len, size_t* out_actual) {
-  // The only IOCTL we support is get channel.
-  if (op != CAMERA_IOCTL_GET_CHANNEL) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if ((out_buf == nullptr) || (out_actual == nullptr) ||
-      (out_len != sizeof(zx_handle_t))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
   fbl::AutoLock lock(&lock_);
+  zx::channel channel(handle);
 
   if (camera_control_ != nullptr) {
     zxlogf(ERROR, "Camera Control already running\n");
@@ -293,27 +289,18 @@ zx_status_t UsbVideoStream::DdkIoctl(uint32_t op, const void* in_buf,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  fidl::InterfaceHandle<fuchsia::camera::Control> control_handle;
-  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface =
-      control_handle.NewRequest();
-
-  if (control_interface.is_valid()) {
-    camera_control_ = fbl::make_unique<camera::ControlImpl>(
-        this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
-        [this] {
-          fbl::AutoLock lock(&lock_);
-
-          camera_control_.reset();
-        });
-
-    *(reinterpret_cast<zx_handle_t*>(out_buf)) =
-        control_handle.TakeChannel().release();
-    *out_actual = sizeof(zx_handle_t);
-
-    return ZX_OK;
-  } else {
-    return ZX_ERR_NO_RESOURCES;
+  if (handle == ZX_HANDLE_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
   }
+  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(std::move(channel));
+  camera_control_ = fbl::make_unique<camera::ControlImpl>(
+      this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
+      [this] {
+        fbl::AutoLock lock(&lock_);
+
+        camera_control_.reset();
+      });
+  return ZX_OK;
 }
 
 zx_status_t UsbVideoStream::GetFormats(

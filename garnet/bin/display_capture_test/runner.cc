@@ -5,7 +5,10 @@
 #include "runner.h"
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/camera/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/device/display-controller.h>
 #include <cmath>
 
@@ -106,29 +109,32 @@ zx_status_t Runner::Start(const char* display_name) {
 }
 
 void Runner::OnCameraAvailable(int dir_fd, std::string filename) {
-  fxl::UniqueFD fd(openat(dir_fd, filename.c_str(), O_RDWR));
+  fbl::unique_fd fd{::openat(dir_fd, filename.c_str(), O_RDWR)};
   if (!fd.is_valid()) {
     printf("Failed to open camera %s\n", filename.c_str());
     return;
   }
 
-  zx::channel channel;
-  ssize_t res =
-      ioctl_camera_get_channel(fd.get(), channel.reset_and_get_address());
-  if (res < 0) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
+  FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
+
+  fzl::FdioCaller dev(std::move(fd));
+  zx_status_t res = fuchsia_hardware_camera_DeviceGetChannel(
+      dev.borrow_channel(), remote.release());
+  if (res != ZX_OK) {
     printf("Failed to obtain channel for camera %s\n", filename.c_str());
     return;
   }
 
-  camera_control_.Bind(std::move(channel), loop_->dispatcher());
+  camera_control_.Bind(std::move(local), loop_->dispatcher());
 
   camera_control_->GetFormats(
       0, fit::bind_member(this, &Runner::GetFormatCallback));
 }
 
-void Runner::GetFormatCallback(
-    ::std::vector<fuchsia::camera::VideoFormat> fmts, uint32_t total_count,
-    zx_status_t status) {
+void Runner::GetFormatCallback(::std::vector<fuchsia::camera::VideoFormat> fmts,
+                               uint32_t total_count, zx_status_t status) {
   uint32_t idx;
   for (idx = 0; idx < fmts.size(); idx++) {
     auto& format = fmts[idx];

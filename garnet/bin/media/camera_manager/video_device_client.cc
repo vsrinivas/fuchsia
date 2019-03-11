@@ -5,11 +5,12 @@
 #include "garnet/bin/media/camera_manager/video_device_client.h"
 #include "garnet/bin/media/camera_manager/fake-control-impl.h"
 
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <garnet/drivers/usb_video/usb-video-camera.h>
+#include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/strings/string_printf.h>
+#include <lib/fzl/fdio.h>
 
 namespace camera {
 using fuchsia::camera::VideoFormat;
@@ -34,7 +35,7 @@ VideoDeviceClient::~VideoDeviceClient() {
 std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
     int dir_fd, const std::string& name) {
   // Open the device node.
-  fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
+  fbl::unique_fd dev_node{::openat(dir_fd, name.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
     FXL_LOG(WARNING) << "VideoDeviceClient failed to open device node at \""
                      << name << "\". (" << strerror(errno) << " : " << errno
@@ -42,16 +43,20 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
     return nullptr;
   }
 
-  zx::channel control_channel;
-  ssize_t res = ::fdio_ioctl(dev_node.get(), CAMERA_IOCTL_GET_CHANNEL, nullptr,
-                             0, &control_channel, sizeof(control_channel));
-  if (res != sizeof(control_channel)) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
+  FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
+
+  fzl::FdioCaller dev(std::move(dev_node));
+  zx_status_t res = fuchsia_hardware_camera_DeviceGetChannel(
+      dev.borrow_channel(), remote.release());
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
     return nullptr;
   }
 
   std::unique_ptr<VideoDeviceClient> device(new VideoDeviceClient);
-  device->camera_control_.Bind(std::move(control_channel));
+  device->camera_control_.Bind(std::move(local));
   device->device_info_.camera_id = camera_id_counter_++;
   return device;
 }

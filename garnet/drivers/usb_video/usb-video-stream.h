@@ -11,6 +11,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>
+#include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/zx/vmo.h>
@@ -18,7 +19,6 @@
 
 #include <lib/fzl/vmo-pool.h>
 #include "garnet/drivers/usb_video/camera_control_impl.h"
-#include "garnet/drivers/usb_video/usb-video-camera.h"
 #include "garnet/drivers/usb_video/usb-video.h"
 #include "garnet/drivers/usb_video/uvc_format.h"
 
@@ -29,7 +29,7 @@ static constexpr int USB_ENDPOINT_INVALID = -1;
 
 class UsbVideoStream;
 using UsbVideoStreamBase =
-    ddk::Device<UsbVideoStream, ddk::Ioctlable, ddk::Unbindable>;
+    ddk::Device<UsbVideoStream, ddk::Messageable, ddk::Unbindable>;
 
 class UsbVideoStream : public UsbVideoStreamBase,
                        public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
@@ -45,8 +45,10 @@ class UsbVideoStream : public UsbVideoStreamBase,
   // DDK device implementation
   void DdkUnbind();
   void DdkRelease();
-  zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                       void* out_buf, size_t out_len, size_t* out_actual);
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_camera_Device_dispatch(this, txn, msg,
+                                                   &CAMERA_FIDL_THUNKS);
+  }
   ~UsbVideoStream();
 
  private:
@@ -55,6 +57,9 @@ class UsbVideoStream : public UsbVideoStreamBase,
     STOPPING,
     STARTED,
   };
+
+  // Device FIDL implementation
+  zx_status_t GetChannel(zx_handle_t handle);
 
   UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                  UvcFormatList format_list,
@@ -194,7 +199,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   // Size of underlying VMO backing the USB request.
   uint64_t allocated_req_size_ = 0;
 
-  //usb request size queried from the usb stack
+  // usb request size queried from the usb stack
   size_t parent_req_size_ = 0;
   // Bulk transfer specific fields.
   // Total bytes received so far for the current payload, including headers.
@@ -208,6 +213,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   fbl::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) =
       nullptr;
 
+  static const fuchsia_hardware_camera_Device_ops_t CAMERA_FIDL_THUNKS;
   // Loop used to run the FIDL server
   static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
 

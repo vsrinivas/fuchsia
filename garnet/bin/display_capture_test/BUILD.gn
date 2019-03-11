@@ -27,8 +27,10 @@ executable("bin") {
   deps = [
     "//garnet/lib/media/camera/simple_camera_lib",
     "//garnet/public/lib/fsl",
+    "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/public/fidl/fuchsia-hardware-display",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fzl",
   ]
 }
 

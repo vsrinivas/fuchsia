@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
 #define GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
 
-#include <garnet/drivers/usb_video/usb-video-camera.h>
+#include <fuchsia/camera/cpp/fidl.h>
 #include "lib/sys/cpp/startup_context.h"
 
 namespace camera {

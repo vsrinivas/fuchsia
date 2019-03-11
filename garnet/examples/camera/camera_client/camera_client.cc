@@ -6,9 +6,12 @@
 
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include "src/lib/files/unique_fd.h"
-#include "lib/fxl/strings/string_printf.h"
+#include <fuchsia/hardware/camera/c/fidl.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fzl/fdio.h>
 
 namespace camera {
 
@@ -123,23 +126,26 @@ zx_status_t Client::StartDriver() {
 
 zx_status_t Client::Open(int dev_id) {
   std::string dev_path = fxl::StringPrintf("/dev/class/camera/%03u", dev_id);
-  fxl::UniqueFD dev_node(::open(dev_path.c_str(), O_RDONLY));
+  fbl::unique_fd dev_node{::open(dev_path.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
     FXL_LOG(ERROR) << "Client::Open failed to open device node at \""
                    << dev_path << "\". (" << strerror(errno) << " : " << errno
                    << ")";
     return ZX_ERR_IO;
   }
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0u, &local, &remote);
+  FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
 
-  zx::channel channel;
-  ssize_t res =
-      ioctl_camera_get_channel(dev_node.get(), channel.reset_and_get_address());
-  if (res < 0) {
+  fzl::FdioCaller dev(std::move(dev_node));
+  zx_status_t res = fuchsia_hardware_camera_DeviceGetChannel(
+      dev.borrow_channel(), remote.release());
+  if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
-    return static_cast<zx_status_t>(res);
+    return res;
   }
 
-  camera().Bind(std::move(channel));
+  camera().Bind(std::move(local));
 
   return ZX_OK;
 }

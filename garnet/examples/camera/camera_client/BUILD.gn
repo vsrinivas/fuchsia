@@ -9,6 +9,10 @@ source_set("camera_client") {
     "camera_client.cc",
     "camera_client.h",
   ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/public/lib/fzl",
+  ]
 
   public_deps = [
     "//garnet/public/lib/fxl",

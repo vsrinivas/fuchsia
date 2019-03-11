@@ -23,6 +23,7 @@ driver("arm-isp") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-camera:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

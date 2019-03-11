@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_DISPLAY_CAPTURE_TEST_RUNNER_H_
 #define GARNET_BIN_DISPLAY_CAPTURE_TEST_RUNNER_H_
 
+#include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl.h>
-#include <garnet/drivers/usb_video/usb-video-camera.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
