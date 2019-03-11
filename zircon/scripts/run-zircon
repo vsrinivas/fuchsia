@@ -111,7 +111,7 @@ BUILD_SWITCH=
 
 while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
     case $FLAG in
-        A) VARIANT=asan ;;
+        A) VARIANT=asan BUILD_SWITCH=-A ;;
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
