@@ -19,6 +19,7 @@ library("ramdevice-client") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/ulib/ddk",

@@ -21,11 +21,13 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -136,11 +138,15 @@ public:
     }
 
     zx_status_t Rebind() {
-        ssize_t r = ioctl_block_rr_part(block_fd_.get());
-        if (r < 0) {
-            return static_cast<zx_status_t>(r);
+        fzl::FdioCaller disk_client(std::move(block_fd_));
+        zx_status_t io_status, status;
+        io_status = fuchsia_hardware_block_BlockRebindDevice(disk_client.borrow_channel(),
+                                                             &status);
+        if (io_status != ZX_OK) {
+            return io_status;
+        } else if (status != ZX_OK) {
+            return status;
         }
-        block_fd_.reset();
         ramdisk_interface_.reset();
 
         // Ramdisk paths have the form: /dev/.../ramctl/ramdisk-xxx/block.
@@ -151,7 +157,7 @@ public:
         const char* sep = strrchr(path_.c_str(), '/');
         char ramdisk_path[PATH_MAX];
         strlcpy(ramdisk_path, path_.c_str(), sep - path_.c_str() + 1);
-        zx_status_t status = wait_for_device_impl(ramdisk_path, zx::deadline_after(zx::sec(3)));
+        status = wait_for_device_impl(ramdisk_path, zx::deadline_after(zx::sec(3)));
         if (status != ZX_OK) {
             return status;
         }
