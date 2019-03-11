@@ -63,6 +63,15 @@ impl AbsoluteMoniker {
     pub fn is_root(&self) -> bool {
         self.path.is_empty()
     }
+
+    pub fn parent(&self) -> Option<AbsoluteMoniker> {
+        if self.is_root() {
+            None
+        } else {
+            let l = self.path.len() - 1;
+            Some(AbsoluteMoniker { path: self.path[..l].to_vec() })
+        }
+    }
 }
 
 impl fmt::Display for AbsoluteMoniker {
@@ -163,6 +172,22 @@ mod tests {
         ]);
         assert_eq!(false, leaf.is_root());
         assert_eq!("/a/b", format!("{}", leaf));
+    }
+
+    #[test]
+    fn absolute_moniker_parent() {
+        let root = AbsoluteMoniker::root();
+        assert_eq!(true, root.is_root());
+        assert_eq!(None, root.parent());
+
+        let leaf = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string()),
+            ChildMoniker::new("b".to_string()),
+        ]);
+        assert_eq!("/a/b", format!("{}", leaf));
+        assert_eq!("/a", format!("{}", leaf.parent().unwrap()));
+        assert_eq!("/", format!("{}", leaf.parent().unwrap().parent().unwrap()));
+        assert_eq!(None, leaf.parent().unwrap().parent().unwrap().parent());
     }
 
     #[test]
