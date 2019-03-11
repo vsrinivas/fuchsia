@@ -58,8 +58,10 @@ template("fidlmerge_dart") {
   fidl_target_name = get_path_info(fidl_target_gen_dir, "file")
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
-  include_stem = string_replace(target_gen_dir, ".", "/")
-  file_stem = "$include_stem/$source_base"
+  # Subtle: rebase dance, so that we allow paths up to and including the build
+  # dir to contain periods:
+  include_stem = string_replace(rebase_path(target_gen_dir, root_build_dir), ".", "/")
+  file_stem = "$root_build_dir/$include_stem/$source_base"
 
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
