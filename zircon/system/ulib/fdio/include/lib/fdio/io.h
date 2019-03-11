@@ -41,9 +41,21 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
 // invoke a raw fdio ioctl
 ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
-// create a pipe, installing one half in a fd, returning the other
-// for transport to another process
+// DEPRECATED:
+// This only exists in this state right now as part of a soft transition.
+// Use fdio_pipe_half2 below.
 zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type);
+
+// Creates a pipe. The first argument returns the file descriptor representing
+// the pipe, and the second argument returns the handle of the socket used to
+// communicate with the pipe.
+//
+// # Errors
+//
+// ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
+//
+// ZX_ERR_NO_RESOURCES: Failed to bind to the file descriptor.
+zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle);
 
 // Get a read-only VMO containing the whole contents of the file.
 // This function creates a clone of the underlying VMO when possible, falling

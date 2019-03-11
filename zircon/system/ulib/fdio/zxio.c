@@ -765,6 +765,31 @@ fail:
     return r;
 }
 
+__EXPORT
+zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle) {
+    zx_handle_t h0, h1;
+    zx_status_t r;
+    fdio_t* io;
+    if ((r = zx_socket_create(0, &h0, &h1)) < 0) {
+        return r;
+    }
+    if ((io = fdio_pipe_create(h0)) == NULL) {
+        r = ZX_ERR_NO_MEMORY;
+        goto fail;
+    }
+    if ((*out_fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
+        fdio_release(io);
+        r = ZX_ERR_NO_RESOURCES;
+        goto fail;
+    }
+    *out_handle = h1;
+    return ZX_OK;
+
+fail:
+    zx_handle_close(h1);
+    return r;
+}
+
 // Debuglog --------------------------------------------------------------------
 
 fdio_t* fdio_logger_create(zx_handle_t handle) {

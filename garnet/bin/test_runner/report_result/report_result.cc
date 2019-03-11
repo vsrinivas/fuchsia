@@ -23,12 +23,11 @@ using fuchsia::testing::runner::TestRunner;
 
 static zx_status_t AddPipe(int target_fd, int* local_fd,
                            fdio_spawn_action_t* action) {
-  zx_status_t status = fdio_pipe_half(&action->h.handle, &action->h.id);
-  if (status < 0)
+  zx_status_t status = fdio_pipe_half2(local_fd, &action->h.handle);
+  if (status != ZX_OK)
     return status;
-  *local_fd = status;
   action->action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-  action->h.id = PA_HND(PA_HND_TYPE(action->h.id), target_fd);
+  action->h.id = PA_HND(PA_HND_TYPE(PA_FD), target_fd);
   return ZX_OK;
 }
 

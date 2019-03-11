@@ -301,9 +301,9 @@ static bool spawn_actions_fd_test(void) {
 
     {
         zx_handle_t socket = ZX_HANDLE_INVALID;
-        uint32_t type;
-        int fd = fdio_pipe_half(&socket, &type);
-        ASSERT_GE(fd, 0);
+        int fd;
+        status = fdio_pipe_half2(&fd, &socket);
+        ASSERT_GE(status, ZX_OK);
 
         fdio_spawn_action_t action;
         action.action = FDIO_SPAWN_ACTION_CLONE_FD;
@@ -323,9 +323,9 @@ static bool spawn_actions_fd_test(void) {
 
     {
         zx::socket socket;
-        uint32_t type;
-        int fd = fdio_pipe_half(socket.reset_and_get_address(), &type);
-        ASSERT_GE(fd, 0);
+        int fd;
+        status = fdio_pipe_half2(&fd, socket.reset_and_get_address());
+        ASSERT_GE(status, ZX_OK);
 
         fdio_spawn_action_t action;
         action.action = FDIO_SPAWN_ACTION_TRANSFER_FD;
@@ -343,9 +343,9 @@ static bool spawn_actions_fd_test(void) {
 
     {
         zx::socket socket;
-        uint32_t type;
-        int fd = fdio_pipe_half(socket.reset_and_get_address(), &type);
-        ASSERT_GE(fd, 0);
+        int fd;
+        status = fdio_pipe_half2(&fd, socket.reset_and_get_address());
+        ASSERT_GE(status, ZX_OK);
 
         fdio_spawn_action_t actions[2];
         actions[0].action = FDIO_SPAWN_ACTION_CLONE_FD;
