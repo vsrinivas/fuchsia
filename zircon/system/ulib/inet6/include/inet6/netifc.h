@@ -4,13 +4,15 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
 // setup networking
 // if interface != NULL, only use the given topological path for networking
-int netifc_open(const char* interface);
+int netifc_open(const char* interface, bool quiet);
 
 // process inbound packet(s)
 int netifc_poll(void);

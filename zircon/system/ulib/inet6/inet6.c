@@ -121,7 +121,7 @@ static void mac_cache_init(void) {
     mtx_unlock(&mac_cache_lock);
 }
 
-void ip6_init(void* macaddr) {
+void ip6_init(void* macaddr, bool quiet) {
     char tmp[IP6TOAMAX];
     mac_addr_t all;
 
@@ -139,11 +139,13 @@ void ip6_init(void* macaddr) {
     multicast_from_ip6(&all, &ip6_ll_all_nodes);
     eth_add_mcast_filter(&all);
 
-    printf("macaddr: %02x:%02x:%02x:%02x:%02x:%02x\n",
-           ll_mac_addr.x[0], ll_mac_addr.x[1], ll_mac_addr.x[2],
-           ll_mac_addr.x[3], ll_mac_addr.x[4], ll_mac_addr.x[5]);
-    printf("ip6addr: %s\n", ip6toa(tmp, &ll_ip6_addr));
-    printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
+    if (!quiet) {
+        printf("macaddr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+                ll_mac_addr.x[0], ll_mac_addr.x[1], ll_mac_addr.x[2],
+                ll_mac_addr.x[3], ll_mac_addr.x[4], ll_mac_addr.x[5]);
+        printf("ip6addr: %s\n", ip6toa(tmp, &ll_ip6_addr));
+        printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
+    }
 }
 
 static uint8_t mac_cache_hash(const ip6_addr_t* ip) {

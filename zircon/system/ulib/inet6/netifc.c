@@ -66,6 +66,8 @@ static eth_client_t* eth;
 static uint8_t netmac[6];
 static size_t netmtu;
 
+static bool netifc_open_quiet = false;
+
 static zx_handle_t iovmo;
 static void* iobuf;
 
@@ -257,7 +259,9 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         return ZX_OK;
     }
 
-    printf("netifc: ? /dev/class/ethernet/%s\n", fn);
+    if (!netifc_open_quiet) {
+        printf("netifc: ? /dev/class/ethernet/%s\n", fn);
+    }
 
     mtx_lock(&eth_lock);
     int fd;
@@ -334,7 +338,8 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
             iovmo = ZX_HANDLE_INVALID;
             goto fail_close_svc;
         }
-        printf("netifc: create %zu eth buffers\n", eth_buffer_count);
+        if (!netifc_open_quiet)
+            printf("netifc: create %zu eth buffers\n", eth_buffer_count);
         // assign data chunks to ethbufs
         for (unsigned n = 0; n < eth_buffer_count; n++) {
             eth_buffer_base[n].magic = ETH_BUFFER_MAGIC;
@@ -358,7 +363,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         goto fail_destroy_client;
     }
 
-    ip6_init(netmac);
+    ip6_init(netmac, netifc_open_quiet);
 
     // enqueue rx buffers
     for (unsigned n = 0; n < NET_BUFFERS; n++) {
@@ -372,7 +377,8 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
     }
 
     mtx_unlock(&eth_lock);
-    printf("netsvc: using /dev/class/ethernet/%s\n", fn);
+    if (!netifc_open_quiet)
+        printf("netsvc: using /dev/class/ethernet/%s\n", fn);
 
     // stop polling
     return ZX_ERR_STOP;
@@ -388,7 +394,9 @@ finish:
     return ZX_OK;
 }
 
-int netifc_open(const char* interface) {
+int netifc_open(const char* interface, bool quiet) {
+    netifc_open_quiet = quiet;
+
     int dirfd;
     if ((dirfd = open("/dev/class/ethernet", O_DIRECTORY|O_RDONLY)) < 0) {
         return -1;

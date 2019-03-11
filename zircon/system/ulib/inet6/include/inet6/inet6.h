@@ -129,7 +129,7 @@ char* ip6toa(char* _out, void* ip6addr);
 #define IP6TOAMAX 40
 
 // provided by inet6.c
-void ip6_init(void* macaddr);
+void ip6_init(void* macaddr, bool quiet);
 void eth_recv(void* data, size_t len);
 
 typedef struct eth_buffer eth_buffer_t;

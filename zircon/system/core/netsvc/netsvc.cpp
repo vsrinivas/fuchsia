@@ -114,6 +114,7 @@ int main(int argc, char** argv) {
     unsigned char mac[6];
     uint16_t mtu;
     char device_id[DEVICE_ID_MAX];
+    bool print_nodename_and_exit = false;
 
     if (debuglog_init() < 0) {
         return -1;
@@ -136,6 +137,8 @@ int main(int argc, char** argv) {
             // Advance args one position. The second arg will be advanced below.
             argv++;
             argc--;
+        } else if (!strncmp(argv[1], "--nodename", 10)) {
+            print_nodename_and_exit = true;
         } else {
             nodename = argv[1];
             nodename_provided = true;
@@ -148,7 +151,7 @@ int main(int argc, char** argv) {
     }
 
     for (;;) {
-        if (netifc_open(interface) != 0) {
+        if (netifc_open(interface, /*quiet=*/print_nodename_and_exit) != 0) {
             printf("netsvc: fatal error initializing network\n");
             return -1;
         }
@@ -158,6 +161,10 @@ int main(int argc, char** argv) {
             netifc_get_info(mac, &mtu);
             device_id_get(mac, device_id);
             nodename = device_id;
+            if (print_nodename_and_exit) {
+                printf("%s\n", nodename);
+                return 0;
+            }
         }
 
         if (netbootloader) {
