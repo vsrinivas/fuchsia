@@ -64,6 +64,7 @@ test("fs") {
   deps = [
     "$zx/system/fidl/fuchsia-cobalt:c",
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-mem:c",
     "$zx/system/fidl/fuchsia-minfs:c",

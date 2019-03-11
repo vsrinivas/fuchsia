@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <fs-management/mount.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
@@ -48,7 +49,7 @@ extern ramdisk_client_t* test_ramdisk;
 extern bool use_real_disk;
 
 // The disk's cached info.
-extern block_info_t test_disk_info;
+extern fuchsia_hardware_block_BlockInfo test_disk_info;
 
 // A filter of the filesystems; indicates which one should be tested.
 extern const char* filesystem_name_filter;

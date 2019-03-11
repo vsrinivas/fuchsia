@@ -27,7 +27,7 @@ const char* kTmpfsPath = "/fs-test-tmp";
 const char* kMountPath = "/fs-test-tmp/mount";
 
 bool use_real_disk = false;
-block_info_t test_disk_info;
+fuchsia_hardware_block_BlockInfo test_disk_info;
 char test_disk_path[PATH_MAX];
 ramdisk_client_t* test_ramdisk = nullptr;
 fs_info_t* test_info;

@@ -9,8 +9,10 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>
 
@@ -43,28 +45,28 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "[fs] Could not open block device\n");
                 return -1;
             }
-            fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-            if (io == nullptr) {
-                fprintf(stderr, "[fs] could not convert fd to io\n");
-                return -1;
-            }
+            fzl::FdioCaller caller(std::move(fd));
 
-            zx_status_t call_status;
+            zx_status_t status;
             size_t path_len;
-            zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-                    fdio_unsafe_borrow_channel(io), &call_status, test_disk_path, PATH_MAX - 1,
+            zx_status_t io_status = fuchsia_device_ControllerGetTopologicalPath(
+                    caller.borrow_channel(), &status, test_disk_path, PATH_MAX - 1,
                     &path_len);
-            fdio_unsafe_release(io);
-            if (status == ZX_OK) {
-                status = call_status;
+            if (io_status != ZX_OK) {
+                status = io_status;
             }
             if (status != ZX_OK) {
                 fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
                 return -1;
             }
             test_disk_path[path_len] = 0;
+            io_status = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status,
+                                                            &test_disk_info);
+            if (io_status != ZX_OK) {
+                status = io_status;
+            }
 
-            if (ioctl_block_get_info(fd.get(), &test_disk_info) < 0) {
+            if (status != ZX_OK) {
                 fprintf(stderr, "[fs] Could not read disk info\n");
                 return -1;
             }
