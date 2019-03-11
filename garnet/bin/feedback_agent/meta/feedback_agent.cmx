@@ -3,6 +3,9 @@
         "binary": "bin/feedback_agent"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.ui.scenic.Scenic"

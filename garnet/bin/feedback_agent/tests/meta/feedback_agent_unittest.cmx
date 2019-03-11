@@ -3,6 +3,9 @@
         "binary": "test/feedback_agent_unittest"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "isolated-persistent-storage"
         ],

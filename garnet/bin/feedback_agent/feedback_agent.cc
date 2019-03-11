@@ -10,6 +10,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include "garnet/bin/feedback_agent/annotations.h"
 #include "garnet/bin/feedback_agent/image_conversion.h"
 
 namespace fuchsia {
@@ -21,8 +22,10 @@ FeedbackAgent::FeedbackAgent(::sys::StartupContext* startup_context)
 }
 
 void FeedbackAgent::GetData(GetDataCallback callback) {
+  DataProvider_GetData_Response response;
+  response.data.set_annotations(GetAnnotations());
   DataProvider_GetData_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  result.set_response(std::move(response));
   callback(std::move(result));
 }
 

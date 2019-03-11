@@ -9,11 +9,21 @@
 #include <lib/escher/test/gtest_vulkan.h>
 #include <zircon/errors.h>
 
+#include "garnet/bin/feedback_agent/annotations.h"
+#include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace feedback {
 namespace {
+
+// Returns true if gMock |arg|.key matches |expected_key|.
+MATCHER_P(MatchesAnnotationKey, expected_key,
+          "matches an annotation with key \"" + std::string(expected_key) +
+              "\"") {
+  return arg.key == expected_key;
+}
 
 // Smoke-tests the real environment service for the
 // fuchsia.feedback.DataProvider FIDL interface, connecting through FIDL.
@@ -43,17 +53,33 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   ASSERT_EQ(feedback_data_provider_->GetScreenshot(ImageEncoding::PNG,
                                                    &out_screenshot),
             ZX_OK);
-  // We cannot expect a particular payload in the response because depending on
-  // the device on which the test runs, Scenic might return a screenshot or not.
+  // We cannot expect a particular payload in the response because Scenic might
+  // return a screenshot or not depending on which device the test runs.
 }
 
-TEST_F(FeedbackAgentIntegrationTest, GetData_SmokeTest) {
+TEST_F(FeedbackAgentIntegrationTest, GetData_CheckAnnotationKeys) {
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(feedback_data_provider_->GetData(&out_result), ZX_OK);
-  ASSERT_TRUE(out_result.is_err());
-  EXPECT_EQ(out_result.err(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_TRUE(out_result.is_response());
+
+  // We cannot expect a particular value for each annotation because values
+  // might depend on which device the test runs (e.g., board name) or what
+  // happened prior to running this test (e.g., logs).
+  // But we should expect the keys to be present.
+  ASSERT_TRUE(out_result.response().data.has_annotations());
+  EXPECT_THAT(*out_result.response().data.annotations(),
+              testing::UnorderedElementsAreArray({
+                  MatchesAnnotationKey("device.board-name"),
+              }));
 }
 
 }  // namespace
+
+// Pretty-prints Annotation in gTest matchers instead of the default byte string
+// in case of failed expectations.
+void PrintTo(const Annotation annotation, std::ostream* os) {
+  *os << annotation;
+}
+
 }  // namespace feedback
 }  // namespace fuchsia

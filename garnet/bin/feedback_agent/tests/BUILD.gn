@@ -67,10 +67,13 @@ executable("integration_test") {
   ]
 
   deps = [
+    "//garnet/bin/feedback_agent:src",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/escher/test:gtest_escher",
+    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/fidl/fuchsia.feedback",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

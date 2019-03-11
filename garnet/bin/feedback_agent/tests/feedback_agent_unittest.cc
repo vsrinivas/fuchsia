@@ -370,8 +370,9 @@ TEST_F(FeedbackAgentTest, GetData_SmokeTest) {
     feedback_result = std::move(result);
   });
   RunLoopUntilIdle();
-  ASSERT_TRUE(feedback_result.is_err());
-  EXPECT_EQ(feedback_result.err(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_TRUE(feedback_result.is_response());
+  // There is nothing else we can assert here as no missing annotation nor
+  // attachment is fatal.
 }
 
 }  // namespace
