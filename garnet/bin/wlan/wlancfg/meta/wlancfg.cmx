@@ -4,13 +4,11 @@
     },
     "sandbox": {
         "features": [
+            "config-data",
             "deprecated-global-persistent-storage"
         ],
         "services": [
             "fuchsia.wlan.device.service.DeviceService"
-        ],
-        "system": [
-            "data/wlan"
         ]
     }
 }

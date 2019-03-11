@@ -12,7 +12,7 @@ use std::{
 };
 
 const CONFIG_FILE: &str = "/data/config.json";
-const DEFAULT_CONFIG_FILE: &str = "/system/data/wlan/default.json";
+const DEFAULT_CONFIG_FILE: &str = "/config/data/wlancfg/default.json";
 
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub enum Role {

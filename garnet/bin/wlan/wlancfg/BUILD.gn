@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
@@ -65,23 +66,13 @@ package("wlancfg") {
   ]
 }
 
-package("config") {
-  deprecated_system_image = true
-
+config_data("config") {
   if (wlancfg_config_type == "ap") {
-    resources = [
-      {
-        path = rebase_path("config/ap.json")
-        dest = "wlan/default.json"
-      },
-    ]
+    sources = [ rebase_path("config/ap.json") ]
+    outputs = [ "wlancfg/default.json" ]
   } else if (wlancfg_config_type == "client") {
-    resources = [
-      {
-        path = rebase_path("config/client.json")
-        dest = "wlan/default.json"
-      },
-    ]
+    sources = [ rebase_path("config/client.json") ]
+    outputs = [ "wlancfg/default.json" ]
   }
 }
 
