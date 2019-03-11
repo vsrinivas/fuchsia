@@ -89,6 +89,7 @@ void NamespaceBuilder::AddPackage(zx::channel package) {
 void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::string& component_name) {
   for (const auto& feature : sandbox.features()) {
     if (feature == "config-data") {
+      FXL_LOG(INFO) << "config-data for " << component_name;
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/" + component_name,
                               "/config/data/" + component_name);
     }
