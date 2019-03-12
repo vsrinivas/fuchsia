@@ -69,7 +69,7 @@ fidl("fidl") {
   name = "test.fidlcat.examples"
 
   sources = [
-    "testdata/empty.fidl.test",
-    "testdata/types.fidl.test",
+    "testdata/empty.test.fidl",
+    "testdata/types.test.fidl",
   ]
 }

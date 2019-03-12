@@ -14,11 +14,9 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 #include "library_loader.h"
-#include "test/fidlcat/examples/cpp/fidl.h"
-
-// TB deleted
-#include <rapidjson/writer.h>
 #include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
+#include "test/fidlcat/examples/cpp/fidl.h"
 
 namespace fidlcat {
 
@@ -415,5 +413,90 @@ TEST_WIRE_TO_JSON(I8Enum, I8Enum, XPair<test::fidlcat::examples::i8_enum>, "ev",
                   test::fidlcat::examples::i8_enum::x);
 TEST_WIRE_TO_JSON(I16Enum, I16Enum, XPair<test::fidlcat::examples::i16_enum>,
                   "ev", test::fidlcat::examples::i16_enum::x);
+
+TEST_F(WireParserTest, BadSchemaPrintHex) {
+  std::vector<std::unique_ptr<std::istream>> library_files;
+  // i32 in the schema is missing "subtype": "int32"
+  std::string bad_schema = R"FIDL({
+  "version": "0.0.1",
+  "name": "fidl.examples.types",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.fidlcat.examples/this_is_an_interface",
+      "location": {
+        "filename": "../../garnet/bin/fidlcat/lib/testdata/types.test.fidl",
+        "line": 7,
+        "column": 9
+      },
+      "methods": [
+        {
+          "ordinal": 912304001,
+          "generated_ordinal": 912304001,
+          "name": "Int32",
+          "location": {
+            "filename": "../../garnet/bin/fidlcat/lib/testdata/types.test.fidl",
+            "line": 12,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive"
+              },
+              "name": "i32",
+              "location": {
+                "filename": "../../garnet/bin/fidlcat/lib/testdata/types.test.fidl",
+                "line": 12,
+                "column": 16
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": []
+})FIDL";
+  std::unique_ptr<std::istream> file =
+      std::make_unique<std::istringstream>(std::istringstream(bad_schema));
+  library_files.push_back(std::move(file));
+  LibraryReadError err;
+  LibraryLoader loader(library_files, &err);
+  ASSERT_TRUE(err.value == LibraryReadError::ErrorValue::kOk);
+  fidl::MessageBuffer buffer;
+  fidl::Message message = buffer.CreateEmptyMessage();
+
+  InterceptRequest<test::fidlcat::examples::this_is_an_interface>(
+      message,
+      [](fidl::InterfacePtr<test::fidlcat::examples::this_is_an_interface>&
+         ptr) { ptr->Int32(0xdeadbeef); });
+
+  fidl_message_header_t header = message.header();
+
+  const InterfaceMethod* method;
+  // If this is false, you probably have to update the schema above.
+  ASSERT_TRUE(loader.GetByOrdinal(header.ordinal, &method));
+
+  rapidjson::Document actual;
+  fidlcat::RequestToJSON(method, message, actual);
+
+  ASSERT_STREQ(actual["i32"].GetString(), "ef be ad de");
+}
 
 }  // namespace fidlcat

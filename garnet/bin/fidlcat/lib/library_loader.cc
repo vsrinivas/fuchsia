@@ -8,6 +8,8 @@
 
 #include <endian.h>
 
+#include "rapidjson/error/en.h"
+
 // See library_loader.h for details.
 
 namespace fidlcat {
@@ -63,6 +65,21 @@ T MemoryFrom(const uint8_t* bytes) {
   } u;
   u.uval = LeToHost<U>::le_to_host(reinterpret_cast<const U*>(bytes));
   return u.tval;
+}
+
+// Prints out raw bytes as a C string of hex pairs ("af b0 1e...").  Useful for
+// debugging / unknown data.
+size_t UnknownPrint(const uint8_t* bytes, size_t length,
+                    rapidjson::Value& value,
+                    rapidjson::Document::AllocatorType& allocator) {
+  size_t size = length * 3 + 1;
+  char output[size];
+  for (size_t i = 0; i < length; i++) {
+    snprintf(output + (i * 3), 4, "%02x ", bytes[i]);
+  }
+  output[size - 2] = '\0';
+  value.SetString(output, size, allocator);
+  return length;
 }
 
 size_t StringPrint(const uint8_t* bytes, size_t length, rapidjson::Value& value,
@@ -181,18 +198,18 @@ const Type& Type::get_illegal() {
 }
 
 Type Type::ScalarTypeFromName(const std::string& type_name) {
-  static std::map<std::string, Type> scalar_type_map_ {
-    { "bool", Type(BoolPrint, DummyEq) },
-    { "float32", Type(PrimitivePrint<float>, DummyEq) },
-    { "float64", Type(PrimitivePrint<double>, DummyEq) },
-    { "int8", Type(PrimitivePrint<int8_t>, PrimitiveEq<int8_t>) },
-    { "int16", Type(PrimitivePrint<int16_t>, PrimitiveEq<int16_t>) },
-    { "int32", Type(PrimitivePrint<int32_t>, PrimitiveEq<int32_t>) },
-    { "int64", Type(PrimitivePrint<int64_t>, PrimitiveEq<int64_t>) },
-    { "uint8", Type(PrimitivePrint<uint8_t>, PrimitiveEq<uint8_t>) },
-    { "uint16", Type(PrimitivePrint<uint16_t>, PrimitiveEq<uint16_t>) },
-    { "uint32", Type(PrimitivePrint<uint32_t>, PrimitiveEq<uint32_t>) },
-    { "uint64", Type(PrimitivePrint<uint64_t>, PrimitiveEq<uint64_t>) },
+  static std::map<std::string, Type> scalar_type_map_{
+      {"bool", Type(BoolPrint, DummyEq)},
+      {"float32", Type(PrimitivePrint<float>, DummyEq)},
+      {"float64", Type(PrimitivePrint<double>, DummyEq)},
+      {"int8", Type(PrimitivePrint<int8_t>, PrimitiveEq<int8_t>)},
+      {"int16", Type(PrimitivePrint<int16_t>, PrimitiveEq<int16_t>)},
+      {"int32", Type(PrimitivePrint<int32_t>, PrimitiveEq<int32_t>)},
+      {"int64", Type(PrimitivePrint<int64_t>, PrimitiveEq<int64_t>)},
+      {"uint8", Type(PrimitivePrint<uint8_t>, PrimitiveEq<uint8_t>)},
+      {"uint16", Type(PrimitivePrint<uint16_t>, PrimitiveEq<uint16_t>)},
+      {"uint32", Type(PrimitivePrint<uint32_t>, PrimitiveEq<uint32_t>)},
+      {"uint64", Type(PrimitivePrint<uint64_t>, PrimitiveEq<uint64_t>)},
   };
   auto it = scalar_type_map_.find(type_name);
   if (it != scalar_type_map_.end()) {
@@ -204,9 +221,7 @@ Type Type::ScalarTypeFromName(const std::string& type_name) {
 Type Type::TypeFromPrimitive(const rapidjson::Value& type) {
   if (!type.HasMember("subtype")) {
     FXL_LOG(ERROR) << "Invalid type";
-    // TODO: something else here.
-    // Probably print out raw bytes instead.
-    return Type(StringPrint, DummyEq);
+    return Type(UnknownPrint, DummyEq);
   }
 
   std::string subtype = type["subtype"].GetString();
@@ -237,9 +252,7 @@ Type Type::TypeFromIdentifier(const LibraryLoader& loader,
                               const rapidjson::Value& type) {
   if (!type.HasMember("identifier")) {
     FXL_LOG(ERROR) << "Invalid type";
-    // TODO: something else here.
-    // Probably print out raw bytes instead.
-    return Type(StringPrint, DummyEq);
+    return Type(UnknownPrint, DummyEq);
   }
   std::string id = type["identifier"].GetString();
   size_t split_index = id.find('/');
@@ -287,9 +300,7 @@ Type Type::GetType(const LibraryLoader& loader, const rapidjson::Value& type) {
 
   if (!type.HasMember("kind")) {
     FXL_LOG(ERROR) << "Invalid type";
-    // TODO: something else here.
-    // Probably print out raw bytes instead.
-    return Type(StringPrint, DummyEq);
+    return Type(UnknownPrint, DummyEq);
   }
   std::string kind = type["kind"].GetString();
   if (kind == "array") {
@@ -315,9 +326,8 @@ Type Type::GetType(const LibraryLoader& loader, const rapidjson::Value& type) {
   } else if (kind == "identifier") {
     return Type::TypeFromIdentifier(loader, type);
   }
-  // TODO same as if there is no "kind" field"
   FXL_LOG(ERROR) << "Invalid type " << kind;
-  return Type(StringPrint, DummyEq);
+  return Type(UnknownPrint, DummyEq);
 }
 
 LibraryLoader::LibraryLoader(
@@ -332,7 +342,9 @@ LibraryLoader::LibraryLoader(
     }
     Add(ir, err);
     if (err->value != LibraryReadError ::kOk) {
-      FXL_LOG(ERROR) << "rapidjson error code " << err->error_description;
+      FXL_LOG(ERROR) << "JSON parse error: "
+                     << rapidjson::GetParseError_En(err->parse_result.Code())
+                     << " at offset " << err->parse_result.Offset();
       return;
     }
   }

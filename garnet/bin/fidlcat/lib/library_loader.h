@@ -49,7 +49,7 @@ struct LibraryReadError {
     kParseError,
   };
   ErrorValue value;
-  rapidjson::ParseErrorCode error_description;
+  rapidjson::ParseResult parse_result;
 };
 
 class Library;
@@ -441,13 +441,13 @@ class LibraryLoader {
  private:
   void Add(std::string& ir, LibraryReadError* err) {
     rapidjson::Document document;
-    document.Parse<rapidjson::kParseNumbersAsStringsFlag>(ir.c_str());
+    err->parse_result =
+        document.Parse<rapidjson::kParseNumbersAsStringsFlag>(ir.c_str());
     // TODO: This would be a good place to validate that the resulting JSON
     // matches the schema in zircon/system/host/fidl/schema.json.  If there are
     // errors, we will currently get mysterious crashes.
     if (document.HasParseError()) {
       err->value = LibraryReadError::kParseError;
-      err->error_description = document.GetParseError();
       return;
     }
     std::string library_name = document["name"].GetString();
