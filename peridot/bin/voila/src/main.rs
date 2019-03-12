@@ -187,7 +187,7 @@ impl ViewAssistant for VoilaViewAssistant {
 
         let circle_radius = context.size.width.min(context.size.height) * 0.25;
         self.circle_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
-        self.circle_node.set_translation(center_x, center_y, 8.0);
+        self.circle_node.set_translation(center_x, center_y, -8.0);
 
         let mut views: Vec<&mut ChildViewData> =
             self.replicas.iter_mut().map(|(_key, child_session)| &mut child_session.view).collect();
