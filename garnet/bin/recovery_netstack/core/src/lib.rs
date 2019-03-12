@@ -9,13 +9,19 @@
 #![allow(stable_features)]
 #![feature(never_type)]
 #![feature(specialization)]
-
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 // TODO(joshlf): Remove this once all of the elements in the crate are actually
 // used.
 #![allow(unused)]
 #![deny(unused_imports)]
+// This is a hack until we migrate to a different benchmarking framework. To run
+// benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
+// run with that feature enabled.
+#![cfg_attr(feature = "benchmark", feature(test))]
+
+#[cfg(feature = "benchmark")]
+extern crate test;
 
 #[macro_use]
 mod macros;
