@@ -427,7 +427,7 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, DISABLED_NonBlockingConnectWrite) {
+TEST(NetStreamTest, NonBlockingConnectWrite) {
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
