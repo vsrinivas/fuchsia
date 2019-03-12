@@ -153,13 +153,15 @@ void FormatValue::AppendVariable(const SymbolContext& symbol_context,
 
   // We can capture "this" here since the callback will be scoped to the
   // lifetime of the resolver which this class owns.
-  resolver->ResolveVariable(
-      symbol_context, var, [this, data_provider, options, output_key](
-                               const Err& err, ExprValue val) {
-        // The variable has been resolved, now we need to print it (which could
-        // in itself be asynchronous).
-        FormatExprValue(data_provider, err, val, options, false, output_key);
-      });
+  resolver->ResolveVariable(symbol_context, var,
+                            [this, data_provider, options, output_key](
+                                const Err& err, ExprValue val) {
+                              // The variable has been resolved, now we need to
+                              // print it (which could in itself be
+                              // asynchronous).
+                              FormatExprValue(data_provider, err, val, options,
+                                              false, output_key);
+                            });
 
   // Keep in our class scope so the callbacks will be run.
   resolvers_.push_back(std::move(resolver));
@@ -339,9 +341,13 @@ void FormatValue::FormatCollection(
 
     // Some base classes are empty. Only show if this base class or any of
     // its base classes have member values.
-    if (!VisitClassHierarchy(from, [](const Collection* cur, uint32_t) -> bool {
-          return !cur->data_members().empty();
-        }))
+    VisitResult has_members_result = VisitClassHierarchy(
+        from, [](const Collection* cur, uint32_t) -> VisitResult {
+          if (cur->data_members().empty())
+            return VisitResult::kNotFound;
+          return VisitResult::kDone;
+        });
+    if (has_members_result == VisitResult::kNotFound)
       continue;
 
     if (needs_comma)
@@ -469,29 +475,32 @@ void FormatValue::FormatCharPointer(
     return;
   }
 
-  data_provider->GetMemoryAsync(address, bytes_to_fetch, [
-    address, bytes_to_fetch, weak_this = weak_factory_.GetWeakPtr(), output_key
-  ](const Err& err, std::vector<uint8_t> data) {
-    if (!weak_this)
-      return;
+  data_provider->GetMemoryAsync(
+      address, bytes_to_fetch,
+      [address, bytes_to_fetch, weak_this = weak_factory_.GetWeakPtr(),
+       output_key](const Err& err, std::vector<uint8_t> data) {
+        if (!weak_this)
+          return;
 
-    if (data.empty()) {
-      // Should not have requested 0 size, so it if came back empty the
-      // pointer was invalid.
-      weak_this->OutputKeyComplete(output_key, InvalidPointerToOutput(address));
-      return;
-    }
+        if (data.empty()) {
+          // Should not have requested 0 size, so it if came back empty the
+          // pointer was invalid.
+          weak_this->OutputKeyComplete(output_key,
+                                       InvalidPointerToOutput(address));
+          return;
+        }
 
-    // Report as truncated because if the string goes to the end of this array
-    // it will be. FormatCharArray will clear this flag if it finds a null
-    // before the end of the buffer.
-    //
-    // Don't want to set truncated if the data ended before the requested size,
-    // this means it hit the end of valid memory, so we're not omitting data
-    // by only showing that part of it.
-    bool truncated = data.size() == bytes_to_fetch;
-    weak_this->FormatCharArray(&data[0], data.size(), truncated, output_key);
-  });
+        // Report as truncated because if the string goes to the end of this
+        // array it will be. FormatCharArray will clear this flag if it finds a
+        // null before the end of the buffer.
+        //
+        // Don't want to set truncated if the data ended before the requested
+        // size, this means it hit the end of valid memory, so we're not
+        // omitting data by only showing that part of it.
+        bool truncated = data.size() == bytes_to_fetch;
+        weak_this->FormatCharArray(&data[0], data.size(), truncated,
+                                   output_key);
+      });
 }
 
 void FormatValue::FormatCharArray(const uint8_t* data, size_t length,
@@ -734,52 +743,53 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   OutputKey output_key) {
-  EnsureResolveReference(data_provider, value, [
-    weak_this = weak_factory_.GetWeakPtr(), data_provider,
-    original_value = value, options, output_key
-  ](const Err& err, ExprValue resolved_value) {
-    if (!weak_this)
-      return;
+  EnsureResolveReference(
+      data_provider, value,
+      [weak_this = weak_factory_.GetWeakPtr(), data_provider,
+       original_value = value, options,
+       output_key](const Err& err, ExprValue resolved_value) {
+        if (!weak_this)
+          return;
 
-    OutputBuffer out;
+        OutputBuffer out;
 
-    // First show the type if desired. As with pointers, the calling code will
-    // have printed the type for the "all types" case.
-    if (options.verbosity == Verbosity::kMedium) {
-      out.Append(
-          Syntax::kComment,
-          fxl::StringPrintf(
-              "(%s) ",
-              GetElidedTypeName(original_value.type()->GetFullName()).c_str()));
-    }
+        // First show the type if desired. As with pointers, the calling code
+        // will have printed the type for the "all types" case.
+        if (options.verbosity == Verbosity::kMedium) {
+          out.Append(Syntax::kComment,
+                     fxl::StringPrintf(
+                         "(%s) ",
+                         GetElidedTypeName(original_value.type()->GetFullName())
+                             .c_str()));
+        }
 
-    // Followed by the address (only in non-minimal modes).
-    if (options.verbosity != Verbosity::kMinimal) {
-      TargetPointer address = 0;
-      Err addr_err = original_value.PromoteTo64(&address);
-      if (addr_err.has_error()) {
-        // Invalid data in the reference.
-        out.Append(ErrToOutput(addr_err));
-        weak_this->OutputKeyComplete(output_key, std::move(out));
-        return;
-      }
-      out.Append(Syntax::kComment,
-                 fxl::StringPrintf("0x%" PRIx64 " = ", address));
-    }
+        // Followed by the address (only in non-minimal modes).
+        if (options.verbosity != Verbosity::kMinimal) {
+          TargetPointer address = 0;
+          Err addr_err = original_value.PromoteTo64(&address);
+          if (addr_err.has_error()) {
+            // Invalid data in the reference.
+            out.Append(ErrToOutput(addr_err));
+            weak_this->OutputKeyComplete(output_key, std::move(out));
+            return;
+          }
+          out.Append(Syntax::kComment,
+                     fxl::StringPrintf("0x%" PRIx64 " = ", address));
+        }
 
-    // Follow with the resolved value.
-    if (err.has_error()) {
-      out.Append(ErrToOutput(err));
-      weak_this->OutputKeyComplete(output_key, std::move(out));
-    } else {
-      // FormatExprValue will mark the output key complete when it's done
-      // formatting. Pass true for suppress_type_printing since the type of
-      // the reference was printed above.
-      weak_this->AppendToOutputKey(output_key, std::move(out));
-      weak_this->FormatExprValue(data_provider, resolved_value, options, true,
-                                 output_key);
-    }
-  });
+        // Follow with the resolved value.
+        if (err.has_error()) {
+          out.Append(ErrToOutput(err));
+          weak_this->OutputKeyComplete(output_key, std::move(out));
+        } else {
+          // FormatExprValue will mark the output key complete when it's done
+          // formatting. Pass true for suppress_type_printing since the type of
+          // the reference was printed above.
+          weak_this->AppendToOutputKey(output_key, std::move(out));
+          weak_this->FormatExprValue(data_provider, resolved_value, options,
+                                     true, output_key);
+        }
+      });
 }
 
 void FormatValue::FormatFunctionPointer(const ExprValue& value,

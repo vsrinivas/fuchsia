@@ -20,12 +20,12 @@ TEST(VisitScopes, ClassHierarchy) {
   VisitLog visited;
 
   // A single class with no hierarchy.
-  bool found = VisitClassHierarchy(
-      derived.get(), [&visited](const Collection* c, uint32_t o) -> bool {
+  VisitResult result = VisitClassHierarchy(
+      derived.get(), [&visited](const Collection* c, uint32_t o) -> VisitResult {
         visited.emplace_back(c, o);
-        return false;
+        return VisitResult::kNotFound;
       });
-  EXPECT_FALSE(found);  // All callbacks returned false.
+  EXPECT_EQ(VisitResult::kNotFound, result);
   VisitLog expected{{derived.get(), 0}};
   EXPECT_EQ(expected, visited);
 
@@ -49,12 +49,12 @@ TEST(VisitScopes, ClassHierarchy) {
   // ordering was most convenient for the implementation, it can be changed
   // in the future if there's a reason for a specific different order).
   visited = VisitLog();
-  found = VisitClassHierarchy(
-      derived.get(), [&visited](const Collection* c, uint32_t o) -> bool {
+  result = VisitClassHierarchy(
+      derived.get(), [&visited](const Collection* c, uint32_t o) -> VisitResult {
         visited.emplace_back(c, o);
-        return false;
+        return VisitResult::kNotFound;
       });
-  EXPECT_FALSE(found);  // All callbacks returned false.
+  EXPECT_EQ(VisitResult::kNotFound, result);
   expected = VisitLog{{derived.get(), 0},
                       {mid1.get(), mid1_offset},
                       {base1.get(), mid1_offset + base1_offset},
@@ -63,12 +63,12 @@ TEST(VisitScopes, ClassHierarchy) {
 
   // Test early termination at mid1.
   visited = VisitLog();
-  found = VisitClassHierarchy(
-      derived.get(), [&visited, mid1](const Collection* c, uint32_t o) -> bool {
+  result = VisitClassHierarchy(
+      derived.get(), [&visited, mid1](const Collection* c, uint32_t o) -> VisitResult {
         visited.emplace_back(c, o);
-        return c == mid1.get();
+        return c == mid1.get() ? VisitResult::kDone : VisitResult::kNotFound;
       });
-  EXPECT_TRUE(found);  // Should have found mid1.
+  EXPECT_EQ(VisitResult::kDone, result);  // Should have found mid1.
   expected = VisitLog{{derived.get(), 0}, {mid1.get(), mid1_offset}};
   EXPECT_EQ(expected, visited);
 }

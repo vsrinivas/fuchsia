@@ -129,16 +129,16 @@ std::optional<FoundMember> FindMember(const Collection* object,
   VisitClassHierarchy(
       object,
       [ident_name, &result](const Collection* cur_collection,
-                            uint32_t cur_offset) -> bool {
+                            uint32_t cur_offset) -> VisitResult {
         // Called for each collection in the hierarchy.
         for (const auto& lazy : cur_collection->data_members()) {
           const DataMember* data = lazy.Get()->AsDataMember();
           if (data && data->GetAssignedName() == *ident_name) {
             result.emplace(data, cur_offset + data->member_location());
-            return true;
+            return VisitResult::kDone;
           }
         }
-        return false;  // Not found in this scope, continue search.
+        return VisitResult::kNotFound;  // Continue search.
       });
   return result;
 }

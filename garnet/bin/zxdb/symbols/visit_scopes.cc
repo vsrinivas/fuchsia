@@ -12,12 +12,13 @@ namespace zxdb {
 
 namespace {
 
-bool DoVisitClassHierarchy(
+VisitResult DoVisitClassHierarchy(
     const Collection* current,
     uint32_t offset,
-    std::function<bool(const Collection*, uint32_t offset)>& cb) {
-  if (cb(current, offset))
-    return true;
+    std::function<VisitResult(const Collection*, uint32_t offset)>& cb) {
+  VisitResult result = cb(current, offset);
+  if (result != VisitResult::kNotFound)
+    return result;
 
   // Iterate through base classes.
   for (const auto& lazy_from : current->inherited_from()) {
@@ -29,18 +30,19 @@ bool DoVisitClassHierarchy(
     if (!from_coll)
       continue;
 
-    if (DoVisitClassHierarchy(from_coll, offset + inherited_from->offset(), cb))
-      return true;
+    result = DoVisitClassHierarchy(from_coll, offset + inherited_from->offset(), cb);
+    if (result != VisitResult::kNotFound)
+      return result;
   }
 
-  return false;
+  return VisitResult::kNotFound;
 }
 
 }  // namespace
 
-bool VisitClassHierarchy(
+VisitResult VisitClassHierarchy(
     const Collection* starting,
-    std::function<bool(const Collection*, uint32_t offset)> cb) {
+    std::function<VisitResult(const Collection*, uint32_t offset)> cb) {
   return DoVisitClassHierarchy(starting, 0, cb);
 }
 
