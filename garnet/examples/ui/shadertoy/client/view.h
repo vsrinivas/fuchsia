@@ -16,8 +16,9 @@
 
 namespace shadertoy_client {
 
-// Common functionality for |OldView| and |ShadertoyClientView| classes, below.
-// TODO(SCN-589): Should be folded back into the latter when the former dies.
+// TODO(SCN-589): Should be folded back into ShadertoyClientView. This used to
+// be common functionality for |ShadertoyClientView| and a different View class
+// that used the old Views API.
 class ViewImpl {
  public:
   ViewImpl(component::StartupContext* startup_context, scenic::Session* session,
