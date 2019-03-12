@@ -737,8 +737,12 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
         if (loop->timer_armed) {
             status = zx_timer_cancel(loop->timer);
             ZX_ASSERT_MSG(status == ZX_OK, "zx_timer_cancel: status=%d", status);
+            // ZX_ERR_NOT_FOUND can happen here when a pending timer fires and
+            // the packet is picked up by port_wait in another thread but has
+            // not reached dispatch.
             status = zx_port_cancel(loop->port, loop->timer, KEY_CONTROL);
-            ZX_ASSERT_MSG(status == ZX_OK, "zx_port_cancel: status=%d", status);
+            ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND,
+                          "zx_port_cancel: status=%d", status);
             loop->timer_armed = false;
         }
 
