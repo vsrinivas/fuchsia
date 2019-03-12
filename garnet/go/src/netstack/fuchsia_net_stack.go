@@ -158,13 +158,13 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	ifs, ok := ns.mu.ifStates[nicid]
 	ns.mu.Unlock()
 
-	ifs.mu.Lock()
-	addr := ifs.mu.nic.Addr
-	ifs.mu.Unlock()
-
 	if !ok {
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
+
+	ifs.mu.Lock()
+	addr := ifs.mu.nic.Addr
+	ifs.mu.Unlock()
 
 	var protocol tcpip.NetworkProtocolNumber
 	switch ifAddr.IpAddress.Which() {
