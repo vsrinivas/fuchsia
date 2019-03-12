@@ -7,6 +7,9 @@
 #include <fbl/algorithm.h>
 
 namespace amlrawnand {
+
+static constexpr uint32_t NAND_BUSWIDTH_16 = 0x00000002;
+
 // In the case where user_mode == 2 (2 OOB bytes per ECC page),
 // the controller adds one of these structs *per* ECC page in
 // the info_buf.
@@ -835,6 +838,7 @@ zx_status_t AmlRawNand::AmlNandInit() {
     controller_params_.ecc_strength = AmlParams.ecc_strength;
     controller_params_.user_mode = AmlParams.user_mode;
     controller_params_.rand_mode = AmlParams.rand_mode;
+    static constexpr auto NAND_USE_BOUNCE_BUFFER = 0x1;
     controller_params_.options = NAND_USE_BOUNCE_BUFFER;
     controller_params_.bch_mode = AmlParams.bch_mode;
 

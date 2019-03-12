@@ -38,7 +38,6 @@ struct AmlController {
     int ecc_strength;
     int user_mode;
     int rand_mode;
-#define NAND_USE_BOUNCE_BUFFER 0x1
     int options;
     int bch_mode;
 };
@@ -97,7 +96,6 @@ private:
     uint32_t erasesize_; /* size of erase block - bytes */
     uint32_t erasesize_pages_;
     uint32_t oobsize_; /* oob bytes per NAND page - bytes */
-#define NAND_BUSWIDTH_16 0x00000002
     uint32_t bus_width_;  /* 16bit or 8bit ? */
     uint64_t chipsize_;   /* MiB */
     uint32_t page_shift_; /* NAND page shift */
