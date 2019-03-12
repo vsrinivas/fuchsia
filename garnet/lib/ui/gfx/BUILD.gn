@@ -10,6 +10,10 @@ declare_args() {
   # 2 - use vulkan swapchain with fixed-size fake display
   scenic_vulkan_swapchain = 0
   scenic_ignore_vsync = false
+
+  # Specifies whether Scenic uses the new "PaperRenderer2" when
+  # rendering Scenes with fuchsia.ui.gfx.ShadowTechnique.UNSHADOWED.
+  scenic_use_new_renderer = false
 }
 
 config("common_include_dirs") {
@@ -23,6 +27,7 @@ config("swapchain") {
   defines = [
     "SCENIC_VULKAN_SWAPCHAIN=$scenic_vulkan_swapchain",
     "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
+    "SCENIC_USE_PAPERRENDERER2=$scenic_use_new_renderer",
   ]
 }
 

@@ -134,8 +134,12 @@ void App::CreateExampleScene(float display_width, float display_height) {
   param.set_shadow_technique(shadow_technique_);
   renderer.SetParam(std::move(param));
 
-  if (shadow_technique_ ==
-      fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME) {
+  if (shadow_technique_ == fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED) {
+    AmbientLight ambient_light(session);
+    ambient_light.SetColor(1.f, 1.f, 1.f);
+    scene.AddLight(ambient_light);
+  } else if (shadow_technique_ ==
+             fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME) {
     AmbientLight ambient_light(session);
     PointLight point_light1(session);
     PointLight point_light2(session);
@@ -256,9 +260,9 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr int kSessionDuration = 40;
-  async::PostDelayedTask(
-      loop_->dispatcher(), [this] { ReleaseSessionResources(); },
-      zx::sec(kSessionDuration));
+  async::PostDelayedTask(loop_->dispatcher(),
+                         [this] { ReleaseSessionResources(); },
+                         zx::sec(kSessionDuration));
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);

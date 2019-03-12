@@ -209,13 +209,18 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
   escher::PaperRendererShadowType shadow_type =
       GetPaperRendererShadowType(layer->renderer()->shadow_technique());
   switch (shadow_type) {
+#if !SCENIC_USE_PAPERRENDERER2
     case escher::PaperRendererShadowType::kNone:
+#endif
     case escher::PaperRendererShadowType::kSsdo:
     case escher::PaperRendererShadowType::kShadowMap:
     case escher::PaperRendererShadowType::kMomentShadowMap:
       DrawLayerWithPaperRenderer(frame, target_presentation_time, layer,
                                  shadow_type, output_image, overlay_model);
       break;
+#if SCENIC_USE_PAPERRENDERER2
+    case escher::PaperRendererShadowType::kNone:
+#endif
     case escher::PaperRendererShadowType::kShadowVolume:
       DrawLayerWithPaperRenderer2(frame, target_presentation_time, layer,
                                   shadow_type, output_image, overlay_model);
