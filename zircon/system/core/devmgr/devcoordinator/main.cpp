@@ -292,9 +292,9 @@ int pwrbtn_monitor_starter(void* arg) {
         return 1;
     }
 
-    zx::channel misc_handle = devmgr::fs_clone("dev/misc");
-    if (!misc_handle.is_valid()) {
-        printf("devcoordinator: failed to clone /dev/misc\n");
+    zx::channel svc_handle = devmgr::fs_clone("svc");
+    if (!svc_handle.is_valid()) {
+        printf("devcoordinator: failed to clone /svc\n");
         return 1;
     }
 
@@ -302,10 +302,10 @@ int pwrbtn_monitor_starter(void* arg) {
         {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}},
         {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
          .ns = {.prefix = "/input", .handle = input_handle.release()}},
-        // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
-        // single files
+        // Ideally we'd only expose /svc/fuchsia.device.manager.Administrator, but we do not
+        // support exposing single services.
         {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-         .ns = {.prefix = "/misc", .handle = misc_handle.release()}},
+         .ns = {.prefix = "/svc", .handle = svc_handle.release()}},
         {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
          .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0),
                .handle = debuglog.release()}},

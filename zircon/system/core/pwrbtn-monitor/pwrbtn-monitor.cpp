@@ -11,23 +11,26 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <ddk/device.h>
 
 #include <utility>
 
 #define INPUT_PATH "/input"
-#define DMCTL_PATH "/misc/dmctl"
 
 namespace {
 
@@ -142,6 +145,33 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
     return ZX_ERR_STOP;
 }
 
+zx_status_t send_poweroff() {
+    zx::channel channel_local, channel_remote;
+    zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
+    if (status != ZX_OK) {
+        printf("failed to create channel: %d\n", status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    const char* service = "/svc/" fuchsia_device_manager_Administrator_Name;
+    status = fdio_service_connect(service, channel_remote.get());
+    if (status != ZX_OK) {
+        fprintf(stderr, "failed to connect to service %s: %d\n", service, status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_device_manager_AdministratorSuspend(channel_local.get(),
+                                                         DEVICE_SUSPEND_FLAG_POWEROFF,
+                                                         &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        fprintf(stderr, "Call to %s failed: ret: %d  remote: %d\n", service, status, call_status);
+        return status != ZX_OK ? status : call_status;
+    }
+
+    return ZX_OK;
+}
+
 } // namespace
 
 int main(int argc, char**argv) {
@@ -207,13 +237,11 @@ int main(int argc, char**argv) {
 
         // Check if the power button is pressed, and request a poweroff if so.
         if (report[byte_index] & (1u << (info.bit_offset % 8))) {
-            int fd = open(DMCTL_PATH, O_WRONLY);
-            if (fd < 0) {
-                printf("pwrbtn-monitor: input-watcher: failed to open dmctl\n");
+            auto status = send_poweroff();
+            if (status != ZX_OK) {
+                printf("pwrbtn-monitor: input-watcher: failed send poweroff to device manager.\n");
                 continue;
             }
-            write(fd, "poweroff", strlen("poweroff"));
-            close(fd);
         }
     }
 }
