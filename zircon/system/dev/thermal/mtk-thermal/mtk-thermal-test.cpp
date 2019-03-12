@@ -4,14 +4,10 @@
 
 #include "mtk-thermal.h"
 
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <lib/mock-function/mock-function.h>
-#include <lib/sync/completion.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 
 namespace {
@@ -50,10 +46,10 @@ namespace thermal {
 
 class MtkThermalTest : public MtkThermal {
 public:
-    MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::ClockProtocolClient& clk, uint32_t clk_count,
-                   const thermal_device_info_t& thermal_info, zx::port port,
+    MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::ClockProtocolClient& clk,
+                   uint32_t clk_count, const thermal_device_info_t& thermal_info, zx::port port,
                    TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse,
-                   TempCalibration2 cal2_fuse)
+                   TempCalibration2 cal2_fuse, zx::port main_port, zx::port thread_port)
         : MtkThermal(nullptr, ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio),
                      ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio), clk, clk_count,
                      thermal_info, std::move(port), zx::interrupt(), cal0_fuse, cal1_fuse,
@@ -61,7 +57,8 @@ public:
           mock_thermal_regs_(thermal_reg_array_, sizeof(uint32_t), MT8167_THERMAL_SIZE),
           mock_pll_regs_(pll_reg_array_, sizeof(uint32_t), MT8167_AP_MIXED_SYS_SIZE),
           mock_pmic_wrap_regs_(pmic_wrap_reg_array_, sizeof(uint32_t), MT8167_PMIC_WRAP_SIZE),
-          mock_infracfg_regs_(infracfg_reg_array_, sizeof(uint32_t), MT8167_INFRACFG_SIZE) {
+          mock_infracfg_regs_(infracfg_reg_array_, sizeof(uint32_t), MT8167_INFRACFG_SIZE),
+          main_port_(std::move(main_port)), thread_port_(std::move(thread_port)) {
         mmio_ = ddk::MmioBuffer(mock_thermal_regs_.GetMmioBuffer());
         pll_mmio_ = ddk::MmioBuffer(mock_pll_regs_.GetMmioBuffer());
         pmic_mmio_ = ddk::MmioBuffer(mock_pmic_wrap_regs_.GetMmioBuffer());
@@ -83,9 +80,20 @@ public:
         TempCalibration2 cal2_fuse;
         cal2_fuse.set_reg_value(kCal2Fuse);
 
+        zx::port main_port;
+        if (zx::port::create(0, &main_port) != ZX_OK) {
+            return false;
+        }
+
+        zx::port thread_port;
+        if (main_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &thread_port) != ZX_OK) {
+            return false;
+        }
+
         fbl::AllocChecker ac;
-        test->reset(new (&ac) MtkThermalTest(dummy_mmio, ddk::ClockProtocolClient(), 0, thermal_info,
-                                             std::move(port), cal0_fuse, cal1_fuse, cal2_fuse));
+        test->reset(new (&ac) MtkThermalTest(
+            dummy_mmio, ddk::ClockProtocolClient(), 0, thermal_info, std::move(port), cal0_fuse,
+            cal1_fuse, cal2_fuse, std::move(main_port), std::move(thread_port)));
         return ac.check();
     }
 
@@ -157,27 +165,24 @@ public:
         }
     }
 
-    // Trigger count interrupts and wait for them to be handled.
-    void TriggerInterrupts(uint32_t count) {
-        {
-            fbl::AutoLock lock(&interrupt_count_lock_);
-            interrupt_count_ += count;
-        }
-
-        sync_completion_signal(&signal_);
-
-        for (;;) {
-            fbl::AutoLock lock(&interrupt_count_lock_);
-            if (interrupt_count_ == 0) {
-                break;
-            }
-        }
+    // Trigger count interrupts without waiting for them to be handled.
+    zx_status_t TriggerInterrupts(uint32_t count) {
+        zx_port_packet_t packet;
+        packet.key = kPacketKeyInterrupt;
+        packet.type = ZX_PKT_TYPE_USER;
+        packet.user.u32[0] = count;
+        return main_port_.queue(&packet);
     }
 
-    void StopThread() override {
-        thread_stop_ = true;
-        sync_completion_signal(&signal_);
+    // Wait for the thread to finish processing interrupts and join.
+    zx_status_t StopThread() override {
+        zx_port_packet_t packet;
+        packet.key = kPacketKeyStopThread;
+        packet.type = ZX_PKT_TYPE_USER;
+        zx_status_t status = main_port_.queue(&packet);
+
         JoinThread();
+        return status;
     }
 
 private:
@@ -186,19 +191,25 @@ private:
     static constexpr uint32_t kCal1Fuse = 0x805f84a9;
     static constexpr uint32_t kCal2Fuse = 0x4eaad600;
 
-    zx_status_t WaitForInterrupt() override {
-        while (!thread_stop_) {
-            {
-                fbl::AutoLock lock(&interrupt_count_lock_);
-                if (interrupt_count_ > 0) {
-                    interrupt_count_--;
-                    return ZX_OK;
-                }
-            }
+    static constexpr uint64_t kPacketKeyInterrupt  = 0;
+    static constexpr uint64_t kPacketKeyStopThread = 1;
 
-            // Wait for the main thread to send an update with TriggerInterrupts or StopThread.
-            sync_completion_wait(&signal_, ZX_TIME_INFINITE);
-            sync_completion_reset(&signal_);
+    zx_status_t WaitForInterrupt() override {
+        if (interrupt_count_ > 0) {
+            interrupt_count_--;
+            return ZX_OK;
+        }
+
+        zx_port_packet_t packet;
+        zx_status_t status =
+            thread_port_.wait(zx::deadline_after(zx::duration::infinite()), &packet);
+        if (status != ZX_OK) {
+            return ZX_ERR_CANCELED;
+        }
+
+        if (packet.type == ZX_PKT_TYPE_USER && packet.key == kPacketKeyInterrupt) {
+            interrupt_count_ = packet.user.u32[0] - 1;
+            return ZX_OK;
         }
 
         return ZX_ERR_CANCELED;
@@ -219,16 +230,12 @@ private:
     mock_function::MockFunction<zx_status_t, uint16_t, uint32_t> mock_set_dvfs_opp_;
     mock_function::MockFunction<zx_status_t, size_t> mock_set_trip_point_;
 
-    volatile bool thread_stop_ = false;
-    sync_completion_t signal_;
-    uint32_t interrupt_count_ TA_GUARDED(interrupt_count_lock_) = 0;
-    fbl::Mutex interrupt_count_lock_;
+    uint32_t interrupt_count_ = 0;
+    zx::port main_port_;
+    zx::port thread_port_;
 };
 
 TEST(ThermalTest, TripPoints) {
-    // TODO(bradenkell): Fix FLK-86
-    return;
-
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 3;
     thermal_info.critical_temp = CToKTenths(50);
@@ -265,8 +272,8 @@ TEST(ThermalTest, TripPoints) {
 
     EXPECT_OK(test->StartThread());
 
-    test->TriggerInterrupts(4);
-    test->StopThread();
+    EXPECT_OK(test->TriggerInterrupts(4));
+    EXPECT_OK(test->StopThread());
     test->VerifyAll();
 }
 
@@ -295,8 +302,8 @@ TEST(ThermalTest, CriticalTemperature) {
 
     EXPECT_OK(test->StartThread());
 
-    test->TriggerInterrupts(1);
-    test->StopThread();
+    EXPECT_OK(test->TriggerInterrupts(1));
+    EXPECT_OK(test->StopThread());
     test->VerifyAll();
 }
 
@@ -316,7 +323,7 @@ TEST(ThermalTest, InitialTripPoint) {
 
     EXPECT_OK(test->StartThread());
 
-    test->StopThread();
+    EXPECT_OK(test->StopThread());
     test->VerifyAll();
 }
 
@@ -373,8 +380,8 @@ TEST(ThermalTest, TripPointJumpMultiple) {
 
     EXPECT_OK(test->StartThread());
 
-    test->TriggerInterrupts(8);
-    test->StopThread();
+    EXPECT_OK(test->TriggerInterrupts(8));
+    EXPECT_OK(test->StopThread());
     test->VerifyAll();
 }
 

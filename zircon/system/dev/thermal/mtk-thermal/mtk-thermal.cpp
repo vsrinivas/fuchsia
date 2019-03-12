@@ -627,9 +627,10 @@ zx_status_t MtkThermal::StartThread() {
     ));
 }
 
-void MtkThermal::StopThread() {
+zx_status_t MtkThermal::StopThread() {
     irq_.destroy();
     JoinThread();
+    return ZX_OK;
 }
 
 void MtkThermal::DdkRelease() {

@@ -8,10 +8,10 @@
 
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
 #include <zircon/device/thermal.h>
@@ -37,7 +37,7 @@ public:
     // Visible for testing.
     zx_status_t Init();
     zx_status_t StartThread();
-    virtual void StopThread();
+    virtual zx_status_t StopThread();
 
 protected:
     // Visible for testing.
