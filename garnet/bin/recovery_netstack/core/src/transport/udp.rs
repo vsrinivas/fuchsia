@@ -332,7 +332,7 @@ pub(crate) fn connect_udp<D: EventDispatcher, A: IpAddress>(
     if let Some(local_port) = local_port {
         let c = Conn { local_addr, local_port, remote_addr, remote_port };
         let listener = Listener { addr: local_addr, port: local_port };
-        let state = get_inner_state(ctx.state());
+        let state = get_inner_state_mut(ctx.state_mut());
         if state.conns.get_by_addr(&c).is_some() || state.listeners.get_by_addr(&listener).is_some()
         {
             // TODO(joshlf): Return error
@@ -374,7 +374,7 @@ pub(crate) fn listen_udp<D: EventDispatcher, A: IpAddress>(
         panic!("transport::udp::listen_udp: listener already in use");
     }
 
-    let state = get_inner_state(ctx.state());
+    let mut state = get_inner_state_mut(ctx.state_mut());
     if addrs.is_empty() {
         if state.wildcard_listeners.get_by_addr(&port).is_some() {
             // TODO(joshlf): Return error
@@ -398,6 +398,16 @@ pub(crate) fn listen_udp<D: EventDispatcher, A: IpAddress>(
 
 #[specialize_ip_address]
 fn get_inner_state<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
+) -> &UdpStateInner<D, A> {
+    #[ipv4addr]
+    return &state.transport.udp.ipv4;
+    #[ipv6addr]
+    return &state.transport.udp.ipv6;
+}
+
+#[specialize_ip_address]
+fn get_inner_state_mut<D: EventDispatcher, A: IpAddress>(
     state: &mut StackState<D>,
 ) -> &mut UdpStateInner<D, A> {
     #[ipv4addr]
@@ -407,8 +417,8 @@ fn get_inner_state<D: EventDispatcher, A: IpAddress>(
 }
 
 fn get_inner_states<D: EventDispatcher>(
-    state: &mut StackState<D>,
-) -> (&mut UdpStateInner<D, Ipv4Addr>, &mut UdpStateInner<D, Ipv6Addr>) {
-    let state = &mut state.transport.udp;
-    (&mut state.ipv4, &mut state.ipv6)
+    state: &StackState<D>,
+) -> (&UdpStateInner<D, Ipv4Addr>, &UdpStateInner<D, Ipv6Addr>) {
+    let state = &state.transport.udp;
+    (&state.ipv4, &state.ipv6)
 }

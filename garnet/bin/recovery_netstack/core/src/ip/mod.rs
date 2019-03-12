@@ -289,7 +289,7 @@ pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
     subnet: Subnet<A>,
     next_hop: A,
 ) {
-    let state = &mut ctx.state().ip;
+    let state = &mut ctx.state_mut().ip;
 
     #[ipv4addr]
     state.v4.table.add_route(subnet, next_hop);
@@ -304,14 +304,14 @@ pub(crate) fn add_device_route<D: EventDispatcher, A: ext::IpAddress>(
     device: DeviceId,
 ) {
     // NOTE(joshlf): This weird nesting is a holdover until
-    // #[specialize_ip_addr] supports ext::IpAddress in addition to IpAddress.
+    // #[specialize_ip_address] supports ext::IpAddress in addition to IpAddress.
     #[specialize_ip_address]
     fn add_device_route<D: EventDispatcher, A: IpAddress>(
         ctx: &mut Context<D>,
         subnet: Subnet<A>,
         device: DeviceId,
     ) {
-        let state = &mut ctx.state().ip;
+        let state = &mut ctx.state_mut().ip;
 
         #[ipv4addr]
         state.v4.table.add_device_route(subnet, device);
@@ -503,7 +503,7 @@ where
     // the original packet ingressed over? We'll probably want to consult BCP 38
     // (aka RFC 2827) and RFC 3704.
 
-    let ip_state = &mut ctx.state().ip;
+    let ip_state = &mut ctx.state_mut().ip;
     if let Some(route) = lookup_route(ip_state, src_ip) {
         if let Some(local_ip) =
             crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)

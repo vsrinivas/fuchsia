@@ -331,7 +331,7 @@ impl DummyEventDispatcherBuilder {
         let mut idx_to_device_id =
             HashMap::<_, _, std::collections::hash_map::RandomState>::default();
         for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
-            let id = ctx.state().add_ethernet_device(mac, IPV6_MIN_MTU);
+            let id = ctx.state_mut().add_ethernet_device(mac, IPV6_MIN_MTU);
             idx_to_device_id.insert(idx, id);
             match ip_subnet {
                 Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {

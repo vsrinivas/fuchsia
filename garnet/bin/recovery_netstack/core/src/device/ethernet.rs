@@ -328,7 +328,7 @@ fn get_device_state<D: EventDispatcher>(
     // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
     // the device exists), but sometimes we want to report an error to the user.
     // Right now, this is a DoS vector.
-    ctx.state()
+    ctx.state_mut()
         .device
         .ethernet
         .get_mut(&device_id)

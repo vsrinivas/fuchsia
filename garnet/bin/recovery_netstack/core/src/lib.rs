@@ -120,8 +120,13 @@ impl<D: EventDispatcher> Context<D> {
         Context { state, dispatcher }
     }
 
-    /// Get the stack state.
-    pub fn state(&mut self) -> &mut StackState<D> {
+    /// Get the stack state immutably.
+    pub fn state(&self) -> &StackState<D> {
+        &self.state
+    }
+
+    /// Get the stack state mutably.
+    pub fn state_mut(&mut self) -> &mut StackState<D> {
         &mut self.state
     }
 

@@ -441,7 +441,7 @@ mod tests {
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG).build();
         // currently only used by test_ttl_exceeded
-        ctx.state().ip.v4.forward = true;
+        ctx.state_mut().ip.v4.forward = true;
         receive_ip_packet::<_, _, Ipv4>(&mut ctx, DeviceId::new_ethernet(1), buffer);
 
         for counter in assert_counters {
