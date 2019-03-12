@@ -11,7 +11,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <zircon/status.h>
 
 #include "pty-core.h"
@@ -115,24 +114,18 @@ static zx_status_t psd_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
     }
 }
 
-static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
-    .OpenClient = pty_server_fidl_OpenClient,
-};
-
-zx_status_t psd_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
-}
-
-// Since we have no special functionality, we just use the implementations from pty-core directly.
+// Since we have no special functionality,
+// we just use the implementations from pty-core
+// directly.
 static zx_protocol_device_t psd_ops = []() {
     zx_protocol_device_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
     // ops.open = default, allow cloning;
+    ops.open_at = pty_server_openat;
     ops.release = pty_server_release;
     ops.read = psd_read;
     ops.write = psd_write;
     ops.ioctl = psd_ioctl;
-    ops.message = psd_message;
     return ops;
 }();
 

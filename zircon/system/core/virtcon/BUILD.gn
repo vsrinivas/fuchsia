@@ -25,7 +25,6 @@ group("common") {
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-display:c",
     "$zx/system/fidl/fuchsia-hardware-input:c",
-    "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
