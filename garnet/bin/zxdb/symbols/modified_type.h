@@ -22,9 +22,6 @@ namespace zxdb {
 // comes from the surrounding context of the ModifiedType.
 class ModifiedType final : public Type {
  public:
-  // Returns true if the given DWARF tag is a type modifier.
-  static bool IsTypeModifierTag(DwarfTag tag);
-
   // Type/Symbol overrides.
   const ModifiedType* AsModifiedType() const override;
   const Type* GetConcreteType() const override;

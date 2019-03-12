@@ -113,6 +113,7 @@ enum class DwarfTag : int {
   // Member of an enumeration. Will be a child of an EnumerationType entry.
   kEnumerator = 0x28,
 
+  // Used by Pascal to represent its native file type.
   kFileType = 0x29,
 
   // C++ "friend" declaration. Seems to not be generated.
@@ -179,5 +180,12 @@ enum class DwarfTag : int {
   kLoUser = 0x4080,
   kHiUser = 0xffff,
 };
+
+// Returns true if the tag defines a type.
+bool DwarfTagIsType(DwarfTag tag);
+
+// Returns true if the tag is one of the type modified variants (pointers,
+// references, etc.).
+bool DwarfTagIsTypeModifier(DwarfTag tag);
 
 }  // namespace zxdb

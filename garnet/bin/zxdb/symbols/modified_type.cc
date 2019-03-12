@@ -29,6 +29,7 @@ bool IsPointerTag(DwarfTag tag) {
 
 ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified)
     : Type(kind), modified_(modified) {
+  FXL_DCHECK(DwarfTagIsTypeModifier(kind));
   if (IsTransparentTag(kind)) {
     const Type* mod_type = modified_.Get()->AsType();
     if (mod_type)
@@ -49,15 +50,6 @@ const Type* ModifiedType::GetConcreteType() const {
       return mod->GetConcreteType();
   }
   return this;
-}
-
-// static
-bool ModifiedType::IsTypeModifierTag(DwarfTag tag) {
-  return tag == DwarfTag::kConstType || tag == DwarfTag::kPointerType ||
-         tag == DwarfTag::kReferenceType || tag == DwarfTag::kRestrictType ||
-         tag == DwarfTag::kRvalueReferenceType || tag == DwarfTag::kTypedef ||
-         tag == DwarfTag::kVolatileType ||
-         tag == DwarfTag::kImportedDeclaration;
 }
 
 std::string ModifiedType::ComputeFullName() const {
@@ -114,8 +106,9 @@ std::string ModifiedType::ComputeFullName() const {
     case DwarfTag::kImportedDeclaration:
       // Using statements use the underlying name.
       return modified_name;
+    default:
+      return kUnknown;
   }
-  return kUnknown;
 }
 
 }  // namespace zxdb

@@ -173,7 +173,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(void* data_ptr,
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     const llvm::DWARFDie& die) {
   DwarfTag tag = static_cast<DwarfTag>(die.getTag());
-  if (ModifiedType::IsTypeModifierTag(tag))
+  if (DwarfTagIsTypeModifier(tag))
     return DecodeModifiedType(die);
 
   fxl::RefPtr<Symbol> symbol;

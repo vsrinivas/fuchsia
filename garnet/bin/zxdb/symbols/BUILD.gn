@@ -69,6 +69,7 @@ static_library("symbols") {
     "dwarf_expr_eval.cc",
     "dwarf_symbol_factory.cc",
     "dwarf_symbol_factory.h",
+    "dwarf_tag.cc",
     "enumeration.cc",
     "file_line.cc",
     "find_line.cc",

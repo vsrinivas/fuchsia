@@ -9,7 +9,10 @@
 
 namespace zxdb {
 
-Type::Type(DwarfTag kind) : Symbol(kind) {}
+Type::Type(DwarfTag kind) : Symbol(kind) {
+  FXL_DCHECK(DwarfTagIsType(kind));
+}
+
 Type::~Type() = default;
 
 const Type* Type::AsType() const { return this; }
