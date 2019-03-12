@@ -256,13 +256,27 @@ executable("common_tests") {
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
 }
 
-package("wlan_tests") {
+package("wlanphy-testdev-driver") {
   testonly = true
   deprecated_system_image = true
 
+  drivers = [
+    {
+      name = "wlanphy-testdev.so"
+    },
+  ]
+}
+
+package("wlan_tests") {
+  testonly = true
+
   deps = [
-    ":tests",
     "//garnet/drivers/wlan/testing",
+    ":tests",
+  ]
+
+  data_deps = [
+    ":wlanphy-testdev-driver",
   ]
 
   binaries = [
@@ -316,12 +330,6 @@ package("wlan_tests") {
     {
       name = "wlan_common_unittest"
       environments = basic_envs
-    },
-  ]
-
-  drivers = [
-    {
-      name = "wlanphy-testdev.so"
     },
   ]
 }
