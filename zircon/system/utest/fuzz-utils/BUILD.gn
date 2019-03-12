@@ -6,6 +6,10 @@ test("fuzz-utils") {
   sources = [
     "fixture.cpp",
     "fuzzer-fixture.cpp",
+    "fuzzer.cpp",
+    "path.cpp",
+    "string-list.cpp",
+    "string-map.cpp",
     "test-fuzzer.cpp",
   ]
   deps = [
