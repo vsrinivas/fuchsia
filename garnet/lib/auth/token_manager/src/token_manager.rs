@@ -530,13 +530,13 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
                     TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                 })?;
 
-        // In the case of probably-temporary AuthProvider failures we fail this method and expect
-        // the client to retry. For other AuthProvider failures we continue to delete our copy of
-        // the credential even if the server can't revoke it.  Note this means it will never be
-        // possible to ask the server to revoke the token in the future, but it does let us clean
-        // up broken tokens from our database.
+        // TODO(ukode, jsankey): In the case of probably-temporary AuthProvider failures we
+        // log a warning and delete local state from cache and store. For other AuthProvider
+        // failures we continue to delete our copy of the credential even if the server can't
+        // revoke it. Note this means it will never be possible to ask the server to revoke
+        // the token in the future, but it does let us clean up broken tokens from our database.
         if status == AuthProviderStatus::NetworkError {
-            return Err(TokenManagerError::from(status));
+            warn!("Network not reachable for revoking tokens, still deleting local state.");
         }
 
         match self.token_cache.lock().delete(&cache_key) {
