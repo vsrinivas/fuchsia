@@ -106,7 +106,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
         return status;
     }
 
-    thermal_device_info_t thermal_info;
+    fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
     size_t actual;
     status = device_get_metadata(parent, THERMAL_CONFIG_METADATA, &thermal_info,
                                  sizeof(thermal_info), &actual);
@@ -163,12 +163,9 @@ zx_status_t MtkThermal::Init() {
     }
 
     // Set the initial DVFS operating point. The bootloader sets it to 1.001 GHz @ 1.2 V.
-    dvfs_info_t dvfs_info = {
-        .op_idx = static_cast<uint16_t>(thermal_info_.num_trip_points - 1),
-        .power_domain = BIG_CLUSTER_POWER_DOMAIN
-    };
-
-    zx_status_t status = SetDvfsOpp(&dvfs_info);
+    uint32_t op_idx =
+        thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].count - 1;
+    zx_status_t status = SetDvfsOpp(static_cast<uint16_t>(op_idx));
     if (status != ZX_OK) {
         return status;
     }
@@ -332,7 +329,7 @@ uint32_t MtkThermal::GetRawCold(uint32_t temp) {
     return raw_min;
 }
 
-uint32_t MtkThermal::GetTemperature() {
+uint32_t MtkThermal::ReadTemperatureSensors() {
     uint32_t sensor_values[kSensorCount];
     for (uint32_t i = 0; i < countof(sensor_values); i++) {
         auto msr = TempMsr::Get(i).ReadFrom(&mmio_);
@@ -354,18 +351,15 @@ uint32_t MtkThermal::GetTemperature() {
     return temp;
 }
 
-zx_status_t MtkThermal::SetDvfsOpp(const dvfs_info_t* opp) {
-    if (opp->power_domain >= MAX_DVFS_DOMAINS) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    const scpi_opp_t& opps = thermal_info_.opps[opp->power_domain];
-    if (opp->op_idx >= opps.count) {
+zx_status_t MtkThermal::SetDvfsOpp(uint16_t op_idx) {
+    const scpi_opp_t& opps =
+        thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
+    if (op_idx >= opps.count) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    uint32_t new_freq = opps.opp[opp->op_idx].freq_hz;
-    uint32_t new_volt = opps.opp[opp->op_idx].volt_mv;
+    uint32_t new_freq = opps.opp[op_idx].freq_hz;
+    uint32_t new_volt = opps.opp[op_idx].volt_mv;
 
     if (new_volt > VprocCon10::kMaxVoltageUv || new_volt < VprocCon10::kMinVoltageUv) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -399,7 +393,7 @@ zx_status_t MtkThermal::SetDvfsOpp(const dvfs_info_t* opp) {
         PmicWrite(vproc.reg_value(), vproc.reg_addr());
     }
 
-    current_opp_idx_ = opp->op_idx;
+    current_op_idx_ = op_idx;
 
     return ZX_OK;
 }
@@ -412,7 +406,7 @@ zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
             return ZX_ERR_INVALID_ARGS;
         }
 
-        *reinterpret_cast<uint32_t*>(out_buf) = GetTemperature();
+        *reinterpret_cast<uint32_t*>(out_buf) = ReadTemperatureSensors();
         *actual = sizeof(uint32_t);
         return ZX_OK;
 
@@ -425,12 +419,18 @@ zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         *actual = sizeof(thermal_info_);
         return ZX_OK;
 
-    case IOCTL_THERMAL_SET_DVFS_OPP:
+    case IOCTL_THERMAL_SET_DVFS_OPP: {
         if (in_len != sizeof(dvfs_info_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        return SetDvfsOpp(reinterpret_cast<const dvfs_info_t*>(in_buf));
+        const dvfs_info_t* dvfs_info = reinterpret_cast<const dvfs_info_t*>(in_buf);
+        if (dvfs_info->power_domain !=
+            fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        return SetDvfsOpp(dvfs_info->op_idx);
+    }
 
     case IOCTL_THERMAL_GET_DVFS_INFO: {
         if (in_len != sizeof(uint32_t) || out_len != sizeof(thermal_info_.opps[0])) {
@@ -438,7 +438,7 @@ zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         }
 
         uint32_t domain = *reinterpret_cast<const uint32_t*>(in_buf);
-        if (domain >= MAX_DVFS_DOMAINS) {
+        if (domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
             return ZX_ERR_INVALID_ARGS;
         }
 
@@ -453,14 +453,14 @@ zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
         }
 
         uint32_t domain = *reinterpret_cast<const uint32_t*>(in_buf);
-        if (domain != BIG_CLUSTER_POWER_DOMAIN) {
-            return ZX_ERR_INVALID_ARGS;
+        if (domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+            return ZX_ERR_NOT_SUPPORTED;
         }
 
-        uint32_t* opp_idx = reinterpret_cast<uint32_t*>(out_buf);
+        uint32_t* op_idx = reinterpret_cast<uint32_t*>(out_buf);
 
-        *opp_idx = current_opp_idx_;
-        *actual = sizeof(*opp_idx);
+        *op_idx = get_dvfs_opp();
+        *actual = sizeof(*op_idx);
         return ZX_OK;
     }
 
@@ -486,6 +486,77 @@ zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
+}
+
+zx_status_t MtkThermal::GetInfo(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
+zx_status_t MtkThermal::GetDeviceInfo(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDeviceInfo_reply(txn, ZX_OK, &thermal_info_);
+}
+
+zx_status_t MtkThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
+                                    fidl_txn_t* txn) {
+    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+        fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+    }
+
+    const fuchsia_hardware_thermal_OperatingPoint* info =
+        &thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
+    return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, info);
+}
+
+zx_status_t MtkThermal::GetTemperature(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK,
+                                                               ReadTemperatureSensors());
+}
+
+zx_status_t MtkThermal::GetStateChangeEvent(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetStateChangeEvent_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                                    ZX_HANDLE_INVALID);
+}
+
+zx_status_t MtkThermal::GetStateChangePort(fidl_txn_t* txn) {
+    zx::port dup;
+    zx_status_t status = GetPort(&dup);
+    return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, dup.release());
+}
+
+zx_status_t MtkThermal::SetTrip(uint16_t op_idx, fuchsia_hardware_thermal_PowerDomain power_domain,
+                                fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+zx_status_t MtkThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
+                                              fidl_txn_t* txn) {
+    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+        fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+    }
+
+    return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_OK, get_dvfs_opp());
+}
+
+zx_status_t MtkThermal::SetDvfsOperatingPoint(uint16_t op_idx,
+                                              fuchsia_hardware_thermal_PowerDomain power_domain,
+                                              fidl_txn_t* txn) {
+    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+        fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    }
+
+    return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, SetDvfsOpp(op_idx));
+}
+
+zx_status_t MtkThermal::GetFanLevel(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+zx_status_t MtkThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t MtkThermal::SetTripPoint(size_t trip_pt) {
@@ -518,12 +589,7 @@ zx_status_t MtkThermal::SetTripPoint(size_t trip_pt) {
 }
 
 int MtkThermal::Thread() {
-    const thermal_temperature_info_t* trip_pts = thermal_info_.trip_point_info;
-
-    constexpr dvfs_info_t dvfs_safe_opp = {
-        .op_idx = 0,
-        .power_domain = BIG_CLUSTER_POWER_DOMAIN
-    };
+    const fuchsia_hardware_thermal_ThermalTemperatureInfo* trip_pts = thermal_info_.trip_point_info;
 
     TempProtCtl::Get().ReadFrom(&mmio_).set_strategy(TempProtCtl::kStrategyMaximum).WriteTo(&mmio_);
     TempProtStage3::Get()
@@ -531,7 +597,7 @@ int MtkThermal::Thread() {
         .set_threshold(GetRawHot(thermal_info_.critical_temp))
         .WriteTo(&mmio_);
 
-    uint32_t temp = GetTemperature();
+    uint32_t temp = ReadTemperatureSensors();
     TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
 
     // Set the initial trip point based on the current temperature.
@@ -575,12 +641,12 @@ int MtkThermal::Thread() {
 
         // Read the current temperature then pause periodic measurements so we don't get out of sync
         // with the hardware.
-        temp = GetTemperature();
+        temp = ReadTemperatureSensors();
         TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
 
         if (int_status.stage_3()) {
             trip_pt = thermal_info_.num_trip_points - 1;
-            if (SetDvfsOpp(&dvfs_safe_opp) != ZX_OK) {
+            if (SetDvfsOpp(0) != ZX_OK) {
                 zxlogf(ERROR, "%s: Failed to set safe operating point\n", __FILE__);
                 return thrd_error;
             }
