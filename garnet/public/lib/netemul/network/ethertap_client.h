@@ -37,7 +37,7 @@ class EthertapConfig {
 // instance in scope.
 class EthertapClient {
  public:
-  using PacketCallback = fit::function<void(const void* buf, size_t len)>;
+  using PacketCallback = fit::function<void(std::vector<uint8_t>)>;
   using PeerClosedCallback = fit::function<void()>;
   virtual ~EthertapClient() = default;
 

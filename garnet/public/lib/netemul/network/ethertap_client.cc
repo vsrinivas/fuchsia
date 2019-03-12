@@ -36,7 +36,7 @@ class EthertapClientImpl : public EthertapClient {
       : config_(std::move(config)), device_(std::move(device)) {
     device_.events().OnFrame = [this](std::vector<uint8_t> data) {
       if (packet_callback_) {
-        packet_callback_(&data[0], data.size());
+        packet_callback_(std::move(data));
       }
     };
 

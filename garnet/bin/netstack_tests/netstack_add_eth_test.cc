@@ -210,8 +210,9 @@ TEST_F(NetstackLaunchTest, DHCPRequestSent) {
   config.ip_address_config.set_dhcp(true);
 
   bool data_callback_run = false;
-  auto f = [&data_callback_run](const void* b, size_t len) {
-    const std::byte* ethbuf = reinterpret_cast<const std::byte*>(b);
+  auto f = [&data_callback_run](std::vector<uint8_t> data) {
+    auto len = data.size();
+    const std::byte* ethbuf = reinterpret_cast<const std::byte*>(&data[0]);
     size_t expected_len = 302;
     size_t parsed = 0;
 

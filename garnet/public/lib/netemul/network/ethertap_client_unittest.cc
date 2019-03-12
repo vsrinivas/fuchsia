@@ -88,9 +88,9 @@ TEST_F(EthertapClientTest, EthertapReceive) {
   }
 
   // listen for data coming through tap
-  tap()->SetPacketCallback([&ok, &testSend](const void* buff, size_t len) {
-    ASSERT_EQ(len, static_cast<size_t>(TEST_BUFF_SIZE));
-    ASSERT_EQ(0, memcmp(buff, testSend, len));
+  tap()->SetPacketCallback([&ok, &testSend](std::vector<uint8_t> data) {
+    ASSERT_EQ(data.size(), static_cast<size_t>(TEST_BUFF_SIZE));
+    ASSERT_EQ(0, memcmp(&data[0], testSend, data.size()));
 
     ok = true;
   });
@@ -161,11 +161,11 @@ TEST_F(EthertapClientTest, EthertapLink) {
 
   // all data received on tap(0), push into tap(1)...
   tap(0)->SetPacketCallback(
-      [this](const void* data, size_t len) { tap(1)->Send(data, len); });
+      [this](std::vector<uint8_t> data) { tap(1)->Send(std::move(data)); });
 
   // ... and vice-versa
   tap(1)->SetPacketCallback(
-      [this](const void* data, size_t len) { tap(0)->Send(data, len); });
+      [this](std::vector<uint8_t> data) { tap(0)->Send(std::move(data)); });
 
   bool eth0Received = false;
   bool eth1Received = false;

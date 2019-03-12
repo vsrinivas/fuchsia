@@ -4,9 +4,9 @@
 
 #include "endpoint.h"
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 #include <unordered_set>
@@ -56,9 +56,9 @@ class EndpointImpl : public data::Consumer {
       return ZX_ERR_INTERNAL;
     }
 
-    ethertap_->SetPacketCallback(std::bind(&EndpointImpl::ForwardData, this,
-                                           std::placeholders::_1,
-                                           std::placeholders::_2));
+    ethertap_->SetPacketCallback([this](std::vector<uint8_t> data) {
+      ForwardData(&data[0], data.size());
+    });
 
     ethertap_->SetPeerClosedCallback([this]() {
       if (closed_callback_) {
