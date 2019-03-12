@@ -1,0 +1,180 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/dart/toolchain.gni")
+import("//build/testing/test_spec.gni")
+
+# Defines a Dart test suite.
+#
+# Parameters
+#
+#   sources
+#     Required: The list of public dart sources files defining the test.
+#       NOTE: this template assumes that all test entrypoints are defined by
+#       files with a suffix of "_test.dart".
+#
+#   source_dir
+#     Optional: The directory of test sources files. Defaults to "test".
+#
+#   deps
+#     Optional: Dart dependencies of the test.
+#
+#   non_dart_deps
+#     Optional: List of labels this package depends on that are not Dart
+#       packages.
+#
+#   environments
+#     Optional: What environments this test should target. Only used here for
+#       linux and mac tests, with a default value of a general linux/mac
+#       environment (as a function of $current_os).
+#       See //build/testing/test_spec.gni for more details.
+#
+template("dart_test") {
+  assert(defined(invoker.sources), "dart_test() must specify sources")
+
+  _main_target_name = target_name
+  _dart_library_target_name = "${target_name}_dart_library"
+  _test_grouping_target_name = "${target_name}_test_grouping"
+  _copy_target_name = "${target_name}_copy"
+  _snapshot_target_name = "${target_name}_snapshot"
+  _spec_target_name = "${target_name}_spec"
+
+  if (defined(invoker.source_dir)) {
+    _source_dir = invoker.source_dir
+  } else {
+    _source_dir = "test"
+  }
+
+  dart_library(_dart_library_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                           ])
+    source_dir = _source_dir
+    infer_package_name = true
+  }
+
+  # Create a single, grouped test file, as snapshot files correspond to a single
+  # entrypoint.
+  _grouped_main_file = "$target_gen_dir/${_main_target_name}_grouped.dart"
+
+  action(_test_grouping_target_name) {
+    script = "//topaz/runtime/dart/group_tests.py"
+    outputs = [
+      _grouped_main_file,
+    ]
+    args = [
+      "--out",
+      rebase_path(_grouped_main_file),
+    ]
+    foreach(src, invoker.sources) {
+      args += [
+        "--source",
+        rebase_path("$_source_dir/$src"),
+      ]
+    }
+  }
+
+  _dart_binary = "$target_gen_dir/$_main_target_name/dart"
+  copy(_copy_target_name) {
+    sources = [
+      "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/dart",
+    ]
+    outputs = [
+      _dart_binary,
+    ]
+  }
+
+  # Creates a snapshot file, which allows the test to be invoked hermetically.
+  _snapshot = "$target_gen_dir/${target_name}.snapshot"
+  _dart_target_gen_dir =
+      get_label_info(":anything($dart_toolchain)", "target_gen_dir")
+  _packages_path = "$_dart_target_gen_dir/${_dart_library_target_name}.packages"
+
+  action(_snapshot_target_name) {
+    depfile = "${_snapshot}.d"
+
+    outputs = [
+      _snapshot,
+    ]
+
+    script = _dart_binary
+
+    # The snapshot path needs to be rebased on top of the root build dir so
+    # that the resulting depfile gets properly formatted.
+    _rebased_snapshot = rebase_path(_snapshot, root_build_dir)
+    _rebased_depfile = rebase_path(depfile)
+    _rebased_packages_path = rebase_path(_packages_path)
+
+    args = [
+      "--snapshot=$_rebased_snapshot",
+      "--snapshot-depfile=$_rebased_depfile",
+      "--packages=$_rebased_packages_path",
+      rebase_path(_grouped_main_file),
+    ]
+
+    deps = dart_sdk_deps + [
+             ":$_dart_library_target_name",
+             ":$_test_grouping_target_name",
+             ":$_copy_target_name",
+           ]
+
+    metadata = {
+      test_runtime_deps = [
+        _dart_binary,
+        _snapshot,
+      ]
+    }
+  }
+
+  _invocation = "$root_out_dir/$_main_target_name"
+  test_spec(_spec_target_name) {
+    name = _main_target_name
+    location = _invocation
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "environment",
+                           ])
+    deps += [ ":$_snapshot_target_name" ]
+    if (defined(invoker.non_dart_deps)) {
+      deps += invoker.non_dart_deps
+    }
+  }
+
+  # Creates a convenience script to invoke the test.
+  action(_main_target_name) {
+    script = "//topaz/runtime/dart/gen_dart_test_invocation.py"
+
+    inputs = [
+      _snapshot,
+    ]
+    outputs = [
+      _invocation,
+    ]
+
+    args = [
+      "--wd",
+
+      # TODO(crbug.com/gn/56): Rebasing root_build_dir alone yields a path
+      # component that leaves root_build_dir, preventing portability.
+      rebase_path("$root_build_dir/dummy/..",
+                  get_path_info(_invocation, "dir")),
+      "--out",
+      rebase_path(_invocation),
+      "--dart",
+      rebase_path(_dart_binary, root_build_dir),
+      "--snapshot",
+      rebase_path(_snapshot, root_build_dir),
+    ]
+
+    deps = dart_sdk_deps + [
+             ":$_snapshot_target_name",
+             ":$_spec_target_name",
+           ]
+  }
+}
