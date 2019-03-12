@@ -429,11 +429,12 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (netstac
 	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
 
-// TODO(NET-1263): Remove once clients registering with the ResolverAdmin interface
-// does not crash netstack.
-func (ni *netstackImpl) SetNameServers(servers []net.IpAddress) error {
-	d := dnsImpl{ns: ni.ns}
-	return d.SetNameServers(servers)
+func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) (uint32, error) {
+	ifs, err := ns.ns.addEth(topological_path, interfaceConfig, &device)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(ifs.mu.nic.ID), err
 }
 
 type dnsImpl struct {
@@ -449,23 +450,4 @@ func (dns *dnsImpl) SetNameServers(servers []net.IpAddress) error {
 
 	dns.ns.dnsClient.SetDefaultServers(ss)
 	return nil
-}
-
-func (dns *dnsImpl) GetNameServers() ([]net.IpAddress, error) {
-	servers := dns.ns.getDNSServers()
-	out := make([]net.IpAddress, len(servers))
-
-	for i, s := range servers {
-		out[i] = fidlconv.ToNetIpAddress(s)
-	}
-
-	return out, nil
-}
-
-func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) (uint32, error) {
-	ifs, err := ns.ns.addEth(topological_path, interfaceConfig, &device)
-	if err != nil {
-		return 0, err
-	}
-	return uint32(ifs.mu.nic.ID), err
 }

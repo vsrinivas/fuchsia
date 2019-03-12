@@ -205,9 +205,6 @@ protocol Netstack {
 
     BridgeInterfaces(vector<uint32> nicids) -> (NetErr result);
 
-    // TODO(NET-1263): remove once we can use the ResolverAdmin interface
-    SetNameServers(vector<fuchsia.net.IpAddress> servers);
-
     AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
 
     // Begin a route transaction for atomically getting and setting the route
@@ -215,6 +212,11 @@ protocol Netstack {
     StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status status);
 
     -> OnInterfacesChanged(vector<NetInterface> interfaces);
+};
+
+[Discoverable]
+protocol ResolverAdmin {
+    SetNameServers(vector<fuchsia.net.IpAddress> servers);
 };
 
 [Discoverable]

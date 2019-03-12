@@ -80,6 +80,9 @@ fn main() -> Result<(), failure::Error> {
     let netstack =
         fuchsia_app::client::connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
             .context("could not connect to netstack")?;
+    let resolver_admin =
+        fuchsia_app::client::connect_to_service::<fidl_fuchsia_netstack::ResolverAdminMarker>()
+            .context("could not connect to resolver admin")?;
     let device_settings_manager = fuchsia_app::client::connect_to_service::<
         fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker,
     >()
@@ -91,8 +94,9 @@ fn main() -> Result<(), failure::Error> {
         .map(Into::into)
         .collect::<Vec<fidl_fuchsia_net::IpAddress>>();
 
-    let () =
-        netstack.set_name_servers(&mut servers.iter_mut()).context("could not set name servers")?;
+    let () = resolver_admin
+        .set_name_servers(&mut servers.iter_mut())
+        .context("could not set name servers")?;
 
     let default_device_name = device_name.as_ref().map(Cow::Borrowed).map(Ok);
 
@@ -237,11 +241,10 @@ fn main() -> Result<(), failure::Error> {
     };
 
     let interface_ids = interface_ids.clone();
-    let netstack_service = netstack.clone();
 
     let fidl_service_fut = ServicesServer::new()
         .add_service((DnsPolicyMarker::NAME, move |channel| {
-            dns_policy_service::spawn_net_dns_fidl_server(netstack_service.clone(), channel);
+            dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), channel);
         }))
         .add_service((ObserverMarker::NAME, move |channel| {
             fasync::spawn(

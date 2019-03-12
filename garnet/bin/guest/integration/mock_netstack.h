@@ -48,8 +48,6 @@ class MockNetstack : public fuchsia::netstack::Netstack {
   void BridgeInterfaces(std::vector<uint32_t> nicids,
                         BridgeInterfacesCallback callback) override {}
 
-  void SetNameServers(std::vector<fuchsia::net::IpAddress> servers) override {}
-
   void AddEthernetDevice(
       std::string topological_path,
       fuchsia::netstack::InterfaceConfig interfaceConfig,
@@ -65,8 +63,8 @@ class MockNetstack : public fuchsia::netstack::Netstack {
     return bindings_.GetHandler(this);
   }
 
-  // Send a ICMP6 neighbor advertisement packet informing the guest that the host is available
-  // over the network.
+  // Send a ICMP6 neighbor advertisement packet informing the guest that the
+  // host is available over the network.
   zx_status_t SendAdvertisement() const;
 
   // Send a packet with UDP headers, including the ethernet and IPv6 headers.

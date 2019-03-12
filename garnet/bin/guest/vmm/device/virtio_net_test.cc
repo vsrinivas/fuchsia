@@ -58,9 +58,6 @@ class VirtioNetTest : public TestWithDevice,
   void BridgeInterfaces(::std::vector<uint32_t> nicids,
                         BridgeInterfacesCallback callback) override {}
 
-  void SetNameServers(::std::vector<fuchsia::net::IpAddress> servers) override {
-  }
-
   void AddEthernetDevice(
       ::std::string topological_path,
       fuchsia::netstack::InterfaceConfig interfaceConfig,

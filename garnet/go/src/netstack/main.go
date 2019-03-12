@@ -157,13 +157,11 @@ func Main() {
 		return nil
 	})
 
-	// TODO(NET-1263): register resolver admin service once clients don't crash netstack
-	// when registering.
-	// var dnsService netstack.ResolverAdminService
-	// ctx.OutgoingService.AddService(netstack.ResolverAdminName, func(c zx.Channel) error {
-	//   _, err := dnsService.Add(&dnsImpl{ns: ns}, c, nil)
-	//   return err
-	// })
+	var dnsService netstack.ResolverAdminService
+	ctx.OutgoingService.AddService(netstack.ResolverAdminName, func(c zx.Channel) error {
+		_, err := dnsService.Add(&dnsImpl{ns: ns}, c, nil)
+		return err
+	})
 
 	var stackService stack.StackService
 	ctx.OutgoingService.AddService(stack.StackName, func(c zx.Channel) error {
