@@ -1130,7 +1130,6 @@ foreach(target, paver_targets) {
     deps = [
       ":default-images",
       ":flash_script",
-      ":ids.txt",
       ":netboot",
       "zedboot",
     ]
