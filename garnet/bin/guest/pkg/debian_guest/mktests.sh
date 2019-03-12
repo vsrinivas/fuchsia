@@ -16,7 +16,7 @@ usage() {
 }
 
 declare UPDATE="${UPDATE:-false}"
-declare -r LINUX_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+declare -r DEBIAN_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 declare -r FUCHSIA_DIR="${DEBIAN_GUEST_DIR}/../../../../.."
 
 while getopts "d:o:u" OPT; do

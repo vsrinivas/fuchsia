@@ -15,6 +15,7 @@ usage() {
   echo
   echo "OPTIONS:"
   echo "  -d DEVICE     Build the image on the given block device."
+  echo "  -o [dir]      Output directory."
   echo
   exit 1
 }
@@ -31,9 +32,10 @@ check_dep() {
 check_dep multistrap
 check_dep qemu-img qemu-utils
 
-while getopts "d:" FLAG; do
+while getopts "d:o:" FLAG; do
   case "${FLAG}" in
   d) DEVICE="${OPTARG}";;
+  o) OUTDIR="${OPTARG}";;
   *) usage;;
   esac
 done
@@ -55,8 +57,13 @@ x64)
   usage;;
 esac
 
-OUTDIR=./debian-$ARCH
-mkdir -p $OUTDIR
+if [[ -z "${OUTDIR}" ]]; then
+  OUTDIR="./images/${ARCH}"
+  mkdir -p "${OUTDIR}"
+elif [[ ! -d "${OUTDIR}" ]]; then
+  echo "${OUTDIR} is not a valid directory"
+  exit 1
+fi
 
 RAW_IMAGE_PATH=$OUTDIR/rootfs.img
 QCOW_IMAGE_PATH=$OUTDIR/rootfs.qcow2
@@ -115,4 +122,5 @@ sudo umount "${MOUNTPOINT}"
 
 if [[ -z "${DEVICE}" ]]; then
   qemu-img convert -f raw -O qcow2 "${RAW_IMAGE_PATH}" "${QCOW_IMAGE_PATH}"
+  rm -rf "${RAW_IMAGE_PATH}"
 fi

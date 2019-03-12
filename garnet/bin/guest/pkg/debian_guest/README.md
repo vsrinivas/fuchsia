@@ -45,3 +45,13 @@ with:
 ```
 $ guest socat 0 3 23
 ```
+
+## CIPD (Googlers only)
+
+All of the images constructed by `build.sh` (see above) are available on CIPD. To update and upload those images run the following. The scripts will prompt for a CIPD auth token and for sudo access.
+
+```
+$ cd $FUCHSIA_DIR
+$ ./garnet/bin/guest/pkg/debian_guest/mkcipd.sh x64
+$ ./garnet/bin/guest/pkg/debian_guest/mkcipd.sh arm64
+```

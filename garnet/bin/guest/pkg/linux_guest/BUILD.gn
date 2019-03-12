@@ -113,6 +113,6 @@ guest_package("linux_guest") {
         dest = "extras.img"
       },
     ]
-    block_devices += [ "/guest/data/extras.img,ro,volatile" ]
+    block_devices += [ "/guest/data/extras.img,ro" ]
   }
 }

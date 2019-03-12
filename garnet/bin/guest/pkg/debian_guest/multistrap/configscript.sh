@@ -8,7 +8,6 @@
 
 export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true
 export LC_ALL=C LANGUAGE=C LANG=C
-/var/lib/dpkg/info/dash.preinst install
 dpkg --configure -a
 
 # Create default account.
