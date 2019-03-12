@@ -49,6 +49,93 @@ const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] =
     "/system/data/crashpad_analyzer/override_config.json";
 
+}  // namespace
+
+std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
+  Config config;
+
+  if (files::IsFile(kOverrideConfigPath) &&
+      ParseConfig(kOverrideConfigPath, &config) == ZX_OK) {
+    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+  }
+
+  // We try to load the default config included in the package if no override
+  // config was specified or we failed to parse it.
+  if (ParseConfig(kDefaultConfigPath, &config) == ZX_OK) {
+    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+  }
+
+  FX_LOGS(FATAL) << "failed to set up crash analyzer";
+  return nullptr;
+}
+
+std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
+    Config config) {
+  if (!files::IsDirectory(config.local_crashpad_database_path)) {
+    files::CreateDirectory(config.local_crashpad_database_path);
+  }
+
+  std::unique_ptr<crashpad::CrashReportDatabase> database(
+      crashpad::CrashReportDatabase::Initialize(
+          base::FilePath(config.local_crashpad_database_path)));
+  if (!database) {
+    FX_LOGS(ERROR) << "error initializing local crash report database at "
+                   << config.local_crashpad_database_path;
+    FX_LOGS(FATAL) << "failed to set up crash analyzer";
+    return nullptr;
+  }
+
+  // Today we enable uploads here. In the future, this will most likely be set
+  // in some external settings.
+  database->GetSettings()->SetUploadsEnabled(
+      config.enable_upload_to_crash_server);
+
+  return std::unique_ptr<CrashpadAnalyzerImpl>(
+      new CrashpadAnalyzerImpl(std::move(config), std::move(database)));
+}
+
+CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
+    Config config, std::unique_ptr<crashpad::CrashReportDatabase> database)
+    : config_(std::move(config)), database_(std::move(database)) {
+  FXL_DCHECK(database_);
+}
+
+void CrashpadAnalyzerImpl::HandleNativeException(
+    zx::process process, zx::thread thread, zx::port exception_port,
+    HandleNativeExceptionCallback callback) {
+  const zx_status_t status = HandleNativeException(
+      std::move(process), std::move(thread), std::move(exception_port));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to handle native exception. Won't retry.";
+  }
+  callback(status);
+}
+
+void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
+    ManagedRuntimeLanguage language, std::string component_url,
+    std::string exception, fuchsia::mem::Buffer stack_trace,
+    HandleManagedRuntimeExceptionCallback callback) {
+  const zx_status_t status = HandleManagedRuntimeException(
+      language, component_url, exception, std::move(stack_trace));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR)
+        << "failed to handle managed runtime exception. Won't retry.";
+  }
+  callback(status);
+}
+
+void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
+    fuchsia::mem::Buffer crashlog,
+    ProcessKernelPanicCrashlogCallback callback) {
+  const zx_status_t status = ProcessKernelPanicCrashlog(std::move(crashlog));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to process kernel panic crashlog. Won't retry.";
+  }
+  callback(status);
+}
+
+namespace {
+
 std::string GetPackageName(const zx::process& process) {
   char name[ZX_MAX_NAME_LEN];
   if (process.get_property(ZX_PROP_NAME, name, sizeof(name)) == ZX_OK) {
@@ -58,106 +145,6 @@ std::string GetPackageName(const zx::process& process) {
 }
 
 }  // namespace
-
-zx_status_t CrashpadAnalyzerImpl::UploadReport(
-    const crashpad::UUID& local_report_id,
-    const std::map<std::string, std::string>* annotations,
-    bool read_annotations_from_minidump) {
-  bool uploads_enabled;
-  if ((!database_->GetSettings()->GetUploadsEnabled(&uploads_enabled) ||
-       !uploads_enabled)) {
-    FX_LOGS(INFO)
-        << "upload to remote crash server disabled. Local crash report, ID "
-        << local_report_id.ToString() << ", available under "
-        << config_.local_crashpad_database_path;
-    database_->SkipReportUpload(
-        local_report_id,
-        crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
-    return ZX_OK;
-  }
-
-  // Read local crash report as an "upload" report.
-  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
-  const crashpad::CrashReportDatabase::OperationStatus database_status =
-      database_->GetReportForUploading(local_report_id, &report);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
-    FX_LOGS(ERROR) << "error loading local crash report, ID "
-                   << local_report_id.ToString() << " (" << database_status
-                   << ")";
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Set annotations, either from argument or from minidump.
-  FXL_CHECK((annotations != nullptr) ^ read_annotations_from_minidump);
-  const std::map<std::string, std::string>* final_annotations = annotations;
-  std::map<std::string, std::string> minidump_annotations;
-  if (read_annotations_from_minidump) {
-    crashpad::FileReader* reader = report->Reader();
-    crashpad::FileOffset start_offset = reader->SeekGet();
-    crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
-    if (!minidump_process_snapshot.Initialize(reader)) {
-      database_->SkipReportUpload(
-          report->uuid,
-          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-      FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
-                     << local_report_id.ToString();
-      return ZX_ERR_INTERNAL;
-    }
-    minidump_annotations = crashpad::BreakpadHTTPFormParametersFromMinidump(
-        &minidump_process_snapshot);
-    final_annotations = &minidump_annotations;
-    if (!reader->SeekSet(start_offset)) {
-      database_->SkipReportUpload(
-          report->uuid,
-          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-      FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
-                     << local_report_id.ToString();
-      return ZX_ERR_INTERNAL;
-    }
-  }
-
-  // We have to build the MIME multipart message ourselves as all the public
-  // Crashpad helpers are asynchronous and we won't be able to know the upload
-  // status nor the server report ID.
-  crashpad::HTTPMultipartBuilder http_multipart_builder;
-  http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& kv : *final_annotations) {
-    http_multipart_builder.SetFormData(kv.first, kv.second);
-  }
-  for (const auto& kv : report->GetAttachments()) {
-    http_multipart_builder.SetFileAttachment(kv.first, kv.first, kv.second,
-                                             "application/octet-stream");
-  }
-  http_multipart_builder.SetFileAttachment(
-      "uploadFileMinidump", report->uuid.ToString() + ".dmp", report->Reader(),
-      "application/octet-stream");
-
-  std::unique_ptr<crashpad::HTTPTransport> http_transport(
-      crashpad::HTTPTransport::Create());
-  crashpad::HTTPHeaders content_headers;
-  http_multipart_builder.PopulateContentHeaders(&content_headers);
-  for (const auto& content_header : content_headers) {
-    http_transport->SetHeader(content_header.first, content_header.second);
-  }
-  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
-  http_transport->SetTimeout(60.0);  // 1 minute.
-  http_transport->SetURL(*config_.crash_server_url);
-
-  std::string server_report_id;
-  if (!http_transport->ExecuteSynchronously(&server_report_id)) {
-    database_->SkipReportUpload(
-        report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
-    FX_LOGS(ERROR) << "error uploading local crash report, ID "
-                   << report->uuid.ToString();
-    return ZX_ERR_INTERNAL;
-  }
-  database_->RecordUploadComplete(std::move(report), server_report_id);
-  FX_LOGS(INFO) << "successfully uploaded crash report at "
-                   "https://crash.corp.google.com/"
-                << server_report_id;
-
-  return ZX_OK;
-}
 
 zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
     zx::process process, zx::thread thread, zx::port exception_port) {
@@ -286,87 +273,104 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
                       /*read_annotations_from_minidump=*/false);
 }
 
-CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
-    Config config, std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : config_(std::move(config)), database_(std::move(database)) {
-  FXL_DCHECK(database_);
-}
-
-void CrashpadAnalyzerImpl::HandleNativeException(
-    zx::process process, zx::thread thread, zx::port exception_port,
-    HandleNativeExceptionCallback callback) {
-  const zx_status_t status = HandleNativeException(
-      std::move(process), std::move(thread), std::move(exception_port));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to handle native exception. Won't retry.";
-  }
-  callback(status);
-}
-
-void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
-    ManagedRuntimeLanguage language, std::string component_url,
-    std::string exception, fuchsia::mem::Buffer stack_trace,
-    HandleManagedRuntimeExceptionCallback callback) {
-  const zx_status_t status = HandleManagedRuntimeException(
-      language, component_url, exception, std::move(stack_trace));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "failed to handle managed runtime exception. Won't retry.";
-  }
-  callback(status);
-}
-
-void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
-    fuchsia::mem::Buffer crashlog,
-    ProcessKernelPanicCrashlogCallback callback) {
-  const zx_status_t status = ProcessKernelPanicCrashlog(std::move(crashlog));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to process kernel panic crashlog. Won't retry.";
-  }
-  callback(status);
-}
-
-std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
-    Config config) {
-  if (!files::IsDirectory(config.local_crashpad_database_path)) {
-    files::CreateDirectory(config.local_crashpad_database_path);
+zx_status_t CrashpadAnalyzerImpl::UploadReport(
+    const crashpad::UUID& local_report_id,
+    const std::map<std::string, std::string>* annotations,
+    bool read_annotations_from_minidump) {
+  bool uploads_enabled;
+  if ((!database_->GetSettings()->GetUploadsEnabled(&uploads_enabled) ||
+       !uploads_enabled)) {
+    FX_LOGS(INFO)
+        << "upload to remote crash server disabled. Local crash report, ID "
+        << local_report_id.ToString() << ", available under "
+        << config_.local_crashpad_database_path;
+    database_->SkipReportUpload(
+        local_report_id,
+        crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
+    return ZX_OK;
   }
 
-  std::unique_ptr<crashpad::CrashReportDatabase> database(
-      crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(config.local_crashpad_database_path)));
-  if (!database) {
-    FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << config.local_crashpad_database_path;
-    FX_LOGS(FATAL) << "failed to set up crash analyzer";
-    return nullptr;
+  // Read local crash report as an "upload" report.
+  std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
+  const crashpad::CrashReportDatabase::OperationStatus database_status =
+      database_->GetReportForUploading(local_report_id, &report);
+  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+    FX_LOGS(ERROR) << "error loading local crash report, ID "
+                   << local_report_id.ToString() << " (" << database_status
+                   << ")";
+    return ZX_ERR_INTERNAL;
   }
 
-  // Today we enable uploads here. In the future, this will most likely be set
-  // in some external settings.
-  database->GetSettings()->SetUploadsEnabled(
-      config.enable_upload_to_crash_server);
-
-  return std::unique_ptr<CrashpadAnalyzerImpl>(
-      new CrashpadAnalyzerImpl(std::move(config), std::move(database)));
-}
-
-std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
-  Config config;
-
-  if (files::IsFile(kOverrideConfigPath) &&
-      ParseConfig(kOverrideConfigPath, &config) == ZX_OK) {
-    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+  // Set annotations, either from argument or from minidump.
+  FXL_CHECK((annotations != nullptr) ^ read_annotations_from_minidump);
+  const std::map<std::string, std::string>* final_annotations = annotations;
+  std::map<std::string, std::string> minidump_annotations;
+  if (read_annotations_from_minidump) {
+    crashpad::FileReader* reader = report->Reader();
+    crashpad::FileOffset start_offset = reader->SeekGet();
+    crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
+    if (!minidump_process_snapshot.Initialize(reader)) {
+      database_->SkipReportUpload(
+          report->uuid,
+          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+      FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
+                     << local_report_id.ToString();
+      return ZX_ERR_INTERNAL;
+    }
+    minidump_annotations = crashpad::BreakpadHTTPFormParametersFromMinidump(
+        &minidump_process_snapshot);
+    final_annotations = &minidump_annotations;
+    if (!reader->SeekSet(start_offset)) {
+      database_->SkipReportUpload(
+          report->uuid,
+          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+      FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
+                     << local_report_id.ToString();
+      return ZX_ERR_INTERNAL;
+    }
   }
 
-  // We try to load the default config included in the package if no override
-  // config was specified or we failed to parse it.
-  if (ParseConfig(kDefaultConfigPath, &config) == ZX_OK) {
-    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+  // We have to build the MIME multipart message ourselves as all the public
+  // Crashpad helpers are asynchronous and we won't be able to know the upload
+  // status nor the server report ID.
+  crashpad::HTTPMultipartBuilder http_multipart_builder;
+  http_multipart_builder.SetGzipEnabled(true);
+  for (const auto& kv : *final_annotations) {
+    http_multipart_builder.SetFormData(kv.first, kv.second);
   }
+  for (const auto& kv : report->GetAttachments()) {
+    http_multipart_builder.SetFileAttachment(kv.first, kv.first, kv.second,
+                                             "application/octet-stream");
+  }
+  http_multipart_builder.SetFileAttachment(
+      "uploadFileMinidump", report->uuid.ToString() + ".dmp", report->Reader(),
+      "application/octet-stream");
 
-  FX_LOGS(FATAL) << "failed to set up crash analyzer";
-  return nullptr;
+  std::unique_ptr<crashpad::HTTPTransport> http_transport(
+      crashpad::HTTPTransport::Create());
+  crashpad::HTTPHeaders content_headers;
+  http_multipart_builder.PopulateContentHeaders(&content_headers);
+  for (const auto& content_header : content_headers) {
+    http_transport->SetHeader(content_header.first, content_header.second);
+  }
+  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
+  http_transport->SetTimeout(60.0);  // 1 minute.
+  http_transport->SetURL(*config_.crash_server_url);
+
+  std::string server_report_id;
+  if (!http_transport->ExecuteSynchronously(&server_report_id)) {
+    database_->SkipReportUpload(
+        report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
+    FX_LOGS(ERROR) << "error uploading local crash report, ID "
+                   << report->uuid.ToString();
+    return ZX_ERR_INTERNAL;
+  }
+  database_->RecordUploadComplete(std::move(report), server_report_id);
+  FX_LOGS(INFO) << "successfully uploaded crash report at "
+                   "https://crash.corp.google.com/"
+                << server_report_id;
+
+  return ZX_OK;
 }
 
 }  // namespace crash
