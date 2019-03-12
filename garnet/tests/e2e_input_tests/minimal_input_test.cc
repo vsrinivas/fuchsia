@@ -35,7 +35,7 @@ component::StartupContext* g_context = nullptr;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
-constexpr zx::duration kTimeout = zx::sec(30);
+constexpr zx::duration kTimeout = zx::min(5);
 
 // A very small Scenic client. Puts up a fuchsia-colored rectangle, and stores
 // input events for examination.
