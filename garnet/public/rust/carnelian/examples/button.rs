@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, App, AppAssistant, Color, Label, Paint, Point, Rect, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    make_message, set_node_color, App, AppAssistant, Color, Label, Message, Paint, Point, Rect,
+    Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
-use std::any::Any;
 
-/// enum that defines all messages sent with `App::send_message` that
+/// enum that defines all messages sent with `App::queue_message` that
 /// the button view assistant will understand and process.
 pub enum ButtonMessages {
     Pressed,
@@ -140,7 +139,7 @@ impl Button {
             }
             PointerEventPhase::Up => {
                 if self.active {
-                    context.queue_message(&ButtonMessages::Pressed);
+                    context.queue_message(make_message(&ButtonMessages::Pressed));
                 }
                 self.tracking = false;
                 self.active = false;
@@ -233,10 +232,12 @@ impl ViewAssistant for ButtonViewAssistant {
         Ok(())
     }
 
-    fn handle_message(&mut self, _: &dyn Any) {
-        // TODO: downcast the message to ensure that it is
-        // ButtonMessages::Pressed.
-        self.red_light = !self.red_light;
+    fn handle_message(&mut self, message: Message) {
+        if let Some(button_message) = message.downcast_ref::<ButtonMessages>() {
+            match button_message {
+                ButtonMessages::Pressed => self.red_light = !self.red_light,
+            }
+        }
     }
 
     fn handle_input_event(

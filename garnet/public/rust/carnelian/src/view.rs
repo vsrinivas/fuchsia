@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::geometry::Size;
+use crate::{geometry::Size, message::Message};
 use failure::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
 use fidl_fuchsia_ui_input::InputEvent;
@@ -28,13 +28,13 @@ pub struct ViewAssistantContext<'a> {
     pub logical_size: Size,
     pub size: Size,
     pub metrics: Size,
-    pub messages: Vec<Box<dyn Any>>,
+    pub messages: Vec<Box<&'static Any>>,
 }
 
 impl<'a> ViewAssistantContext<'a> {
     /// Queue up a message for delivery
-    pub fn queue_message<A: Any>(&mut self, message: A) {
-        self.messages.push(Box::new(message));
+    pub fn queue_message(&mut self, message: Message) {
+        self.messages.push(message);
     }
 }
 
@@ -57,8 +57,8 @@ pub trait ViewAssistant {
     }
 
     /// This method is called when `App::send_message` is called with the associated
-    /// view controller's view_id and the view controller does not handle the message.
-    fn handle_message(&mut self, _message: &Any) {}
+    /// view controller's `ViewKey` and the view controller does not handle the message.
+    fn handle_message(&mut self, _message: Message) {}
 }
 
 /// Reference to a view assistant. _This type is likely to change in the future so
@@ -144,7 +144,7 @@ impl ViewController {
                     .handle_input_event(&mut context, &event)
                     .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
                 for msg in context.messages {
-                    self.send_message(&msg);
+                    self.send_message(msg);
                 }
                 self.update();
             }
@@ -166,7 +166,7 @@ impl ViewController {
     /// This method sends an arbitrary message to this view. If it is not
     /// handled directly by `ViewController::send_message` it will be forwarded
     /// to the view assistant.
-    pub fn send_message(&mut self, msg: &Any) {
+    pub fn send_message(&mut self, msg: Message) {
         if let Some(view_msg) = msg.downcast_ref::<ViewMessages>() {
             match view_msg {
                 ViewMessages::Update => {

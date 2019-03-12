@@ -15,6 +15,7 @@ mod app;
 mod canvas;
 mod geometry;
 mod label;
+mod message;
 mod scenic_utils;
 mod view;
 
@@ -25,6 +26,7 @@ pub use crate::{
     },
     geometry::{Coord, Point, Rect, Size},
     label::Label,
+    message::{make_message, Message},
     scenic_utils::set_node_color,
     view::{
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey,

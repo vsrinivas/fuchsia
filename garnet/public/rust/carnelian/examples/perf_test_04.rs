@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    make_message, set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::Error;
@@ -48,7 +48,7 @@ impl RainbowViewAssistant {
         let f = timer
             .map(move |_| {
                 App::with(|app| {
-                    app.send_message(key, &ViewMessages::Update);
+                    app.queue_message(key, make_message(&ViewMessages::Update));
                 })
             })
             .collect::<()>();

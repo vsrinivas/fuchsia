@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::view::{ViewAssistantPtr, ViewController, ViewKey};
+use crate::{
+    message::Message,
+    view::{ViewAssistantPtr, ViewController, ViewKey},
+};
 use failure::{bail, Error, ResultExt};
 use fidl::endpoints::{create_endpoints, create_proxy, RequestStream, ServiceMarker};
 use fidl_fuchsia_ui_app::{ViewProviderMarker, ViewProviderRequest, ViewProviderRequestStream};
@@ -13,9 +16,9 @@ use fuchsia_async as fasync;
 use fuchsia_scenic::{Session, SessionPtr};
 use futures::{TryFutureExt, TryStreamExt};
 use std::{
-    any::Any,
     cell::RefCell,
     collections::BTreeMap,
+    mem,
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -60,6 +63,7 @@ pub struct App {
     view_controllers: BTreeMap<ViewKey, ViewController>,
     next_key: ViewKey,
     assistant: Option<AppAssistantPtr>,
+    messages: Vec<(ViewKey, Message)>,
 }
 
 /// Reference to the singleton app. _This type is likely to change in the future so
@@ -86,6 +90,7 @@ impl App {
             view_controllers: BTreeMap::new(),
             next_key: 0,
             assistant: None,
+            messages: Vec::new(),
         }))
     }
 
@@ -113,8 +118,21 @@ impl App {
         F: FnOnce(&mut App) -> R,
     {
         APP.with(|app| {
-            let mut app_ref = app.borrow_mut();
-            f(&mut app_ref)
+            let mut app_ref = app
+                .try_borrow_mut()
+                .expect("Attempted to call App::with() while already in a call to App::with()");
+            let r = f(&mut app_ref);
+
+            // Replace app's messages with an empty list before
+            // sending them. This isn't strictly needed now as
+            // queueing messages during `with` is not possible
+            // but it will be in the future.
+            let mut messages = Vec::new();
+            mem::swap(&mut messages, &mut app_ref.messages);
+            for (key, msg) in messages {
+                app_ref.send_message(key, msg);
+            }
+            r
         })
     }
 
@@ -134,14 +152,20 @@ impl App {
 
     /// Send a message to a specific view controller. Messages not handled by the ViewController
     /// will be forwarded to the `ViewControllerAssistant`.
-    pub fn send_message(&mut self, view_key: ViewKey, msg: &Any) {
-        if let Some(view) = self.view_controllers.get_mut(&view_key) {
+    fn send_message(&mut self, target: ViewKey, msg: Message) {
+        if let Some(view) = self.view_controllers.get_mut(&target) {
             view.send_message(msg);
         }
     }
 
     fn set_assistant(&mut self, assistant: AppAssistantPtr) {
         self.assistant = Some(assistant);
+    }
+
+    /// Send a message to a specific view controller. Messages not handled by the ViewController
+    /// will be forwarded to the `ViewControllerAssistant`.
+    pub fn queue_message(&mut self, target: ViewKey, msg: Message) {
+        self.messages.push((target, msg));
     }
 
     fn setup_session(&self) -> Result<SessionPtr, Error> {

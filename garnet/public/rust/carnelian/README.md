@@ -39,3 +39,13 @@ into triangle meshes for use with Scenic's mesh drawing commands.
 ## Animation
 
 Design and implement a simple animation facility.
+
+# Frequently Asked Questions
+
+## Nested Calls to App::with()
+
+`App::with` is implemented with a thread-local `RefCell`. After calling the function provided
+to `App::with`, any messages queued with `App::queue_message` are sent. If the sending of these
+messages results in a call to `App::with` the Carnelian app will be aborted.
+
+This restriction will be removed soon.

@@ -22,7 +22,6 @@ use fuchsia_scenic::{Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewH
 use fuchsia_syslog::{self as fx_log, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use rand::Rng;
-use std::any::Any;
 use std::collections::BTreeMap;
 
 mod layout;
@@ -203,8 +202,6 @@ impl ViewAssistant for VoilaViewAssistant {
         layout(&mut views, &context.size)?;
         Ok(())
     }
-
-    fn handle_message(&mut self, _message: &Any) {}
 }
 
 fn main() -> Result<(), Error> {
