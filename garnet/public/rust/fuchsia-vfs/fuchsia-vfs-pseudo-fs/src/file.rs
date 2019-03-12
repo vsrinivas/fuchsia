@@ -585,7 +585,8 @@ where
                 let len = connection.buffer.len() as u64;
 
                 if offset >= len {
-                    responder(Status::OUT_OF_RANGE, &mut iter::empty())?;
+                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK.  See ZX-3633.
+                    responder(Status::OK, &mut iter::empty())?;
                     return Ok(0);
                 }
 
@@ -1440,7 +1441,8 @@ mod tests {
             ),
             async move |proxy| {
                 assert_seek!(proxy, 7, Start);
-                assert_read_err!(proxy, Status::OUT_OF_RANGE);
+                // POSIX wants this to be a zero read. ZX-3633.
+                assert_read!(proxy, "");
                 assert_write!(proxy, " ext");
                 //      "Content ext"));
                 assert_seek!(proxy, 3, Current, 14);
