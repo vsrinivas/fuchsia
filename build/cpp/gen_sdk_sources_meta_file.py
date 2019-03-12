@@ -61,7 +61,8 @@ def main():
     metadata['fidl_deps'] = fidl_deps
 
     with open(args.out, 'w') as out_file:
-        json.dump(metadata, out_file, indent=2, sort_keys=True)
+        json.dump(metadata, out_file, indent=2, sort_keys=True,
+                  separators=(',', ': '))
 
     return 0
 

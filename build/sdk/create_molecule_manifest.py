@@ -37,7 +37,8 @@ def main():
         'atoms': map(lambda a: a.json, sorted(list(atoms))),
     }
     with open(os.path.abspath(args.out), 'w') as out:
-        json.dump(manifest, out, indent=2, sort_keys=True)
+        json.dump(manifest, out, indent=2, sort_keys=True,
+                  separators=(',', ': '))
 
 
 if __name__ == '__main__':

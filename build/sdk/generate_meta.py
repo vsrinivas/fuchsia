@@ -45,7 +45,8 @@ def main():
     }
 
     with open(args.meta, 'w') as meta_file:
-        json.dump(meta, meta_file, indent=2, sort_keys=True)
+        json.dump(meta, meta_file, indent=2, sort_keys=True,
+                  separators=(',', ': '))
 
 
 if __name__ == '__main__':
