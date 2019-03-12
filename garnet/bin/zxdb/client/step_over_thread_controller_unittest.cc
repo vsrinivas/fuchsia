@@ -160,7 +160,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
 
   // Make the 2nd inline function.
   auto second_inline_func =
-      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   second_inline_func->set_assigned_name("SecondInlineFunction");
   second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
   Location second_inline_loc(

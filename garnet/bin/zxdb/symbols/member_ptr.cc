@@ -10,7 +10,7 @@
 namespace zxdb {
 
 MemberPtr::MemberPtr(LazySymbol container_type, LazySymbol member_type)
-    : Type(Symbol::kTagPtrToMemberType),
+    : Type(DwarfTag::kPtrToMemberType),
       container_type_(std::move(container_type)),
       member_type_(std::move(member_type)) {
   set_byte_size(kTargetPointerSize);

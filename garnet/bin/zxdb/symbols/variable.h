@@ -29,8 +29,8 @@ class Variable : public Value {
   FRIEND_REF_COUNTED_THREAD_SAFE(Variable);
   FRIEND_MAKE_REF_COUNTED(Variable);
 
-  explicit Variable(int tag);
-  Variable(int tag, const std::string& assigned_name, LazySymbol type,
+  explicit Variable(DwarfTag tag);
+  Variable(DwarfTag tag, const std::string& assigned_name, LazySymbol type,
            VariableLocation location);
   ~Variable();
 

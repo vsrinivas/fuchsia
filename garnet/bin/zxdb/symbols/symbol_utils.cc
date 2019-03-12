@@ -22,7 +22,7 @@ std::string GetSymbolScopePrefix(const Symbol* symbol) {
     return std::string();  // No prefix
 
   const Symbol* parent = symbol->parent().Get();
-  if (parent->tag() == Symbol::kTagCompileUnit)
+  if (parent->tag() == DwarfTag::kCompileUnit)
     return std::string();  // Don't go above compilation units.
 
   if (parent->AsNamespace() || parent->AsCollection() || parent->AsFunction()) {

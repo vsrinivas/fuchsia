@@ -45,7 +45,7 @@ class Function final : public CodeBlock {
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // Returns true if this function is an inlined function instance.
-  bool is_inline() const { return tag() == Symbol::kTagInlinedSubroutine; }
+  bool is_inline() const { return tag() == DwarfTag::kInlinedSubroutine; }
 
   // The containing block is the CodeBlock that contains an inlined function.
   // This will be null for non-inlined functions.
@@ -135,7 +135,7 @@ class Function final : public CodeBlock {
 
   // The tag must be either "subprogram" or "inlined subroutine" according to
   // whether or not this is an inlined function.
-  explicit Function(int tag);
+  explicit Function(DwarfTag tag);
   ~Function();
 
   // Symbol protected overrides.

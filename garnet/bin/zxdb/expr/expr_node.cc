@@ -119,7 +119,7 @@ void AddressOfExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
         } else {
           // Construct a pointer type to the variable.
           auto ptr_type = fxl::MakeRefCounted<ModifiedType>(
-              Symbol::kTagPointerType, LazySymbol(value.type_ref()));
+              DwarfTag::kPointerType, LazySymbol(value.type_ref()));
 
           std::vector<uint8_t> contents;
           contents.resize(kTargetPointerSize);

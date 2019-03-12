@@ -172,56 +172,56 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(void* data_ptr,
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     const llvm::DWARFDie& die) {
-  int tag = die.getTag();
+  DwarfTag tag = static_cast<DwarfTag>(die.getTag());
   if (ModifiedType::IsTypeModifierTag(tag))
     return DecodeModifiedType(die);
 
   fxl::RefPtr<Symbol> symbol;
   switch (tag) {
-    case llvm::dwarf::DW_TAG_array_type:
+    case DwarfTag::kArrayType:
       symbol = DecodeArrayType(die);
       break;
-    case llvm::dwarf::DW_TAG_base_type:
+    case DwarfTag::kBaseType:
       symbol = DecodeBaseType(die);
       break;
-    case llvm::dwarf::DW_TAG_enumeration_type:
+    case DwarfTag::kEnumerationType:
       symbol = DecodeEnum(die);
       break;
-    case llvm::dwarf::DW_TAG_formal_parameter:
-    case llvm::dwarf::DW_TAG_variable:
+    case DwarfTag::kFormalParameter:
+    case DwarfTag::kVariable:
       symbol = DecodeVariable(die);
       break;
-    case llvm::dwarf::DW_TAG_subroutine_type:
+    case DwarfTag::kSubroutineType:
       symbol = DecodeFunctionType(die);
       break;
-    case llvm::dwarf::DW_TAG_inheritance:
+    case DwarfTag::kInheritance:
       symbol = DecodeInheritedFrom(die);
       break;
-    case llvm::dwarf::DW_TAG_lexical_block:
+    case DwarfTag::kLexicalBlock:
       symbol = DecodeLexicalBlock(die);
       break;
-    case llvm::dwarf::DW_TAG_member:
+    case DwarfTag::kMember:
       symbol = DecodeDataMember(die);
       break;
-    case llvm::dwarf::DW_TAG_namespace:
+    case DwarfTag::kNamespace:
       symbol = DecodeNamespace(die);
       break;
-    case llvm::dwarf::DW_TAG_ptr_to_member_type:
+    case DwarfTag::kPtrToMemberType:
       symbol = DecodeMemberPtr(die);
       break;
-    case llvm::dwarf::DW_TAG_inlined_subroutine:
-    case llvm::dwarf::DW_TAG_subprogram:
+    case DwarfTag::kInlinedSubroutine:
+    case DwarfTag::kSubprogram:
       symbol = DecodeFunction(die, tag);
       break;
-    case llvm::dwarf::DW_TAG_structure_type:
-    case llvm::dwarf::DW_TAG_class_type:
-    case llvm::dwarf::DW_TAG_union_type:
+    case DwarfTag::kStructureType:
+    case DwarfTag::kClassType:
+    case DwarfTag::kUnionType:
       symbol = DecodeCollection(die);
       break;
     default:
       // All unhandled Tag types get a Symbol that has the correct tag, but
       // no other data.
-      symbol = fxl::MakeRefCounted<Symbol>(static_cast<int>(die.getTag()));
+      symbol = fxl::MakeRefCounted<Symbol>(static_cast<DwarfTag>(die.getTag()));
   }
 
   // Set the parent block if it hasn't been set already by the type-specific
@@ -243,7 +243,7 @@ LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) {
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
-    const llvm::DWARFDie& die, int tag, bool is_specification) {
+    const llvm::DWARFDie& die, DwarfTag tag, bool is_specification) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
 
   llvm::DWARFDie parent;
@@ -270,7 +270,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   // Call location (inline functions only).
   llvm::Optional<std::string> call_file;
   llvm::Optional<uint64_t> call_line;
-  if (tag == Symbol::kTagInlinedSubroutine) {
+  if (tag == DwarfTag::kInlinedSubroutine) {
     decoder.AddFile(llvm::dwarf::DW_AT_call_file, &call_file);
     decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_call_line, &call_line);
   }
@@ -353,7 +353,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
     function->set_parent(MakeLazy(parent));
   }
 
-  if (tag == Symbol::kTagInlinedSubroutine) {
+  if (tag == DwarfTag::kInlinedSubroutine) {
     // In contrast to the logic for parent() above, the direct containing block
     // of the inlined subroutine will save the CodeBlock inlined functions are
     // embedded in.
@@ -490,7 +490,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
-  auto result = fxl::MakeRefCounted<Collection>(die.getTag());
+  auto result =
+      fxl::MakeRefCounted<Collection>(static_cast<DwarfTag>(die.getTag()));
   if (name)
     result->set_assigned_name(*name);
   if (byte_size)
@@ -615,9 +616,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   if (type)
     lazy_type = MakeLazy(type);
   const char* type_name_str = type_name ? *type_name : "";
-  auto result = fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type),
-                                          *byte_size, is_signed,
-                                          std::move(map));
+  auto result =
+      fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type),
+                                       *byte_size, is_signed, std::move(map));
   if (parent)
     result->set_parent(MakeLazy(parent));
   return result;
@@ -694,7 +695,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(
     const llvm::DWARFDie& die) {
-  auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   block->set_code_ranges(GetCodeRanges(die));
 
   // Handle sub-DIEs: child blocks and variables.
@@ -758,8 +759,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(
   if (modified)
     lazy_modified = MakeLazy(modified);
 
-  auto result =
-      fxl::MakeRefCounted<ModifiedType>(die.getTag(), std::move(lazy_modified));
+  auto result = fxl::MakeRefCounted<ModifiedType>(
+      static_cast<DwarfTag>(die.getTag()), std::move(lazy_modified));
   if (name)
     result->set_assigned_name(*name);
 
@@ -830,8 +831,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
     if (spec_variable)
       variable = fxl::RefPtr<Variable>(spec_variable);
   }
-  if (!variable)
-    variable = fxl::MakeRefCounted<Variable>(die.getTag());
+  if (!variable) {
+    variable =
+        fxl::MakeRefCounted<Variable>(static_cast<DwarfTag>(die.getTag()));
+  }
 
   if (name)
     variable->set_assigned_name(*name);

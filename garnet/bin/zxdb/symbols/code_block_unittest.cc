@@ -9,7 +9,7 @@
 namespace zxdb {
 
 TEST(CodeBlock, ContainsAddress) {
-  auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
 
   SymbolContext context = SymbolContext::ForRelativeAddresses();
 
@@ -40,7 +40,7 @@ TEST(CodeBlock, ContainsAddress) {
 }
 
 TEST(CodeBlock, GetMostSpecificChild) {
-  auto outer = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto outer = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
 
   // Outer has two ranges.
   outer->set_code_ranges(AddressRanges(
@@ -49,10 +49,10 @@ TEST(CodeBlock, GetMostSpecificChild) {
 
   // There are two inner blocks, one covers partially the first range, the
   // other covers exactly the second range.
-  auto first_child = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto first_child = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   first_child->set_code_ranges(AddressRanges(AddressRange(0x1000, 0x2000)));
 
-  auto second_child = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto second_child = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   second_child->set_code_ranges(AddressRanges(AddressRange(0x3000, 0x3001)));
 
   // Append the child ranges.
@@ -62,14 +62,14 @@ TEST(CodeBlock, GetMostSpecificChild) {
   outer->set_inner_blocks(outer_inner);
 
   // The first child has yet another child.
-  auto child_child = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto child_child = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   child_child->set_code_ranges(AddressRanges(AddressRange(0x1000, 0x1100)));
   std::vector<LazySymbol> inner_inner;
   inner_inner.emplace_back(child_child);
   first_child->set_inner_blocks(inner_inner);
 
   // The second child has an inner child with no defined range.
-  auto child_child2 = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+  auto child_child2 = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   std::vector<LazySymbol> inner_inner2;
   inner_inner2.emplace_back(child_child2);
   second_child->set_inner_blocks(inner_inner2);

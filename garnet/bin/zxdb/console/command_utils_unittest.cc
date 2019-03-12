@@ -207,7 +207,7 @@ TEST(CommandUtils, FormatIdentifier) {
 }
 
 TEST(CommandUtils, FormatFunctionName) {
-  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("Function");
 
   // Function with no parameters.
@@ -229,7 +229,7 @@ TEST(CommandUtils, FormatFunctionName) {
 
   // Put in a namespace and add some templates. This needs a new function
   // because the name will be cached above.
-  function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+  function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("Function<int>");
   function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
 
@@ -260,7 +260,7 @@ TEST(CommandUtils, FormatLocation) {
 
   // Function-only location.
   fxl::RefPtr<Function> function(
-      fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram));
+      fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram));
   function->set_assigned_name("Func");
   function->set_code_ranges(AddressRanges(AddressRange(0x1200, 0x1300)));
   EXPECT_EQ("Func() + 0x34 (no line info)",

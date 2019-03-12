@@ -8,7 +8,7 @@
 
 namespace zxdb {
 
-Namespace::Namespace() : Symbol(kTagNamespace) {}
+Namespace::Namespace() : Symbol(DwarfTag::kNamespace) {}
 Namespace::~Namespace() = default;
 
 const Namespace* Namespace::AsNamespace() const { return this; }

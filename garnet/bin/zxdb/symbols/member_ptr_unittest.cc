@@ -18,10 +18,10 @@ TEST(MemberPtr, Function) {
   auto standalone = fxl::MakeRefCounted<FunctionType>(
       LazySymbol(), std::vector<LazySymbol>());
   auto standalone_ptr = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(standalone));
+      DwarfTag::kPointerType, LazySymbol(standalone));
 
   // Class to be the containing class for the pointer to member func.
-  auto containing = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   containing->set_assigned_name("MyClass");
 
   // A parameter type.
@@ -32,14 +32,14 @@ TEST(MemberPtr, Function) {
   // behavior about named parameters in function pointers is consistent.
   std::vector<LazySymbol> params{
       LazySymbol(fxl::MakeRefCounted<Variable>(
-          Symbol::kTagFormalParameter, "val1", LazySymbol(standalone_ptr),
+          DwarfTag::kFormalParameter, "val1", LazySymbol(standalone_ptr),
           VariableLocation())),
-      LazySymbol(fxl::MakeRefCounted<Variable>(Symbol::kTagFormalParameter,
+      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter,
                                                "val2", LazySymbol(int32_type),
                                                VariableLocation()))};
   auto function =
       fxl::MakeRefCounted<FunctionType>(LazySymbol(int32_type), params);
-  auto function_ptr = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+  auto function_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                         LazySymbol(function));
   EXPECT_EQ("int32_t (*)(void (*)(), int32_t)", function_ptr->GetFullName());
 
@@ -52,7 +52,7 @@ TEST(MemberPtr, Function) {
 
 TEST(MemberPtr, Data) {
   // Class to be the containing class for the pointer to member func.
-  auto containing = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   containing->set_assigned_name("MyClass");
 
   auto int32_type = MakeInt32Type();

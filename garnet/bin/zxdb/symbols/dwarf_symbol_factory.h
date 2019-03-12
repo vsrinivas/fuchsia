@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 #include "garnet/bin/zxdb/symbols/symbol_factory.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -39,7 +40,7 @@ class DwarfSymbolFactory : public SymbolFactory {
   // because when recursively looking up the definitions, we want the original
   // DIE tag rather than the specification's tag (the origina could be an
   // inlined function while the specification will never be).
-  fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die, int tag,
+  fxl::RefPtr<Symbol> DecodeFunction(const llvm::DWARFDie& die, DwarfTag tag,
                                      bool is_specification = false);
   fxl::RefPtr<Symbol> DecodeArrayType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeBaseType(const llvm::DWARFDie& die);

@@ -9,7 +9,7 @@
 namespace zxdb {
 
 ArrayType::ArrayType(fxl::RefPtr<Type> value_type, size_t num_elts)
-    : Type(Symbol::kTagArrayType),
+    : Type(DwarfTag::kArrayType),
       value_type_(std::move(value_type)),
       num_elts_(num_elts) {
   set_byte_size(num_elts * value_type_->byte_size());

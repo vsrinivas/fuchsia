@@ -18,13 +18,13 @@ Err StringToType(const std::string& input, fxl::RefPtr<Type>* type) {
   } else if (input == "char*") {
     auto char_type =
         fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
-    *type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+    *type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                               LazySymbol(char_type));
     return Err();
   } else if (input == "void*") {
     // A "void*" is a pointer modification of nothing.
-    *type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
-                                              LazySymbol());
+    *type =
+        fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
     return Err();
   }
   return Err("Unknown type (type parsing is a work in progress).");

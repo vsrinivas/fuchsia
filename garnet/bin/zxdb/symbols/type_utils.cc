@@ -17,7 +17,7 @@ Err GetPointedToType(const Type* input, const Type** pointed_to) {
 
   // Convert to a pointer.
   const ModifiedType* mod_type = input->GetConcreteType()->AsModifiedType();
-  if (!mod_type || mod_type->tag() != Symbol::kTagPointerType) {
+  if (!mod_type || mod_type->tag() != DwarfTag::kPointerType) {
     return Err(fxl::StringPrintf(
         "Attempting to dereference '%s' which is not a pointer.",
         input->GetFullName().c_str()));

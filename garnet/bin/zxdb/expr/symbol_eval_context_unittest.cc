@@ -37,7 +37,7 @@ class SymbolEvalContextTest : public testing::Test {
   debug_ipc::MessageLoop& loop() { return loop_; }
 
   fxl::RefPtr<CodeBlock> MakeCodeBlock() {
-    auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+    auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
 
     // Declare a variable in this code block stored in register 0.
     auto variable = MakeUint64VariableForTest(
@@ -196,10 +196,10 @@ TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
 TEST_F(SymbolEvalContextTest, FoundThis) {
   auto int32_type = MakeInt32Type();
   auto derived = MakeDerivedClassPair(
-      Symbol::kTagClassType, "Base", {{"b1", int32_type}, {"b2", int32_type}},
+      DwarfTag::kClassType, "Base", {{"b1", int32_type}, {"b2", int32_type}},
       "Derived", {{"d1", int32_type}, {"d2", int32_type}});
 
-  auto derived_ptr = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+  auto derived_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                        LazySymbol(derived));
 
   // Make the storage for the class in memory.
@@ -222,7 +222,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
 
   // Make a function with a parameter / object pointer to Derived (this will be
   // like a member function on Derived).
-  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_parameters({LazySymbol(this_var)});
   function->set_object_pointer(LazySymbol(this_var));
 

@@ -59,7 +59,7 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
 
   // Deserialize to a function object.
   const Symbol* function_symbol = lazy_function.Get();
-  EXPECT_EQ(Symbol::kTagSubprogram, function_symbol->tag());
+  EXPECT_EQ(DwarfTag::kSubprogram, function_symbol->tag());
   return fxl::RefPtr<const Function>(function_symbol->AsFunction());
 }
 
@@ -130,14 +130,13 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
   const Function* inline_func =
       call_function->inner_blocks()[0].Get()->AsFunction();
   ASSERT_TRUE(inline_func);
-  EXPECT_EQ(Symbol::kTagInlinedSubroutine, inline_func->tag());
+  EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
   EXPECT_EQ("ForInline::InlinedFunction", inline_func->GetFullName());
 
   // The inline function should have two parameters, "this" and "param".
   ASSERT_EQ(2u, inline_func->parameters().size());
-  const Variable* this_param =
-      inline_func->parameters()[0].Get()->AsVariable();
+  const Variable* this_param = inline_func->parameters()[0].Get()->AsVariable();
   ASSERT_TRUE(this_param);
   EXPECT_EQ("this", this_param->GetAssignedName());
   const Variable* param_param =
@@ -168,7 +167,7 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   const Function* inline_func =
       call_function->inner_blocks()[0].Get()->AsFunction();
   ASSERT_TRUE(inline_func);
-  EXPECT_EQ(Symbol::kTagInlinedSubroutine, inline_func->tag());
+  EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
   // Parameter decoding is tested by the InlinedMemberFunction test above. Here
   // we care that the enclosing namespace is correct because of the different
@@ -196,20 +195,24 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   // Get the return type, this references a "pointer" modifier.
   EXPECT_TRUE(function->return_type().is_valid());
   const ModifiedType* ptr_mod = function->return_type().Get()->AsModifiedType();
-  ASSERT_TRUE(ptr_mod) << "Tag = " << function->return_type().Get()->tag();
-  EXPECT_EQ(Symbol::kTagPointerType, ptr_mod->tag());
+  ASSERT_TRUE(ptr_mod) << "Tag = "
+                       << static_cast<int>(
+                              function->return_type().Get()->tag());
+  EXPECT_EQ(DwarfTag::kPointerType, ptr_mod->tag());
   EXPECT_EQ("const int*", ptr_mod->GetFullName());
 
   // The modified type should be a "const" modifier.
   const ModifiedType* const_mod = ptr_mod->modified().Get()->AsModifiedType();
-  ASSERT_TRUE(const_mod) << "Tag = " << function->return_type().Get()->tag();
-  EXPECT_EQ(Symbol::kTagConstType, const_mod->tag());
+  ASSERT_TRUE(const_mod) << "Tag = "
+                         << static_cast<int>(
+                                function->return_type().Get()->tag());
+  EXPECT_EQ(DwarfTag::kConstType, const_mod->tag());
   EXPECT_EQ("const int", const_mod->GetFullName());
 
   // The modified type should be the int base type.
   const BaseType* base = const_mod->modified().Get()->AsBaseType();
   ASSERT_TRUE(base);
-  EXPECT_EQ(Symbol::kTagBaseType, base->tag());
+  EXPECT_EQ(DwarfTag::kBaseType, base->tag());
   EXPECT_EQ("int", base->GetFullName());
 
   // Validate the BaseType parameters.
@@ -239,7 +242,7 @@ TEST(DwarfSymbolFactory, RValueRef) {
   ASSERT_TRUE(var);
   const ModifiedType* modified = var->type().Get()->AsModifiedType();
   ASSERT_TRUE(modified);
-  EXPECT_EQ(Symbol::kTagRvalueReferenceType, modified->tag());
+  EXPECT_EQ(DwarfTag::kRvalueReferenceType, modified->tag());
 
   EXPECT_EQ("int&&", modified->GetFullName());
 }

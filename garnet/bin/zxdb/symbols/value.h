@@ -33,8 +33,8 @@ class Value : public Symbol {
   // entries have this information.
 
  protected:
-  explicit Value(int tag);
-  Value(int tag, const std::string& assigned_name, LazySymbol type);
+  explicit Value(DwarfTag tag);
+  Value(DwarfTag tag, const std::string& assigned_name, LazySymbol type);
   ~Value();
 
  private:

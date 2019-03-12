@@ -179,7 +179,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   // Make an inline function starting at the return address of the function.
   AddressRange second_inline_range(return_address, return_address + 4);
   auto second_inline_func =
-      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   second_inline_func->set_assigned_name("Second");
   second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
 

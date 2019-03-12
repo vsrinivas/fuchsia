@@ -100,7 +100,7 @@ class CodeBlock : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);
   FRIEND_MAKE_REF_COUNTED(CodeBlock);
 
-  explicit CodeBlock(int tag);
+  explicit CodeBlock(DwarfTag tag);
   ~CodeBlock() override;
 
  private:

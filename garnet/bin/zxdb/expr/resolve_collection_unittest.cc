@@ -23,7 +23,7 @@ namespace {
 fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
                                          const DataMember** member_b) {
   auto int32_type = MakeInt32Type();
-  auto sc = MakeCollectionType(Symbol::kTagStructureType, "Foo",
+  auto sc = MakeCollectionType(DwarfTag::kStructureType, "Foo",
                                {{"a", int32_type}, {"b", int32_type}});
 
   *member_a = sc->data_members()[0].Get()->AsDataMember();
@@ -50,9 +50,9 @@ TEST(ResolveCollection, GoodMemberAccess) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Make this const volatile to add extra layers.
-  auto vol_sc = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagVolatileType,
+  auto vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType,
                                                   LazySymbol(sc));
-  auto const_vol_sc = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagConstType,
+  auto const_vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType,
                                                         LazySymbol(vol_sc));
 
   // This struct has the values 1 and 2 in it.
@@ -145,7 +145,7 @@ TEST(ResolveCollection, DerivedClass) {
   const DataMember* b_data;
   auto base = GetTestClassType(&a_data, &b_data);
 
-  auto derived = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto derived = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
 
   uint32_t base_offset = 4;  // Offset in derived of base.
   auto inherited =
@@ -155,9 +155,10 @@ TEST(ResolveCollection, DerivedClass) {
   // This struct has the values 1 and 2 in it, offset by 4 bytes (the offset
   // within "derived" of "base").
   constexpr uint64_t kBaseAddr = 0x11000;
-  ExprValue value(derived, {0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
-                            0x02, 0x00, 0x00, 0x00},
-                  ExprValueSource(kBaseAddr));
+  ExprValue value(
+      derived,
+      {0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
+      ExprValueSource(kBaseAddr));
 
   // Resolve B by name.
   ExprValue out;

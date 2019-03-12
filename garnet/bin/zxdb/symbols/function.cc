@@ -10,9 +10,9 @@
 
 namespace zxdb {
 
-Function::Function(int tag) : CodeBlock(tag) {
-  FXL_DCHECK(tag == Symbol::kTagSubprogram ||
-             tag == Symbol::kTagInlinedSubroutine);
+Function::Function(DwarfTag tag) : CodeBlock(tag) {
+  FXL_DCHECK(tag == DwarfTag::kSubprogram ||
+             tag == DwarfTag::kInlinedSubroutine);
 }
 
 Function::~Function() = default;

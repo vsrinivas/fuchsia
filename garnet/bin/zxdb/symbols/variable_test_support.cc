@@ -11,7 +11,7 @@ namespace zxdb {
 fxl::RefPtr<Variable> MakeVariableForTest(
     const std::string& name, fxl::RefPtr<Type> type, uint64_t begin_ip_range,
     uint64_t end_ip_range, std::vector<uint8_t> location_expression) {
-  auto variable = fxl::MakeRefCounted<Variable>(Symbol::kTagVariable);
+  auto variable = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable);
   variable->set_assigned_name(name);
 
   VariableLocation::Entry entry;

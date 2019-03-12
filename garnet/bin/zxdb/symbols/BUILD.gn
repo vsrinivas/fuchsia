@@ -20,6 +20,7 @@ static_library("symbols") {
     "collection.h",
     "data_member.h",
     "dwarf_expr_eval.h",
+    "dwarf_tag.h",
     "enumeration.h",
     "file_line.h",
     "function.h",

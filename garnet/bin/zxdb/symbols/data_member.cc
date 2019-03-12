@@ -6,7 +6,7 @@
 
 namespace zxdb {
 
-DataMember::DataMember() : Value(kTagMember) {}
+DataMember::DataMember() : Value(DwarfTag::kMember) {}
 DataMember::~DataMember() = default;
 
 const DataMember* DataMember::AsDataMember() const { return this; }

@@ -126,7 +126,7 @@ void ResolveArray(fxl::RefPtr<SymbolDataProvider> data_provider,
     cb(err, result);
     return;
   } else if (const ModifiedType* modified_type = concrete->AsModifiedType()) {
-    if (modified_type->tag() == Symbol::kTagPointerType) {
+    if (modified_type->tag() == DwarfTag::kPointerType) {
       return ResolvePointerArray(data_provider, array, modified_type,
                                  begin_index, end_index, std::move(cb));
     }

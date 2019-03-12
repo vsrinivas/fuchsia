@@ -10,10 +10,10 @@
 
 namespace zxdb {
 
-CodeBlock::CodeBlock(int tag) : Symbol(tag) {
-  FXL_DCHECK(tag == Symbol::kTagSubprogram ||
-             tag == Symbol::kTagInlinedSubroutine ||
-             tag == Symbol::kTagLexicalBlock);
+CodeBlock::CodeBlock(DwarfTag tag) : Symbol(tag) {
+  FXL_DCHECK(tag == DwarfTag::kSubprogram ||
+             tag == DwarfTag::kInlinedSubroutine ||
+             tag == DwarfTag::kLexicalBlock);
 }
 
 CodeBlock::~CodeBlock() = default;

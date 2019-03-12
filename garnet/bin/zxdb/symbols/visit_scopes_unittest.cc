@@ -10,10 +10,10 @@
 namespace zxdb {
 
 TEST(VisitScopes, ClassHierarchy) {
-  auto base1 = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
-  auto mid1 = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
-  auto mid2 = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
-  auto derived = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto base1 = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  auto mid1 = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  auto mid2 = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  auto derived = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
 
   // Stores the collections and their offsets visited.
   using VisitLog = std::vector<std::pair<const Collection*, uint32_t>>;

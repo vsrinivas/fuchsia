@@ -108,7 +108,7 @@ TEST(Cast, Coerce) {
 
   // Pointer to integer with truncation.
   auto ptr_to_double_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(double_type));
+      DwarfTag::kPointerType, LazySymbol(double_type));
   ExprValue ptr_value(ptr_to_double_type,
                       {0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12},
                       ExprValueSource());
@@ -137,9 +137,9 @@ TEST(Cast, Reinterpret) {
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
 
   auto ptr_to_int32_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(int32_type));
+      DwarfTag::kPointerType, LazySymbol(int32_type));
   auto ptr_to_void_type =
-      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol());
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
 
   ExprValue int32_minus_one(int32_type, {0xff, 0xff, 0xff, 0xff},
                             ExprValueSource());

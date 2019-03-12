@@ -23,7 +23,7 @@ namespace zxdb {
 class ModifiedType final : public Type {
  public:
   // Returns true if the given DWARF tag is a type modifier.
-  static bool IsTypeModifierTag(int tag);
+  static bool IsTypeModifierTag(DwarfTag tag);
 
   // Type/Symbol overrides.
   const ModifiedType* AsModifiedType() const override;
@@ -42,7 +42,7 @@ class ModifiedType final : public Type {
   FRIEND_REF_COUNTED_THREAD_SAFE(ModifiedType);
   FRIEND_MAKE_REF_COUNTED(ModifiedType);
 
-  ModifiedType(int kind, LazySymbol modified);
+  ModifiedType(DwarfTag kind, LazySymbol modified);
   ~ModifiedType() override;
 
   // Symbol protected overrides.

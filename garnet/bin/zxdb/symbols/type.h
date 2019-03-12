@@ -43,7 +43,7 @@ class Type : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(Type);
   FRIEND_MAKE_REF_COUNTED(Type);
 
-  explicit Type(int kind);
+  explicit Type(DwarfTag kind);
   virtual ~Type();
 
  private:

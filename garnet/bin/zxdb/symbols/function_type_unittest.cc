@@ -25,10 +25,10 @@ TEST(FunctionType, ComputeFullName) {
   // One with args and a return value.
   auto int32_type = MakeInt32Type();
   std::vector<LazySymbol> params{
-      LazySymbol(fxl::MakeRefCounted<Variable>(Symbol::kTagFormalParameter, "",
+      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "",
                                                LazySymbol(int32_type),
                                                VariableLocation())),
-      LazySymbol(fxl::MakeRefCounted<Variable>(Symbol::kTagFormalParameter, "",
+      LazySymbol(fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "",
                                                LazySymbol(int32_type),
                                                VariableLocation()))};
   auto with_stuff =
@@ -37,11 +37,11 @@ TEST(FunctionType, ComputeFullName) {
 
   // A regular pointer to the functions above.
   auto standalone_ptr = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(standalone));
+      DwarfTag::kPointerType, LazySymbol(standalone));
   EXPECT_EQ("void (*)()", standalone_ptr->GetFullName());
 
   auto with_stuff_ptr = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(with_stuff));
+      DwarfTag::kPointerType, LazySymbol(with_stuff));
   EXPECT_EQ("int32_t (*)(int32_t, int32_t)", with_stuff_ptr->GetFullName());
 
   // Member function pointers are tested by the MemberPtr test.

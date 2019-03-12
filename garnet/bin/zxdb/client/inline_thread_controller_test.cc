@@ -14,7 +14,8 @@ namespace {
 
 fxl::RefPtr<Function> MakeFunction(const char* name, bool is_inline,
                                    AddressRanges ranges) {
-  int tag = is_inline ? Symbol::kTagInlinedSubroutine : Symbol::kTagSubprogram;
+  DwarfTag tag =
+      is_inline ? DwarfTag::kInlinedSubroutine : DwarfTag::kSubprogram;
   auto func = fxl::MakeRefCounted<Function>(tag);
   func->set_assigned_name(name);
   func->set_code_ranges(std::move(ranges));

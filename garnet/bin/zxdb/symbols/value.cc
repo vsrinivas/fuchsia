@@ -6,8 +6,8 @@
 
 namespace zxdb {
 
-Value::Value(int tag) : Symbol(tag) {}
-Value::Value(int tag, const std::string& assigned_name, LazySymbol type)
+Value::Value(DwarfTag tag) : Symbol(tag) {}
+Value::Value(DwarfTag tag, const std::string& assigned_name, LazySymbol type)
     : Symbol(tag), assigned_name_(assigned_name), type_(std::move(type)) {}
 Value::~Value() = default;
 

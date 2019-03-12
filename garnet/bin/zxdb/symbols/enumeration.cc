@@ -11,7 +11,7 @@ namespace zxdb {
 
 Enumeration::Enumeration(const std::string& name, LazySymbol type,
                          uint32_t byte_size, bool is_signed, Map map)
-    : Type(Symbol::kTagEnumerationType),
+    : Type(DwarfTag::kEnumerationType),
       underlying_type_(std::move(type)),
       is_signed_(is_signed),
       values_(std::move(map)) {

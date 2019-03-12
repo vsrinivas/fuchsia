@@ -36,7 +36,7 @@ fxl::RefPtr<BaseType> GetInt32Type() {
 }
 
 fxl::RefPtr<ModifiedType> GetCharPointerType() {
-  return fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+  return fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                            LazySymbol(GetCharType()));
 }
 
@@ -238,7 +238,7 @@ TEST_F(FormatValueTest, Pointer) {
 
   auto base_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                     LazySymbol(base_type));
 
   std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
@@ -391,7 +391,7 @@ TEST_F(FormatValueTest, Reference) {
 
   auto base_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
-  auto ref_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagReferenceType,
+  auto ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
                                                     LazySymbol(base_type));
   constexpr uint64_t kAddress = 0x1100;
   provider()->AddMemory(kAddress, {123, 0, 0, 0, 0, 0, 0, 0});
@@ -419,7 +419,7 @@ TEST_F(FormatValueTest, Reference) {
   // Test an rvalue reference. This is treated the same as a regular reference
   // from an interpretation and printing perspective.
   auto rvalue_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagRvalueReferenceType, LazySymbol(base_type));
+      DwarfTag::kRvalueReferenceType, LazySymbol(base_type));
   value = ExprValue(rvalue_ref_type, data);
   opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
   EXPECT_EQ("(int&&) 0x1100 = 123", SyncFormatValue(value, opts));
@@ -436,7 +436,7 @@ TEST_F(FormatValueTest, Structs) {
 
   // Make an int reference. Reference type printing combined with struct type
   // printing can get complicated.
-  auto int_ref = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagReferenceType,
+  auto int_ref = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
                                                    LazySymbol(int32_type));
 
   // The references point to this data.
@@ -445,9 +445,9 @@ TEST_F(FormatValueTest, Structs) {
 
   // Struct with two values, an int and a int&, and a pair of two of those
   // structs.
-  auto foo = MakeCollectionType(Symbol::kTagStructureType, "Foo",
+  auto foo = MakeCollectionType(DwarfTag::kStructureType, "Foo",
                                 {{"a", int32_type}, {"b", int_ref}});
-  auto pair = MakeCollectionType(Symbol::kTagStructureType, "Pair",
+  auto pair = MakeCollectionType(DwarfTag::kStructureType, "Pair",
                                  {{"first", foo}, {"second", foo}});
 
   ExprValue pair_value(
@@ -474,9 +474,9 @@ TEST_F(FormatValueTest, Structs) {
 
   // Test an anonymous struct. Clang will generate structs with no names for
   // things like closures.
-  auto anon_struct = fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
+  auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(anon_struct));
+      DwarfTag::kPointerType, LazySymbol(anon_struct));
   ExprValue anon_value(anon_struct_ptr,
                        {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
   EXPECT_EQ("((anon struct)*) 0x1100", SyncFormatValue(anon_value, opts));
@@ -490,7 +490,7 @@ TEST_F(FormatValueTest, Union) {
   // Define a union type with two int32 values.
   auto int32_type = MakeInt32Type();
 
-  auto union_type = fxl::MakeRefCounted<Collection>(Symbol::kTagUnionType);
+  auto union_type = fxl::MakeRefCounted<Collection>(DwarfTag::kUnionType);
   union_type->set_byte_size(int32_type->byte_size());
   union_type->set_assigned_name("MyUnion");
 
@@ -517,16 +517,16 @@ TEST_F(FormatValueTest, Union) {
 // Tests formatting when a class has derived base classes.
 TEST_F(FormatValueTest, DerivedClasses) {
   auto int32_type = MakeInt32Type();
-  auto base = MakeCollectionType(Symbol::kTagStructureType, "Base",
+  auto base = MakeCollectionType(DwarfTag::kStructureType, "Base",
                                  {{"a", int32_type}, {"b", int32_type}});
 
   // This second base class is empty, it should be omitted from the output.
-  auto empty_base = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto empty_base = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   empty_base->set_assigned_name("EmptyBase");
 
   // Derived class, leave enough room to hold |Base|.
   auto derived = MakeCollectionTypeWithOffset(
-      Symbol::kTagStructureType, "Derived", base->byte_size(),
+      DwarfTag::kStructureType, "Derived", base->byte_size(),
       {{"c", int32_type}, {"d", int32_type}});
 
   auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0);
@@ -633,12 +633,12 @@ TEST_F(FormatValueTest, FunctionPtr) {
                                                      std::vector<LazySymbol>());
 
   // This type is "void (*)()"
-  auto func_ptr_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(func_type));
+  auto func_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
+                                                         LazySymbol(func_type));
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("MyFunc");
 
   // Map the address to point to the function.
@@ -678,7 +678,7 @@ TEST_F(FormatValueTest, FunctionPtr) {
   // Member function pointer. The type naming of function pointers is tested by
   // the MemberPtr class, and otherwise the code paths are the same, so here
   // we only need to verify things are hooked up.
-  auto containing = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   containing->set_assigned_name("MyClass");
 
   auto member_func = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing),
@@ -699,7 +699,7 @@ TEST_F(FormatValueTest, FunctionPtr) {
 // This tests pointers to member data. Pointers to member functions were tested
 // by the FunctionPtr test.
 TEST_F(FormatValueTest, MemberPtr) {
-  auto containing = fxl::MakeRefCounted<Collection>(Symbol::kTagClassType);
+  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   containing->set_assigned_name("MyClass");
 
   auto int32_type = GetInt32Type();

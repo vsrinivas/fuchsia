@@ -45,7 +45,7 @@ class Collection final : public Type {
   FRIEND_REF_COUNTED_THREAD_SAFE(Collection);
   FRIEND_MAKE_REF_COUNTED(Collection);
 
-  explicit Collection(int kind);
+  explicit Collection(DwarfTag kind);
   virtual ~Collection();
 
   // Symbol protected overrides.

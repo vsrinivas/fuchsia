@@ -126,7 +126,7 @@ void AppendEscapedChar(uint8_t ch, std::string* dest) {
 // Returns true if the given type (assumed to be a pointer) is a pointer to
 // a function (but NOT a member function).
 bool IsPointerToFunction(const ModifiedType* pointer) {
-  FXL_DCHECK(pointer->tag() == Symbol::kTagPointerType);
+  FXL_DCHECK(pointer->tag() == DwarfTag::kPointerType);
   return !!pointer->modified().Get()->AsFunctionType();
 }
 
@@ -216,8 +216,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 
   // References (these require asynchronous calls to format so can't be in the
   // "modified types" block below in the synchronous section).
-  if (type->tag() == Symbol::kTagReferenceType ||
-      type->tag() == Symbol::kTagRvalueReferenceType) {
+  if (type->tag() == DwarfTag::kReferenceType ||
+      type->tag() == DwarfTag::kRvalueReferenceType) {
     FormatReference(data_provider, value, options, output_key);
     return;
   }
@@ -230,7 +230,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
   if (const ModifiedType* modified_type = type->AsModifiedType()) {
     // Modified types (references were handled above).
     switch (modified_type->tag()) {
-      case Symbol::kTagPointerType:
+      case DwarfTag::kPointerType:
         // Function pointers need special handling.
         if (IsPointerToFunction(modified_type))
           FormatFunctionPointer(value, options, &out);
@@ -412,7 +412,7 @@ bool FormatValue::TryFormatArrayOrString(
     OutputKey output_key) {
   FXL_DCHECK(type == type->GetConcreteType());
 
-  if (type->tag() == Symbol::kTagPointerType) {
+  if (type->tag() == DwarfTag::kPointerType) {
     // Any pointer type (we only char about char*).
     const ModifiedType* modified = type->AsModifiedType();
     if (!modified)
@@ -423,7 +423,7 @@ bool FormatValue::TryFormatArrayOrString(
       return true;
     }
     return false;  // All other pointer types are unhandled.
-  } else if (type->tag() == Symbol::kTagArrayType) {
+  } else if (type->tag() == DwarfTag::kArrayType) {
     // Any array type with a known size (we care about both).
     const ArrayType* array = type->AsArrayType();
     if (!array)

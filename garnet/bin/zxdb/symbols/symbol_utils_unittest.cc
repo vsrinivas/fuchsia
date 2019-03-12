@@ -28,7 +28,7 @@ TEST(SymbolUtils, SymbolScope) {
 
   // Struct inside anonymous namespace.
   fxl::RefPtr<Collection> st =
-      fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
+      fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   st->set_parent(LazySymbol(ns2));
   st->set_assigned_name("Struct");
   EXPECT_EQ("ns1::(anon)::", GetSymbolScopePrefix(st.get()));
@@ -50,7 +50,7 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
 
   // Function definition inside namespace.
   fxl::RefPtr<Function> fn =
-      fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+      fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   fn->set_parent(LazySymbol(ns));
   fn->set_assigned_name("Function");
   EXPECT_EQ("ns::", GetSymbolScopePrefix(fn.get()));
@@ -59,7 +59,7 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   // Lexical scope inside the function. This should not appear in names.
   // TODO(brettw) these nested function scopes should include paramter names.
   fxl::RefPtr<CodeBlock> block =
-      fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
+      fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   block->set_parent(LazySymbol(fn));
   EXPECT_EQ("ns::Function::", GetSymbolScopePrefix(block.get()));
   EXPECT_EQ("", block->GetFullName());
@@ -67,7 +67,7 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   // Type defined inside the function is qualified by the function name. This
   // format matches GDB and LLDB.
   fxl::RefPtr<Collection> sc =
-      fxl::MakeRefCounted<Collection>(Symbol::kTagStructureType);
+      fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   sc->set_parent(LazySymbol(block));
   sc->set_assigned_name("Struct");
   EXPECT_EQ("ns::Function::", GetSymbolScopePrefix(sc.get()));
@@ -80,7 +80,7 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   // works that way because it falls out of the algorithm. However, the
   // local variable printer may well not need this code path.
   fxl::RefPtr<Variable> var =
-      fxl::MakeRefCounted<Variable>(Symbol::kTagVariable);
+      fxl::MakeRefCounted<Variable>(DwarfTag::kVariable);
   var->set_parent(LazySymbol(block));
   var->set_assigned_name("var");
   EXPECT_EQ("ns::Function::", GetSymbolScopePrefix(var.get()));

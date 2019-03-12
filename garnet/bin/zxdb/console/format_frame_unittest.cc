@@ -88,7 +88,7 @@ TEST(FormatFrame, Inline) {
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   function->set_assigned_name("Function");
 
   MockFrame inline_frame(nullptr, nullptr, stack_frame,

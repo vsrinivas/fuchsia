@@ -288,7 +288,7 @@ TEST_F(StackTest, InlineExpansion) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // Non-inline location for the top stack frame.
-  auto top_func = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+  auto top_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   top_func->set_assigned_name("Top");
   Location top_location(kTopAddr, top_line, 0, symbol_context,
                         LazySymbol(top_func));
@@ -297,7 +297,7 @@ TEST_F(StackTest, InlineExpansion) {
   // Bottom stack frame has a real function, an inline function, and an
   // ambiguous inline location (at the start of an inline range).
   auto bottom_ambig_inline_func =
-      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   bottom_ambig_inline_func->set_assigned_name("Inline");
   // Must start exactly at kBottomAddr for the location to be ambiguous.
   bottom_ambig_inline_func->set_code_ranges(
@@ -305,14 +305,14 @@ TEST_F(StackTest, InlineExpansion) {
   bottom_ambig_inline_func->set_call_line(inline_ambig_call_line);
 
   auto bottom_inline_func =
-      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   bottom_inline_func->set_assigned_name("Inline");
   // Must start before at kBottomAddr for the location to not be ambiguous.
   bottom_inline_func->set_code_ranges(
       AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 8)));
   bottom_inline_func->set_call_line(inline_call_line);
 
-  auto bottom_func = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
+  auto bottom_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   bottom_func->set_assigned_name("Bottom");
   bottom_func->set_code_ranges(
       AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));

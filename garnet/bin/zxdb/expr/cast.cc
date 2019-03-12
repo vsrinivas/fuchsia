@@ -19,7 +19,7 @@ namespace {
 bool IsIntegerLike(const Type* t) {
   // Pointers count.
   if (const ModifiedType* modified_type = t->AsModifiedType())
-    return modified_type->tag() == Symbol::kTagPointerType;
+    return modified_type->tag() == DwarfTag::kPointerType;
 
   const BaseType* base_type = t->AsBaseType();
   if (!base_type)

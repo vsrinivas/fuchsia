@@ -29,12 +29,13 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  ResolvePointer(provider, int32_value, [&called, &out_err, &out_value](
-                                            const Err& err, ExprValue value) {
-    called = true;
-    out_err = err;
-    out_value = value;
-  });
+  ResolvePointer(
+      provider, int32_value,
+      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+        called = true;
+        out_err = err;
+        out_value = value;
+      });
 
   // This should fail synchronously.
   EXPECT_TRUE(called);
@@ -43,7 +44,7 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
 
   // Pointer with incorrectly sized data.
   auto int32_ptr_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(int32_type));
+      DwarfTag::kPointerType, LazySymbol(int32_type));
   ExprValue int32_ptr_value(int32_ptr_type, {0x00, 0x00, 0x00, 0x00});
 
   called = false;
@@ -142,11 +143,11 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
   // reference (volatile on the outside, const on the inside).
   auto int32_type = MakeInt32Type();
   auto const_int32_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagConstType, LazySymbol(int32_type));
+      DwarfTag::kConstType, LazySymbol(int32_type));
   auto const_int32_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagReferenceType, LazySymbol(const_int32_type));
+      DwarfTag::kReferenceType, LazySymbol(const_int32_type));
   auto volatile_const_int32_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagVolatileType, LazySymbol(const_int32_ref_type));
+      DwarfTag::kVolatileType, LazySymbol(const_int32_ref_type));
 
   ExprValue value(volatile_const_int32_ref_type,
                   {0x20, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00});

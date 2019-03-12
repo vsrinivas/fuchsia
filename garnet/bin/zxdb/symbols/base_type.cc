@@ -17,10 +17,10 @@ const int BaseType::kBaseTypeUnsigned;
 const int BaseType::kBaseTypeUnsignedChar;
 const int BaseType::kBaseTypeUTF;
 
-BaseType::BaseType() : Type(Symbol::kTagBaseType) {}
+BaseType::BaseType() : Type(DwarfTag::kBaseType) {}
 
 BaseType::BaseType(int base_type, int byte_size, const std::string& name)
-    : Type(Symbol::kTagBaseType), base_type_(base_type) {
+    : Type(DwarfTag::kBaseType), base_type_(base_type) {
   set_byte_size(byte_size);
   set_assigned_name(name);
 }

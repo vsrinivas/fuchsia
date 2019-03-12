@@ -30,7 +30,7 @@ TEST(TypeUtils, GetPointedToType_NotPointer) {
 TEST(TypeUtils, GetPointedToType_NoPointedToType) {
   // Pointer to nothing.
   auto ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol());
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
 
   const Type* pointed_to = nullptr;
   Err err = GetPointedToType(ptr_type.get(), &pointed_to);
@@ -42,7 +42,7 @@ TEST(TypeUtils, GetPointedToType_NoPointedToType) {
 TEST(TypeUtils, GetPointedToType_Good) {
   auto int32_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                     LazySymbol(int32_type));
 
   const Type* pointed_to = nullptr;

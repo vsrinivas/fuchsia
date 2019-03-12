@@ -8,18 +8,18 @@
 
 namespace zxdb {
 
-Collection::Collection(int tag) : Type(tag) {}
+Collection::Collection(DwarfTag tag) : Type(tag) {}
 Collection::~Collection() = default;
 
 const Collection* Collection::AsCollection() const { return this; }
 
 const char* Collection::GetKindString() const {
   switch (tag()) {
-    case kTagStructureType:
+    case DwarfTag::kStructureType:
       return "struct";
-    case kTagClassType:
+    case DwarfTag::kClassType:
       return "class";
-    case kTagUnionType:
+    case DwarfTag::kUnionType:
       return "union";
     default:
       return "unknown";

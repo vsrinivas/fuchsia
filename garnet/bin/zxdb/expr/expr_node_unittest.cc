@@ -185,10 +185,10 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto base_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 4, "uint32_t");
   auto const_base_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagConstType, LazySymbol(base_type));
+      DwarfTag::kConstType, LazySymbol(base_type));
   auto ptr_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(const_base_type));
-  auto const_ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagConstType,
+      DwarfTag::kPointerType, LazySymbol(const_base_type));
+  auto const_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType,
                                                           LazySymbol(ptr_type));
 
   // The value being pointed to.
@@ -253,7 +253,7 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   // made above, but the underlying "const int" should still match.
   const ModifiedType* out_mod_type = out_value.type()->AsModifiedType();
   ASSERT_TRUE(out_mod_type);
-  EXPECT_EQ(Symbol::kTagPointerType, out_mod_type->tag());
+  EXPECT_EQ(DwarfTag::kPointerType, out_mod_type->tag());
   EXPECT_EQ(const_base_type.get(),
             out_mod_type->modified().Get()->AsModifiedType());
   EXPECT_EQ("const uint32_t*", out_mod_type->GetFullName());
@@ -288,7 +288,7 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   auto uint32_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 4, "uint32_t");
   auto uint32_ptr_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagPointerType, LazySymbol(uint32_type));
+      DwarfTag::kPointerType, LazySymbol(uint32_type));
   constexpr uint64_t kAddress = 0x12345678;
   ExprValue pointer_value(uint32_ptr_type,
                           {0x78, 0x56, 0x34, 0x12, 0x00, 0x00, 0x00, 0x00});
@@ -303,7 +303,7 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   // The index expression is a reference to the index we saved above, and the
   // reference data is the address.
   auto uint32_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      Symbol::kTagReferenceType, LazySymbol(uint32_type));
+      DwarfTag::kReferenceType, LazySymbol(uint32_type));
   auto index = fxl::MakeRefCounted<MockExprNode>(
       false, ExprValue(uint32_ref_type, {0, 0x50, 0, 0, 0, 0, 0, 0}));
 
@@ -355,7 +355,7 @@ TEST_F(ExprNodeTest, FunctionCall) {
   auto context = fxl::MakeRefCounted<MockExprEvalContext>();
 
   auto ptr_to_void_type =
-      fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType, LazySymbol());
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
 
   auto [err, reinterpret] = Identifier::FromString("reinterpret_cast<void*>");
   ASSERT_FALSE(err.has_error());
@@ -387,7 +387,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
 
   // Define a class.
   auto int32_type = MakeInt32Type();
-  auto sc = MakeCollectionType(Symbol::kTagStructureType, "Foo",
+  auto sc = MakeCollectionType(DwarfTag::kStructureType, "Foo",
                                {{"a", int32_type}, {"b", int32_type}});
 
   // Set up a call to do "." synchronously.
@@ -415,8 +415,8 @@ TEST_F(ExprNodeTest, MemberAccess) {
   EXPECT_EQ(0x12345678, out_value.GetAs<int32_t>());
 
   // Test indirection: "foo->a".
-  auto foo_ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
-                                                        LazySymbol(sc));
+  auto foo_ptr_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(sc));
   // Add memory in two chunks since the mock data provider can only respond
   // with the addresses it's given.
   constexpr uint64_t kAddress = 0x1000;

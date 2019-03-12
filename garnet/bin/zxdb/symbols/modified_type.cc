@@ -13,21 +13,21 @@ namespace {
 
 // Returns true if this tag is a modified type that is transparent with respect
 // to the data stored in it.
-bool IsTransparentTag(int tag) {
-  return tag == Symbol::kTagConstType || tag == Symbol::kTagVolatileType ||
-         tag == Symbol::kTagTypedef || tag == Symbol::kTagRestrictType;
+bool IsTransparentTag(DwarfTag tag) {
+  return tag == DwarfTag::kConstType || tag == DwarfTag::kVolatileType ||
+         tag == DwarfTag::kTypedef || tag == DwarfTag::kRestrictType;
 }
 
 // Returns true if this modified holds some kind of pointer to the modified
 // type.
-bool IsPointerTag(int tag) {
-  return tag == Symbol::kTagPointerType || tag == Symbol::kTagReferenceType ||
-         tag == Symbol::kTagRvalueReferenceType;
+bool IsPointerTag(DwarfTag tag) {
+  return tag == DwarfTag::kPointerType || tag == DwarfTag::kReferenceType ||
+         tag == DwarfTag::kRvalueReferenceType;
 }
 
 }  // namespace
 
-ModifiedType::ModifiedType(int kind, LazySymbol modified)
+ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified)
     : Type(kind), modified_(modified) {
   if (IsTransparentTag(kind)) {
     const Type* mod_type = modified_.Get()->AsType();
@@ -52,11 +52,12 @@ const Type* ModifiedType::GetConcreteType() const {
 }
 
 // static
-bool ModifiedType::IsTypeModifierTag(int tag) {
-  return tag == kTagConstType || tag == kTagPointerType ||
-         tag == kTagReferenceType || tag == kTagRestrictType ||
-         tag == kTagRvalueReferenceType || tag == kTagTypedef ||
-         tag == kTagVolatileType || tag == kTagImportedDeclaration;
+bool ModifiedType::IsTypeModifierTag(DwarfTag tag) {
+  return tag == DwarfTag::kConstType || tag == DwarfTag::kPointerType ||
+         tag == DwarfTag::kReferenceType || tag == DwarfTag::kRestrictType ||
+         tag == DwarfTag::kRvalueReferenceType || tag == DwarfTag::kTypedef ||
+         tag == DwarfTag::kVolatileType ||
+         tag == DwarfTag::kImportedDeclaration;
 }
 
 std::string ModifiedType::ComputeFullName() const {
@@ -64,7 +65,7 @@ std::string ModifiedType::ComputeFullName() const {
 
   // Typedefs are special and just use the assigned name. Every other modifier
   // below is based on the underlying type name.
-  if (tag() == kTagTypedef)
+  if (tag() == DwarfTag::kTypedef)
     return GetAssignedName();
 
   const Type* modified_type = nullptr;
@@ -74,7 +75,7 @@ std::string ModifiedType::ComputeFullName() const {
     modified_name = "void";
   } else {
     if (auto func_type = modified().Get()->AsFunctionType();
-        func_type && tag() == kTagPointerType) {
+        func_type && tag() == DwarfTag::kPointerType) {
       // Special-case pointer-to-funcion which has unusual syntax.
       // TODO(DX-683) this doesn't handle pointers of references to
       // pointers-to-member functions
@@ -89,7 +90,7 @@ std::string ModifiedType::ComputeFullName() const {
   }
 
   switch (tag()) {
-    case kTagConstType:
+    case DwarfTag::kConstType:
       if (modified_type && modified_type->AsModifiedType()) {
         // When the underlying type is another modifier, add it to the end,
         // e.g. a "constant pointer to a nonconstant int" is "int* const".
@@ -100,17 +101,17 @@ std::string ModifiedType::ComputeFullName() const {
         // "const int*" so special-case.
         return "const " + modified_name;
       }
-    case kTagPointerType:
+    case DwarfTag::kPointerType:
       return modified_name + "*";
-    case kTagReferenceType:
+    case DwarfTag::kReferenceType:
       return modified_name + "&";
-    case kTagRestrictType:
+    case DwarfTag::kRestrictType:
       return modified_name + " restrict";
-    case kTagRvalueReferenceType:
+    case DwarfTag::kRvalueReferenceType:
       return modified_name + "&&";
-    case kTagVolatileType:
+    case DwarfTag::kVolatileType:
       return "volatile " + modified_name;
-    case kTagImportedDeclaration:
+    case DwarfTag::kImportedDeclaration:
       // Using statements use the underlying name.
       return modified_name;
   }

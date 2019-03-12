@@ -68,7 +68,7 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   constexpr uint32_t kTypeSize = 2;
   auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned,
                                                 kTypeSize, "uint16_t");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(Symbol::kTagPointerType,
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                     LazySymbol(elt_type));
 
   // Create memory with two values 0x3344, 0x5566. Note that these are offset

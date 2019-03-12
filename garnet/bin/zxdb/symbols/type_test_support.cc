@@ -30,21 +30,21 @@ fxl::RefPtr<BaseType> MakeUint64Type() {
 }
 
 fxl::RefPtr<Collection> MakeCollectionType(
-    int type_tag, const std::string& type_name,
+    DwarfTag type_tag, const std::string& type_name,
     std::initializer_list<NameAndType> members) {
   return MakeCollectionTypeWithOffset(type_tag, type_name, 0,
                                       std::move(members));
 }
 
 fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(
-    int type_tag, const std::string& type_name, uint32_t first_member_offset,
-    std::initializer_list<NameAndType> members) {
+    DwarfTag type_tag, const std::string& type_name,
+    uint32_t first_member_offset, std::initializer_list<NameAndType> members) {
   auto result = fxl::MakeRefCounted<Collection>(type_tag);
   result->set_assigned_name(type_name);
 
   uint32_t offset = first_member_offset;
   std::vector<LazySymbol> data_members;
-  for (const auto & [ name, type ] : members) {
+  for (const auto& [name, type] : members) {
     auto member = fxl::MakeRefCounted<DataMember>();
     member->set_assigned_name(name);
     member->set_type(LazySymbol(type));
@@ -60,7 +60,7 @@ fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(
 }
 
 fxl::RefPtr<Collection> MakeDerivedClassPair(
-    int type_tag, const std::string& base_name,
+    DwarfTag type_tag, const std::string& base_name,
     std::initializer_list<NameAndType> base_members,
     const std::string& derived_name,
     std::initializer_list<NameAndType> derived_members) {
