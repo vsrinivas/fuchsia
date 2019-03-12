@@ -372,7 +372,7 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     if (dev->host) {
         vmo->Printf("Name [%s]%s%s%s\n", dev->name.data(), dev->libname.empty() ? "" : " Driver [",
                     dev->libname.empty() ? "" : dev->libname.data(), dev->libname.empty() ? "" : "]");
-        vmo->Printf("Flags   :%s%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
+        vmo->Printf("Flags   :%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
                     dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
                     dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
                     dev->flags & DEV_CTX_BOUND ? " Bound" : "",
@@ -388,16 +388,16 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
                     dev->protocol_id(), dev->protocol_id());
 
         const auto& props = dev->props();
-        vmo->Printf("%u Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
+        vmo->Printf("%zu Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
         for (uint32_t i = 0; i < props.size(); ++i) {
             const zx_device_prop_t* p = &props[i];
             const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
-                vmo->Printf("[%2u/%2u] : Value 0x%08x Id %s\n", i, props.size(), p->value,
+                vmo->Printf("[%2u/%2zu] : Value 0x%08x Id %s\n", i, props.size(), p->value,
                             param_name);
             } else {
-                vmo->Printf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n", i, props.size(), p->value,
+                vmo->Printf("[%2u/%2zu] : Value 0x%08x Id 0x%04hx\n", i, props.size(), p->value,
                             p->id);
             }
         }

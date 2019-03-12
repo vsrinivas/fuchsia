@@ -18,7 +18,7 @@ class VmoWriter {
     }
 
     // printf into the vmo.
-    void Printf(const char* fmt, ...);
+    void Printf(const char* fmt, ...) __PRINTFLIKE(2, 3);
 
     size_t written() const { return written_; }
     size_t available() const { return written_; }
