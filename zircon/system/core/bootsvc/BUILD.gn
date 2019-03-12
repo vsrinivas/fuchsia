@@ -40,7 +40,7 @@ executable("bootsvc") {
     "$zx/third_party/ulib/lz4",
   ]
   data_deps = [
-    "$zx/system/core/devmgr/devmgr",
+    "$zx/system/core/devmgr/devcoordinator",
   ]
 }
 

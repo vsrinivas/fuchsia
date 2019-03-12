@@ -21,7 +21,7 @@ Device::~Device() {
     // holding a reference we shouldn't be able to hit that check, in which case
     // the flag is only used to modify the proxy library loading behavior.
 
-    log(DEVLC, "devcoord: destroy dev %p name='%s'\n", this, this->name.data());
+    log(DEVLC, "devcoordinator: destroy dev %p name='%s'\n", this, this->name.data());
 
     devfs_unpublish(this);
 
@@ -44,7 +44,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
                        async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
-        log(ERROR, "devcoord: Device::HandleRpc aborting, saw status %d\n", status);
+        log(ERROR, "devcoordinator: Device::HandleRpc aborting, saw status %d\n", status);
         return;
     }
 
@@ -52,7 +52,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
         zx_status_t r;
         if ((r = dev->coordinator->HandleDeviceRead(dev)) < 0) {
             if (r != ZX_ERR_STOP) {
-                log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n", dev.get(),
+                log(ERROR, "devcoordinator: device %p name='%s' rpc status: %d\n", dev.get(),
                     dev->name.data(), r);
             }
             dev->coordinator->RemoveDevice(dev, true);
@@ -63,12 +63,12 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
         return;
     }
     if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev.get(), dev->name.data());
+        log(ERROR, "devcoordinator: device %p name='%s' disconnected!\n", dev.get(), dev->name.data());
         dev->coordinator->RemoveDevice(dev, true);
         // Do not start waiting again on this device's channel again
         return;
     }
-    log(ERROR, "devcoord: no work? %08x\n", signal->observed);
+    log(ERROR, "devcoordinator: no work? %08x\n", signal->observed);
     Device::BeginWait(std::move(dev), dispatcher);
 }
 

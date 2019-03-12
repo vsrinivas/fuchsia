@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("devmgr") {
+executable("devcoordinator") {
   sources = [
     "main.cpp",
   ]
@@ -76,7 +76,7 @@ source_set("common") {
   ]
 }
 
-test("devmgr-test") {
+test("devcoordinator-test") {
   test_group = "ddk"
   sources = [
     "binding-test.cpp",

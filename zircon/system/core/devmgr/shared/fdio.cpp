@@ -162,10 +162,10 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
                                 proc.reset_and_get_address(), err_msg);
     }
     if (status != ZX_OK) {
-        printf("devmgr: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
+        printf("devcoordinator: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
         return status;
     }
-    printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+    printf("devcoordinator: launch %s (%s) OK\n", argv[0], name);
     if (out_proc != nullptr) {
         *out_proc = std::move(proc);
     }

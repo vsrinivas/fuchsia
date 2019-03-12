@@ -114,7 +114,7 @@ int LaunchNextProcess(void* raw_ctx) {
 
     const char* next_program = getenv("bootsvc.next");
     if (next_program == nullptr) {
-        next_program = "bin/devmgr";
+        next_program = "bin/devcoordinator";
     }
 
     // Open the executable we will start next

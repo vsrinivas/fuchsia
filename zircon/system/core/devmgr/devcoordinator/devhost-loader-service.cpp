@@ -76,24 +76,24 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
     fdio_ns_t* ns;
     zx_status_t status = fdio_ns_create(&ns);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to create namespace %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to create namespace %d\n", status);
         return status;
     }
     auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
     status = fdio_ns_bind(ns, "/boot", fs_clone("boot").release());
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to bind namespace %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to bind namespace %d\n", status);
         return status;
     }
     fbl::unique_fd root(fdio_ns_opendir(ns));
     if (!root) {
-        fprintf(stderr, "devmgr: failed to open root directory %d\n", errno);
+        fprintf(stderr, "devcoordinator: failed to open root directory %d\n", errno);
         return ZX_ERR_IO;
     }
     fbl::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
     status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to create loader service %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to create loader service %d\n", status);
         return status;
     }
     ldsvc->root_ = std::move(root);

@@ -74,7 +74,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n, z
     uint64_t size;
     zx_status_t status = zx_vmo_get_size(vmo, &size);
     if (status != ZX_OK) {
-        printf("devmgr: failed to get bootfs#%u size (%d)\n", n, status);
+        printf("devcoordinator: failed to get bootfs#%u size (%d)\n", n, status);
         return status;
     }
     if (size == 0) {
@@ -89,7 +89,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n, z
     if (!root->IsSystemMounted()) {
         status = root->MountSystem();
         if (status != ZX_OK) {
-            printf("devmgr: failed to mount /system (%d)\n", status);
+            printf("devcoordinator: failed to mount /system (%d)\n", status);
             return status;
         }
     }
@@ -99,7 +99,7 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n, z
     zx::vmo bootfs_vmo;
     status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, bootfs_vmo.reset_and_get_address());
     if (status != ZX_OK) {
-        printf("devmgr: failed to duplicate vmo for /system (%d)\n", status);
+        printf("devcoordinator: failed to duplicate vmo for /system (%d)\n", status);
         return status;
     }
     bootfs::Parser bfs;
@@ -166,11 +166,11 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
             continue;
         }
         if ((bootdata.type != BOOTDATA_CONTAINER) || (bootdata.extra != BOOTDATA_MAGIC)) {
-            printf("devmgr: bootdata item does not contain bootdata\n");
+            printf("devcoordinator: bootdata item does not contain bootdata\n");
             continue;
         }
         if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
-            printf("devmgr: bootdata v1 no longer supported\n");
+            printf("devcoordinator: bootdata v1 no longer supported\n");
             continue;
         }
 
@@ -184,19 +184,19 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
             }
             size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
             if (itemlen > len) {
-                printf("devmgr: bootdata item too large (%zd > %zd)\n", itemlen, len);
+                printf("devcoordinator: bootdata item too large (%zd > %zd)\n", itemlen, len);
                 break;
             }
             switch (bootdata.type) {
             case BOOTDATA_CONTAINER:
-                printf("devmgr: unexpected bootdata container header\n");
+                printf("devcoordinator: unexpected bootdata container header\n");
                 continue;
             case BOOTDATA_BOOTFS_DISCARD:
                 // this was already unpacked for us by userboot and bootsvc
                 break;
             case BOOTDATA_BOOTFS_BOOT:
                 // These should have been consumed by userboot and bootsvc.
-                printf("devmgr: unexpected boot-type bootfs\n");
+                printf("devcoordinator: unexpected boot-type bootfs\n");
                 break;
             case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
@@ -205,7 +205,7 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
                     decompress_bootdata(zx_vmar_root_self(), vmo.get(), off,
                                         bootdata.length + sizeof(bootdata_t), &bootfs_vmo, &errmsg);
                 if (status < 0) {
-                    printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
+                    printf("devcoordinator: failed to decompress bootdata: %s\n", errmsg);
                 } else {
                     SetupBootfsVmo(root, idx++, bootfs_vmo);
                 }
@@ -299,11 +299,11 @@ zx_status_t FshostConnections::CreateNamespace() {
     }
     zx::channel system_connection;
     if ((status = Open("system", &system_connection)) != ZX_OK) {
-        printf("devmgr: cannot open connection to /system: %d\n", status);
+        printf("devcoordinator: cannot open connection to /system: %d\n", status);
         return status;
     }
     if ((status = fdio_ns_bind(ns, "/system", system_connection.release())) != ZX_OK) {
-        printf("devmgr: cannot bind /system to namespace: %d\n", status);
+        printf("devcoordinator: cannot bind /system to namespace: %d\n", status);
         return status;
     }
     return ZX_OK;

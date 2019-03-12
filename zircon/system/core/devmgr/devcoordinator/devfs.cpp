@@ -814,7 +814,7 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
-        log(ERROR, "devcoord: DcIostate::HandleRpc aborting, saw status %d\n", status);
+        log(ERROR, "devcoordinator: DcIostate::HandleRpc aborting, saw status %d\n", status);
         return;
     }
 
@@ -832,7 +832,7 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
             return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
         });
     } else {
-        log(ERROR, "devcoord: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
+        log(ERROR, "devcoordinator: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
         exit(0);
     }
     // Do not start waiting again, and destroy |ios|
@@ -847,11 +847,11 @@ zx::channel devfs_root_clone() {
 }
 
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
-    printf("devmgr: init\n");
+    printf("devcoordinator: init\n");
 
     root_devnode = fbl::make_unique<Devnode>("");
     if (!root_devnode) {
-        printf("devmgr: failed to allocate devfs root node\n");
+        printf("devcoordinator: failed to allocate devfs root node\n");
         return;
     }
     root_devnode->ino = 1;

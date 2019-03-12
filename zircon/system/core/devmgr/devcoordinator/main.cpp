@@ -135,7 +135,7 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
     }
     status = fdio_service_connect(kRootResourcePath, remote.release());
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: could not open root resource service, assuming test "
+        fprintf(stderr, "devcoordinator: could not open root resource service, assuming test "
                         "environment and continuing\n");
         return ZX_OK;
     }
@@ -176,7 +176,7 @@ int fuchsia_starter(void* arg) {
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
                 if (service_args->coordinator->require_system()) {
-                    fprintf(stderr, "devmgr: appmgr not launched in %zus, closing appmgr handle\n",
+                    fprintf(stderr, "devcoordinator: appmgr not launched in %zus, closing appmgr handle\n",
                             appmgr_timeout);
                 }
                 g_handles.appmgr_server.reset();
@@ -185,12 +185,12 @@ int fuchsia_starter(void* arg) {
             continue;
         }
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: error waiting on fuchsia start event: %d\n", status);
+            fprintf(stderr, "devcoordinator: error waiting on fuchsia start event: %d\n", status);
             break;
         }
         status = service_args->coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: error signaling fshost: %d\n", status);
+            fprintf(stderr, "devcoordinator: error signaling fshost: %d\n", status);
         }
 
         if (!drivers_loaded) {
@@ -229,7 +229,7 @@ int fuchsia_starter(void* arg) {
 
 int console_starter(void* arg) {
     // if no kernel shell on serial uart, start a sh there
-    printf("devmgr: shell startup\n");
+    printf("devcoordinator: shell startup\n");
     auto& boot_args = *static_cast<const devmgr::BootArgs*>(arg);
 
     // If we got a TERM environment variable (aka a TERM=... argument on
@@ -253,12 +253,12 @@ int console_starter(void* arg) {
 
     zx_status_t status = wait_for_file(device, zx::time::infinite());
     if (status != ZX_OK) {
-        printf("devmgr: failed to wait for console '%s'\n", device);
+        printf("devcoordinator: failed to wait for console '%s'\n", device);
         return 1;
     }
     fbl::unique_fd fd(open(device, O_RDWR));
     if (!fd.is_valid()) {
-        printf("devmgr: failed to open console '%s'\n", device);
+        printf("devcoordinator: failed to open console '%s'\n", device);
         return 1;
     }
 
@@ -276,25 +276,25 @@ int pwrbtn_monitor_starter(void* arg) {
     zx_status_t status =
         g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
     if (status != ZX_OK) {
-        printf("devmgr: svc_job.duplicate failed %s\n", zx_status_get_string(status));
+        printf("devcoordinator: svc_job.duplicate failed %s\n", zx_status_get_string(status));
         return 1;
     }
 
     zx::debuglog debuglog;
     if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) != ZX_OK)) {
-        printf("devmgr: cannot create debuglog handle\n");
+        printf("devcoordinator: cannot create debuglog handle\n");
         return 1;
     }
 
     zx::channel input_handle = devmgr::fs_clone("dev/class/input");
     if (!input_handle.is_valid()) {
-        printf("devmgr: failed to clone /dev/input\n");
+        printf("devcoordinator: failed to clone /dev/input\n");
         return 1;
     }
 
     zx::channel misc_handle = devmgr::fs_clone("dev/misc");
     if (!misc_handle.is_valid()) {
-        printf("devmgr: failed to clone /dev/misc\n");
+        printf("devcoordinator: failed to clone /dev/misc\n");
         return 1;
     }
 
@@ -317,12 +317,12 @@ int pwrbtn_monitor_starter(void* arg) {
                             nullptr, fbl::count_of(actions), actions,
                             nullptr, err_msg);
     if (status != ZX_OK) {
-        printf("devmgr: spawn %s (%s) failed: %s: %s\n", argv[0], name, err_msg,
+        printf("devcoordinator: spawn %s (%s) failed: %s: %s\n", argv[0], name, err_msg,
                zx_status_get_string(status));
         return 1;
     }
 
-    printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+    printf("devcoordinator: launch %s (%s) OK\n", argv[0], name);
     return 0;
 }
 
@@ -342,7 +342,7 @@ void start_console_shell(const devmgr::BootArgs& boot_args) {
 zx_status_t fuchsia_create_job() {
     zx_status_t status = zx::job::create(*g_handles.root_job, 0u, &g_handles.fuchsia_job);
     if (status != ZX_OK) {
-        printf("devmgr: unable to create fuchsia job: %d (%s)\n", status,
+        printf("devcoordinator: unable to create fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
         return status;
     }
@@ -356,7 +356,7 @@ zx_status_t fuchsia_create_job() {
     status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, basic_policy,
                                               fbl::count_of(basic_policy));
     if (status != ZX_OK) {
-        printf("devmgr: unable to set basic policy for fuchsia job: %d (%s)\n", status,
+        printf("devcoordinator: unable to set basic policy for fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
         return status;
     }
@@ -373,7 +373,7 @@ zx_status_t fuchsia_create_job() {
     status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK,
                                               &timer_slack_policy, 1);
     if (status != ZX_OK) {
-        printf("devmgr: unable to set timer slack policy for fuchsia job: %d (%s)\n", status,
+        printf("devcoordinator: unable to set timer slack policy for fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
         return status;
     }
@@ -382,7 +382,7 @@ zx_status_t fuchsia_create_job() {
 }
 
 zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator) {
-    printf("devmgr: svc init\n");
+    printf("devcoordinator: svc init\n");
 
     const auto& root_resource = coordinator->root_resource();
     zx::channel dir_request, svchost_local;
@@ -491,7 +491,7 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator)
         nametable[count] = "/sysmem";
         launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
     } else {
-        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/sysmem");
+        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devcoordinator: failed to clone /dev/class/sysmem");
         // The launchpad_go() call below will fail, but will still free lp.
     }
 
@@ -499,10 +499,10 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator)
 
     const char* errmsg = nullptr;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) != ZX_OK) {
-        printf("devmgr: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
+        printf("devcoordinator: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
         return status;
     } else {
-        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+        printf("devcoordinator: launch %s (%s) OK\n", argv[0], name);
     }
 
     zx::channel svchost_public_remote;
@@ -551,7 +551,7 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot
         }
         zx_status_t status = coordinator->SetBootdata(zx::unowned_vmo(handles[n]));
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: failed to set bootdata: %d\n", status);
+            fprintf(stderr, "devcoordinator: failed to set bootdata: %d\n", status);
             break;
         }
         types[n++] = type;
@@ -622,19 +622,19 @@ zx::channel bootfs_root_clone() {
 
 void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot_args,
                      bool needs_svc_mount) {
-    printf("devmgr: vfs init\n");
+    printf("devcoordinator: vfs init\n");
 
     fdio_ns_t* ns;
     zx_status_t r;
     r = fdio_ns_get_installed(&ns);
-    ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot get namespace: %s\n", zx_status_get_string(r));
+    ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot get namespace: %s\n", zx_status_get_string(r));
     r = fdio_ns_bind(ns, "/dev", devmgr::fs_clone("dev").release());
-    ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot bind /dev to namespace: %s\n",
+    ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /dev to namespace: %s\n",
                   zx_status_get_string(r));
 
     if (needs_svc_mount) {
         r = fdio_ns_bind(ns, "/svc", devmgr::fs_clone("svc").release());
-        ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot bind /svc to namespace: %s\n",
+        ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /svc to namespace: %s\n",
                       zx_status_get_string(r));
     }
 
@@ -642,7 +642,7 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::BootArgs& b
     fshost_start(coordinator, boot_args);
 
     if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
-        printf("devmgr: cannot bind /system to namespace: %d\n", r);
+        printf("devcoordinator: cannot bind /system to namespace: %d\n", r);
     }
 }
 
@@ -766,7 +766,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
     };
 
     auto print_usage_and_exit = [options]() {
-        printf("devmgr: supported arguments:\n");
+        printf("devcoordinator: supported arguments:\n");
         for (const auto& option : options) {
             printf("  --%s\n", option.name);
         }
@@ -775,7 +775,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
 
     auto check_not_duplicated = [print_usage_and_exit](const char* arg) {
         if (arg != nullptr) {
-            printf("devmgr: duplicated argument\n");
+            printf("devcoordinator: duplicated argument\n");
             print_usage_and_exit();
         }
     };
@@ -806,12 +806,12 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
 }
 
 zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) {
-    printf("devmgr: coordinator_init()\n");
+    printf("devcoordinator: coordinator_init()\n");
 
     zx::job devhost_job;
     zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
     if (status != ZX_OK) {
-        log(ERROR, "devcoord: unable to create devhost job\n");
+        log(ERROR, "devcoordinator: unable to create devhost job\n");
         return status;
     }
     static const zx_policy_basic_t policy[] = {
@@ -820,12 +820,12 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
     status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy,
                                     fbl::count_of(policy));
     if (status != ZX_OK) {
-        log(ERROR, "devcoord: zx_job_set_policy() failed\n");
+        log(ERROR, "devcoordinator: zx_job_set_policy() failed\n");
         return status;
     }
     status = devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
     if (status != ZX_OK) {
-        log(ERROR, "devcoord: zx_job_set_property() failed\n");
+        log(ERROR, "devcoordinator: zx_job_set_property() failed\n");
         return status;
     }
 
@@ -870,7 +870,7 @@ zx::channel fs_clone(const char* path) {
 } // namespace devmgr
 
 int main(int argc, char** argv) {
-    printf("devmgr: main()\n");
+    printf("devcoordinator: main()\n");
 
     devmgr::BootArgs boot_args;
     zx::vmo args_vmo;
@@ -879,11 +879,11 @@ int main(int argc, char** argv) {
     if (status == ZX_OK) {
         status = devmgr::BootArgs::Create(std::move(args_vmo), args_size, &boot_args);
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: failed to create kernel arguments: %d\n", status);
+            fprintf(stderr, "devcoordinator: failed to create kernel arguments: %d\n", status);
             return 1;
         }
     } else {
-        fprintf(stderr, "devmgr: failed to get kernel arguments, assuming test "
+        fprintf(stderr, "devcoordinator: failed to get kernel arguments, assuming test "
                         "environment and continuing\n");
     }
 
@@ -915,29 +915,29 @@ int main(int argc, char** argv) {
 
     status = get_root_resource(&config.root_resource);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
+        fprintf(stderr, "devcoordinator: did not receive root resource: %d\n", status);
         return 1;
     }
     // TODO: limit to enumerate rights
     status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to duplicate root job for sysinfo: %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to duplicate root job for sysinfo: %d\n", status);
     }
     status = CreateDevhostJob(*g_handles.root_job, &config.devhost_job);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to create devhost job: %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to create devhost job: %d\n", status);
         return 1;
     }
     status = zx::event::create(0, &config.fshost_event);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to create fshost event: %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to create fshost event: %d\n", status);
         return 1;
     }
 
     devmgr::Coordinator coordinator(std::move(config));
     status = coordinator.InitializeCoreDevices(devmgr_args.sys_device_driver);
     if (status != ZX_OK) {
-        log(ERROR, "devmgr: failed to initialize core devices\n");
+        log(ERROR, "devcoordinator: failed to initialize core devices\n");
         return 1;
     }
 
@@ -955,7 +955,7 @@ int main(int argc, char** argv) {
 
     status = zx::job::create(*g_handles.root_job, 0u, &g_handles.svc_job);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to create service job: %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to create service job: %d\n", status);
         return 1;
     }
     g_handles.svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
@@ -971,18 +971,18 @@ int main(int argc, char** argv) {
         zx::channel dir_request;
         zx_status_t status = zx::channel::create(0, &dir_request, &g_handles.svchost_outgoing);
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: failed to create svchost_outgoing channel\n");
+            fprintf(stderr, "devcoordinator: failed to create svchost_outgoing channel\n");
             return 1;
         }
         status = fdio_service_connect("/svc", dir_request.release());
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: failed to connect to /svc\n");
+            fprintf(stderr, "devcoordinator: failed to connect to /svc\n");
             return 1;
         }
     } else {
         status = svchost_start(require_system, &coordinator);
         if (status != ZX_OK) {
-            fprintf(stderr, "devmgr: failed to start svchost: %d", status);
+            fprintf(stderr, "devcoordinator: failed to start svchost: %d", status);
             return 1;
         }
     }
@@ -999,7 +999,7 @@ int main(int argc, char** argv) {
     thrd_t t;
     int ret = thrd_create_with_name(&t, pwrbtn_monitor_starter, nullptr, "pwrbtn-monitor-starter");
     if (ret != thrd_success) {
-        log(ERROR, "devmgr: failed to create pwrbtn monitor starter thread\n");
+        log(ERROR, "devcoordinator: failed to create pwrbtn monitor starter thread\n");
         return 1;
     }
     thrd_detach(t);
@@ -1009,7 +1009,7 @@ int main(int argc, char** argv) {
     ServiceArgs service_args{&coordinator, boot_args};
     ret = thrd_create_with_name(&t, service_starter, &service_args, "service-starter");
     if (ret != thrd_success) {
-        log(ERROR, "devmgr: failed to create service starter thread\n");
+        log(ERROR, "devcoordinator: failed to create service starter thread\n");
         return 1;
     }
     thrd_detach(t);
@@ -1046,7 +1046,7 @@ int main(int argc, char** argv) {
 
     if (coordinator.require_system() && !coordinator.system_loaded()) {
         printf(
-            "devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
+            "devcoordinator: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
         coordinator.UseFallbackDrivers();
     }
@@ -1058,6 +1058,6 @@ int main(int argc, char** argv) {
 
     coordinator.set_running(true);
     status = loop.Run();
-    fprintf(stderr, "devmgr: coordinator exited unexpectedly: %d\n", status);
+    fprintf(stderr, "devcoordinator: coordinator exited unexpectedly: %d\n", status);
     return status == ZX_OK ? 0 : 1;
 }

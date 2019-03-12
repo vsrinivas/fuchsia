@@ -48,7 +48,7 @@ action("devmgr-manifest") {
   ]
   script = "//build/images/manifest.py"
   args = [
-    "--include=bin/devmgr",
+    "--include=bin/devcoordinator",
     "--include=bin/fshost",
     "--output=" + rebase_path(outputs[0], root_build_dir),
   ]
