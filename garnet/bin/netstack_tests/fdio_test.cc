@@ -42,7 +42,18 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
     addr.sin_family = AF_INET;
     addr.sin_port = port;
     addr.sin_addr.s_addr = INADDR_ANY;
-    int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
+
+    int ret = 0;
+    for (int retry = 0; retry < 2; retry++) {
+      ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
+      if (j > 0 && ret < 0 && errno == EADDRINUSE) {
+        // Wait until netstack detects the peer handle is closed and
+        // tears down the port.
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+      } else {
+        break;
+      }
+    }
     ASSERT_EQ(0, ret) << "bind failed: " << errno << " port: " << port;
 
     socklen_t addrlen = sizeof(addr);
@@ -79,12 +90,6 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
 
     EXPECT_EQ(0, close(ntfyfd[0]));
     EXPECT_EQ(0, close(ntfyfd[1]));
-
-    // Wait while netstack tears down the port.
-    // TODO(NET-2124): netstack does this synchronously now. remove?
-    if (j == 0) {
-      zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-    }
   }
 }
 
