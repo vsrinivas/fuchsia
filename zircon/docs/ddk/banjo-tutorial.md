@@ -5,7 +5,7 @@ This document is part of the [Zircon Driver Development Kit](overview.md) docume
 [TOC]
 
 Banjo is a "transpiler" (like [FIDL's
-`fidlc`](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md))
+`fidlc`](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/README.md))
 &mdash; a program that converts an interface definition language (**IDL**) into target language
 specific files.
 
