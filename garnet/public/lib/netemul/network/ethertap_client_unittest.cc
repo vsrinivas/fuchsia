@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/netemul/network/ethertap_client.h"
+#include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/netemul/network/ethernet_client.h"
@@ -26,6 +27,7 @@ class EthertapClientTest : public TestWithEnvironment {
   void PushInterface(Mac* mac = nullptr) {
     EthertapConfig config(fxl::StringPrintf("etap-%lu", taps_.size()));
     config.mtu = TEST_MTU_SIZE;
+    config.options = fuchsia::hardware::ethertap::OPT_TRACE;
 
     if (mac) {
       memcpy(mac->d, config.mac.d, sizeof(config.mac.d));
@@ -207,7 +209,7 @@ TEST_F(EthertapClientTest, EthertapDies) {
   bool ok = false;
   tap()->SetPeerClosedCallback([&ok]() { ok = true; });
   // use internal ethertap signal to destroy ethertap
-  tap()->socket().signal_peer(0u, ZX_USER_SIGNAL_7);
+  tap()->channel().signal_peer(0u, ZX_USER_SIGNAL_7);
   // and wait for callback to get called
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
 }

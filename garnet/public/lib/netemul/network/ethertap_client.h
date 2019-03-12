@@ -44,7 +44,7 @@ class EthertapClient {
   // Toggles ethertap link up signal.
   virtual void SetLinkUp(bool linkUp) = 0;
   // sends data packet.
-  virtual zx_status_t Send(const void* data, size_t len, size_t* sent) = 0;
+  virtual zx_status_t Send(std::vector<uint8_t> data) = 0;
   // PacketCallback will be called whenever the tap device receives a packet.
   virtual void SetPacketCallback(PacketCallback cb) = 0;
   // PeerClosedCallback will be called if the client loses connection with the
@@ -54,10 +54,11 @@ class EthertapClient {
   virtual void Close() = 0;
 
   virtual zx_status_t Send(const void* data, size_t len) {
-    return Send(data, len, nullptr);
+    return Send(std::vector<uint8_t>(static_cast<const uint8_t*>(data),
+                                     static_cast<const uint8_t*>(data) + len));
   }
 
-  virtual const zx::socket& socket() = 0;
+  virtual const zx::channel& channel() = 0;
 
   // Creates an EthertapClient with given configuration.
   // A null reference will be returned if the client can't be created.

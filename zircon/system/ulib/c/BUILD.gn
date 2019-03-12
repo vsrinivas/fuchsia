@@ -261,7 +261,6 @@ if (toolchain.environment == "user" && current_toolchain == toolchain.shlib &&
       "zircon/device/block.h",
       "zircon/device/bt-hci.h",
       "zircon/device/display-controller.h",
-      "zircon/device/ethertap.h",
       "zircon/device/ethernet.h",
       "zircon/device/intel-hda.h",
       "zircon/device/ioctl-wrapper.h",

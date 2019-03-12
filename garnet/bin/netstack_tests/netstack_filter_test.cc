@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/zx/socket.h>
-#include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 

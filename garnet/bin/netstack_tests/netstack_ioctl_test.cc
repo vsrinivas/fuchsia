@@ -10,7 +10,6 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/netstack/c/netconfig.h>
 #include <lib/zx/socket.h>
-#include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 

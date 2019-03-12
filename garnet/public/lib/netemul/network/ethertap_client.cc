@@ -6,14 +6,16 @@
 
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 #include <functional>
@@ -23,34 +25,35 @@
 
 static const char kTapctl[] = "/dev/misc/tapctl";
 
-typedef struct ethertap_data_in {
-  ethertap_socket_header_t header;
-  uint8_t data[];
-} ethertap_data_in_t;
-
 namespace netemul {
 
 class EthertapClientImpl : public EthertapClient {
  public:
-  explicit EthertapClientImpl(async_dispatcher_t* dispatcher, zx::socket sock,
+  using TapDevice = fuchsia::hardware::ethertap::TapDevice;
+  using TapControl = fuchsia::hardware::ethertap::TapControl;
+  explicit EthertapClientImpl(fidl::InterfacePtr<TapDevice> device,
                               EthertapConfig config)
-      : dispatcher_(dispatcher),
-        buf_(config.mtu + sizeof(ethertap_socket_header_t)),
-        config_(std::move(config)),
-        sock_(std::move(sock)) {
-    sock_data_wait_.set_object(sock_.get());
-    sock_data_wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
+      : config_(std::move(config)), device_(std::move(device)) {
+    device_.events().OnFrame = [this](std::vector<uint8_t> data) {
+      if (packet_callback_) {
+        packet_callback_(&data[0], data.size());
+      }
+    };
 
-    WaitOnSocket();
+    device_.set_error_handler([this](zx_status_t status) {
+      fprintf(stderr, "Ethertap device error: %s\n",
+              zx_status_get_string(status));
+      if (peer_closed_callback_) {
+        peer_closed_callback_();
+      }
+    });
   }
 
-  void SetLinkUp(bool linkUp) override {
-    sock_.signal_peer(
-        0, linkUp ? ETHERTAP_SIGNAL_ONLINE : ETHERTAP_SIGNAL_OFFLINE);
-  }
+  void SetLinkUp(bool linkUp) override { device_->SetOnline(linkUp); }
 
-  zx_status_t Send(const void* data, size_t len, size_t* sent) override {
-    return sock_.write(0u, data, len, sent);
+  zx_status_t Send(std::vector<uint8_t> data) override {
+    device_->WriteFrame(std::move(data));
+    return ZX_OK;
   }
 
   void SetPacketCallback(PacketCallback cb) override {
@@ -64,96 +67,49 @@ class EthertapClientImpl : public EthertapClient {
   static std::unique_ptr<EthertapClientImpl> Create(
       async_dispatcher_t* dispatcher, const EthertapConfig& incfg) {
     zx::socket sock;
-    fbl::unique_fd ctlfd(open(kTapctl, O_RDONLY));
-    if (!ctlfd.is_valid()) {
-      fprintf(stderr, "could not open %s: %s\n", kTapctl, strerror(errno));
+
+    fidl::SynchronousInterfacePtr<TapControl> tapctl;
+
+    auto status = fdio_service_connect(
+        kTapctl, tapctl.NewRequest().TakeChannel().release());
+    if (status != ZX_OK) {
+      fprintf(stderr, "could not open %s: %s\n", kTapctl,
+              zx_status_get_string(status));
       return nullptr;
     }
 
-    ethertap_ioctl_config_t config = {};
-    strlcpy(config.name, incfg.name.c_str(), ETHERTAP_MAX_NAME_LEN);
+    fidl::InterfacePtr<TapDevice> tapdevice;
+
+    fuchsia::hardware::ethertap::Config config;
+    config.features = 0;
     config.options = incfg.options;
     config.mtu = incfg.mtu;
-    memcpy(config.mac, incfg.mac.d, 6);
-    ssize_t rc = ioctl_ethertap_config(ctlfd.get(), &config,
-                                       sock.reset_and_get_address());
-    if (rc < 0) {
-      auto status = static_cast<zx_status_t>(rc);
-      fprintf(stderr, "could not configure ethertap device: %s\n",
+    memcpy(config.mac.octets.data(), incfg.mac.d, 6);
+    zx_status_t o_status = ZX_OK;
+
+    status = tapctl->OpenDevice(incfg.name, std::move(config),
+                                tapdevice.NewRequest(dispatcher), &o_status);
+    if (status != ZX_OK) {
+      fprintf(stderr, "Could not open tap device: %s\n",
               zx_status_get_string(status));
+      return nullptr;
+    } else if (o_status != ZX_OK) {
+      fprintf(stderr, "Could not open tap device: %s\n",
+              zx_status_get_string(o_status));
       return nullptr;
     }
 
-    return std::make_unique<EthertapClientImpl>(dispatcher, std::move(sock),
-                                                incfg);
+    return std::make_unique<EthertapClientImpl>(std::move(tapdevice), incfg);
   }
 
-  void Close() override {
-    sock_data_wait_.Cancel();
-    sock_.reset();
-  }
+  void Close() override { device_.Unbind(); }
 
-  const zx::socket& socket() override { return sock_; }
+  const zx::channel& channel() override { return device_.channel(); }
 
-  void OnSocketSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                      zx_status_t status, const zx_packet_signal_t* signal) {
-    if (status != ZX_OK) {
-      fprintf(stderr, "Ethertap OnSocketSignal bad status %s\n",
-              zx_status_get_string(status));
-      return;
-    }
-
-    if (signal->observed & ZX_SOCKET_READABLE) {
-      size_t read;
-
-      status = sock_.read(0u, buf_.data(), buf_.size(), &read);
-      if (status != ZX_OK) {
-        fprintf(stderr, "Ethertap OnSocketSignal read failed %s\n",
-                zx_status_get_string(status));
-        return;
-      }
-      if (read < sizeof(ethertap_socket_header_t)) {
-        fprintf(
-            stderr,
-            "Ethertap socket read too short, expecting at least %ld header, "
-            "got %ld\n",
-            sizeof(ethertap_socket_header_t), read);
-      }
-
-      auto d = reinterpret_cast<ethertap_data_in_t*>(buf_.data());
-      read -= sizeof(ethertap_socket_header_t);
-
-      if (d->header.type == ETHERTAP_MSG_PACKET && packet_callback_) {
-        packet_callback_(d->data, read);
-      }
-    }
-
-    if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
-      fprintf(stderr, "Ethertap OnSocketSignal peer closed\n");
-      if (peer_closed_callback_) {
-        peer_closed_callback_();
-      }
-    } else {
-      WaitOnSocket();
-    }
-  }
-
-  void WaitOnSocket() {
-    zx_status_t status = sock_data_wait_.Begin(dispatcher_);
-    if (status != ZX_OK) {
-      fprintf(stderr, "Can't wait on ethertap socket: %s\n",
-              zx_status_get_string(status));
-    }
-  }
-
-  async_dispatcher_t* dispatcher_;
-  std::vector<uint8_t> buf_;
   EthertapConfig config_;
-  zx::socket sock_;
+  fidl::InterfacePtr<TapDevice> device_;
   PacketCallback packet_callback_;
   PeerClosedCallback peer_closed_callback_;
-  async::WaitMethod<EthertapClientImpl, &EthertapClientImpl::OnSocketSignal>
-      sock_data_wait_{this};
 };
 
 std::unique_ptr<EthertapClient> EthertapClient::Create(
