@@ -1130,6 +1130,7 @@ foreach(target, paver_targets) {
     deps = [
       ":default-images",
       ":flash_script",
+      ":ids.txt",
       ":netboot",
       "zedboot",
     ]
@@ -1518,7 +1519,7 @@ generated_file("package-build-id-files.list") {
   ]
 
   deps = [
-    ":packages",
+    ":available_packages",
   ]
 }
 
