@@ -110,6 +110,13 @@ class Process final {
   // no effect on the inferior, including not preserving the lifetime of the
   // kernel process instance because we still have a handle of the process.
   // Returns true on success, or false if already detached.
+  // N.B. It is the caller's responsibility to have first removed any and all
+  // breakpoints. This includes the ld.so breakpoint which is automagically
+  // set if we launched the inferior. Furthermore, if the ld.so breakpoint
+  // hasn't been hit yet, which can be determined by calling
+  // |ldso_debug_data_has_initialized()|, then this must be called while the
+  // inferior is stopped. Typically this happens when processing the
+  // THREAD_STARTING exception for the initial thread.
   bool Detach();
 
   // Starts running the process. Returns false in case of an error.
@@ -217,7 +224,27 @@ class Process final {
   // Called when ZX_PROCESS_TERMINATED is received, update our internal state.
   void OnTermination();
 
+  zx_vaddr_t debug_addr_property() const { return debug_addr_property_; }
+
+  bool ldso_debug_data_has_initialized() const {
+    return ldso_debug_data_has_initialized_;
+  }
+
+  zx_vaddr_t ldso_debug_break_addr() const { return ldso_debug_break_addr_; }
+
+  zx_vaddr_t ldso_debug_map_addr() const { return ldso_debug_map_addr_; }
+
  private:
+  // Wrapper on |zx_object_get_property()| to fetch the value of
+  // ZX_PROP_PROCESS_DEBUG_ADDR.
+  // Returns a boolean indicating success.
+  bool GetDebugAddrProperty(zx_vaddr_t* out_debug_addr);
+
+  // Wrapper on |zx_object_set_property()| to set the value of
+  // ZX_PROP_PROCESS_DEBUG_ADDR.
+  // Returns a boolean indicating success.
+  bool SetDebugAddrProperty(zx_vaddr_t debug_addr);
+
   // Cause ld.so to execute a s/w breakpoint instruction after all dsos have
   // been loaded at startup. Returns true on success.
   bool SetLdsoDebugTrigger();
@@ -289,12 +316,12 @@ class Process final {
   zx_koid_t id_ = ZX_KOID_INVALID;
 
   // The value of ZX_PROP_PROCESS_DEBUG_ADDR or zero if not known yet.
-  // The value is never legitimately zero.
+  // The value is never legitimately zero, except if we attached to a running
+  // program prior to ld.so reaching its debug breakpoint on startup.
   zx_vaddr_t debug_addr_property_ = 0;
 
-  // True if we've seen the ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET dynamic
-  // linker breakpoint.
-  bool seen_ldso_debug_addr_breakpoint_ = false;
+  // True if ld.so's debug data structures are initialized.
+  bool ldso_debug_data_has_initialized_ = false;
 
   // The address of the "standard" dynamic linker breakpoint.
   // I.e., the contents of |r_debug.r_brk|.

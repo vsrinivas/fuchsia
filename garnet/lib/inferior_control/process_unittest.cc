@@ -47,23 +47,46 @@ class AttachTest : public TestServer {
     if (!main_thread_started_) {
       // Must be the inferior's main thread.
       main_thread_started_ = true;
+      DoDetachAttach(true);
+      // Do the test twice, once at THREAD_STARTING, prior to seeing the
+      // ld.so breakpoint, and once later after we've gone past it.
       async::PostTask(message_loop().dispatcher(),
-                      [this] { DoDetachAttach(); });
+                      [this] { DoDetachAttach(false); });
+      // Since we detached there's no need to resume the thread, the kernel
+      // will for us when the eport is unbound.
+    } else {
+      // The inferior doesn't have any other threads, but don't assume that.
+      TestServer::OnThreadStarting(process, thread, context);
     }
-    TestServer::OnThreadStarting(process, thread, context);
   }
 
-  void DoDetachAttach() {
+  void DoDetachAttach(bool thread_starting) {
     auto inferior = current_process();
     auto pid = inferior->id();
+
+    // The inferior will send us a packet. Wait for it so that we know it has
+    // gone past the ld.so breakpoint.
+    if (!thread_starting) {
+      zx_signals_t pending;
+      EXPECT_EQ(channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
+                                    &pending),
+                ZX_OK);
+    }
     EXPECT_TRUE(inferior->Detach());
+    // Sleep a little to hopefully give the inferior a chance to run.
+    // We want it to trip over the ld.so breakpoint if we forgot to remove it.
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
     EXPECT_TRUE(inferior->Attach(pid));
     // If attaching failed we'll hang since we won't see the inferior exiting.
     if (!inferior->IsAttached()) {
       QuitMessageLoop(true);
     }
-    // The inferior is waiting for us to close our side of the channel.
-    channel_.reset();
+
+    if (!thread_starting) {
+      // The inferior is waiting for us to close our side of the channel.
+      // We don't need to read the packet it sent us.
+      channel_.reset();
+    }
   }
 
   void set_channel(zx::channel channel) { channel_ = std::move(channel); }
@@ -145,6 +168,7 @@ class LdsoBreakpointTest : public TestServer {
       // The shared libraries should have been loaded by now.
       if (process->DsosLoaded()) {
         dsos_loaded_ = true;
+
         // Libc and the main executable should be present.
         for (debugger_utils::dsoinfo_t* dso = process->GetDsos(); dso;
              dso = dso->next) {
@@ -159,6 +183,12 @@ class LdsoBreakpointTest : public TestServer {
             libc_present_ = true;
           }
         }
+
+        // Various state vars describing ld.so state should be set.
+        EXPECT_NE(process->debug_addr_property(), 0u);
+        EXPECT_TRUE(process->ldso_debug_data_has_initialized());
+        EXPECT_NE(process->ldso_debug_break_addr(), 0u);
+        EXPECT_NE(process->ldso_debug_map_addr(), 0u);
       }
 
       // Terminate the inferior, we don't want the exception propagating to

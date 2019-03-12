@@ -48,25 +48,30 @@ static void ExceptionHandlerThreadFunc(
   }
 }
 
-static void WaitPeerClosed() {
-  zx_handle_t channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-  // If no channel was passed we're running standalone.
-  if (channel == ZX_HANDLE_INVALID) {
-    FXL_LOG(INFO) << "No handle provided";
-    return;
-  }
+static void SendSelfThread(zx_handle_t channel) {
+  // Send the parent a packet so that it knows we've started.
+  zx_handle_t self_copy;
+  zx_status_t status = zx_handle_duplicate(
+      zx_thread_self(), ZX_RIGHT_SAME_RIGHTS, &self_copy);
+  FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
+  status = zx_channel_write(channel, 0, nullptr, 0, &self_copy, 1);
+  FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
+}
+
+static void WaitPeerClosed(zx_handle_t channel) {
   zx_status_t status = zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED,
                                           ZX_TIME_INFINITE, nullptr);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 }
 
-static int PerformWaitPeerClosed() {
-  WaitPeerClosed();
+static int PerformWaitPeerClosed(zx_handle_t channel) {
+  SendSelfThread(channel);
+  WaitPeerClosed(channel);
   printf("wait-peer-closed complete\n");
   return 0;
 }
 
-static int TestTryNext() {
+static int TestTryNext(zx_handle_t channel) {
   zx::port eport;
   zx_status_t status = zx::port::create(0, &eport);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
@@ -86,7 +91,7 @@ static int TestTryNext() {
 
   debugger_utils::TriggerSoftwareBreakpoint();
 
-  WaitPeerClosed();
+  WaitPeerClosed(channel);
 
   // The the exception thread to exit.
   zx_port_packet_t packet{};
@@ -104,13 +109,19 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  zx_handle_t channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+  // If no channel was passed we're running standalone.
+  if (channel == ZX_HANDLE_INVALID) {
+    FXL_LOG(INFO) << "No handle provided";
+  }
+
   if (argc == 2) {
     const char* cmd = argv[1];
     if (strcmp(cmd, "wait-peer-closed") == 0) {
-      return PerformWaitPeerClosed();
+      return PerformWaitPeerClosed(channel);
     }
     if (strcmp(cmd, "test-try-next") == 0) {
-      return TestTryNext();
+      return TestTryNext(channel);
     }
     fprintf(stderr, "Unrecognized command: %s\n", cmd);
     return 1;

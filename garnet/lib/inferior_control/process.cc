@@ -112,19 +112,6 @@ void Process::AddStartupHandle(fuchsia::process::HandleInfo handle) {
   extra_handles_.push_back(std::move(handle));
 }
 
-bool Process::SetLdsoDebugTrigger() {
-  const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
-  zx_status_t status =
-    zx_object_set_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
-                           &kMagicValue, sizeof(kMagicValue));
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to set ld.so debug-addr trigger: "
-                   << debugger_utils::ZxErrorString(status);
-    return false;
-  }
-  return true;
-}
-
 bool Process::Initialize() {
   if (IsAttached()) {
     FXL_LOG(ERROR) << "Cannot initialize, already attached to a process";
@@ -271,6 +258,8 @@ bool Process::Attach(zx_koid_t pid) {
     return false;
   }
 
+  // TODO(dje): Update ldso state (debug_addr_property_, etc.).
+
   attached_running_ = true;
   set_state(State::kRunning);
   thread_map_stale_ = true;
@@ -374,6 +363,27 @@ bool Process::Detach() {
     FXL_LOG(ERROR) << "Not attached";
     return false;
   }
+
+  // If detaching from an inferior we started, and we haven't seen the ld.so
+  // breakpoint yet, then remove it. Otherwise the inferior will crash when
+  // it hits the breakpoint.
+  // N.B. In this situation it is the caller's responsibility to only call
+  // us when the inferior is stopped. Typically this happens when processing
+  // the THREAD_STARTING exception for the initial thread.
+  if (!attached_running_ && !ldso_debug_data_has_initialized_) {
+    zx_vaddr_t debug_addr;
+    if (!GetDebugAddrProperty(&debug_addr)) {
+      return false;
+    }
+    if (debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET) {
+      // TODO(ZX-3627): Use official value when available.
+      constexpr zx_vaddr_t ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET_DISABLED = 2u;
+      if (!SetDebugAddrProperty(ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET_DISABLED)) {
+        return false;
+      }
+    }
+  }
+
   RawDetach();
   Clear();
   return true;
@@ -456,6 +466,10 @@ void Process::Clear() {
   thread_map_stale_ = false;
 
   id_ = ZX_KOID_INVALID;
+  debug_addr_property_ = 0;
+  ldso_debug_data_has_initialized_ = false;
+  ldso_debug_break_addr_ = 0;
+  ldso_debug_map_addr_ = 0;
   base_address_ = 0;
   entry_address_ = 0;
   attached_running_ = false;
@@ -624,20 +638,45 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
   return memory_->Write(address, data, length);
 }
 
+bool Process::GetDebugAddrProperty(zx_vaddr_t* out_debug_addr) {
+  zx_status_t status =
+      zx_object_get_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
+                             out_debug_addr, sizeof(*out_debug_addr));
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "zx_object_get_property failed, unable to fetch DEBUG_ADDR: "
+        << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+  return true;
+}
+
+bool Process::SetDebugAddrProperty(zx_vaddr_t debug_addr) {
+  zx_status_t status =
+      zx_object_set_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
+                             &debug_addr, sizeof(debug_addr));
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "zx_object_set_property failed, unable to set DEBUG_ADDR: "
+        << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+  return true;
+}
+
+bool Process::SetLdsoDebugTrigger() {
+  return SetDebugAddrProperty(ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
+}
+
 zx_vaddr_t Process::GetDebugAddr() {
   if (debug_addr_property_ != 0)
     return debug_addr_property_;
 
   zx_vaddr_t debug_addr;
-  zx_status_t status =
-      zx_object_get_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
-                             &debug_addr, sizeof(debug_addr));
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "zx_object_get_property failed, unable to fetch DEBUG_ADDR: "
-        << debugger_utils::ZxErrorString(status);
+  if (!GetDebugAddrProperty(&debug_addr)) {
     return 0;
   }
+
   // Since we could, theoretically, stop in the dynamic linker before we get
   // that far check to see if it has been filled in.
   if (debug_addr == 0 ||
@@ -651,7 +690,7 @@ zx_vaddr_t Process::GetDebugAddr() {
 }
 
 bool Process::CheckLdsoDebugAddrBreak() {
-  FXL_DCHECK(!seen_ldso_debug_addr_breakpoint_);
+  FXL_DCHECK(!ldso_debug_data_has_initialized_);
   FXL_DCHECK(debug_addr_property_ != 0);
 
   // The address isn't recorded in r_debug like the "standard" dynamic linker
@@ -684,7 +723,7 @@ bool Process::CheckLdsoDebugAddrBreak() {
 
   ldso_debug_break_addr_ = debug.r_brk;
   ldso_debug_map_addr_ = reinterpret_cast<zx_vaddr_t>(debug.r_map);
-  seen_ldso_debug_addr_breakpoint_ = true;
+  ldso_debug_data_has_initialized_ = true;
   return true;
 }
 
@@ -725,11 +764,11 @@ bool Process::CheckDsosList(Thread* thread) {
   }
 
   // Are we stopped at the ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET breakpoint?
-  if (!seen_ldso_debug_addr_breakpoint_) {
+  if (!ldso_debug_data_has_initialized_) {
     if (!CheckLdsoDebugAddrBreak()) {
       return false;
     }
-    FXL_DCHECK(seen_ldso_debug_addr_breakpoint_);
+    FXL_DCHECK(ldso_debug_data_has_initialized_);
     TryBuildLoadedDsosList(thread);
     return true;
   }
