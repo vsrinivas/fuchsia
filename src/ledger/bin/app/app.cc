@@ -64,7 +64,7 @@ fit::deferred_action<fit::closure> SetupCobalt(
 class App : public ledger_internal::LedgerController {
  public:
   explicit App(AppParams app_params)
-      : app_params_(app_params),
+      : app_params_(std::move(app_params)),
         loop_(&kAsyncLoopConfigAttachToThread),
         io_loop_(&kAsyncLoopConfigNoAttachToThread),
         trace_provider_(loop_.dispatcher()),

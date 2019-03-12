@@ -101,7 +101,7 @@ void ComputePageChange(
   // |on_next| is called for each change on the diff
   auto on_next = [storage, waiter, prefix_key = std::move(prefix_key),
                   context = context.get(),
-                  pagination_behavior](storage::EntryChange change) {
+                  pagination_behavior](const storage::EntryChange& change) {
     if (!PageUtils::MatchesPrefix(change.entry.key, prefix_key)) {
       return false;
     }

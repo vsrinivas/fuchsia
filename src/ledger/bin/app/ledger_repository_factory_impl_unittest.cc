@@ -52,9 +52,9 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   ~LedgerRepositoryFactoryImplTest() override {}
 
  protected:
-  ::testing::AssertionResult CreateDirectory(std::string name);
+  ::testing::AssertionResult CreateDirectory(const std::string& name);
   ::testing::AssertionResult CallGetRepository(
-      std::string name,
+      const std::string& name,
       ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
@@ -66,7 +66,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 };
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CreateDirectory(
-    std::string name) {
+    const std::string& name) {
   if (!files::CreateDirectoryAt(tmpfs_.root_fd(), name)) {
     return ::testing::AssertionFailure()
            << "Failed to create directory \"" << name << "\"!";
@@ -75,7 +75,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 }
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CallGetRepository(
-    std::string name,
+    const std::string& name,
     ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr) {
   fxl::UniqueFD fd(openat(tmpfs_.root_fd(), name.c_str(), O_PATH));
   if (!fd.is_valid()) {

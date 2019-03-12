@@ -22,7 +22,7 @@ void PageUtils::ResolveObjectIdentifierAsStringView(
     storage::PageStorage::Location location, Status not_found_status,
     fit::function<void(Status, fxl::StringView)> callback) {
   storage->GetObject(
-      object_identifier, location,
+      std::move(object_identifier), location,
       [not_found_status, callback = std::move(callback)](
           storage::Status status,
           std::unique_ptr<const storage::Object> object) {
