@@ -27,6 +27,11 @@ declare_args() {
   # partition.
   data_partition_manifest = ""
 
+  # Whether to build the netboot zbi by default.
+  #
+  # You can still build //build/images:netboot explicitly even if enable_netboot is false.
+  enable_netboot = false
+
   # arguments to fx flash script
   zircon_a_partition = ""
   zircon_b_partition = ""
@@ -110,6 +115,13 @@ group("packages") {
     ":available_packages",
   ]
   data_deps = package_data_deps
+
+  if (enable_netboot) {
+    data_deps += [
+      ":netboot",
+      ":netboot-script",
+    ]
+  }
 }
 
 template("package_list") {

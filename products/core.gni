@@ -4,7 +4,8 @@
 
 import("//products/bringup.gni")
 
-monolith -= [ "build/packages/netboot" ]
+enable_netboot = false
+
 monolith += [ "garnet/packages/products/base" ]
 
 preinstall += []
