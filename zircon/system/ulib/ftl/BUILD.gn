@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 library("ftl") {
+  host = true
+
   sources = [
     "ftln/ftln_init.c",
     "ftln/ftln_intrnl.c",
@@ -19,9 +21,15 @@ library("ftl") {
     "utils/fsys.c",
     "utils/fsysinit.c",
     "utils/ftl_mc.c",
-    "utils/semaphore.cpp",
     "utils/sys.c",
   ]
+
+  if (is_fuchsia) {
+    sources += [ "utils/semaphore.cpp" ]
+  } else {
+    sources += [ "utils/semaphore_posix.cpp" ]
+  }
+
   configs += [ ":config" ]
   deps = [
     "$zx/system/ulib/backtrace-request",
