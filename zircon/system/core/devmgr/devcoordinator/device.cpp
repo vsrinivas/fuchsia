@@ -12,7 +12,7 @@ namespace devmgr {
 
 Device::Device(Coordinator* coord)
     : coordinator(coord),
-      publish_task([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }) {}
+      publish_task_([this] { coordinator->HandleNewDevice(fbl::WrapRefPtr(this)); }) {}
 
 Device::~Device() {
     // Ideally we'd assert here that immortal devices are never destroyed, but
@@ -37,6 +37,106 @@ Device::~Device() {
 
     // TODO: cancel any pending rpc responses
     // TODO: Have dtor assert that DEV_CTX_IMMORTAL set on flags
+}
+
+zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
+                           fbl::String name, fbl::String driver_path, fbl::String args,
+                           uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
+                           zx::channel rpc, bool invisible, zx::channel client_remote,
+                           fbl::RefPtr<Device>* device) {
+    auto dev = fbl::MakeRefCounted<Device>(coordinator);
+    if (!dev) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = dev->SetProps(std::move(props));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    dev->name = std::move(name);
+    dev->libname = std::move(driver_path);
+    dev->args = std::move(args);
+    dev->set_channel(std::move(rpc));
+    dev->set_protocol_id(protocol_id);
+    dev->client_remote = std::move(client_remote);
+
+    // If we have bus device args we are, by definition, a bus device.
+    if (dev->args.size() > 0) {
+        dev->flags |= DEV_CTX_MUST_ISOLATE;
+    }
+
+    // We exist within our parent's device host
+    dev->host = parent->host;
+
+    fbl::RefPtr<Device> real_parent;
+    // If our parent is a proxy, for the purpose
+    // of devicefs, we need to work with *its* parent
+    // which is the device that it is proxying.
+    if (parent->flags & DEV_CTX_PROXY) {
+        real_parent = parent->parent();
+    } else {
+        real_parent = parent;
+    }
+    dev->set_parent(real_parent);
+
+    // We must mark the device as invisible before publishing so
+    // that we don't send "device added" notifications.
+    if (invisible) {
+        dev->flags |= DEV_CTX_INVISIBLE;
+    }
+
+    if ((status = devfs_publish(real_parent, dev)) < 0) {
+        return status;
+    }
+
+    if ((status = Device::BeginWait(dev, coordinator->dispatcher())) != ZX_OK) {
+        return status;
+    }
+
+    if (dev->host) {
+        // TODO host == nullptr should be impossible
+        dev->host->AddRef();
+        dev->host->devices().push_back(dev.get());
+    }
+    real_parent->children.push_back(dev.get());
+    log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name.data());
+
+    *device = std::move(dev);
+    return ZX_OK;
+}
+
+zx_status_t Device::CreateProxy() {
+    ZX_ASSERT(this->proxy == nullptr);
+
+    auto dev = fbl::MakeRefCounted<Device>(this->coordinator);
+    if (dev == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    dev->name = this->name;
+    dev->libname = this->libname;
+    // non-immortal devices, use foo.proxy.so for
+    // their proxy devices instead of foo.so
+    if (!(this->flags & DEV_CTX_IMMORTAL)) {
+        const char* begin = dev->libname.data();
+        const char* end = strstr(begin, ".so");
+        fbl::StringPiece prefix(begin, end == nullptr ? dev->libname.size() : end - begin);
+        fbl::AllocChecker ac;
+        dev->libname = fbl::String::Concat({prefix, ".proxy.so"}, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+    }
+
+    dev->flags = DEV_CTX_PROXY;
+    dev->set_protocol_id(protocol_id_);
+    dev->set_parent(fbl::WrapRefPtr(this));
+    this->proxy = std::move(dev);
+    log(DEVLC, "devcoord: dev %p name='%s' (proxy)\n", this, this->name.data());
+    return ZX_OK;
+}
+
+zx_status_t Device::SignalReadyForBind(zx::duration delay) {
+    return publish_task_.PostDelayed(this->coordinator->dispatcher(), delay);
 }
 
 // Handle inbound messages from devhost to devices

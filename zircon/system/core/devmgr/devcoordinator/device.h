@@ -56,14 +56,28 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     explicit Device(Coordinator* coord);
     ~Device();
 
+    // Create a new device with the given parameters.  This sets up its
+    // relationship with its parent and devhost and adds its RPC channel to the
+    // coordinator's async loop.  This does not add the device to the
+    // coordinator's devices_ list, or trigger publishing
+    static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
+                              fbl::String name, fbl::String driver_path, fbl::String args,
+                              uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
+                              zx::channel rpc, bool invisible, zx::channel client_remote,
+                              fbl::RefPtr<Device>* device);
+    zx_status_t CreateProxy();
+
     static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
 
+    // Signal that this device is ready for bind to happen.  This should happen
+    // either immediately after the device is created, if it's created visible,
+    // or after it becomes visible.
+    zx_status_t SignalReadyForBind(zx::duration delay = zx::sec(0));
+
     Coordinator* coordinator;
     uint32_t flags = 0;
-
-    async::TaskClosure publish_task;
 
     Devhost* host = nullptr;
     fbl::String name;
@@ -138,6 +152,8 @@ private:
     fbl::Array<const zx_device_prop_t> props_;
     // If the device has a topological property in |props|, this points to it.
     const zx_device_prop_t* topo_prop_ = nullptr;
+
+    async::TaskClosure publish_task_;
 };
 
 } // namespace devmgr
