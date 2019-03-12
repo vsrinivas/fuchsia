@@ -94,7 +94,7 @@ static void mbr_queue(void* ctx, block_op_t* bop, block_impl_queue_callback comp
         // Ensure that the request is in-bounds
         if ((bop->rw.offset_dev >= max) ||
             ((max - bop->rw.offset_dev) < blocks)) {
-            completion_cb(cookie, ZX_ERR_INVALID_ARGS, bop);
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, bop);
             return;
         }
 
