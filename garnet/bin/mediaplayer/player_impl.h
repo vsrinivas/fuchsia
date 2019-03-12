@@ -82,7 +82,7 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   void CreateStreamSource(
       int64_t duration_ns, bool can_pause, bool can_seek,
-      std::unique_ptr<fuchsia::mediaplayer::Metadata> metadata,
+      std::unique_ptr<fuchsia::media::Metadata> metadata,
       ::fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
           source_request) override;
 

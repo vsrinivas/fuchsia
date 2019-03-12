@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.mediaplayer;
+library fuchsia.media;
 
 // A TimelineFunction represents a relationship between a subject timeline and a
 // reference timeline with a linear relation.
@@ -39,7 +39,6 @@ library fuchsia.mediaplayer;
 // this with a TimelineFunction whose |subject_time| is the time to skip to,
 // |reference_time| is now plus some epsilon, and delta ratio is 1/1 for normal
 // playback rate.
-// DEPRECATED: Use fuchsia.media.TimelineFunction
 struct TimelineFunction {
     // A value from the subject timeline that correlates to reference_time.
     int64 subject_time = 0;

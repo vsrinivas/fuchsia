@@ -325,6 +325,7 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
   return nullptr;
 }
 
+// TODO(dalesat): Remove as part of soft transition.
 fuchsia::mediaplayer::Metadata
 TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata>::Convert(
     const media_player::Metadata& input) {
@@ -339,9 +340,34 @@ TypeConverter<fuchsia::mediaplayer::Metadata, media_player::Metadata>::Convert(
   return result;
 }
 
+// TODO(dalesat): Remove as part of soft transition.
 media_player::Metadata
 TypeConverter<media_player::Metadata, fuchsia::mediaplayer::Metadata>::Convert(
     const fuchsia::mediaplayer::Metadata& input) {
+  media_player::Metadata result(input.properties.size());
+  for (auto& property : input.properties) {
+    result.emplace(property.label, property.value);
+  }
+  return result;
+}
+
+fuchsia::media::Metadata
+TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(
+    const media_player::Metadata& input) {
+  fuchsia::media::Metadata result;
+  for (auto& pair : input) {
+    fuchsia::media::Property property;
+    property.label = pair.first;
+    property.value = pair.second;
+    result.properties.push_back(property);
+  }
+
+  return result;
+}
+
+media_player::Metadata
+TypeConverter<media_player::Metadata, fuchsia::media::Metadata>::Convert(
+    const fuchsia::media::Metadata& input) {
   media_player::Metadata result(input.properties.size());
   for (auto& property : input.properties) {
     result.emplace(property.label, property.value);

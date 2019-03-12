@@ -114,4 +114,8 @@ struct PlayerStatus {
 
     // Indicates whether presentation has reached end-of-stream.
     bool end_of_stream;
+
+    // TEMPORARY: Moving these structs from fuchsia.mediaplayer to fuchsia.media.
+    fuchsia.media.Metadata? metadata2;
+    fuchsia.media.TimelineFunction? timeline_function2;
 };

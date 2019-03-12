@@ -29,7 +29,7 @@ protocol SourceManager {
     // the player, in the PlayerStatus as well. can_pause and can_seek, when
     // false, constrain the capabilities of the player.
     CreateStreamSource(int64 duration_ns, bool can_pause, bool can_seek,
-                       Metadata? metadata,
+                       fuchsia.media.Metadata? metadata,
                        request<StreamSource> source_request);
 
     // Sets the source for this player to use. If source is null, the player
@@ -123,4 +123,7 @@ struct SourceStatus {
 
     // Indicates a problem preventing intended operation.
     Problem? problem;
+
+    // TEMPORARY: Moving Metadata from fuchsia.mediaplayer to fuchsia.media.
+    fuchsia.media.Metadata? metadata2;
 };
