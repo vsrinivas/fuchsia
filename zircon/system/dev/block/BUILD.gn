@@ -6,8 +6,8 @@ group("block") {
   deps = [
     "ahci",
     "aml-sd-emmc",
-    "block",
     "bootpart",
+    "core",
     "ftl",
     "fvm",
     "gpt",
