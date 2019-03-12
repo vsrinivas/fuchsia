@@ -131,6 +131,10 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   void OnEvent(fuchsia::ui::input::InputEvent event);
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
+  // When no shadows, ambient light needs to be full brightness.  Otherwise,
+  // ambient needs to be dimmed so that other lights don't "overbrighten".
+  void UpdateLightsForShadowTechnique(fuchsia::ui::gfx::ShadowTechnique tech);
+
   void PresentScene();
 
   fuchsia::ui::scenic::Scenic* const scenic_;

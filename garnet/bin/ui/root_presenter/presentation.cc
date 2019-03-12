@@ -34,6 +34,11 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   memcpy(&ib, &fb, sizeof(uint32_t));
   return (((uint64_t)ia) << 32) | ib;
 }
+
+// Light intensities.
+constexpr float kAmbient = 0.3f;
+constexpr float kNonAmbient = 1.f - kAmbient;
+
 }  // namespace
 
 Presentation::Presentation(
@@ -83,8 +88,7 @@ Presentation::Presentation(
   scene_.AddLight(ambient_light_);
   scene_.AddLight(directional_light_);
   scene_.AddLight(point_light_);
-  constexpr float kAmbient = 0.3f;
-  constexpr float kNonAmbient = 1.f - kAmbient;
+
   ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
   directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
@@ -134,6 +138,9 @@ void Presentation::OverrideRendererParams(RendererParams renderer_params,
     param.set_shadow_technique(
         renderer_params_override_.shadow_technique.value());
     renderer_.SetParam(std::move(param));
+
+    UpdateLightsForShadowTechnique(
+        renderer_params_override_.shadow_technique.value());
   }
   if (present_changes) {
     PresentScene();
@@ -762,6 +769,15 @@ void Presentation::PresentScene() {
   });
 }
 
+void Presentation::UpdateLightsForShadowTechnique(
+    fuchsia::ui::gfx::ShadowTechnique tech) {
+  if (tech == fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED) {
+    ambient_light_.SetColor(1.f, 1.f, 1.f);
+  } else {
+    ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
+  }
+}
+
 void Presentation::SetRendererParams(
     ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
   for (size_t i = 0; i < params.size(); ++i) {
@@ -773,6 +789,7 @@ void Presentation::SetRendererParams(
                  "shadow technique, default was overriden in root_presenter";
           continue;
         }
+        UpdateLightsForShadowTechnique(params.at(i).shadow_technique());
         break;
       case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
         if (renderer_params_override_.render_frequency.has_value()) {
