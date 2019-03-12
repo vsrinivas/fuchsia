@@ -1,0 +1,184 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+  public_deps = [
+    ":fidl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":ack_frame_test",
+    ":routable_message_test",
+    ":varint_test",
+  ]
+}
+
+###############################################################################
+
+# ack_frame
+source_set("ack_frame") {
+  sources = [
+    "ack_frame.cc",
+    "ack_frame.h",
+  ]
+  deps = [
+    ":varint",
+    "//src/connectivity/overnet/lib/environment:trace",
+    "//src/connectivity/overnet/lib/vocabulary:slice",
+    "//src/connectivity/overnet/lib/vocabulary:status",
+  ]
+}
+
+source_set("ack_frame_test") {
+  testonly = true
+  sources = [
+    "ack_frame_test.cc",
+  ]
+  deps = [
+    ":ack_frame",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("ack_frame_fuzzer") {
+  testonly = true
+  sources = [
+    "ack_frame_fuzzer.cc",
+  ]
+  deps = [
+    ":ack_frame",
+  ]
+}
+
+# coding
+source_set("coding") {
+  sources = [
+    "coding.cc",
+    "coding.h",
+  ]
+  deps = [
+    "//src/connectivity/overnet/lib/vocabulary:slice",
+    "//src/connectivity/overnet/lib/vocabulary:status",
+    "//third_party/snappy",
+  ]
+}
+
+fuzz_target("overnet_encoding_fuzzer") {
+  testonly = true
+  sources = [
+    "encoding_fuzzer.cc",
+  ]
+  deps = [
+    ":coding",
+  ]
+}
+
+fuzz_target("overnet_decoding_fuzzer") {
+  testonly = true
+  sources = [
+    "decoding_fuzzer.cc",
+  ]
+  deps = [
+    ":coding",
+  ]
+}
+
+# fidl
+source_set("fidl") {
+  sources = [
+    "fidl.h",
+  ]
+  deps = [
+    ":coding",
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//src/connectivity/overnet/lib/vocabulary:slice",
+    "//src/connectivity/overnet/lib/vocabulary:status",
+  ]
+}
+
+# fidl_stream
+source_set("fidl_stream") {
+  sources = [
+    "fidl_stream.cc",
+    "fidl_stream.h",
+  ]
+  deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+  ]
+}
+
+# routable_message
+source_set("routable_message") {
+  sources = [
+    "routable_message.cc",
+    "routable_message.h",
+  ]
+  public_deps = [
+    "//src/connectivity/overnet/lib/labels:node_id",
+    "//src/connectivity/overnet/lib/labels:seq_num",
+    "//src/connectivity/overnet/lib/labels:stream_id",
+  ]
+  deps = [
+    ":varint",
+    "//src/connectivity/overnet/lib/vocabulary:optional",
+    "//src/connectivity/overnet/lib/vocabulary:slice",
+    "//src/connectivity/overnet/lib/vocabulary:status",
+  ]
+}
+
+source_set("routable_message_test") {
+  testonly = true
+  sources = [
+    "routable_message_test.cc",
+  ]
+  deps = [
+    ":routable_message",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("routable_message_fuzzer") {
+  testonly = true
+  sources = [
+    "routable_message_fuzzer.cc",
+  ]
+  deps = [
+    ":routable_message",
+  ]
+}
+
+# serialization_helpers
+source_set("serialization_helpers") {
+  sources = [
+    "serialization_helpers.h",
+  ]
+}
+
+# varint
+source_set("varint") {
+  sources = [
+    "varint.cc",
+    "varint.h",
+  ]
+}
+
+source_set("varint_test") {
+  testonly = true
+  sources = [
+    "varint_test.cc",
+  ]
+  deps = [
+    ":varint",
+    "//third_party/googletest:gtest",
+  ]
+}

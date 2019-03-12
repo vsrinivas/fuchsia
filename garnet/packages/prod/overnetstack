@@ -1,6 +1,6 @@
 {
     "packages": [
-        "//garnet/bin/overnet/overnetstack",
-        "//garnet/bin/overnet/onet"
+        "//src/connectivity/overnet/overnetstack",
+        "//src/connectivity/overnet/tools/onet"
     ]
 }

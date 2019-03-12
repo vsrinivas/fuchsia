@@ -9,7 +9,7 @@ package templates
 
 const OvernetInternal = `
 {{- define "Header" }}
-#include "garnet/lib/overnet/protocol/fidl_stream.h"
+#include "src/connectivity/overnet/lib/protocol/fidl_stream.h"
 
 #include "{{ range $index, $path := .Library }}{{ if $index }}/{{ end }}{{ $path }}{{ end }}/cpp/fidl.h"
   {{- range .Library }}

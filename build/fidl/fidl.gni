@@ -113,7 +113,7 @@ template("fidl") {
           output_stem = "cpp/overnet_internal"
           additional_public_deps =
               hlcpp_public_deps +
-              [ "//garnet/lib/overnet/protocol:fidl_stream" ]
+              [ "//src/connectivity/overnet/lib/protocol:fidl_stream" ]
         },
       ]
       generators += llcpp_generators

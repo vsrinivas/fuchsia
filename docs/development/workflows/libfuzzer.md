@@ -471,7 +471,7 @@ You will also need to edit the package manifest and add an explicit label for th
 
 ```json
     "labels": [
-        "//garnet/lib/overnet:host_overnet_fuzzers"
+        "//src/connectivity/overnet/lib:host_overnet_fuzzers"
     ]
 ```
 

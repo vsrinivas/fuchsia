@@ -1,6 +1,6 @@
 {
     "packages": [
-        "//garnet/examples/overnet/echo:overnet-echo",
-        "//garnet/examples/overnet/interface_passing:overnet-interface-passing"
+        "//src/connectivity/overnet/examples/echo:overnet-echo",
+        "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing"
     ]
 }

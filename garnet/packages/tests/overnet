@@ -1,14 +1,14 @@
 {
     "packages": [
-        "//garnet/lib/overnet:overnet_tests",
-        "//garnet/lib/overnet:overnet_fuzzers",
-        "//garnet/bin/overnet/overnetstack:overnetstack_tests",
-        "//garnet/examples/overnet:overnet_examples_tests"
+        "//src/connectivity/overnet/lib:overnet_tests",
+        "//src/connectivity/overnet/lib:overnet_fuzzers",
+        "//src/connectivity/overnet/overnetstack:overnetstack_tests",
+        "//src/connectivity/overnet/examples:overnet_examples_tests"
     ],
     "host_tests": [
-        "//garnet/lib/overnet:overnet_unittests"
+        "//src/connectivity/overnet/lib:overnet_unittests"
     ],
     "labels": [
-        "//garnet/lib/overnet:host_overnet_fuzzers"
+        "//src/connectivity/overnet/lib:host_overnet_fuzzers"
     ]
 }

@@ -48,6 +48,7 @@ source_set("cpp") {
     "//garnet/public/lib/*",
     "//garnet/tests/e2e_input_tests:*",
     "//peridot/*",
+    "//src/connectivity/overnet/*",
     "//src/ledger/*",
     "//third_party/dart/runtime/*",
     "//topaz/app/term:*",
