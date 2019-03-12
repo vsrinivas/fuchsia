@@ -6,6 +6,7 @@
 #include <lib/vfs/cpp/directory.h>
 
 #include <lib/vfs/cpp/internal/directory_connection.h>
+#include <zircon/errors.h>
 
 namespace vfs {
 
@@ -18,7 +19,7 @@ void Directory::Describe(fuchsia::io::NodeInfo* out_info) {
 }
 
 zx_status_t Directory::Lookup(const std::string& name, Node** out_node) const {
-  return ZX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Directory::CreateConnection(

@@ -38,6 +38,8 @@ sdk_source_set("cpp") {
     "pseudo_dir.h",
     "pseudo_file.cc",
     "pseudo_file.h",
+    "remote_dir.cc",
+    "remote_dir.h",
     "service.cc",
     "service.h",
     "vmo_file.cc",
@@ -60,6 +62,7 @@ test("vfs_cpp_unittests") {
     "lazy_dir_unittest.cc",
     "pseudo_dir_unittest.cc",
     "pseudo_file_unittest.cc",
+    "remote_dir_unittest.cc",
     "service_unittest.cc",
     "vmo_file_unittest.cc",
   ]
