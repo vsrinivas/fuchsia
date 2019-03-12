@@ -32,6 +32,7 @@ firmware("firmware") {
 }
 
 test("bt-hci-mediatek-test") {
+  output_name = "bt-hci-mediatek-test"
   sources = [
     "bt-hci-mediatek-test.cpp",
     "bt-hci-mediatek.cpp",

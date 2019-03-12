@@ -27,6 +27,7 @@ driver("mtk-sdmmc") {
 }
 
 test("mtk-sdmmc-test") {
+  output_name = "mtk-sdmmc-test"
   sources = [
     "mtk-sdmmc-test.cpp",
     "mtk-sdmmc.cpp",

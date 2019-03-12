@@ -25,6 +25,7 @@ driver("sg-micro") {
 }
 
 test("sgm37603a-test") {
+  output_name = "sgm37603a-test"
   sources = [
     "sgm37603a-test.cpp",
     "sgm37603a.cpp",

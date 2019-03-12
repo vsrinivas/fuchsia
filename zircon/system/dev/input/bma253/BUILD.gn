@@ -27,6 +27,7 @@ driver("bma253") {
 }
 
 test("bma253-test") {
+  output_name = "bma253-test"
   sources = [
     "bma253-test.cpp",
     "bma253.cpp",

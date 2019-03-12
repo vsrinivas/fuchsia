@@ -26,6 +26,7 @@ driver("mtk-thermal") {
 }
 
 test("mtk-thermal-test") {
+  output_name = "mtk-thermal-test"
   sources = [
     "mtk-thermal-test.cpp",
     "mtk-thermal.cpp",
