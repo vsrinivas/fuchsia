@@ -478,6 +478,10 @@ template("package") {
       assert(!defined(pkg.binary),
              "$pkg_desc deprecated_system_image incompatible with binary")
 
+      # Only appmgr can contribute binaries to /system/bin.
+      assert(pkg.binaries == [] || pkg.package_name == "appmgr",
+              "no new packages are allowed to add binaries to /system/bin")
+
       assert(pkg.tests == [], "tests are not allowed in /system")
     } else {
       assert(pkg.drivers == [],
