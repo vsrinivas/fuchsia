@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_modular_internal::{SessionContextRequest, SessionContextRequestStream};
+use fuchsia_syslog::fx_log_warn;
 use futures::prelude::*;
-use log::warn;
 
 /// Service injected by Voila for sessionmgr.
 pub struct SessionContext {}
@@ -26,7 +26,7 @@ impl SessionContext {
     ) -> Result<(), fidl::Error> {
         while let Some(req) = await!(stream.try_next())? {
             await!(self.handle_request(req)).unwrap_or_else(|err| {
-                warn!("Error handling SessionContextRequest: {:?}", err);
+                fx_log_warn!("Error handling SessionContextRequest: {:?}", err);
             });
         }
         Ok(())

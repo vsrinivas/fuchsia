@@ -16,7 +16,7 @@ use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::client::{App as LaunchedApp, LaunchOptions, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_scenic::{Circle, EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
-use log::{info, warn};
+use fuchsia_syslog::{self as fx_log, fx_log_info, fx_log_warn};
 use rand::Rng;
 use std::any::Any;
 use std::collections::BTreeMap;
@@ -68,7 +68,7 @@ impl VoilaViewAssistant {
     ) -> Result<(), Error> {
         let replica_random_number = rand::thread_rng().gen_range(1, 1000000);
         let replica_id = format!("voila-r{}", replica_random_number.to_string());
-        info!("Voila: creating a replica {}", replica_id);
+        fx_log_info!("creating a replica {}", replica_id);
 
         // Configure disk directory.
         let data_origin = format!("/data/voila/{}", replica_id);
@@ -120,7 +120,7 @@ impl VoilaViewAssistant {
             async move {
                 await!(session_context.handle_requests_from_stream(session_context_stream))
                     .unwrap_or_else(|err| {
-                        warn!("Error handling SessionContext request channel: {:?}", err);
+                        fx_log_warn!("error handling SessionContext request channel: {:?}", err);
                     })
             },
         );
@@ -199,6 +199,8 @@ impl ViewAssistant for VoilaViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
+    fx_log::init_with_tags(&["voila"])?;
+    fx_log::set_severity(fx_log::levels::INFO);
     let assistant = VoilaAppAssistant {};
     App::run(Box::new(assistant))
 }
