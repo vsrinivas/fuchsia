@@ -20,3 +20,4 @@ cipd.gni
 .cipd/*
 last-update
 third_party/
+!secondary/third_party
