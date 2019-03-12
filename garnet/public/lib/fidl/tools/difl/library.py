@@ -4,12 +4,16 @@
 
 from typing import List
 
-from difl.ir import Library
+from difl.ir import Library, Libraries
 from difl.changes import Change
 from difl.protocol import protocol_changes
 from difl.struct import struct_changes
 from difl.intersection import intersect_changes
 
+
+def libraries_changes(before: Libraries, after: Libraries) -> List[Change]:
+    # Only analyze libraries that exist before and after
+    return intersect_changes(before, after, library_changes, include_decl_added_and_decl_removed=False)
 
 def library_changes(before: Library, after: Library) -> List[Change]:
     changes: List[Change] = []

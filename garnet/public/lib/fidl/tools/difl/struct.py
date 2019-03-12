@@ -7,7 +7,7 @@ from typing import List, Optional, Sequence, Tuple, FrozenSet, Set, Dict, NamedT
 
 from difl.ir import Library, Struct, StructMember, Type, Table, Union, Protocol, Enum
 from difl.changes import *
-from difl.intersection import DeclarationIntersection, intersect_changes
+from difl.intersection import intersect_changes
 from difl.type import compare_types
 
 
@@ -173,10 +173,10 @@ def struct_changes(before: Struct, after: Struct) -> List[Change]:
                                 after_members[after_name]))
 
     for name in layout_diff.added:
-        changes.append(StructMemberAdded(None, after_members[name]))
+        changes.append(StructMemberAdded(before, after_members[name]))
 
     for name in layout_diff.removed:
-        changes.append(StructMemberRemoved(before_members[name], None))
+        changes.append(StructMemberRemoved(before_members[name], after))
 
     for before_name, after_names in layout_diff.split:
         changes.append(

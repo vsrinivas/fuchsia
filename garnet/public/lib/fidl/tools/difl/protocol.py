@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from difl.ir import Method, Argument, Library, Protocol
 from difl.changes import *
-from difl.intersection import DeclarationIntersection, intersect_changes
+from difl.intersection import intersect_changes
 from difl.struct import struct_changes
 
 

@@ -167,7 +167,7 @@ class Method(Declaration):
                 'name': '%s:%s' % (self.name, suffix),
                 'members': members,
                 'size': size,
-                'location': self.location,
+                'location': self['location'],
             })
 
     @property
@@ -306,27 +306,17 @@ class Libraries(list):
     def __init__(self):
         self.by_name = dict()
 
+    def load_all(self, list_path: str):
+        for relative_path in (line.strip() for line in open(list_path).readlines()):
+            path = os.path.join(os.path.dirname(list_path), relative_path)
+            self.load(path)
+
     def load(self, path: str) -> Library:
         library = Library(self, path)
         self.append(library)
         self.by_name[library.name] = library
 
         return library
-
-    def load_from_build_dir(self, build_dir=None):
-        if build_dir is None:
-            build_dir = os.environ.get('FUCHSIA_BUILD_DIR')
-        if build_dir is None:
-            print('FUCHSIA_BUILD_DIR is not set.')
-            print('Run: fx exec %s' % ' '.join(sys.argv))
-            sys.exit(1)
-
-        # find all the .fidl.json files
-        ENDING = '.fidl.json'
-        for root, _, files in os.walk(build_dir):
-            for f in files:
-                if f.endswith(ENDING):
-                    self.load(os.path.join(root, f))
 
     @property
     def consts(self) -> t.List[Const]:
