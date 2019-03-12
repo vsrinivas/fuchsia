@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fbl/unique_ptr.h>
+#include <fbl/ref_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
@@ -12,45 +12,41 @@
 
 namespace devmgr {
 
-// Mixin for representing a type that represents an RPC handler and is owned
-// by an async loop.  The loop will own both the wrapped type and the RPC
+// Mixin for representing a type that represents an RPC handler and that has a
+// reference owned by an async loop.  The loop will own both the wrapped type and the RPC
 // connection handle.
 //
 // Deriving classes should define and implement this function:
-// static void HandleRpc(fbl::unique_ptr<T> conn,
-//                      async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-//                      const zx_packet_signal_t* signal);
-template <typename T> class AsyncLoopOwnedRpcHandler {
+// static void HandleRpc(fbl::RefPtr<T>&& conn,
+//                       async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+//                       const zx_packet_signal_t* signal);
+template <typename T> class AsyncLoopRefCountedRpcHandler {
 public:
-    ~AsyncLoopOwnedRpcHandler() {
+    ~AsyncLoopRefCountedRpcHandler() {
         zx_status_t status = wait_.Cancel();
         ZX_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 
         zx_handle_close(wait_.object());
     }
 
-    // Variant of BeginWait that conditionally consumes |conn|.  On failure,
-    // |*conn| is untouched.
-    static zx_status_t BeginWait(fbl::unique_ptr<T>* conn, async_dispatcher_t* dispatcher) {
-        zx_status_t status = (*conn)->wait_.Begin(dispatcher);
+    // Begins waiting in |dispatcher| on |conn->wait|.  This transfers ownership
+    // of a reference to |conn| to the dispatcher.  The dispatcher returns ownership when the
+    // handler is invoked.
+    static zx_status_t BeginWait(fbl::RefPtr<T> conn, async_dispatcher_t* dispatcher) {
+        zx_status_t status = conn->wait_.Begin(dispatcher);
         if (status == ZX_OK) {
-            __UNUSED auto ptr = conn->release();
+            // This reference will be recovered by MakeRefPtrNoAdopt in
+            // HandleRpcEntry
+            __UNUSED auto ptr = conn.leak_ref();
         }
         return status;
-    }
-
-    // Begins waiting in |dispatcher| on |conn->wait|.  This transfers ownership
-    // of |conn| to the dispatcher.  The dispatcher returns ownership when the
-    // handler is invoked.
-    static zx_status_t BeginWait(fbl::unique_ptr<T> conn, async_dispatcher_t* dispatcher) {
-        return BeginWait(&conn, dispatcher);
     }
 
     // Entrypoint for the RPC handler that captures the pointer ownership
     // semantics.
     void HandleRpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
-        fbl::unique_ptr<T> self(static_cast<T*>(this));
+        auto self = fbl::internal::MakeRefPtrNoAdopt(static_cast<T*>(this));
         T::HandleRpc(std::move(self), dispatcher, wait, status, signal);
     }
 
@@ -63,11 +59,12 @@ public:
         return old;
     }
 
-    using WaitType = async::WaitMethod<AsyncLoopOwnedRpcHandler<T>,
-                                       &AsyncLoopOwnedRpcHandler<T>::HandleRpcEntry>;
+    using WaitType = async::WaitMethod<AsyncLoopRefCountedRpcHandler<T>,
+                                       &AsyncLoopRefCountedRpcHandler<T>::HandleRpcEntry>;
 
 private:
     WaitType wait_{this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED};
 };
 
 } // namespace devmgr
+
