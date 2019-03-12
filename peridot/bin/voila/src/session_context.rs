@@ -14,6 +14,7 @@ impl SessionContext {
     async fn handle_request(&self, request: SessionContextRequest) -> Result<(), (fidl::Error)> {
         match request {
             SessionContextRequest::Logout { control_handle: _ } => {}
+            SessionContextRequest::Shutdown { control_handle: _ } => {}
             SessionContextRequest::GetPresentation { presentation: _, control_handle: _ } => {}
         }
         Ok(())

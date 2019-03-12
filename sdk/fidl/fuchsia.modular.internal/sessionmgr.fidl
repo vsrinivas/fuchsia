@@ -33,10 +33,14 @@ protocol Sessionmgr {
 
 // This interface is provided by basemgr to |Sessionmgr|.
 protocol SessionContext {
-    // See detailed comments in SessionShellContext.Logout(). Invocation of this
-    // method will logout all the users in this session, then shut down the
-    // sessionmgr process.
+    // See detailed comments in SessionShellContext.Logout(). Logs out all the
+    // users in this session, then shut down the sessionmgr process.
     Logout();
+
+    // Shut down the sessionmgr process. This method should be called if the
+    // users of the session should remain logged in. Call Logout() if the intent
+    // is to also log out the users from the session.
+    Shutdown();
 
     GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
 };

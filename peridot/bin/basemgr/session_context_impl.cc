@@ -116,4 +116,8 @@ void SessionContextImpl::Logout() {
   Shutdown(/* logout_users= */ true, [] {});
 }
 
+void SessionContextImpl::Shutdown() {
+  Shutdown(/* logout_users= */ false, [] {});
+}
+
 }  // namespace modular

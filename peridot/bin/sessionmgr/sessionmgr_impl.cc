@@ -292,7 +292,7 @@ void SessionmgrImpl::InitializeLedger(
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Logout();
+    Shutdown();
   });
   AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
@@ -316,8 +316,8 @@ void SessionmgrImpl::InitializeLedger(
   ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
                    << LedgerEpitaphToString(status) << std::endl
-                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Logout();
+                   << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
+    Shutdown();
   });
   ledger_app_->services().ConnectToService(
       ledger_repository_factory_.NewRequest());
@@ -334,15 +334,16 @@ void SessionmgrImpl::InitializeLedger(
   ledger_repository_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "LedgerRepository disconnected with epitaph: "
                    << LedgerEpitaphToString(status) << std::endl
-                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Logout();
+                   << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
+    Shutdown();
   });
   AtEnd(Reset(&ledger_repository_));
 
   ledger_client_ =
       std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this] {
-        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-        Logout();
+        FXL_LOG(ERROR)
+            << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
+        Shutdown();
       });
   AtEnd(Reset(&ledger_client_));
 }
@@ -772,8 +773,8 @@ void SessionmgrImpl::RunSessionShell(
 
   session_shell_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Session Shell seems to have crashed unexpectedly."
-                   << " Logging out.";
-    Logout();
+                   << " Shutting down.";
+    Shutdown();
   });
 
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
@@ -905,6 +906,8 @@ void SessionmgrImpl::GetVisibleStoriesController(
 }
 
 void SessionmgrImpl::Logout() { session_context_->Logout(); }
+
+void SessionmgrImpl::Shutdown() { session_context_->Shutdown(); }
 
 // |EntityProviderLauncher|
 void SessionmgrImpl::ConnectToEntityProvider(

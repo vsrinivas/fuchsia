@@ -73,6 +73,9 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   void Logout() override;
 
   // |fuchsia::modular::internal::SessionContext|
+  void Shutdown() override;
+
+  // |fuchsia::modular::internal::SessionContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
 

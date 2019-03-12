@@ -165,6 +165,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
           request) override;
   void Logout() override;
+  void Shutdown();
 
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
