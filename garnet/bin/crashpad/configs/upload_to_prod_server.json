@@ -1,5 +1,6 @@
 {
     "local_crashpad_database_path": "/data/crashes",
+    "max_crashpad_database_size_in_kb": 1024,
     "enable_upload_to_crash_server": true,
     "crash_server_url": "https://clients2.google.com/cr/report"
 }

@@ -23,6 +23,9 @@ const char kSchema[] = R"({
     "local_crashpad_database_path": {
       "type": "string"
     },
+    "max_crashpad_database_size_in_kb": {
+      "type": "integer"
+    },
     "enable_upload_to_crash_server": {
       "type": "boolean"
     },
@@ -32,12 +35,14 @@ const char kSchema[] = R"({
   },
   "required": [
     "local_crashpad_database_path",
+    "max_crashpad_database_size_in_kb",
     "enable_upload_to_crash_server"
   ],
   "additionalProperties": false
 })";
 
 const char kLocalCrashpadDatabasePathKey[] = "local_crashpad_database_path";
+const char kMaxDatabaseSizeInKbKey[] = "max_crashpad_database_size_in_kb";
 const char kEnableUploadToCrashServerKey[] = "enable_upload_to_crash_server";
 const char kCrashServerUrlKey[] = "crash_server_url";
 
@@ -87,10 +92,12 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   // We use a local config to only set the out argument after all the checks.
   Config local_config;
-  // It is safe to directly access these two fields as the keys are marked as
+  // It is safe to directly access these three fields as the keys are marked as
   // required and we have checked the config against the schema.
   local_config.local_crashpad_database_path =
       doc[kLocalCrashpadDatabasePathKey].GetString();
+  local_config.max_crashpad_database_size_in_kb =
+      doc[kMaxDatabaseSizeInKbKey].GetUint();
   local_config.enable_upload_to_crash_server =
       doc[kEnableUploadToCrashServerKey].GetBool();
 

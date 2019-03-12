@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_CRASHPAD_CONFIG_H_
 #define GARNET_BIN_CRASHPAD_CONFIG_H_
 
+#include <stdint.h>
+
 #include <memory>
 #include <string>
 
@@ -17,6 +19,10 @@ namespace crash {
 struct Config {
   // Directory path under which to store the local Crashpad database.
   std::string local_crashpad_database_path;
+
+  // Maximum size (in kilobytes) that the local Crashpad database should grow
+  // to, excluding current reports being generated.
+  uint64_t max_crashpad_database_size_in_kb;
 
   // Whether to upload the crash report to a remote crash server or leave it
   // locally.

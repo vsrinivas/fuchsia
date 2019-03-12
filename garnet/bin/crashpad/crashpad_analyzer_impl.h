@@ -15,11 +15,11 @@
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
-#include <third_party/crashpad/client/crash_report_database.h>
-#include <third_party/crashpad/util/misc/uuid.h>
 #include <zircon/status.h>
 
-#include "config.h"
+#include "garnet/bin/crashpad/config.h"
+#include "third_party/crashpad/client/crash_report_database.h"
+#include "third_party/crashpad/util/misc/uuid.h"
 
 namespace fuchsia {
 namespace crash {
@@ -66,6 +66,13 @@ class CrashpadAnalyzerImpl : public Analyzer {
       const crashpad::UUID& local_report_id,
       const std::map<std::string, std::string>* annotations,
       bool read_annotations_from_minidump);
+
+  // Deletes oldest crash reports to keep |database_| under a maximum size read
+  // from |config_|.
+  //
+  // Report age is defined by their
+  // crashpad::CrashReportDatabase::Report::creation_time.
+  void PruneDatabase();
 
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;

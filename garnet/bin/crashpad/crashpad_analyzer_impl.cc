@@ -25,6 +25,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "third_party/crashpad/client/crash_report_database.h"
+#include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/client/settings.h"
 #include "third_party/crashpad/handler/fuchsia/crash_report_exception_handler.h"
 #include "third_party/crashpad/handler/minidump_to_upload_parameters.h"
@@ -119,6 +120,7 @@ void CrashpadAnalyzerImpl::HandleNativeException(
     FX_LOGS(ERROR) << "failed to handle native exception. Won't retry.";
   }
   callback(status);
+  PruneDatabase();
 }
 
 void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
@@ -132,6 +134,7 @@ void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
         << "failed to handle managed runtime exception. Won't retry.";
   }
   callback(status);
+  PruneDatabase();
 }
 
 void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
@@ -142,6 +145,7 @@ void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
     FX_LOGS(ERROR) << "failed to process kernel panic crashlog. Won't retry.";
   }
   callback(status);
+  PruneDatabase();
 }
 
 namespace {
@@ -381,6 +385,16 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
                 << server_report_id;
 
   return ZX_OK;
+}
+
+void CrashpadAnalyzerImpl::PruneDatabase() {
+  // We need to create a new condition every time we prune as it internally
+  // maintains a cumulated total size as it iterates over the reports in the
+  // database and we want to reset that cumulated total size every time we
+  // prune.
+  crashpad::DatabaseSizePruneCondition pruning_condition(
+      config_.max_crashpad_database_size_in_kb);
+  crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
 }
 
 }  // namespace crash

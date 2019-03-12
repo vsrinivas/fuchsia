@@ -4,6 +4,8 @@
 
 #include "garnet/bin/crashpad/crashpad_analyzer_impl.h"
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -20,6 +22,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <zircon/errors.h>
+#include <zircon/time.h>
 
 #include "garnet/bin/crashpad/config.h"
 #include "src/lib/files/directory.h"
@@ -33,6 +36,13 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+// We keep the local Crashpad database size under a certain value. As we want to
+// check the produced attachments in the database, we should set the size to be
+// at least the total size for a single report so that it does not get cleaned
+// up before we are able to inspect its attachments.
+// For now, a single report should take up to 1MB.
+constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
+
 // Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
 //
 // This does not test the environment service. It directly instantiates the
@@ -43,6 +53,8 @@ class CrashpadAnalyzerImplTest : public ::testing::Test {
   // be reset via ResetAnalyzer() if a different config is necessary.
   void SetUp() override {
     ResetAnalyzer(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                         /*max_crashpad_database_size_in_kb=*/
+                         kMaxTotalReportSizeInKb,
                          /*enable_upload_to_crash_server=*/false,
                          /*crash_server_url=*/nullptr});
   }
@@ -219,6 +231,88 @@ TEST_F(CrashpadAnalyzerImplTest, ProcessKernelPanicCrashlog_Basic) {
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
   CheckAttachments({"build.snapshot", "log"});
+}
+
+TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_ZeroSize) {
+  // We reset the analyzer with a max database size of 0, meaning reports will
+  // get cleaned up before the end of the |analyzer_| call.
+  ResetAnalyzer(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                       /*max_crashpad_database_size_in_kb=*/0u,
+                       /*enable_upload_to_crash_server=*/false,
+                       /*crash_server_url=*/nullptr});
+
+  // We generate a crash report, using ProcessKernelPanicCrashlog() because
+  // there are fewer arguments!
+  fuchsia::mem::Buffer crashlog;
+  ASSERT_TRUE(
+      fsl::VmoFromString("just big enough to be greater than 0", &crashlog));
+  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
+  analyzer_->ProcessKernelPanicCrashlog(
+      std::move(crashlog),
+      [&out_status](zx_status_t status) { out_status = status; });
+  EXPECT_EQ(out_status, ZX_OK);
+
+  // We check that all the attachments have been cleaned up.
+  EXPECT_TRUE(GetAttachmentSubdirs().empty());
+}
+
+std::string GenerateString(const uint64_t string_size_in_kb) {
+  std::string str;
+  for (size_t i = 0; i < string_size_in_kb * 1024; ++i) {
+    str.push_back(static_cast<char>(i % 128));
+  }
+  return str;
+}
+
+TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_SizeForOneReport) {
+  // We reset the analyzer with a max database size equivalent to the expected
+  // size of a report plus the value of an especially large attachment.
+  const uint64_t crashlog_size_in_kb = 2u * kMaxTotalReportSizeInKb;
+  const std::string large_string = GenerateString(crashlog_size_in_kb);
+  ResetAnalyzer(
+      Config{/*local_crashpad_database_path=*/database_path_.path(),
+             /*max_crashpad_database_size_in_kb=*/kMaxTotalReportSizeInKb +
+                 crashlog_size_in_kb,
+             /*enable_upload_to_crash_server=*/false,
+             /*crash_server_url=*/nullptr});
+
+  // We generate a crash report, using ProcessKernelPanicCrashlog() because
+  // we can more easily control the total report size as there are no minidumps
+  // and the crashlog is one of the attachments.
+  fuchsia::mem::Buffer crashlog;
+  ASSERT_TRUE(fsl::VmoFromString(large_string, &crashlog));
+  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
+  analyzer_->ProcessKernelPanicCrashlog(
+      std::move(crashlog),
+      [&out_status](zx_status_t status) { out_status = status; });
+  EXPECT_EQ(out_status, ZX_OK);
+
+  // We check that only one set of attachments is there.
+  const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
+  ASSERT_EQ(attachment_subdirs.size(), 1u);
+
+  // We sleep for one second to guarantee a different creation time for the
+  // next crash report.
+  zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+
+  // We generate a new crash report.
+  fuchsia::mem::Buffer new_crashlog;
+  ASSERT_TRUE(fsl::VmoFromString(large_string, &new_crashlog));
+  zx_status_t new_out_status = ZX_ERR_UNAVAILABLE;
+  analyzer_->ProcessKernelPanicCrashlog(
+      std::move(new_crashlog),
+      [&new_out_status](zx_status_t status) { new_out_status = status; });
+  EXPECT_EQ(new_out_status, ZX_OK);
+
+  // We check that only one set of attachments is there and that it is a
+  // different directory than previously (the directory name is the local crash
+  // report ID).
+  const std::vector<std::string> new_attachment_subdirs =
+      GetAttachmentSubdirs();
+  EXPECT_EQ(new_attachment_subdirs.size(), 1u);
+  EXPECT_THAT(
+      new_attachment_subdirs,
+      testing::Not(testing::UnorderedElementsAreArray(attachment_subdirs)));
 }
 
 }  // namespace
