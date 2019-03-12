@@ -114,19 +114,18 @@ void PresentationContainer::OnEvent(fuchsia::ui::input::KeyboardEvent event) {
 void PresentationContainer::SetNextShadowTechnique() {
   using ShadowTechnique = fuchsia::ui::gfx::ShadowTechnique;
 
+  // These are the only two types currently supported by the Scenic renderer.
+  // TODO(MF-266) Make this more robust.
   auto next_shadow_technique =
       [](ShadowTechnique shadow_technique) -> ShadowTechnique {
     switch (shadow_technique) {
       case ShadowTechnique::UNSHADOWED:
-        return ShadowTechnique::SCREEN_SPACE;
-      case ShadowTechnique::SCREEN_SPACE:
-        return ShadowTechnique::SHADOW_MAP;
+        return ShadowTechnique::STENCIL_SHADOW_VOLUME;
+      case ShadowTechnique::STENCIL_SHADOW_VOLUME:
+        return ShadowTechnique::UNSHADOWED;
       default:
         FXL_LOG(ERROR) << "Unknown shadow technique: "
                        << fidl::ToUnderlying(shadow_technique);
-        // Fallthrough
-      case ShadowTechnique::SHADOW_MAP:
-      case ShadowTechnique::MOMENT_SHADOW_MAP:
         return ShadowTechnique::UNSHADOWED;
     }
   };
