@@ -17,12 +17,8 @@ class Type : public Symbol {
   const Type* AsType() const final;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
-  // Returns the type with no "const" or "volatile" modifiers. If this is
-  // neither of those types, or the underlying modified type can not be
-  // resolved, it will return |this|.
-  //
-  // Most operations don't care about "const" and "volatile". This function
-  // will follow modifiers until it finds a concrete type.
+  // Returns the type with no "const", "volatile", or similar modifiers that
+  // don't affect the stored data, and expand typedef and using statements.
   //
   // It is on the Type class rather than the ModifiedType class so that calling
   // code can unconditionally call type->GetConcreteType()->byte_size() or

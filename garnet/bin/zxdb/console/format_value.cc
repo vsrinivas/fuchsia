@@ -137,7 +137,7 @@ FormatValue::FormatValue(std::unique_ptr<ProcessContext> process_context)
 FormatValue::~FormatValue() = default;
 
 void FormatValue::AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
-                              const ExprValue value,
+                              const ExprValue& value,
                               const FormatExprValueOptions& options) {
   FormatExprValue(data_provider, value, options, false,
                   AsyncAppend(GetRootOutputKey()));
@@ -189,6 +189,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
                                   OutputKey output_key) {
+  // Always use this variable instead of value.type() since it will be modified
+  // below to strip unneeded stuff.
   const Type* type = value.type();
   if (!type) {
     OutputKeyComplete(output_key, ErrStringToOutput("no type"));
@@ -203,7 +205,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                      fxl::StringPrintf("(%s) ", type->GetFullName().c_str())));
   }
 
-  // Trim "const", "volatile", etc. for the type checking below.
+  // Trim "const", "volatile", etc. and follow typedef and using for the type
+  // checking below.
   type = type->GetConcreteType();
 
   // Structs and classes.
@@ -246,19 +249,26 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        static_cast<unsigned>(modified_type->tag())));
         break;
     }
-  } else if (const MemberPtr* member_ptr = value.type()->AsMemberPtr()) {
+  } else if (const MemberPtr* member_ptr = type->AsMemberPtr()) {
     // Pointers to class/struct members.
     FormatMemberPtr(value, member_ptr, options, &out);
-  } else if (const FunctionType* func = value.type()->AsFunctionType()) {
+  } else if (const FunctionType* func = type->AsFunctionType()) {
     // Functions. These don't have a direct C++ equivalent without being
     // modified by a "pointer". Assume these act like pointers to functions.
     FormatFunctionPointer(value, options, &out);
-  } else if (const Enumeration* enum_type = value.type()->AsEnumeration()) {
+  } else if (const Enumeration* enum_type = type->AsEnumeration()) {
     // Enumerations.
     FormatEnum(value, enum_type, options, &out);
   } else if (IsNumericBaseType(value.GetBaseType())) {
     // Numeric types.
     FormatNumeric(value, options, &out);
+  } else if (type->tag() == DwarfTag::kUnspecifiedType) {
+    // Unspecified, assume nullptr_t and print as a number (probably 0x0).
+    uint64_t unspecified_value = 0;
+    if (value.PromoteTo64(&unspecified_value).has_error())
+      out.Append("<unspecified>");
+    else
+      out.Append(fxl::StringPrintf("0x%" PRIx64, unspecified_value));
   } else {
     // Non-numeric base types.
     switch (value.GetBaseType()) {
@@ -404,13 +414,6 @@ void FormatValue::FormatCollection(
   AppendToOutputKey(output_key, OutputBuffer("}"));
   OutputKeyComplete(output_key);
 }
-
-void FormatValue::FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
-                               const ExprValue& value,
-                               const Type* array_value_type,
-                               int known_elt_count,
-                               const FormatExprValueOptions& options,
-                               OutputKey output_key) {}
 
 bool FormatValue::TryFormatArrayOrString(
     fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,

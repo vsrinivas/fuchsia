@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/symbols/test_data/zxdb_symbol_test.h"
 
+#include <stddef.h>
+
 // This file is compiled into a library and used in the DWARFSymboLFactory
 // tests to query symbol information. The actual code is not run.
 
@@ -58,6 +60,10 @@ __attribute__((always_inline)) int InlinedFunction(int param) {
   return param * 2;
 }
 
+struct TypeForUsing {
+  int a;
+};
+
 }  // namespace my_ns
 
 void My2DArray() {
@@ -106,8 +112,20 @@ StructWithEnums GetStructWithEnums() {
   return StructWithEnums();
 }
 
+EXPORT nullptr_t GetNullPtrT() {
+  return nullptr;
+}
+
+// TODO(brettw) "TypeForUsing" lacks a test because the function actually
+// returns "my_ns::TypeForUsing" so we need to find another way to get the
+// using definition for testing.
+using my_ns::TypeForUsing;
+EXPORT TypeForUsing GetUsing() {
+  TypeForUsing result;
+  result.a = 92;
+  return result;
+}
+
 // TODO(brettw) test:
 //   stuff in an anonymous namespace
-//   typedef
-//   using
 //   local types defined in functions

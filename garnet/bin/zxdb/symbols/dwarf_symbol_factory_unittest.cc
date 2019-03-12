@@ -88,7 +88,7 @@ TEST(DwarfSymbolFactory, Function) {
   EXPECT_TRUE(function->decl_line().is_valid());
   EXPECT_TRUE(StringEndsWith(function->decl_line().file(), "/type_test.cc"))
       << function->decl_line().file();
-  EXPECT_EQ(10, function->decl_line().line());
+  EXPECT_EQ(12, function->decl_line().line());
 
   // Note: return type tested by ModifiedBaseType.
 }
@@ -512,5 +512,43 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   // The lexical scope should have no other children.
   EXPECT_TRUE(inner->inner_blocks().empty());
 }
+
+// Tests both nullptr_t and typedef decoding (which is how it's encoded).
+TEST(DwarfSymbolFactory, NullPtrTTypedef) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName(), "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Find the GetNullPtrT function.
+  const char kGetNullPtrT[] = "GetNullPtrT";
+  fxl::RefPtr<const Function> function =
+      GetFunctionWithName(module, kGetNullPtrT);
+  ASSERT_TRUE(function);
+
+  // The return type should be nullptr_t.
+  auto* nullptr_t_type = function->return_type().Get()->AsType();
+  ASSERT_TRUE(nullptr_t_type);
+  EXPECT_EQ("nullptr_t", nullptr_t_type->GetFullName());
+
+  // The standard defined nullptr_t as "typedef decltype(nullptr) nullptr_t"
+  auto* typedef_type = nullptr_t_type->AsModifiedType();
+  ASSERT_TRUE(typedef_type);
+  EXPECT_EQ(DwarfTag::kTypedef, typedef_type->tag());
+
+  // Check the type underlying the typedef.
+  auto* underlying = typedef_type->modified().Get()->AsType();
+  ASSERT_TRUE(underlying);
+  EXPECT_EQ("decltype(nullptr)", underlying->GetFullName());
+
+  // Currently Clang defines this as an "unspecified" type. Since this isn't
+  // specified, it's possible this may change in the future, but if it does we
+  // need to check to make sure everything works properly.
+  EXPECT_EQ(DwarfTag::kUnspecifiedType, underlying->tag());
+
+  // The decoder should have forced the size to be the size of a pointer.
+  EXPECT_EQ(8u, underlying->byte_size());
+}
+
+// TODO(brettw) test using statements. See GetUsing() in type_test.cc
 
 }  // namespace zxdb

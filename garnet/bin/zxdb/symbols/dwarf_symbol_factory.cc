@@ -194,6 +194,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     case DwarfTag::kSubroutineType:
       symbol = DecodeFunctionType(die);
       break;
+    case DwarfTag::kImportedDeclaration:
+      symbol = DecodeImportedDeclaration(die);
+      break;
     case DwarfTag::kInheritance:
       symbol = DecodeInheritedFrom(die);
       break;
@@ -217,6 +220,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     case DwarfTag::kClassType:
     case DwarfTag::kUnionType:
       symbol = DecodeCollection(die);
+      break;
+    case DwarfTag::kUnspecifiedType:
+      symbol = DecodeUnspecifiedType(die);
       break;
     default:
       // All unhandled Tag types get a Symbol that has the correct tag, but
@@ -662,6 +668,24 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(
   return function;
 }
 
+// Imported declarations are "using" statements that don't provide a new name
+// like "using std::vector;".
+//
+// Type renames like "using Foo = std::vector;" is encoded as a typedef.
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeImportedDeclaration(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::DWARFDie imported;
+  decoder.AddReference(llvm::dwarf::DW_AT_import, &imported);
+
+  if (!decoder.Decode(die) || !imported)
+    return fxl::MakeRefCounted<Symbol>();
+
+  return fxl::MakeRefCounted<ModifiedType>(DwarfTag::kImportedDeclaration,
+                                           MakeLazy(imported));
+}
+
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(
     const llvm::DWARFDie& die) {
   DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
@@ -791,6 +815,35 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(
 
   if (parent)
     result->set_parent(MakeLazy(parent));
+  return result;
+}
+
+// Clang and GCC use "unspecified" types to encode "decltype(nullptr)". When
+// used as a variable this appears as a pointer with 0 value, despite not
+// having any declared size in the symbols. Therefore, we make up a byte size
+// equal to the pointer size (8 bytes on our 64-bit systems).
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeUnspecifiedType(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  // Types must always use the parent of the abstract origin (if it exists) so
+  // they can be nested in the correct namespace.
+  llvm::DWARFDie parent;
+  decoder.AddAbstractParent(&parent);
+
+  llvm::Optional<const char*> name;
+  decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  auto result = fxl::MakeRefCounted<Type>(DwarfTag::kUnspecifiedType);
+  if (name)
+    result->set_assigned_name(*name);
+  result->set_byte_size(8);  // Assume pointer.
+  if (parent)
+    result->set_parent(MakeLazy(parent));
+
   return result;
 }
 

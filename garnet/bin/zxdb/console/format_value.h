@@ -68,7 +68,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Construct with fxl::MakeRefCounted<FormatValue>().
 
   void AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
-                   const ExprValue value,
+                   const ExprValue& value,
                    const FormatExprValueOptions& options);
 
   // The data provider normally comes from the frame where you want to evaluate
@@ -186,10 +186,6 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                         const Collection* coll, const ExprValue& value,
                         const FormatExprValueOptions& options,
                         OutputKey output_key);
-  void FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
-                    const ExprValue& value, const Type* array_value_type,
-                    int known_elt_count, const FormatExprValueOptions& options,
-                    OutputKey output_key);
 
   // Checks array and string types and formats the value accordingly. Returns
   // true if it was an array or string type that was handled, false if it

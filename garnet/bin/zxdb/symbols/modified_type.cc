@@ -15,7 +15,8 @@ namespace {
 // to the data stored in it.
 bool IsTransparentTag(DwarfTag tag) {
   return tag == DwarfTag::kConstType || tag == DwarfTag::kVolatileType ||
-         tag == DwarfTag::kTypedef || tag == DwarfTag::kRestrictType;
+         tag == DwarfTag::kTypedef || tag == DwarfTag::kRestrictType ||
+         tag == DwarfTag::kImportedDeclaration;
 }
 
 // Returns true if this modified holds some kind of pointer to the modified
@@ -104,7 +105,16 @@ std::string ModifiedType::ComputeFullName() const {
     case DwarfTag::kVolatileType:
       return "volatile " + modified_name;
     case DwarfTag::kImportedDeclaration:
-      // Using statements use the underlying name.
+      // Using statements. This is use the kind that moves stuff between
+      // namespaces like "using std::vector;" -- the renaming type is encoded
+      // as a typedef.
+      //
+      // TODO(brettw) this is probably wrong because we need to strip
+      // namespaces from the modified type and instead use the namespaces from
+      // the using statement. Currently we don't encounter these as Clang
+      // follows the using statement when defining types of variables so we
+      // only see the underlying type. When we support type lookup by name,
+      // these will matter.
       return modified_name;
     default:
       return kUnknown;
