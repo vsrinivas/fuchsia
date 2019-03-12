@@ -70,11 +70,9 @@ public:
                                      size_t* data_actual, void* oob, size_t oob_size,
                                      size_t* oob_actual, uint32_t* ecc_correct);
     zx_status_t RawNandWritePageHwecc(const void* data, size_t data_size, const void* oob,
-                                     size_t oob_size, uint32_t nand_page);
+                                      size_t oob_size, uint32_t nand_page);
     zx_status_t RawNandEraseBlock(uint32_t nand_page);
     zx_status_t RawNandGetNandInfo(fuchsia_hardware_nand_Info* nand_info);
-    void aml_cmd_ctrl(int32_t cmd, uint32_t ctrl);
-    uint8_t aml_read_byte();
 
 private:
     Onfi onfi_;
@@ -108,36 +106,44 @@ private:
         uint64_t failed;
     } stats;
 
-    void nandctrl_set_cfg(uint32_t val);
-    void nandctrl_set_timing_async(int bus_tim, int bus_cyc);
-    void nandctrl_send_cmd(uint32_t cmd);
-    void aml_cmd_idle(uint32_t time);
-    zx_status_t aml_wait_cmd_finish(unsigned int timeout_ms);
-    void aml_cmd_seed(uint32_t seed);
-    void aml_cmd_n2m(uint32_t ecc_pages, uint32_t ecc_pagesize);
-    void aml_cmd_m2n(uint32_t ecc_pages, uint32_t ecc_pagesize);
-    void aml_cmd_m2n_page0();
-    void aml_cmd_n2m_page0();
-    zx_status_t aml_wait_dma_finish();
-    void* aml_info_ptr(int i);
-    zx_status_t aml_get_oob_byte(uint8_t* oob_buf);
-    zx_status_t aml_set_oob_byte(const uint8_t* oob_buf, uint32_t ecc_pages);
-    zx_status_t aml_get_ecc_corrections(int ecc_pages, uint32_t nand_page,
-                                        uint32_t* ecc_corrected);
-    zx_status_t aml_check_ecc_pages(int ecc_pages);
-    zx_status_t aml_queue_rb();
-    void aml_set_clock_rate(uint32_t clk_freq);
-    void aml_clock_init();
-    void aml_adjust_timings(uint32_t tRC_min, uint32_t tREA_max,
-                            uint32_t RHOH_min);
-    zx_status_t aml_get_flash_type();
+    void AmlCmdCtrl(int32_t cmd, uint32_t ctrl);
+    // Reads status byte.
+    uint8_t AmlReadByte();
+    void NandctrlSetCfg(uint32_t val);
+    void NandctrlSetTimingAsync(int bus_tim, int bus_cyc);
+    void NandctrlSendCmd(uint32_t cmd);
+    void AmlCmdIdle(uint32_t time);
+    zx_status_t AmlWaitCmdFinish(unsigned int timeout_ms);
+    void AmlCmdSeed(uint32_t seed);
+    void AmlCmdN2M(uint32_t ecc_pages, uint32_t ecc_pagesize);
+    void AmlCmdM2N(uint32_t ecc_pages, uint32_t ecc_pagesize);
+    void AmlCmdM2NPage0();
+    void AmlCmdN2MPage0();
+    zx_status_t AmlWaitDmaFinish();
+    // Returns the AmlInfoFormat struct corresponding to the i'th
+    // ECC page. THIS ASSUMES user_mode == 2 (2 OOB bytes per ECC page).
+    void* AmlInfoPtr(int i);
+    zx_status_t AmlGetOOBByte(uint8_t* oob_buf);
+    zx_status_t AmlSetOOBByte(const uint8_t* oob_buf, uint32_t ecc_pages);
+    // Returns the maximum bitflips corrected on this NAND page
+    // (the maximum bitflips across all of the ECC pages in this page).
+    zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
+                                     uint32_t* ecc_corrected);
+    zx_status_t AmlCheckECCPages(int ecc_pages);
+    zx_status_t AmlQueueRB();
+    void AmlSetClockRate(uint32_t clk_freq);
+    void AmlClockInit();
+    void AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min);
+    zx_status_t AmlGetFlashType();
     int IrqThread();
-    void aml_set_encryption();
-    zx_status_t aml_read_page0(void* data, size_t data_size, void* oob, size_t oob_size,
-                               uint32_t nand_page, uint32_t* ecc_correct, int retries);
-    zx_status_t aml_nand_init_from_page0();
-    zx_status_t aml_raw_nand_allocbufs();
-    zx_status_t aml_nand_init();
+    void AmlSetEncryption();
+    zx_status_t AmlReadPage0(void* data, size_t data_size, void* oob, size_t oob_size,
+                             uint32_t nand_page, uint32_t* ecc_correct, int retries);
+    // Reads one of the page0 pages, and use the result to init
+    // ECC algorithm and rand-mode.
+    zx_status_t AmlNandInitFromPage0();
+    zx_status_t AmlRawNandAllocBufs();
+    zx_status_t AmlNandInit();
 };
 
 } // namespace amlrawnand

@@ -9,15 +9,13 @@
 
 #include <ddk/debug.h>
 
-/*
- * Database of settings for the NAND flash devices we support.
- * Note on chip_delay: chip_delay is the delay after we enqueue certain ONFI
- * commands (RESET, READSTART). The value of 30us was experimentally picked for
- * the Samsung NAND, and 20us for the Toshiba NAND. It turns out that a value
- * of 25us works better for the Micron NAND (25us reduces the number of ECC
- * errors significantly).
- * TODO(ZX-2696): Determine the value of chip delay more scientifically.
- */
+// Database of settings for the NAND flash devices we support.
+// Note on chip_delay: chip_delay is the delay after we enqueue certain ONFI
+// commands (RESET, READSTART). The value of 30us was experimentally picked for
+// the Samsung NAND, and 20us for the Toshiba NAND. It turns out that a value
+// of 25us works better for the Micron NAND (25us reduces the number of ECC
+// errors significantly).
+// TODO(ZX-2696): Determine the value of chip delay more scientifically.
 static struct nand_chip_table nand_chip_table[] = {
     {0x2C, 0xDC, "Micron", "MT29F4G08ABAEA", {20, 16, 15}, 25, true, 512, 0, 0, 0, 0},
     {0xEC, 0xDC, "Samsung", "K9F4G08U0F", {25, 20, 15}, 30, true, 512, 0, 0, 0, 0},
@@ -28,12 +26,8 @@ static struct nand_chip_table nand_chip_table[] = {
 #define NAND_CHIP_TABLE_SIZE \
     (sizeof(nand_chip_table) / sizeof(struct nand_chip_table))
 
-/*
- * Find the entry in the NAND chip table database based on manufacturer
- * id and device id
- */
-struct nand_chip_table* Onfi::find_nand_chip_table(uint8_t manuf_id,
-                                                   uint8_t device_id) {
+struct nand_chip_table* Onfi::FindNandChipTable(uint8_t manuf_id,
+                                                uint8_t device_id) {
     for (uint32_t i = 0; i < NAND_CHIP_TABLE_SIZE; i++)
         if (manuf_id == nand_chip_table[i].manufacturer_id &&
             device_id == nand_chip_table[i].device_id)
@@ -47,13 +41,7 @@ void Onfi::Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
     read_byte_ = std::move(read_byte);
 }
 
-/*
- * onfi_wait() and onfi_command() are generic ONFI protocol compliant.
- *
- * Generic wait function used by both program (write) and erase
- * functionality.
- */
-zx_status_t Onfi::onfi_wait(uint32_t timeout_ms) {
+zx_status_t Onfi::OnfiWait(uint32_t timeout_ms) {
     uint64_t total_time = 0;
     uint8_t cmd_status;
 
@@ -77,12 +65,9 @@ zx_status_t Onfi::onfi_wait(uint32_t timeout_ms) {
     return ZX_OK;
 }
 
-/*
- * Send onfi command down to the controller.
- */
-void Onfi::onfi_command(uint32_t command, int32_t column, int32_t page_addr,
-                        uint32_t capacity_mb, uint32_t chip_delay_us,
-                        int buswidth_16) {
+void Onfi::OnfiCommand(uint32_t command, int32_t column, int32_t page_addr,
+                       uint32_t capacity_mb, uint32_t chip_delay_us,
+                       int buswidth_16) {
     cmd_ctrl_(command, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
     if (column != -1 || page_addr != -1) {
         uint32_t ctrl = NAND_CTRL_CHANGE | NAND_NCE | NAND_ALE;

@@ -68,12 +68,17 @@ struct nand_chip_table {
 
 class Onfi {
 public:
-    void onfi_command(uint32_t command, int32_t column, int32_t page_addr,
-                      uint32_t capacity_mb, uint32_t chip_delay_us, int buswidth_16);
-    zx_status_t onfi_wait(uint32_t timeout_ms);
+    // OnfiWait() and OnfiCommand() are generic ONFI protocol compliant.
+    // Sends onfi command down to the controller.
+    void OnfiCommand(uint32_t command, int32_t column, int32_t page_addr,
+                     uint32_t capacity_mb, uint32_t chip_delay_us, int buswidth_16);
+    // Generic wait function used by both program (write) and erase functionality.
+    zx_status_t OnfiWait(uint32_t timeout_ms);
     void Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
               fbl::Function<uint8_t()> read_byte);
-    struct nand_chip_table* find_nand_chip_table(uint8_t manuf_id, uint8_t device_id);
+    // Finds the entry in the NAND chip table database based on manufacturer
+    // id and device id.
+    struct nand_chip_table* FindNandChipTable(uint8_t manuf_id, uint8_t device_id);
 
 private:
     fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl_;
