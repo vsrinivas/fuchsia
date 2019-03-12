@@ -15,6 +15,9 @@ declare_args() {
                 root_build_dir),
   ]
 
+  # Path to Clang lib directory.
+  clang_lib_dir = rebase_path("${clang_prefix}/../lib", root_build_dir)
+
   # Extra args to globally apply to the manifest generation script.
   extra_manifest_args = []
 }
@@ -162,6 +165,7 @@ template("generate_manifest") {
              "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
              "--build-id-dir=" + rebase_path("$root_build_dir/.build-id"),
+             "--clang-lib-dir=" + clang_lib_dir,
              "@{{response_file_name}}",
            ]
     response_file_contents = []

@@ -34,6 +34,7 @@ asan versions of the toolchain/Zircon libraries.
 
 from collections import namedtuple
 import argparse
+import elfinfo
 import fnmatch
 import itertools
 import manifest
@@ -253,7 +254,8 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 # Take an iterable of binary_entry, and return list of binary_entry (all
 # stripped files), a list of binary_info (all debug files), and a boolean
 # saying whether any new stripped output files were written in the process.
-def strip_binary_manifest(manifest, stripped_dir, build_id_dir, examined):
+def strip_binary_manifest(manifest, stripped_dir, build_id_dir, clang_lib_dir,
+                          examined):
     new_output = False
 
     def find_debug_file(filename):
@@ -267,6 +269,17 @@ def strip_binary_manifest(manifest, stripped_dir, build_id_dir, examined):
             debugfile = filename[:-6]
         elif os.path.exists(filename + '.debug'):
             debugfile = filename + '.debug'
+        elif os.path.realpath(filename).startswith(
+                os.path.realpath(clang_lib_dir)):
+            build_id_dir = os.path.join(clang_lib_dir, 'debug', '.build-id')
+            if not os.path.exists(build_id_dir):
+                return None
+            info = elfinfo.get_elf_info(filename)
+            debugfile = os.path.join(
+                build_id_dir, info.build_id[:2], info.build_id[2:] + '.debug')
+            if not os.path.exists(debugfile):
+                return None
+            return binary_info(debugfile)
         else:
             dir, file = os.path.split(filename)
             if file.endswith('.so') or '.so.' in file:
@@ -360,7 +373,8 @@ def emit_manifests(args, selected, unselected, input_binaries):
     # stripped files are implicit outputs (there's no such thing as a depfile
     # for outputs, only for inputs).
     binaries, debug_files, force_update = strip_binary_manifest(
-        binaries, args.stripped_dir, args.build_id_dir, examined)
+        binaries, args.stripped_dir, args.build_id_dir, args.clang_lib_dir,
+        examined)
 
     # Collate groups.
     for entry in itertools.chain((binary.entry for binary in binaries),
@@ -426,6 +440,9 @@ is used for shared libraries and the like.
     parser.add_argument('--build-id-dir', required=False,
                         metavar='DIR',
                         help='.build-id directory to populate when stripping')
+    parser.add_argument('--clang-lib-dir', required=False,
+                        metavar='DIR',
+                        help='Path to Clang library directory')
     parser.add_argument('--depfile',
                         metavar='DEPFILE',
                         help='Ninja depfile to write')
