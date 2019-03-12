@@ -14,19 +14,27 @@ __BEGIN_CDECLS;
 
 // Forward declarations
 
+
+
 typedef struct a a_t;
 typedef struct b b_t;
 typedef struct c c_t;
 typedef struct d d_t;
 
+
+
+
+
 // Declarations
 
+
+
 struct a {
-    b_t* foo;
+    b_t foo;
 };
 
 struct b {
-    a_t* bar;
+    a_t bar;
 };
 
 struct c {

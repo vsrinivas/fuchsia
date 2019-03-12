@@ -7,11 +7,12 @@
 
 #pragma once
 
-#include <banjo/examples/empty.h>
 #include <type_traits>
 
 namespace ddk {
 namespace internal {
+
+
 
 } // namespace internal
 } // namespace ddk

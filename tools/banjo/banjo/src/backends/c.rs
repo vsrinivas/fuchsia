@@ -68,18 +68,17 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::USize => Ok(String::from("size_t")),
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
-        ast::Ty::Voidptr => Ok(String::from("void*")),
+        ast::Ty::Voidptr => Ok(String::from("void")),
         ast::Ty::Str { .. } => Ok(String::from("char*")),
         ast::Ty::Vector { ref ty, .. } => ty_to_c_str(ast, ty),
         ast::Ty::Array { ref ty, .. } => ty_to_c_str(ast, ty),
-        ast::Ty::Identifier { id, reference } => {
-            let ptr = if *reference { "*" } else { "" };
+        ast::Ty::Identifier { id, .. } => {
             if id.is_base_type() {
                 Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
                     ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
-                        return Ok(format!("{}_t{}", to_c_name(id.name()), ptr));
+                        return Ok(format!("{}_t", to_c_name(id.name())));
                     }
                     t => return ty_to_c_str(ast, &t),
                 }
@@ -599,13 +598,14 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                         accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
                         match f.ty {
                             ast::Ty::Vector { .. } => {
+                                let ty_name = ty_to_c_str(ast, &f.ty)?;
                                 accum.push_str(
                                     format!(
-                                        "    {ty}{ptr} {c_name}_buffer;\n\
-                                         uint32_t {c_name}_size;",
+                                        "    {ty}* {c_name}_{buffer};\n    size_t {c_name}_{size};",
+                                        buffer = name_buffer(&ty_name),
+                                        size = name_size(&ty_name),
                                         c_name = to_c_name(f.ident.name()),
-                                        ptr = if false { "*" } else { "" },
-                                        ty = ty_to_c_str(ast, &f.ty)?
+                                        ty = ty_name,
                                     )
                                     .as_str(),
                                 );
@@ -613,9 +613,8 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                             ast::Ty::Array { ref size, .. } => {
                                 accum.push_str(
                                     format!(
-                                        "    {ty}{ptr} {c_name}[{size}];",
+                                        "    {ty} {c_name}[{size}];",
                                         c_name = to_c_name(f.ident.name()),
-                                        ptr = if false { "*" } else { "" },
                                         size = size,
                                         ty = ty_to_c_str(ast, &f.ty)?
                                     )
@@ -625,9 +624,8 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                             _ => {
                                 accum.push_str(
                                     format!(
-                                        "    {ty}{ptr} {c_name};",
+                                        "    {ty} {c_name};",
                                         c_name = to_c_name(f.ident.name()),
-                                        ptr = if false { "*" } else { "" },
                                         ty = ty_to_c_str(ast, &f.ty)?
                                     )
                                     .as_str(),

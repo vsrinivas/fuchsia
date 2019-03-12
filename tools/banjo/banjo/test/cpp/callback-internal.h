@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <banjo/examples/callback.h>
 #include <type_traits>
 
 namespace ddk {

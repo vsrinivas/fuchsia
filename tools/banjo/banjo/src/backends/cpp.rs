@@ -89,7 +89,7 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         ast::Ty::USize => Ok(String::from("size_t")),
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
-        ast::Ty::Voidptr => Ok(String::from("void*")),
+        ast::Ty::Voidptr => Ok(String::from("void")),
         ast::Ty::Str { .. } => Ok(String::from("char*")),
         ast::Ty::Array { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
         ast::Ty::Vector { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
@@ -433,6 +433,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
+        protocol: bool,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
@@ -443,10 +444,12 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
+                let protocol = if protocol { "protocol_" } else { "" };
                 Ok(format!(
                     include_str!("templates/cpp/internal_decl.h"),
                     return_param = return_param,
                     params = params,
+                    protocol = protocol,
                     protocol_name = to_cpp_name(name),
                     protocol_name_snake = to_c_name(name),
                     method_name = to_cpp_name(m.name.as_str()),
@@ -461,6 +464,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
+        protocol: bool,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
@@ -471,10 +475,12 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
+                let protocol = if protocol { "protocol_" } else { "" };
                 Ok(format!(
                     include_str!("templates/cpp/internal_static_assert.h"),
                     return_param = return_param,
                     params = params,
+                    protocol = protocol,
                     protocol_name = to_cpp_name(name),
                     protocol_name_snake = to_c_name(name),
                     method_name = to_cpp_name(m.name.as_str()),
@@ -485,19 +491,43 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
             .map(|fns| fns.join("\n"))
     }
 
-    fn codegen_protocol(&self, ast: &BanjoAst) -> Result<String, Error> {
-        ast.namespaces
+    fn codegen_protocol(
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
             .iter()
-            .filter(|n| *n.0 != "zx")
-            .flat_map(|n| {
-                n.1.iter().filter_map(filter_protocol).map(|(name, methods, _)| {
-                    Ok(format!(
-                        include_str!("templates/cpp/internal_protocol.h"),
-                        protocol_name = to_cpp_name(name.name()),
-                        decls = self.codegen_decls(name.name(), &methods, ast)?,
-                        static_asserts = self.codegen_static_asserts(name.name(), &methods, ast)?
-                    ))
-                })
+            .filter_map(filter_protocol)
+            .map(|(name, methods, _)| {
+                Ok(format!(
+                    include_str!("templates/cpp/internal_protocol.h"),
+                    protocol_name = to_cpp_name(name.name()),
+                    decls = self.codegen_decls(name.name(), &methods, true, ast)?,
+                    static_asserts =
+                        self.codegen_static_asserts(name.name(), &methods, true, ast)?
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
+    fn codegen_interface(
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .iter()
+            .filter_map(filter_interface)
+            .map(|(name, methods, _)| {
+                Ok(format!(
+                    include_str!("templates/cpp/internal_interface.h"),
+                    protocol_name = to_cpp_name(name.name()),
+                    decls = self.codegen_decls(name.name(), &methods, false, ast)?,
+                    static_asserts =
+                        self.codegen_static_asserts(name.name(), &methods, false, ast)?
+                ))
             })
             .collect::<Result<Vec<_>, Error>>()
             .map(|x| x.join("\n"))
@@ -506,12 +536,12 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
 impl<'a, W: io::Write> Backend<'a, W> for CppInternalBackend<'a, W> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
-        let namespace_include = &ast.primary_namespace.replace('.', "/").replace("ddk", "ddktl");
+        let namespace = &ast.namespaces[&ast.primary_namespace];
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/internal.h"),
-            protocol_static_asserts = self.codegen_protocol(&ast)?,
+            protocol_static_asserts = self.codegen_protocol(namespace, &ast)?,
+            interface_static_asserts = self.codegen_interface(namespace, &ast)?,
             namespace = &ast.primary_namespace,
-            namespace_include = namespace_include,
         ))?;
 
         Ok(())
@@ -571,7 +601,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .into_iter()
             .map(|m| {
                 format!(
-                    "        {c_name}_ops_.{c_name} = {protocol_name}{cpp_name};",
+                    "        {protocol_name_snake}_ops_.{c_name} = {protocol_name}{cpp_name};",
+                    protocol_name_snake = to_c_name(&name),
                     protocol_name = to_cpp_name(&name),
                     c_name = to_c_name(&m.name),
                     cpp_name = to_cpp_name(&m.name)

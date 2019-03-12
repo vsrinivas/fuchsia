@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <banjo/examples/interface.h>
 #include <type_traits>
 
 namespace ddk {
@@ -29,6 +28,32 @@ constexpr void CheckBakerProtocolSubclass() {
     static_assert(internal::has_baker_protocol_de_register<D>::value,
         "BakerProtocol subclasses must implement "
         "void BakerDeRegister();");
+
+}
+
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_prep, CookieMakerPrep,
+        void (C::*)(cookie_kind_t cookie, cookie_maker_prep_callback callback, void* cookie));
+
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_bake, CookieMakerBake,
+        void (C::*)(uint64_t token, zx_time_t time, cookie_maker_bake_callback callback, void* cookie));
+
+DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_deliver, CookieMakerDeliver,
+        zx_status_t (C::*)(uint64_t token));
+
+
+template <typename D>
+constexpr void CheckCookieMakerSubclass() {
+    static_assert(internal::has_cookie_maker_prep<D>::value,
+        "CookieMakerProtocol subclasses must implement "
+        "void CookieMakerPrep(cookie_kind_t cookie, cookie_maker_prep_callback callback, void* cookie);");
+
+    static_assert(internal::has_cookie_maker_bake<D>::value,
+        "CookieMakerProtocol subclasses must implement "
+        "void CookieMakerBake(uint64_t token, zx_time_t time, cookie_maker_bake_callback callback, void* cookie);");
+
+    static_assert(internal::has_cookie_maker_deliver<D>::value,
+        "CookieMakerProtocol subclasses must implement "
+        "zx_status_t CookieMakerDeliver(uint64_t token);");
 
 }
 

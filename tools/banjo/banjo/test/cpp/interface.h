@@ -55,9 +55,9 @@ class CookieMaker : public internal::base_mixin {
 public:
     CookieMaker() {
         internal::CheckCookieMakerSubclass<D>();
-        prep_ops_.prep = CookieMakerPrep;
-        bake_ops_.bake = CookieMakerBake;
-        deliver_ops_.deliver = CookieMakerDeliver;
+        cookie_maker_ops_.prep = CookieMakerPrep;
+        cookie_maker_ops_.bake = CookieMakerBake;
+        cookie_maker_ops_.deliver = CookieMakerDeliver;
     }
 
 protected:

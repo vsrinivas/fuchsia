@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include <{namespace_include}.h>
 #include <type_traits>
 
 namespace ddk {{
 namespace internal {{
 
 {protocol_static_asserts}
+{interface_static_asserts}
 }} // namespace internal
 }} // namespace ddk

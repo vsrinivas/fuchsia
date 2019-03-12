@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <banjo/examples/protocol/handle.h>
 #include <type_traits>
 
 namespace ddk {
