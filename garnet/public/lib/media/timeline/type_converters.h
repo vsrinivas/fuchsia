@@ -6,27 +6,10 @@
 #define LIB_MEDIA_TIMELINE_TYPE_CONVERTERS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/mediaplayer/cpp/fidl.h>
 #include "lib/fxl/type_converter.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace fxl {
-
-  // TODO(dalesat): Remove as part of soft transition.
-template <>
-struct TypeConverter<fuchsia::mediaplayer::TimelineFunction,
-                     media::TimelineFunction> {
-  static fuchsia::mediaplayer::TimelineFunction Convert(
-      const media::TimelineFunction& value);
-};
-
-  // TODO(dalesat): Remove as part of soft transition.
-template <>
-struct TypeConverter<media::TimelineFunction,
-                     fuchsia::mediaplayer::TimelineFunction> {
-  static media::TimelineFunction Convert(
-      const fuchsia::mediaplayer::TimelineFunction& value);
-};
 
 template <>
 struct TypeConverter<fuchsia::media::TimelineFunction,

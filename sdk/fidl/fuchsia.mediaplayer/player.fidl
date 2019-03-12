@@ -88,7 +88,7 @@ struct PlayerStatus {
     bool ready;
 
     // Describes the media.
-    Metadata? metadata;
+    fuchsia.media.Metadata? metadata;
 
     // Indicates a problem preventing intended operation.
     Problem? problem;
@@ -110,7 +110,7 @@ struct PlayerStatus {
     fuchsia.math.Size? pixel_aspect_ratio;
 
     // Function translating local time to presentation time.
-    TimelineFunction? timeline_function;
+    fuchsia.media.TimelineFunction? timeline_function;
 
     // Indicates whether presentation has reached end-of-stream.
     bool end_of_stream;

@@ -126,7 +126,7 @@ void SourceImpl::UpdateStatus() {
   // TODO(dalesat): Remove as part of soft transition.
   status_.metadata =
       metadata ? fidl::MakeOptional(
-                     fxl::To<fuchsia::mediaplayer::Metadata>(*metadata))
+                     fxl::To<fuchsia::media::Metadata>(*metadata))
                : nullptr;
   // TODO(dalesat): Change to |metadata| as part of soft transition.
   status_.metadata2 =

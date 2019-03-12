@@ -4,7 +4,7 @@
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
-use fidl_fuchsia_mediaplayer::TimelineFunction;
+use fidl_fuchsia_media::TimelineFunction;
 use fidl_fuchsia_mediasession::{
     PlaybackState, PlaybackStatus, PublisherMarker, PublisherProxy, RegistryEvent,
     RegistryEventStream, RegistryMarker, RegistryProxy, RepeatMode, SessionControlHandle,

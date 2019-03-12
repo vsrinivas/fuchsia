@@ -28,7 +28,7 @@ class AudioPlayer {
   void HandleStatusChanged(const fuchsia::mediaplayer::PlayerStatus& status);
 
   // Logs a metadata property, if it exists.
-  void MaybeLogMetadataProperty(const fuchsia::mediaplayer::Metadata& metadata,
+  void MaybeLogMetadataProperty(const fuchsia::media::Metadata& metadata,
                                 const std::string& property_label,
                                 const std::string& prefix);
 

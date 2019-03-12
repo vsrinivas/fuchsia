@@ -1,9 +1,7 @@
 {
-  "fidl/fuchsia.mediaplayer/metadata.fidl": "818ff6b9ce0fe090aa3d966a8c9f27ef",
-  "fidl/fuchsia.mediaplayer/player.fidl": "559dfe4b5b4eb7b22cffb24bd32ae55a",
+  "fidl/fuchsia.mediaplayer/player.fidl": "e645a875342731f30ba2eb1812ef0e89",
   "fidl/fuchsia.mediaplayer/problem.fidl": "321c3ee60eaa6a74a079610a17b4b395",
   "fidl/fuchsia.mediaplayer/seeking_reader.fidl": "c77b67438f0b182584eded53737d4b81",
   "fidl/fuchsia.mediaplayer/sink_manager.fidl": "8b5244eaef2a1679093e0ee433e9878b",
-  "fidl/fuchsia.mediaplayer/source_manager.fidl": "f8e832a950ca26621465355b8b91d3c4",
-  "fidl/fuchsia.mediaplayer/timeline_function.fidl": "3e0a771ee3b686ac99268420364aa294"
+  "fidl/fuchsia.mediaplayer/source_manager.fidl": "19e3da1c20a2892cf8477453ed809201"
 }

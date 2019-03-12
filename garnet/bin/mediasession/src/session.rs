@@ -7,7 +7,7 @@ use crate::service::ServiceEvent;
 use crate::{Result, CHANNEL_BUFFER_SIZE};
 use failure::ResultExt;
 use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_mediaplayer::TimelineFunction;
+use fidl_fuchsia_media::TimelineFunction;
 use fidl_fuchsia_mediasession::{
     Error, PlaybackCapabilities, PlaybackState, PlaybackStatus, SessionControlHandle, SessionEvent,
     SessionEventStream, SessionMarker, SessionProxy, SessionRequest,

@@ -8,13 +8,11 @@ fidl("fuchsia.mediaplayer") {
   sdk_category = "partner"
 
   sources = [
-    "metadata.fidl",
     "player.fidl",
     "problem.fidl",
     "seeking_reader.fidl",
     "sink_manager.fidl",
     "source_manager.fidl",
-    "timeline_function.fidl",
   ]
 
   public_deps = [
