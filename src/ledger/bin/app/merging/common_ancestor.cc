@@ -44,7 +44,7 @@ class CommitWalkMap {
     if (IsInteresting(e.mapped())) {
       interesting_nodes_--;
     }
-    return std::make_pair(std::move(e.key()), std::move(e.mapped()));
+    return std::make_pair(std::move(e.key()), e.mapped());
   }
 
   // Returns the highest generation number present in the map.
