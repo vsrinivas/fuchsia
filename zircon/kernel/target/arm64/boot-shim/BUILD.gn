@@ -171,6 +171,3 @@ boot_shim("qemu") {
     type = "kernel"
   }
 }
-
-boot_shim("sherlock") {
-}
