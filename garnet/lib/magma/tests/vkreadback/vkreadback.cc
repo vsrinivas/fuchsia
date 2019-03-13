@@ -1,64 +1,8 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "gtest/gtest.h"
 
-#if defined(MAGMA_USE_SHIM)
-#include "vulkan_shim.h"
-#else
-#include <vulkan/vulkan.h>
-#endif
-#include <lib/fdio/io.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <vector>
-#include <zircon/syscalls.h>
-
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
-
-namespace {
-
-class VkReadbackTest {
-public:
-    static constexpr uint32_t kWidth = 64;
-    static constexpr uint32_t kHeight = 64;
-
-    enum Extension { NONE, EXTERNAL_MEMORY_FUCHSIA };
-
-    VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
-
-    bool Initialize();
-    bool Exec();
-    bool Readback();
-
-    uint32_t get_device_memory_handle() { return device_memory_handle_; }
-    void set_device_memory_handle(uint32_t handle) { device_memory_handle_ = handle; }
-
-private:
-    bool InitVulkan();
-    bool InitImage();
-
-    Extension ext_;
-    bool is_initialized_ = false;
-    VkPhysicalDevice vk_physical_device_;
-    VkDevice vk_device_;
-    VkQueue vk_queue_;
-    VkImage vk_image_;
-    VkDeviceMemory vk_device_memory_;
-
-    // Import/export
-    VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
-    uint32_t device_memory_handle_ = 0;
-    PFN_vkGetMemoryFuchsiaHandleKHR vk_get_memory_fuchsia_handle_khr_{};
-    PFN_vkGetMemoryFuchsiaHandlePropertiesKHR vk_get_memory_fuchsia_handle_properties_khr_{};
-
-    VkCommandPool vk_command_pool_;
-    VkCommandBuffer vk_command_buffer_;
-    uint64_t bind_offset_;
-};
+#include "vkreadback.h"
 
 bool VkReadbackTest::Initialize()
 {
@@ -156,7 +100,7 @@ bool VkReadbackTest::InitVulkan()
 
     std::vector<const char*> enabled_extension_names;
     switch (ext_) {
-        case EXTERNAL_MEMORY_FUCHSIA:
+        case VK_KHR_EXTERNAL_MEMORY_FUCHSIA:
             enabled_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
             break;
         default:
@@ -181,7 +125,7 @@ bool VkReadbackTest::InitVulkan()
         return DRETF(false, "vkCreateDevice failed: %d", result);
 
     switch (ext_) {
-        case EXTERNAL_MEMORY_FUCHSIA:
+        case VK_KHR_EXTERNAL_MEMORY_FUCHSIA:
             vk_get_memory_fuchsia_handle_khr_ = reinterpret_cast<PFN_vkGetMemoryFuchsiaHandleKHR>(
                 vkGetInstanceProcAddr(instance, "vkGetMemoryFuchsiaHandleKHR"));
             if (!vk_get_memory_fuchsia_handle_khr_)
@@ -265,7 +209,7 @@ bool VkReadbackTest::InitImage()
         VK_SUCCESS)
         return DRETF(false, "vkAllocateMemory failed");
 
-    if (ext_ == EXTERNAL_MEMORY_FUCHSIA && device_memory_handle_) {
+    if (ext_ == VK_KHR_EXTERNAL_MEMORY_FUCHSIA && device_memory_handle_) {
         size_t vmo_size;
         zx_vmo_get_size(device_memory_handle_, &vmo_size);
         VkImportMemoryFuchsiaHandleInfoKHR magma_info = {
@@ -281,7 +225,7 @@ bool VkReadbackTest::InitImage()
         if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
             VK_SUCCESS)
             return DRETF(false, "vkAllocateMemory failed");
-    } else if (ext_ == EXTERNAL_MEMORY_FUCHSIA) {
+    } else if (ext_ == VK_KHR_EXTERNAL_MEMORY_FUCHSIA) {
         uint32_t handle;
         VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
             VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr, vk_device_memory_,
@@ -434,40 +378,3 @@ bool VkReadbackTest::Readback()
 
     return mismatches == 0;
 }
-
-TEST(Vulkan, Readback)
-{
-    VkReadbackTest test;
-    ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec());
-    ASSERT_TRUE(test.Readback());
-}
-
-TEST(Vulkan, ReadbackExternalMemoryFuchsia)
-{
-    VkReadbackTest export_app(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
-    VkReadbackTest import_app(VkReadbackTest::EXTERNAL_MEMORY_FUCHSIA);
-
-    ASSERT_TRUE(export_app.Initialize());
-    import_app.set_device_memory_handle(export_app.get_device_memory_handle());
-    ASSERT_TRUE(import_app.Initialize());
-    ASSERT_TRUE(export_app.Exec());
-    ASSERT_TRUE(import_app.Readback());
-}
-
-TEST(Vulkan, ManyReadback)
-{
-    std::vector<std::unique_ptr<VkReadbackTest>> tests;
-    // This should be limited by the number of FDs in use. The maximum number of FDs is 256
-    // (FDIO_MAX_FD), and the Intel mesa driver uses 2 per VkPhysicalDevice and 1 per VkDevice.
-    for (uint32_t i = 0; i < 75; i++) {
-        tests.push_back(std::make_unique<VkReadbackTest>());
-        ASSERT_TRUE(tests.back()->Initialize());
-        ASSERT_TRUE(tests.back()->Exec());
-    }
-    for (auto& test : tests) {
-        ASSERT_TRUE(test->Readback());
-    }
-}
-
-} // namespace
