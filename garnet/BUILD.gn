@@ -4,6 +4,17 @@
 
 import("//build/package.gni")
 
+group("garnet") {
+  testonly = true
+
+  deps = [
+    ":build-info",
+    "bin",
+    "examples",
+    # TODO: Add more.
+  ]
+}
+
 declare_args() {
   # Product configuration of the current build
   build_info_product = ""

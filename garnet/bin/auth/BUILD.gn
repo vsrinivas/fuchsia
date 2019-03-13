@@ -5,6 +5,17 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("auth") {
+  testonly = true
+
+  deps = [
+    ":account_handler",
+    ":account_manager",
+    ":auth_bin_tests",
+    ":token_manager_factory",
+  ]
+}
+
 package("token_manager_factory") {
   deprecated_global_persistent_storage = "//build"
   deps = [
@@ -53,7 +64,7 @@ package("account_handler") {
   ]
 }
 
-package("auth_bin_unittests") {
+package("auth_bin_tests") {
   testonly = true
 
   deps = [

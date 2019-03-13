@@ -5,6 +5,17 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("a11y") {
+  testonly = true
+
+  deps = [
+    ":a11y_tests",
+    "a11y_manager",
+    "a11y_toggler",
+    "fuchsiavox",
+  ]
+}
+
 package("a11y_tests") {
   testonly = true
 
@@ -23,60 +34,6 @@ package("a11y_tests") {
     {
       path = rebase_path("meta/a11y_manager_apptests.cmx")
       dest = "a11y_manager_apptests.cmx"
-    },
-  ]
-}
-
-package("a11y_manager") {
-  deps = [
-    "a11y_manager",
-  ]
-
-  binaries = [
-    {
-      name = "a11y_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/a11y_manager.cmx")
-      dest = "a11y_manager.cmx"
-    },
-  ]
-}
-
-package("a11y_toggler") {
-  deps = [
-    "//garnet/bin/a11y/a11y_toggler:a11y_toggler",
-  ]
-
-  binaries = [
-    {
-      name = "a11y_toggler"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/a11y_toggler.cmx")
-      dest = "a11y_toggler.cmx"
-    },
-  ]
-}
-
-package("fuchsiavox") {
-  deps = [
-    "fuchsiavox",
-  ]
-
-  binary = "fuchsiavox"
-
-  meta = [
-    {
-      path = rebase_path("meta/fuchsiavox.cmx")
-      dest = "fuchsiavox.cmx"
     },
   ]
 }

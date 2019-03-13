@@ -5,6 +5,15 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("components") {
+  testonly = true
+
+  deps = [
+    ":component_hello_world",
+    ":component_hello_world_tests",
+  ]
+}
+
 executable("bin") {
   output_name = "app"
 

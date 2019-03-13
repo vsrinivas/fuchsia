@@ -2,7 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("a11y_manager") {
+import("//build/package.gni")
+
+package("a11y_manager") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "a11y_manager"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_manager.cmx")
+      dest = "a11y_manager.cmx"
+    },
+  ]
+}
+
+executable("bin") {
   output_name = "a11y_manager"
 
   sources = [

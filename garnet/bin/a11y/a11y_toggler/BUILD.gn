@@ -2,7 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("a11y_toggler") {
+import("//build/package.gni")
+
+package("a11y_toggler") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "a11y_toggler"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_toggler.cmx")
+      dest = "a11y_toggler.cmx"
+    },
+  ]
+}
+
+executable("bin") {
   output_name = "a11y_toggler"
 
   sources = [

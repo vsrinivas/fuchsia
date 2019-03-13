@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("fuchsiavox") {
+import("//build/package.gni")
+
+package("fuchsiavox") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "fuchsiavox"
+
+  meta = [
+    {
+      path = rebase_path("meta/fuchsiavox.cmx")
+      dest = "fuchsiavox.cmx"
+    },
+  ]
+}
+
+executable("bin") {
   output_name = "fuchsiavox"
 
   sources = [
