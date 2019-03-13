@@ -1,0 +1,442 @@
+# fx workflows
+
+`fx` is the front-door to a collection of scripts that make many tasks
+related to Fuchsia development easier. It contains a large nubmer of
+subcommands, which can be discovered by running `fx help`. If you use `bash`
+or `zsh` as a shell, you can get some auto-completion for `fx` by sourcing
+`scripts/fx-env.sh` into your shell.
+
+## Common Daily Tools
+
+The first thing you will want to do after checking out a Fuchsia tree is to
+build Fuchsia, and then get it onto a device. `fx` has some commands to help
+with this:
+
+* `fx set` [configure a build](#configure)
+* `fx full-build` [execute a build](#build)
+* `fx flash | fx mkzedboot` [flash a target | prepare a zedboot USB key](#flash_zedboot)
+* `fx serve` [serve a build](#serve)
+* `fx update` [update a target](#update)
+* `fx run-test` [execute tests](#test)
+* `fx shell` [connect to a target shell](#shell)
+* [and many other small tasks](#misc)
+
+First lets configure the build. To do this we need to make a few choices:
+
+ * What product configuration do you want? (unsure: try `workstation`)
+ * What board are you building for? (unsure: try `x64`)
+ * What extra bundles do you want? (unsure: try `tools`, and if you're working
+   on features, you probably want `tests`)
+
+## <a name="configure"></a> Configure a build
+
+Armed with our above choices (if you didn't read above, do so now), you are
+ready to configure your build:
+
+```
+$ fx set x64 --product workstation --board x64 --preinstall bundles/tools --available bundles/tests
+```
+
+### What just happened?
+
+* We selected the architecture `x64`
+* We selected the product `workstation` (run `fx list-products` for a list of
+  other product configurations)
+* We selected the board `x64` (on arm64 boards, the board choice is very
+  important! run `fx list-boards` for a list of board configurations)
+* We selected to "preinstall" various developer tools, this includes many basic
+  tools like `cat` and `ls`, as well as mroe advanced tools, such as `trace`.
+* We selected to build "tests", but not have them included in our "paving"
+  images.
+
+So what are `monolith`, `preinstall` and `available`?
+
+There are three major axes for where build artifacts end up at the end of a
+build, these are:
+
+* *Monolith*: Packages that are added to the monolith are included in
+  "paving" images produced by the build. They are included in over-the-air
+  updates, and are always updated as a single unit. Packages in the monolith
+  can not be evicted from a device at runtime - they encode the minimum
+  possible size of a configuration.
+* *Preinstall*: Packages in preinstall are included in "paving" images, but
+  they are not included in over-the-air system updates, and are allowed to be
+  evicted from the system in response to resource demands, such as disk-space
+  pressure. Packages in preinstall can be updated at any time that updates
+  are available, each and each of these packages may be updated
+  independently. This is software that is "optional", but is good to have
+  available instantly "out of the box".
+* *Available*: Packages in available are additional optional packages that can
+  be fetched and run on-demand, but are not pre-baked into any "paving"
+  images.
+
+The "board" and "product" configurations pick a predefined set of members for
+each of these package sets. Most commonly the board configurations specify a
+set of boot critical drivers to add to the monolith package set, and could
+for example include some optional but common peripheral drivers in the
+preinstall set. The board configuration may also include some board specific
+development tools (more commonly host tools, rather than target packages) for
+interacting with the board in "available". The product configurations make
+choices to add more or less software to the monolith, preinstall or available
+package sets based on the definition and feature set of the product they
+represent. A speaker product for example adds many audio media related
+packages to the monolith. A workstation product adds a wide range of GUI,
+media and many other packages to the monolith.
+
+### Key product configurations
+
+There are many more than below, but the following three are critical axes to
+be familiar with:
+
+* `bringup` is a minimal feature set product that is focused on being very
+  simple and very lean. It exists to provide fast builds and small images
+  (primarily used in a netboot rather than paved fashion), and is great for
+  working on very low level facilities, such as the Zircon kernel or board
+  specific drivers and configurations. It elides most network capabilities,
+  and can not easily add new software at runtime.
+* `core` is a minimal feature set that can install additional software (such as
+  items added to the "available" build group). It is the starting point for
+  all higher level product configurations. It has common network capabilities
+  can update a system over-the-air.
+* `workstation` is a basis for a general purpose development environment, good
+  for working on UI, media and many other high level features. This is also
+  the best environment for enthusiasts to play with and explore.
+
+### Key bundles
+
+As with products, there are many more, but the following bundles are most important to be familiar with:
+
+* `tools` contains a broad array of the most common developer tools. This
+  includes tools for spawning components from command line shells, tools for
+  reconfiguring and testing networks, making http requests, debugging programs,
+  changing audio volume, and so on.
+* `tests` causes all test programs to be built. Most test programs can be
+  invoked using `run-test-component` on the device, or via `fx run-test`.
+* `kitchen_sink` is a target that causes all other build targets to be
+  included. It is useful when testing the impact of core changes, or when
+  making large scale changes in the code base. It is also may be a fun
+  configuration for enthusiasts to play with, as it includes all software
+  available in the source tree. Note that kitchen sink will produce more than
+  20GB of build artifacts and requires at least 2GB of storage on the target
+  device.
+
+## <a name="build"></a> Execute a build
+
+For most use cases, only `fx full-build` is needed. The build is optimized
+for fast incremental rebuilds, as such, repeating this command does the
+minimal work required after code has been changed, and no work if the source
+files are unchanged.
+
+Additionally to `fx full-build`, a few other build related commands provide
+more granular control:
+
+* `fx build-zircon` builds only the Zircon portion of the build.
+* `fx build` builds only the Fuchsia portion (all above Zircon, but not Zircon
+  itself) of the build.
+* `fx clean` clear out all build artifacts.
+* `fx clean-build` perform a clean, then a full-build.
+* `fx gen` - repeat the `gn gen` process that `fx set` performed. Users making
+  fine grained build argument changes (e.g. by editing `args.gn` directly) can
+  run `fx gen` to reconfigure their build.
+
+## <a name="flash_zedboot"></a> Flash a board / Prepare Zedboot
+
+The exact preparation required to put Fuchsia onto a target device varies by
+specific device, but there are two general groups in common use today, made
+convenient behind `fx` commands:
+
+* `fx flash` is used with most `arm64` devices to perform a raw write of
+  Zedboot to the device, preparing it for "Paving".
+* `fx mkzedboot` is used with most `x64` devices to prepare a bootable USB key
+  that boots into Zedboot, preparing the device for "Paving".
+
+What is Zedboot?
+
+Zedboot is a special configuration of Zircon that contains a simple network
+stack, a simple device advertisement & discovery protocols, and a suite of
+protocols to write Fuchsia to a target disk and/or to network boot a target
+system. Zedboot is a term used for both the overall process, as well as a
+special build configuration. Many people come to know it as "the blue screen
+with ascii art".
+
+To enter Zedboot on an arm64 target, power on the device while triggering a
+boot into fastboot flashing mode (often this involves holding a particular
+button while rebooting or powering on that varies by particular hardware
+target). Once in flashing mode, execute `fx flash` on the host system.
+
+To enter Zedboot on an x64 target, first produce a Zedboot USB key using
+`fx mkzedboot <path-to-usb-device>` (to list suitable USB devices on your
+system, execute `fx list-usb-disks`). Remove the USB key after completion,
+insert it to the target device, and reboot the target device, selecting "Boot
+from USB" from the boot options, or in the device BIOS. There are additional
+instructions for preparing a
+[Pixelbook](../hardware/pixelbook.md).
+
+What is Paving?
+
+Paving is in many ways similar to "flashing" from other worlds, however, it
+has some differences. Specifically paving refers to a group of processes and
+protocols in Fuchsia to transfer a set of artifacts to a target system that
+will be written into various partitions on a target system. By contrast, the
+process of "flashing" is more often not strictly partition oriented, instead
+it is a more raw process of writing a raw data stream to a raw disk device,
+possibly at particular offsets.
+
+Users can start a paving process by first flashing Zedboot using `fx flash`,
+or by booting a Zedboot USB key made by `fx mkzedboot`, then executing `fx pave`
+on the host system. In general most users actually will want to use `fx serve`
+instead of `fx pave`. `fx serve` is covred in the [next section](#serve).
+
+What is Netbooting?
+
+In Fuchsia "netboot" refers to sending a set of artifacts to a Zedboot
+instance that instead of making changes to the disk, will just be booted from
+ram. Users can perform a "netboot" by first booting a device into Zedboot by
+using either `fx flash` (arm64) or `fx mkzedboot` (x64), and then executing
+`fx netboot` on the host system.
+
+Note: the `netboot` artifacts are not produced by all builds by default,
+because for larger builds such as the "workstation" product configuration
+such builds are extremely large, and producing them many times a day is both
+slow as well as measurably wearing on host disk hardware. The `bringup`
+configuration always prepares `netboot` artifacts. For all other build
+configurations, a user can optionally build the netboot artifacts using
+`fx build netboot`.
+
+## <a name="serve"></a> Serve a build
+
+A lot of build configurations for Fuchsia include software that is not
+immediately included in the base images that a build produces, that are
+written to devices during paving. Such software is instead made available to
+target devices on-demand, which is often colloquially referred to as
+"ephemeral software".
+
+The command `fx serve` performs two functions internally:
+
+* `fx pave` start a paving server, used for "fresh installs" of a Fuchsia
+  device from a Zedboot state.
+* `fx serve-updates` start a package repository server, used for dynamic
+  installation of software at runtime, as well as whole-system updates.
+
+Internally the `fx serve-updates` command also searches for a device to
+configure, and upon discovery (which may be restricted/modulated with
+`fx set-device` or `fx -d`) the target device is configured to use the
+repository server as a source of dynamic packages and system updates.
+
+## <a name="update"></a> Update a target device
+
+As described in prior sections, there are different groups of software on a
+Fuchsia device:
+
+* Software that is part of the core system "monolith", that is updated in a
+  single transaction.
+* Software that is part of Zedboot images other than the monolith (preinstall)
+  that can be updated ephemerally.
+* Software that is always ephemeral.
+
+For new user development workflows, the most general command to assist with
+updating a target device is `fx update`. The `fx update` command first
+updates all "preinstall" software, and then performs an `fx ota` or, a core
+system update. This command reboots the target device when it is complete.
+The end result of this process should be indistinguishable in terms of
+software versions from performing a fresh pave of a device.
+
+As the `fx update` process causes a device reboot, it is sometimes not the
+most efficient process for diagnosis, debugging or other non-testing based
+workflows or needs. In these cases a user has some options for how to ensure
+that software on a device is being regularly updated.
+
+The `fx serve` process configures a Fuchsia software repository with
+automatic update features. The repository informs the target device of newly
+updated software every time the underlying repository is updated (which
+happens at the end of every successful `fx build`). For many software
+components, the easiest way to update them during development is to ensure
+that they are not included in the monolith set, but instead included in
+either preinstall or available. In that case, simply restarting the software
+on the target (e.g. by closing it completely, or by invoking `killall`) will
+result in the software being immediately updated when it is started again.
+
+The commands `fx push-package` and `fx build-push` perform manual, forceful
+updates of packages on a target device. These commands do not however know
+how to re-start software on the device, as such they provide little benefit
+over simply restarting software correctly (which, along with `fx serve`) will
+cause software to be updated as a natural course of restarting. These
+commands are sometimes used to diagnose issues, or in cases where automatic
+updates are disabled in special build configurations.
+
+Note: some software may not appear to be updating because it is being run
+inside of a "runner" process or some other surrounding environment that is
+"holding on" to resources for the previous package version, only spawning
+programs from the old package. As packages in Fuchsia are immutable and
+content-addressed, when host environments retain resources in this manner,
+there is nothing that the update system can do to forcefully trigger updates
+in the rest of the system. Users who find themselves with this issue mostly
+need to find efficient workflow methods to fully restart the relevant
+software stack.
+
+XXX: TODO: NEEDED: simple example command to restart all GUI / shell
+components, e.g. if basemgr spawned things under a job or a component
+topology, a method to restart that topology (e.g. `killall basemgr.cmx`,
+however that's no good today).
+
+## <a name="test"></a> Execute tests
+
+The Fuchsia code base contains many tests. Most of these tests are themselves
+Components, and can be launched on the target device in the same way as other
+components. On the target device, some programs also assist with test
+specific concerns for component launching, such as `runtests` and
+`/bin/run-test-component`. The process can also conveniently be controlled
+from the development host by way of `fx run-test`.
+
+The command `fx run-test <package-name>` requires the user to specify a
+particular package name to execute. A package may contain one or more tests.
+Arguments after `fx run-test package-name` are passed to the program
+`runtests`. One particularly common use case is to execute:
+`fx run-test package-of-many-tests -t name-of-one-test` to execute only a
+single test.
+
+Some users find that an effective high focus workflow is to have the system
+build, push and execute tests whenever they save their source code. This can
+be achived with `fx` very easily, for example:
+
+```shell
+$ fx -i run-test rolldice-tests
+```
+
+The above command will execute the rolldice tests every time a change is made
+to the source code in the tree. The `-i` flag to `fx` causes `fx` to repeat
+the rest of it's command every time the source code in the tree is changed.
+As the `fx run-test` command first performs a build, then executes a test on
+a target, this combination provides a convenient auto-test loop, great for
+high focus workflows like test driven development.
+
+## <a name="shell"></a> Connect to a target shell
+
+Most Fuchsia product configurations include an SSH server with a Fuchsia
+specific configuration. The command `fx shell` is a convenient wrapper to
+connect to the target device over SSH and provides access to a very simply
+POSIX-style shell. Users should note that while the shell is a fork of a
+POSIX shell, it does not provide all features of a common Unix shell. In
+particular users will find that CTRL+C has odd quirks, and may often find
+quirks for sub-shell expressions and certain more advanced IO redirections or
+environment variable propagations. These misfeatures are side effects of
+Fuchsia not being a POSIX system.
+
+Nonetheless the shell made available via `fx shell` is extremely useful for
+imperatively executing programs on the Fuchsia target, as well as exploring
+some of the diagnostic / debug interfaces made available in a filesystem
+tree, such as `/hub` and `/dev`. It is also useful for invoking programs such
+as `/bin/run` that provides facilities for launching Fuchsia components. If
+the `tools` bundle is available in the build configuration, many tools common
+to unix shell environments have been ported and are available, such as `ps`,
+`ls`, `cat`, `curl`, `vim`, `fortune` and so on.
+
+## <a name="misc"></a> Performing other common tasks
+
+### Getting logs
+
+`fx syslog` captures all logs from both the kernel, drivers and other
+userspace programs. `fx syslog` depends upon a working high level network
+stack and SSH. As such, `fx syslog` does not work with Zedboot or "bringup"
+product configurations. If a device is in a state where `fx syslog` ceases to
+function, it is often useful to switch to `fx log` to capture more
+information about probable causes.
+
+`fx log` captures only the kernel log stream. The kernel log stream includes
+logs from the Zircon kernel itself, as well as a subset of userspace software
+(most notably drivers and low level core software). `fx log` depends on a
+lightweight network stack called `netsvc` that has a tendency to remain
+available even after problems in higher level software. The netsvc suite is
+also always available in "bringup" product configurations, as such, `fx log`
+is most useful when working on low level software, such as the Zircon kernel,
+or drivers.
+
+### Copying files
+
+`fx cp` provides a basic wrapper around `scp`, similar to how `fx shell` is a
+wrapper around `ssh`.
+
+```shell
+# copy ./book.txt from the host, to /tmp/book.txt on the target
+$ fx cp book.txt /tmp/book.txt
+# copy /tmp/poem.txt on the target to poem.txt on the host
+$ fx cp --to-hsot /tmp/poem.txt poem.txt
+```
+
+### Start Fuchsia in QEMU
+
+`fx run` starts a Fuchsia build under QEMU, a general purpose virtual
+machine. Users on Linux host systems can execute `fx run -k` for
+significantly improved performance.
+
+The QEMU environment does not support any GUI programs. It also has limiting
+network capabilities. Hardware devices are recommended for day to day Fuchsia
+software development whenever possible.
+
+### Using multiple Fuchsia devices with set-device
+
+Some users will have more than one Fuchsia device on a network, and will want
+to limit the effects of various commands to particular of those devices. The
+`fx set-device` command exists to help with this use case.
+
+The `fx set-device` command binds a particular device node name to a
+particular build directory. This is particularly useful when a user wishes to
+keep several different devices in several build configurations, and could be
+setup as follows:
+
+```shell
+$ fx set x64 out/workstation --product workstation
+$ fx full-build
+$ fx set-device <workstation-node-name>
+
+$ fx set arm64 out/core --product core
+$ fx full-build
+$ fx set-device <core-node-name>
+
+# Start a server for the workstation:
+$ fx --dir=out/workstation serve
+# Set the default build-dir and target device to the arm64 core, and
+# connect to a shell on that device:
+$ fx use out/core
+$ fx shell
+```
+
+Additionally, for users who wish to execute a command against a single
+Fuchsia device from the current default build directory, as a one-off
+command, the `fx` global flag `-d` allows overriding the target node name for
+a single command invocation.
+
+### Reboot a device
+
+`fx reboot`
+
+On some devices, most arm64 devices at present, there are also some useful flags:
+
+* `fx reboot -r` reboot into "recovery" (Zedboot)
+* `fx reboot -b` reboot into "bootloader" (Flash)
+
+### Debugging and developing `fx` commands
+
+* `fx -x` the `-x` flag turns on tracing for the `fx` scripts, printing out all
+  expressions evaluated during the `fx` invocation.
+* `fx exec` executes an abitrary program that follows inside of the current
+  `fx` environment. As an example `fx exec env` prints all environment
+  variables in that environment (`fx exec env | grep FUCHSIA` is likely of
+  interest).
+
+### Getting help with `fx`
+
+`fx help <command>` provides the best introductory documentation for that
+command. Some commands also support/provide `fx <command> -h` or
+`fx <command> --help`, however this help is not available for all comamnds.
+This is unusual, but is a function of implementation details. Internally many
+`fx` commands just run other programs, most often those produced by the
+build, and flags are in many cases passed on unaltered to those programs. In
+those cases, passing the usual `-h` or `--help` flags may not provide
+documentation for `fx <command>`, but instead for the program invoked
+downstream of `fx`.
+
+Users should always start with `fx help <command>`.
+
+`fx help` with no other arguments provides a list of all available commands
+in `fx`, as well as documentation for `fx` global flags.
