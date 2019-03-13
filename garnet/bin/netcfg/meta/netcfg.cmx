@@ -13,7 +13,8 @@
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
             "fuchsia.net.stack.Stack",
-            "fuchsia.netstack.Netstack"
+            "fuchsia.netstack.Netstack",
+            "fuchsia.netstack.ResolverAdmin"
         ]
     }
 }
