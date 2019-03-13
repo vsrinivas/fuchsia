@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::mac::*, std::mem::transmute};
+use crate::mac::*;
 
 pub fn make_mgmt_frame(ht_ctrl: bool) -> Vec<u8> {
     #[rustfmt::skip]
@@ -32,7 +32,7 @@ pub fn make_data_hdr(
     fc.set_from_ds(addr4.is_some());
     fc.set_to_ds(addr4.is_some());
     fc.set_htc_order(ht_ctrl.is_some());
-    let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
+    let fc = fc.value().to_le_bytes();
 
     #[rustfmt::skip]
         let mut bytes = vec![
