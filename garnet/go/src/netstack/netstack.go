@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	Sniff                            = false
+	sniff                            = false
 	deviceSettingsManagerNodenameKey = "DeviceName"
 	defaultNodename                  = "fuchsia-unset-device-name"
 
@@ -570,7 +570,7 @@ func (ns *Netstack) addLoopback() error {
 	ns.mu.countNIC++
 
 	linkID := loopback.New()
-	if Sniff {
+	if sniff {
 		linkID = sniffer.New(linkID)
 	}
 	linkID, ifs.statsEP = stats.NewEndpoint(linkID)
@@ -625,7 +625,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 
 	b := bridge.New(links)
 	return ns.addEndpoint(func(nicid tcpip.NICID) string {
-			return fmt.Sprintf("br%d", nicid)
+		return fmt.Sprintf("br%d", nicid)
 	}, b, b)
 }
 
@@ -652,7 +652,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 
 func (ns *Netstack) addEndpoint(nameFn func(nicid tcpip.NICID) string, ep stack.LinkEndpoint, controller link.Controller) (*ifState, error) {
 	ifs := &ifState{
-		ns: ns,
+		ns:  ns,
 		eth: controller,
 	}
 	ifs.mu.state = link.StateUnknown
@@ -671,7 +671,7 @@ func (ns *Netstack) addEndpoint(nameFn func(nicid tcpip.NICID) string, ep stack.
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
-	if Sniff {
+	if sniff {
 		// A wrapper LinkEndpoint should encapsulate the underlying
 		// one, and manifest itself to 3rd party netstack.
 		linkID = sniffer.New(linkID)
