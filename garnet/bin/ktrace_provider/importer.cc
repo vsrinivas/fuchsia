@@ -80,7 +80,8 @@ Importer::Importer(trace_context_t* context)
       flags_name_ref_(MAKE_STRING("flags")),
       exit_address_name_ref_(MAKE_STRING("exit_address")),
       arg0_name_ref_(MAKE_STRING("arg0")),
-      arg1_name_ref_(MAKE_STRING("arg1")) {}
+      arg1_name_ref_(MAKE_STRING("arg1")),
+      kUnknownThreadRef(trace_make_unknown_thread_ref()) {}
 
 #undef MAKE_STRING
 
@@ -901,7 +902,7 @@ bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread,
 trace_thread_ref_t Importer::GetCpuCurrentThreadRef(
     trace_cpu_number_t cpu_number) {
   if (cpu_number >= cpu_infos_.size())
-    return trace_make_unknown_thread_ref();
+    return kUnknownThreadRef;
   return cpu_infos_[cpu_number].current_thread_ref;
 }
 
@@ -942,6 +943,11 @@ const trace_string_ref_t& Importer::GetNameRef(
 }
 
 const trace_thread_ref_t& Importer::GetThreadRef(zx_koid_t thread) {
+  // |trace_make_inline_thread_ref()| requires a valid thread id (given that
+  // we're using ZX_KOID_INVALID for the process for unknown threads).
+  if (thread == ZX_KOID_INVALID) {
+    return kUnknownThreadRef;
+  }
   auto it = thread_refs_.find(thread);
   if (it == thread_refs_.end()) {
     std::tie(it, std::ignore) = thread_refs_.emplace(

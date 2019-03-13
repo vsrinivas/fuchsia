@@ -201,6 +201,8 @@ class Importer {
   std::unordered_map<KernelThread, trace_thread_ref_t> kernel_thread_refs_;
   std::unordered_map<zx_koid_t, trace_thread_ref_t> thread_refs_;
 
+  const trace_thread_ref_t kUnknownThreadRef;
+
   struct VcpuDuration {
     trace_ticks_t begin;
     bool valid = false;
