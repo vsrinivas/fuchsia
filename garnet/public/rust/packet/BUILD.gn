@@ -11,6 +11,7 @@ rustc_library("packet") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/never",
     "//garnet/public/rust/zerocopy",
   ]
 }

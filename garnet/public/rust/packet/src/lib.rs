@@ -409,8 +409,6 @@
 //! `as_buf_mut` call in order to break the cycle, pick the option which is the
 //! least in the hot path.
 
-#![feature(never_type)]
-
 extern crate zerocopy;
 
 pub mod serialize;

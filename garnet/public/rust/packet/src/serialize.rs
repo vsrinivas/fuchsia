@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! Serialization.
+//! Serialization.
+
 use std::cmp;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::{Range, RangeBounds};
+
+use never::Never;
 
 use crate::{
     canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, Buffer, BufferMut,
@@ -618,14 +621,14 @@ fn inner_packet_builder_serializer_total_len_body_len_body_range<B: InnerPacketB
 
 impl<B: InnerPacketBuilder> Serializer for B {
     type Buffer = Buf<Vec<u8>>;
-    type Error = !;
-    type InnerError = !;
+    type Error = Never;
+    type InnerError = Never;
 
     fn serialize_mtu(
         self,
         mtu: usize,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<!>, B)> {
+    ) -> Result<Self::Buffer, (MtuError<Never>, B)> {
         let (total_len, body_len, body_range) =
             inner_packet_builder_serializer_total_len_body_len_body_range(&self, c);
 
@@ -749,14 +752,14 @@ where
     F: FnOnce(usize) -> O,
 {
     type Buffer = Either<Buf, O>;
-    type Error = !;
-    type InnerError = !;
+    type Error = Never;
+    type InnerError = Never;
 
     fn serialize_mtu(
         self,
         mtu: usize,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<!>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<Never>, Self)> {
         let InnerSerializer { builder, buf, get_buf } = self;
         let body_len = cmp::max(c.min_body_len, builder.bytes_len());
         let total_len = c.prefix_len + body_len + c.suffix_len;
@@ -768,7 +771,7 @@ where
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<Either<Buf, O>, (!, Self)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Either<Buf, O>, (Never, Self)> {
         let InnerSerializer { builder, buf, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
         Ok(Self::serialize_inner(builder, buf, get_buf, c.prefix_len, total_len))
@@ -830,14 +833,14 @@ where
     F: FnOnce(usize) -> O,
 {
     type Buffer = O;
-    type Error = !;
-    type InnerError = !;
+    type Error = Never;
+    type InnerError  = Never;
 
     fn serialize_mtu(
         self,
         mtu: usize,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<!>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<Never>, Self)> {
         let FnSerializer { builder, get_buf } = self;
         let body_len = cmp::max(c.min_body_len, builder.bytes_len());
         let total_len = c.prefix_len + body_len + c.suffix_len;
@@ -852,7 +855,7 @@ where
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<O, (!, Self)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<O, (Never, Self)> {
         let FnSerializer { builder, get_buf } = self;
         let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes_len()) + c.suffix_len;
 
@@ -957,14 +960,14 @@ impl<B: Debug, F> Debug for BufferSerializer<B, F> {
 
 impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSerializer<B, F> {
     type Buffer = Either<B, O>;
-    type Error = !;
-    type InnerError = !;
+    type Error = Never;
+    type InnerError = Never;
 
     fn serialize_mtu(
         self,
         mtu: usize,
         c: SerializeConstraints,
-    ) -> Result<Self::Buffer, (MtuError<!>, Self)> {
+    ) -> Result<Self::Buffer, (MtuError<Never>, Self)> {
         let BufferSerializer { buf, get_buf } = self;
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
@@ -976,7 +979,7 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> Serializer for BufferSer
         }
     }
 
-    fn serialize(self, c: SerializeConstraints) -> Result<Either<B, O>, (!, Self)> {
+    fn serialize(self, c: SerializeConstraints) -> Result<Either<B, O>, (Never, Self)> {
         let BufferSerializer { buf, get_buf } = self;
         let body_and_padding = cmp::max(c.min_body_len, buf.len());
         let total_len = c.prefix_len + body_and_padding + c.suffix_len;
