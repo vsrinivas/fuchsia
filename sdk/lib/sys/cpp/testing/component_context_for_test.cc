@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/sys/cpp/testing/startup_context_for_test.h"
+#include "lib/sys/cpp/testing/component_context_for_test.h"
 
 #include <lib/fdio/directory.h>
 #include <zircon/processargs.h>
@@ -10,11 +10,11 @@
 namespace sys {
 namespace testing {
 
-StartupContextForTest::StartupContextForTest(
+ComponentContextForTest::ComponentContextForTest(
     std::shared_ptr<ServiceDirectoryForTest> svc,
     fuchsia::io::DirectoryPtr directory_ptr, async_dispatcher_t* dispatcher)
-    : StartupContext(svc, directory_ptr.NewRequest(dispatcher).TakeChannel(),
-                     dispatcher),
+    : ComponentContext(svc, directory_ptr.NewRequest(dispatcher).TakeChannel(),
+                       dispatcher),
       controller_(this),
       outgoing_directory_ptr_(std::move(directory_ptr)),
       fake_svc_(svc) {
@@ -23,15 +23,15 @@ StartupContextForTest::StartupContextForTest(
       public_directory_ptr_.NewRequest().TakeChannel().release());
 }
 
-StartupContextForTest::~StartupContextForTest() = default;
+ComponentContextForTest::~ComponentContextForTest() = default;
 
-std::unique_ptr<StartupContextForTest> StartupContextForTest::Create(
+std::unique_ptr<ComponentContextForTest> ComponentContextForTest::Create(
     async_dispatcher_t* dispatcher) {
   // remove this handle from namespace so that no one is using it.
   zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   fuchsia::io::DirectoryPtr directory_ptr;
-  return std::make_unique<StartupContextForTest>(
+  return std::make_unique<ComponentContextForTest>(
       ServiceDirectoryForTest::Create(dispatcher), std::move(directory_ptr),
       dispatcher);
 }

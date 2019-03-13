@@ -8,11 +8,10 @@ namespace sys {
 namespace testing {
 
 TestWithContext::TestWithContext()
-    : context_(StartupContextForTest::Create()),
-      controller_(&context_->controller()) {
-}
+    : context_(ComponentContextForTest::Create()),
+      controller_(&context_->controller()) {}
 
-std::unique_ptr<StartupContext> TestWithContext::TakeContext() {
+std::unique_ptr<ComponentContext> TestWithContext::TakeContext() {
   return std::move(context_);
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/testing/startup_context_for_test.h>
+#include <lib/sys/cpp/testing/component_context_for_test.h>
 
 #include "echo_server.h"
 
@@ -12,14 +12,14 @@
 
 namespace {
 
-class StartupContextForTest_Tests : public gtest::RealLoopFixture {
+class ComponentContextForTest_Tests : public gtest::RealLoopFixture {
  protected:
-  void PublishOutgoingService(sys::StartupContext* context) {
+  void PublishOutgoingService(sys::ComponentContext* context) {
     ASSERT_EQ(ZX_OK, context->outgoing().AddPublicService(
                          echo_impl_.GetHandler(dispatcher())));
   }
 
-  void PublishIncomingService(sys::testing::StartupContextForTest* context) {
+  void PublishIncomingService(sys::testing::ComponentContextForTest* context) {
     ASSERT_EQ(ZX_OK, context->service_directory_for_test()->AddService(
                          echo_impl_.GetHandler(dispatcher())));
   }
@@ -27,8 +27,8 @@ class StartupContextForTest_Tests : public gtest::RealLoopFixture {
   EchoImpl echo_impl_;
 };
 
-TEST_F(StartupContextForTest_Tests, TestOutgoingPublicServices) {
-  auto context = sys::testing::StartupContextForTest::Create();
+TEST_F(ComponentContextForTest_Tests, TestOutgoingPublicServices) {
+  auto context = sys::testing::ComponentContextForTest::Create();
 
   PublishOutgoingService(context.get());
 
@@ -42,8 +42,8 @@ TEST_F(StartupContextForTest_Tests, TestOutgoingPublicServices) {
   EXPECT_EQ("hello", result);
 }
 
-TEST_F(StartupContextForTest_Tests, TestIncomingServices) {
-  auto context = sys::testing::StartupContextForTest::Create();
+TEST_F(ComponentContextForTest_Tests, TestIncomingServices) {
+  auto context = sys::testing::ComponentContextForTest::Create();
 
   PublishIncomingService(context.get());
 

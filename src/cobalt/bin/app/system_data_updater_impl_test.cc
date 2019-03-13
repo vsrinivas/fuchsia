@@ -5,6 +5,7 @@
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/sys/cpp/startup_context.h"
 #include "lib/sys/cpp/testing/test_with_context.h"
 
 namespace cobalt {

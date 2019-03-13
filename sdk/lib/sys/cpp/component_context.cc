@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
@@ -16,22 +16,22 @@ constexpr char kServiceRootPath[] = "/svc";
 
 }  // namespace
 
-StartupContext::StartupContext(std::shared_ptr<ServiceDirectory> svc,
-                               zx::channel directory_request,
-                               async_dispatcher_t* dispatcher)
+ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
+                                   zx::channel directory_request,
+                                   async_dispatcher_t* dispatcher)
     : svc_(std::move(svc)) {
   outgoing_.Serve(std::move(directory_request), dispatcher);
 }
 
-StartupContext::~StartupContext() = default;
+ComponentContext::~ComponentContext() = default;
 
-std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
+std::unique_ptr<ComponentContext> ComponentContext::CreateFromStartupInfo() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
-  return std::make_unique<StartupContext>(
+  return std::make_unique<ComponentContext>(
       ServiceDirectory::CreateFromNamespace(), zx::channel(directory_request));
 }
 
-std::unique_ptr<StartupContext> StartupContext::CreateFrom(
+std::unique_ptr<ComponentContext> ComponentContext::CreateFrom(
     fuchsia::sys::StartupInfo startup_info) {
   fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
   if (flat.paths.size() != flat.directories.size())
@@ -45,7 +45,7 @@ std::unique_ptr<StartupContext> StartupContext::CreateFrom(
     }
   }
 
-  return std::make_unique<StartupContext>(
+  return std::make_unique<ComponentContext>(
       std::make_shared<ServiceDirectory>(std::move(service_root)),
       std::move(startup_info.launch_info.directory_request));
 }

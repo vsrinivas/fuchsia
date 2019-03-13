@@ -5,25 +5,25 @@
 #ifndef LIB_SYS_CPP_TESTING_TEST_WITH_CONTEXT_H_
 #define LIB_SYS_CPP_TESTING_TEST_WITH_CONTEXT_H_
 
-#include <lib/sys/cpp/testing/startup_context_for_test.h>
+#include <lib/sys/cpp/testing/component_context_for_test.h>
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace sys {
 namespace testing {
 
-// Test fixture for tests where a |StartupContext| is needed.
+// Test fixture for tests where a |ComponentContext| is needed.
 // Code under test can be given a context, while the test can use a |Controller|
 // to set up and access the test environment.
 class TestWithContext : public gtest::TestLoopFixture {
-  using Controller = StartupContextForTest::Controller;
+  using Controller = ComponentContextForTest::Controller;
 
  protected:
   TestWithContext();
-  std::unique_ptr<StartupContext> TakeContext();
+  std::unique_ptr<ComponentContext> TakeContext();
   const Controller& controller() const { return *controller_; }
 
  private:
-  std::unique_ptr<StartupContextForTest> context_;
+  std::unique_ptr<ComponentContextForTest> context_;
   const Controller* controller_;
 };
 

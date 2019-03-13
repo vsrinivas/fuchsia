@@ -28,9 +28,9 @@ test("component_cpp_unittests") {
 
 test("component_cpp_testing_unittests") {
   sources = [
+    "component_context_for_test_unittest.cc",
     "echo_server.h",
     "service_directory_for_test_unittest.cc",
-    "startup_context_for_test_unittest.cc",
   ]
 
   deps = [
