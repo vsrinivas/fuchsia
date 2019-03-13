@@ -177,7 +177,8 @@ namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-Coordinator::Coordinator(CoordinatorConfig config) : config_(std::move(config)) {}
+Coordinator::Coordinator(CoordinatorConfig config)
+    : config_(std::move(config)) {}
 
 Coordinator::~Coordinator() {
     drivers_.clear();
@@ -450,7 +451,7 @@ void Coordinator::DumpDrivers(VmoWriter* vmo) const {
             char line[256];
             uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(drv.binding[0]));
             vmo->Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
-                     drv.binding_size);
+                        drv.binding_size);
             for (uint32_t i = 0; i < count; ++i) {
                 di_dump_bind_inst(&drv.binding[i], line, sizeof(line));
                 vmo->Printf("[%u/%u]: %s\n", i + 1, count, line);
@@ -512,7 +513,8 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 }
 
 static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
-                                     const char* devhost_bin, const char* name, zx_handle_t hrpc,
+                                     const char* devhost_bin, const char* name,
+                                     const char* const* env, zx_handle_t hrpc,
                                      const zx::resource& root_resource, const zx::job& sysinfo_job,
                                      zx::unowned_job devhost_job) {
     zx::channel loader_connection;
@@ -547,32 +549,31 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     size_t actions_count = 0;
     actions[actions_count++] = (fdio_spawn_action_t){
         .action = FDIO_SPAWN_ACTION_SET_NAME,
-        .name = { .data = name }
-    };
+        .name = {.data = name}};
     // TODO: eventually devhosts should not have vfs access
     actions[actions_count++] = (fdio_spawn_action_t){
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = { .prefix = "/boot", .handle = fs_clone("boot").release() },
+        .ns = {.prefix = "/boot", .handle = fs_clone("boot").release()},
     };
     // TODO: constrain to /svc/device
     actions[actions_count++] = (fdio_spawn_action_t){
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = { .prefix = "/svc", .handle = fs_clone("svc").release() },
+        .ns = {.prefix = "/svc", .handle = fs_clone("svc").release()},
     };
     actions[actions_count++] = (fdio_spawn_action_t){
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = { .id = PA_HND(PA_USER0, 0), .handle = hrpc },
+        .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc},
     };
     if (resource.is_valid()) {
         actions[actions_count++] = (fdio_spawn_action_t){
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = PA_HND(PA_RESOURCE, 0), .handle = resource.release() },
+            .h = {.id = PA_HND(PA_RESOURCE, 0), .handle = resource.release()},
         };
     }
     if (sysinfo_job_duplicate.is_valid()) {
         actions[actions_count++] = (fdio_spawn_action_t){
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = PA_HND(PA_USER0, kIdHJobRoot), .handle = sysinfo_job_duplicate.release() },
+            .h = {.id = PA_HND(PA_USER0, kIdHJobRoot), .handle = sysinfo_job_duplicate.release()},
         };
     }
 
@@ -580,7 +581,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     if (loader_connection.is_valid()) {
         actions[actions_count++] = (fdio_spawn_action_t){
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release() },
+            .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
         };
     } else {
         spawn_flags |= FDIO_SPAWN_DEFAULT_LDSVC;
@@ -594,8 +595,8 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
         devhost_bin,
         nullptr,
     };
-    status = fdio_spawn_etc(devhost_job->get(), spawn_flags, argv[0], argv, nullptr,
-                            actions_count, actions, proc.reset_and_get_address(), err_msg);
+    status = fdio_spawn_etc(devhost_job->get(), spawn_flags, argv[0], argv, env, actions_count,
+                            actions, proc.reset_and_get_address(), err_msg);
     if (status != ZX_OK) {
         log(ERROR, "devcoordinator: launch devhost '%s': failed: %s: %s\n", name,
             zx_status_get_string(status), err_msg);
@@ -619,18 +620,23 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
         return ZX_ERR_NO_MEMORY;
     }
 
+    // TODO: Use zx::channel here.
     zx_handle_t hrpc, dh_hrpc;
-    zx_status_t r;
-    if ((r = zx_channel_create(0, &hrpc, &dh_hrpc)) < 0) {
-        return r;
+    zx_status_t status = zx_channel_create(0, &hrpc, &dh_hrpc);
+    if (status != ZX_OK) {
+        return status;
     }
     dh->set_hrpc(dh_hrpc);
 
-    if ((r = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
-                               name, hrpc, root_resource(), config_.sysinfo_job,
-                               zx::unowned_job(config_.devhost_job))) < 0) {
+    fbl::Vector<const char*> env;
+    boot_args().Collect("driver.", &env);
+    env.push_back(nullptr);
+    status = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
+                               name, env.get(), hrpc, root_resource(), config_.sysinfo_job,
+                               zx::unowned_job(config_.devhost_job));
+    if (status != ZX_OK) {
         zx_handle_close(dh->hrpc());
-        return r;
+        return status;
     }
     launched_first_devhost_ = true;
 

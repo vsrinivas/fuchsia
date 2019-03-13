@@ -156,13 +156,8 @@ zx_status_t get_arguments(zx::vmo* args_vmo, size_t* args_size) {
     return fuchsia_boot_ArgumentsGet(local.get(), args_vmo->reset_and_get_address(), args_size);
 }
 
-struct ServiceArgs {
-    devmgr::Coordinator* coordinator;
-    const devmgr::BootArgs& boot_args;
-};
-
 int fuchsia_starter(void* arg) {
-    auto service_args = static_cast<const ServiceArgs*>(arg);
+    auto coordinator = static_cast<devmgr::Coordinator*>(arg);
     bool appmgr_started = false;
     bool autorun_started = false;
     bool drivers_loaded = false;
@@ -171,11 +166,11 @@ int fuchsia_starter(void* arg) {
     zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
     do {
-        zx_status_t status = service_args->coordinator->fshost_event().wait_one(
+        zx_status_t status = coordinator->fshost_event().wait_one(
             FSHOST_SIGNAL_READY, deadline, nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
-                if (service_args->coordinator->require_system()) {
+                if (coordinator->require_system()) {
                     fprintf(stderr, "devcoordinator: appmgr not launched in %zus, closing appmgr handle\n",
                             appmgr_timeout);
                 }
@@ -188,7 +183,7 @@ int fuchsia_starter(void* arg) {
             fprintf(stderr, "devcoordinator: error waiting on fuchsia start event: %d\n", status);
             break;
         }
-        status = service_args->coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
+        status = coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
         if (status != ZX_OK) {
             fprintf(stderr, "devcoordinator: error signaling fshost: %d\n", status);
         }
@@ -197,8 +192,8 @@ int fuchsia_starter(void* arg) {
             // we're starting the appmgr because /system is present
             // so we also signal the device coordinator that those
             // drivers are now loadable
-            service_args->coordinator->set_system_available(true);
-            service_args->coordinator->ScanSystemDrivers();
+            coordinator->set_system_available(true);
+            coordinator->ScanSystemDrivers();
             drivers_loaded = true;
         }
 
@@ -220,7 +215,7 @@ int fuchsia_starter(void* arg) {
             appmgr_started = true;
         }
         if (!autorun_started) {
-            do_autorun("autorun:system", service_args->boot_args.Get("zircon.autorun.system"));
+            do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"));
             autorun_started = true;
         }
     } while (!appmgr_started);
@@ -647,33 +642,33 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::BootArgs& b
 }
 
 int service_starter(void* arg) {
-    auto service_args = static_cast<const ServiceArgs*>(arg);
+    auto coordinator = static_cast<devmgr::Coordinator*>(arg);
 
     bool netboot = false;
     bool vruncmd = false;
     fbl::String vcmd;
-    if (!service_args->boot_args.GetBool("netsvc.disable", false)) {
+    if (!coordinator->boot_args().GetBool("netsvc.disable", false)) {
         const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr,
                               nullptr};
         int argc = 1;
 
-        if (service_args->boot_args.GetBool("netsvc.netboot", false)) {
+        if (coordinator->boot_args().GetBool("netsvc.netboot", false)) {
             args[argc++] = "--netboot";
             netboot = true;
             vruncmd = true;
         }
 
-        if (service_args->boot_args.GetBool("netsvc.advertise", true)) {
+        if (coordinator->boot_args().GetBool("netsvc.advertise", true)) {
             args[argc++] = "--advertise";
         }
 
-        const char* interface = service_args->boot_args.Get("netsvc.interface");
+        const char* interface = coordinator->boot_args().Get("netsvc.interface");
         if (interface != nullptr) {
             args[argc++] = "--interface";
             args[argc++] = interface;
         }
 
-        const char* nodename = service_args->boot_args.Get("zircon.nodename");
+        const char* nodename = coordinator->boot_args().Get("zircon.nodename");
         if (nodename) {
             args[argc++] = nodename;
         }
@@ -694,14 +689,14 @@ int service_starter(void* arg) {
         __UNUSED auto leaked_handle = proc.release();
     }
 
-    if (!service_args->boot_args.GetBool("virtcon.disable", false)) {
+    if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
         // pass virtcon.* options along
         fbl::Vector<const char*> env;
-        service_args->boot_args.Collect("virtcon.", &env);
+        coordinator->boot_args().Collect("virtcon.", &env);
         env.push_back(nullptr);
 
         const char* num_shells =
-            service_args->coordinator->require_system() && !netboot ? "0" : "3";
+            coordinator->require_system() && !netboot ? "0" : "3";
         size_t handle_count = 0;
         zx_handle_t handles[2];
         uint32_t types[2];
@@ -709,14 +704,14 @@ int service_starter(void* arg) {
         zx::channel virtcon_client, virtcon_server;
         zx_status_t status = zx::channel::create(0, &virtcon_client, &virtcon_server);
         if (status == ZX_OK) {
-            service_args->coordinator->set_virtcon_channel(std::move(virtcon_client));
+            coordinator->set_virtcon_channel(std::move(virtcon_client));
             handles[handle_count] = virtcon_server.release();
             types[handle_count] = PA_HND(PA_USER0, 0);
             ++handle_count;
         }
 
         zx::debuglog debuglog;
-        status = zx::debuglog::create(service_args->coordinator->root_resource(),
+        status = zx::debuglog::create(coordinator->root_resource(),
                                       ZX_LOG_FLAG_READABLE, &debuglog);
         if (status == ZX_OK) {
             handles[handle_count] = debuglog.release();
@@ -734,16 +729,16 @@ int service_starter(void* arg) {
                               types, handle_count, nullptr, FS_ALL);
     }
 
-    const char* epoch = service_args->boot_args.Get("devmgr.epoch");
+    const char* epoch = coordinator->boot_args().Get("devmgr.epoch");
     if (epoch) {
         zx_time_t offset = ZX_SEC(atoi(epoch));
-        zx_clock_adjust(service_args->coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
+        zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
     }
 
-    do_autorun("autorun:boot", service_args->boot_args.Get("zircon.autorun.boot"));
+    do_autorun("autorun:boot", coordinator->boot_args().Get("zircon.autorun.boot"));
 
     thrd_t t;
-    int ret = thrd_create_with_name(&t, fuchsia_starter, arg, "fuchsia-starter");
+    int ret = thrd_create_with_name(&t, fuchsia_starter, coordinator, "fuchsia-starter");
     if (ret == thrd_success) {
         thrd_detach(t);
     }
@@ -906,8 +901,9 @@ int main(int argc, char** argv) {
     bool require_system = boot_args.GetBool("devmgr.require-system", false);
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    devmgr::CoordinatorConfig config;
+    devmgr::CoordinatorConfig config{};
     config.dispatcher = loop.dispatcher();
+    config.boot_args = &boot_args;
     config.require_system = require_system;
     config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
     config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", false);
@@ -1006,8 +1002,7 @@ int main(int argc, char** argv) {
 
     start_console_shell(boot_args);
 
-    ServiceArgs service_args{&coordinator, boot_args};
-    ret = thrd_create_with_name(&t, service_starter, &service_args, "service-starter");
+    ret = thrd_create_with_name(&t, service_starter, &coordinator, "service-starter");
     if (ret != thrd_success) {
         log(ERROR, "devcoordinator: failed to create service starter thread\n");
         return 1;

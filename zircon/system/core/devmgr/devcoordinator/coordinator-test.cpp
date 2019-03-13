@@ -23,7 +23,7 @@ static constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
 static constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
 
 static devmgr::CoordinatorConfig default_config(async_dispatcher_t* dispatcher) {
-    devmgr::CoordinatorConfig config;
+    devmgr::CoordinatorConfig config{};
     config.dispatcher = dispatcher;
     config.require_system = false;
     config.asan_drivers = false;

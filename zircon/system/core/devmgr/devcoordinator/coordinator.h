@@ -21,6 +21,7 @@
 
 #include <utility>
 
+#include "boot-args.h"
 #include "composite-device.h"
 #include "device.h"
 #include "driver.h"
@@ -201,6 +202,8 @@ struct CoordinatorConfig {
     zx::event fshost_event;
     // Async dispatcher for the coordinator.
     async_dispatcher_t* dispatcher;
+    // Boot arguments from the Arguments service.
+    const devmgr::BootArgs* boot_args;
     // Whether we require /system.
     bool require_system;
     // Whether we require ASan drivers.
@@ -279,6 +282,7 @@ public:
     const zx::resource& root_resource() const { return config_.root_resource; }
     const zx::event& fshost_event() const { return config_.fshost_event; }
     async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
+    const devmgr::BootArgs& boot_args() const { return *config_.boot_args; }
     bool require_system() const { return config_.require_system; }
     bool suspend_fallback() const { return config_.suspend_fallback; }
     bool suspend_debug() const { return config_.suspend_debug; }
