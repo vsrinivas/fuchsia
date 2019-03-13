@@ -656,12 +656,7 @@ void PlayerImpl::SendStatusUpdates() {
 }
 
 void PlayerImpl::UpdateStatus() {
-  // TODO(dalesat): Remove as part of soft transition.
   status_.timeline_function =
-      fidl::MakeOptional(fxl::To<fuchsia::media::TimelineFunction>(
-          core_.timeline_function()));
-  // TODO(dalesat): Change to |timeline_function| as part of soft transition.
-  status_.timeline_function2 =
       fidl::MakeOptional(fxl::To<fuchsia::media::TimelineFunction>(
           core_.timeline_function()));
   status_.end_of_stream = core_.end_of_stream();
@@ -675,13 +670,7 @@ void PlayerImpl::UpdateStatus() {
   status_.can_seek = core_.can_seek();
 
   auto metadata = core_.metadata();
-  // TODO(dalesat): Remove as part of soft transition.
   status_.metadata =
-      metadata ? fidl::MakeOptional(
-                     fxl::To<fuchsia::media::Metadata>(*metadata))
-               : nullptr;
-  // TODO(dalesat): Change to |metadata| as part of soft transition.
-  status_.metadata2 =
       metadata ? fidl::MakeOptional(
                      fxl::To<fuchsia::media::Metadata>(*metadata))
                : nullptr;

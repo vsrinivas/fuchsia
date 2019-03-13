@@ -123,7 +123,4 @@ struct SourceStatus {
 
     // Indicates a problem preventing intended operation.
     Problem? problem;
-
-    // TEMPORARY: Moving Metadata from fuchsia.mediaplayer to fuchsia.media.
-    fuchsia.media.Metadata? metadata2;
 };

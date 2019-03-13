@@ -123,13 +123,7 @@ void SourceImpl::UpdateStatus() {
   status_.can_seek = source_segment_->can_seek();
 
   auto metadata = source_segment_->metadata();
-  // TODO(dalesat): Remove as part of soft transition.
   status_.metadata =
-      metadata ? fidl::MakeOptional(
-                     fxl::To<fuchsia::media::Metadata>(*metadata))
-               : nullptr;
-  // TODO(dalesat): Change to |metadata| as part of soft transition.
-  status_.metadata2 =
       metadata ? fidl::MakeOptional(
                      fxl::To<fuchsia::media::Metadata>(*metadata))
                : nullptr;
