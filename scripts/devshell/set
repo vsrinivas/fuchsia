@@ -192,13 +192,13 @@ function main {
   local gn_cmd='gen'
   local -a gn_switches=(--check)
   local gn_args="target_cpu=\"${arch}\""
+  local gn_after_args=""
   local boards=()
   local products=()
   local available=()
   local preinstall=()
   local monolith=()
   local zircon_args=(-v -g -t "$arch")
-  local extra_packages=()
   local build_dir=
   local variant=
   local use_goma
@@ -257,7 +257,7 @@ function main {
         shift
         ;;
       --netboot)
-        extra_packages+=('build/packages/netboot')
+        gn_after_args+=" enable_netboot=true"
         ;;
       --goma)
         use_goma=1
@@ -438,13 +438,6 @@ function main {
     gn_args+=" import(\"//${product}\")"
   done
 
-  # Board configs MUST declare fuchsia_packages, and boards must be non-empty.
-  gn_args+=" fuchsia_packages+=["
-  for package in ${extra_packages[@]}; do
-    gn_args+="\"${package}\","
-  done
-  gn_args+="]"
-
   gn_args+=" if (!defined(available)) { available = [] }"
   gn_args+=" available+=["
   for package in ${available[@]}; do
@@ -468,6 +461,8 @@ function main {
   if [[ -n "${variant}" ]]; then
     gn_args+=" select_variant=[${variant}]"
   fi
+
+  gn_args+="${gn_after_args}"
 
   # Using a subshell with -x prints out the gn command precisely with shell
   # quoting so a cut&paste to the command line works.  Always show the real
