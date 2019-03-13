@@ -304,16 +304,23 @@ enclosing type.
 
 ### Comments
 
-Use `// comments` to document your library.  Place comments above the thing
-being described.  Use reasonably complete sentences with proper capitalization
-and periods:
+Comments use `///` (three forward slashes). Comments in a library will also
+appear in the generated code to ease development when coding against the
+library. We say that comments "flow-through" to the target language.
 
+Place comments above the thing being described.  Use reasonably complete
+sentences with proper capitalization and periods. Limit comment widths to 80
+characters.
+
+For instance:
 ```fidl
+/// A widget displaying violins on the screen.
 struct Widget {
-    // Widgets must be published with monotonically increasing ids.
+    /// A monotonically increasing id, uniquely identifying the widget.
     uint64 id;
-    // Relative to the center.
+    /// Location of the top left corner of the widget.
     Point location;
+    ...
 };
 ```
 
@@ -322,45 +329,38 @@ with references to the external thing.  For example, reference the WiFi
 specification that describes a configuration structure.  Similarly, if a
 structure must match an ABI defined in a C header, reference the C header.
 
-If you would like your comments to "flow through" to the target language,
-then use either `///` as the comment introducer (yes, three forward slashes
-in a row) or the `[Doc = "this is a comment"]` attribute:
-
-```fidl
-/// this is a comment that flows through to the target
-
-[Doc = "and so is this"]
-```
-
 For more information about what your comments should contain, consult the [API
 Documentation Rubric](documentation.md).
 
-#### Flow-through vs. regular comment guidelines
+#### Non flow-through comments
 
-For flow through comments, the `///` form is preferred over the `[Doc = ]`
-form; the latter is intended as an internal implementation hook.
+If your comments are meant for library authors, use the simpler comments `//`
+(two forward slashes) which do not flow-through to the target language.
 
-When deciding what should be a regular "`//`" comment versus a flow-through
+When deciding what should be a regular `///` comment versus a non flow-through
 comment, keep in mind the following.
 
 Regular comments:
+
+ * descriptions of parameters, arguments, function
+ * usage notes
+
+Non flow-through comments:
 
  * internal "todo" comments
  * copyright notices
  * implementation details
 
-Flow-through comments:
-
- * descriptions of parameters, arguments, function
- * usage notes
-
-For example:
-
+Both style of comments can be combined:
 ```fidl
-// TODO -- this function needs additional error checks
-/// WatchedEvent describes events returned from a DirectoryWatcher.
-struct WatchedEvent {
-...
+/// A widget displaying violins on the screen.
+// TODO -- widgets should use UUIDs instead of sequential ids
+struct Widget {
+    /// A monotonically increasing id, uniquely identifying the widget.
+    uint64 id;
+    /// Location of the top left corner of the widget.
+    ...
+};
 ```
 
 ### Files
