@@ -24,7 +24,7 @@ pub async fn wlan_method_to_fidl(
             fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
             // return the scan results
             to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
-        },
+        }
         "connect" => {
             let target_ssid = match args.get("target_ssid") {
                 Some(ssid) => {
@@ -53,7 +53,7 @@ pub async fn wlan_method_to_fidl(
             fx_log_info!(tag: "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
             let results = await!(wlan_facade.connect(target_ssid, target_pwd))?;
             to_value(results).map_err(|e| format_err!("error handling connection result: {}", e))
-        },
+        }
         "disconnect" => {
             fx_log_info!(tag: "WlanFacade", "performing wlan disconnect");
             await!(wlan_facade.disconnect())?;

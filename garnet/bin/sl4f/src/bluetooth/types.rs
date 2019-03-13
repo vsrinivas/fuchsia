@@ -59,9 +59,7 @@ impl BluetoothMethod {
                 BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse
             }
             "GattcEnableNotifyCharactertistic" => BluetoothMethod::GattcEnableNotifyCharacteristic,
-            "GattcDisableNotifyCharacteristic" => {
-                BluetoothMethod::GattcDisableNotifyCharacteristic
-            }
+            "GattcDisableNotifyCharacteristic" => BluetoothMethod::GattcDisableNotifyCharacteristic,
             "GattcReadCharacteristicById" => BluetoothMethod::GattcReadCharacteristicById,
             "GattcReadLongCharacteristicById" => BluetoothMethod::GattcReadLongCharacteristicById,
             "GattcReadLongDescriptorById" => BluetoothMethod::GattcReadLongDescriptorById,
@@ -85,11 +83,7 @@ pub struct BleScanResponse {
 
 impl BleScanResponse {
     pub fn new(id: String, name: String, connectable: bool) -> BleScanResponse {
-        BleScanResponse {
-            id,
-            name,
-            connectable,
-        }
+        BleScanResponse { id, name, connectable }
     }
 }
 
@@ -234,11 +228,8 @@ impl BleConnectPeripheralResponse {
     pub fn new(info: Vec<ServiceInfo>) -> Vec<BleConnectPeripheralResponse> {
         let mut res = Vec::new();
         for v in info {
-            let copy = BleConnectPeripheralResponse {
-                id: v.id,
-                primary: v.primary,
-                uuid_type: v.type_,
-            };
+            let copy =
+                BleConnectPeripheralResponse { id: v.id, primary: v.primary, uuid_type: v.type_ };
             res.push(copy)
         }
         res

@@ -36,10 +36,7 @@ pub struct BleAdvertiseFacade {
 impl BleAdvertiseFacade {
     pub fn new() -> BleAdvertiseFacade {
         BleAdvertiseFacade {
-            inner: RwLock::new(InnerBleAdvertiseFacade {
-                adv_id: None,
-                peripheral: None,
-            }),
+            inner: RwLock::new(InnerBleAdvertiseFacade { adv_id: None, peripheral: None }),
         }
     }
 
@@ -84,7 +81,10 @@ impl BleAdvertiseFacade {
     }
 
     pub async fn start_adv(
-        &self, adv_data: Option<AdvertisingData>, interval: Option<u32>, connectable: bool,
+        &self,
+        adv_data: Option<AdvertisingData>,
+        interval: Option<u32>,
+        connectable: bool,
     ) -> Result<(), Error> {
         // Default interval (ms) to 1 second
         let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);

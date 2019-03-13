@@ -37,60 +37,6 @@ use crate::scenic::facade::ScenicFacade;
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
-pub mod macros {
-    pub use crate::dtag;
-}
-
-// Create a short way to describe tags within facades.
-//
-// dtag is short for "descriptive tag"
-//
-// While using the dtag macro within a custom facade, the log
-// tag will print as such:
-// TestFacade::test_func:123
-//     TestFacade - is the class.
-//     test_func - is the function where the log message was called from.
-//     123 - is the line number the log message was called from.
-//
-// Example usage and output:
-// Class TestFacade {
-//      pub fn test_func {
-//          fx_log_info!(tag: &dtag!(), "tests this random func.");
-//      }
-//
-// "fx syslog" output:
-//     [sl4f, TestFacade::test_func:123] INFO: tests this random func.
-#[macro_export]
-macro_rules! dtag {
-    () => {{
-        fn f() {}
-        fn type_name_of<T>(_: T) -> &'static str {
-            extern crate core;
-            unsafe { core::intrinsics::type_name::<T>() }
-        }
-        let name = type_name_of(f);
-
-        // In some circumstances an additional ::{{closure}} tag is added
-        // to the function name. Remove it.
-        let re = Regex::new(r"::\{\{closure\}\}").unwrap();
-        let mut result = re.replace_all(name, "").to_string();
-
-        // Remove the full module path as we only want the class and
-        // function being called for less verbosity.
-        let mut prefix_to_remove = module_path!().to_string() + &"::".to_string();
-        // Remove beginning "sl4f::" from the prefix_to_remove.
-        prefix_to_remove = prefix_to_remove[6..prefix_to_remove.len()].to_string();
-        let re = Regex::new(&prefix_to_remove).unwrap();
-        result = re.replace_all(&result, "").to_string();
-        // Remove beginning "fn() {" and ending "::f}".
-        result = result[6..result.len() - 4].to_string();
-        let line = line!();
-        // Return and add line number to the tag.
-        let result = result + &":".to_string() + &line.to_string();
-        result
-    }};
-}
-
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
 /// For example, to add WLAN stack support, add "wlan_facade" to the struct definition and update

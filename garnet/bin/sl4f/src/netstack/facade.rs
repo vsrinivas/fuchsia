@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_app as app;
+use failure::Error;
 use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
-use failure::{Error};
+use fuchsia_app as app;
 use serde_json::{to_value, Value};
 
 /// Perform Netstack operations.
@@ -19,7 +19,8 @@ pub struct NetstackFacade {
 impl NetstackFacade {
     pub fn new() -> NetstackFacade {
         NetstackFacade {
-            stack: app::client::connect_to_service::<StackMarker>().expect("failed to connect to netstack"),
+            stack: app::client::connect_to_service::<StackMarker>()
+                .expect("failed to connect to netstack"),
         }
     }
 

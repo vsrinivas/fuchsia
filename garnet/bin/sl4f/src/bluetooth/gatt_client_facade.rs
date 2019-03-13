@@ -83,7 +83,9 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_connect_to_service(
-        &self, periph_id: String, service_id: u64,
+        &self,
+        periph_id: String,
+        service_id: u64,
     ) -> Result<(), Error> {
         let client_proxy = self.get_client_from_peripherals(periph_id);
         let (proxy, server) = endpoints::create_proxy()?;
@@ -106,13 +108,8 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_discover_characteristics(&self) -> Result<Vec<Characteristic>, Error> {
-        let discover_characteristics = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .discover_characteristics();
+        let discover_characteristics =
+            self.inner.read().active_proxy.as_ref().unwrap().discover_characteristics();
 
         let (status, chrcs) =
             await!(discover_characteristics).map_err(|_| BTError::new("Failed to send message"))?;
@@ -123,15 +120,17 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_write_char_by_id(
-        &self, id: u64, offset: u16, write_value: Vec<u8>,
+        &self,
+        id: u64,
+        offset: u16,
+        write_value: Vec<u8>,
     ) -> Result<(), Error> {
-        let write_characteristic = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .write_characteristic(id, offset, &mut write_value.into_iter());
+        let write_characteristic =
+            self.inner.read().active_proxy.as_ref().unwrap().write_characteristic(
+                id,
+                offset,
+                &mut write_value.into_iter(),
+            );
 
         let status =
             await!(write_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
@@ -143,7 +142,9 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_write_char_by_id_without_response(
-        &self, id: u64, write_value: Vec<u8>,
+        &self,
+        id: u64,
+        write_value: Vec<u8>,
     ) -> Result<(), Error> {
         self.inner
             .read()
@@ -155,13 +156,8 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_read_char_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
-        let read_characteristic = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .read_characteristic(id);
+        let read_characteristic =
+            self.inner.read().active_proxy.as_ref().unwrap().read_characteristic(id);
 
         let (status, value) =
             await!(read_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
@@ -173,7 +169,10 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_read_long_char_by_id(
-        &self, id: u64, offset: u16, max_bytes: u16,
+        &self,
+        id: u64,
+        offset: u16,
+        max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
         let read_long_characteristic = self
             .inner
@@ -193,13 +192,7 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_read_desc_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
-        let read_descriptor = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .read_descriptor(id);
+        let read_descriptor = self.inner.read().active_proxy.as_ref().unwrap().read_descriptor(id);
 
         let (status, value) =
             await!(read_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
@@ -211,7 +204,10 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_read_long_desc_by_id(
-        &self, id: u64, offset: u16, max_bytes: u16,
+        &self,
+        id: u64,
+        offset: u16,
+        max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
         let read_long_descriptor = self
             .inner
@@ -249,15 +245,12 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_toggle_notify_characteristic(
-        &self, id: u64, value: bool,
+        &self,
+        id: u64,
+        value: bool,
     ) -> Result<(), Error> {
-        let notify_characteristic = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .notify_characteristic(id, value);
+        let notify_characteristic =
+            self.inner.read().active_proxy.as_ref().unwrap().notify_characteristic(id, value);
 
         let status =
             await!(notify_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
@@ -280,10 +273,7 @@ impl GattClientFacade {
                         fx_log_info!(tag: "list_services", "Found services: {:?}", services);
                         Ok(services)
                     }
-                    Some(e) => bail!(
-                        "Error found while listing services: {:?}",
-                        BTError::from(*e)
-                    ),
+                    Some(e) => bail!("Error found while listing services: {:?}", BTError::from(*e)),
                 }
             }
             None => bail!("No client exists with provided device id"),
@@ -345,7 +335,9 @@ impl GattClientFacade {
 
     // Update the devices dictionary with a discovered RemoteDevice
     pub fn update_devices(
-        inner: &Arc<RwLock<InnerGattClientFacade>>, id: String, device: RemoteDevice,
+        inner: &Arc<RwLock<InnerGattClientFacade>>,
+        id: String,
+        device: RemoteDevice,
     ) {
         if inner.read().devices.contains_key(&id) {
             fx_log_warn!(tag: "update_devices", "Already discovered: {:?}", id);

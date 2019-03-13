@@ -107,23 +107,17 @@ impl BluetoothFacade {
     }
 
     pub fn publish_service(
-        bt_facade: &RwLock<BluetoothFacade>, mut service_info: ServiceInfo,
+        bt_facade: &RwLock<BluetoothFacade>,
+        mut service_info: ServiceInfo,
         local_service_id: String,
     ) -> impl Future<Output = Result<(), Error>> {
         // Set the local peripheral proxy if necessary
         BluetoothFacade::set_server_proxy(&bt_facade);
 
         // If the unique service_proxy id already exists, reject publishing of service
-        if bt_facade
-            .read()
-            .service_proxies
-            .contains_key(&local_service_id)
-        {
+        if bt_facade.read().service_proxies.contains_key(&local_service_id) {
             fx_log_err!(tag: "publish_service", "Attempted to create service proxy for existing key. {:?}", local_service_id.clone());
-            return Left(fready(Err(BTError::new(
-                "Proxy key already exists, aborting.",
-            )
-            .into())));
+            return Left(fready(Err(BTError::new("Proxy key already exists, aborting.").into())));
         }
 
         // TODO(NET-1289): Ensure unwrap() safety
@@ -139,10 +133,7 @@ impl BluetoothFacade {
         let delegate_ptr =
             fidl::endpoints::ClientEnd::<LocalServiceDelegateMarker>::new(delegate_remote);
 
-        bt_facade
-            .write()
-            .service_proxies
-            .insert(local_service_id, (service_proxy, delegate_local));
+        bt_facade.write().service_proxies.insert(local_service_id, (service_proxy, delegate_local));
 
         match &bt_facade.read().server_proxy {
             Some(server) => {
@@ -156,9 +147,7 @@ impl BluetoothFacade {
 
                 Right(pub_fut)
             }
-            None => Left(fready(
-                Err(BTError::new("No central proxy created.").into()),
-            )),
+            None => Left(fready(Err(BTError::new("No central proxy created.").into()))),
         }
     }
 }
