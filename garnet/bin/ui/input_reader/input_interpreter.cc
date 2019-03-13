@@ -732,6 +732,10 @@ bool InputInterpreter::Read(bool discard) {
   }
   for (size_t i = 0; i < devices_.size(); i++) {
     InputDevice& device = devices_[i];
+    if (device.device->ReportId() != 0 &&
+        device.device->ReportId() != report[0]) {
+      continue;
+    }
     if (device.device->ParseReport(report.data(), rc, device.report.get())) {
       if (!discard) {
         device.report->event_time = InputEventTimestampNow();
@@ -746,7 +750,7 @@ bool InputInterpreter::Read(bool discard) {
   return true;
 }
 
-Protocol ExtractProtocol(hid::Usage input) {
+Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Consumer;
   using ::hid::usage::Digitizer;
   using ::hid::usage::GenericDesktop;
@@ -781,6 +785,102 @@ Protocol ExtractProtocol(hid::Usage input) {
     }
   }
   return Protocol::Other;
+}
+
+bool InputInterpreter::ParseHidInputReportDescriptor(
+    const hid::ReportDescriptor* input_desc) {
+  FXL_CHECK(input_desc);
+
+  // Traverse up the nested collections to the Application collection.
+  hid::Collection* collection = input_desc->input_fields[0].col;
+  while (collection != nullptr) {
+    if (collection->type == hid::CollectionType::kApplication) {
+      break;
+    }
+    collection = collection->parent;
+  }
+
+  if (collection == nullptr) {
+    FXL_LOG(ERROR) << "Can't process HID report descriptor for " << name()
+                   << "; Needed a valid Collection but didn't get one";
+    return false;
+  }
+
+  InputDevice input_device = {};
+  input_device.report = fuchsia::ui::input::InputReport::New();
+
+  // Most modern gamepads report themselves as Joysticks. Madness.
+  if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
+      collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
+      hardcoded_.ParseGamepadDescriptor(input_desc->input_fields,
+                                        input_desc->input_count)) {
+    protocol_ = Protocol::Gamepad;
+    return true;
+  } else {
+    protocol_ = ExtractProtocol(collection->usage);
+    switch (protocol_) {
+      case Protocol::LightSensor:
+        hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields,
+                                               input_desc->input_count);
+        return true;
+      case Protocol::Buttons: {
+        FXL_VLOG(2) << "Device " << name() << " has HID buttons";
+
+        input_device.device = std::make_unique<Buttons>();
+        input_device.report->buttons = fuchsia::ui::input::ButtonsReport::New();
+        break;
+      }
+      case Protocol::Sensor: {
+        FXL_VLOG(2) << "Device " << name() << " has HID sensor";
+
+        input_device.device = std::make_unique<Sensor>();
+        input_device.report->sensor = fuchsia::ui::input::SensorReport::New();
+        break;
+      }
+      case Protocol::Touchpad: {
+        FXL_VLOG(2) << "Device " << name() << " has HID touchpad";
+
+        input_device.device = std::make_unique<Touchpad>();
+        input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
+        break;
+      }
+      case Protocol::Touch: {
+        FXL_VLOG(2) << "Device " << name() << " has HID touch";
+
+        input_device.device = std::make_unique<TouchScreen>();
+        input_device.report->touchscreen =
+            fuchsia::ui::input::TouchscreenReport::New();
+        break;
+      }
+      case Protocol::Mouse: {
+        FXL_VLOG(2) << "Device " << name() << " has HID mouse";
+
+        input_device.device = std::make_unique<Mouse>();
+        input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
+        break;
+      }
+      // Add more protocols here
+      default:
+        // Not being able to match on a given HID report descriptor is not
+        // an error and will happen frequently. We only need to match a single
+        // report in the report descriptor to be valid.
+        return true;
+    }
+  }
+
+  if (!input_device.device->ParseReportDescriptor(*input_desc,
+                                                  &input_device.descriptor)) {
+    FXL_LOG(ERROR) << "Can't process HID report descriptor for " << name()
+                   << "; Failed to do generic device parsing";
+    return false;
+  }
+  devices_.push_back(std::move(input_device));
+
+  FXL_LOG(INFO) << "hid-parser successful for " << name() << " with usage page "
+                << collection->usage.page << " and usage "
+                << collection->usage.usage;
+
+  return true;
 }
 
 bool InputInterpreter::ParseProtocol() {
@@ -876,104 +976,22 @@ bool InputInterpreter::ParseProtocol() {
     return false;
   }
 
-  // Find the first input report.
-  const hid::ReportDescriptor* input_desc = nullptr;
+  // Parse each input report.
   for (size_t rep = 0; rep < count; rep++) {
     const hid::ReportDescriptor* desc = &dev_desc->report[rep];
     if (desc->input_count != 0) {
-      input_desc = desc;
-      break;
-    }
-  }
-
-  if (input_desc == nullptr) {
-    FXL_LOG(ERROR) << "no input report fields for " << name();
-    return false;
-  }
-
-  // Traverse up the nested collections to the Application collection.
-  auto collection = input_desc->input_fields[0].col;
-  while (collection != nullptr) {
-    if (collection->type == hid::CollectionType::kApplication) {
-      break;
-    }
-    collection = collection->parent;
-  }
-
-  if (collection == nullptr) {
-    FXL_LOG(ERROR) << "invalid HID collection for " << name();
-    return false;
-  }
-
-  FXL_LOG(INFO) << "hid-parser succesful for " << name() << " with usage page "
-                << collection->usage.page << " and usage "
-                << collection->usage.usage;
-
-  InputDevice input_device = {};
-  input_device.report = fuchsia::ui::input::InputReport::New();
-
-  // Most modern gamepads report themselves as Joysticks. Madness.
-  if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
-      collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
-      hardcoded_.ParseGamepadDescriptor(input_desc->input_fields,
-                                        input_desc->input_count)) {
-    protocol_ = Protocol::Gamepad;
-    return true;
-  } else {
-    protocol_ = ExtractProtocol(collection->usage);
-    switch (protocol_) {
-      case Protocol::LightSensor:
-        hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields,
-                                               input_desc->input_count);
-        return true;
-      case Protocol::Buttons: {
-        FXL_VLOG(2) << "Device " << name() << " has HID buttons";
-
-        input_device.device = std::make_unique<Buttons>();
-        input_device.report->buttons = fuchsia::ui::input::ButtonsReport::New();
-        break;
-      }
-      case Protocol::Sensor: {
-        FXL_VLOG(2) << "Device " << name() << " has HID sensor";
-
-        input_device.device = std::make_unique<Sensor>();
-        input_device.report->sensor = fuchsia::ui::input::SensorReport::New();
-        break;
-      }
-      case Protocol::Touchpad: {
-        FXL_VLOG(2) << "Device " << name() << " has HID touchpad";
-
-        input_device.device = std::make_unique<Touchpad>();
-        input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
-        break;
-      }
-      case Protocol::Touch: {
-        FXL_VLOG(2) << "Device " << name() << " has HID touch";
-
-        input_device.device = std::make_unique<TouchScreen>();
-        input_device.report->touchscreen =
-            fuchsia::ui::input::TouchscreenReport::New();
-        break;
-      }
-      case Protocol::Mouse: {
-        FXL_VLOG(2) << "Device " << name() << " has HID mouse";
-
-        input_device.device = std::make_unique<Mouse>();
-        input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
-        break;
-      }
-      // Add more protocols here
-      default:
+      if (!ParseHidInputReportDescriptor(desc)) {
         return false;
+      }
     }
   }
 
-  if (!input_device.device->ParseReportDescriptor(*input_desc,
-                                                  &input_device.descriptor)) {
-    FXL_LOG(ERROR) << "invalid report descriptor for " << name();
+  // If we never parsed a single device correctly then fail.
+  if (devices_.size() == 0) {
+    FXL_LOG(ERROR) << "Can't process HID report descriptor for " << name()
+                   << "; All parsing attempts failed.";
     return false;
   }
-  devices_.push_back(std::move(input_device));
 
   return true;
 }

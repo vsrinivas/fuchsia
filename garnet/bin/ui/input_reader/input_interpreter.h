@@ -70,9 +70,19 @@ class InputInterpreter {
     fuchsia::ui::input::InputDevicePtr input_device;
   };
 
+  Protocol ExtractProtocol(hid::Usage input);
+
+  // This function takes a ReportDescriptor that describes an input report.
+  // It will use the report descriptor to create a matching InputDevice. If it
+  // returns true then the |devices_| array will have been extended by one extra
+  // |InputDevice|.
+  bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* input_desc);
   // Helper function called during Init() that determines which protocol
-  // is going to be used. If it returns true then |protocol_| has been
-  // set correctly.
+  // is going to be used. It is responsible for reading the HID device's
+  // Report Descriptor and determining what type of device it is.
+  // If it returns true then either |protocol_| will have been set
+  // (if the device is a hardcoded device), or |devices_| array will contain
+  // the full list of generic devices the HID report descriptor describes.
   bool ParseProtocol();
 
   void NotifyRegistry();
