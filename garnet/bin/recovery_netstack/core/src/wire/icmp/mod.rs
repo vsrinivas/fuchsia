@@ -26,6 +26,7 @@ use std::mem;
 use std::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use never::Never;
 use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -111,7 +112,7 @@ pub(crate) trait IcmpIpExt: Ip {
 // implement IcmpIpExt for both of these types, this is fine. The compiler isn't
 // so smart. This implementation should never actually be used.
 impl<I: Ip> IcmpIpExt for I {
-    default type IcmpMessageType = !;
+    default type IcmpMessageType = Never;
 
     // divide by 0 will only happen during constant evaluation, which will only
     // happen if this implementation is monomorphized, which should never happen

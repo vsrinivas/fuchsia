@@ -7,7 +7,6 @@
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
-#![feature(never_type)]
 #![feature(specialization)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]

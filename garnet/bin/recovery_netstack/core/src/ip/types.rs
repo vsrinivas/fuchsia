@@ -85,6 +85,7 @@ mod internal {
     use std::net;
 
     use byteorder::{ByteOrder, NetworkEndian};
+    use never::Never;
     use packet::{PacketBuilder, ParsablePacket};
     use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, Unaligned};
 
@@ -721,8 +722,8 @@ mod internal {
     // NOTE(joshlf): We know that this is safe because we seal the Ip trait to
     // only be implemented by Ipv4 and Ipv6.
     impl<B: ByteSlice, I: Ip> IpExt<B> for I {
-        default type Packet = !;
-        default type PacketBuilder = !;
+        default type Packet = Never;
+        default type PacketBuilder = Never;
     }
 
     impl<B: ByteSlice> IpExt<B> for Ipv4 {
