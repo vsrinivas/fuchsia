@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #[deny(warnings)]
-
 use chrono::TimeZone;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
@@ -71,15 +70,10 @@ impl Default for LocalOptions {
 impl LocalOptions {
     fn format_time(&self, timestamp: zx::sys::zx_time_t) -> String {
         match self.clock {
-            Clock::Monotonic => format!(
-                "{:05}.{:06}",
-                timestamp / 1000000000,
-                (timestamp / 1000) % 1000000
-            ),
-            Clock::UTC => self
-                ._monotonic_to_utc(timestamp)
-                .format(&self.time_format)
-                .to_string(),
+            Clock::Monotonic => {
+                format!("{:05}.{:06}", timestamp / 1000000000, (timestamp / 1000) % 1000000)
+            }
+            Clock::UTC => self._monotonic_to_utc(timestamp).format(&self.time_format).to_string(),
             Clock::Local => chrono::Local
                 .from_utc_datetime(&self._monotonic_to_utc(timestamp))
                 .format(&self.time_format)
@@ -121,22 +115,17 @@ impl MaxCapacityFile {
         let file_path = file_path.into();
         let file = fs::OpenOptions::new().append(true).create(true).open(&file_path)?;
         let curr_size = file.metadata()?.len();
-        Ok(MaxCapacityFile {
-            file,
-            file_path,
-            capacity,
-            curr_size,
-        })
+        Ok(MaxCapacityFile { file, file_path, capacity, curr_size })
     }
 
     // rotate will move the current file to ${file_path}.log.old and create a new file at ${file_path}
     // to hold future messages.
     fn rotate(&mut self) -> io::Result<()> {
-        let mut new_file_name =
-                self.file_path
-                .to_str()
-                .ok_or(io::Error::new(io::ErrorKind::Other, "invalid file name"))?
-                .to_string();
+        let mut new_file_name = self
+            .file_path
+            .to_str()
+            .ok_or(io::Error::new(io::ErrorKind::Other, "invalid file name"))?
+            .to_string();
         new_file_name.push_str(".old");
 
         fs::rename(&self.file_path, PathBuf::from(new_file_name))?;
@@ -152,7 +141,10 @@ impl Write for MaxCapacityFile {
             return Ok(buf.len());
         }
         if buf.len() as u64 > self.capacity / 2 {
-            return Err(io::Error::new(io::ErrorKind::Other, "buffer size larger than file capacity"));
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "buffer size larger than file capacity",
+            ));
         }
         if self.capacity != 0 && self.curr_size + (buf.len() as u64) > self.capacity / 2 {
             self.rotate()?;
@@ -215,7 +207,8 @@ fn help(name: &str) -> String {
 
         --help | -h:
             Prints usage."#,
-        name=name, default_capacity=DEFAULT_FILE_CAPACITY
+        name = name,
+        default_capacity = DEFAULT_FILE_CAPACITY
     )
 }
 
@@ -230,10 +223,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
     while i < args.len() {
         let argument = &args[i];
         if args[i + 1].starts_with("-") {
-            return Err(format!(
-                "Invalid args. Pass argument after flag '{}'",
-                argument
-            ));
+            return Err(format!("Invalid args. Pass argument after flag '{}'", argument));
         }
         match argument.as_ref() {
             "--tag" => {
@@ -274,26 +264,27 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     a => return Err(format!("Invalid severity: {}", a)),
                 }
             }
-            "--verbosity" => if let Ok(v) = args[i + 1].parse::<u8>() {
-                if severity_passed {
-                    return Err(
-                        "Invalid arguments: Cannot pass both severity and verbosity".to_string()
-                    );
-                }
-                if v == 0 {
+            "--verbosity" => {
+                if let Ok(v) = args[i + 1].parse::<u8>() {
+                    if severity_passed {
+                        return Err("Invalid arguments: Cannot pass both severity and verbosity"
+                            .to_string());
+                    }
+                    if v == 0 {
+                        return Err(format!(
+                            "Invalid verbosity: '{}', should be positive integer greater than 0.",
+                            args[i + 1]
+                        ));
+                    }
+                    options.filter.min_severity = LogLevelFilter::None;
+                    options.filter.verbosity = v;
+                } else {
                     return Err(format!(
                         "Invalid verbosity: '{}', should be positive integer greater than 0.",
                         args[i + 1]
                     ));
                 }
-                options.filter.min_severity = LogLevelFilter::None;
-                options.filter.verbosity = v;
-            } else {
-                return Err(format!(
-                    "Invalid verbosity: '{}', should be positive integer greater than 0.",
-                    args[i + 1]
-                ));
-            },
+            }
             "--pid" => {
                 options.filter.filter_by_pid = true;
                 match args[i + 1].parse::<u64>() {
@@ -325,19 +316,17 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             "--file" => {
                 options.local.file = Some((&args[i + 1]).clone());
             }
-            "--file_capacity" => {
-                match args[i + 1].parse::<u64>() {
-                    Ok(cap) => {
-                        options.local.file_capacity = cap;
-                    }
-                    Err(_) => {
-                        return Err(format!(
-                            "Invalid file capacity: '{}', should be a positive integer.",
-                            args[i + 1]
-                        ));
-                    }
+            "--file_capacity" => match args[i + 1].parse::<u64>() {
+                Ok(cap) => {
+                    options.local.file_capacity = cap;
                 }
-            }
+                Err(_) => {
+                    return Err(format!(
+                        "Invalid file capacity: '{}', should be a positive integer.",
+                        args[i + 1]
+                    ));
+                }
+            },
             "--clock" => match args[i + 1].to_lowercase().as_ref() {
                 "monotonic" => options.local.clock = Clock::Monotonic,
                 "utc" => options.local.clock = Clock::UTC,
@@ -368,11 +357,7 @@ where
     W: Write + Send,
 {
     fn log(&mut self, message: LogMessage) {
-        if message
-            .tags
-            .iter()
-            .any(|tag| self.local_options.ignore_tags.contains(tag))
-        {
+        if message.tags.iter().any(|tag| self.local_options.ignore_tags.contains(tag)) {
             return;
         }
         let tags = message.tags.join(", ");
@@ -385,7 +370,8 @@ where
             tags,
             get_log_level(message.severity),
             message.msg
-        ).expect("should not fail");
+        )
+        .expect("should not fail");
         if message.dropped_logs > 0
             && self
                 .dropped_logs
@@ -401,7 +387,8 @@ where
                 message.tid,
                 tags,
                 message.dropped_logs
-            ).expect("should not fail");
+            )
+            .expect("should not fail");
             self.dropped_logs.insert(message.pid, message.dropped_logs);
         }
     }
@@ -432,11 +419,7 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
         None => Box::new(io::stdout()),
         Some(ref name) => Box::new(MaxCapacityFile::new(name, local_options.file_capacity)?),
     };
-    Ok(Listener {
-        dropped_logs: HashMap::new(),
-        writer: writer,
-        local_options: local_options,
-    })
+    Ok(Listener { dropped_logs: HashMap::new(), writer: writer, local_options: local_options })
 }
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
@@ -447,9 +430,7 @@ fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Erro
     );
     let l = new_listener(local_options)?;
     let listener_fut = syslog_listener::run_log_listener(l, filter_options, false)?;
-    executor
-        .run_singlethreaded(listener_fut)
-        .map_err(Into::into)
+    executor.run_singlethreaded(listener_fut).map_err(Into::into)
 }
 
 fn main() {
@@ -520,9 +501,9 @@ mod tests {
             l.log(copy_log_message(&message));
         }
         let mut expected = "".to_string();
-        for level in &[
-            "INFO", "WARNING", "ERROR", "FATAL", "INVALID", "INVALID", "VLOG(1)", "VLOG(3)",
-        ] {
+        for level in
+            &["INFO", "WARNING", "ERROR", "FATAL", "INVALID", "INVALID", "VLOG(1)", "VLOG(3)"]
+        {
             expected.push_str(&format!("[00076.352234][123][321][] {}: hello\n", level));
         }
 
@@ -569,16 +550,13 @@ mod tests {
 
         let mut tmp_file = File::open(&file_path).expect("should have opened the file");
         let mut content = String::new();
-        tmp_file
-            .read_to_string(&mut content)
-            .expect("something went wrong reading the file");
+        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
 
         assert_eq!(content, expected);
     }
 
     #[test]
     fn test_max_capacity_file_write() {
-
         struct TestCase {
             file_cap: u64,
             file_1_initial_state: Vec<u8>,
@@ -617,31 +595,31 @@ mod tests {
                 file_cap: 10,
                 file_1_initial_state: vec![],
                 file_2_initial_state: vec![],
-                write_to_perform: vec![0,1,2,3,4],
-                file_1_expected_state: vec![0,1,2,3,4],
+                write_to_perform: vec![0, 1, 2, 3, 4],
+                file_1_expected_state: vec![0, 1, 2, 3, 4],
                 file_2_expected_state: vec![],
             },
             TestCase {
                 file_cap: 10,
-                file_1_initial_state: vec![0,1,2,3,4],
+                file_1_initial_state: vec![0, 1, 2, 3, 4],
                 file_2_initial_state: vec![],
                 write_to_perform: vec![5],
                 file_1_expected_state: vec![5],
-                file_2_expected_state: vec![0,1,2,3,4],
+                file_2_expected_state: vec![0, 1, 2, 3, 4],
             },
             TestCase {
                 file_cap: 10,
-                file_1_initial_state: vec![5,6,7,8,9],
-                file_2_initial_state: vec![0,1,2,3,4],
-                write_to_perform: vec![10,11,12,13,14],
-                file_1_expected_state: vec![10,11,12,13,14],
-                file_2_expected_state: vec![5,6,7,8,9],
+                file_1_initial_state: vec![5, 6, 7, 8, 9],
+                file_2_initial_state: vec![0, 1, 2, 3, 4],
+                write_to_perform: vec![10, 11, 12, 13, 14],
+                file_1_expected_state: vec![10, 11, 12, 13, 14],
+                file_2_expected_state: vec![5, 6, 7, 8, 9],
             },
             TestCase {
                 file_cap: 0,
                 file_1_initial_state: vec![],
                 file_2_initial_state: vec![],
-                write_to_perform: vec![1,2,3,4,5],
+                write_to_perform: vec![1, 2, 3, 4, 5],
                 file_1_expected_state: vec![],
                 file_2_expected_state: vec![],
             },
@@ -650,25 +628,36 @@ mod tests {
         for tc in test_cases {
             let tmp_dir = TempDir::new().unwrap();
             let tmp_file_path = tmp_dir.path().join("test.log");
-            fs::OpenOptions::new().append(true).create(true)
-                .open(&tmp_file_path).unwrap()
-                .write(&tc.file_1_initial_state).unwrap();
-            fs::OpenOptions::new().append(true).create(true)
-                .open(&tmp_file_path.with_extension("log.old")).unwrap()
-                .write(&tc.file_2_initial_state).unwrap();
+            fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&tmp_file_path)
+                .unwrap()
+                .write(&tc.file_1_initial_state)
+                .unwrap();
+            fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&tmp_file_path.with_extension("log.old"))
+                .unwrap()
+                .write(&tc.file_2_initial_state)
+                .unwrap();
 
-            MaxCapacityFile::new(tmp_file_path.clone(), tc.file_cap).unwrap()
-                .write(&tc.write_to_perform).unwrap();
+            MaxCapacityFile::new(tmp_file_path.clone(), tc.file_cap)
+                .unwrap()
+                .write(&tc.write_to_perform)
+                .unwrap();
 
-            let mut file1 = fs::OpenOptions::new().read(true)
-                .open(&tmp_file_path).unwrap();
+            let mut file1 = fs::OpenOptions::new().read(true).open(&tmp_file_path).unwrap();
             let file_size = file1.metadata().unwrap().len();
             let mut buf = vec![0; file_size as usize];
             file1.read(&mut buf).unwrap();
             assert_eq!(buf, tc.file_1_expected_state);
 
-            let mut file2 = fs::OpenOptions::new().read(true)
-                .open(&tmp_file_path.with_extension("log.old")).unwrap();
+            let mut file2 = fs::OpenOptions::new()
+                .read(true)
+                .open(&tmp_file_path.with_extension("log.old"))
+                .unwrap();
             let file_size = file2.metadata().unwrap().len();
             let mut buf = vec![0; file_size as usize];
             file2.read(&mut buf).unwrap();
@@ -699,11 +688,10 @@ mod tests {
         let timestamp_utc_struct = chrono::NaiveDateTime::parse_from_str(
             &timestamp_utc_formatted,
             &local_options.time_format,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
-            timestamp_utc_struct
-                .format(&local_options.time_format)
-                .to_string(),
+            timestamp_utc_struct.format(&local_options.time_format).to_string(),
             timestamp_utc_formatted
         );
         let zero_utc_formatted = local_options.format_time(0);
@@ -745,11 +733,7 @@ mod tests {
 
         #[test]
         fn invalid_flag() {
-            let args = vec![
-                "--tag".to_string(),
-                "tag".to_string(),
-                "--invalid".to_string(),
-            ];
+            let args = vec!["--tag".to_string(), "tag".to_string(), "--invalid".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
@@ -835,7 +819,8 @@ mod tests {
                 let args = vec!["--severity".to_string(), s.to_string()];
                 expected.filter.min_severity = LogLevelFilter::from_primitive(
                     expected.filter.min_severity.into_primitive() + 1,
-                ).unwrap();
+                )
+                .unwrap();
                 parse_flag_test_helper(&args, Some(&expected));
             }
         }
