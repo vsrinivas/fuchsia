@@ -15,6 +15,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
+#include <fuchsia/wlan/service/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
@@ -62,7 +63,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fuchsia::sys::Launcher* const launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-      std::function<void()> on_shutdown);
+      fuchsia::wlan::service::WlanPtr wlan, std::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
 
@@ -142,6 +143,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fuchsia::ui::policy::PresenterPtr presenter_;
   // Used to look-up whether device needs a factory reset.
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
+  // Used to reset Wi-Fi during factory reset.
+  fuchsia::wlan::service::WlanPtr wlan_;
+
   std::function<void()> on_shutdown_;
 
   // Holds the presentation service.

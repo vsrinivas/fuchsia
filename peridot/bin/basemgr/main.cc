@@ -51,10 +51,12 @@ int main(int argc, const char** argv) {
   context->ConnectToEnvironmentService(presenter.NewRequest());
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager;
   context->ConnectToEnvironmentService(device_settings_manager.NewRequest());
+  fuchsia::wlan::service::WlanPtr wlan;
+  context->ConnectToEnvironmentService(wlan.NewRequest());
 
   modular::BasemgrImpl basemgr(
       settings, session_shell_settings, context->launcher().get(),
-      std::move(presenter), std::move(device_settings_manager),
+      std::move(presenter), std::move(device_settings_manager), std::move(wlan),
       [&loop, &cobalt_cleanup, &context] {
         cobalt_cleanup.call();
         context->outgoing().debug_dir()->RemoveEntry(kBasemgrDir);

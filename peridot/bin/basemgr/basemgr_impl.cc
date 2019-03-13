@@ -59,12 +59,13 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-    std::function<void()> on_shutdown)
+    fuchsia::wlan::service::WlanPtr wlan, std::function<void()> on_shutdown)
     : settings_(settings),
       session_shell_settings_(session_shell_settings),
       launcher_(launcher),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
+      wlan_(std::move(wlan)),
       on_shutdown_(std::move(on_shutdown)),
       base_shell_context_binding_(this),
       authentication_context_provider_binding_(this),
@@ -396,7 +397,9 @@ void BasemgrImpl::ShowSetupOrLogin() {
                 }
               });
 
-          user_provider_impl_->RemoveAllUsers([this] { StartBaseShell(); });
+          user_provider_impl_->RemoveAllUsers([this] {
+            wlan_->ClearSavedNetworks([this] { StartBaseShell(); });
+          });
         } else {
           show_setup_or_login();
         }
