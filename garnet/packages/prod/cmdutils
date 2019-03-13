@@ -4,7 +4,7 @@
         "garnet/packages/prod/vim"
     ],
     "packages": [
-        "//garnet/bin/cowsay",
+        "//examples/cowsay",
         "//garnet/bin/time",
         "//garnet/bin/uname"
     ]
