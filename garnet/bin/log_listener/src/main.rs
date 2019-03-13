@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #[deny(warnings)]
+use ansi_term::Colour;
 use chrono::TimeZone;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_syslog_listener::LogProcessor;
 use fuchsia_zircon as zx;
+use regex::{Captures, Regex};
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
@@ -22,6 +24,76 @@ use fidl_fuchsia_logger::{
 };
 
 const DEFAULT_FILE_CAPACITY: u64 = 64000;
+
+pub static ANSI_RESET: &str = "\x1B[0m";
+
+struct Decorator {
+    lines: HashMap<String, Colour>,
+    words: HashMap<String, Colour>,
+    is_active: bool,
+}
+
+impl Decorator {
+    pub fn new() -> Self {
+        Decorator { lines: HashMap::new(), words: HashMap::new(), is_active: false }
+    }
+
+    pub fn add_line(&mut self, keyword: String, color: Colour) {
+        self.lines.insert(keyword, color);
+    }
+
+    pub fn add_word(&mut self, keyword: String, color: Colour) {
+        self.words.insert(keyword, color);
+    }
+
+    pub fn activate(&mut self) {
+        self.is_active = true;
+    }
+
+    #[allow(dead_code)]
+    pub fn deactivate(&mut self) {
+        self.is_active = false;
+    }
+
+    /// If line contains a keyword, color the entire line
+    fn colorize_line(&self, line: String, keyword: &str, color: &Colour) -> String {
+        if line.contains(keyword) {
+            color.paint(line).to_string()
+        } else {
+            line
+        }
+    }
+
+    fn colorize_word(&self, line: String, keyword: &str, color: &Colour) -> String {
+        let expr = format!(r#"(?i)(?P<k>(?:{}))"#, keyword);
+        let re = Regex::new(expr.as_str()).expect("should create regex");
+
+        re.replace_all(line.as_str(), |caps: &Captures| {
+            let keyword = match caps.name("k") {
+                Some(n) => n.as_str(),
+                None => "",
+            };
+            format!("{}{}", color.paint(keyword), ANSI_RESET)
+        })
+        .to_string()
+    }
+
+    pub fn decorate(&self, line: String) -> String {
+        if !self.is_active {
+            return line;
+        }
+
+        let mut colored = line.clone();
+        for (keyword, color) in &self.lines {
+            colored = self.colorize_line(colored, keyword, &color);
+        }
+        // TODO(porce): Proper handling of nested coloring.
+        for (keyword, color) in &self.words {
+            colored = self.colorize_word(colored, keyword, &color);
+        }
+        colored
+    }
+}
 
 #[derive(Debug, PartialEq)]
 struct LogListenerOptions {
@@ -53,6 +125,8 @@ struct LocalOptions {
     ignore_tags: HashSet<String>,
     clock: Clock,
     time_format: String,
+    is_pretty: bool,
+    suppress: Vec<String>,
 }
 
 impl Default for LocalOptions {
@@ -63,6 +137,8 @@ impl Default for LocalOptions {
             ignore_tags: HashSet::new(),
             clock: Clock::Monotonic,
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
+            is_pretty: false,
+            suppress: vec![],
         }
     }
 }
@@ -172,8 +248,14 @@ fn help(name: &str) -> String {
         --pid <integer>:
             pid for the program to filter on.
 
+        --pretty:
+            Activate colorization and suppression
+
         --tid <integer>:
             tid for the program to filter on.
+
+        --suppress <comma-separated-words>
+            Do not show log lines containing any of the specified words
 
         --severity <INFO|WARN|ERROR|FATAL>:
             Minimum severity to filter on.
@@ -248,6 +330,18 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     ));
                 }
                 options.local.ignore_tags.insert(String::from(tag.as_ref()));
+            }
+            "--pretty" => {
+                let ans = &args[i + 1];
+                if ans.to_lowercase() == "yes" {
+                    options.local.is_pretty = true;
+                }
+            }
+            "--suppress" => {
+                options
+                    .local
+                    .suppress
+                    .append(&mut args[i + 1].split(",").map(|s| s.to_string()).collect());
             }
             "--severity" => {
                 if options.filter.verbosity > 0 {
@@ -350,6 +444,7 @@ struct Listener<W: Write + Send> {
     dropped_logs: HashMap<u64, u32>,
     local_options: LocalOptions,
     writer: W,
+    decorator: Decorator,
 }
 
 impl<W> LogProcessor for Listener<W>
@@ -361,8 +456,7 @@ where
             return;
         }
         let tags = message.tags.join(", ");
-        writeln!(
-            self.writer,
+        let line = format!(
             "[{}][{}][{}][{}] {}: {}",
             self.local_options.format_time(message.time),
             message.pid,
@@ -370,8 +464,19 @@ where
             tags,
             get_log_level(message.severity),
             message.msg
-        )
-        .expect("should not fail");
+        );
+
+        if self.local_options.suppress.len() > 0 {
+            let line_lowercase = line.clone().to_lowercase();
+            for k in &self.local_options.suppress {
+                if line_lowercase.contains(k.to_lowercase().as_str()) {
+                    return;
+                }
+            }
+        }
+
+        writeln!(self.writer, "{}", self.decorator.decorate(line)).expect("should not fail");
+
         if message.dropped_logs > 0
             && self
                 .dropped_logs
@@ -419,7 +524,28 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
         None => Box::new(io::stdout()),
         Some(ref name) => Box::new(MaxCapacityFile::new(name, local_options.file_capacity)?),
     };
-    Ok(Listener { dropped_logs: HashMap::new(), writer: writer, local_options: local_options })
+
+    let mut d = Decorator::new();
+    d.add_line(" bt#".to_string(), Colour::Purple);
+    // TODO(porce): ansi_term's Colour::Fixed() and Colour::RGB()
+    // seemed to have a bug in resetting the style.
+    // TODO(porce): Support background color
+    // TODO(porce): Support styles such as bold, italic, blink
+    d.add_word("error".to_string(), Colour::Red);
+    d.add_word("info".to_string(), Colour::Yellow);
+    d.add_word("DHCP".to_string(), Colour::Green);
+    d.add_word("warning|warn".to_string(), Colour::Blue);
+
+    if local_options.is_pretty {
+        d.activate();
+    }
+
+    Ok(Listener {
+        dropped_logs: HashMap::new(),
+        writer: writer,
+        local_options: local_options,
+        decorator: d,
+    })
 }
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
@@ -428,6 +554,7 @@ fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Erro
         || (None, LocalOptions::default()),
         |o| (Some(&mut o.filter), o.local.clone()),
     );
+
     let l = new_listener(local_options)?;
     let listener_fut = syslog_listener::run_log_listener(l, filter_options, false)?;
     executor.run_singlethreaded(listener_fut).map_err(Into::into)
@@ -482,6 +609,7 @@ mod tests {
             dropped_logs: HashMap::new(),
             writer: tmp_file,
             local_options: LocalOptions::default(),
+            decorator: Decorator::new(),
         };
 
         // test log levels
@@ -797,6 +925,22 @@ mod tests {
         }
 
         #[test]
+        fn pretty() {
+            let args = vec!["--pretty".to_string(), "YeS".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.is_pretty = true;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn pretty_fail() {
+            let args = vec!["--pretty".to_string(), "123".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.is_pretty = false;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
         fn tid() {
             let args = vec!["--tid".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -808,6 +952,20 @@ mod tests {
         #[test]
         fn tid_fail() {
             let args = vec!["--tid".to_string(), "123a".to_string()];
+            parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
+        fn suppress() {
+            let args = vec!["--suppress".to_string(), "x,yz,abc".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.suppress = vec!["x".to_string(), "yz".to_string(), "abc".to_string()];
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn suppress_fail() {
+            let args = vec!["--suppress".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
@@ -946,6 +1104,30 @@ mod tests {
                 args.push(format!("tag{}", i));
             }
             parse_flag_test_helper(&args, None);
+        }
+    }
+
+    #[test]
+    fn test_decorate() {
+        let syslog = "
+            [00051.028569][1051][1054][klog] INFO: bootsvc: Creating bootfs service...
+            [00052.101073][5525][5550][klog] INFO: ath10k: ath10k: Probed chip QCA6174 ver: 2.1
+            [00052.190295][4979][4996][klog] INFO: [ERROR:garnet/bin/appmgr/namespace_builder.cc(62)] Failed to migrate 'deprecated-global-persistent-storage' to new global data directory
+            [00052.282476][526727887][0][netstack] WARNING: main.go(154): OnInterfacesChanged failed: ErrBadHandle: zx.Channel.Write
+            [00052.687460][5525][12795][klog] INFO: devhost: rpc:load-firmware failed: -25
+            [00055.306545][526727887][0][netstack] INFO: netstack.go(363): NIC ethp001f6: DHCP acquired IP 192.168.42.193 for 24h0m0s
+            [00229.964817][1170][1263][klog] INFO: bt#02: pc 0x644746c42725 sp 0x3279d688da00 (app:/boot/bin/sh,0x1b725)";
+
+        let mut d = Decorator::new();
+        d.add_line(" bt#".to_string(), Colour::Purple);
+        d.add_word("error".to_string(), Colour::Red);
+        d.add_word("info".to_string(), Colour::Yellow);
+        d.add_word("DHCP".to_string(), Colour::Green);
+        d.add_word("wArN".to_string(), Colour::Blue);
+        d.activate();
+
+        for line in syslog.split("\n") {
+            println!("{}", d.decorate(line.to_string()));
         }
     }
 }
