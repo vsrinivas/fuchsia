@@ -19,8 +19,7 @@ if !exists("g:main_syntax")
 endif
 
 " Keywords
-syn keyword fidlKeyword as const enum interface library struct union using
-
+syn keyword fidlKeyword as const enum error library protocol struct table union using xunion
 
 " Types
 syn match fidlType "\<request<@\?[a-zA-Z][a-zA-Z0-9]*\(\.[a-zA-Z][a-zA-Z0-9]*\)*>?\?"
