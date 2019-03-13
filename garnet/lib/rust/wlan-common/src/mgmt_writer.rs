@@ -5,8 +5,7 @@
 use {
     crate::{
         appendable::Appendable,
-        buffer_writer::{BufferWriter, ByteSliceMut},
-        mac::{self, FrameControl, HtControl, MgmtHdr, RawHtControl},
+        mac::{self, FrameControl, HtControl, MgmtHdr},
     },
     failure::{ensure, Error},
 };
@@ -23,7 +22,7 @@ pub struct FixedFields {
 }
 impl FixedFields {
     pub fn sent_from_client(
-        mut frame_ctrl: FrameControl,
+        frame_ctrl: FrameControl,
         bssid: MacAddr,
         client_addr: MacAddr,
         seq_ctrl: u16,
@@ -66,14 +65,14 @@ pub fn write_mgmt_hdr<B: Appendable>(
     mgmt_hdr.set_seq_ctrl(fixed.seq_ctrl);
 
     if let Some(ht_ctrl) = ht_ctrl.as_ref() {
-        w.append_value(ht_ctrl);
+        w.append_value(ht_ctrl)?;
     }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::buffer_writer::BufferWriter};
 
     #[test]
     fn fixed_fields_sent_from_client() {
@@ -125,7 +124,7 @@ mod tests {
     #[test]
     fn write_fixed_fields_only() {
         let mut bytes = vec![];
-        let w = write_mgmt_hdr(
+        write_mgmt_hdr(
             &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),
@@ -156,7 +155,7 @@ mod tests {
     #[test]
     fn write_ht_ctrl() {
         let mut bytes = vec![];
-        let w = write_mgmt_hdr(
+        write_mgmt_hdr(
             &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),

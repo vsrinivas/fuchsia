@@ -10,7 +10,7 @@ mod parse;
 mod reader;
 mod write;
 
-use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 pub use {constants::*, fields::*, parse::*, reader::Reader, write::*};
 

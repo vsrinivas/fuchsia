@@ -4,10 +4,8 @@
 
 use {
     crate::appendable::{Appendable, BufferTooSmall},
-    zerocopy::{self, ByteSlice},
+    zerocopy::ByteSliceMut,
 };
-
-pub use zerocopy::{ByteSliceMut, LayoutVerified};
 
 pub struct BufferWriter<B> {
     buf: B,

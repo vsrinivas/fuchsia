@@ -5,11 +5,9 @@
 use std::collections::HashMap;
 
 type MacAddr = [u8; 6];
-const MAC_ADDR_LEN: usize = 6;
 
 const SEQ_START_NUM: SequenceNum = 0;
-type SnsEntryHash = u64;
-type SequenceNum = u32;
+pub type SequenceNum = u32;
 
 /// IEEE Std 802.11-2016, 10.3.2.11.2, 10.3.2.11.3
 /// A specific Sequence Number Space such as SNS1, SNS2, etc.

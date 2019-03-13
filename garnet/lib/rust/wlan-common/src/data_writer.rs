@@ -5,9 +5,7 @@
 use {
     crate::{
         appendable::Appendable,
-        mac::{
-            self, Addr4, DataHdr, FrameControl, HtControl, QosControl, RawHtControl, RawQosControl,
-        },
+        mac::{self, Addr4, DataHdr, FrameControl, HtControl, QosControl},
     },
     failure::{ensure, Error},
 };
@@ -273,7 +271,7 @@ mod tests {
     #[test]
     fn write_qos_ctrl() {
         let mut bytes = vec![];
-        let w = write_data_hdr(
+        write_data_hdr(
             &mut bytes,
             FixedFields {
                 frame_ctrl: FrameControl(0b00110001_00111000),
@@ -310,7 +308,7 @@ mod tests {
     #[test]
     fn write_llc_hdr() {
         let mut bytes = vec![];
-        let w = write_snap_llc_hdr(&mut bytes, 0x888E).expect("Failed writing LLC header");
+        write_snap_llc_hdr(&mut bytes, 0x888E).expect("Failed writing LLC header");
 
         #[rustfmt::skip]
         assert_eq!(

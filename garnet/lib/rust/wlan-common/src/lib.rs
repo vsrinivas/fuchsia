@@ -5,9 +5,6 @@
 //! Crate wlan-common hosts common libraries
 //! to be used for WLAN SME, MLME, and binaries written in Rust.
 
-// Allow while bringing up MLME.
-#![allow(unused)]
-
 #[macro_use]
 mod utils;
 
@@ -26,8 +23,7 @@ pub mod tim;
 
 use {
     channel::{Cbw, Phy},
-    failure::{self, Fail},
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    failure, fidl_fuchsia_wlan_sme as fidl_sme,
 };
 
 #[derive(Clone, Debug, Default, PartialEq)]

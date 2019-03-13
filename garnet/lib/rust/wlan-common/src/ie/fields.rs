@@ -4,7 +4,7 @@
 
 use {
     bitfield::bitfield,
-    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
+    zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
 };
 
 // IEEE Std 802.11-2016, 9.4.2.3

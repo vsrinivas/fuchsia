@@ -1,4 +1,4 @@
-use crate::ie::{BitmapControl, TimHeader};
+use crate::ie::TimHeader;
 
 pub fn is_traffic_buffered(header: &TimHeader, bitmap: &[u8], aid: usize) -> bool {
     let n1 = header.bmp_ctrl.offset() as usize * 2;
@@ -10,7 +10,7 @@ pub fn is_traffic_buffered(header: &TimHeader, bitmap: &[u8], aid: usize) -> boo
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::ie::BitmapControl};
 
     #[test]
     fn zero_offset() {

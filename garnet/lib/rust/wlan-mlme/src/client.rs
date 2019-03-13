@@ -9,7 +9,7 @@ use {
     std::{ops::Deref, ops::DerefMut},
     wlan_common::{
         appendable::Appendable,
-        buffer_writer::{BufferWriter, ByteSliceMut, LayoutVerified},
+        buffer_writer::BufferWriter,
         data_writer,
         mac::{self, OptionalField},
         mgmt_writer,

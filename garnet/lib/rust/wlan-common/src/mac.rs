@@ -6,9 +6,8 @@ use {
     crate::{buffer_reader::BufferReader, utils::skip},
     bitfield::bitfield,
     byteorder::{BigEndian, ByteOrder, LittleEndian},
-    num::{One, Unsigned},
+    num::Unsigned,
     num_derive::{FromPrimitive, ToPrimitive},
-    num_traits::{FromPrimitive, ToPrimitive},
     std::{marker::PhantomData, ops::Deref},
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
@@ -823,7 +822,7 @@ impl<B: ByteSlice> AmsduReader<B> {
         self.0.bytes_remaining() > 0
     }
 
-    pub fn into_remaining(mut self) -> B {
+    pub fn into_remaining(self) -> B {
         self.0.into_remaining()
     }
 }
@@ -1338,7 +1337,7 @@ mod tests {
     #[test]
     fn data_hdr_ta() {
         let mut data_hdr = make_data_hdr(None, [0, 0], None);
-        let (mut data_hdr, _) =
+        let (data_hdr, _) =
             LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
                 .expect("invalid data header");
         assert_eq!(data_transmitter_addr(&data_hdr), [4; 6]); // Addr2
@@ -1347,7 +1346,7 @@ mod tests {
     #[test]
     fn data_hdr_ra() {
         let mut data_hdr = make_data_hdr(None, [0, 0], None);
-        let (mut data_hdr, _) =
+        let (data_hdr, _) =
             LayoutVerified::<_, DataHdr>::new_unaligned_from_prefix(&mut data_hdr[..])
                 .expect("invalid data header");
         assert_eq!(data_receiver_addr(&data_hdr), [3; 6]); // Addr2

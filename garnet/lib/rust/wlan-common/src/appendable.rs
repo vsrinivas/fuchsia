@@ -64,7 +64,7 @@ impl Appendable for Vec<u8> {
         self.len()
     }
 
-    fn can_append(&self, bytes: usize) -> bool {
+    fn can_append(&self, _bytes: usize) -> bool {
         true
     }
 }
@@ -81,7 +81,7 @@ mod tests {
         data.append_bytes(&[1, 2, 3]).unwrap();
         assert_eq!(3, data.bytes_written());
 
-        let mut bytes = data.append_bytes_zeroed(2).unwrap();
+        let bytes = data.append_bytes_zeroed(2).unwrap();
         bytes[0] = 4;
         assert_eq!(5, data.bytes_written());
 

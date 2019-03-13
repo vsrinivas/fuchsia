@@ -22,7 +22,7 @@ impl FrameWriteError {
 }
 
 impl From<appendable::BufferTooSmall> for FrameWriteError {
-    fn from(error: appendable::BufferTooSmall) -> Self {
+    fn from(_error: appendable::BufferTooSmall) -> Self {
         FrameWriteError::BufferTooSmall
     }
 }
