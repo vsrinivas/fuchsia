@@ -135,9 +135,7 @@ pub const MSDU_2_PAYLOAD : &[u8] = &[
 pub fn make_data_frame_amsdu() -> Vec<u8> {
     let mut qos_ctrl = QosControl(0);
     qos_ctrl.set_amsdu_present(true);
-    let mut raw_qos_ctrol = RawQosControl::default();
-    raw_qos_ctrol.set(qos_ctrl.value());
-    let mut amsdu_data_frame = make_data_hdr(None, *raw_qos_ctrol, None);
+    let mut amsdu_data_frame = make_data_hdr(None, qos_ctrl.value().to_le_bytes(), None);
     #[rustfmt::skip]
     amsdu_data_frame.extend(&[
         // A-MSDU Subframe #1
@@ -165,9 +163,7 @@ pub fn make_data_frame_amsdu() -> Vec<u8> {
 pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {
     let mut qos_ctrl = QosControl(0);
     qos_ctrl.set_amsdu_present(true);
-    let mut raw_qos_ctrol = RawQosControl::default();
-    raw_qos_ctrol.set(qos_ctrl.value());
-    let mut amsdu_data_frame = make_data_hdr(None, *raw_qos_ctrol, None);
+    let mut amsdu_data_frame = make_data_hdr(None, qos_ctrl.value().to_le_bytes(), None);
     #[rustfmt::skip]
         amsdu_data_frame.extend(&[
         // A-MSDU Subframe #1

@@ -343,7 +343,7 @@ impl Deref for RawHtControl {
     }
 }
 
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct RawQosControl([u8; 2]);
 
@@ -356,6 +356,7 @@ impl RawQosControl {
         LittleEndian::write_u16(&mut self.0, val)
     }
 }
+
 impl Deref for RawQosControl {
     type Target = [u8; 2];
 
