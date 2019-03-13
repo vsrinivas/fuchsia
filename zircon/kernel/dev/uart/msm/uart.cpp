@@ -114,9 +114,10 @@ static uint32_t uart_irq = 0;
 static cbuf_t uart_rx_buf;
 
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
-                                                      true,
-                                                      EVENT_FLAG_AUTOUNSIGNAL);
+static event_t uart_dputc_event =
+    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static event_t uart_txemt_event =
+    EVENT_INITIAL_VALUE(uart_txemt_event, true, EVENT_FLAG_AUTOUNSIGNAL);
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
@@ -204,38 +205,42 @@ static int msm_pgetc(void)
 
 static interrupt_eoi uart_irq_handler(void* arg) {
     uint32_t misr = uart_read(UART_DM_MISR);
+    if (misr & UART_IRQ_TX_READY) {
+        event_signal(&uart_txemt_event, false);
+        uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_CR);
+    }
+    if (misr & UART_IRQ_RXSTALE) {
+        while (uart_read(UART_DM_SR) & UART_DM_SR_RXRDY) {
+            uint32_t rxfs = uart_read(UART_DM_RXFS);
+            // count is number of words in RX fifo that have data
+            int count = UART_DM_RXFS_FIFO_STATE(rxfs);
 
-    while (uart_read(UART_DM_SR) & UART_DM_SR_RXRDY) {
-        uint32_t rxfs = uart_read(UART_DM_RXFS);
-        // count is number of words in RX fifo that have data
-        int count = UART_DM_RXFS_FIFO_STATE(rxfs);
+            for (int i = 0; i < count; i++) {
+                uint32_t val = uart_read(UART_DM_RF(0));
+                char* bytes = (char*)&val;
 
-        for (int i = 0; i < count; i++) {
-            uint32_t val = uart_read(UART_DM_RF(0));
-            char* bytes = (char *)&val;
-
-            for (int j = 0; j < 4; j++) {
-                // Unfortunately there is no documented way to get number of bytes in each word
-                // so we just need to ignore zero bytes here.
-                // Apparently this problem doesn't exist in DMA mode.
-                char ch = bytes[j];
-                if (ch) {
-                    cbuf_write_char(&uart_rx_buf, ch);
-                } else {
-                    break;
+                for (int j = 0; j < 4; j++) {
+                    // Unfortunately there is no documented way to get number of bytes in each word
+                    // so we just need to ignore zero bytes here.
+                    // Apparently this problem doesn't exist in DMA mode.
+                    char ch = bytes[j];
+                    if (ch) {
+                        cbuf_write_char(&uart_rx_buf, ch);
+                    } else {
+                        break;
+                    }
                 }
             }
         }
+
+        if (misr & UART_IRQ_RXSTALE) {
+            uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
+        }
+
+        // ask to receive more
+        uart_write(0xFFFFFF, UART_DM_DMRX);
+        uart_write(UART_DM_CR_CMD_ENABLE_STALE_EVENT, UART_DM_CR);
     }
-
-    if (misr & UART_IRQ_RXSTALE) {
-        uart_write(UART_DM_CR_CMD_RESET_STALE_INT, UART_DM_CR);
-    }
-
-    // ask to receive more
-    uart_write(0xFFFFFF, UART_DM_DMRX);
-    uart_write(UART_DM_CR_CMD_ENABLE_STALE_EVENT, UART_DM_CR);
-
     return IRQ_EOI_DEACTIVATE;
 }
 
@@ -263,8 +268,8 @@ static void msm_uart_init(const void* driver_data, uint32_t length) {
 
     cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
-    // enable RX interrupt
-    uart_write(UART_IRQ_RXSTALE, UART_DM_IMR);
+    // enable RX and TX interrupts
+    uart_write(UART_IRQ_RXSTALE | UART_IRQ_TX_READY, UART_DM_IMR);
 
     register_int_handler(uart_irq, &uart_irq_handler, nullptr);
     unmask_interrupt(uart_irq);
@@ -295,14 +300,12 @@ static void msm_dputs(const char* str, size_t len,
 
     while (len > 0) {
         // is FIFO full?
-        while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXEMT)) {
+        while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
             spin_unlock_irqrestore(&uart_spinlock, state);
             if (block) {
-                // TODO: Enable TX interrupt
-//                UARTREG(UART_IER) |= UART_IER_ETBEI;
                 event_wait(&uart_dputc_event);
             } else {
-                arch_spinloop_pause();
+                event_wait(&uart_txemt_event);
             }
             spin_lock_irqsave(&uart_spinlock, state);
         }
