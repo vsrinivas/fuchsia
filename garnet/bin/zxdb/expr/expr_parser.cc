@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/expr/expr_parser.h"
 
+#include "garnet/bin/zxdb/expr/name_lookup.h"
 #include "garnet/bin/zxdb/expr/template_type_extractor.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
@@ -71,7 +72,7 @@ constexpr int kPrecedenceEquality = 80;               // == !=
 //constexpr int kPrecedencePointerToMember = 140;     // .* ->*
 constexpr int kPrecedenceUnary = 150;                 // ++ -- +a -a ! ~ *a &a
 constexpr int kPrecedenceCallAccess = 160;            // () . -> []
-constexpr int kPrecedenceScope = 170;                 // ::  (Highest precedence)
+//constexpr int kPrecedenceScope = 170;               // ::  (Highest precedence)
 // clang-format on
 
 }  // namespace
@@ -86,7 +87,7 @@ struct ExprParser::DispatchInfo {
 // clang-format off
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                     // kInvalid
-    {&ExprParser::NamePrefix,      &ExprParser::NameInfix,       -1},                     // kName
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kName
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kInteger
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},  // kEquals
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},    // kEqualsEquals
@@ -97,13 +98,13 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
     {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},  // kLeftSquare
     {nullptr,                      nullptr,                      -1},                     // kRightSquare
-    {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix, kPrecedenceCallAccess},   // kLeftParen
+    {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},  // kLeftParen
     {nullptr,                      nullptr,                      -1},                     // kRightParen
     {nullptr,                      &ExprParser::LessInfix,       kPrecedenceUnary},       // kLess
     {nullptr,                      nullptr,                      -1},                     // kGreater
     {&ExprParser::MinusPrefix,     nullptr,                      -1},                     // kMinus
     {nullptr,                      nullptr,                      -1},                     // kPlus (currently unhandled)
-    {&ExprParser::ScopePrefix,     &ExprParser::ScopeInfix,      kPrecedenceScope},       // kColonColon
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kColonColon
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kTrue
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kFalse
 };
@@ -112,8 +113,10 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
 // static
 const ExprToken ExprParser::kInvalidToken;
 
-ExprParser::ExprParser(std::vector<ExprToken> tokens)
-    : tokens_(std::move(tokens)) {
+ExprParser::ExprParser(std::vector<ExprToken> tokens,
+                       NameLookupCallback name_lookup)
+    : name_lookup_callback_(std::move(name_lookup)),
+      tokens_(std::move(tokens)) {
   static_assert(arraysize(ExprParser::kDispatchInfo) == ExprToken::kNumTypes,
                 "kDispatchInfo needs updating to match ExprToken::Type");
 }
@@ -168,6 +171,206 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   }
 
   return left;
+}
+
+ExprParser::ParseNameResult ExprParser::ParseName() {
+  // Grammar we support. Note "identifier" in this context is a single token
+  // of type "name" (more like how the C++ spec uses it), while our Identifier
+  // class represents a whole name with scopes and templates.
+  //
+  //   name := type-name | non-type-identifier
+  //
+  //   type-name :=
+  //       [ type-name "::" ] identifier [ "<" template-list ">" ]
+  //       "::" identifier [ "<" template-list ">" ]
+  //
+  //   non-type-identifier := [ <type-name> "::" ] <identifier>
+  //
+  // The thing this doesn't handle is templatized functions, for example:
+  //   auto foo = &MyClass::MyFunc<int>;
+  // To handle this we will need the type lookup function to be able to tell
+  // us "MyClass::MyFunc" is a thing that has a template so we know to parse
+  // the following "<" as part of the name and not as a comparison. Note that
+  // when we need to parse function names, there is special handling required
+  // for operators.
+
+  // The mode of the state machine.
+  enum Mode {
+    kBegin,       // Inital state with no previous context.
+    kColonColon,  // Just saw a "::", expecting a name next.
+    kType,        // Idenfitier is a type.
+    kTemplate,    // Idenfitier is a template, expecting "<" next.
+    kNamespace,   // Identifier is a namespace.
+    kOtherName,   // Identifier is something other than the above (normally this
+                  // means a variable).
+    kAnything     // Caller can't do symbol lookups, accept anything that makes
+                  // sense.
+  };
+
+  Mode mode = kBegin;
+  ParseNameResult result;
+  const ExprToken* prev_token = nullptr;
+
+  while (!at_end()) {
+    const ExprToken& token = cur_token();
+    switch (token.type()) {
+      case ExprToken::kColonColon: {
+        // "::" can only follow nothing, a namespace or type name.
+        if (mode != kBegin && mode != kNamespace && mode != kType &&
+            mode != kAnything) {
+          SetError(token,
+                   "Could not identify thing to the left of '::' as a type or "
+                   "namespace.");
+          return ParseNameResult();
+        }
+
+        mode = kColonColon;
+        result.ident.AppendComponent(token, ExprToken());  // Append "::".
+        result.type = nullptr;                             // No longer a type.
+        break;
+      }
+
+      case ExprToken::kLess: {
+        // "<" can only come after a template name.
+        if (mode == kNamespace || mode == kType) {
+          // Generate a nicer error for these cases.
+          SetError(token, "Template parameters not valid on this object type.");
+          return ParseNameResult();
+        }
+        if (mode != kTemplate && mode != kAnything) {
+          // "<" after anything but a template means the end of the name. In
+          // "anything" mode we assume "<" means a template since this is used
+          // to parse random identifiers and function names.
+          return result;
+        }
+        if (result.ident.components().back().has_template()) {
+          // Got a "<" after a template parameter list was already defined
+          // (this will happen in "anything" mode since we don't know what it
+          // is for sure). That means this is a comparison operator which will
+          // be handled by the outer parser.
+          return result;
+        }
+
+        prev_token = &Consume();  // Eat the "<".
+
+        // Extract the contents of the template.
+        std::vector<std::string> list = ParseTemplateList(ExprToken::kGreater);
+        if (has_error())
+          return ParseNameResult();
+
+        // Ending ">".
+        const ExprToken& template_end =
+            Consume(ExprToken::kGreater, token, "Expected '>' to match.");
+        if (has_error())
+          return ParseNameResult();
+
+        // Construct a replacement for the last component of the identifier
+        // with the template arguments added.
+        Identifier::Component& back = result.ident.components().back();
+        back = Identifier::Component(back.separator(), back.name(), token,
+                                     std::move(list), template_end);
+
+        // The thing we just made is either a type or a name, look it up.
+        if (name_lookup_callback_) {
+          NameLookupResult lookup = name_lookup_callback_(result.ident);
+          switch (lookup.kind) {
+            case NameLookupResult::kType:
+              mode = kType;
+              result.type = std::move(lookup.type);
+              break;
+            case NameLookupResult::kNamespace:
+            case NameLookupResult::kTemplate:
+              // The lookup shouldn't tell us a template name or namespace for
+              // something that has template parameters.
+              FXL_NOTREACHED();
+              // Fall through to "other" case for fallback.
+            case NameLookupResult::kOther:
+              mode = kOtherName;
+              break;
+          }
+        } else {
+          mode = kAnything;
+        }
+        continue;  // Don't Consume() since we already ate the token.
+      }
+
+      case ExprToken::kName: {
+        // Names can only follow nothing or "::".
+        if (mode == kType) {
+          // Normally in C++ a name can follow a type, so make a special error
+          // for this case.
+          SetError(token,
+                   "This looks like a declaration which is not supported.");
+          return ParseNameResult();
+        } else if (mode == kBegin) {
+          // Found an identifier name with nothing before it.
+          result.ident = Identifier(token);
+        } else if (mode == kColonColon) {
+          FXL_DCHECK(!result.ident.components().empty());
+          result.ident.components().back().set_name(cur_token());
+        } else {
+          // Anything else like "std::vector foo" or "foo bar".
+          SetError(token, "Unexpected identifier, did you forget an operator?");
+          return ParseNameResult();
+        }
+
+        // Decode what adding the name just generated.
+        if (name_lookup_callback_) {
+          NameLookupResult lookup = name_lookup_callback_(result.ident);
+          switch (lookup.kind) {
+            case NameLookupResult::kNamespace:
+              mode = kNamespace;
+              break;
+            case NameLookupResult::kTemplate:
+              mode = kTemplate;
+              break;
+            case NameLookupResult::kType:
+              mode = kType;
+              result.type = std::move(lookup.type);
+              break;
+            case NameLookupResult::kOther:
+              mode = kOtherName;
+              break;
+          }
+        } else {
+          mode = kAnything;
+        }
+        break;
+      }
+
+      default: {
+        // Any other token type means we're done. The outer parser will figure
+        // out what it means.
+        return result;
+      }
+    }
+    prev_token = &Consume();
+  }
+
+  // Hit end-of-input.
+  switch (mode) {
+    case kOtherName:
+    case kAnything:
+    case kType:
+      return result;  // Success cases.
+    case kBegin:
+      FXL_NOTREACHED();
+      SetError(ExprToken(), "Unexpected end of input.");
+      return ParseNameResult();
+    case kColonColon:
+      SetError(*prev_token, "Expected name after '::'.");
+      return ParseNameResult();
+    case kTemplate:
+      SetError(*prev_token, "Expected template args after template name.");
+      return ParseNameResult();
+    case kNamespace:
+      SetError(*prev_token, "Expected expression after namespace name.");
+      return ParseNameResult();
+  }
+
+  FXL_NOTREACHED();
+  SetError(ExprToken(), "Internal error.");
+  return ParseNameResult();
 }
 
 // A list is any sequence of comma-separated types. We don't parse the types
@@ -261,20 +464,6 @@ fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
                                                std::move(right));
 }
 
-fxl::RefPtr<ExprNode> ExprParser::ScopeInfix(fxl::RefPtr<ExprNode> left,
-                                             const ExprToken& token) {
-  // Scope infix means we have two things separated by a "::". Both the right
-  // and the left should be identifier nodes. Scope resolution is
-  // left-associative so use the same precedence as the token.
-  return JoinIdentifiers(left, token, ParseExpression(kPrecedenceScope));
-}
-
-fxl::RefPtr<ExprNode> ExprParser::ScopePrefix(const ExprToken& token) {
-  // Scope prefix means we found something like "::foo". Scope resolution is
-  // left-associative so use the same precedence as the token.
-  return JoinIdentifiers(nullptr, token, ParseExpression(kPrecedenceScope));
-}
-
 fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                                   const ExprToken& token) {
   // These are left-associative so use the same precedence as the token.
@@ -349,38 +538,8 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
 
 fxl::RefPtr<ExprNode> ExprParser::LessInfix(fxl::RefPtr<ExprNode> left,
                                             const ExprToken& token) {
-  std::vector<std::string> list = ParseTemplateList(ExprToken::kGreater);
-  if (has_error())
-    return nullptr;
-
-  // Ending ">".
-  const ExprToken& template_end =
-      Consume(ExprToken::kGreater, token, "Expected '>' to match.");
-  if (has_error())
-    return nullptr;
-
-  // For templates the thing on the left should always be an identifier.
-  const IdentifierExprNode* left_ident_node = left->AsIdentifier();
-  if (!left_ident_node) {
-    SetError(token, "Unexpected '<'.");
-    return nullptr;
-  }
-
-  // Find what we're adding the template to.
-  const auto& comps = left_ident_node->ident().components();
-  FXL_DCHECK(!comps.empty());
-  if (comps.back().has_template()) {
-    SetError(token, "Duplicate template specification.");
-    return nullptr;
-  }
-  const auto& back = comps.back();
-
-  // Make a new identifier with the template appended to the last component.
-  auto result = fxl::MakeRefCounted<IdentifierExprNode>();
-  result->ident() = left_ident_node->ident();
-  result->ident().components().back() = Identifier::Component(
-      back.separator(), back.name(), token, std::move(list), template_end);
-  return result;
+  SetError(token, "Comparisons not supported yet.");
+  return nullptr;
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
@@ -389,6 +548,7 @@ fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::GreaterInfix(fxl::RefPtr<ExprNode> left,
                                                const ExprToken& token) {
+  SetError(token, "Comparisons not supported yet.");
   return nullptr;
 }
 
@@ -405,12 +565,30 @@ fxl::RefPtr<ExprNode> ExprParser::MinusPrefix(const ExprToken& token) {
 }
 
 fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
-  return NameInfix(nullptr, token);
-}
+  // Handles names and "::" which precedes names. This could be a typename
+  // ("int", or "::std::vector<int>") or a variable name ("i",
+  // "std::basic_string<char>::npos").
 
-fxl::RefPtr<ExprNode> ExprParser::NameInfix(fxl::RefPtr<ExprNode> left,
-                                            const ExprToken& token) {
-  return fxl::MakeRefCounted<IdentifierExprNode>(token);
+  // Back up so the current token is the first component of the name so we
+  // can hand-off to the specialized name parser.
+  FXL_DCHECK(cur_ > 0);
+  cur_--;
+
+  // TODO(brettw) handle const/volatile/restrict here to force type
+  // parsing mode.
+
+  ParseNameResult result = ParseName();
+  if (has_error())
+    return nullptr;
+
+  if (result.type) {
+    // TODO(brettw) go into type parsing mode.
+    SetError(token, "Type, implement me.");
+    return nullptr;
+  }
+
+  // Normal identifier.
+  return fxl::MakeRefCounted<IdentifierExprNode>(std::move(result.ident));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
@@ -449,55 +627,6 @@ const ExprToken& ExprParser::Consume(ExprToken::Type type,
 
   SetError(error_token, error_msg);
   return kInvalidToken;
-}
-
-fxl::RefPtr<ExprNode> ExprParser::JoinIdentifiers(fxl::RefPtr<ExprNode> left,
-                                                  const ExprToken& scope_token,
-                                                  fxl::RefPtr<ExprNode> right) {
-  // This always makes a new identifier ExprNode. In most cases this is
-  // unnecessary and we could easily modify left or right, or at least suck out
-  // the Components to avoid copying all the strings. But this is not
-  // performance-critical so the simpler solution is better.
-  auto result = fxl::MakeRefCounted<IdentifierExprNode>();
-
-  // Left identifier is optional since this is also used to prefix things with
-  // a "::".
-  if (left) {
-    if (const IdentifierExprNode* left_ident = left->AsIdentifier()) {
-      result->ident() = left_ident->ident();
-    } else {
-      SetError(scope_token, "'::' not expected here.");
-      return nullptr;
-    }
-  }
-
-  // Right side is required.
-  const IdentifierExprNode* right_ident = nullptr;
-  if (!right || !(right_ident = right->AsIdentifier())) {
-    SetError(scope_token, "Expected identifier after '::'.");
-    return nullptr;
-  }
-
-  // All identifiers should have >= one component.
-  const auto& right_comps = right_ident->ident().components();
-  FXL_DCHECK(!right_comps.empty());
-
-  // Right shouldn't start with a "::" since we're adding another one.
-  const Identifier::Component& first_comp = right_comps[0];
-  if (first_comp.has_separator()) {
-    // Two "::" in a row.
-    SetError(first_comp.separator(), "Duplicate '::'.");
-    return nullptr;
-  }
-
-  // Append all the right elements, adding the new scope to the first.
-  result->ident().components().emplace_back(
-      scope_token, first_comp.name(), first_comp.template_begin(),
-      first_comp.template_contents(), first_comp.template_end());
-  for (size_t i = 1; i < right_comps.size(); i++)
-    result->ident().components().push_back(right_comps[i]);
-
-  return result;
 }
 
 void ExprParser::SetError(const ExprToken& token, std::string msg) {

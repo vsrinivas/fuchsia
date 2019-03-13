@@ -97,7 +97,7 @@ TEST(Identifier, FromString) {
 
   // Normal word.
   auto[word_err, word_ident] = Identifier::FromString("foo");
-  EXPECT_FALSE(word_err.has_error());
+  EXPECT_FALSE(word_err.has_error()) << word_err.msg();
   EXPECT_EQ("\"foo\"", word_ident.GetDebugName());
 
   // Complicated identifier (copied from STL).
@@ -121,7 +121,9 @@ TEST(Identifier, FromString) {
       "\"std::__2::allocator<std::__2::pair<"
       "const std::__2::basic_string<char>, unsigned long>>\">",
       complex_ident.GetDebugName());
+}
 
+TEST(Identifier, FromStringError) {
   // Error from input.
   auto[bad_err, bad_ident] = Identifier::FromString("Foo<Bar");
   EXPECT_TRUE(bad_err.has_error());

@@ -8,6 +8,9 @@
 
 namespace zxdb {
 
+// Returns true if the first argument begins in exactly the second.
+bool StringBeginsWith(std::string_view str, std::string_view begins_with);
+
 // Returns true if the first argument ends in exactly the second.
 bool StringEndsWith(std::string_view str, std::string_view ends_with);
 

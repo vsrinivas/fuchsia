@@ -4,11 +4,46 @@
 
 #include <sstream>
 
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/expr/expr_parser.h"
 #include "garnet/bin/zxdb/expr/expr_tokenizer.h"
+#include "garnet/bin/zxdb/symbols/collection.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
+
+namespace {
+
+// This name looker-upper declares anything beginning with "Namespace" is a
+// namespace, anything beginning with "Template" is a template, and anything
+// beginning with "Type" is a type.
+NameLookupResult TestLookupName(const Identifier& ident) {
+  const Identifier::Component& comp = ident.components().back();
+  const std::string& name = comp.name().value();
+
+  if (StringBeginsWith(name, "Namespace"))
+    return NameLookupResult(NameLookupResult::kNamespace);
+  if (StringBeginsWith(name, "Type")) {
+    // Make up a random class to go with the type.
+    //
+    // NOTE: This won't convert to a string matching the input because we don't
+    // set the name. To get that right we would have to generate a full symbol
+    // hierarchy for nested namespaces and classes.
+    return NameLookupResult(NameLookupResult::kType,
+        fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
+  }
+  if (StringBeginsWith(name, "Template")) {
+    if (comp.has_template()) {
+      // Assume templates with arguments are types.
+      return NameLookupResult(NameLookupResult::kType,
+          fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
+    }
+    return NameLookupResult(NameLookupResult::kTemplate);
+  }
+  return NameLookupResult(NameLookupResult::kOther);
+}
+
+}  // namespace
 
 class ExprParserTest : public testing::Test {
  public:
@@ -17,7 +52,9 @@ class ExprParserTest : public testing::Test {
   // Valid after Parse() is called.
   ExprParser& parser() { return *parser_; }
 
-  fxl::RefPtr<ExprNode> Parse(const char* input) {
+  fxl::RefPtr<ExprNode> Parse(
+      const char* input,
+      NameLookupCallback name_lookup = NameLookupCallback()) {
     parser_.reset();
 
     tokenizer_ = std::make_unique<ExprTokenizer>(input);
@@ -26,13 +63,16 @@ class ExprParserTest : public testing::Test {
       return nullptr;
     }
 
-    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens());
+    parser_ =
+        std::make_unique<ExprParser>(tokenizer_->TakeTokens(), name_lookup);
     return parser_->Parse();
   }
 
   // Does the parse and returns the string dump of the structure.
-  std::string GetParseString(const char* input) {
-    auto root = Parse(input);
+  std::string GetParseString(
+      const char* input,
+      NameLookupCallback name_lookup = NameLookupCallback()) {
+    auto root = Parse(input, name_lookup);
     if (!root) {
       // Expect calls to this to parse successfully.
       if (parser_.get())
@@ -248,15 +288,17 @@ TEST_F(ExprParserTest, Identifiers) {
 
   auto result = Parse("::");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected identifier after '::'.", parser().err().msg());
+  EXPECT_EQ("Expected name after '::'.", parser().err().msg());
 
   result = Parse(":: :: name");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Duplicate '::'.", parser().err().msg());
+  EXPECT_EQ(
+      "Could not identify thing to the left of '::' as a type or namespace.",
+      parser().err().msg());
 
   result = Parse("foo bar");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Unexpected input, did you forget an operator?",
+  EXPECT_EQ("Unexpected identifier, did you forget an operator?",
             parser().err().msg());
 
   // It's valid to have identifiers with colons in them to access class members
@@ -303,7 +345,8 @@ TEST_F(ExprParserTest, FunctionCall) {
   // Arguments not separated by commas.
   result = Parse("Call(a b)");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected ',' separating expressions.", parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator?",
+            parser().err().msg());
 
   // Empty parameter
   result = Parse("Call(a, , b)");
@@ -353,7 +396,7 @@ TEST_F(ExprParserTest, Templates) {
   // Duplicate template spec.
   result = Parse("Foo<Bar><Baz>");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Duplicate template specification.", parser().err().msg());
+  EXPECT_EQ("Comparisons not supported yet.", parser().err().msg());
 
   // Empty value.
   result = Parse("Foo<1,,2>");
@@ -372,6 +415,45 @@ TEST_F(ExprParserTest, BinaryOp) {
       " IDENTIFIER(\"a\")\n"
       " LITERAL(23)\n",
       GetParseString("a = 23"));
+}
+
+// Tests parsing identifier names that require lookups from the symbol system.
+// See TestLookupName above for the mocked symbol rules.
+TEST_F(ExprParserTest, NamesWithSymbolLookup) {
+  // Bare namespace is an error.
+  auto result = Parse("Namespace", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected expression after namespace name.", parser().err().msg());
+
+  // Bare template is an error.
+  result = Parse("Template", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected template args after template name.",
+            parser().err().msg());
+
+  // Nothing after "::"
+  result = Parse("Namespace::", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected name after '::'.", parser().err().msg());
+
+  // Can't put a template on a type that's not a template.
+  result = Parse("Type<int>", &TestLookupName);
+  ASSERT_FALSE(result);
+  // This error message might change with future type support because it might
+  // look like a comparison between a type and an int.
+  EXPECT_EQ("Template parameters not valid on this object type.",
+            parser().err().msg());
+
+  // Can't put a template on a namespace.
+  result = Parse("Namespace<int>", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Template parameters not valid on this object type.",
+            parser().err().msg());
+
+  // Good type name.
+  EXPECT_EQ(
+      "FUNCTIONCALL(\"Namespace\"; ::,\"Template\",<\"int\">; ::,\"fn\")\n",
+      GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
 }
 
 }  // namespace zxdb

@@ -75,6 +75,7 @@ class Identifier {
     void set_separator(ExprToken t) { separator_ = std::move(t); }
 
     const ExprToken& name() const { return name_; }
+    void set_name(ExprToken n) { name_ = std::move(n); }
 
     // This will be kInvalid if there is no template on this component.
     // The begin and end are the <> tokens, and the contents is the normalized

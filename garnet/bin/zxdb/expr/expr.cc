@@ -20,6 +20,7 @@ void EvalExpression(const std::string& input,
     return;
   }
 
+  // TODO(brettw) hook up the symbol lookup callback here.
   ExprParser parser(tokenizer.TakeTokens());
   auto node = parser.Parse();
   if (parser.err().has_error()) {

@@ -6,6 +6,15 @@
 
 namespace zxdb {
 
+bool StringBeginsWith(std::string_view str, std::string_view begins_with) {
+  if (begins_with.size() > str.size())
+    return false;
+
+  std::string_view source =
+      str.substr(0, begins_with.size());
+  return source == begins_with;
+}
+
 bool StringEndsWith(std::string_view str, std::string_view ends_with) {
   if (ends_with.size() > str.size())
     return false;
