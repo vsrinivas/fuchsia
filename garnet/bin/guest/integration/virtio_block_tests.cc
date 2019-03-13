@@ -218,7 +218,7 @@ using RawGuestTypes = ::testing::Types<
                           fuchsia::guest::BlockFormat::RAW>>;
 TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
 
-TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
+TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_BlockDeviceExists) {
   std::string args =
       fxl::StringPrintf("%lu %u check", kBlockSectorSize, kVirtioBlockCount);
   std::string result;
@@ -226,7 +226,7 @@ TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TYPED_TEST(RawVirtioBlockGuestTest, Read) {
+TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_Read) {
   fbl::unique_fd fd(open(this->FilePath().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -246,7 +246,7 @@ TYPED_TEST(RawVirtioBlockGuestTest, Read) {
   }
 }
 
-TYPED_TEST(RawVirtioBlockGuestTest, Write) {
+TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_Write) {
   fbl::unique_fd fd(open(this->FilePath().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
 
