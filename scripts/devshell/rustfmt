@@ -19,7 +19,9 @@ import pytoml as toml
 
 def main():
     parser = argparse.ArgumentParser("Format a rust target")
-    parser.add_argument("gn_target",
+    parser.add_argument("gn_targets",
+                        metavar="gn_target",
+                        nargs="+",
                         type=lib.rust.GnTarget,
                         help="GN target to format. \
                               Use '.[:target]' to discover the cargo target \
@@ -38,32 +40,37 @@ def main():
 
     out_dir = lib.rust.find_out_dir()
 
-    if args.print_sources and not os.path.exists(args.gn_target.manifest_path(out_dir)):
+    if args.print_sources and not all(os.path.exists(gn_target.manifest_path(out_dir)) for gn_target in args.gn_targets):
         return 0
 
-    with open(args.gn_target.manifest_path(out_dir), "r") as fin:
-        cargo_toml = toml.load(fin)
+    cargo_tomls = []  # List of (gn_target, cargo_toml)
+    for gn_target in args.gn_targets:
+        with open(gn_target.manifest_path(out_dir), "r") as fin:
+            cargo_tomls.append((gn_target, toml.load(fin)))
 
-    main_file = None
-    if 'bin' in cargo_toml:
-        bins = cargo_toml['bin']
-        if len(bins) != 1:
-            print("Expected a single bin target for {gn_target}, found {n}".format(
-                    gn_target = args.gn_target,
-                    n = len(bins)))
-            return 1
-        main_file = bins[0]['path']
-    elif 'lib' in cargo_toml:
-        main_file = cargo_toml['lib']['path']
+    main_files = []  # List of (gn_target, main_file)
+    for gn_target, cargo_toml in cargo_tomls:
+        if 'bin' in cargo_toml:
+            bins = cargo_toml['bin']
+            if len(bins) != 1:
+                print("Expected a single bin target for {gn_target}, found {n}".format(
+                        gn_target = gn_target,
+                        n = len(bins)))
+                return 1
+            main_files.append((gn_target, bins[0]['path']))
+        elif 'lib' in cargo_toml:
+            main_files.append((gn_target, cargo_toml['lib']['path']))
 
     if args.print_sources:
-        if main_file:
-            print(main_file)
+        if main_files:
+            print('\n'.join(main_file[1] for main_file in main_files))
         return 0
 
-    if not main_file or not os.path.exists(main_file):
-        print("No source root (typically lib.rs or main.rs) found for this gn target")
-        return 1
+    for gn_target, main_file in main_files:
+        if not main_file or not os.path.exists(main_file):
+            print("No source root (typically lib.rs or main.rs) found for {gn_target}".format(
+                gn_target=gn_target))
+            return 1
 
     host_platform = "%s-%s" % (
         platform.system().lower().replace("darwin", "mac"),
@@ -76,9 +83,8 @@ def main():
     rustfmt = os.path.join(buildtools_dir, "rust", "bin", "rustfmt")
 
     call_args = [
-        rustfmt,
-        main_file,
-    ]
+        rustfmt
+    ] + [main_file[1] for main_file in main_files]
 
     if args.verbose:
         call_args.append("-v")
