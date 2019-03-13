@@ -6,8 +6,108 @@ You are encouraged to add your own questions (and answers) here!
 
 ## Q: Is there a standard Git workflow for Fuchsia?
 
-A: No. Instead, the Git tool offers infinite control and variety for defining
-your own workflow. Carve out the workflow you need.
+There are a wide variety of workflows used by the Fuchsia team. A daily
+workflow to get you started is as follows:
+
+```shell
+$ jiri update -gc
+# Start a new feature "myfeature" from the current stable commit
+$ git checkout -b myfeature JIRI_HEAD
+# Do work, making changes, etc.
+$ git commit
+# Upload your work to Gerrit for review
+$ jiri upload
+# OR
+$ git push origin HEAD:refs/for/master
+```
+
+Congratulations, you made your first Gerrit change!
+
+Suppose you want to start new work while you wait for review of "myfeature":
+
+```shell
+# Start a new independent line of work while waiting for review:
+$ git checkout -b otherfeature JIRI_HEAD
+# OR
+# Start a derivative line of work while waiting for review:
+$ git checkout -b otherfeature
+```
+
+When you want to update "myfeature" and you've been working on an
+"independent" line of work:
+
+```shell
+# Commit any present dirty work, then, switch to "myfeature":
+$ git checkout myfeature
+# Make any relevant edits to the code, then:
+$ git commit --amend
+# Now upload the new patchset to Gerrit:
+$ jiri upload
+# OR
+$ git push origin HEAD:refs/for/master
+```
+
+When you want to update "myfeature" because you got some review comments, and
+you are using a "derivative" line of work:
+
+```shell
+# Now you get a review comment that needs a change in "myfeature"
+# Commit your present work, if you aren't finished, maybe use a work-in-progress change:
+$ git commit -a -m "work in progress"
+# Start a rebase operation, so you can edit your first change:
+$ git rebase -i JIRI_HEAD
+# Replace "pick" with "edit" on the change you need to update and save and close the file
+# Make the relevant code changes, then:
+$ git add . && git rebase --continue
+# You may need to make additional "rebase" steps if your edits need integration
+# with later commits For each case, look at "git status" to see what files are
+# in conflict, and make the relevant adjustments. The rebase is complete when
+# git reports "Successfully rebased and updated ...." If you made a "work in
+# progress" change and want to unwind that commit:
+$ git reset HEAD
+# Now you can upload your modified changes to Gerrit:
+$ jiri upload
+# OR
+$ git push origin HEAD:refs/for/master
+```
+
+When you see "merge conflict" in Gerrit because your change can't cleanly be
+integrated with "master":
+
+```shell
+# Checkout the branch for the change you need to update (e.g. "myfeature"):
+$ git checkout myfeature
+# Update your git repository:
+$ git fetch
+# Update your branch:
+$ git rebase origin/master
+# Fixup and continue the rebase as necessary, until you see "Successfully rebased ..."
+# Then upload your newly updated code:
+$ jiri upload
+# OR
+$ git push origin HEAD:refs/for/master
+```
+
+When you've been working for more than a day, and you need to "sync your
+code" with upstream (you generally want to do this at least once per day):
+
+```
+# Commit any in-progress work, then
+# Checkout the stable upstream you last sync'd
+$ git checkout JIRI_HEAD
+# Update your local repository (this will include updates for prebuilts, third
+# party repositories, and so on):
+$ jiri update -gc
+# Now to switch back to, and update your working branch (e.g. "myfeature"):
+$ git checkout myfeature
+# Updating "myfeature" with the latest stable code:
+$ git rebase JIRI_HEAD
+# Perform fixups and "git rebase --continue" until you get to "Successfully rebased ..."
+```
+
+You can find more information on parts of workflows below.
+You can find more information on general git workflows in [gitworkflows(7)](https://github.com/git/git/blob/master/Documentation/gitworkflows.txt).
+You can find more information on git in general at [git-scm.com/doc](https://git-scm.com/doc).
 
 ### Rebasing
 
@@ -15,7 +115,6 @@ Update all projects simultaneously, and rebase your work branch on `JIRI_HEAD`:
 
 ```shell
 $ jiri update -gc -rebase-untracked
-$ cd garnet  # go into a petal
 $ git checkout <my_branch>
 $ git rebase JIRI_HEAD
 ```
@@ -75,14 +174,16 @@ $ git stash pop # uncommitted changes will come back
 
 ## Q: I use **fx** and **jiri** a lot. How are they related?
 
-A: [`jiri`](https://fuchsia.googlesource.com/jiri/+/master/) is source
-management for multiple repositories.
+A: They are not related.
+[`jiri`](https://fuchsia.googlesource.com/jiri/+/master/) is a wrapper around
+git that provides support for managing more than one git repository in sync
+(the Fuchsia code base is composed of many git repositories), as well as
+synchronizing a set of prebuilt artifacts, such as those found in
+`//prebuilt` and `//buildtools`.
 [`fx`](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/fx) is a
-convenience wrapper for configuring and running the build system (
-[GN](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#gn) and
-[Ninja](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#ninja)),
-as well as facilities to help with day-to-day engineering (`fx boot`, `fx log`,
-etc).
+convenience wrapper around many tools built in the Fuchsia tree, and helps
+with many daily workflow tasks, such as building, running tests, consuming
+logs, connecting to shells on devices, and many other operations.
 
 ## Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
 
@@ -137,12 +238,51 @@ Alternatively, you *could* do something as follows:
 
 ## Q: How do I do parallel builds from a single set of sources?
 
-A: Currently, this is not possible. The vanilla GN + Ninja workflow should allow
-this, but `fx` maintains additional global state.
+Note: this answer is subject to change/breakage shortly after authorship.
 
-Another slight limitation is that GN files for Zircon are currently generated at
-build-time, and running multiple parallel builds which both try to generate GN
-files may confuse Ninja. It's unclear whether this is a real issue or not.
+Lets assume you want to produce four builds:
+
+ * a "bringup" product for x64
+ * a "workstation" product for x64
+ * a "core" product for vim2
+ * a "workstation" product for vim2
+
+First, one must build Zircon, as the Zircon build directory is shared across
+Fuchsia build targets. It doesn't matter at this stage which product/board
+combination you pick, we just need to start building Zircon.
+
+```shell
+# We start with bringup, because it's small, but it doesn't matter which you start with:
+$ fx set x64 out/bringup.x64 --product bringup
+$ fx --dir=out/bringup.x64 full-build
+```
+
+Now you have Zircon built, you can start building several other builds concurrently:
+
+```shell
+$ fx set x64 out/workstation.x64 --product workstation
+$ fx --dir out/workstation.x64 full-build > workstation.x64.build.log &
+
+$ fx set arm64 out/core.vim2 --product core
+$ fx --dir out/core.vim2 full-build > core.vim2.build.log &
+
+$ fx set arm64 out/workstation.vim2 --product workstation
+$ fx --dir out/workstation.vim2 full-build > workstation.vim2.build.log &
+```
+
+You can reference each of these builds while running `fx` tools by passing
+`--dir` to your fx command, e.g. to run `fx serve` using the vim2 workstation
+product, you would use:
+
+```shell
+$ fx --dir out/workstation.vim2 serve
+```
+
+You can also change which build directory is your current default by using `fx use`:
+
+```shell
+$ fx use out/core.vim2
+```
 
 ## Q: What if I want to build at a previous snapshot across the repos?
 
