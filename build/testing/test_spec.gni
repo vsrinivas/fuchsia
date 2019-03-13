@@ -202,7 +202,7 @@ template("test_spec") {
       if (is_linux || is_mac) {
         # Trim leading //.
         location = rebase_path(location, root_build_dir)
-        forward_variables_from(invoker, ["command"])
+        forward_variables_from(invoker, [ "command" ])
       }
       os = current_os
       cpu = current_cpu
@@ -220,13 +220,15 @@ template("test_spec") {
 
     # TODO(IN-876): Delete this block once astros are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Astro") {
-      assert(defined(env.label) && env.label == "astro",
+      assert(defined(env.label) &&
+                 (env.label == "astro" || env.label == "system_ota_tests"),
              "astros may not yet be targeted.")
     }
 
     # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
-      assert(defined(env.label) && env.label == "vim2",
+      assert(defined(env.label) &&
+                 (env.label == "vim2" || env.label == "system_ota_tests"),
              "vim2s may not yet be targeted.")
     }
   }

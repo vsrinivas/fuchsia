@@ -5,6 +5,8 @@
 import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/environments.gni")
+import("//garnet/tests/system_ota_tests/system_ota_tests.gni")
 
 copy("copy") {
   sources = [
