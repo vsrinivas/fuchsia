@@ -11,7 +11,7 @@ executable("vkext") {
     "main.cc",
     "vk_ext_buffer_collection.cc",
     "vk_ext_scanout.cc",
-    "vk_external_semaphore_fuchsia.cc",
+    "vk_external_semaphore_fuchsia_khr.cc",
   ]
 
   deps = [

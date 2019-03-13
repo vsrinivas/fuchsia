@@ -436,7 +436,7 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary)
     return true;
 }
 
-TEST(VulkanExtension, ExternalSemaphoreFuchsia)
+TEST(VulkanExtension, ExternalSemaphoreFuchsiaKHR)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
@@ -444,7 +444,7 @@ TEST(VulkanExtension, ExternalSemaphoreFuchsia)
     ASSERT_TRUE(VulkanTest::Exec(&t1, &t2, false));
 }
 
-TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsia)
+TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsiaKHR)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
@@ -452,7 +452,7 @@ TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsia)
     ASSERT_TRUE(VulkanTest::Exec(&t1, &t2, true));
 }
 
-TEST(VulkanExtension, QueueExternalSemaphoreFuchsia)
+TEST(VulkanExtension, QueueExternalSemaphoreFuchsiaKHR)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
@@ -460,7 +460,7 @@ TEST(VulkanExtension, QueueExternalSemaphoreFuchsia)
     ASSERT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, false));
 }
 
-TEST(VulkanExtension, QueueTemporaryExternalSemaphoreFuchsia)
+TEST(VulkanExtension, QueueTemporaryExternalSemaphoreFuchsiaKHR)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
