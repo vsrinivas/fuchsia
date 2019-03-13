@@ -7,15 +7,16 @@
 //
 // Example usage:
 //
-// $ artifacts ls -build=1234567890
-// $ artifacts cp -build=2345678900 -src=packages.tar.gz -dst=local/packages.tar.gz
+// $ artifacts ls -build=123
+// $ artifacts cp -build=123 -src=packages.tar.gz -dst=local/packages.tar.gz
+// $ artifacts storetestoutputs -build=123 -testenv=TEST_ENV outputs.json
+
 package main
 
 import (
 	"context"
 	"flag"
 	"os"
-
 	"github.com/google/subcommands"
 )
 
@@ -25,6 +26,7 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(&ListCommand{}, "")
 	subcommands.Register(&CopyCommand{}, "")
+	subcommands.Register(&StoreTestOutputsCommand{}, "")
 
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))

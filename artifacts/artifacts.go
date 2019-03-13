@@ -29,7 +29,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 // build is the BuildBucket build ID.
 func (c *Client) GetBuildDir(bucket, build string) *BuildDirectory {
 	bkt := c.client.Bucket(bucket)
-	return &BuildDirectory{&Directory{
+	return &BuildDirectory{&directory{
 		bucket: bkt,
 		root:   strings.Join([]string{"builds", build}, "/"),
 	}}
