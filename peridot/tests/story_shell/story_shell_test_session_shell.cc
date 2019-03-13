@@ -16,7 +16,6 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
-#include <lib/fxl/tasks/task_runner.h>
 #include <lib/fxl/time/time_delta.h>
 
 #include "peridot/lib/fidl/clone.h"

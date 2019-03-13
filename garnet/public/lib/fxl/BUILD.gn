@@ -143,8 +143,6 @@ static_library("fxl") {
     "observer_list.h",
     "synchronization/thread_annotations.h",
     "synchronization/thread_checker.h",
-    "tasks/task_runner.cc",
-    "tasks/task_runner.h",
     "type_converter.h",
   ]
 
@@ -212,8 +210,6 @@ executable("fxl_unittests") {
     "strings/trim_unittest.cc",
     "synchronization/thread_annotations_unittest.cc",
     "synchronization/thread_checker_unittest.cc",
-    "test/fake_task_runner_unittest.cc",
-    "test/timeout_tolerance.h",
     "time/stopwatch_unittest.cc",
     "time/time_delta_unittest.cc",
     "time/time_point_unittest.cc",
@@ -224,7 +220,6 @@ executable("fxl_unittests") {
     ":fxl",
     ":fxl_logging",
     ":printers",
-    "test",
     "test:gtest_main",
     "//src/lib/files",
     "//third_party/googletest:gmock",

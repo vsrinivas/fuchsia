@@ -11,6 +11,7 @@
 #include "src/lib/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/time/time_delta.h"
 
 #include "garnet/lib/inferior_control/exception_port.h"
 #include "garnet/lib/inferior_control/process.h"

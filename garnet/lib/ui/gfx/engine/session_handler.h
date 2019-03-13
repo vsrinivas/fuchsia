@@ -8,7 +8,6 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/engine.h"

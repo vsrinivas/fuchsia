@@ -180,7 +180,6 @@ source_set("unittests") {
     ":test_utils",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test",
     "//peridot/lib/rng",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl",
