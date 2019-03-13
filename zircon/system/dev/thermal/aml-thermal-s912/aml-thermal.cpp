@@ -261,8 +261,7 @@ zx_status_t AmlThermal::GetStateChangePort(fidl_txn_t* txn) {
     return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, dup.release());
 }
 
-zx_status_t AmlThermal::SetTrip(uint16_t op_idx, fuchsia_hardware_thermal_PowerDomain power_domain,
-                                fidl_txn_t* txn) {
+zx_status_t AmlThermal::SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) {
     return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 

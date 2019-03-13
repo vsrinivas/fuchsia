@@ -145,7 +145,7 @@ protocol Device {
 
     /// Sets a trip point. When the sensor reaches the trip point temperature the device will notify
     /// on an event.
-    SetTrip(uint16 op_idx, PowerDomain power_domain) -> (zx.status status);
+    SetTrip(uint32 id, uint32 temp) -> (zx.status status);
 
     /// Get the current operating point index.
     GetDvfsOperatingPoint(PowerDomain power_domain) -> (zx.status status, uint16 op_idx);

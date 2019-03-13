@@ -58,8 +58,7 @@ private:
     zx_status_t GetTemperature(fidl_txn_t* txn);
     zx_status_t GetStateChangeEvent(fidl_txn_t* txn);
     zx_status_t GetStateChangePort(fidl_txn_t* txn);
-    zx_status_t SetTrip(uint16_t op_idx, fuchsia_hardware_thermal_PowerDomain power_domain,
-                        fidl_txn_t* txn);
+    zx_status_t SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn);
     zx_status_t GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
                                       fidl_txn_t* txn);
     zx_status_t SetDvfsOperatingPoint(uint16_t op_idx,
