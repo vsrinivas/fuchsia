@@ -783,6 +783,10 @@ pub struct AmsduSubframe<B> {
     pub body: B,
 }
 
+/// Parse an A-MSDU subframe from the byte stream and advance the cursor in the `BufferReader` if
+/// successful. Parsing is only successful if the byte stream starts with a valid subframe.
+/// TODO(WLAN-995): The received AMSDU should not be greater than `max_amsdu_len`, specified in
+/// HtCapabilities IE of Association. Warn or discard if violated.
 impl<B: ByteSlice> AmsduSubframe<B> {
     pub fn parse(buffer_reader: &mut BufferReader<B>) -> Option<Self> {
         let hdr = buffer_reader.read::<AmsduSubframeHdr>()?;
@@ -810,32 +814,6 @@ impl<B: ByteSlice> AmsduSubframe<B> {
     }
 }
 
-/// Iterates through an A-MSDU frame and provides access to
-/// individual MSDUs.
-/// The reader expects the byte stream to start with an
-/// `AmsduSubframeHdr`.
-/// TODO(WLAN-995): The received AMSDU should not be greater than `max_amsdu_len`, specified in
-/// HtCapabilities IE of Association. Warn or discard if violated.
-pub struct AmsduReader<B>(BufferReader<B>);
-
-impl<B: ByteSlice> AmsduReader<B> {
-    pub fn has_remaining_bytes(&self) -> bool {
-        self.0.bytes_remaining() > 0
-    }
-
-    pub fn into_remaining(self) -> B {
-        self.0.into_remaining()
-    }
-}
-
-impl<B: ByteSlice> Iterator for AmsduReader<B> {
-    type Item = AmsduSubframe<B>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        AmsduSubframe::parse(&mut self.0)
-    }
-}
-
 pub enum DataFrameBody<B> {
     Llc { llc_frame: B },
     Amsdu { amsdu: B },
@@ -849,7 +827,7 @@ pub struct Msdu<B> {
 
 pub enum MsduIterator<B> {
     Llc { dst_addr: MacAddr, src_addr: MacAddr, buffer_reader: BufferReader<B> },
-    Amsdu(AmsduReader<B>),
+    Amsdu(BufferReader<B>),
 }
 
 impl<B: ByteSlice> Iterator for MsduIterator<B> {
@@ -862,7 +840,7 @@ impl<B: ByteSlice> Iterator for MsduIterator<B> {
                 Some(Msdu { dst_addr: *dst_addr, src_addr: *src_addr, llc_frame })
             }
             MsduIterator::Amsdu(reader) => {
-                let AmsduSubframe { hdr, body } = reader.next()?;
+                let AmsduSubframe { hdr, body } = AmsduSubframe::parse(reader)?;
                 let llc_frame = LlcFrame::parse(body)?;
                 Some(Msdu { dst_addr: hdr.da, src_addr: hdr.sa, llc_frame })
             }
@@ -914,7 +892,7 @@ impl<B: ByteSlice> MsduIterator<B> {
                         })
                     }
                     DataSubtype::Data(DataFrameBody::Amsdu { amsdu }) => {
-                        Some(MsduIterator::Amsdu(AmsduReader(BufferReader::new(amsdu))))
+                        Some(MsduIterator::Amsdu(BufferReader::new(amsdu)))
                     }
                     _ => None,
                 }
