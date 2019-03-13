@@ -317,9 +317,10 @@ private:
         return hwreg::BitfieldRef<const typename fbl::remove_reference<decltype(FIELD)>::type>(   \
             &FIELD, (BIT_HIGH), (BIT_LOW)).get();                                                 \
     }                                                                                             \
-    void set_ ## NAME(typename fbl::remove_reference<decltype(FIELD)>::type val) {                \
+    auto& set_ ## NAME(typename fbl::remove_reference<decltype(FIELD)>::type val) {               \
         hwreg::BitfieldRef<typename fbl::remove_reference<decltype(FIELD)>::type>(                \
                 &FIELD, (BIT_HIGH), (BIT_LOW)).set(val);                                          \
+        return *this;                                                                             \
     }
 
 // Declares "decltype(FIELD) NAME() const" and "void set_NAME(decltype(FIELD))" that
