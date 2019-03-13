@@ -22,8 +22,8 @@ using namespace fuchsia::netemul;
 namespace netemul {
 
 static const char* kEndpointMountPath = "class/ethernet/";
-// give setup processes a maximum of 10s before bailing
-constexpr int kSetupTimeoutSecs = 10;
+// give setup processes a maximum of 30s before bailing
+constexpr int kSetupTimeoutSecs = 30;
 constexpr int64_t kFailureTerminationCode = -1;
 constexpr int64_t kTimeoutTerminationCode = 1;
 

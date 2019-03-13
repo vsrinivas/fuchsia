@@ -32,7 +32,7 @@ struct Opt {
     skip_up_check: bool,
 }
 
-const TIMEOUT_SECS: i64 = 5;
+const TIMEOUT_SECS: i64 = 15;
 const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
 
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
@@ -47,8 +47,10 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     // retrieve the created endpoint:
     let ep = await!(epm.get_endpoint(&opt.endpoint))?;
     let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
+    println!("Got endpoint.");
     // and the ethernet device:
     let eth = await!(ep.get_ethernet_device())?;
+    println!("Got ethernet.");
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
@@ -79,6 +81,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         await!(netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth))
             .context("can't add ethernet device")?;
     let () = netstack.set_interface_status(nicid as u32, true)?;
+    println!("Added ethernet to stack.");
 
     if let Some(ip) = opt.ip {
         let mut subnet: fidl_fuchsia_net::Subnet =
@@ -92,6 +95,9 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         let _ = await!(netstack.set_dhcp_client_status(nicid as u32, true))?;
     };
 
+    println!("Configured nic address.");
+
+    println!("Waiting for interface up...");
     let (if_id, hwaddr) = await!(if_changed.try_next())
         .context("wait for interfaces")?
         .ok_or_else(|| format_err!("interface added"))?;
