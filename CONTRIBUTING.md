@@ -127,7 +127,7 @@ Gerrit if you use the same topic.
 Create branch with same name on all repos and upload the changes
 ```
 # make and commit the first change
-cd fuchsia/bin/fortune
+cd examples/fortune
 git checkout -b add_feature_foo
 * edit foo_related_files ... *
 git add foo_related_files ...
@@ -146,7 +146,7 @@ jiri upload -multipart # Adds default topic - ${USER}-branch_name
 jiri upload -multipart -topic="custom_topic"
 
 # after the changes are reviewed, approved and submitted, clean up the local branch
-cd fuchsia/bin/fortune
+cd examples/fortune
 git branch -d add_feature_foo
 
 cd fuchsia/build
@@ -157,7 +157,7 @@ git branch -d add_feature_foo
 
 ```
 # make and commit the first change, upload it with topic 'add_feature_foo'
-cd fuchsia/bin/fortune
+cd examples/fortune
 git checkout -b add_feature_foo
 * edit foo_related_files ... *
 git add foo_related_files ...
@@ -173,7 +173,7 @@ git commit ...
 git push origin HEAD:refs/for/master%topic=add_feature_foo
 
 # after the changes are reviewed, approved and submitted, clean up the local branch
-cd fuchsia/bin/fortune
+cd examples/fortune
 git branch -d add_feature_foo
 
 cd fuchsia/build

@@ -74,4 +74,4 @@ To build a package, use the `package()` macro in `gn` defined in
 See the documentation for the `package()` macro for details about including resources.
 
 For examples, see [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/packages/prod/fortune]
-and [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/fortune/BUILD.gn].
+and [https://fuchsia.googlesource.com/fuchsia/+/master/examples/fortune/BUILD.gn].

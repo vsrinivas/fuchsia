@@ -6,5 +6,6 @@ group("examples") {
   testonly = true
   deps = [
     "cowsay",
+    "fortune",
   ]
 }
