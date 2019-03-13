@@ -222,6 +222,31 @@ TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
             event.gfx().Which());
 }
 
+TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+
+  EXPECT_ERROR_COUNT(0);
+  bool view_holder_connected_event = false;
+  bool view_connected_event = false;
+  for (fuchsia::ui::scenic::Event& event : events_) {
+    if (event.gfx().Which() ==
+        fuchsia::ui::gfx::Event::Tag::kViewHolderConnected) {
+      view_holder_connected_event = true;
+    } else if (event.gfx().Which() ==
+               fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+      view_connected_event = true;
+    }
+  }
+  EXPECT_TRUE(view_holder_connected_event);
+  EXPECT_TRUE(view_connected_event);
+  events_.clear();
+}
+
 TEST_F(ViewTest, ViewHolderConnectsToScene) {
   auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
@@ -294,7 +319,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
     events_.clear();
   }  // view_holder out of scope, release reference.
 
-  // Now, release the ViewHolder resource. It's link should be destroyed.
+  // Now, release the ViewHolder resource. Its link should be destroyed.
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(view_holder_id)));
   EXPECT_ERROR_COUNT(0);
   bool view_holder_disconnected_event = false;
@@ -485,13 +510,20 @@ TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   EXPECT_ERROR_COUNT(0);
 
   // Verify the connect event was emitted before the scene attached event.
-  EXPECT_EQ(3u, events_.size());
+  EXPECT_EQ(4u, events_.size());
+  EXPECT_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events_[0];
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected,
             event.gfx().Which());
-  const fuchsia::ui::scenic::Event& event2 = events_[1];
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
-            event2.gfx().Which());
+
+  bool view_attached_to_scene_event = false;
+  for (fuchsia::ui::scenic::Event& event : events_) {
+    if (event.gfx().Which() ==
+        fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+      view_attached_to_scene_event = true;
+    }
+  }
+  EXPECT_TRUE(view_attached_to_scene_event);
 }
 
 TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
