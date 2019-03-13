@@ -84,6 +84,15 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                 std::move(channel)));
         return ZX_OK;
       })));
+  services_->AddService(
+      fuchsia::device::manager::Administrator::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        realm_->environment_services()->ConnectToService(
+            fidl::InterfaceRequest<fuchsia::device::manager::Administrator>(
+                std::move(channel)));
+        return ZX_OK;
+      })));
+
 
   if (additional_services) {
     auto& names = additional_services->names;

@@ -89,6 +89,7 @@ TEST_F(HubTest, Services) {
     // Expected files are built-in services plus sysmgr services.
     std::vector<std::string> expected_files = {
         ".",
+        "fuchsia.device.manager.Administrator",
         "fuchsia.device.manager.DebugDumper",
         "fuchsia.kernel.DebugBroker",
         "fuchsia.process.Launcher",

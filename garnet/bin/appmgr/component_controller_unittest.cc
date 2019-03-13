@@ -65,6 +65,7 @@ std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
 std::vector<std::string> GetDefaultNamespaceServiceEntries() {
   return std::vector<std::string>{
       ".",
+      fuchsia::device::manager::Administrator::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
       fuchsia::kernel::DebugBroker::Name_,
       fuchsia::sys::Environment::Name_,
