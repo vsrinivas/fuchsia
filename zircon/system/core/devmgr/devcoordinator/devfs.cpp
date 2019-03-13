@@ -833,7 +833,7 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
         });
     } else {
         log(ERROR, "devcoordinator: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
-        exit(0);
+        abort();
     }
     // Do not start waiting again, and destroy |ios|
 }

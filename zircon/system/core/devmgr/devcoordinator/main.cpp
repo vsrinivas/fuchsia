@@ -770,7 +770,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         for (const auto& option : options) {
             printf("  --%s\n", option.name);
         }
-        exit(1);
+        abort();
     };
 
     auto check_not_duplicated = [print_usage_and_exit](const char* arg) {

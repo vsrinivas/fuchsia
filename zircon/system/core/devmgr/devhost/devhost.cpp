@@ -632,7 +632,7 @@ void DevcoordinatorConnection::HandleRpc(fbl::unique_ptr<DevcoordinatorConnectio
         zx_status_t r = dh_handle_rpc_read(wait->object(), conn.get());
         if (r != ZX_OK) {
             log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%d. fatal.\n", conn.get(), r);
-            exit(0);
+            abort();
         }
         BeginWait(std::move(conn), dispatcher);
         return;
@@ -650,7 +650,7 @@ void DevcoordinatorConnection::HandleRpc(fbl::unique_ptr<DevcoordinatorConnectio
         }
 
         log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
-        exit(0);
+        abort();
     }
     log(ERROR, "devhost: no work? %08x\n", signal->observed);
     BeginWait(std::move(conn), dispatcher);
@@ -679,7 +679,7 @@ void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
         });
     } else {
         printf("dh_handle_fidl_rpc: invalid signals %x\n", signal->observed);
-        exit(0);
+        abort();
     }
 
     // We arrive here if devhost_fidl_handler was a clean close (ERR_DISPATCHER_DONE),
