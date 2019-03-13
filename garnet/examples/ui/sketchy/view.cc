@@ -24,6 +24,12 @@ View::View(scenic::ViewContext context, async::Loop* loop)
 
   import_node_.AddChild(scratch_group_);
   import_node_.AddChild(stable_group_);
+
+  fuchsia::ui::input::SetHardKeyboardDeliveryCmd cmd;
+  cmd.delivery_request = true;
+  fuchsia::ui::input::Command input_cmd;
+  input_cmd.set_set_hard_keyboard_delivery(std::move(cmd));
+  session()->Enqueue(std::move(input_cmd));
 }
 
 void View::OnPropertiesChanged(
