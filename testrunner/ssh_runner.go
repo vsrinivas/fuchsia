@@ -21,6 +21,9 @@ type SSHRunner struct {
 func (r *SSHRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
 	r.Session.Stdout = stdout
 	r.Session.Stderr = stderr
+
+	// TERM-dumb, to avoid a loop fetching a cursor position.
+	command = append([]string{"TERM=dumb;"}, command...)
 	cmd := strings.Join(command, " ")
 
 	if err := r.Session.Start(cmd); err != nil {

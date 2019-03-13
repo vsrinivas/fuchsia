@@ -34,7 +34,8 @@ func NewSyslogger(client *ssh.Client) (*Syslogger, error) {
 func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 	// Note: Fuchsia's log_listener does not write to stderr.
 	s.session.Stdout = output
-	if err := s.session.Start(logListener); err != nil {
+	// TERM-dumb, to avoid a loop fetching a cursor position.
+	if err := s.session.Start("TERM=dumb; " + logListener); err != nil {
 		return err
 	}
 
