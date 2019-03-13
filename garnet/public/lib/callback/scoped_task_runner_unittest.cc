@@ -6,10 +6,11 @@
 
 #include <pthread.h>
 
+#include <thread>
+
 #include <gtest/gtest.h>
 #include <lib/async-testutils/test_loop.h>
 #include <lib/fxl/macros.h>
-#include <lib/fxl/threading/thread.h>
 
 namespace callback {
 namespace {
@@ -157,7 +158,7 @@ TEST(ScopedTaskRunnerTest, PostPeriodicTaskOffThread) {
   pthread_t dispatch_thread = pthread_self();
 
   int called = 0;
-  fxl::Thread foreign_thread([&] {
+  std::thread foreign_thread([&] {
     // test-correctness assertion
     EXPECT_NE(dispatch_thread, pthread_self());
 
@@ -168,8 +169,7 @@ TEST(ScopedTaskRunnerTest, PostPeriodicTaskOffThread) {
         },
         kInterval, true);
   });
-  foreign_thread.Run();
-  foreign_thread.Join();
+  foreign_thread.join();
 
   loop.RunFor(kInterval * 4);
 
