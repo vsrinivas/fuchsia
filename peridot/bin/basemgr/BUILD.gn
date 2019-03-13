@@ -143,7 +143,6 @@ source_set("lib") {
 }
 
 executable_package("dev_base_shell") {
-  deprecated_global_persistent_storage = "//build"
   meta = [
     {
       path = "meta/dev_base_shell.cmx"

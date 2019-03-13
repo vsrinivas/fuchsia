@@ -36,7 +36,6 @@ group("deprecated_global_persistent_storage_whitelist") {
     "//garnet/bin/wlan/wlancfg:wlancfg",
     "//garnet/go/src/amber:amber",
     "//peridot/bin/basemgr:basemgr",
-    "//peridot/bin/basemgr:dev_base_shell",
     "//peridot/bin/voila:voila",
     "//topaz/app/dashboard:dashboard",
   ]
