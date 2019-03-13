@@ -227,12 +227,7 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
 
 const int32_t kConnections = 100;
 
-// TODO(toshik): figure out why this fails on Linux and macOS and re-enable.
-#if defined(__linux__)
-TEST(NetStreamTest, DISABLED_BlockingAcceptWriteMultiple) {
-#else
 TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
-#endif
   int acptfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(acptfd, 0);
 
@@ -250,7 +245,7 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
 
-  ret = listen(acptfd, 10);
+  ret = listen(acptfd, kConnections);
   ASSERT_EQ(0, ret) << "listen failed: " << strerror(errno);
 
   std::thread thrd[kConnections];
