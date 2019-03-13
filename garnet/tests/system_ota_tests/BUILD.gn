@@ -1,35 +1,46 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
+import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/host.gni")
 
-go_library("system_ota_test_lib") {
-  name = "fuchsia.googlesource.com/system_ota_test"
+copy("copy") {
+  sources = [
+    "$zircon_tools_dir/netaddr",
+    "//prebuilt/tools/artifacts/artifacts",
+    "//prebuilt/tools/lkgb/lkgb",
+  ]
+  outputs = [
+    "$root_out_dir/test_data/system_ota_tests/{{source_file_part}}",
+  ]
+}
+
+go_library("system_ota_tests_lib") {
+  name = "fuchsia.googlesource.com/system_ota_tests"
   deps = [
     "//garnet/go/src/pm:pm_lib",
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
     "//garnet/public/go/third_party:golang.org/x/crypto",
   ]
+  non_go_deps = [ ":copy" ]
+  metadata = {
+    test_runtime_deps = get_target_outputs(":copy")
+  }
 }
 
-go_binary("system_ota_test_bin") {
-  output_name = "system_ota_test"
-  gopackage = "fuchsia.googlesource.com/system_ota_test/cmd"
-
+go_test("system_ota_tests_upgrade") {
+  gopackage = "fuchsia.googlesource.com/system_ota_tests/upgrade_test"
+  disabled = true
   deps = [
-    ":system_ota_test_lib",
+    ":system_ota_tests_lib",
   ]
 }
 
-install_host_tools("host") {
+group("system_ota_tests") {
+  testonly = true
   deps = [
-    ":system_ota_test_bin",
-  ]
-  outputs = [
-    "system_ota_test",
+    ":system_ota_tests_upgrade($host_toolchain)",
   ]
 }

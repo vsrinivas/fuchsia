@@ -1,5 +1,5 @@
 {
     "labels": [
-        "//garnet/tests/system_ota_tests:host"
+        "//garnet/tests/system_ota_tests"
     ]
 }

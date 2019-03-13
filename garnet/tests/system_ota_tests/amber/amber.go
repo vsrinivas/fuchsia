@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 	"time"
 
 	tuf_data "github.com/flynn/go-tuf/data"
@@ -31,7 +32,7 @@ func (lw *loggingWriter) WriteHeader(status int) {
 }
 
 // ServeRepository serves the amber repository in an http server.
-func ServeRepository(repoDir string) {
+func ServeRepository(t *testing.T, repoDir string) {
 	log.Printf("Serving %s", repoDir)
 
 	http.Handle("/", http.FileServer(http.Dir(repoDir)))
@@ -42,7 +43,7 @@ func ServeRepository(repoDir string) {
 			time.Now().Format("2006-01-02 15:04:05"), lw.status, r.RequestURI)
 	}))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }
 

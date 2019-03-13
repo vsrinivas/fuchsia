@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fuchsia.googlesource.com/system_ota_test/util"
+	"fuchsia.googlesource.com/system_ota_tests/util"
 
 	pm_repo "fuchsia.googlesource.com/pm/repo"
 )
@@ -33,8 +33,8 @@ type Archive struct {
 }
 
 // NewArchive creates a new BuildArtifact.
-func NewArchive(lkgbPath string, artifactsPath string, dir string) Archive {
-	return Archive{
+func NewArchive(lkgbPath string, artifactsPath string, dir string) *Archive {
+	return &Archive{
 		dir:           dir,
 		lkgbPath:      lkgbPath,
 		artifactsPath: artifactsPath,

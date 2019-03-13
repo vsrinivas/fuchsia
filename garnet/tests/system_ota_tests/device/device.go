@@ -13,10 +13,11 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/system_ota_test/amber"
-	"fuchsia.googlesource.com/system_ota_test/sshclient"
+	"fuchsia.googlesource.com/system_ota_tests/amber"
+	"fuchsia.googlesource.com/system_ota_tests/sshclient"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -81,11 +82,11 @@ func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
 }
 
 // WaitForDeviceToBeUp blocks until a device is available for access.
-func (c *Client) WaitForDeviceToBeUp() {
+func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 	log.Printf("waiting for device %q to ping", c.deviceHostname)
 	path, err := exec.LookPath("/bin/ping")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	for {
@@ -103,40 +104,39 @@ func (c *Client) WaitForDeviceToBeUp() {
 		time.Sleep(1 * time.Second)
 	}
 
+	c.waitForDevicePath("/bin")
+	c.waitForDevicePath("/config")
+
 	log.Printf("device up")
 }
 
 // GetBuildSnapshot fetch the device's current system version, as expressed by the file
 // /config/build-info/snapshot.
-func (c *Client) GetBuildSnapshot() []byte {
+func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
 	const buildInfoSnapshot = "/config/build-info/snapshot"
 	snapshot, err := c.ReadRemotePath(buildInfoSnapshot)
 	if err != nil {
-		log.Fatalf("failed to read %q", buildInfoSnapshot)
+		t.Fatalf("failed to read %q", buildInfoSnapshot)
 	}
 
 	return snapshot
 }
 
 // TriggerSystemOTA gets the device to perform a system update.
-func (c *Client) TriggerSystemOTA() {
+func (c *Client) TriggerSystemOTA(t *testing.T) {
 	log.Printf("triggering OTA")
 
 	err := c.Run("amber_ctl system_update", os.Stdout, os.Stderr)
 	if err != nil {
-		log.Fatalf("failed to trigger OTA: %s", err)
+		t.Fatalf("failed to trigger OTA: %s", err)
 	}
 
 	// Wait until we get a signal that we have disconnected
 	c.sshClient.WaitUntilDisconnected()
 	log.Printf("disconnected from device")
 
-	c.WaitForDeviceToBeUp()
+	c.WaitForDeviceToBeUp(t)
 	log.Printf("device rebooted")
-
-	c.waitForDevicePath("/boot")
-	c.waitForDevicePath("/system")
-	c.waitForDevicePath("/pkgfs")
 }
 
 // ReadRemotePath read a file off the remote device.
@@ -152,7 +152,7 @@ func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 }
 
 // RemoteFileExists checks if a file exists on the remote device.
-func (c *Client) RemoteFileExists(path string) bool {
+func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
 	var stderr bytes.Buffer
 	err := c.Run(fmt.Sprintf("/bin/ls %s", path), ioutil.Discard, &stderr)
 	if err == nil {
@@ -165,7 +165,7 @@ func (c *Client) RemoteFileExists(path string) bool {
 		}
 	}
 
-	log.Fatalf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
+	t.Fatalf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
 
 	return false
 }

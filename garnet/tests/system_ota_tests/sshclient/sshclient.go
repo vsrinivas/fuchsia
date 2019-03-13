@@ -44,7 +44,7 @@ func NewClient(addr string, config *ssh.ClientConfig) (*Client, error) {
 		conn:              conn,
 		shuttingDown:      false,
 		done:              make(chan struct{}),
-		keepaliveDuration: 1 * time.Second,
+		keepaliveDuration: 10 * time.Second,
 	}
 	go c.keepalive()
 
@@ -182,7 +182,9 @@ func (c *Client) emitKeepalive() {
 
 	_, _, err := c.client.SendRequest("keepalive@openssh.com", true, nil)
 	if err != nil {
-		log.Printf("disconnected from %s: %s", c.addr, err)
+		if !c.shuttingDown {
+			log.Printf("disconnected from %s: %s", c.addr, err)
+		}
 		c.disconnect()
 	}
 }
