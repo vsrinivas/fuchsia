@@ -52,6 +52,7 @@ COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
 def compile_kernel_action(
         context,
         package_name,
+        target,
         dest_dir,
         dart_exec,
         kernel_compiler,
@@ -62,12 +63,14 @@ def compile_kernel_action(
         kernel_snapshot_file,
         manifest_file,
         main_dilp_file,
-        dilp_list_file):
+        dilp_list_file,
+        framework_version_file):
     """Creates an action that generates the Dart kernel and its dependencies.
 
     Args:
         context: The rule context.
         package_name: The Dart package name.
+        taget_name: The Dart target name.
         dest_dir: The directory under data/ where to install compiled files.
         dart_exec: The Dart executable `File`.
         kernel_compiler: The kernel compiler snapshot `File`.
@@ -79,6 +82,7 @@ def compile_kernel_action(
         manifest_file: The Fuchsia manifest `File` output.
         main_dilp_file: The compiled main dilp `File` output.
         dilp_list_file: The dilplist `File` output.
+        framework_version_file The framework version `File` output.
 
     Returns:
         Mapping `dict` to be used for packaging.
@@ -163,7 +167,7 @@ def compile_kernel_action(
             "--data-dir",
             dest_dir,
             "--target",
-            "dart_runner",
+            target,
             "--platform",
             sdk_root.path,
             "--filesystem-scheme",
@@ -189,6 +193,7 @@ def compile_kernel_action(
         outputs = [
             main_dilp_file,
             dilp_list_file,
+            framework_version_file,
             kernel_snapshot_file,
             manifest_file,
         ] + mappings.values(),
@@ -196,20 +201,6 @@ def compile_kernel_action(
     )
     mappings[data_root + "main.dilp"] = main_dilp_file
     mappings[data_root + "app.dilplist"] = dilp_list_file
-
-    if context.attr.space_dart:
-        enable_interpreter = context.actions.declare_file(
-            context.label.name + "_enable_interpreter",
-        )
-        context.actions.write(
-            output = enable_interpreter,
-            # The existence of this file is enough to enable SpaceDart, we add
-            # a random string to prevent the `package` rule from removing this
-            # file when empty.
-            # See:
-            #   https://fuchsia.googlesource.com/topaz/+/2a6073f931edc4136761c5b8dcfd2245efc79d45/runtime/flutter_runner/component.cc#57
-            content = "No content",
-        )
-        mappings["data/enable_interpreter"] = enable_interpreter
+    mappings[data_root + "app.frameworkversion"] = framework_version_file
 
     return mappings

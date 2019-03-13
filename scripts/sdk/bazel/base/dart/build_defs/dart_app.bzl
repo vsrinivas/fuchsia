@@ -22,6 +22,7 @@ def _dart_app_impl(context):
     mappings = compile_kernel_action(
         context = context,
         package_name = context.attr.package_name,
+        target = "dart_runner",
         dest_dir = component_name,
         dart_exec = context.executable._dart,
         kernel_compiler = context.files._kernel_compiler[0],
@@ -33,6 +34,7 @@ def _dart_app_impl(context):
         manifest_file = manifest_file,
         main_dilp_file = context.outputs.main_dilp,
         dilp_list_file = context.outputs.dilp_list,
+        framework_version_file = context.outputs.framework_version,
     )
     outs = [kernel_snapshot_file, manifest_file]
     return [
@@ -65,6 +67,8 @@ dart_app = rule(
         "main_dilp": "%{name}_kernel.dil-main.dilp",
         # Dilp list.
         "dilp_list": "%{name}_kernel.dilpmanifest.dilplist",
+        # Framework version attestation.
+        "framework_version": "%{name}_kernel.dilpmanifest.frameworkversion",
         # Fuchsia package manifest file.
         "manifest": "%{name}_kernel.dilpmanifest",
     },
