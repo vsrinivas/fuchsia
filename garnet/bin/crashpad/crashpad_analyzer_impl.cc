@@ -54,16 +54,26 @@ const char kOverrideConfigPath[] =
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
   Config config;
 
-  if (files::IsFile(kOverrideConfigPath) &&
-      ParseConfig(kOverrideConfigPath, &config) == ZX_OK) {
-    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+  if (files::IsFile(kOverrideConfigPath)) {
+    const zx_status_t status = ParseConfig(kOverrideConfigPath, &config);
+    if (status == ZX_OK) {
+      return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+    }
+    FX_LOGS(ERROR) << "failed to read override config file at "
+                   << kOverrideConfigPath << ": " << status << " ("
+                   << zx_status_get_string(status)
+                   << "); falling back to default config file";
   }
 
   // We try to load the default config included in the package if no override
   // config was specified or we failed to parse it.
-  if (ParseConfig(kDefaultConfigPath, &config) == ZX_OK) {
+  const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
+  if (status == ZX_OK) {
     return CrashpadAnalyzerImpl::TryCreate(std::move(config));
   }
+  FX_LOGS(ERROR) << "failed to read default config file at "
+                 << kDefaultConfigPath << ": " << status << " ("
+                 << zx_status_get_string(status) << ")";
 
   FX_LOGS(FATAL) << "failed to set up crash analyzer";
   return nullptr;
