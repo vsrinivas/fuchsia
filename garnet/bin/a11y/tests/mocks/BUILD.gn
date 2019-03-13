@@ -18,7 +18,7 @@ source_set("mocks") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest",
   ]
 }

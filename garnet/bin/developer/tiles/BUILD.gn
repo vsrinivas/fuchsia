@@ -73,7 +73,7 @@ executable("tiles_unittests") {
     ":tiles_lib",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest_main",
   ]
 }

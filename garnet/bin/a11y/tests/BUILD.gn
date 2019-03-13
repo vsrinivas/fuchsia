@@ -29,7 +29,7 @@ executable("a11y_manager_apptests") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest_main",
   ]
 

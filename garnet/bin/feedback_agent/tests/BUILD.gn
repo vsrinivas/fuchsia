@@ -49,7 +49,7 @@ executable("unittest") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
-    "//sdk/lib/sys/cpp/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

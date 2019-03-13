@@ -69,7 +69,7 @@ executable("cobalt_system_metrics_unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testing:fake_clock_lib",
     "//src/cobalt/bin/testing:fake_logger_lib",
     "//src/cobalt/bin/utils:clock",

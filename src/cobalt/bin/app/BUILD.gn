@@ -124,7 +124,7 @@ executable("cobalt_app_unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
