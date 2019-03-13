@@ -1,8 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/net/filter/cpp/fidl.h>
+#include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 
 #include "garnet/lib/inet/ip_address.h"
@@ -16,17 +16,17 @@
 #include "lib/sys/cpp/termination_reason.h"
 
 namespace {
-class NetstackFilterTest : public component::testing::TestWithEnvironment {};
+class NetstackNoNetworkTest : public component::testing::TestWithEnvironment {};
 
-const zx::duration kTimeout = zx::sec(10);
 const char kNetstackUrl[] =
     "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const char kTopoPath[] = "/fake/topo/path";
 const char kInterfaceName[] = "en0";
-const char kFilterClientUrl[] =
-    "fuchsia-pkg://fuchsia.com/test_filter_client#meta/test_filter_client.cmx";
+const char kTestNoNetworkClientUrl[] =
+    "fuchsia-pkg://fuchsia.com/test_no_network_client#meta/"
+    "test_no_network_client.cmx";
 
-TEST_F(NetstackFilterTest, TestRuleset) {
+TEST_F(NetstackNoNetworkTest, DisableEthernetInterface) {
   auto services = CreateServices();
 
   fuchsia::sys::LaunchInfo netstack_launch_info;
@@ -36,20 +36,21 @@ TEST_F(NetstackFilterTest, TestRuleset) {
   services->AddServiceWithLaunchInfo(std::move(netstack_launch_info),
                                      fuchsia::netstack::Netstack::Name_);
 
-  fuchsia::sys::LaunchInfo filter_launch_info;
-  filter_launch_info.url = kNetstackUrl;
-  filter_launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
-  filter_launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
-  services->AddServiceWithLaunchInfo(std::move(filter_launch_info),
-                                     fuchsia::net::filter::Filter::Name_);
+  fuchsia::sys::LaunchInfo socket_provider_launch_info;
+  socket_provider_launch_info.url = kNetstackUrl;
+  socket_provider_launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
+  socket_provider_launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
+  services->AddServiceWithLaunchInfo(std::move(socket_provider_launch_info),
+                                     fuchsia::net::SocketProvider::Name_);
 
-  auto env = CreateNewEnclosingEnvironment("NetstackFilterTest_TestRules",
-                                           std::move(services));
+  auto env = CreateNewEnclosingEnvironment(
+      "NetstackNoNetworkTest_DisableEthernetInterface", std::move(services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
 
-  auto eth_config = netemul::EthertapConfig("TestRuleset");
+  auto eth_config = netemul::EthertapConfig("DisableEthernetInterface");
   auto tap = netemul::EthertapClient::Create(eth_config);
   ASSERT_TRUE(tap) << "failed to create ethertap device";
+  tap->SetLinkUp(true);
 
   netemul::EthernetClientFactory eth_factory;
   auto eth = eth_factory.RetrieveWithMAC(eth_config.mac);
@@ -58,22 +59,9 @@ TEST_F(NetstackFilterTest, TestRuleset) {
   fuchsia::netstack::NetstackPtr netstack;
   env->ConnectToService(netstack.NewRequest());
 
-  inet::IpAddress test_static_ip = inet::IpAddress(192, 168, 250, 1);
-  ASSERT_NE(test_static_ip, inet::IpAddress::kInvalid)
-      << "Failed to create static IP address: "
-      << test_static_ip.ToString().c_str();
-  fprintf(stderr, "created static ip address: %s\n",
-          test_static_ip.ToString().c_str());
-
-  fuchsia::net::Subnet subnet;
-  fuchsia::net::IPv4Address ipv4;
-  memcpy(ipv4.addr.data(), test_static_ip.as_bytes(), 4);
-  subnet.addr.set_ipv4(ipv4);
-  subnet.prefix_len = 24;
-
   fuchsia::netstack::InterfaceConfig config;
   config.name = kInterfaceName;
-  config.ip_address_config.set_static_ip(std::move(subnet));
+  config.ip_address_config.set_dhcp(false);
 
   uint32_t eth_id = 0;
   netstack->AddEthernetDevice(std::move(kTopoPath), std::move(config),
@@ -81,16 +69,29 @@ TEST_F(NetstackFilterTest, TestRuleset) {
                               [&eth_id](uint32_t id) { eth_id = id; });
   ASSERT_TRUE(RunLoopUntil([&eth_id] { return eth_id != 0; }));
 
-  // Launch the test program.
-  std::vector<std::string> args = {test_static_ip.ToString()};
+  inet::IpAddress ip = inet::IpAddress(192, 168, 0, 2);
+  fuchsia::net::IpAddress addr;
+  fuchsia::net::IPv4Address ipv4;
+  memcpy(ipv4.addr.data(), ip.as_bytes(), 4);
+  addr.set_ipv4(ipv4);
+
+  fuchsia::netstack::Status net_status =
+      fuchsia::netstack::Status::UNKNOWN_ERROR;
+  netstack->SetInterfaceAddress(
+      eth_id, std::move(addr), 32,
+      [&net_status](fuchsia::netstack::NetErr result) {
+        net_status = result.status;
+      });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&net_status] { return net_status == fuchsia::netstack::Status::OK; },
+      zx::sec(10)));
+
+  netstack->SetInterfaceStatus(eth_id, false);  // do not enable the interface.
 
   fuchsia::sys::LaunchInfo client_launch_info;
-  client_launch_info.url = kFilterClientUrl;
+  client_launch_info.url = kTestNoNetworkClientUrl;
   client_launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
   client_launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
-  for (const auto& a : args) {
-    client_launch_info.arguments.push_back(a);
-  }
   auto controller = env.get()->CreateComponent(std::move(client_launch_info));
 
   bool wait = false;
@@ -103,10 +104,11 @@ TEST_F(NetstackFilterTest, TestRuleset) {
         exit_code = retcode;
         term_reason = reason;
       };
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
-  ASSERT_TRUE(exit_code == 0) << "Exit code was non-zero, got: " << exit_code;
-  ASSERT_TRUE(term_reason == fuchsia::sys::TerminationReason::EXITED)
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
+  ASSERT_EQ(exit_code, 0) << "Exit code was non-zero, got: " << exit_code;
+  ASSERT_EQ(term_reason, fuchsia::sys::TerminationReason::EXITED)
       << "TerminationReason was not 'EXITED' as expected, got: "
       << sys::TerminationReasonToString(term_reason);
 }
+
 }  // namespace
