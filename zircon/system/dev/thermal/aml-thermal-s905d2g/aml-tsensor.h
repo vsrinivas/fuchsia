@@ -24,7 +24,8 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
     AmlTSensor(){};
     uint32_t ReadTemperature();
-    zx_status_t InitSensor(zx_device_t* parent, thermal_device_info_t thermal_config);
+    zx_status_t InitSensor(zx_device_t* parent,
+                           fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
     zx_status_t GetStateChangePort(zx_handle_t* port);
     ~AmlTSensor();
 
@@ -47,7 +48,7 @@ private:
     thrd_t irq_thread_;
     std::atomic<bool> running_;
     zx_handle_t port_;
-    thermal_device_info_t thermal_config_;
+    fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
     uint32_t current_trip_idx_ = 0;
 };
 } // namespace thermal

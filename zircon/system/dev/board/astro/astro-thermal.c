@@ -8,6 +8,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/bus.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -82,7 +83,7 @@ static const pbus_clk_t thermal_clk_gates[] = {
 
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-static thermal_device_info_t aml_astro_config = {
+static fuchsia_hardware_thermal_ThermalDeviceInfo aml_astro_config = {
     .active_cooling                     = false,
     .passive_cooling                    = true,
     .gpu_throttling                     = true,

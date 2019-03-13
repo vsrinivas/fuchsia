@@ -363,14 +363,15 @@ zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
     return zx_handle_duplicate(port_, ZX_RIGHT_SAME_RIGHTS, port);
 }
 
-zx_status_t AmlTSensor::InitSensor(zx_device_t* parent, thermal_device_info_t thermal_config) {
+zx_status_t AmlTSensor::InitSensor(zx_device_t* parent,
+                                   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
     zx_status_t status = InitPdev(parent);
     if (status != ZX_OK) {
         return status;
     }
 
     // Copy the thermal_config
-    memcpy(&thermal_config_, &thermal_config, sizeof(thermal_device_info_t));
+    memcpy(&thermal_config_, &thermal_config, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
 
     // Get the trim info.
     trim_info_ = ao_mmio_->Read32(AML_TRIM_INFO);

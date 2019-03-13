@@ -17,7 +17,7 @@
 namespace thermal {
 
 zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
-    if (opp_idx >= MAX_TRIP_POINTS) {
+    if (opp_idx >= fuchsia_hardware_thermal_MAX_DVFS_OPPS) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -85,10 +85,10 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     }
 
     // Get the thermal policy metadata.
-    thermal_device_info_t thermal_config;
+    fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config;
     status = device_get_metadata(device, THERMAL_CONFIG_METADATA, &thermal_config,
-                                 sizeof(thermal_device_info_t), &actual);
-    if (status != ZX_OK || actual != sizeof(thermal_device_info_t)) {
+                                 sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &actual);
+    if (status != ZX_OK || actual != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
         zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d\n", status);
         return status;
     }
@@ -176,11 +176,11 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 
     case IOCTL_THERMAL_GET_DEVICE_INFO: {
-        if (out_len != sizeof(thermal_device_info_t)) {
+        if (out_len != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        memcpy(out_buf, &thermal_config_, sizeof(thermal_device_info_t));
-        *out_actual = sizeof(thermal_device_info_t);
+        memcpy(out_buf, &thermal_config_, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
+        *out_actual = sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo);
         return ZX_OK;
     }
 
@@ -189,7 +189,8 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
             return ZX_ERR_INVALID_ARGS;
         }
         auto* dvfs_info = reinterpret_cast<const dvfs_info_t*>(in_buf);
-        if (dvfs_info->power_domain != BIG_CLUSTER_POWER_DOMAIN) {
+        if (dvfs_info->power_domain !=
+            fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
             return ZX_ERR_INVALID_ARGS;
         }
         return SetTarget(dvfs_info->op_idx);
@@ -207,6 +208,67 @@ zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
+}
+
+zx_status_t AmlThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
+}
+
+zx_status_t AmlThermal::GetInfo(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
+zx_status_t AmlThermal::GetDeviceInfo(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDeviceInfo_reply(txn, ZX_OK, &thermal_config_);
+}
+
+zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
+                                    fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
+zx_status_t AmlThermal::GetTemperature(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_OK,
+                                                               tsensor_->ReadTemperature());
+}
+
+zx_status_t AmlThermal::GetStateChangeEvent(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetStateChangeEvent_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                                    ZX_HANDLE_INVALID);
+}
+
+zx_status_t AmlThermal::GetStateChangePort(fidl_txn_t* txn) {
+    zx_handle_t handle;
+    zx_status_t status = tsensor_->GetStateChangePort(&handle);
+    return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, status, handle);
+}
+
+zx_status_t AmlThermal::SetTrip(uint16_t op_idx, fuchsia_hardware_thermal_PowerDomain power_domain,
+                                fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+zx_status_t AmlThermal::SetDvfsOperatingPoint(uint16_t op_idx,
+                                              fuchsia_hardware_thermal_PowerDomain power_domain,
+                                              fidl_txn_t* txn) {
+    if (power_domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+        return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_INVALID_ARGS);
+    }
+
+    return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, SetTarget(op_idx));
+}
+
+zx_status_t AmlThermal::GetFanLevel(fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+zx_status_t AmlThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 void AmlThermal::DdkUnbind() {
