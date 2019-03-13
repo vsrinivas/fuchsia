@@ -209,7 +209,7 @@ class Node : public Resource {
   }
 
   void SetTranslationRH(const float translation[3]) {
-    SetTranslationInternal(translation);
+    SetTranslation(translation);
   }
 
   void SetScale(float sx, float sy, float sz) {
@@ -244,8 +244,6 @@ class Node : public Resource {
   explicit Node(Session* session);
   Node(Node&& moved);
   ~Node();
-
-  void SetTranslationInternal(const float translation[3]);
 };
 
 // Represents an shape node resource in a session.
