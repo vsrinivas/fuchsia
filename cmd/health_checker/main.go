@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -75,21 +76,6 @@ func checkHealth(n *netboot.Client, nodename string) HealthCheckResult {
 	return HealthCheckResult{nodename, healthyState, ""}
 }
 
-func reboot(config target.DeviceConfig) error {
-	if config.Power == nil {
-		return fmt.Errorf("Failed to reboot the device: missing power management info in botanist config file.")
-	}
-	signers, err := target.SSHSignersFromConfigs([]target.DeviceConfig{config})
-	if err != nil {
-		return fmt.Errorf("Failed to reboot the device: %v.", err)
-	}
-
-	if err = config.Power.RebootDevice(signers, config.Nodename); err != nil {
-		return fmt.Errorf("Failed to reboot the device: %v.", err)
-	}
-	return nil
-}
-
 func printHealthCheckResults(checkResults []HealthCheckResult) error {
 	output, err := json.Marshal(checkResults)
 	if err != nil {
@@ -120,15 +106,25 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var checkResultSlice []HealthCheckResult
+
+	var devices []*target.DeviceTarget
 	for _, config := range configs {
-		nodename := config.Nodename
+		device, err := target.NewDeviceTarget(config, target.DeviceOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+		devices = append(devices, device)
+	}
+
+	var checkResultSlice []HealthCheckResult
+	for _, device := range devices {
+		nodename := device.Nodename()
 		if nodename == "" {
-			log.Fatal("Failed to retrieve nodename from config file")
+			log.Fatal("no nodename in config")
 		}
 		checkResult := checkHealth(client, nodename)
 		if checkResult.State == unhealthyState && rebootIfUnhealthy {
-			if rebootErr := reboot(config); rebootErr != nil {
+			if rebootErr := device.Restart(context.Background()); rebootErr != nil {
 				checkResult.ErrorMsg += "; " + rebootErr.Error()
 			}
 		}

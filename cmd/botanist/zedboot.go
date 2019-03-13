@@ -22,13 +22,10 @@ import (
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/netutil"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/runtests"
 
 	"github.com/google/subcommands"
-	"golang.org/x/crypto/ssh"
 )
 
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
@@ -184,66 +181,7 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodes []target.DeviceConfig, cmdlineArgs []string, signers []ssh.Signer) error {
-	var err error
-
-	// Set up log listener and dump kernel output to stdout.
-	for _, node := range nodes {
-		l, err := netboot.NewLogListener(node.Nodename)
-		if err != nil {
-			return fmt.Errorf("cannot listen: %v\n", err)
-		}
-		go func(nodename string) {
-			defer l.Close()
-			logger.Debugf(ctx, "starting log listener for <<%s>>\n", nodename)
-			for {
-				data, err := l.Listen()
-				if err != nil {
-					continue
-				}
-				if len(nodes) == 1 {
-					fmt.Print(data)
-				} else {
-					// Print each line with nodename prepended when there are multiple nodes
-					lines := strings.Split(data, "\n")
-					for _, line := range lines {
-						if len(line) > 0 {
-							fmt.Printf("<<%s>> %s\n", nodename, line)
-						}
-					}
-				}
-
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-			}
-		}(node.Nodename)
-	}
-
-	var addrs []*net.UDPAddr
-	for _, node := range nodes {
-		addr, err := netutil.GetNodeAddress(ctx, node.Nodename, false)
-		if err != nil {
-			return err
-		}
-		addrs = append(addrs, addr)
-	}
-
-	// Boot fuchsia.
-	var bootMode int
-	if cmd.netboot {
-		bootMode = botanist.ModeNetboot
-	} else {
-		bootMode = botanist.ModePave
-	}
-	for _, addr := range addrs {
-		if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, signers); err != nil {
-			return err
-		}
-	}
-
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, addr *net.UDPAddr, cmdlineArgs []string) error {
 	// Handle host commands
 	// TODO(IN-831): Remove when host-target-interaction infra is ready
 	if cmd.hostCmd != "" {
@@ -251,11 +189,6 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	}
 
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
-	if len(addrs) != 1 {
-		return fmt.Errorf("Non-host tests should have exactly 1 node defined in config, found %v", len(addrs))
-	}
-
-	addr := addrs[0]
 	return runtests.PollForSummary(ctx, addr, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
 }
 
@@ -265,22 +198,22 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	if err != nil {
 		return fmt.Errorf("failed to load target config file %q", cmd.configFile)
 	}
-
-	signers, err := target.SSHSignersFromConfigs(configs)
-	if err != nil {
-		return err
+	opts := target.DeviceOptions{
+		Netboot:  cmd.netboot,
+		Fastboot: cmd.fastboot,
 	}
 
+	var devices []*target.DeviceTarget
 	for _, config := range configs {
-		if config.Power != nil {
-			defer func(cfg *target.DeviceConfig) {
-				logger.Debugf(ctx, "rebooting the node %q\n", cfg.Nodename)
-
-				if err := cfg.Power.RebootDevice(signers, cfg.Nodename); err != nil {
-					logger.Errorf(ctx, "failed to reboot the device: %v", err)
-				}
-			}(&config)
+		device, err := target.NewDeviceTarget(config, opts)
+		if err != nil {
+			return err
 		}
+		devices = append(devices, device)
+	}
+
+	for _, device := range devices {
+		defer device.Restart(ctx)
 	}
 
 	imgs, err := build.LoadImages(cmd.imageManifests...)
@@ -291,27 +224,21 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	errs := make(chan error)
-	go func() {
-		if cmd.fastboot != "" {
-			zirconR := imgs.Get("zircon-r")
-			if zirconR == nil {
-				errs <- fmt.Errorf("zircon-r not provided")
-				return
-			}
-			// If it can't find any fastboot device, the fastboot
-			// tool will hang waiting, so we add a timeout.
-			// All fastboot operations take less than a second on
-			// a developer workstation, so two minutes to flash and
-			// continue is very generous.
-			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-			defer cancel()
-			logger.Debugf(ctx, "flashing to zedboot with fastboot\n")
-			if err := botanist.FastbootToZedboot(ctx, cmd.fastboot, zirconR.Path); err != nil {
+
+	for _, device := range devices {
+		go func() {
+			if err := device.Start(ctx, imgs, cmdlineArgs); err != nil {
 				errs <- err
-				return
 			}
+		}()
+	}
+	go func() {
+		addr, err := devices[0].IPv6Addr()
+		if err != nil {
+			errs <- err
+			return
 		}
-		errs <- cmd.runTests(ctx, imgs, configs, cmdlineArgs, signers)
+		errs <- cmd.runTests(ctx, imgs, addr, cmdlineArgs)
 	}()
 
 	select {
