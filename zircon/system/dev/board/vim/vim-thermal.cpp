@@ -83,7 +83,7 @@ static const pbus_gpio_t fanctl_gpios[] = {
  * Operating point -1 - INVALID/No throttling needed
  */
 
-static thermal_device_info_t aml_vim2_config = {
+static fuchsia_hardware_thermal_ThermalDeviceInfo aml_vim2_config = {
     .active_cooling = true,
     .passive_cooling = true,
     .gpu_throttling = true,

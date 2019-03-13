@@ -8,6 +8,8 @@
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/scpi.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/port.h>
 #include <threads.h>
@@ -27,7 +29,7 @@ enum FanLevel {
 };
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Ioctlable, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Ioctlable, ddk::Messageable, ddk::Unbindable>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
 class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
@@ -56,10 +58,44 @@ public:
     // Ddk-required methods.
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkUnbind();
     void DdkRelease();
 
 private:
+    zx_status_t GetInfo(fidl_txn_t* txn);
+    zx_status_t GetDeviceInfo(fidl_txn_t* txn);
+    zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);
+    zx_status_t GetTemperature(fidl_txn_t* txn);
+    zx_status_t GetStateChangeEvent(fidl_txn_t* txn);
+    zx_status_t GetStateChangePort(fidl_txn_t* txn);
+    zx_status_t SetTrip(uint16_t op_idx, fuchsia_hardware_thermal_PowerDomain power_domain,
+                        fidl_txn_t* txn);
+    zx_status_t GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
+                                      fidl_txn_t* txn);
+    zx_status_t SetDvfsOperatingPoint(uint16_t op_idx,
+                                      fuchsia_hardware_thermal_PowerDomain power_domain,
+                                      fidl_txn_t* txn);
+    zx_status_t GetFanLevel(fidl_txn_t* txn);
+    zx_status_t SetFanLevel(uint32_t fan_level, fidl_txn_t* txn);
+
+    static constexpr fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
+        .GetInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetInfo>,
+        .GetDeviceInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDeviceInfo>,
+        .GetDvfsInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsInfo>,
+        .GetTemperature = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperature>,
+        .GetStateChangeEvent =
+            fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangeEvent>,
+        .GetStateChangePort = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangePort>,
+        .SetTrip = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetTrip>,
+        .GetDvfsOperatingPoint =
+            fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsOperatingPoint>,
+        .SetDvfsOperatingPoint =
+            fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetDvfsOperatingPoint>,
+        .GetFanLevel = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetFanLevel>,
+        .SetFanLevel = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetFanLevel>,
+    };
+
     // Notification thread implementation.
     int Worker();
 
@@ -78,7 +114,7 @@ private:
     zx::port port_;
 
     thrd_t worker_ = {};
-    thermal_device_info_t info_ = {};
+    fuchsia_hardware_thermal_ThermalDeviceInfo info_ = {};
     FanLevel fan_level_ = FAN_L0;
     uint32_t temperature_ = 0;
     sync_completion quit_;
