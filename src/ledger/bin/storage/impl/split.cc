@@ -63,7 +63,7 @@ class SplitContext {
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
       fit::function<void(IterationStatus, ObjectIdentifier,
-                         const std::vector<ObjectIdentifier>& children,
+                         const ObjectReferences& children,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback,
       ObjectType object_type)
@@ -132,7 +132,7 @@ class SplitContext {
   // Information about a piece of data (chunk or index) to be sent.
   struct PendingPiece {
     ObjectIdentifier identifier;
-    std::vector<ObjectIdentifier> children;
+    ObjectReferences children;
     std::unique_ptr<DataSource::DataChunk> data;
 
     bool ready() { return data != nullptr; }
@@ -143,8 +143,7 @@ class SplitContext {
   // until the next call of this method, because the last object needs to be
   // treated differently in |SendDone|. |children| must contain the identifiers
   // of the children pieces if |type| is INDEX, and be empty otherwise.
-  ObjectIdentifier SendInProgress(PieceType type,
-                                  std::vector<ObjectIdentifier> children,
+  ObjectIdentifier SendInProgress(PieceType type, ObjectReferences children,
                                   std::unique_ptr<DataSource::DataChunk> data) {
     if (latest_piece_.ready()) {
       callback_(IterationStatus::IN_PROGRESS,
@@ -270,10 +269,9 @@ class SplitContext {
         << "Expected maximum of: " << kMaxChunkSize
         << ", but got: " << chunk->Get().size();
 
-    std::vector<ObjectIdentifier> children;
-    children.reserve(identifiers_and_sizes.size());
+    ObjectReferences children;
     for (auto& child : identifiers_and_sizes) {
-      children.push_back(std::move(child.identifier));
+      children.insert(std::move(child.identifier));
     }
 
     auto identifier =
@@ -332,7 +330,7 @@ class SplitContext {
 
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
   fit::function<void(IterationStatus, ObjectIdentifier,
-                     const std::vector<ObjectIdentifier>& children,
+                     const ObjectReferences& children,
                      std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   // The object encoded by DataSource.
@@ -414,7 +412,7 @@ void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
     fit::function<void(IterationStatus, ObjectIdentifier,
-                       const std::vector<ObjectIdentifier>&,
+                       const ObjectReferences&,
                        std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(make_object_identifier), std::move(callback),

@@ -108,6 +108,9 @@ bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e);
 
+// Object-object references from a given object, for garbage collection.
+using ObjectReferences = std::set<ObjectIdentifier>;
+
 // An entry in a commit.
 struct Entry {
   std::string key;

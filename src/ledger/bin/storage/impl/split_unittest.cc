@@ -83,7 +83,7 @@ struct Call {
 
 struct SplitResult {
   std::vector<Call> calls;
-  std::map<ObjectDigest, std::vector<ObjectIdentifier>> children;
+  std::map<ObjectDigest, ObjectReferences> children;
   std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>> data;
 };
 
@@ -97,7 +97,7 @@ void DoSplit(DataSource* source, ObjectType object_type,
       },
       [result = std::move(result), callback = std::move(callback)](
           IterationStatus status, ObjectIdentifier identifier,
-          const std::vector<ObjectIdentifier>& children,
+          const ObjectReferences& children,
           std::unique_ptr<DataSource::DataChunk> data) mutable {
         EXPECT_TRUE(result);
         const auto& digest = identifier.object_digest();

@@ -35,7 +35,7 @@ void SplitDataSource(
     DataSource* source, ObjectType type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
     fit::function<void(IterationStatus, ObjectIdentifier,
-                       const std::vector<ObjectIdentifier>&,
+                       const ObjectReferences&,
                        std::unique_ptr<DataSource::DataChunk>)>
         callback);
 
