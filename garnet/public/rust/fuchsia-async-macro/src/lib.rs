@@ -239,8 +239,12 @@ struct RunAttributes {
 impl Parse for RunAttributes {
     fn parse(input: ParseStream) -> syn::parse::Result<Self> {
         let threads = input.parse::<syn::LitInt>()?.value() as usize;
-        input.parse::<syn::Token![,]>()?;
-        let test = input.parse::<Option<kw::test>>()?.is_some();
+        let comma = input.parse::<Option<syn::Token![,]>>()?.is_some();
+        let test = if comma {
+            input.parse::<Option<kw::test>>()?.is_some()
+        } else {
+            false
+        };
         Ok(RunAttributes { threads, test })
     }
 }
