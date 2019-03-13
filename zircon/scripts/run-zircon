@@ -90,6 +90,13 @@ else
   IFNAME="qemu"
 fi
 
+# Propagate our TERM environment variable as a kernel command line
+# argument.  This is first so that an explicit -c TERM=foo argument
+# goes into CMDLINE later and overrides this.
+if [[ -n $TERM ]]; then
+    CMDLINE+="TERM=$TERM "
+fi
+
 # QEMU looks for its own files in its current directory before looking in its
 # data directory (.../share/qemu/).  So a file in the current directory that
 # happens to match one of those internal files' names will be used instead of
@@ -410,14 +417,6 @@ case $ARCH in
         HELP
         ;;
 esac
-
-# Propagate our TERM environment variable as a kernel command line
-# argument.  This is last so that an explicit -c TERM=foo argument
-# goes into CMDLINE first.  Kernel command line words become environment
-# variables, and the first variable in the list wins for getenv calls.
-if [[ -n $TERM ]]; then
-    CMDLINE+="TERM=$TERM "
-fi
 
 # Add entropy to the kernel
 CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
