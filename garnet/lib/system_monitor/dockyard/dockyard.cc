@@ -12,7 +12,6 @@
 
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/threading/thread.h"
 
 namespace dockyard {
 
@@ -186,16 +185,15 @@ std::ostream& operator<<(std::ostream& out,
 }
 
 Dockyard::Dockyard()
-    : server_thread_(nullptr),
-      stream_name_handler_(nullptr),
+    : stream_name_handler_(nullptr),
       stream_sets_handler_(nullptr),
       next_context_id_(0ULL) {}
 
 Dockyard::~Dockyard() {
   std::lock_guard<std::mutex> guard(mutex_);
   FXL_LOG(INFO) << "Stopping dockyard server";
-  if (server_thread_ != nullptr) {
-    server_thread_->Join();
+  if (server_thread_.joinable()) {
+    server_thread_.join();
   }
   for (SampleStreamMap::iterator i = sample_streams_.begin();
        i != sample_streams_.end(); ++i) {
@@ -299,18 +297,18 @@ void Dockyard::StopCollectingFrom(const std::string& device) {
 }
 
 bool Dockyard::Initialize() {
-  if (server_thread_ != nullptr) {
+  if (server_thread_.joinable()) {
     return true;
   }
   FXL_LOG(INFO) << "Starting dockyard server";
   server_thread_ =
-      new fxl::Thread([this] { RunGrpcServer(DEFAULT_SERVER_ADDRESS, this); });
-  return server_thread_->Run();
+      std::thread([this] { RunGrpcServer(DEFAULT_SERVER_ADDRESS, this); });
+  return server_thread_.joinable();
 }
 
 StreamNamesCallback Dockyard::SetStreamNamesHandler(
     StreamNamesCallback callback) {
-  assert(server_thread_ == nullptr);
+  assert(!server_thread_.joinable());
   auto old_handler = stream_name_handler_;
   stream_name_handler_ = callback;
   return old_handler;

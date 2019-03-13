@@ -6,15 +6,13 @@
 #define GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_H_
 
 #include <stdint.h>
+
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
-
-namespace fxl {
-class Thread;
-}  // namespace fxl.
 
 namespace dockyard {
 
@@ -238,7 +236,7 @@ class Dockyard {
  private:
   // TODO(dschuyler): avoid having a global mutex. Use a queue to update data.
   mutable std::mutex mutex_;
-  fxl::Thread* server_thread_;
+  std::thread server_thread_;
 
   // Communication with the GUI.
   StreamNamesCallback stream_name_handler_;
