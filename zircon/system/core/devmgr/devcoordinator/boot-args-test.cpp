@@ -25,11 +25,11 @@ bool CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args
 bool Get() {
     BEGIN_TEST;
 
-    const char config[] = "key1=value1\0key2=value2";
+    const char config[] = "key1=old-value\0key2=value2\0key1=new-value";
 
     devmgr::BootArgs boot_args;
     ASSERT_TRUE(CreateBootArgs(config, sizeof(config), &boot_args));
-    ASSERT_STR_EQ("value1", boot_args.Get("key1"));
+    ASSERT_STR_EQ("new-value", boot_args.Get("key1"));
     ASSERT_STR_EQ("value2", boot_args.Get("key2"));
 
     END_TEST;
