@@ -34,10 +34,11 @@ typedef struct acpi_thermal_device {
 
     // programmable trip points
     uint32_t trip_point_count;
-    uint32_t trip_points[MAX_TRIP_POINTS];
+    uint32_t trip_points[fuchsia_hardware_thermal_MAX_TRIP_POINTS];
 } acpi_thermal_device_t;
 
-static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev, thermal_info_t* info) {
+static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev,
+                                         fuchsia_hardware_thermal_ThermalInfo* info) {
     mtx_lock(&dev->lock);
     zx_status_t st = ZX_OK;
 
@@ -62,7 +63,7 @@ static zx_status_t acpi_thermal_get_info(acpi_thermal_device_t* dev, thermal_inf
     }
     info->state = 0;
     if (info->active_trip[0] && (temp > info->active_trip[0])) {
-        info->state |= THERMAL_STATE_TRIP_VIOLATION;
+        info->state |= fuchsia_hardware_thermal_THERMAL_STATE_TRIP_VIOLATION;
     }
 out:
     mtx_unlock(&dev->lock);
@@ -96,14 +97,14 @@ static zx_status_t acpi_thermal_ioctl(void* ctx, uint32_t op,
     acpi_thermal_device_t* dev = ctx;
     switch (op) {
     case IOCTL_THERMAL_GET_INFO: {
-        if (out_len != sizeof(thermal_info_t)) {
+        if (out_len != sizeof(fuchsia_hardware_thermal_ThermalInfo)) {
             return ZX_ERR_INVALID_ARGS;
         }
 
         // reading state clears the signal
         zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
 
-        thermal_info_t info;
+        fuchsia_hardware_thermal_ThermalInfo info;
         zx_status_t status = acpi_thermal_get_info(dev, &info);
         if (status != ZX_OK) {
             return status;
@@ -155,6 +156,114 @@ static zx_status_t acpi_thermal_ioctl(void* ctx, uint32_t op,
     }
 }
 
+static zx_status_t fidl_GetInfo(void* ctx, fidl_txn_t* txn) {
+    acpi_thermal_device_t* dev = ctx;
+
+    // reading state clears the signal
+    zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+
+    fuchsia_hardware_thermal_ThermalInfo info;
+    zx_status_t status = acpi_thermal_get_info(dev, &info);
+    if (status != ZX_OK) {
+        return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, status, NULL);
+    }
+
+    return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, status, &info);
+}
+
+static zx_status_t fidl_GetDeviceInfo(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDeviceInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, NULL);
+}
+
+static zx_status_t fidl_GetDvfsInfo(void* ctx, fuchsia_hardware_thermal_PowerDomain power_domain,
+                                    fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, NULL);
+}
+
+static zx_status_t fidl_GetTemperature(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetTemperature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t fidl_GetStateChangeEvent(void* ctx, fidl_txn_t* txn) {
+    acpi_thermal_device_t* dev = ctx;
+
+    zx_handle_t handle;
+    zx_status_t status = zx_handle_duplicate(dev->event, ZX_RIGHT_SAME_RIGHTS, &handle);
+
+    if (status == ZX_OK) {
+        // clear the signal before returning
+        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
+    }
+
+    return fuchsia_hardware_thermal_DeviceGetStateChangeEvent_reply(txn, status, handle);
+}
+
+static zx_status_t fidl_GetStateChangePort(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, ZX_ERR_NOT_SUPPORTED,
+                                                                   ZX_HANDLE_INVALID);
+}
+
+static zx_status_t fidl_SetTrip(void* ctx, uint32_t id, uint32_t temp, fidl_txn_t* txn) {
+    acpi_thermal_device_t* dev = ctx;
+
+    if (dev->trip_point_count < 1) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // only one trip point for now
+    if (id != 0) {
+        return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_ERR_INVALID_ARGS);
+    }
+    ACPI_STATUS acpi_status = acpi_evaluate_method_intarg(dev->acpi_handle,
+                                                          "PAT0", temp);
+    if (acpi_status != AE_OK) {
+        zxlogf(ERROR, "acpi-thermal: acpi error %d in PAT0\n", acpi_status);
+        return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, acpi_to_zx_status(acpi_status));
+    }
+    mtx_lock(&dev->lock);
+    dev->trip_points[0] = temp;
+    mtx_unlock(&dev->lock);
+    return fuchsia_hardware_thermal_DeviceSetTrip_reply(txn, ZX_OK);
+}
+
+static zx_status_t fidl_GetDvfsOperatingPoint(void* ctx,
+                                              fuchsia_hardware_thermal_PowerDomain power_domain,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t fidl_SetDvfsOperatingPoint(void* ctx, uint16_t op_idx,
+                                              fuchsia_hardware_thermal_PowerDomain power_domain,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t fidl_GetFanLevel(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceGetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t fidl_SetFanLevel(void* ctx, uint32_t fan_level, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static const fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
+    .GetInfo = fidl_GetInfo,
+    .GetDeviceInfo = fidl_GetDeviceInfo,
+    .GetDvfsInfo = fidl_GetDvfsInfo,
+    .GetTemperature = fidl_GetTemperature,
+    .GetStateChangeEvent = fidl_GetStateChangeEvent,
+    .GetStateChangePort = fidl_GetStateChangePort,
+    .SetTrip = fidl_SetTrip,
+    .GetDvfsOperatingPoint = fidl_GetDvfsOperatingPoint,
+    .SetDvfsOperatingPoint = fidl_SetDvfsOperatingPoint,
+    .GetFanLevel = fidl_GetFanLevel,
+    .SetFanLevel = fidl_SetFanLevel,
+};
+
+static zx_status_t acpi_thermal_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_thermal_Device_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 static void acpi_thermal_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
     acpi_thermal_device_t* dev = ctx;
     zxlogf(TRACE, "acpi-thermal: got event 0x%x\n", value);
@@ -177,6 +286,7 @@ static zx_protocol_device_t acpi_thermal_device_proto = {
     .read = acpi_thermal_read,
     .ioctl = acpi_thermal_ioctl,
     .release = acpi_thermal_release,
+    .message = acpi_thermal_message,
 };
 
 zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDLE acpi_handle) {
