@@ -40,6 +40,18 @@ const size_t kZx1130KeyLen = 32;
 
 using key_slot_t = zx_off_t;
 
+// Unifying types used for a couple of calls that will call either FIDL or Banjo
+// interfaces under the hood.
+typedef struct {
+    uint64_t block_count;
+    uint32_t block_size;
+} BlockInfo;
+
+typedef struct {
+    bool allocated;
+    size_t count;
+} SliceRegion;
+
 class Volume {
 public:
     // The supported version, named by the algorithms they use.  New version should increment the
@@ -122,8 +134,13 @@ protected:
     ////////////////
     // Device methods
 
-    // Sends an I/O control message to the underlying device and reads the response.
-    virtual zx_status_t Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len) = 0;
+    virtual zx_status_t GetBlockInfo(BlockInfo* out) = 0;
+    virtual zx_status_t GetFvmSliceSize(uint64_t* out) = 0;
+    static const size_t MAX_SLICE_REGIONS = 16;
+    virtual zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start,
+                                              SliceRegion ranges[MAX_SLICE_REGIONS],
+                                              uint64_t* slice_count) = 0;
+    virtual zx_status_t DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) = 0;
 
     // Reads a block from the current offset on the underlying device.
     virtual zx_status_t Read() = 0;

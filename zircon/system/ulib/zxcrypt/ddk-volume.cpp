@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 #include <ddk/protocol/block.h>
+#include <ddk/protocol/block/volume.h>
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/debug.h>
@@ -151,12 +152,83 @@ zx_status_t DdkVolume::Unlock(const crypto::Secret& key, key_slot_t slot) {
     return Volume::Unlock(key, slot);
 }
 
-zx_status_t DdkVolume::Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len) {
-    // Don't include debug messages here; some errors (e.g. ZX_ERR_NOT_SUPPORTED)
-    // are expected under certain conditions (e.g. calling FVM ioctls on a non-FVM
-    // device).  Handle error reporting at the call sites instead.
-    size_t actual;
-    return device_ioctl(dev_, op, in, in_len, out, out_len, &actual);
+zx_status_t DdkVolume::GetBlockInfo(BlockInfo* out) {
+    zx_status_t rc;
+    block_impl_protocol_t proto;
+    if ((rc = device_get_protocol(dev_, ZX_PROTOCOL_BLOCK, &proto)) != ZX_OK) {
+        xprintf("block protocol not supported\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    block_info_t info;
+    size_t block_op_size;
+    block_impl_query(&proto, &info, &block_op_size);
+
+    out->block_count = info.block_count;
+    out->block_size = info.block_size;
+    return ZX_OK;
+}
+
+zx_status_t DdkVolume::GetFvmSliceSize(uint64_t* out) {
+    zx_status_t rc;
+    block_volume_protocol_t proto;
+    if ((rc = device_get_protocol(dev_, ZX_PROTOCOL_BLOCK_VOLUME, &proto)) != ZX_OK) {
+        xprintf("block volume protocol not supported\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    parent_volume_info_t info;
+    if ((rc = block_volume_query(&proto, &info)) != ZX_OK) {
+        return rc;
+    }
+
+    *out = info.slice_size;
+    return ZX_OK;
+}
+
+zx_status_t DdkVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
+                                             SliceRegion ranges[MAX_SLICE_REGIONS],
+                                             uint64_t* slice_count) {
+    static_assert(MAX_SLICE_QUERY_REQUESTS == Volume::MAX_SLICE_REGIONS,
+                  "block volume slice response count must match");
+    zx_status_t rc;
+    block_volume_protocol_t proto;
+    if ((rc = device_get_protocol(dev_, ZX_PROTOCOL_BLOCK_VOLUME, &proto)) != ZX_OK) {
+        xprintf("block volume protocol not supported\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    slice_region_t tmp_ranges[MAX_SLICE_QUERY_REQUESTS];
+    size_t range_count;
+    if ((rc = block_volume_query_slices(&proto, &vslice_start, 1, tmp_ranges,
+                                        MAX_SLICE_QUERY_REQUESTS, &range_count)) != ZX_OK) {
+        return rc;
+    }
+    if (range_count > Volume::MAX_SLICE_REGIONS) {
+        // Should be impossible.  Trust nothing.
+        return ZX_ERR_BAD_STATE;
+    }
+
+    *slice_count = range_count;
+    for (size_t i = 0; i < range_count; i++) {
+        ranges[i].allocated = tmp_ranges[i].allocated;
+        ranges[i].count = tmp_ranges[i].count;
+    }
+    return ZX_OK;
+}
+
+zx_status_t DdkVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) {
+    zx_status_t rc;
+    block_volume_protocol_t proto;
+    if ((rc = device_get_protocol(dev_, ZX_PROTOCOL_BLOCK_VOLUME, &proto)) != ZX_OK) {
+        xprintf("block volume protocol not supported\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    slice_extent_t extent;
+    extent.offset = start_slice;
+    extent.length = slice_count;
+    return block_volume_extend(&proto, &extent);
 }
 
 zx_status_t DdkVolume::Read() {

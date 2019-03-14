@@ -32,9 +32,10 @@ private:
     // corresponding to given key |slot|.
     zx_status_t Unlock(const crypto::Secret& key, key_slot_t slot);
 
-    // Sends an I/O control message to the underlying device and reads the
-    // response.
-    zx_status_t Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len);
+    zx_status_t GetBlockInfo(BlockInfo* out);
+    zx_status_t GetFvmSliceSize(uint64_t* out);
+    zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start, SliceRegion ranges[MAX_SLICE_REGIONS], uint64_t* slice_count);
+    zx_status_t DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count);
 
     // Reads a block from the current offset on the underlying device.
     zx_status_t Read();

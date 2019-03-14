@@ -19,13 +19,17 @@ library("zxcrypt") {
   configs += [ "$zx/public/gn/config:integer-paranoia" ]
   deps = [
     "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk-protocol-block-volume",
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/ulib/crypto",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/ramdevice-client:static",
     "$zx/system/ulib/sync",

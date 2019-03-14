@@ -145,8 +145,8 @@ zx_status_t Volume::Init() {
     zx_status_t rc;
 
     // Get block info; align our blocks to pages
-    block_info_t blk;
-    if ((rc = Ioctl(IOCTL_BLOCK_GET_INFO, nullptr, 0, &blk, sizeof(blk))) < 0) {
+    BlockInfo blk;
+    if ((rc = GetBlockInfo(&blk)) != ZX_OK) {
         xprintf("failed to get block info: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -162,37 +162,35 @@ zx_status_t Volume::Init() {
         return rc;
     }
     // Get FVM info
-    fvm_info_t fvm;
-    switch ((rc = Ioctl(IOCTL_BLOCK_FVM_QUERY, nullptr, 0, &fvm, sizeof(fvm)))) {
+    uint64_t fvm_slice_size;
+    switch ((rc = GetFvmSliceSize(&fvm_slice_size))) {
     case ZX_OK: {
         // This *IS* an FVM partition.
         // Ensure first kReservedSlices + 1 slices are allocated
-        size_t blocks_per_slice = fvm.slice_size / blk.block_size;
+        size_t blocks_per_slice = fvm_slice_size / blk.block_size;
         reserved_blocks_ = fbl::round_up(reserved_blocks_, blocks_per_slice);
         reserved_slices_ = reserved_blocks_ / blocks_per_slice;
         size_t required = reserved_slices_ + 1;
         size_t range = 1;
-        query_request_t request;
-        query_response_t response;
-        extend_request_t extend;
         for (size_t i = 0; i < required; i += range) {
             // Ask about the next contiguous range
-            request.count = 1;
-            request.vslice_start[0] = i + 1;
-            if ((rc = Ioctl(IOCTL_BLOCK_FVM_VSLICE_QUERY, &request, sizeof(request), &response,
-                            sizeof(response))) < 0 ||
-                response.count == 0 || (range = response.vslice_range[0].count) == 0) {
+            SliceRegion ranges[MAX_SLICE_REGIONS];
+            uint64_t slice_count;
+            if ((rc = DoBlockFvmVsliceQuery(i+1, ranges, &slice_count)) != ZX_OK ||
+                slice_count == 0 ||
+                ((range = ranges[0].count) == 0)) {
                 xprintf("ioctl_block_fvm_vslice_query failed: %s\n", zx_status_get_string(rc));
                 return rc;
             }
             // If already allocated, continue
-            if (response.vslice_range[0].allocated) {
+            if (ranges[0].allocated) {
                 continue;
             };
             // Otherwise, allocate it
-            extend.offset = i + 1;
-            extend.length = fbl::min(required - i, range);
-            if ((rc = Ioctl(IOCTL_BLOCK_FVM_EXTEND, &extend, sizeof(extend), nullptr, 0)) < 0) {
+            uint64_t extend_start_slice = i + 1;
+            uint64_t extend_length = fbl::min(required - i, range);
+
+            if ((rc = DoBlockFvmExtend(extend_start_slice, extend_length)) != ZX_OK) {
                 xprintf("failed to extend FVM partition: %s\n", zx_status_get_string(rc));
                 return rc;
             }
@@ -201,8 +199,10 @@ zx_status_t Volume::Init() {
     }
     case ZX_ERR_NOT_SUPPORTED:
         // This is *NOT* an FVM partition.
+        xprintf("Not an FVM partition\n");
         break;
     default:
+        xprintf("init failed: %s\n", zx_status_get_string(rc));
         // An error occurred
         return rc;
     }

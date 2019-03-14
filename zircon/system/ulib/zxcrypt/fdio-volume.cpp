@@ -10,7 +10,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fuchsia/device/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zircon-internal/debug.h>
 #include <ramdevice-client/ramdisk.h> // Why does wait_for_device() come from here?
 #include <zircon/status.h>
@@ -117,21 +120,18 @@ zx_status_t FdioVolume::Init() {
 zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     zx_status_t rc;
 
-    fdio_t* io = fdio_unsafe_fd_to_io(fd_.get());
-    if (io == nullptr) {
+    fzl::UnownedFdioCaller caller(fd_.get());
+    if (!caller) {
         xprintf("could not convert fd to io\n");
         return ZX_ERR_BAD_STATE;
     }
-    auto cleanup_fdio = fbl::MakeAutoCall([io]() {
-        fdio_unsafe_release(io);
-    });
 
     // Get the full device path
     fbl::StringBuffer<PATH_MAX> path;
     path.Resize(path.capacity());
     zx_status_t call_status;
     size_t path_len;
-    rc = fuchsia_device_ControllerGetTopologicalPath(fdio_unsafe_borrow_channel(io),
+    rc = fuchsia_device_ControllerGetTopologicalPath(caller.borrow_channel(),
                                                      &call_status, path.data(),
                                                      path.capacity(), &path_len);
     if (rc == ZX_OK) {
@@ -152,7 +152,7 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     }
 
     // Bind the device
-    rc = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kDriverLib,
+    rc = fuchsia_device_ControllerBind(caller.borrow_channel(), kDriverLib,
                                        strlen(kDriverLib), &call_status);
     if (rc == ZX_OK) {
         rc = call_status;
@@ -175,14 +175,119 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     return ZX_OK;
 }
 
-zx_status_t FdioVolume::Ioctl(int op, const void* in, size_t in_len, void* out, size_t out_len) {
-    // Don't include debug messages here; some errors (e.g. ZX_ERR_NOT_SUPPORTED)
-    // are expected under certain conditions (e.g. calling FVM ioctls on a non-FVM
-    // device).  Handle error reporting at the call sites instead.
+zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
+    zx_status_t rc;
+    zx_status_t call_status;
+    fzl::UnownedFdioCaller caller(fd_.get());
+    if (!caller) {
+        return ZX_ERR_BAD_STATE;
+    }
+    fuchsia_hardware_block_BlockInfo block_info;
+    if ((rc = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(),
+                                                  &call_status, &block_info)) != ZX_OK) {
+        return rc;
+    }
+    if (call_status != ZX_OK) {
+        return call_status;
+    }
 
-    ssize_t res;
-    if ((res = fdio_ioctl(fd_.get(), op, in, in_len, out, out_len)) < 0) {
-        return static_cast<zx_status_t>(res);
+    out->block_count = block_info.block_count;
+    out->block_size = block_info.block_size;
+    return ZX_OK;
+}
+
+zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
+    zx_status_t rc;
+    zx_status_t call_status;
+    fzl::UnownedFdioCaller caller(fd_.get());
+    if (!caller) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // When this function is called, we're not yet sure if the underlying device
+    // actually implements the block protocol, and we use the return value here
+    // to tell us if we should utilize FVM-specific codepaths or not.
+    // If the underlying channel doesn't respond to volume methods, when we call
+    // a method from fuchsia.hardware.block.volume the FIDL channel will be
+    // closed and we'll be unable to do other calls to it.  So before making
+    // this call, we clone the channel.
+    zx::channel channel(fdio_service_clone(caller.borrow_channel()));
+
+    fuchsia_hardware_block_volume_VolumeInfo volume_info;
+    if ((rc = fuchsia_hardware_block_volume_VolumeQuery(channel.get(),
+                                                        &call_status, &volume_info)) != ZX_OK) {
+        if (rc == ZX_ERR_PEER_CLOSED) {
+            // The channel being closed here means that the thing at the other
+            // end of this channel does not speak the FVM protocol, and has
+            // closed the channel on us.  Return the appropriate error to signal
+            // that we shouldn't bother with any of the FVM codepaths.
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        return rc;
+    }
+    if (call_status != ZX_OK) {
+        return call_status;
+    }
+
+    *out = volume_info.slice_size;
+    return ZX_OK;
+}
+
+zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
+                                              SliceRegion ranges[Volume::MAX_SLICE_REGIONS],
+                                              uint64_t* slice_count) {
+    static_assert(fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS == Volume::MAX_SLICE_REGIONS,
+                  "block volume slice response count must match");
+    zx_status_t rc;
+    zx_status_t call_status;
+    fzl::UnownedFdioCaller caller(fd_.get());
+    if (!caller) {
+        return ZX_ERR_BAD_STATE;
+    }
+    fuchsia_hardware_block_volume_VsliceRange tmp_ranges[Volume::MAX_SLICE_REGIONS];
+    uint64_t range_count;
+
+    if ((rc =
+         fuchsia_hardware_block_volume_VolumeQuerySlices(caller.borrow_channel(),
+                                                         &vslice_start, 1,
+                                                         &call_status,
+                                                         tmp_ranges,
+                                                         &range_count)) != ZX_OK) {
+        return rc;
+    }
+    if (call_status != ZX_OK) {
+        return call_status;
+    }
+
+    if (range_count > Volume::MAX_SLICE_REGIONS) {
+        // Should be impossible.  Trust nothing.
+        return ZX_ERR_BAD_STATE;
+    }
+
+    *slice_count = range_count;
+    for (size_t i = 0; i < range_count; i++) {
+        ranges[i].allocated = tmp_ranges[i].allocated;
+        ranges[i].count = tmp_ranges[i].count;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) {
+    zx_status_t rc;
+    zx_status_t call_status;
+    fzl::UnownedFdioCaller caller(fd_.get());
+    if (!caller) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if ((rc = fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(),
+                                                         start_slice,
+                                                         slice_count,
+                                                         &call_status)) != ZX_OK) {
+        return rc;
+    }
+    if (call_status != ZX_OK) {
+        return call_status;
     }
 
     return ZX_OK;
@@ -226,6 +331,5 @@ zx_status_t FdioVolume::Write() {
     }
     return ZX_OK;
 }
-
 
 } // namespace zxcrypt
