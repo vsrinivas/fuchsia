@@ -61,7 +61,8 @@ zx_status_t Mt8167I2c::I2cImplTransact(uint32_t id, const i2c_impl_op_t* ops, si
         status = Transact(ops[i].is_read, id, addr, ops[i].data_buffer, ops[i].data_size,
                           ops[i].stop);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: status %d\n", __FUNCTION__, status);
+            zxlogf(ERROR, "%s: error in bus id: %u  addr: 0x%X  size: %lu\n", __func__, id, addr,
+                   ops[i].data_size);
             Reset(id);
             return status;
         }
@@ -82,12 +83,6 @@ int Mt8167I2c::IrqThread() {
         auto id = static_cast<uint32_t>(packet.key);
         ZX_ASSERT(id < keys_.size());
         keys_[id].irq.ack();
-        auto st = IntrStatReg::Get().ReadFrom(&keys_[id].mmio);
-        if (st.arb_lost() || st.hs_nacker() || st.ackerr()) {
-            zxlogf(ERROR, "%s: error 0x%08X\n", __func__,
-                   IntrStatReg::Get().ReadFrom(&keys_[id].mmio).reg_value());
-            IntrStatReg::Get().ReadFrom(&keys_[id].mmio).Print();
-        }
         keys_[id].event.signal(0, kEventCompletion);
     }
 }
@@ -144,6 +139,11 @@ zx_status_t Mt8167I2c::Transact(bool is_read, uint32_t id, uint8_t addr, void* b
     }
     auto st = IntrStatReg::Get().ReadFrom(&keys_[id].mmio);
     if (st.arb_lost() || st.hs_nacker() || st.ackerr()) {
+        zxlogf(ERROR, "%s: I2C error 0x%X\n", __func__,
+               IntrStatReg::Get().ReadFrom(&keys_[id].mmio).reg_value());
+        if (st.ackerr()) {
+            zxlogf(ERROR, "%s: No I2C ack reply from peripheral\n", __func__);
+        }
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
