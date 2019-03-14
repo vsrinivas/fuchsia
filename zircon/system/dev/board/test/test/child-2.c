@@ -67,7 +67,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         .name = "child-2",
         .ctx = test,
         .ops = &test_device_protocol,
-        .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     status = device_add(parent, &args, &test->zxdev);

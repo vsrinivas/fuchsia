@@ -72,7 +72,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
     device_add_args_t child_2_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "child-2",
+        .name = "child-2-top",
         .ctx = child_2,
         .ops = &test_device_protocol,
         .props = child_2_props,
@@ -100,7 +100,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
     device_add_args_t child_3_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "child-3",
+        .name = "child-3-top",
         .ctx = child_3,
         .ops = &test_device_protocol,
         .props = child_3_props,

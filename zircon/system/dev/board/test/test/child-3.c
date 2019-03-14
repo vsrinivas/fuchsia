@@ -67,7 +67,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         .name = "child-3",
         .ctx = test,
         .ops = &test_device_protocol,
-        .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     status = device_add(parent, &args, &test->zxdev);
@@ -88,6 +87,6 @@ static zx_driver_ops_t test_driver_ops = {
 ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST), 
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_3),
 ZIRCON_DRIVER_END(test_bus)
