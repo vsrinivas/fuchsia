@@ -10,6 +10,7 @@ use {
     futures::{channel::mpsc, poll, select},
     pin_utils::pin_mut,
     std::collections::HashMap,
+    std::task::Poll,
 };
 
 // Remedy for FLK-24 (DNO-389)
@@ -73,20 +74,22 @@ pub fn test_rate_selection() {
         // is at least 15 times as large as anyone else. 15 is the number of non-probing data
         // frames between 2 consecutive probing data frames.
         const NORMAL_FRAMES_PER_PROBE: u64 = 15;
-        max_val >= NORMAL_FRAMES_PER_PROBE * second_largest
+        // Minstrel takes about 10 cycles to converge
+        // |second_largest| is a heuristic for number of cycles
+        second_largest >= 10 && max_val >= NORMAL_FRAMES_PER_PROBE * second_largest
     };
-    let mut hm = HashMap::new();
+    let mut tx_vec_count_map = HashMap::new();
     helper
         .run(
             &mut exec,
             30.seconds(),
-            "verify rate selection is working",
+            "verify rate selection converges to 130",
             |event| {
                 handle_rate_selection_event(
                     event,
                     &phy,
                     &BSS_MINSTL,
-                    &mut hm,
+                    &mut tx_vec_count_map,
                     will_succeed,
                     is_done,
                     sender.clone(),
@@ -96,10 +99,12 @@ pub fn test_rate_selection() {
         )
         .expect("running main future");
 
-    let total = hm.values().sum::<u64>();
-    let others = total - hm[&MAX_SUCCESSFUL_IDX];
-    println!("{:#?}\ntotal: {}, others: {}", hm, total, others);
-    let mut tx_vec_idx_seen: Vec<_> = hm.keys().cloned().collect();
+    let total = tx_vec_count_map.values().sum::<u64>();
+    println!("final tx vector counts:\n{:#?}\ntotal: {}", tx_vec_count_map, total);
+    assert!(tx_vec_count_map.contains_key(&MAX_SUCCESSFUL_IDX));
+    let others = total - tx_vec_count_map[&MAX_SUCCESSFUL_IDX];
+    println!("others: {}", others);
+    let mut tx_vec_idx_seen: Vec<_> = tx_vec_count_map.keys().cloned().collect();
     tx_vec_idx_seen.sort();
     if tx_vec_idx_seen.len() == MUST_USE_IDX.len() {
         // 135 may not be attempted due to randomness and it is OK.
@@ -107,9 +112,9 @@ pub fn test_rate_selection() {
     } else {
         assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
     }
-    let most_frequently_used_idx = hm.keys().max_by_key(|k| hm[&k]).unwrap();
+    let most_frequently_used_idx = tx_vec_count_map.iter().max_by_key(|&(_, v)| v).unwrap().0;
     println!(
-        "If the test fails due to QEMU slowness outside of the scope of WLAN(FLK-24, \
+        "If the test fails due to QEMU slowness outside of the scope of WLAN (See FLK-24, \
          DNO-389). Try increasing |MINSTREL_DATA_FRAME_INTERVAL_NANOS| above."
     );
     assert_eq!(most_frequently_used_idx, &MAX_SUCCESSFUL_IDX);
@@ -122,7 +127,7 @@ fn handle_rate_selection_event<F, G>(
     hm: &mut HashMap<u16, u64>,
     should_succeed: F,
     is_done: G,
-    mut sender: mpsc::Sender<()>,
+    mut sender: mpsc::Sender<bool>,
 ) where
     F: Fn(u16) -> bool,
     G: Fn(&HashMap<u16, u64>) -> bool,
@@ -139,16 +144,14 @@ fn handle_rate_selection_event<F, G>(
                 if *count == 1 {
                     println!("new tx_vec_idx: {} at #{}", tx_vec_idx, hm.values().sum::<u64>());
                 }
-                if is_done(hm) {
-                    sender.try_send(()).expect("Indicating test successful");
-                }
+                sender.try_send(is_done(hm)).expect("sending message to ethernet sender");
             }
         }
         _ => {}
     }
 }
 
-async fn eth_sender(receiver: &mut mpsc::Receiver<()>) -> Result<(), failure::Error> {
+async fn eth_sender(receiver: &mut mpsc::Receiver<bool>) -> Result<(), failure::Error> {
     let mut client = await!(create_eth_client(&HW_MAC_ADDR))
         .expect("cannot create ethernet client")
         .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
@@ -165,22 +168,20 @@ async fn eth_sender(receiver: &mut mpsc::Receiver<()>) -> Result<(), failure::Er
     .expect("Error creating fake ethernet frame");
 
     let mut timer_stream = fasync::Interval::new(MINSTREL_DATA_FRAME_INTERVAL_NANOS.nanos());
-    let mut client_stream = client.get_stream().fuse();
-    'eth_sender: loop {
-        select! {
-            event = client_stream.next() => {
-                if let Some(Ok(ethernet::Event::StatusChanged)) = event {
-                    println!("status changed to: {:?}", await!(client.get_status()).unwrap());
-                }
-            },
-            () = timer_stream.select_next_some() => { client.send(&buf); },
+    let mut client_stream = client.get_stream();
+    loop {
+        await!(timer_stream.next());
+        client.send(&buf);
+        if let Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) = poll!(client_stream.next()) {
+            println!("status changed to: {:?}", await!(client.get_status())?);
+            // There was an event waiting, ethernet frames have NOT been sent on the previous poll.
+            let _ = poll!(client_stream.next());
         }
-        if let Ok(Some(())) = receiver.try_next() {
-            break 'eth_sender;
+        let converged = await!(receiver.next()).expect("error receiving channel message");
+        if converged {
+            break;
         }
     }
-    // Send any packets that are still in the buffer
-    let _ = poll!(client_stream.next());
     Ok(())
 }
 

@@ -277,7 +277,7 @@ mod simulation_tests {
     const SSID_BAZ: &[u8] = b"baz";
 
     pub const CHANNEL: wlan_common::WlanChan =
-        wlan_common::WlanChan { primary: 6, secondary80: 0, cbw: wlan_common::Cbw::Cbw20 };
+        wlan_common::WlanChan { primary: 1, secondary80: 0, cbw: wlan_common::Cbw::Cbw20 };
 
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.

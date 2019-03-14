@@ -83,11 +83,10 @@ struct EventSender {
     }
 
     void SendSetChannelEvent(uint16_t wlanmac_id, wlan_channel_t* channel) {
-        wlantap::SetChannelArgs args = {
-            .wlanmac_id = wlanmac_id,
-            .chan = {.primary = channel->primary,
-                     .cbw = static_cast<wlan_common::CBW>(channel->cbw),
-                     .secondary80 = channel->secondary80}};
+        wlantap::SetChannelArgs args = {.wlanmac_id = wlanmac_id,
+                                        .chan = {.primary = channel->primary,
+                                                 .cbw = static_cast<wlan_common::CBW>(channel->cbw),
+                                                 .secondary80 = channel->secondary80}};
         Send(EventOrdinal::SetChannel, &args);
     }
 
@@ -314,11 +313,16 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
     virtual void ReportTxStatus(uint16_t wlanmac_id, wlantap::WlanTxStatus ts) override {
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
+        if (!phy_config_->quiet || report_tx_status_count_ < 32) {
+            zxlogf(INFO, "wlantap phy: ReportTxStatus %zu\n", report_tx_status_count_);
+        }
         if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
             ++report_tx_status_count_;
             wlanmac->ReportTxStatus(ts);
         }
-        if (!phy_config_->quiet) { zxlogf(INFO, "wlantap phy: ReportTxStatus done\n"); }
+        if (!phy_config_->quiet || report_tx_status_count_ <= 32) {
+            zxlogf(INFO, "wlantap phy: ReportTxStatus %zu done\n", report_tx_status_count_);
+        }
     }
 
     // WlantapMac::Listener impl
@@ -335,12 +339,16 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
 
     virtual void WlantapMacQueueTx(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) override {
-        if (!phy_config_->quiet) {
-            zxlogf(INFO, "wlantap phy: WlantapMacQueueTx id=%u\n", wlanmac_id);
+        if (!phy_config_->quiet || report_tx_status_count_ < 32) {
+            zxlogf(INFO, "wlantap phy: WlantapMacQueueTx id=%u, tx_report_count=%zu\n", wlanmac_id,
+                   report_tx_status_count_);
         }
         std::lock_guard<std::mutex> guard(user_channel_lock_);
         event_sender_.SendTxEvent(wlanmac_id, pkt);
-        if (!phy_config_->quiet) { zxlogf(INFO, "wlantap phy: WlantapMacQueueTx done\n"); }
+        if (!phy_config_->quiet || report_tx_status_count_ < 32) {
+            zxlogf(INFO, "wlantap phy: WlantapMacQueueTx done, tx_report_count=%zu\n",
+                   report_tx_status_count_);
+        }
     }
 
     virtual void WlantapMacSetChannel(uint16_t wlanmac_id, wlan_channel_t* channel) override {
