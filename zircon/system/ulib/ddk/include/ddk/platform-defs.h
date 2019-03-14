@@ -186,6 +186,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_CHILD_2       3
 #define PDEV_DID_TEST_CHILD_3       4
 #define PDEV_DID_TEST_GPIO          5
+#define PDEV_DID_TEST_COMPOSITE     6
 
 // ARM
 #define PDEV_VID_ARM                18
