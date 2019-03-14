@@ -4,10 +4,10 @@
 
 #include "garnet/bin/appmgr/namespace_builder.h"
 
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 #include <zircon/processargs.h>
 
 #include <fcntl.h>
@@ -30,13 +30,14 @@ namespace {
 // losing data across an OTA.
 // TODO(CF-28): Delete this when removing 'deprecated-global-persistent-data'.
 std::string MigratedGlobalPersistentDataPath() {
-  static const char* kGlobalPersistentDataPath =
-      "/data/deprecated-global-persistent-storage";
-  static const char* kDataPathsNotToMigrate[] = {"pkgfs_index", "ssh"};
+  static const char* kGlobalPersistentDataDir =
+      "deprecated-global-persistent-storage";
+  static const char* kDataPathsNotToMigrate[] = {".", "pkgfs_index", "ssh",
+                                                 kGlobalPersistentDataDir};
 
   // Only migrate if the new directory has not been created yet, so that we only
   // do it once.
-  const std::string new_dir(kGlobalPersistentDataPath);
+  const std::string new_dir(files::JoinPath("/data", kGlobalPersistentDataDir));
   if (files::IsDirectory(new_dir)) {
     return new_dir;
   }
