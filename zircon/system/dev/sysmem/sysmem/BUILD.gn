@@ -60,7 +60,6 @@ driver("sysmem.proxy") {
 test("sysmem-unittest") {
   output_name = "sysmem-unittest"
   sources = [
-    "test/main.cpp",
     "test/pixel_format_cost_test.cpp",
     "usage_pixel_format_cost.cpp",
   ]

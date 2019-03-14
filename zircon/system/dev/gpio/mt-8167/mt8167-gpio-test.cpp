@@ -165,7 +165,3 @@ TEST(GpioTest, PullDownIoCfg) {
     iocfg_mock.VerifyAll();
 }
 } // namespace gpio
-
-int main(int argc, char** argv) {
-    return RUN_ALL_TESTS(argc, argv);
-}

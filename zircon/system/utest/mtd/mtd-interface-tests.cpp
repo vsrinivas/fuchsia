@@ -195,7 +195,3 @@ TEST_F(MtdInterfaceTest, BadBlockTest) {
 }
 
 }  // namespace
-
-int main(int argc, char** argv) {
-    return RUN_ALL_TESTS(argc, argv);
-}

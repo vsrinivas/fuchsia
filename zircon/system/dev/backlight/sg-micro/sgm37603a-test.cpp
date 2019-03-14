@@ -144,7 +144,3 @@ TEST(BacklightTest, Brightness) {
 }
 
 }  // namespace backlight
-
-int main(int argc, char** argv) {
-    return RUN_ALL_TESTS(argc, argv);
-}

@@ -524,7 +524,3 @@ TEST(SdmmcTest, Protocol) {
 }
 
 }  // namespace sdmmc
-
-int main(int argc, char** argv) {
-    return RUN_ALL_TESTS(argc, argv);
-}

@@ -13,7 +13,6 @@ test("minfs-unit") {
   test_group = "fs"
   sources = [
     "allocator-test.cpp",
-    "main.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",

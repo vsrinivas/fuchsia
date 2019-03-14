@@ -25,6 +25,7 @@ library("zxtest") {
     "test-case.cpp",
     "test-info.cpp",
     "test.cpp",
+    "zxtest-main.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

@@ -12,7 +12,6 @@ group("test") {
 test("fvm-unit") {
   sources = [
     "format-info-test.cpp",
-    "main.cpp",
   ]
   deps = [
     "$zx/system/ulib/fvm",

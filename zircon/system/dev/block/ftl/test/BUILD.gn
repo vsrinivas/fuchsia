@@ -16,7 +16,6 @@ test("ftl") {
     "driver-test.cpp",
     "ftl-shell.cpp",
     "ftl-test.cpp",
-    "main.cpp",
     "nand_driver_test.cpp",
     "nand_operation_test.cpp",
     "ndm-ram-driver.cpp",

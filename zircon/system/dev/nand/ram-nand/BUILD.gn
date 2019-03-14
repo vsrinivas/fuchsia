@@ -39,7 +39,6 @@ source_set("common") {
 test("ram-nand-test") {
   output_name = "ram-nand-test"
   sources = [
-    "test/main.cpp",
     "test/ram-nand-ctl.cpp",
     "test/ram-nand.cpp",
   ]
