@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fbl/function.h>
 #include <lib/async/trap.h>
+#include <lib/fit/function.h>
 #include <lib/zx/guest.h>
 
 #include <utility>
@@ -73,7 +73,7 @@ public:
     //
     // The |status| is |ZX_OK| if the bell was received and |bell| contains the
     // information from the packet, otherwise |bell| is null.
-    using Handler = fbl::Function<void(async_dispatcher_t* dispatcher, async::GuestBellTrap* trap,
+    using Handler = fit::function<void(async_dispatcher_t* dispatcher, async::GuestBellTrap* trap,
                                        zx_status_t status, const zx_packet_guest_bell_t* bell)>;
 
     explicit GuestBellTrap(Handler handler = nullptr);

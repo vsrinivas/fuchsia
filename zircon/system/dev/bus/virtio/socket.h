@@ -11,6 +11,7 @@
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <fbl/auto_lock.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_counted.h>

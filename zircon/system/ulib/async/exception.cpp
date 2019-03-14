@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <zircon/assert.h>
+
 namespace async {
 
 ExceptionBase::ExceptionBase(zx_handle_t task, uint32_t options,

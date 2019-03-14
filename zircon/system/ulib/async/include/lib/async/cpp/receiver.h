@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fbl/function.h>
 #include <lib/async/receiver.h>
+#include <lib/fit/function.h>
 
 #include <utility>
 
@@ -65,7 +65,7 @@ public:
     //
     // The |status| is |ZX_OK| if the packet was successfully delivered and |data|
     // contains the information from the packet, otherwise |data| is null.
-    using Handler = fbl::Function<void(async_dispatcher_t* dispatcher,
+    using Handler = fit::function<void(async_dispatcher_t* dispatcher,
                                        async::Receiver* receiver,
                                        zx_status_t status,
                                        const zx_packet_user_t* data)>;

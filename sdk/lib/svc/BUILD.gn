@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/cpp/sdk_shared_library.gni")
-import("//build/test/test_package.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 sdk_shared_library("svc") {
@@ -25,6 +25,8 @@ sdk_shared_library("svc") {
   ]
 
   include_base = "//sdk"
+
+  libcxx_linkage = "static"
 
   public_configs = [ "//sdk/config" ]
 

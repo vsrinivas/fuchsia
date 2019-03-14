@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
+#include <fbl/unique_ptr.h>
 
 namespace {
 class FakeDecoderCore : public DecoderCore {

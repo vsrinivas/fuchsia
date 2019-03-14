@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
+
 #include <lib/async/cpp/time.h>
+#include <zircon/assert.h>
 
 #include <utility>
 
@@ -11,11 +13,11 @@ namespace async {
 namespace internal {
 
 struct RetainedTask : public async_task_t {
-    RetainedTask(fbl::Closure handler, zx::time deadline)
+    RetainedTask(fit::closure handler, zx::time deadline)
         : async_task_t{{ASYNC_STATE_INIT}, &RetainedTask::Handler, deadline.get()},
-          handler(static_cast<fbl::Closure&&>(handler)) {}
+          handler(static_cast<fit::closure&&>(handler)) {}
 
-    fbl::Closure handler;
+    fit::closure handler;
 
     static void Handler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
         auto self = static_cast<RetainedTask*>(task);
@@ -27,18 +29,18 @@ struct RetainedTask : public async_task_t {
 
 } // namespace internal
 
-zx_status_t PostTask(async_dispatcher_t* dispatcher, fbl::Closure handler) {
-    return PostTaskForTime(dispatcher, static_cast<fbl::Closure&&>(handler),
+zx_status_t PostTask(async_dispatcher_t* dispatcher, fit::closure handler) {
+    return PostTaskForTime(dispatcher, static_cast<fit::closure&&>(handler),
                            async::Now(dispatcher));
 }
 
-zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::duration delay) {
-    return PostTaskForTime(dispatcher, static_cast<fbl::Closure&&>(handler),
+zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fit::closure handler, zx::duration delay) {
+    return PostTaskForTime(dispatcher, static_cast<fit::closure&&>(handler),
                            async::Now(dispatcher) + delay);
 }
 
-zx_status_t PostTaskForTime(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::time deadline) {
-    auto* task = new internal::RetainedTask(static_cast<fbl::Closure&&>(handler), deadline);
+zx_status_t PostTaskForTime(async_dispatcher_t* dispatcher, fit::closure handler, zx::time deadline) {
+    auto* task = new internal::RetainedTask(static_cast<fit::closure&&>(handler), deadline);
     zx_status_t status = async_post_task(dispatcher, task);
     if (status != ZX_OK)
         delete task;
@@ -105,7 +107,7 @@ void Task::CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_st
     self->handler_(dispatcher, self, status);
 }
 
-TaskClosure::TaskClosure(fbl::Closure handler)
+TaskClosure::TaskClosure(fit::closure handler)
     : TaskBase(&TaskClosure::CallHandler), handler_(std::move(handler)) {}
 
 TaskClosure::~TaskClosure() = default;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>

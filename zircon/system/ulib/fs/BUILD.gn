@@ -76,6 +76,9 @@ library("fs") {
 
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
+
+      # <fs/connection.h> has #include <lib/async/cpp/wait.h>.
+      "$zx/system/ulib/async:async-cpp",
     ]
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
     deps += [
@@ -83,7 +86,6 @@ library("fs") {
       "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
-      "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/cobalt-client",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",

@@ -9,6 +9,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <zircon/assert.h>
 
 #include <memory>
 #include <stdarg.h>
@@ -83,7 +84,7 @@ class FidlServer {
     // Wrapper of async::PostTask() that uses dispatcher_ and abort()s the
     // current process if async::PostTask() fails.  This method does not protect
     // against ~FidlServer running first (see Post() for that).
-    void PostUnsafe(fbl::Closure to_run) {
+    void PostUnsafe(fit::closure to_run) {
         zx_status_t post_status = async::PostTask(dispatcher_, std::move(to_run));
         // We don't expect this post to fail.
         ZX_ASSERT(post_status == ZX_OK);
@@ -93,7 +94,7 @@ class FidlServer {
     // ~FidlServer has already run.  This does not ensure that any other capture
     // is still allocated at the time to_run runs (that's still the caller's
     // responsibility).
-    void Post(fbl::Closure to_run) {
+    void Post(fit::closure to_run) {
         // For now we don't optimize away use of the heap here, but we easily
         // could if it became an actual problem.
         auto canary = std::make_unique<bool>(true);

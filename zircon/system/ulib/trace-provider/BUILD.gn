@@ -68,6 +68,9 @@ library("trace-provider") {
     "$zx/system/ulib/fdio",
   ]
   public_deps = [
+    # <trace-provider/provider.h> has #include <fbl/unique_ptr.h>.
+    "$zx/system/ulib/fbl:headers",
+
     # <trace-provider/provider.h> has #include <lib/async/dispatcher.h>.
     "$zx/system/ulib/async:headers",
 

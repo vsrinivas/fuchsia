@@ -12,6 +12,7 @@ library("sysmem-connector") {
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

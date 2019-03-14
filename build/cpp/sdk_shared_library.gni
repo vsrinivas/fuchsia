@@ -24,6 +24,12 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     Whether to include the library's headers in the SDK.
 #     Defaults to false.
 #
+#   libcxx_linkage (optional)
+#     Whether or how to link libc++. SDK shared libraries cannot link libc++.so
+#     dynamically because libc++.so does not have a stable ABI. Can be either
+#     "none" or "static".
+#     Defaults to "none".
+#
 #   sdk_name (optional)
 #     Name of the library in the SDK.
 #     Defaults to the library's output name.
@@ -87,23 +93,30 @@ template("sdk_shared_library") {
       visibility += [ ":$manifest_target_name" ]
     }
 
+    if (!defined(libcxx_linkage)) {
+      libcxx_linkage = "none"
+    }
+    assert(libcxx_linkage == "none" || libcxx_linkage == "static")
+
     # Prebuilt shared libraries are eligible for inclusion in the SDK. We do not
     # want to dynamically link against libc++.so because we let clients bring
     # their own toolchain, which might have a different C++ Standard Library or
     # a different C++ ABI entirely.
-    #
-    # Adding this linker flag keeps us honest about not commiting to a specific
-    # C++ ABI. If this flag is causing your library to not to compile, consider
-    # whether your library really ought to be in the SDK. If so, consider
-    # including your library in the SDK as source rather than precompiled. If
-    # you do require precompilation, you probably need to find a way not to
-    # depend on dynamically linking C++ symbols because C++ does not have a
-    # sufficiently stable ABI for the purposes of our SDK.
-    # TODO(TC-46): statically link against libc++ if necessary.
-    if (!defined(ldflags)) {
-      ldflags = []
+    if (!defined(configs)) {
+      configs = []
     }
-    ldflags += [ "-nostdlib++" ]
+    if (libcxx_linkage == "static") {
+      configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+    } else {
+      # Adding this linker flag keeps us honest about not commiting to a
+      # specific C++ ABI. If this flag is causing your library to not to
+      # compile, consider whether your library really ought to be in the SDK.
+      # If so, consider including your library in the SDK as source rather than
+      # precompiled. If you do require precompilation, you probably need to
+      # find a way not to depend on dynamically linking C++ symbols because C++
+      # does not have a sufficiently stable ABI for the purposes of our SDK.
+      configs += [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    }
 
     # Request that the runtime deps be written out to a file. This file will be
     # used later to verify that all runtime deps are available in the SDK.
@@ -178,16 +191,16 @@ template("sdk_shared_library") {
   link_lib = "$prebuilt_base/lib/$lib_name"
   dist_lib = "$prebuilt_base/dist/$lib_name"
   sdk_files = sdk_header_files + [
-    {
-      # TODO(TO-791): put ABI stubs under lib/, not the full thing.
-      source = "$shared_out_dir/$lib_name"
-      dest = link_lib
-    },
-    {
-      source = "$shared_out_dir/$lib_name"
-      dest = dist_lib
-    },
-  ]
+                {
+                  # TODO(TO-791): put ABI stubs under lib/, not the full thing.
+                  source = "$shared_out_dir/$lib_name"
+                  dest = link_lib
+                },
+                {
+                  source = "$shared_out_dir/$lib_name"
+                  dest = dist_lib
+                },
+              ]
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
   debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"

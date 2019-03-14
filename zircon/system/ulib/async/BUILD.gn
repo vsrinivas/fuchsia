@@ -36,8 +36,8 @@ library("async-cpp") {
     # <lib/async/cpp/task.h> has #include <lib/zx/time.h>.
     "$zx/system/ulib/zx:headers",
 
-    # <lib/async/cpp/task.h> has #include <fbl/function.h>.
-    "$zx/system/ulib/fbl:headers",
+    # <lib/async/cpp/task.h> has #include <lib/fit/function.h>.
+    "$zx/system/ulib/fit:headers",
   ]
   sources = [
     "exception.cpp",
@@ -49,7 +49,6 @@ library("async-cpp") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     ":async",
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

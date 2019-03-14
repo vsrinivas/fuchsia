@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fbl/function.h>
 #include <lib/async/task.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
 #include <utility>
@@ -19,7 +19,7 @@ namespace async {
 // Returns |ZX_OK| if the task was successfully posted.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-zx_status_t PostTask(async_dispatcher_t* dispatcher, fbl::Closure handler);
+zx_status_t PostTask(async_dispatcher_t* dispatcher, fit::closure handler);
 
 // Posts a task to invoke |handler| with a deadline expressed as a |delay| from now.
 //
@@ -28,7 +28,7 @@ zx_status_t PostTask(async_dispatcher_t* dispatcher, fbl::Closure handler);
 // Returns |ZX_OK| if the task was successfully posted.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::duration delay);
+zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fit::closure handler, zx::duration delay);
 
 // Posts a task to invoke |handler| with the specified |deadline|.
 //
@@ -37,7 +37,7 @@ zx_status_t PostDelayedTask(async_dispatcher_t* dispatcher, fbl::Closure handler
 // Returns |ZX_OK| if the task was successfully posted.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-zx_status_t PostTaskForTime(async_dispatcher_t* dispatcher, fbl::Closure handler, zx::time deadline);
+zx_status_t PostTaskForTime(async_dispatcher_t* dispatcher, fit::closure handler, zx::time deadline);
 
 // Holds context for a task and its handler, with RAII semantics.
 // Automatically cancels the task when it goes out of scope.
@@ -139,7 +139,7 @@ public:
     // The |status| is |ZX_OK| if the task's deadline elapsed and the task should run.
     // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
     // the task's handler ran or the task was canceled.
-    using Handler = fbl::Function<void(async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status)>;
+    using Handler = fit::function<void(async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status)>;
 
     explicit Task(Handler handler = nullptr);
     ~Task();
@@ -178,7 +178,7 @@ private:
     Class* const instance_;
 };
 
-// A task whose handler is bound to a |fbl::Closure| function with no arguments.
+// A task whose handler is bound to a |fit::closure| function with no arguments.
 // The closure is not invoked when errors occur since it doesn't have a |zx_status_t|
 // argument.
 //
@@ -186,16 +186,16 @@ private:
 // function since it is more efficient to dispatch.
 class TaskClosure final : public TaskBase {
 public:
-    explicit TaskClosure(fbl::Closure handler = nullptr);
+    explicit TaskClosure(fit::closure handler = nullptr);
     ~TaskClosure();
 
-    void set_handler(fbl::Closure handler) { handler_ = std::move(handler); }
+    void set_handler(fit::closure handler) { handler_ = std::move(handler); }
     bool has_handler() const { return !!handler_; }
 
 private:
     static void CallHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
 
-    fbl::Closure handler_;
+    fit::closure handler_;
 };
 
 // A task whose handler is bound to a fixed class member function with no arguments.

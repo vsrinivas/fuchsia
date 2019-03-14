@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <zircon/assert.h>
+
 namespace async {
 
 WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_t* handler)

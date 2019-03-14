@@ -10,6 +10,7 @@
 
 #include <memory>
 
+#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
