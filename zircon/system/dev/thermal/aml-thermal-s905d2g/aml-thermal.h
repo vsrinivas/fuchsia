@@ -34,7 +34,7 @@ public:
     AmlThermal(zx_device_t* device, fbl::unique_ptr<thermal::AmlTSensor> tsensor,
                fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
                fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
-               opp_info_t opp_info,
+               aml_opp_info_t opp_info,
                fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config)
         : DeviceType(device), tsensor_(std::move(tsensor)),
           voltage_regulator_(std::move(voltage_regulator)),
@@ -91,7 +91,7 @@ private:
     fbl::unique_ptr<thermal::AmlTSensor> tsensor_;
     fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
     fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
-    opp_info_t opp_info_;
+    aml_opp_info_t opp_info_;
     fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
 };
 } // namespace thermal

@@ -76,7 +76,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
 zx_status_t AmlThermal::Create(zx_device_t* device) {
     // Get the voltage-table & opp metadata.
     size_t actual;
-    opp_info_t opp_info;
+    aml_opp_info_t opp_info;
     zx_status_t status = device_get_metadata(device, VOLTAGE_DUTY_CYCLE_METADATA, &opp_info,
                                              sizeof(opp_info_), &actual);
     if (status != ZX_OK || actual != sizeof(opp_info_)) {

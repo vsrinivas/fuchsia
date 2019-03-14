@@ -9,6 +9,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -138,7 +139,7 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo aml_astro_config = {
 };
 
 // clang-format on
-static opp_info_t aml_opp_info = {
+static aml_opp_info_t aml_opp_info = {
     .voltage_table = {
         {1022000, 0},
         {1011000, 3},

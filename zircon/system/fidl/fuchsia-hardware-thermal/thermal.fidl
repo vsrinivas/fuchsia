@@ -13,9 +13,6 @@ const uint32 MAX_TRIP_POINTS = 16;
 /// architecture).
 const uint32 MAX_DVFS_DOMAINS = 2;
 
-/// TODO(bradenkell): Remove this if VoltageTable is moved.
-const uint32 MAX_VOLTAGE_TABLE = 31;
-
 /// The maximum number of operating points that can be used.
 const uint32 MAX_DVFS_OPPS = 16;
 
@@ -108,17 +105,6 @@ struct TripPoint {
 struct DvfsInfo {
     uint16 op_idx;
     uint32 power_domain;
-};
-
-/// TODO(bradenkell): These are only used by the Amlogic S905D2 driver, move them to system/dev/lib.
-struct VoltageTable {
-    uint32 microvolt;
-    uint32 duty_cycle;
-};
-
-struct OperatingPointInfo {
-    array<OperatingPointEntry>:MAX_TRIP_POINTS opps;
-    array<VoltageTable>:MAX_VOLTAGE_TABLE voltage_table;
 };
 
 [Layout = "Simple"]
