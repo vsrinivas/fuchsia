@@ -80,6 +80,9 @@ class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
   ResourceMap resource_map_;
   bool is_scenic_present_requested_ = false;
   std::vector<scenic::Session::PresentCallback> callbacks_;
+  size_t canvas_present_count_ = 0;
+  size_t session_present_count_ = 0;
+  size_t request_scenic_present_count_ = 0;
 
   StrokeManager stroke_manager_;
 };

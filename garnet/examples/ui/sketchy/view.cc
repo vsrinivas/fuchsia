@@ -4,7 +4,22 @@
 
 #include "garnet/examples/ui/sketchy/view.h"
 
+#include <trace/event.h>
+
 namespace sketchy_example {
+
+namespace {
+
+// TODO(SCN-1278): Remove this.
+// Turns two floats (high bits, low bits) into a 64-bit uint.
+trace_flow_id_t PointerTraceHACK(float fa, float fb) {
+  uint32_t ia, ib;
+  memcpy(&ia, &fa, sizeof(uint32_t));
+  memcpy(&ib, &fb, sizeof(uint32_t));
+  return (((uint64_t)ia) << 32) | ib;
+}
+
+}
 
 View::View(scenic::ViewContext context, async::Loop* loop)
     : BaseView(std::move(context), "Sketchy Example"),
@@ -47,8 +62,12 @@ void View::OnPropertiesChanged(
 }
 
 void View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
+  TRACE_DURATION("gfx", "View::OnInputEvent");
   if (event.is_pointer()) {
     const auto& pointer = event.pointer();
+    const trace_flow_id_t trace_id =
+        PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+    TRACE_FLOW_END("input", "dispatch_event_to_client", trace_id);
     switch (pointer.phase) {
       case fuchsia::ui::input::PointerEventPhase::DOWN: {
         auto stroke = fxl::MakeRefCounted<sketchy_lib::Stroke>(&canvas_);

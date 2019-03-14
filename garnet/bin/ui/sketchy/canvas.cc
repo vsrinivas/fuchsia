@@ -4,6 +4,8 @@
 
 #include "garnet/bin/ui/sketchy/canvas.h"
 
+#include <trace/event.h>
+
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
@@ -36,6 +38,11 @@ void CanvasImpl::Enqueue(
 }
 
 void CanvasImpl::Present(uint64_t presentation_time, PresentCallback callback) {
+  TRACE_DURATION("gfx", "CanvasImpl::Present");
+  TRACE_FLOW_END("gfx", "PresentCanvas", canvas_present_count_);
+  ++canvas_present_count_;
+  TRACE_FLOW_BEGIN("gfx", "RequestScenicPresent", request_scenic_present_count_);
+
   // TODO(MZ-269): Present() should behave the same way as Scenic. Specifically,
   // Commands shouldn't be applied immediately. Instead a frame-request should
   // be triggered and the Commands enqueue; when the corresponding frame is
@@ -52,6 +59,7 @@ void CanvasImpl::Present(uint64_t presentation_time, PresentCallback callback) {
 }
 
 void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
+  TRACE_DURATION("gfx", "CanvasImpl::RequestScenicPresent");
   if (is_scenic_present_requested_) {
     return;
   }
@@ -67,6 +75,11 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
     RequestScenicPresent(info.presentation_time + info.presentation_interval);
   };
   callbacks_.clear();
+
+  TRACE_FLOW_END("gfx", "RequestScenicPresent", request_scenic_present_count_);
+  ++request_scenic_present_count_;
+  TRACE_FLOW_BEGIN("gfx", "Session::Present", session_present_count_);
+  ++session_present_count_;
 
   auto frame = Frame(escher_.get(), &shared_buffer_pool_, &buffer_factory_);
   if (frame.init_failed()) {

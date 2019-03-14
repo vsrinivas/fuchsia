@@ -4,6 +4,8 @@
 
 #include "lib/ui/sketchy/client/canvas.h"
 
+#include <trace/event.h>
+
 namespace sketchy_lib {
 
 Canvas::Canvas(component::StartupContext* context, async::Loop* loop)
@@ -24,6 +26,10 @@ Canvas::Canvas(::fuchsia::ui::sketchy::CanvasPtr canvas, async::Loop* loop)
 ResourceId Canvas::AllocateResourceId() { return next_resource_id_++; }
 
 void Canvas::Present(uint64_t time, scenic::Session::PresentCallback callback) {
+  TRACE_DURATION("gfx", "Canvas::Present");
+  TRACE_FLOW_BEGIN("gfx", "PresentCanvas", canvas_present_count_);
+  ++canvas_present_count_;
+
   if (!commands_.empty()) {
     canvas_->Enqueue(std::move(commands_));
 

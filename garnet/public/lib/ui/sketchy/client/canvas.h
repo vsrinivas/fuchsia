@@ -30,6 +30,7 @@ class Canvas final {
   async::Loop* const loop_;
   std::vector<::fuchsia::ui::sketchy::Command> commands_;
   ResourceId next_resource_id_;
+  size_t canvas_present_count_ = 0;
 };
 
 }  // namespace sketchy_lib
