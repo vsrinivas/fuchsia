@@ -97,7 +97,7 @@ char* CrosFlagsToCString(char* dst, size_t dst_len, uint64_t flags) {
     uint32_t tries = gpt_cros_attr_get_tries(flags);
     bool successful = gpt_cros_attr_get_successful(flags);
     snprintf(dst, dst_len, "priority=%u tries=%u successful=%u", priority, tries, successful);
-    dst[dst_len-1] = 0;
+    dst[dst_len - 1] = 0;
     return dst;
 }
 
@@ -107,7 +107,7 @@ char* FlagsToCString(char* dst, size_t dst_len, const uint8_t* guid, uint64_t fl
     } else {
         snprintf(dst, dst_len, "0x%016" PRIx64, flags);
     }
-    dst[dst_len-1] = 0;
+    dst[dst_len - 1] = 0;
     return dst;
 }
 
@@ -167,11 +167,11 @@ void Dump(const GptDevice* gpt, int* count) {
         unsigned diff;
         ZX_ASSERT(gpt->GetDiffs(i, &diff) == ZX_OK);
         SetXY(diff & gpt::kGptDiffName, &X, &Y);
-        printf("Partition %d: %s%s%s\n",
-               i, X, utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidStrLength - 1), Y);
+        printf("Partition %d: %s%s%s\n", i, X,
+               utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidStrLength - 1), Y);
         SetXY(diff & (gpt::kGptDiffFirst | gpt::kGptDiffLast), &X, &Y);
-        printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n",
-               X, p->first, Y, X, p->last, Y, p->last - p->first + 1);
+        printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n", X,
+               p->first, Y, X, p->last, Y, p->last - p->first + 1);
         SetXY(diff & gpt::kGptDiffGuid, &X, &Y);
         uint8_to_guid_string(guid, (const uint8_t*)p->guid);
         printf("    id:   %s%s%s\n", X, guid, Y);
@@ -189,7 +189,8 @@ void Dump(const GptDevice* gpt, int* count) {
 
 void DumpPartitions(const char* dev) {
     fbl::unique_ptr<GptDevice> gpt = Init(dev);
-    if (!gpt) return;
+    if (!gpt)
+        return;
 
     if (!gpt->Valid()) {
         fprintf(stderr, "No valid GPT found\n");
@@ -204,7 +205,7 @@ void DumpPartitions(const char* dev) {
         return;
     }
 
-    printf("GPT contains usable blocks from %" PRIu64 " to %" PRIu64" (inclusive)\n", start, end);
+    printf("GPT contains usable blocks from %" PRIu64 " to %" PRIu64 " (inclusive)\n", start, end);
     int count;
     Dump(gpt.get(), &count);
     printf("Total: %d partitions\n", count);
@@ -612,37 +613,37 @@ zx_status_t SetVisibility(char* dev, uint32_t idx_part, bool visible) {
 // ParseSize parses long integers in base 10, expanding p, t, g, m, and k
 // suffices as binary byte scales. If the suffix is %, the value is returned as
 // negative, in order to indicate a proportion.
-int64_t ParseSize(char *s) {
-  char *end = s;
-  long long int v = strtoll(s, &end, 10);
+int64_t ParseSize(char* s) {
+    char* end = s;
+    long long int v = strtoll(s, &end, 10);
 
-  switch(*end) {
+    switch (*end) {
     case 0:
-      break;
+        break;
     case '%':
-      v = -v;
-      break;
+        v = -v;
+        break;
     case 'p':
     case 'P':
-      v *= 1024;
-      __FALLTHROUGH;
+        v *= 1024;
+        __FALLTHROUGH;
     case 't':
     case 'T':
-      v *= 1024;
-      __FALLTHROUGH;
+        v *= 1024;
+        __FALLTHROUGH;
     case 'g':
     case 'G':
-      v *= 1024;
-      __FALLTHROUGH;
+        v *= 1024;
+        __FALLTHROUGH;
     case 'm':
     case 'M':
-      v *= 1024;
-      __FALLTHROUGH;
+        v *= 1024;
+        __FALLTHROUGH;
     case 'k':
     case 'K':
-      v *= 1024;
-  }
-  return v;
+        v *= 1024;
+    }
+    return v;
 }
 
 // TODO(raggi): this should eventually get moved into ulib/gpt.
@@ -650,109 +651,111 @@ int64_t ParseSize(char *s) {
 // block boundary. The gpt specification requires that all partitions are
 // aligned to physical block boundaries.
 uint64_t Align(uint64_t base, uint64_t logical, uint64_t physical) {
-  uint64_t a = logical;
-  if (physical > a) a = physical;
-  uint64_t base_bytes = base * logical;
-  uint64_t d = base_bytes % a;
-  return (base_bytes + a - d) / logical;
+    uint64_t a = logical;
+    if (physical > a)
+        a = physical;
+    uint64_t base_bytes = base * logical;
+    uint64_t d = base_bytes % a;
+    return (base_bytes + a - d) / logical;
 }
 
 // Repartition expects argv to start with the disk path and be followed by
 // triples of name, type and size.
 zx_status_t Repartition(int argc, char** argv) {
-  const char* dev = argv[0];
-  uint64_t logical, free_space;
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
-  if (gpt == NULL) {
-    return ZX_ERR_INTERNAL;
-  }
+    const char* dev = argv[0];
+    uint64_t logical, free_space;
+    fbl::unique_ptr<GptDevice> gpt = Init(dev);
+    if (gpt == NULL) {
+        return ZX_ERR_INTERNAL;
+    }
 
-  argc--;
-  argv = &argv[1];
-  int num_partitions = argc/3;
+    argc--;
+    argv = &argv[1];
+    int num_partitions = argc / 3;
 
-  gpt_partition_t* p = gpt->GetPartition(0);
-  while (p) {
-      ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
-      p = gpt->GetPartition(0);
-  }
+    gpt_partition_t* p = gpt->GetPartition(0);
+    while (p) {
+        ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
+        p = gpt->GetPartition(0);
+    }
 
-  logical = gpt->BlockSize();
-  free_space = gpt->TotalBlockCount() * logical;
+    logical = gpt->BlockSize();
+    free_space = gpt->TotalBlockCount() * logical;
 
-  {
-    // expand out any proportional sizes into absolute sizes
-    uint64_t sizes[num_partitions];
-    memset(sizes, 0, sizeof(sizes));
     {
-      uint64_t percent = 100;
-      uint64_t portions[num_partitions];
-      memset(portions, 0, sizeof(portions));
-      for (int i = 0; i < num_partitions; i++) {
-        int64_t sz = ParseSize(argv[(i*3)+2]);
-        if (sz > 0) {
-          sizes[i] = sz;
-          free_space -= sz;
-        } else {
-          if (percent == 0) {
-            fprintf(stderr, "more than 100%% of free space requested\n");
-            return ZX_ERR_INVALID_ARGS;
-          }
-          // portions from ParseSize are negative
-          portions[i] = -sz;
-          percent -= -sz;
+        // expand out any proportional sizes into absolute sizes
+        uint64_t sizes[num_partitions];
+        memset(sizes, 0, sizeof(sizes));
+        {
+            uint64_t percent = 100;
+            uint64_t portions[num_partitions];
+            memset(portions, 0, sizeof(portions));
+            for (int i = 0; i < num_partitions; i++) {
+                int64_t sz = ParseSize(argv[(i * 3) + 2]);
+                if (sz > 0) {
+                    sizes[i] = sz;
+                    free_space -= sz;
+                } else {
+                    if (percent == 0) {
+                        fprintf(stderr, "more than 100%% of free space requested\n");
+                        return ZX_ERR_INVALID_ARGS;
+                    }
+                    // portions from ParseSize are negative
+                    portions[i] = -sz;
+                    percent -= -sz;
+                }
+            }
+            for (int i = 0; i < num_partitions; i++) {
+                if (portions[i] != 0)
+                    sizes[i] = (free_space * portions[i]) / 100;
+            }
         }
-      }
-      for (int i = 0; i < num_partitions; i++) {
-        if (portions[i] != 0)
-          sizes[i] = (free_space * portions[i]) / 100;
-      }
+
+        // TODO(raggi): get physical block size...
+        uint64_t physical = 8192;
+
+        uint64_t first_usable = 0;
+        uint64_t last_usable = 0;
+        ZX_ASSERT(gpt->Range(&first_usable, &last_usable) == ZX_OK);
+
+        uint64_t start = Align(first_usable, logical, physical);
+
+        for (int i = 0; i < num_partitions; i++) {
+            char* name = argv[i * 3];
+            char* guid_name = argv[(i * 3) + 1];
+
+            uint64_t byte_size = sizes[i];
+
+            uint8_t type[GPT_GUID_LEN];
+            if (!KnownGuid::NameToGuid(guid_name, type) && !ParseGuid(guid_name, type)) {
+                fprintf(stderr, "GUID could not be parsed: %s\n", guid_name);
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            uint8_t guid[GPT_GUID_LEN];
+            zx_cprng_draw(guid, GPT_GUID_LEN);
+
+            // end is clamped to the sector before the next aligned partition, in order
+            // to avoid wasting alignment space at the tail of partitions.
+            uint64_t nblocks = (byte_size / logical) + (byte_size % logical == 0 ? 0 : 1);
+            uint64_t end = Align(start + nblocks + 1, logical, physical) - 1;
+            if (end > last_usable)
+                end = last_usable;
+
+            if (start > last_usable) {
+                fprintf(stderr, "partition %s does not fit\n", name);
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+
+            printf("%s: %" PRIu64 " bytes, %" PRIu64 " blocks, %" PRIu64 "-%" PRIu64 "\n", name,
+                   byte_size, nblocks, start, end);
+            ZX_ASSERT(gpt->AddPartition(name, type, guid, start, end - start, 0) == ZX_OK);
+
+            start = end + 1;
+        }
     }
 
-    // TODO(raggi): get physical block size...
-    uint64_t physical = 8192;
-
-    uint64_t first_usable = 0;
-    uint64_t last_usable = 0;
-    ZX_ASSERT(gpt->Range(&first_usable, &last_usable) == ZX_OK);
-
-    uint64_t start = Align(first_usable, logical, physical);
-
-    for (int i = 0; i < num_partitions; i++) {
-      char *name = argv[i*3];
-      char *guid_name = argv[(i * 3) + 1];
-
-      uint64_t byte_size = sizes[i];
-
-      uint8_t type[GPT_GUID_LEN];
-      if (!KnownGuid::NameToGuid(guid_name, type) && !ParseGuid(guid_name, type)) {
-          fprintf(stderr, "GUID could not be parsed: %s\n", guid_name);
-          return ZX_ERR_INVALID_ARGS;
-      }
-
-      uint8_t guid[GPT_GUID_LEN];
-      zx_cprng_draw(guid, GPT_GUID_LEN);
-
-      // end is clamped to the sector before the next aligned partition, in order
-      // to avoid wasting alignment space at the tail of partitions.
-      uint64_t nblocks = (byte_size/logical) + (byte_size%logical == 0 ? 0 : 1);
-      uint64_t end = Align(start+nblocks+1, logical, physical) - 1;
-      if (end > last_usable) end = last_usable;
-
-      if (start > last_usable) {
-        fprintf(stderr, "partition %s does not fit\n", name);
-        return ZX_ERR_OUT_OF_RANGE;
-      }
-
-      printf("%s: %" PRIu64 " bytes, %" PRIu64 " blocks, %" PRIu64 "-%" PRIu64 "\n",
-             name, byte_size, nblocks, start, end);
-      ZX_ASSERT(gpt->AddPartition(name, type, guid, start, end - start, 0) == ZX_OK);
-
-      start = end + 1;
-    }
-  }
-
-  return Commit(gpt.get(), dev);
+    return Commit(gpt.get(), dev);
 }
 
 } // namespace
