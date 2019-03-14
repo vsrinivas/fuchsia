@@ -354,6 +354,11 @@ void BasemgrImpl::UpdateSessionShellConfig() {
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
+    if (kAutoLoginToGuest) {
+      user_provider_impl_->Login(fuchsia::modular::UserLoginParams());
+      return;
+    }
+
     // If there are no session shell settings specified, default to showing
     // setup.
     if (active_session_shell_settings_index_ >=
@@ -362,20 +367,16 @@ void BasemgrImpl::ShowSetupOrLogin() {
       return;
     }
 
-    if (kAutoLoginToGuest) {
-      user_provider_impl_->Login(fuchsia::modular::UserLoginParams());
-    } else {
-      user_provider_impl_->PreviousUsers(
-          [this](std::vector<fuchsia::modular::auth::Account> accounts) {
-            if (accounts.empty()) {
-              StartBaseShell();
-            } else {
-              fuchsia::modular::UserLoginParams params;
-              params.account_id = accounts.at(0).id;
-              user_provider_impl_->Login(std::move(params));
-            }
-          });
-    }
+    user_provider_impl_->PreviousUsers(
+        [this](std::vector<fuchsia::modular::auth::Account> accounts) {
+          if (accounts.empty()) {
+            StartBaseShell();
+          } else {
+            fuchsia::modular::UserLoginParams params;
+            params.account_id = accounts.at(0).id;
+            user_provider_impl_->Login(std::move(params));
+          }
+        });
   };
 
   // TODO(MF-134): Improve the factory reset logic by deleting more than just
