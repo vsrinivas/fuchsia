@@ -4,6 +4,8 @@
 
 #include "garnet/bin/scpi/app.h"
 #include <ddk/protocol/scpi.h>
+#include <fbl/unique_fd.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -96,9 +98,16 @@ zx_status_t App::Start() {
     return ZX_ERR_NOT_FOUND;
   }
 
-  fd_.reset(open("/dev/class/thermal/000", O_RDWR));
-  if (!fd_.is_valid()) {
+  fbl::unique_fd fd(open("/dev/class/thermal/000", O_RDWR));
+  if (!fd.is_valid()) {
     FXL_LOG(ERROR) << "Failed to open sensor " << errno;
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  status = fdio_get_service_handle(fd.release(),
+                                   thermal_handle_.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get handle for sensor " << errno;
     return ZX_ERR_UNAVAILABLE;
   }
 
@@ -112,11 +121,14 @@ zx_status_t App::Start() {
 
 void App::GetDvfsInfo(const uint32_t power_domain,
                       GetDvfsInfoCallback callback) {
-  scpi_opp_t opps;
+  fuchsia_hardware_thermal_OperatingPoint opps;
   auto result = fidl::VectorPtr<fuchsia::scpi::DvfsOpp>::New(0);
-  size_t rc = ioctl_thermal_get_dvfs_info(fd_.get(), &power_domain, &opps);
-  if (rc != sizeof(opps)) {
-    fprintf(stderr, "ERROR: Failed to get thermal info: %zd\n", rc);
+  zx_status_t status, status2;
+  status = fuchsia_hardware_thermal_DeviceGetDvfsInfo(
+      thermal_handle_.get(), power_domain, &status2, &opps);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", status,
+            status2);
     callback(fuchsia::scpi::Status::ERR_DVFS_INFO, std::move(result));
     return;
   }
@@ -131,34 +143,45 @@ void App::GetDvfsInfo(const uint32_t power_domain,
 
 void App::GetSystemStatus(GetSystemStatusCallback callback) {
   fuchsia::scpi::SystemStatus info;
-  uint32_t power_domain = BIG_CLUSTER_POWER_DOMAIN;
-  size_t rc = ioctl_thermal_get_dvfs_opp(fd_.get(), &power_domain,
-                                         &info.big_cluster_op_index);
-  if (rc != sizeof(uint32_t)) {
-    fprintf(stderr, "ERROR: Failed to get dvfs opp idx: %zd\n", rc);
+  zx_status_t status, status2;
+  uint16_t op_idx;
+  status = fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
+      thermal_handle_.get(),
+      fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status2,
+      &op_idx);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get dvfs opp idx: %d %d\n", status,
+            status2);
     callback(fuchsia::scpi::Status::ERR_DVFS_OPP_IDX, std::move(info));
     return;
   }
+  info.big_cluster_op_index = op_idx;
 
-  power_domain = LITTLE_CLUSTER_POWER_DOMAIN;
-  rc = ioctl_thermal_get_dvfs_opp(fd_.get(), &power_domain,
-                                  &info.small_cluster_op_index);
-  if (rc != sizeof(uint32_t)) {
-    fprintf(stderr, "ERROR: Failed to get dvfs opp idx: %zd\n", rc);
+  status = fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
+      thermal_handle_.get(),
+      fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
+      &status2, &op_idx);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get dvfs opp idx: %d %d\n", status,
+            status2);
     callback(fuchsia::scpi::Status::ERR_DVFS_OPP_IDX, std::move(info));
     return;
   }
+  info.small_cluster_op_index = op_idx;
 
-  rc = ioctl_thermal_get_temperature(fd_.get(), &info.temperature);
-  if (rc != sizeof(uint32_t)) {
-    fprintf(stderr, "ERROR: Failed to get current temperature: %zd\n", rc);
+  status = fuchsia_hardware_thermal_DeviceGetTemperature(
+      thermal_handle_.get(), &status2, &info.temperature);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get current temperature: %d %d\n", status,
+            status2);
     callback(fuchsia::scpi::Status::ERR_TEMPERATURE, std::move(info));
     return;
   }
 
-  rc = ioctl_thermal_get_fan_level(fd_.get(), &info.fan_level);
-  if (rc != sizeof(uint32_t)) {
-    fprintf(stderr, "ERROR: Failed to get fan level: %zd\n", rc);
+  status = fuchsia_hardware_thermal_DeviceGetFanLevel(
+      thermal_handle_.get(), &status2, &info.fan_level);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get fan level: %d %d\n", status, status2);
     callback(fuchsia::scpi::Status::ERR_FAN_LEVEL, std::move(info));
     return;
   }
