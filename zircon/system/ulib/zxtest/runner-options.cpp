@@ -4,6 +4,8 @@
 
 #include <getopt.h>
 
+#include <ctime>
+
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string_printf.h>
@@ -86,6 +88,10 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
     int c = -1;
     int option_index = -1;
     char* val = nullptr;
+
+    // Pick a random seed by default. Overwrite it if a value was explicitly set.
+    options.seed = static_cast<int>(time(nullptr));
+
     while ((c = getopt_long(argc, argv, "f::l::b::s::i:r:h::", opts, &option_index)) >= 0) {
         val = optarg;
         if (val == nullptr) {
@@ -133,5 +139,4 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
 
     return options;
 }
-
 } // namespace zxtest

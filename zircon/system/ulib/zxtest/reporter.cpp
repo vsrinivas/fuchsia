@@ -65,6 +65,32 @@ Reporter::Reporter(FILE* stream)
 
 void Reporter::OnProgramStart(const Runner& runner) {
     timers_.program.Reset();
+
+    if (stream_ == nullptr) {
+        return;
+    }
+
+    fprintf(stream_, "Flags:\n");
+
+    // Report value of flags.
+    if (!runner.options().filter.empty()) {
+        fprintf(stream_, "--gtest_filter = %s\n", runner.options().filter.c_str());
+    }
+
+    if (runner.options().shuffle) {
+        fprintf(stream_, "--gtest_shuffle = true\n");
+    }
+
+    if (runner.options().repeat != 1) {
+        fprintf(stream_, "--gtest_repeat = %d\n", runner.options().repeat);
+    }
+
+    fprintf(stream_, "--gtest_random_seed = %d\n", runner.options().seed);
+
+    if (runner.options().break_on_failure) {
+        fprintf(stream_, "--gtest_break_on_failure = true\n");
+    }
+    fprintf(stream_, "\n");
 }
 
 void Reporter::OnIterationStart(const Runner& runner, int iteration) {

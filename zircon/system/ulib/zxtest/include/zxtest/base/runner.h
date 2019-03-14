@@ -196,6 +196,15 @@ public:
     // Returns whether the current test has experienced any type of failure.
     bool CurrentTestHasFailures() const { return test_driver_.CurrentTestHasAnyFailures(); }
 
+    int random_seed() const {
+        return options_ ? options_->seed : kDefaultOptions.seed;
+    }
+
+    // Set of options currently in use. By default |Runner::kDefaultOptions| will be returned.
+    const Options& options() const {
+        return options_ ? *options_ : kDefaultOptions;
+    }
+
 private:
     TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,
                          const SourceLocation& location, internal::TestFactory factory,
@@ -223,6 +232,9 @@ private:
 
     // Runner information.
     RunnerSummary summary_;
+
+    // Sets of options to use for |Runner::Run| or |Runner::List|.
+    const Options* options_ = nullptr;
 };
 
 // Entry point for C++

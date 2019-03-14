@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <zxtest/base/runner.h>
 
@@ -53,7 +54,8 @@ void TestDriverImpl::Reset() {
 
 } // namespace internal
 
-Runner::Runner(Reporter&& reporter) : reporter_(std::move(reporter)) {
+Runner::Runner(Reporter&& reporter)
+    : reporter_(std::move(reporter)) {
     event_broadcaster_.Subscribe(&test_driver_);
     event_broadcaster_.Subscribe(&reporter_);
 }
@@ -94,6 +96,8 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 }
 
 int Runner::Run(const Runner::Options& options) {
+    options_ = &options;
+    auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
     summary_.total_iterations = options.repeat;
     EnforceOptions(options);
 
@@ -140,6 +144,8 @@ int Runner::Run(const Runner::Options& options) {
 }
 
 void Runner::List(const Runner::Options& options) {
+    options_ = &options;
+    auto reset_options = fbl::MakeAutoCall([this]() { options_ = nullptr; });
     summary_.total_iterations = options.repeat;
     EnforceOptions(options);
     FILE* output = reporter_.stream();
