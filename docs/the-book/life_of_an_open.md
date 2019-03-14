@@ -16,8 +16,7 @@ Where does that request go?
 
 The ‘open’ call is a function, provided by a [standard library](libc.md). For
 C/C++ programs, this will normally be declared in `unistd.h`, which has a
-backing definition in
-[libfdio](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio/).
+backing definition in [libfdio](/zircon/system/ulib/fdio/).
 For Go programs, there is an equivalent (but distinct) implementation in the Go
 standard library. For each language and runtime, developers may opt into their
 own definition of “open”.
@@ -50,8 +49,7 @@ over these handles?
 
 ## Fdio
 
-A library called
-[**fdio**](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio/)
+A library called [**fdio**](/zircon/system/ulib/fdio/)
 is responsible for providing a unified interface to a variety of resources --
 files, sockets, services, pipes, and more. This layer defines a group of
 functions, such as **read, write, open, close, seek, etc** that may be used on
@@ -65,7 +63,7 @@ receive a call to `open` or `write`, they will need to interpret those commands
 differently.
 
 For the purposes of this document, we’ll be focusing on the primary protocol
-used by filesystem clients: [FIDL](/development/languages/fidl/README.md).
+used by filesystem clients: [FIDL](/docs/development/languages/fidl/README.md).
 
 ## FIDL
 

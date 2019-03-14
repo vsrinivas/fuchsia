@@ -8,7 +8,7 @@ using the FIDL InterProcess Communication (**IPC**) system in Fuchsia.
 
 Refer to the [main FIDL page](../README.md) for details on the
 design and implementation of FIDL, as well as the
-[instructions for getting and building Fuchsia](/getting_started.md).
+[instructions for getting and building Fuchsia](/docs/getting_started.md).
 
 # Getting started
 
@@ -286,4 +286,3 @@ $ run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
 
 You do not need to specifically run the server because the call to
 `CreateComponent()` in the client will automatically launch the server.
-

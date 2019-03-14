@@ -28,7 +28,7 @@ for more information.
 
 A bundle is a grouping of related packages within a part of the source tree,
 such as all tools or all tests. A set of top-level bundles are defined in
-[`//bundles`](../../../bundles/README.md).
+[`//bundles`](/bundles/README.md).
 
 ## Build targets
 
@@ -59,7 +59,7 @@ the [package declaration type][packages-source].
 ## Executing a build
 
 The simplest way to this is through the `fx` tool, as described in
-[Getting Started](/getting_started.md#Setup-Build-Environment). Read on to see
+[Getting Started](/docs/getting_started.md#Setup-Build-Environment). Read on to see
 what `fx` does under the hood.
 
 ### A
@@ -227,4 +227,4 @@ You likely forgot to run **A** before running **B**.
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/fuchsia/+/master/build/
 [zircon-getting-started]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/getting_started.md
-[zircon-gn-options]: ../../../zircon/docs/gn_in_zircon.md
+[zircon-gn-options]: /zircon/docs/gn_in_zircon.md

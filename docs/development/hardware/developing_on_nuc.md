@@ -74,7 +74,7 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 
 ## 4. Build Fuchsia <a name="build"/>
 
-1. Follow the [getting started guidelines](../../getting_started.md)
+1. Follow the [getting started guidelines](/docs/getting_started.md)
 
 -----
 

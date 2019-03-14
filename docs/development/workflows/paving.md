@@ -29,7 +29,7 @@ for a workflow summary.
 ## Building
 
 Detailed instructions for obtaining and building Fuchsia are available from the
-[Getting Started](/getting_started.md) guide, but we'll assume here that the
+[Getting Started](/docs/getting_started.md) guide, but we'll assume here that the
 target system is x86-based and that you want to build a complete system. To
 configure our build for this we can run `fx set x64` and then build with
 `fx full-build`.
