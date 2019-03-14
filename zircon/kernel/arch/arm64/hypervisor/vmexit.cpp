@@ -32,6 +32,8 @@
     })
 
 static constexpr size_t kPageTableLevelShift = 3;
+static constexpr uint32_t kPsciMajorVersion = 0;
+static constexpr uint32_t kPsciMinorVersion = 2;
 static constexpr uint16_t kSmcPsci = 0;
 
 enum TimerControl : uint32_t {
@@ -128,6 +130,10 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
 
     next_pc(guest_state);
     switch (guest_state->x[0]) {
+    case PSCI64_PSCI_VERSION:
+        // See ARM PSCI Platform Design Document, Section 5.1.1.
+        guest_state->x[0] = (kPsciMajorVersion << 16) | kPsciMinorVersion;
+        return ZX_OK;
     case PSCI64_CPU_ON:
         memset(packet, 0, sizeof(*packet));
         packet->type = ZX_PKT_TYPE_GUEST_VCPU;
