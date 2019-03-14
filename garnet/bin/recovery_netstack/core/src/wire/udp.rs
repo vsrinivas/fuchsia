@@ -16,7 +16,8 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto};
-use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum};
+use crate::wire::util::checksum::Checksum;
+use crate::wire::util::{fits_in_u16, fits_in_u32};
 
 pub(crate) const HEADER_BYTES: usize = 8;
 

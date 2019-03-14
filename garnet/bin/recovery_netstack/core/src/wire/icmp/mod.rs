@@ -33,7 +33,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
-use crate::wire::util::{fits_in_u32, Checksum, OptionImpl, Options};
+use crate::wire::util::checksum::Checksum;
+use crate::wire::util::fits_in_u32;
+use crate::wire::util::records::options::{OptionImpl, Options};
 
 #[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]

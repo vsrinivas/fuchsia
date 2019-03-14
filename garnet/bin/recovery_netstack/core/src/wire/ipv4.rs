@@ -14,7 +14,9 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
-use crate::wire::util::{fits_in_u16, Checksum, Options};
+use crate::wire::util::checksum::Checksum;
+use crate::wire::util::fits_in_u16;
+use crate::wire::util::records::options::Options;
 
 use self::options::Ipv4OptionImpl;
 
@@ -420,7 +422,7 @@ const MF_FLAG_OFFSET: u32 = 0;
 
 mod options {
     use crate::ip::{Ipv4Option, Ipv4OptionData};
-    use crate::wire::util::{OptionImpl, OptionImplErr};
+    use crate::wire::util::records::options::{OptionImpl, OptionImplErr};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;

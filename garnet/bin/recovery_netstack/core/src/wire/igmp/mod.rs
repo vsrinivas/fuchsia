@@ -17,7 +17,7 @@ pub(crate) use self::types::*;
 use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
 use crate::wire::ipv6::FixedHeader;
-use crate::wire::util::Checksum;
+use crate::wire::util::checksum::Checksum;
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{
     BufferView, InnerPacketBuilder, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,

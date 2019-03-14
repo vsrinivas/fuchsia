@@ -11,7 +11,7 @@ use super::{
 use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
 use crate::wire::igmp::MessageType;
-use crate::wire::util::{Records, RecordsImpl, RecordsImplErr, RecordsImplLimit};
+use crate::wire::util::records::{Records, RecordsImpl, RecordsImplErr, RecordsImplLimit};
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};

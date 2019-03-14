@@ -14,11 +14,11 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
-use crate::wire::util;
 
 use super::{IcmpIpExt, IcmpUnusedCode};
 
-pub(crate) type Options<B> = util::Options<B, options::NdpOptionImpl>;
+pub(crate) type Options<B> =
+    crate::wire::util::records::options::Options<B, options::NdpOptionImpl>;
 
 /// An NDP Router Solicitation.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
@@ -93,7 +93,7 @@ pub(crate) mod options {
     use zerocopy::LayoutVerified;
 
     use crate::ip::Ipv6Addr;
-    use crate::wire::util::{OptionImpl, OptionImplErr};
+    use crate::wire::util::records::options::{OptionImpl, OptionImplErr};
 
     create_net_enum! {
         NdpOptionType,

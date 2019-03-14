@@ -17,7 +17,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto};
 use crate::transport::tcp::TcpOption;
-use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum, Options};
+use crate::wire::util::checksum::Checksum;
+use crate::wire::util::records::options::Options;
+use crate::wire::util::{fits_in_u16, fits_in_u32};
 
 use self::options::TcpOptionImpl;
 
@@ -390,7 +392,7 @@ mod options {
     use zerocopy::LayoutVerified;
 
     use crate::transport::tcp::TcpOption;
-    use crate::wire::util::{OptionImpl, OptionImplErr};
+    use crate::wire::util::records::options::{OptionImpl, OptionImplErr};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
