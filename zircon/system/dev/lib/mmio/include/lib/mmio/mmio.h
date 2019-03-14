@@ -132,6 +132,13 @@ private:
     mmio_pinned_buffer_t pinned_;
 };
 
+// Forward declaration
+template <typename ViewType>
+class MmioBase;
+
+class MmioView;
+typedef MmioBase<MmioView> MmioBuffer;
+
 // MmioBase is wrapper around mmio_block_t.
 // Use MmioBuffer (defined below) instead of MmioBase.
 template <typename ViewType>
@@ -244,6 +251,11 @@ public:
         ClearBits<uint32_t>(bits, offs);
     }
 
+    void CopyFrom32(const MmioBuffer& source, zx_off_t source_offs,
+                    zx_off_t dest_offs, size_t count) const {
+        CopyFrom<uint32_t>(source, source_offs, dest_offs, count);
+    }
+
     template <typename T>
     T Read(zx_off_t offs) const {
         ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
@@ -254,6 +266,17 @@ public:
     template <typename T>
     T ReadMasked(T mask, zx_off_t offs) const {
         return (Read<T>(offs) & mask);
+    }
+
+    template <typename T>
+    void CopyFrom(const MmioBuffer& source, zx_off_t source_offs,
+                  zx_off_t dest_offs, size_t count) const {
+        for (size_t i = 0; i < count; i++) {
+            T val = source.Read<T>(source_offs);
+            Write<T>(val, dest_offs);
+            source_offs++;
+            dest_offs++;
+        }
     }
 
     template <typename T>
@@ -326,9 +349,6 @@ private:
 
     uintptr_t ptr_;
 };
-
-class MmioView;
-typedef MmioBase<MmioView> MmioBuffer;
 
 // A sliced view that of an mmio which does not unmap on close. Must outlive
 // mmio buffer it is created from.
