@@ -270,7 +270,7 @@ zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDoma
     if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
         fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(
             txn, ZX_OK, static_cast<uint16_t>(cur_bigcluster_opp_idx_));
-    } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+    } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN) {
         fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(
             txn, ZX_OK, static_cast<uint16_t>(cur_littlecluster_opp_idx_));
     }
@@ -287,7 +287,7 @@ zx_status_t AmlThermal::SetDvfsOperatingPoint(uint16_t op_idx,
             status = scpi_.SetDvfsIdx(static_cast<uint8_t>(power_domain), op_idx);
         }
         cur_bigcluster_opp_idx_ = op_idx;
-    } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+    } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN) {
         if (op_idx != cur_littlecluster_opp_idx_) {
             status = scpi_.SetDvfsIdx(static_cast<uint8_t>(power_domain), op_idx);
         }
