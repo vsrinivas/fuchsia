@@ -62,7 +62,7 @@ template("dart_test") {
   _grouped_main_file = "$target_gen_dir/${_main_target_name}_grouped.dart"
 
   action(_test_grouping_target_name) {
-    script = "//topaz/runtime/dart/group_tests.py"
+    script = "//build/dart/group_tests.py"
     outputs = [
       _grouped_main_file,
     ]
@@ -148,7 +148,7 @@ template("dart_test") {
 
   # Creates a convenience script to invoke the test.
   action(_main_target_name) {
-    script = "//topaz/runtime/dart/gen_dart_test_invocation.py"
+    script = "//build/dart/gen_dart_test_invocation.py"
 
     inputs = [
       _snapshot,
