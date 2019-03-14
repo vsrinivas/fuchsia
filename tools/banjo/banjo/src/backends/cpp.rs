@@ -4,9 +4,11 @@
 
 use {
     crate::ast::{self, BanjoAst, Ident},
+    crate::backends::c::{
+        array_bounds, get_doc_comment, name_buffer, name_size, not_callback, to_c_name,
+    },
     crate::backends::Backend,
     failure::{format_err, Error},
-    heck::SnakeCase,
     std::collections::HashSet,
     std::io,
     std::iter,
@@ -15,39 +17,6 @@ use {
 fn to_cpp_name(name: &str) -> &str {
     // strip FQN
     name.split(".").last().unwrap()
-}
-
-fn to_c_name(name: &str) -> String {
-    // strip FQN
-    let name = name.split(".").last().unwrap();
-    let mut iter = name.chars().peekable();
-    let mut accum = String::new();
-    while let Some(c) = iter.next() {
-        accum.push(c);
-        if let Some(c2) = iter.peek() {
-            if c.is_ascii_uppercase() && c.is_ascii_uppercase() {
-                accum.push(c2.to_ascii_lowercase());
-                iter.next();
-            }
-        }
-    }
-    accum.to_snake_case()
-}
-
-fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {
-    for attr in attrs.0.iter() {
-        if attr.key == "Doc" {
-            if let Some(ref val) = attr.val {
-                let tabs: String = iter::repeat(' ').take(tabs * 4).collect();
-                return val
-                    .trim_end()
-                    .split("\n")
-                    .map(|line| format!("{}//{}\n", tabs, line))
-                    .collect();
-            }
-        }
-    }
-    "".to_string()
 }
 
 fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<String, Error> {
@@ -116,17 +85,6 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
     }
 }
 
-fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
-    if let ast::Ty::Array { ref ty, size, .. } = ty {
-        return if let Some(bounds) = array_bounds(ast, ty) {
-            Some(format!("[{}]{}", size.0, bounds))
-        } else {
-            Some(format!("[{}]", size.0))
-        };
-    }
-    None
-}
-
 fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Interface {
@@ -134,32 +92,6 @@ fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String,
         }
     }
     Err(format_err!("unknown ident type in interface_to_ops_cpp_str {:?}", ty))
-}
-
-fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
-    if let Some(attributes) = ast.id_to_attributes(id) {
-        if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == "ddk-callback" {
-                return false;
-            }
-        }
-    }
-    true
-}
-
-fn name_buffer(ty: &str) -> &'static str {
-    if ty == "void" {
-        "buffer"
-    } else {
-        "list"
-    }
-}
-fn name_size(ty: &str) -> &'static str {
-    if ty == "void" {
-        "size"
-    } else {
-        "count"
-    }
 }
 
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
@@ -170,6 +102,7 @@ fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String
         Ok((false, "void".to_string()))
     }
 }
+
 fn get_in_params(
     m: &ast::Method,
     wrappers: bool,

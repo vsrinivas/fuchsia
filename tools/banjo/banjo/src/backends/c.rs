@@ -39,7 +39,7 @@ pub fn to_c_name(name: &str) -> String {
     name.trim().to_snake_case()
 }
 
-fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {
+pub fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {
     for attr in attrs.0.iter() {
         if attr.key == "Doc" {
             if let Some(ref val) = attr.val {
@@ -90,7 +90,7 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     }
 }
 
-fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
+pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
     if let ast::Ty::Array { ref ty, size, .. } = ty {
         return if let Some(bounds) = array_bounds(ast, ty) {
             Some(format!("[{}]{}", size.0, bounds))
@@ -110,7 +110,7 @@ fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, E
     Err(format_err!("unknown ident type in interface_to_ops_c_str {:?}", ty))
 }
 
-fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
+pub fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     if let Some(attributes) = ast.id_to_attributes(id) {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-callback" {
@@ -148,14 +148,15 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
     }
 }
 
-fn name_buffer(ty: &str) -> &'static str {
+pub fn name_buffer(ty: &str) -> &'static str {
     if ty == "void" {
         "buffer"
     } else {
         "list"
     }
 }
-fn name_size(ty: &str) -> &'static str {
+
+pub fn name_size(ty: &str) -> &'static str {
     if ty == "void" {
         "size"
     } else {
