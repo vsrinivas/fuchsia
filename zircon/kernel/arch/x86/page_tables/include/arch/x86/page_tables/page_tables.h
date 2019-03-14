@@ -122,7 +122,8 @@ protected:
     // Convert PtFlags to ARCH_MMU_* flags.
     virtual uint pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level) = 0;
     // Returns true if a cache flush is necessary for pagetable changes to be
-    // visible.
+    // visible to hardware page table walkers. On x86, this is only true for Intel IOMMU page
+    // tables when the IOMMU 'caching mode' bit is true.
     virtual bool needs_cache_flushes() = 0;
 
     // Pointer to the translation table.
