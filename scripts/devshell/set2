@@ -87,11 +87,11 @@
 ##
 ## Example:
 ##
-##   $ fx set core.x64 --with bundle/kitchen_sink
+##   $ fx set2 core.x64 --with bundle/tests
 ##   -> build directory: out/default
 ##      board: //boards/x64.gni
 ##      product: //products/core.gni
-##      universe: //bundle/kitchen_sink (all other packages)
+##      universe: //bundle/tests (all test packages)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
@@ -116,13 +116,25 @@ function find_config {
   exit 1
 }
 
+function explain-goal-argument {
+  fx-error You must specify which product and which board you wish to build.
+  fx-error Example:
+  fx-error "  fx set2 core.x64"
+  fx-error
+  fx-error Run \"fx list-products\" to see the available products.
+  fx-error Run \"fx list-boards\" to see the available boards.
+  fx-error Run \"fx set2 --help\" to see full usage.
+  return 0
+}
+
 function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
   if [[ $# -lt 1 ]]; then
-    fx-command-help
-    return 1
+      fx-error Missing an explicit PRODUCT.BOARD goal.
+      explain-goal-argument
+      return 1
   fi
 
   cd "${FUCHSIA_DIR}"
@@ -138,7 +150,7 @@ function main {
       ;;
     *)
       fx-error Unable to parse PRODUCT.BOARD goal \"$1\"
-      fx-error Run "fx set2 --help" to see usage.
+      explain-goal-argument
       return 1
       ;;
   esac
@@ -298,11 +310,13 @@ function main {
     gn_args+=" use_ccache=true"
   fi
 
-  gn_args+=" available+=["
-  for package in ${universe[@]}; do
-    gn_args+="\"${package}\","
-  done
-  gn_args+="]"
+  if [[ ${#universe[@]} -ne 0 ]]; then
+    gn_args+=" available+=["
+    for package in ${universe[@]}; do
+      gn_args+="\"${package}\","
+    done
+    gn_args+="]"
+  fi
 
   if [[ -n "${variant}" ]]; then
     gn_args+=" select_variant=[${variant}]"
