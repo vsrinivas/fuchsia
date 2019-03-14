@@ -9,6 +9,11 @@
 namespace devmgr {
 
 zx_status_t BootArgs::Create(zx::vmo vmo, size_t size, BootArgs* out) {
+    // If we have no valid data in the VMO, return early success.
+    if (size == 0) {
+        return ZX_OK;
+    }
+
     uintptr_t addr;
     zx_status_t status = zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ, &addr);
     if (status != ZX_OK) {

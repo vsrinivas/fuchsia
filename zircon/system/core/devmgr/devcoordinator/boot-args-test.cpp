@@ -22,6 +22,15 @@ bool CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args
     END_HELPER;
 }
 
+bool CreateZeroSized() {
+    BEGIN_TEST;
+
+    devmgr::BootArgs boot_args;
+    ASSERT_TRUE(CreateBootArgs("", 0, &boot_args));
+
+    END_TEST;
+}
+
 bool Get() {
     BEGIN_TEST;
 
@@ -70,6 +79,7 @@ bool Collect() {
 }
 
 BEGIN_TEST_CASE(boot_args_tests)
+RUN_TEST(CreateZeroSized)
 RUN_TEST(Get)
 RUN_TEST(GetBool)
 RUN_TEST(Collect)

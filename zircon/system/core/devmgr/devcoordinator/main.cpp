@@ -874,11 +874,12 @@ int main(int argc, char** argv) {
     if (status == ZX_OK) {
         status = devmgr::BootArgs::Create(std::move(args_vmo), args_size, &boot_args);
         if (status != ZX_OK) {
-            fprintf(stderr, "devcoordinator: failed to create kernel arguments: %d\n", status);
+            fprintf(stderr, "devcoordinator: failed to create boot arguments (size %lu): %d\n",
+                    args_size, status);
             return 1;
         }
     } else {
-        fprintf(stderr, "devcoordinator: failed to get kernel arguments, assuming test "
+        fprintf(stderr, "devcoordinator: failed to get boot arguments, assuming test "
                         "environment and continuing\n");
     }
 

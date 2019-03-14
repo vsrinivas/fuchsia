@@ -36,7 +36,7 @@ zx_status_t ArgumentsGet(void* ctx, fidl_txn_t* txn) {
     zx::vmo dup;
     zx_status_t status = data->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
     if (status != ZX_OK) {
-        fprintf(stderr, "bootsvc: Failed to duplicate VMO\n");
+        fprintf(stderr, "bootsvc: Failed to duplicate boot arguments VMO\n");
         return status;
     }
     return fuchsia_boot_ArgumentsGet_reply(txn, dup.release(), data->size);
