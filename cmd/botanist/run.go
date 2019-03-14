@@ -150,8 +150,10 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 	}
 
 	ip, err := botanist.ResolveIPv4(ctx, nodename, netstackTimeout)
-	if err != nil {
-		logger.Errorf(ctx, "could not resolve IP address: %v", err)
+	if err == nil {
+		logger.Infof(ctx, "IPv4 address of %s found: %s", nodename, ip)
+	} else {
+		logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", nodename, err)
 	}
 
 	env := append(
