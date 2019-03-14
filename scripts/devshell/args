@@ -3,16 +3,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### `gn gen` the FUCHSIA_BUILD_DIR
+### `gn args` the FUCHSIA_BUILD_DIR
 
 ## If FUCHSIA_BUILD_DIR is out/x64, this is simply:
-##   gn gen out/x64
-## It is useful if one has by some mechanism deleted the ninja artifacts, but
-## not the args.gn, e.g. if one CTRL+C's a regen step (gn bug).
+##   gn args out/x64
+## It is useful for seeing and editing the arguments that are currently
+## configured.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
 set -ex
 
-"${FUCHSIA_DIR}/buildtools/gn" gen "$FUCHSIA_BUILD_DIR" "$@"
+"${FUCHSIA_DIR}/buildtools/gn" args "$FUCHSIA_BUILD_DIR" "$@"
+
