@@ -21,21 +21,22 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 }
 
-fn to_c_name(name: &str) -> String {
+pub fn to_c_name(name: &str) -> String {
     // strip FQN
     let name = name.split(".").last().unwrap();
-    let mut iter = name.chars().peekable();
-    let mut accum = String::new();
-    while let Some(c) = iter.next() {
-        accum.push(c);
-        if let Some(c2) = iter.peek() {
-            if c.is_ascii_uppercase() && c.is_ascii_uppercase() {
-                accum.push(c2.to_ascii_lowercase());
-                iter.next();
+    // Force uppercase characters the follow one another to lowercase.
+    // e.g. GUIDType becomes Guidtype
+    let mut iter = name.chars();
+    let name = iter::once(iter.next().unwrap())
+        .chain(iter.zip(name.chars()).map(|(c1, c2)| {
+            if c2.is_ascii_uppercase() {
+                c1.to_ascii_lowercase()
+            } else {
+                c1
             }
-        }
-    }
-    accum.trim().to_snake_case()
+        }))
+        .collect::<String>();
+    name.trim().to_snake_case()
 }
 
 fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {
