@@ -22,7 +22,7 @@ declaration_list = _{ ( declaration ~ ";" )* }
 
 declaration = _{ const_declaration | enum_declaration | union_declaration | struct_declaration | interface_declaration }
 
-const_declaration = { attributes ~ "const" ~ ( primitive_type | identifier_type ) ~ ident ~ "=" ~ constant }
+const_declaration = { attributes ~ "const" ~ ( primitive_type | string_type | identifier_type ) ~ ident ~ "=" ~ constant }
 
 doc_comment = ${ "///" ~ (" " | SYMBOL | PUNCTUATION | ASCII_ALPHANUMERIC)* ~ "\n"}
 doc_comment_block = _{ (doc_comment)* }

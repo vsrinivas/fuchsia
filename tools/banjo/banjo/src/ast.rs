@@ -787,7 +787,7 @@ impl BanjoAst {
                         Rule::ident => {
                             name = String::from(inner_pair.as_str());
                         }
-                        Rule::identifier_type | Rule::primitive_type => {
+                        Rule::identifier_type | Rule::string_type | Rule::primitive_type => {
                             ty = Ty::from_pair(ns, &inner_pair)?;
                         }
                         Rule::constant => {
