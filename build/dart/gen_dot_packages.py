@@ -9,16 +9,18 @@ import string
 import sys
 
 def parse_dot_packages(dot_packages_path):
+  dot_packages_path = os.path.abspath(dot_packages_path)
   deps = {}
   with open(dot_packages_path) as dot_packages:
       for line in dot_packages:
         if line.startswith('#'):
             continue
-        delim = line.find(':file://')
+        delim = line.find(':')
         if delim == -1:
             continue
         name = line[:delim]
-        path = os.path.abspath(line[delim + 8:].strip())
+        path = os.path.normpath(os.path.join(os.path.dirname(dot_packages_path),
+                                line[delim + 1:].strip()))
         if name in deps:
           raise Exception('%s contains multiple entries for package %s' %
               (dot_packages_path, name))
@@ -49,7 +51,7 @@ def main():
   create_base_directory(dot_packages_file)
 
   package_deps = {
-    args.package_name: args.source_dir,
+    args.package_name: os.path.abspath(args.source_dir),
   }
 
   for dep in args.deps:
@@ -63,11 +65,13 @@ def main():
       else:
         package_deps[name] = path
 
+  dot_packages_file = os.path.abspath(dot_packages_file)
   with open(dot_packages_file, "w") as dot_packages:
     names = package_deps.keys()
     names.sort()
     for name in names:
-      dot_packages.write('%s:file://%s/\n' % (name, package_deps[name]))
+      dot_packages.write('%s:%s/\n' % (name, os.path.relpath(package_deps[name],
+          os.path.dirname(dot_packages_file))))
 
   return 0
 
