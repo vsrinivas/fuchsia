@@ -348,7 +348,7 @@ macro_rules! open_get_directory_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 assert_eq!(
                     info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 }))),
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject))),
                 );
             }
         )
@@ -413,7 +413,7 @@ macro_rules! clone_get_directory_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 assert_eq!(
                     info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 }))),
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject))),
                 );
             }
         )

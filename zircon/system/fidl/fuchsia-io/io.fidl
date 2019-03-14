@@ -23,7 +23,6 @@ union NodeInfo {
 /// The default protocol, interface information must be acquired some
 /// other way.
 struct Service {
-    uint8 reserved;
 };
 
 /// The object may be cast to interface 'File'.
@@ -33,7 +32,6 @@ struct FileObject {
 
 /// The object may be cast to interface 'Directory'.
 struct DirectoryObject {
-    uint8 reserved;
 };
 
 /// The object is accompanied by a pipe.

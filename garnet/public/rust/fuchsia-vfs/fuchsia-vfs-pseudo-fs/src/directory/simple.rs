@@ -249,7 +249,7 @@ impl<'entries> Simple<'entries> {
         self.connections.push(conn);
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::Directory(DirectoryObject { reserved: 0 });
+            let mut info = NodeInfo::Directory(DirectoryObject);
             control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)))?;
         }
 
@@ -294,7 +294,7 @@ impl<'entries> Simple<'entries> {
                 return Ok(ConnectionState::Closed);
             }
             DirectoryRequest::Describe { responder } => {
-                let mut info = NodeInfo::Directory(DirectoryObject { reserved: 0 });
+                let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
             }
             DirectoryRequest::Sync { responder } => {
@@ -756,7 +756,7 @@ mod tests {
     #[test]
     fn empty_directory_describe() {
         run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
-            assert_describe!(proxy, NodeInfo::Directory(DirectoryObject { reserved: 0 }));
+            assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
             assert_close!(proxy);
         });
     }
@@ -773,7 +773,7 @@ mod tests {
                 assert_eq!(s, ZX_OK);
                 assert_eq!(
                     info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 })))
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject)))
                 );
             });
         });

@@ -512,7 +512,7 @@ pub mod server {
                     Ok(())
                 }
                 DirectoryRequest::Describe { responder } => {
-                    let mut info = NodeInfo::Directory(DirectoryObject { reserved: 0 } );
+                    let mut info = NodeInfo::Directory(DirectoryObject);
                     responder.send(&mut info).map_err(|e| e.into())
                 }
                 // Unsupported / Ignored methods.
