@@ -69,6 +69,7 @@ group("uapp") {
     "sysconfig",
     "system-version",
     "tee-test",
+    "thermal-cli",
     "thread-depth",
     "thread-stress",
     "trace-benchmark",
