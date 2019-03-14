@@ -869,9 +869,13 @@ void AmlRawNand::DdkRelease() {
     delete this;
 }
 
-void AmlRawNand::DdkUnbind() {
-    irq_.reset();
+void AmlRawNand::CleanUpIrq() {
+    irq_.destroy();
     thrd_join(irq_thread_, nullptr);
+}
+
+void AmlRawNand::DdkUnbind() {
+    CleanUpIrq();
     DdkRemove();
 }
 
@@ -891,17 +895,17 @@ zx_status_t AmlRawNand::Init() {
     zx_status_t status = AmlNandInit();
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_raw_nand: AmlNandInit() failed - This is FATAL\n");
-        return status;
+        CleanUpIrq();
     }
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t AmlRawNand::Bind() {
     zx_status_t status = DdkAdd("aml-raw_nand");
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+        CleanUpIrq();
     }
-
     return status;
 }
 

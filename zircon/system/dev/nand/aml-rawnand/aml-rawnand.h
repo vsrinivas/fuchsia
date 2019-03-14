@@ -142,6 +142,7 @@ private:
     zx_status_t AmlNandInitFromPage0();
     zx_status_t AmlRawNandAllocBufs();
     zx_status_t AmlNandInit();
+    void CleanUpIrq();
 };
 
 } // namespace amlrawnand
