@@ -15,6 +15,7 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/build"
+	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 
@@ -31,7 +32,7 @@ type RunCommand struct {
 	deviceFile string
 
 	// ImageManifests is a list of paths to image manifests (e.g., images.json)
-	imageManifests botanist.StringsFlag
+	imageManifests command.StringsFlag
 
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
@@ -41,7 +42,7 @@ type RunCommand struct {
 	fastboot string
 
 	// ZirconArgs are kernel command-line arguments to pass on boot.
-	zirconArgs botanist.StringsFlag
+	zirconArgs command.StringsFlag
 
 	// Timeout is the duration allowed for the command to finish execution.
 	timeout time.Duration

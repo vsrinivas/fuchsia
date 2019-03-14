@@ -22,6 +22,7 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/build"
+	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
@@ -35,7 +36,7 @@ import (
 // that boots with Zedboot.
 type ZedbootCommand struct {
 	// ImageManifests is a list of paths to image manifests (e.g., images.json)
-	imageManifests botanist.StringsFlag
+	imageManifests command.StringsFlag
 
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool

@@ -10,29 +10,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
-	"strings"
 	"time"
 
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
 )
-
-// StringsFlag implements flag.Value so it may be treated as a flag type.
-type StringsFlag []string
-
-// Set implements flag.Value.Set.
-func (s *StringsFlag) Set(val string) error {
-	*s = append(*s, val)
-	return nil
-}
-
-// Strings implements flag.Value.String.
-func (s *StringsFlag) String() string {
-	if s == nil {
-		return ""
-	}
-	return strings.Join([]string(*s), ", ")
-}
 
 // GetNodeAddress returns the UDP address corresponding to a given node, specifically
 // the netsvc or fuchsia address dependending on the value of `fuchsia`.
