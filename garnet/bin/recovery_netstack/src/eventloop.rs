@@ -275,8 +275,13 @@ impl EventLoop {
                     receive_frame(&mut self.ctx, id, &mut buf[..len]);
                 }
                 Some(Event::TimerEvent(id)) => {
-                    handle_timeout(&mut self.ctx, id);
+                    // cancel_timeout() should be called before handle_timeout().
+                    // Suppose handle_timeout() is called first and it reinstalls
+                    // the timer event, the timer event will be erroneously cancelled by the
+                    // cancel_timeout() before it's being triggered.
+                    // TODO(NET-2138): Create a unit test for the processing logic.
                     self.ctx.dispatcher().cancel_timeout(id);
+                    handle_timeout(&mut self.ctx, id);
                 }
                 None => bail!("Stream of events ended unexpectedly"),
             }
