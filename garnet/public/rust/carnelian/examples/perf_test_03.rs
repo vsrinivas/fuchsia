@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use chrono::prelude::*;
 use failure::Error;
-use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::Duration;
-use futures::StreamExt;
 use std::f32::consts::PI;
 
 const MIN_SEC_HAND_ANGLE_RADIANS: f32 = (PI * 2.0) / 60.0;
@@ -26,11 +23,10 @@ impl AppAssistant for ClockAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        key: ViewKey,
+        _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ClockViewAssistant {
-            key,
             background_node: ShapeNode::new(session.clone()),
             hour_hand_node: ShapeNode::new(session.clone()),
             minute_hand_node: ShapeNode::new(session.clone()),
@@ -40,7 +36,6 @@ impl AppAssistant for ClockAppAssistant {
 }
 
 struct ClockViewAssistant {
-    key: ViewKey,
     background_node: ShapeNode,
     hour_hand_node: ShapeNode,
     minute_hand_node: ShapeNode,
@@ -48,18 +43,6 @@ struct ClockViewAssistant {
 }
 
 impl ClockViewAssistant {
-    fn setup_timer(key: ViewKey) {
-        let timer = Interval::new(Duration::from_millis(10));
-        let f = timer
-            .map(move |_| {
-                App::with(|app| {
-                    app.queue_message(key, make_message(&ViewMessages::Update));
-                })
-            })
-            .collect::<()>();
-        fasync::spawn(f);
-    }
-
     fn position_hand(
         context: &ViewAssistantContext,
         node: &ShapeNode,
@@ -101,7 +84,6 @@ impl ViewAssistant for ClockViewAssistant {
         context.root_node.add_child(&self.second_hand_node);
         set_node_color(context.session, &self.second_hand_node, &hand_color);
 
-        Self::setup_timer(self.key);
         Ok(())
     }
 
@@ -181,6 +163,10 @@ impl ViewAssistant for ClockViewAssistant {
         );
 
         Ok(())
+    }
+
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::EveryFrame;
     }
 }
 

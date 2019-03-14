@@ -5,15 +5,15 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use carnelian::{
-    make_message, set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
-use fuchsia_async::{self as fasync, Interval};
+use fuchsia_async as fasync;
 use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::{ClockId, Duration, Time};
+use fuchsia_zircon::{ClockId, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
 
@@ -26,11 +26,10 @@ impl AppAssistant for SpinningSquareAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        key: ViewKey,
+        _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(SpinningSquareViewAssistant {
-            key,
             background_node: ShapeNode::new(session.clone()),
             spinning_square_node: ShapeNode::new(session.clone()),
             start: Time::get(ClockId::Monotonic),
@@ -79,24 +78,9 @@ impl SpinningSquareAppAssistant {
 }
 
 struct SpinningSquareViewAssistant {
-    key: ViewKey,
     background_node: ShapeNode,
     spinning_square_node: ShapeNode,
     start: Time,
-}
-
-impl SpinningSquareViewAssistant {
-    fn setup_timer(key: ViewKey) {
-        let timer = Interval::new(Duration::from_millis(10));
-        let f = timer
-            .map(move |_| {
-                App::with(|app| {
-                    app.queue_message(key, make_message(&ViewMessages::Update));
-                });
-            })
-            .collect::<()>();
-        fasync::spawn_local(f);
-    }
 }
 
 impl ViewAssistant for SpinningSquareViewAssistant {
@@ -113,7 +97,6 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         );
         context.root_node.add_child(&self.background_node);
         context.root_node.add_child(&self.spinning_square_node);
-        Self::setup_timer(self.key);
         Ok(())
     }
 
@@ -130,7 +113,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         ));
         self.background_node.set_translation(center_x, center_y, 0.0);
         let square_size = context.size.width.min(context.size.height) * 0.6;
-        let t = ((Time::get(ClockId::Monotonic).nanos() - self.start.nanos()) as f32
+        let t = ((context.presentation_time.nanos() - self.start.nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)
             % 1.0;
@@ -143,6 +126,10 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         self.spinning_square_node.set_translation(center_x, center_y, -8.0);
         self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
         Ok(())
+    }
+
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::EveryFrame;
     }
 }
 

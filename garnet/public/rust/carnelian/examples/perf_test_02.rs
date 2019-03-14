@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, set_node_color, App, AppAssistant, Color, Label, Paint, Point, Rect,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, AnimationMode, App, AppAssistant, Color, Label, Paint, Point, Rect,
+    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::Vector2D;
 use failure::Error;
-use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::Duration;
-use futures::prelude::*;
 
 fn make_bounds(context: &ViewAssistantContext) -> Rect {
     Rect::new(Point::zero(), context.size)
@@ -26,10 +23,10 @@ impl AppAssistant for TextScrollAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        key: ViewKey,
+        _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(TextScrollViewAssistant::new(key, session)?))
+        Ok(Box::new(TextScrollViewAssistant::new(session)?))
     }
 }
 
@@ -58,7 +55,6 @@ impl TextLineAnimator {
 }
 
 struct TextScrollViewAssistant {
-    key: ViewKey,
     background_node: ShapeNode,
     container: EntityNode,
     animators: Vec<TextLineAnimator>,
@@ -67,27 +63,14 @@ struct TextScrollViewAssistant {
 }
 
 impl TextScrollViewAssistant {
-    fn new(key: ViewKey, session: &SessionPtr) -> Result<TextScrollViewAssistant, Error> {
+    fn new(session: &SessionPtr) -> Result<TextScrollViewAssistant, Error> {
         Ok(TextScrollViewAssistant {
-            key,
             background_node: ShapeNode::new(session.clone()),
             container: EntityNode::new(session.clone()),
             animators: Vec::new(),
             fg_color: Color::from_hash_code("#A9A9A9")?,
             bg_color: Color::from_hash_code("#0000FF")?,
         })
-    }
-
-    fn setup_timer(key: ViewKey) {
-        let timer = Interval::new(Duration::from_millis(10));
-        let f = timer
-            .map(move |_| {
-                App::with(|app| {
-                    app.queue_message(key, make_message(&ViewMessages::Update));
-                });
-            })
-            .collect::<()>();
-        fasync::spawn_local(f);
     }
 }
 
@@ -151,8 +134,6 @@ impl ViewAssistant for TextScrollViewAssistant {
         self.container.add_child(&self.background_node);
         set_node_color(context.session, &self.background_node, &self.bg_color);
 
-        Self::setup_timer(self.key);
-
         const AESTHETICALLY_PLEASING_INITAL_Y: f32 = 10.0;
         let mut y = AESTHETICALLY_PLEASING_INITAL_Y;
         for line in STATES.iter() {
@@ -188,6 +169,10 @@ impl ViewAssistant for TextScrollViewAssistant {
             animator.animate(&bounds);
         }
         Ok(())
+    }
+
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::EveryFrame;
     }
 }
 

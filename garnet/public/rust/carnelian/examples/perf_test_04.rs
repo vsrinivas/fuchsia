@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
-use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::Duration;
-use futures::StreamExt;
 
 const COLOR_CODES: &[&str] = &[
     "#f80c12", "#ee1100", "#ff3311", "#ff4422", "#ff6644", "#ff9933", "#feae2d", "#ccbb33",
@@ -29,32 +26,19 @@ impl AppAssistant for RainbowAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        key: ViewKey,
+        _: ViewKey,
         _session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(RainbowViewAssistant { key: key, colors: Vec::new(), index: 0 }))
+        Ok(Box::new(RainbowViewAssistant { colors: Vec::new(), index: 0 }))
     }
 }
 
 struct RainbowViewAssistant {
-    key: ViewKey,
     colors: Vec<ShapeNode>,
     index: usize,
 }
 
-impl RainbowViewAssistant {
-    fn setup_timer(key: ViewKey) {
-        let timer = Interval::new(Duration::from_millis(100));
-        let f = timer
-            .map(move |_| {
-                App::with(|app| {
-                    app.queue_message(key, make_message(&ViewMessages::Update));
-                })
-            })
-            .collect::<()>();
-        fasync::spawn(f);
-    }
-}
+impl RainbowViewAssistant {}
 
 impl ViewAssistant for RainbowViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
@@ -64,7 +48,6 @@ impl ViewAssistant for RainbowViewAssistant {
             self.colors.push(node);
         }
 
-        Self::setup_timer(self.key);
         Ok(())
     }
 
@@ -91,6 +74,10 @@ impl ViewAssistant for RainbowViewAssistant {
         }
         self.index = self.index.wrapping_add(1);
         Ok(())
+    }
+
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::EveryFrame;
     }
 }
 

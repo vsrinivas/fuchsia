@@ -29,7 +29,7 @@ pub use crate::{
     message::{make_message, Message},
     scenic_utils::set_node_color,
     view::{
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey,
-        ViewMessages,
+        AnimationMode, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController,
+        ViewKey, ViewMessages,
     },
 };

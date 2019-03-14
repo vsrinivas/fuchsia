@@ -199,7 +199,10 @@ impl App {
     fn create_view(&mut self, view_token: ViewToken) -> Result<(), Error> {
         let session = self.setup_session()?;
         let view_assistant = self.create_view_assistant(&session)?;
-        let view_controller = ViewController::new(view_token, session, view_assistant)?;
+        let mut view_controller =
+            ViewController::new(self.next_key, view_token, session, view_assistant)?;
+
+        view_controller.setup_animation_mode();
 
         view_controller.present();
         self.view_controllers.insert(self.next_key, view_controller);

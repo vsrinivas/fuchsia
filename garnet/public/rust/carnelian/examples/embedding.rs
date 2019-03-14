@@ -35,7 +35,7 @@ impl AppAssistant for EmbeddingAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        _key: ViewKey,
+        _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
         let app = Launcher::new()?.launch(

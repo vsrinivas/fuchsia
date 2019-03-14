@@ -2,15 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{geometry::Size, message::Message};
+use crate::{
+    app::App,
+    geometry::Size,
+    message::{make_message, Message},
+    scenic_utils::PresentationTime,
+};
 use failure::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
 use fidl_fuchsia_ui_input::InputEvent;
 use fidl_fuchsia_ui_views::ViewToken;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{EntityNode, SessionPtr, View};
-use futures::TryFutureExt;
-use std::any::Any;
+use fuchsia_zircon::Duration;
+use fuchsia_zircon::{ClockId, Time};
+use futures::{StreamExt, TryFutureExt};
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the view struct will understand and process.
@@ -19,16 +25,30 @@ pub enum ViewMessages {
     Update,
 }
 
+/// enum that defines the animation behavior of the view
+pub enum AnimationMode {
+    /// No automatic update, only on explicit calls to update
+    None,
+
+    /// Call update in preparation for every frame
+    EveryFrame,
+
+    /// Call update periodically based on duration
+    RefreshRate(Duration),
+}
+
 /// parameter struct passed to setup and update trait methods.
 #[allow(missing_docs)]
 pub struct ViewAssistantContext<'a> {
+    pub key: ViewKey,
     pub view: &'a View,
     pub root_node: &'a EntityNode,
     pub session: &'a SessionPtr,
     pub logical_size: Size,
     pub size: Size,
     pub metrics: Size,
-    pub messages: Vec<Box<&'static Any>>,
+    pub presentation_time: PresentationTime,
+    pub messages: Vec<Message>,
 }
 
 impl<'a> ViewAssistantContext<'a> {
@@ -59,6 +79,11 @@ pub trait ViewAssistant {
     /// This method is called when `App::send_message` is called with the associated
     /// view controller's `ViewKey` and the view controller does not handle the message.
     fn handle_message(&mut self, _message: Message) {}
+
+    /// Initial animation mode for view
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::None;
+    }
 }
 
 /// Reference to a view assistant. _This type is likely to change in the future so
@@ -72,18 +97,20 @@ pub type ViewKey = u64;
 /// view, forwarding the interesting implementation points to a struct implementing
 /// the `ViewAssistant` trait.
 pub struct ViewController {
+    key: ViewKey,
     view: View,
     root_node: EntityNode,
     session: SessionPtr,
-    #[allow(unused)]
     assistant: ViewAssistantPtr,
     metrics: Size,
     physical_size: Size,
     logical_size: Size,
+    animation_mode: AnimationMode,
 }
 
 impl ViewController {
     pub(crate) fn new(
+        key: ViewKey,
         view_token: ViewToken,
         session: SessionPtr,
         mut view_assistant: ViewAssistantPtr,
@@ -94,22 +121,29 @@ impl ViewController {
         view.add_child(&root_node);
 
         let context = ViewAssistantContext {
+            key,
             view: &view,
             root_node: &root_node,
             session: &session,
             logical_size: Size::zero(),
             size: Size::zero(),
             metrics: Size::zero(),
+            presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
         };
         view_assistant.setup(&context)?;
+
+        let initial_animation_mode = view_assistant.initial_animation_mode();
+
         let view_controller = ViewController {
+            key,
             view,
             root_node,
             session,
             metrics: Size::zero(),
             physical_size: Size::zero(),
             logical_size: Size::zero(),
+            animation_mode: initial_animation_mode,
             assistant: view_assistant,
         };
 
@@ -132,12 +166,14 @@ impl ViewController {
             },
             fidl_fuchsia_ui_scenic::Event::Input(event) => {
                 let mut context = ViewAssistantContext {
+                    key: self.key,
                     view: &self.view,
                     root_node: &self.root_node,
                     session: &self.session,
                     logical_size: self.logical_size,
                     size: self.physical_size,
                     metrics: self.metrics,
+                    presentation_time: Time::get(ClockId::Monotonic),
                     messages: Vec::new(),
                 };
                 self.assistant
@@ -186,12 +222,14 @@ impl ViewController {
         );
 
         let context = ViewAssistantContext {
+            key: self.key,
             view: &self.view,
             root_node: &self.root_node,
             session: &self.session,
             logical_size: self.logical_size,
             size: self.physical_size,
             metrics: self.metrics,
+            presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
         };
         self.assistant.update(&context).unwrap_or_else(|e| panic!("Update error: {:?}", e));
@@ -209,5 +247,30 @@ impl ViewController {
             properties.bounding_box.max.y - properties.bounding_box.min.y,
         );
         self.update();
+    }
+
+    fn setup_timer(&self, duration: Duration) {
+        let key = self.key;
+        let timer = Interval::new(duration);
+        let f = timer
+            .map(move |_| {
+                App::with(|app| {
+                    app.queue_message(key, make_message(&ViewMessages::Update));
+                });
+            })
+            .collect::<()>();
+        fasync::spawn_local(f);
+    }
+
+    pub(crate) fn setup_animation_mode(&mut self) {
+        match self.animation_mode {
+            AnimationMode::None => {}
+            AnimationMode::EveryFrame => {
+                self.setup_timer(Duration::from_millis(10));
+            }
+            AnimationMode::RefreshRate(duration) => {
+                self.setup_timer(duration);
+            }
+        }
     }
 }

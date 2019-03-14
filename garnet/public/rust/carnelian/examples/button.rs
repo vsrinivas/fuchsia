@@ -25,7 +25,7 @@ impl AppAssistant for ButtonAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        _key: ViewKey,
+        _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ButtonViewAssistant::new(session)?))

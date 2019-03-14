@@ -3,16 +3,13 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, set_node_color, App, AppAssistant, Color, Coord, Point, Rect, Size,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    set_node_color, AnimationMode, App, AppAssistant, Color, Coord, Point, Rect, Size,
+    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::Vector2D;
 use failure::Error;
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
-use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Circle, Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::Duration;
-use futures::prelude::*;
 use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
 
@@ -31,10 +28,10 @@ impl AppAssistant for ShapeDropAppAssistant {
 
     fn create_view_assistant(
         &mut self,
-        key: ViewKey,
+        _: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(ShapeDropViewAssistant::new(key, session)?))
+        Ok(Box::new(ShapeDropViewAssistant::new(session)?))
     }
 }
 
@@ -152,7 +149,6 @@ impl TouchHandler {
 }
 
 struct ShapeDropViewAssistant {
-    key: ViewKey,
     background_node: ShapeNode,
     touch_handlers: BTreeMap<(u32, u32), TouchHandler>,
     animators: Vec<ShapeAnimator>,
@@ -163,25 +159,12 @@ fn make_pointer_event_key(pointer_event: &PointerEvent) -> (u32, u32) {
 }
 
 impl ShapeDropViewAssistant {
-    fn new(key: ViewKey, session: &SessionPtr) -> Result<ShapeDropViewAssistant, Error> {
+    fn new(session: &SessionPtr) -> Result<ShapeDropViewAssistant, Error> {
         Ok(ShapeDropViewAssistant {
-            key,
             background_node: ShapeNode::new(session.clone()),
             touch_handlers: BTreeMap::new(),
             animators: Vec::new(),
         })
-    }
-
-    fn setup_timer(key: ViewKey) {
-        let timer = Interval::new(Duration::from_millis(10));
-        let f = timer
-            .map(move |_| {
-                App::with(|app| {
-                    app.queue_message(key, make_message(&ViewMessages::Update));
-                });
-            })
-            .collect::<()>();
-        fasync::spawn_local(f);
     }
 
     fn start_animating(
@@ -237,8 +220,6 @@ impl ViewAssistant for ShapeDropViewAssistant {
 
         set_node_color(context.session, &self.background_node, &Color::from_hash_code("#2F4F4F")?);
 
-        Self::setup_timer(self.key);
-
         Ok(())
     }
 
@@ -257,6 +238,10 @@ impl ViewAssistant for ShapeDropViewAssistant {
         }
         self.animators.retain(|animator| animator.running);
         Ok(())
+    }
+
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::EveryFrame;
     }
 
     fn handle_input_event(
