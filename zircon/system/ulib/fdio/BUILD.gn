@@ -14,6 +14,7 @@ library("fdio") {
     "lib/fdio/private.h",
     "lib/fdio/spawn.h",
     "lib/fdio/unsafe.h",
+    "lib/fdio/util.h",
     "lib/fdio/vfs.h",
     "lib/fdio/watcher.h",
   ]
