@@ -274,8 +274,8 @@ public:
         for (size_t i = 0; i < count; i++) {
             T val = source.Read<T>(source_offs);
             Write<T>(val, dest_offs);
-            source_offs++;
-            dest_offs++;
+            source_offs = source_offs + sizeof(T);
+            dest_offs = dest_offs + sizeof(T);
         }
     }
 

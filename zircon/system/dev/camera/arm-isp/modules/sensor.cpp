@@ -10,7 +10,6 @@
 namespace camera {
 
 zx_status_t Sensor::Init() {
-
     zx_status_t status = sensor_callbacks_.Init();
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Sensor Init failed %d\n", __func__, status);

@@ -44,7 +44,7 @@ constexpr uint32_t kHistSize = 0x2000;
 constexpr uint32_t kPingMeteringStatsOffset = 0x44B0;
 constexpr uint32_t kMeteringSize = 0x8000;
 constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
-
+constexpr uint32_t kConfigSize = 0x1231C;
 } // namespace
 
 void ArmIspDevice::IspHWReset(bool reset) {
@@ -105,89 +105,63 @@ int ArmIspDevice::IspIrqHandler() {
 
 void ArmIspDevice::CopyContextInfo(uint8_t config_space,
                                    uint8_t direction) {
-    void* local_config_buffer = nullptr;
-    void* device_config_buffer = nullptr;
+    zx_off_t local_offset, device_offset;
+
     if (config_space == kPing) {
         // PING Context
-        local_config_buffer = static_cast<uint32_t*>(isp_mmio_local_.get()) +
-                              kDecompander0PingOffset;
-        device_config_buffer = static_cast<uint32_t*>(isp_mmio_.get()) + kDecompander0PingOffset;
+        local_offset = kDecompander0PingOffset;
+        device_offset = kDecompander0PingOffset;
     } else {
         // PONG Context
-        local_config_buffer = static_cast<uint32_t*>(isp_mmio_local_.get()) +
-                              kDecompander0PingOffset;
-        device_config_buffer = static_cast<uint32_t*>(isp_mmio_.get()) + kDecompander0PingOffset +
-                               kPingConfigSize;
+        local_offset = kDecompander0PingOffset;
+        device_offset = kDecompander0PingOffset + kPingConfigSize;
     }
-
-    void* source = nullptr;
-    void* destination = nullptr;
 
     if (direction == kCopyToIsp) {
         // Copy to ISP from Local Config Buffer
-        source = local_config_buffer;
-        destination = device_config_buffer;
+        isp_mmio_.CopyFrom32(isp_mmio_local_, local_offset, device_offset, kConfigSize / 4);
     } else {
         // Copy from ISP to Local Config Buffer
-        source = device_config_buffer;
-        destination = local_config_buffer;
+        isp_mmio_local_.CopyFrom32(isp_mmio_, local_offset, device_offset, kConfigSize / 4);
     }
-
-    memcpy(destination, source, 0x1231C);
 }
 
 void ArmIspDevice::CopyMeteringInfo(uint8_t config_space,
                                     uint8_t direction) {
-    void* local_metering_buffer_1 = nullptr;
-    void* device_metering_buffer_1 = nullptr;
-    void* local_metering_buffer_2 = nullptr;
-    void* device_metering_buffer_2 = nullptr;
-    size_t size_1, size_2;
+    zx_off_t local_offset_1, device_offset_1;
+    zx_off_t local_offset_2, device_offset_2;
 
     if (config_space == kPing) {
         // PING Context
-        local_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
-                                  kAexpHistStatsOffset;
-        device_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_.get()) + kAexpHistStatsOffset;
-        size_1 = kHistSize;
+        local_offset_1 = kAexpHistStatsOffset;
+        device_offset_1 = kAexpHistStatsOffset;
 
-        local_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
-                                  kPingMeteringStatsOffset;
-        device_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_.get()) +
-                                   kPingMeteringStatsOffset;
-        size_2 = kMeteringSize;
+        local_offset_2 = kPingMeteringStatsOffset;
+        device_offset_2 = kPingMeteringStatsOffset;
     } else {
         // PONG Context
-        local_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
-                                  kAexpHistStatsOffset;
-        device_metering_buffer_1 = static_cast<uint32_t*>(isp_mmio_.get()) + kAexpHistStatsOffset;
-        size_1 = kHistSize;
+        local_offset_1 = kAexpHistStatsOffset;
+        device_offset_1 = kAexpHistStatsOffset;
 
-        local_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_local_.get()) +
-                                  kPingMeteringStatsOffset +
-                                  kPingConfigSize;
-        device_metering_buffer_2 = static_cast<uint32_t*>(isp_mmio_.get()) +
-                                   kPingMeteringStatsOffset;
-        size_2 = kMeteringSize;
+        local_offset_2 = kPingMeteringStatsOffset;
+        device_offset_2 = kPingMeteringStatsOffset + kPingConfigSize;
     }
 
     if (direction == kCopyToIsp) {
         // Copy to ISP from Local Config Buffer
-        memcpy(device_metering_buffer_1, local_metering_buffer_1, size_1);
-        memcpy(device_metering_buffer_2, local_metering_buffer_2, size_2);
+        isp_mmio_.CopyFrom32(isp_mmio_local_, local_offset_1, device_offset_1, kHistSize / 4);
+        isp_mmio_.CopyFrom32(isp_mmio_local_, local_offset_2, device_offset_2, kMeteringSize / 4);
     } else {
         // Copy from ISP to Local Config Buffer
-        memcpy(local_metering_buffer_1, device_metering_buffer_1, size_1);
-        memcpy(local_metering_buffer_2, device_metering_buffer_2, size_2);
+        isp_mmio_local_.CopyFrom32(isp_mmio_, local_offset_1, device_offset_1, kHistSize / 4);
+        isp_mmio_local_.CopyFrom32(isp_mmio_, local_offset_2, device_offset_2, kMeteringSize / 4);
     }
-
-    // OnMeteringComplete();
 }
 
 zx_status_t ArmIspDevice::IspContextInit() {
-    zx_status_t status = ZX_OK;
     // This is actually writing to the HW
     IspLoadSeq_settings();
+
     // This is being written to the local_config_buffer_
     IspLoadSeq_settings_context();
 
@@ -208,7 +182,7 @@ zx_status_t ArmIspDevice::IspContextInit() {
         .set_mode_request(1)
         .WriteTo(&isp_mmio_);
 
-    return status;
+    return ZX_OK;
 }
 
 zx_status_t ArmIspDevice::InitIsp() {
@@ -336,7 +310,8 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_t sensor_cal
     // Allocate buffers for ISP SW configuration and metering information.
     fbl::AllocChecker ac;
     mmio_buffer_t local_mmio_buffer;
-    local_mmio_buffer.vaddr = new (&ac) char[kLocalBufferSize];
+    local_mmio_buffer.vaddr = new (static_cast<std::align_val_t>(alignof(uint32_t)),
+                                   &ac) char[kLocalBufferSize];
     local_mmio_buffer.size = kLocalBufferSize;
     local_mmio_buffer.vmo = ZX_HANDLE_INVALID;
     if (!ac.check()) {

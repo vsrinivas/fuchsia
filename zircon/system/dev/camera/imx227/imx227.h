@@ -47,7 +47,8 @@ typedef struct sensor_context {
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 
-class Imx227Device : public DeviceType {
+class Imx227Device : public DeviceType,
+                     public ddk::IspCallbacks<Imx227Device> {
 public:
     // GPIO Indexes.
     enum {
@@ -60,23 +61,25 @@ public:
     static zx_status_t Create(zx_device_t* parent);
     Imx227Device(zx_device_t* device)
         : DeviceType(device), pdev_(device), i2c_(device),
-          clk_(device), mipi_(device), ispimpl_(device) {}
+          clk_(device), mipi_(device), ispimpl_(device),
+          isp_callbacks_{&this->isp_callbacks_ops_, this} {}
 
+    const isp_callbacks_t* proto() const { return &isp_callbacks_; }
     // Methods required by the ddk mixins.
     void DdkUnbind();
     void DdkRelease();
 
     // Methods for callbacks.
-    zx_status_t Init();
-    void DeInit();
-    zx_status_t SetMode(uint8_t mode);
-    void StartStreaming();
-    void StopStreaming();
-    int32_t SetAnalogGain(int32_t gain);
-    int32_t SetDigitalGain(int32_t gain);
-    void SetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
-    zx_status_t Update();
-    zx_status_t GetInfo(sensor_info_t* out_info);
+    zx_status_t IspCallbacksInit();
+    void IspCallbacksDeInit();
+    zx_status_t IspCallbacksSetMode(uint8_t mode);
+    void IspCallbacksStartStreaming();
+    void IspCallbacksStopStreaming();
+    int32_t IspCallbacksSetAnalogGain(int32_t gain);
+    int32_t IspCallbacksSetDigitalGain(int32_t gain);
+    void IspCallbacksSetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
+    zx_status_t IspCallbacksUpdate();
+    zx_status_t IspCallbacksGetInfo(sensor_info_t* out_info);
     void GetSupportedModes(void* out_buf, size_t* out_actual);
 
 private:
@@ -90,6 +93,8 @@ private:
     ddk::ClockProtocolClient clk_;
     ddk::MipiCsiProtocolClient mipi_;
     ddk::IspImplProtocolClient ispimpl_;
+
+    const isp_callbacks_t isp_callbacks_;
 
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);

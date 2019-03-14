@@ -21,8 +21,6 @@ namespace sherlock {
 namespace {
 
 constexpr uint32_t kClk24MAltFunc = 7;
-constexpr uint32_t kI2cSDAAltFunc = 2;
-constexpr uint32_t kI2cSCLAltFunc = 2;
 
 constexpr pbus_mmio_t mipi_mmios[] = {
     // CSI PHY0
@@ -221,12 +219,8 @@ static pbus_dev_t isp_dev = []() {
 //      |
 //      -> IMX227
 zx_status_t Sherlock::CameraInit() {
-
     // Set GPIO alternate functions.
     gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
-
-    gpio_impl_.SetAltFunction(T931_GPIOA(14), kI2cSDAAltFunc);
-    gpio_impl_.SetAltFunction(T931_GPIOA(15), kI2cSCLAltFunc);
 
     zx_status_t status = pbus_.DeviceAdd(&isp_dev);
     if (status != ZX_OK) {

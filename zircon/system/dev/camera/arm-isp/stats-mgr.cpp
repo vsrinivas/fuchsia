@@ -20,6 +20,7 @@ fbl::unique_ptr<StatsManager> StatsManager::Create(ddk::MmioView isp_mmio,
     // Once all modules are initialized, create the StatsManger instance
     auto statsmanager = fbl::make_unique_checked<StatsManager>(&ac, std::move(sensor));
     if (!ac.check()) {
+        zxlogf(ERROR, "%s: Unable to start StatsManager \n", __func__);
         return nullptr;
     }
     return statsmanager;

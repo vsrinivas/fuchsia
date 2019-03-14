@@ -140,8 +140,7 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
     return ZX_OK;
 }
 
-zx_status_t Imx227Device::Init() {
-
+zx_status_t Imx227Device::IspCallbacksInit() {
     // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
     gpios_[VANA_ENABLE].ConfigOut(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
@@ -177,24 +176,24 @@ zx_status_t Imx227Device::Init() {
     ctx_.param.integration_time_apply_delay = 2;
     ctx_.param.isp_exposure_channel_delay = 0;
 
+    zxlogf(INFO, "%s IMX227 Camera Sensor Brought out of reset\n",__func__);
     return ZX_OK;
 }
 
-void Imx227Device::DeInit() {
+void Imx227Device::IspCallbacksDeInit() {
     mipi_.DeInit();
 }
 
-zx_status_t Imx227Device::GetInfo(sensor_info_t* out_info) {
+zx_status_t Imx227Device::IspCallbacksGetInfo(sensor_info_t* out_info) {
     if (out_info == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     memcpy(out_info, &ctx_.param, sizeof(sensor_info_t));
-
     return ZX_OK;
 }
 
-zx_status_t Imx227Device::SetMode(uint8_t mode) {
+zx_status_t Imx227Device::IspCallbacksSetMode(uint8_t mode) {
     // Get Sensor ID to see if sensor is initialized.
     if (!ValidateSensorID()) {
         return ZX_ERR_INTERNAL;
@@ -271,30 +270,30 @@ zx_status_t Imx227Device::SetMode(uint8_t mode) {
     return mipi_.Init(&mipi_info, &adap_info);
 }
 
-void Imx227Device::StartStreaming() {
+void Imx227Device::IspCallbacksStartStreaming() {
     ctx_.streaming_flag = 1;
     WriteReg(0x0100, 0x01);
 }
 
-void Imx227Device::StopStreaming() {
+void Imx227Device::IspCallbacksStopStreaming() {
     ctx_.streaming_flag = 0;
     WriteReg(0x0100, 0x00);
 }
 
-int32_t Imx227Device::SetAnalogGain(int32_t gain) {
+int32_t Imx227Device::IspCallbacksSetAnalogGain(int32_t gain) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-int32_t Imx227Device::SetDigitalGain(int32_t gain) {
+int32_t Imx227Device::IspCallbacksSetDigitalGain(int32_t gain) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Imx227Device::SetIntegrationTime(int32_t int_time,
+void Imx227Device::IspCallbacksSetIntegrationTime(int32_t int_time,
                                       int32_t int_time_M,
                                       int32_t int_time_L) {
 }
 
-zx_status_t Imx227Device::Update() {
+zx_status_t Imx227Device::IspCallbacksUpdate() {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -319,49 +318,7 @@ zx_status_t Imx227Device::Create(zx_device_t* parent) {
     // sensor_device intentionally leaked as it is now held by DevMgr.
     auto* dev = sensor_device.release();
 
-    isp_callbacks_t cb;
-    isp_callbacks_ops ops;
-
-    ops.init = [](void* ctx) {
-        return static_cast<Imx227Device*>(ctx)->Init();
-    };
-    ops.de_init = [](void* ctx) {
-        return static_cast<Imx227Device*>(ctx)->DeInit();
-    };
-    ops.set_mode = [](void* ctx, uint8_t mode) {
-        return static_cast<Imx227Device*>(ctx)->SetMode(mode);
-    };
-    ops.start_streaming = [](void* ctx) {
-        return static_cast<Imx227Device*>(ctx)->StartStreaming();
-    };
-    ops.stop_streaming = [](void* ctx) {
-        return static_cast<Imx227Device*>(ctx)->StopStreaming();
-    };
-    ops.set_analog_gain = [](void* ctx, int32_t gain) {
-        return static_cast<Imx227Device*>(ctx)->SetAnalogGain(gain);
-    };
-    ops.set_digital_gain = [](void* ctx, int32_t gain) {
-        return static_cast<Imx227Device*>(ctx)->SetDigitalGain(gain);
-    };
-    ops.set_integration_time = [](void* ctx,
-                                  int32_t int_time,
-                                  int32_t int_time_M,
-                                  int32_t int_time_L) {
-        return static_cast<Imx227Device*>(ctx)->SetIntegrationTime(int_time,
-                                                                   int_time_M,
-                                                                   int_time_L);
-    };
-    ops.get_info = [](void* ctx, sensor_info_t* out_info) {
-        return static_cast<Imx227Device*>(ctx)->GetInfo(out_info);
-    };
-    ops.update = [](void* ctx) {
-        return static_cast<Imx227Device*>(ctx)->Update();
-    };
-
-    cb.ops = &ops;
-    cb.ctx = dev;
-    return dev->ispimpl_.RegisterCallbacks(&cb);
-    return ZX_OK;
+    return dev->ispimpl_.RegisterCallbacks(dev->proto());
 }
 
 void Imx227Device::ShutDown() {
