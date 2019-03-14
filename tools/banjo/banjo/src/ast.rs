@@ -802,13 +802,16 @@ impl BanjoAst {
         }
     }
 
-    fn type_to_decl(&self, ty: &Ty) -> Option<&Decl> {
+    /// Finds the `Decl` in the AST for a `Ty` found inside of another `Decl`.
+    /// If |ignore_ref| is true and |ty| is a reference to an identifier, `None`
+    /// will be returned instead of the appropriate `Decl`.
+    fn type_to_decl(&self, ty: &Ty, ignore_ref: bool) -> Option<&Decl> {
         match ty {
-            Ty::Array { ref ty, .. } => self.type_to_decl(ty),
-            Ty::Vector { ref ty, .. } => self.type_to_decl(ty),
+            Ty::Array { ref ty, .. } => self.type_to_decl(ty, ignore_ref),
+            Ty::Vector { ref ty, .. } => self.type_to_decl(ty, ignore_ref),
             Ty::Identifier { id, reference } => {
                 // don't add edge for a reference
-                if *reference {
+                if ignore_ref && *reference {
                     return None;
                 }
 
@@ -826,7 +829,7 @@ impl BanjoAst {
                         }
                         Decl::Alias(to, from) => {
                             if to == id {
-                                return self.type_to_decl(&self.id_to_type(from));
+                                return self.type_to_decl(&self.id_to_type(from), ignore_ref);
                             }
                         }
                     }
@@ -846,8 +849,8 @@ impl BanjoAst {
     fn decl_dependencies(&self, decl: &Decl) -> Result<HashSet<&Decl>, ParseError> {
         let mut edges = HashSet::new();
 
-        let mut maybe_add_decl = |ty| {
-            if let Some(type_decl) = self.type_to_decl(ty) {
+        let mut maybe_add_decl = |ty, ignore_ref| {
+            if let Some(type_decl) = self.type_to_decl(ty, ignore_ref) {
                 edges.insert(type_decl);
             }
         };
@@ -856,25 +859,25 @@ impl BanjoAst {
             Decl::Interface { methods, .. } => {
                 for method in methods {
                     for (_, ty) in method.in_params.iter() {
-                        maybe_add_decl(&ty);
+                        maybe_add_decl(&ty, false);
                     }
                     for (_, ty) in method.out_params.iter() {
-                        maybe_add_decl(&ty);
+                        maybe_add_decl(&ty, false);
                     }
                 }
             }
             Decl::Struct { fields, .. } => {
                 for field in fields {
-                    maybe_add_decl(&field.ty);
+                    maybe_add_decl(&field.ty, true);
                 }
             }
             Decl::Union { fields, .. } => {
                 for field in fields {
-                    maybe_add_decl(&field.ty);
+                    maybe_add_decl(&field.ty, true);
                 }
             }
             Decl::Alias(_to, from) => {
-                maybe_add_decl(&self.id_to_type(from));
+                maybe_add_decl(&self.id_to_type(from), false);
             }
             // TODO(surajmalhtora): Implement constant.
             Decl::Constant { .. } => (),

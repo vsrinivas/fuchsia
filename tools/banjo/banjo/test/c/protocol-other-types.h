@@ -19,13 +19,13 @@ typedef union this_is_aunion this_is_aunion_t;
 typedef uint32_t this_is_an_enum_t;
 #define THIS_IS_AN_ENUM_X UINT32_C(23)
 #define strings_size UINT32_C(32)
+typedef struct other_types_reference_protocol other_types_reference_protocol_t;
 typedef void (*other_types_async_reference_struct_callback)(void* ctx, this_is_astruct_t* s);
 typedef void (*other_types_async_reference_union_callback)(void* ctx, this_is_aunion_t* u);
 typedef void (*other_types_async_reference_string_callback)(void* ctx, const char* s);
 typedef void (*other_types_async_reference_string_sized_callback)(void* ctx, const char* s);
 typedef void (*other_types_async_reference_string_sized2_callback)(void* ctx, const char* s);
 typedef struct other_types_async_reference_protocol other_types_async_reference_protocol_t;
-typedef struct other_types_reference_protocol other_types_reference_protocol_t;
 typedef struct other_types_protocol other_types_protocol_t;
 typedef void (*other_types_async_struct_callback)(void* ctx, const this_is_astruct_t* s);
 typedef void (*other_types_async_union_callback)(void* ctx, const this_is_aunion_t* u);
@@ -46,41 +46,6 @@ struct this_is_astruct {
 union this_is_aunion {
     char* s;
 };
-
-typedef struct other_types_async_reference_protocol_ops {
-    void (*struct)(void* ctx, this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);
-    void (*union)(void* ctx, this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);
-    void (*string)(void* ctx, const char* s, other_types_async_reference_string_callback callback, void* cookie);
-    void (*string_sized)(void* ctx, const char* s, other_types_async_reference_string_sized_callback callback, void* cookie);
-    void (*string_sized2)(void* ctx, const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie);
-} other_types_async_reference_protocol_ops_t;
-
-
-struct other_types_async_reference_protocol {
-    other_types_async_reference_protocol_ops_t* ops;
-    void* ctx;
-};
-
-static inline void other_types_async_reference_struct(const other_types_async_reference_protocol_t* proto, this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
-    proto->ops->struct(proto->ctx, s, callback, cookie);
-}
-
-static inline void other_types_async_reference_union(const other_types_async_reference_protocol_t* proto, this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
-    proto->ops->union(proto->ctx, u, callback, cookie);
-}
-
-static inline void other_types_async_reference_string(const other_types_async_reference_protocol_t* proto, const char* s, other_types_async_reference_string_callback callback, void* cookie) {
-    proto->ops->string(proto->ctx, s, callback, cookie);
-}
-
-static inline void other_types_async_reference_string_sized(const other_types_async_reference_protocol_t* proto, const char* s, other_types_async_reference_string_sized_callback callback, void* cookie) {
-    proto->ops->string_sized(proto->ctx, s, callback, cookie);
-}
-
-static inline void other_types_async_reference_string_sized2(const other_types_async_reference_protocol_t* proto, const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie) {
-    proto->ops->string_sized2(proto->ctx, s, callback, cookie);
-}
-
 
 typedef struct other_types_reference_protocol_ops {
     void (*struct)(void* ctx, this_is_astruct_t* s, this_is_astruct_t** out_s);
@@ -114,6 +79,41 @@ static inline void other_types_reference_string_sized(const other_types_referenc
 
 static inline void other_types_reference_string_sized2(const other_types_reference_protocol_t* proto, const char* s, char** out_s, size_t s_capacity) {
     proto->ops->string_sized2(proto->ctx, s, out_s, s_capacity);
+}
+
+
+typedef struct other_types_async_reference_protocol_ops {
+    void (*struct)(void* ctx, this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);
+    void (*union)(void* ctx, this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);
+    void (*string)(void* ctx, const char* s, other_types_async_reference_string_callback callback, void* cookie);
+    void (*string_sized)(void* ctx, const char* s, other_types_async_reference_string_sized_callback callback, void* cookie);
+    void (*string_sized2)(void* ctx, const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie);
+} other_types_async_reference_protocol_ops_t;
+
+
+struct other_types_async_reference_protocol {
+    other_types_async_reference_protocol_ops_t* ops;
+    void* ctx;
+};
+
+static inline void other_types_async_reference_struct(const other_types_async_reference_protocol_t* proto, this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
+    proto->ops->struct(proto->ctx, s, callback, cookie);
+}
+
+static inline void other_types_async_reference_union(const other_types_async_reference_protocol_t* proto, this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
+    proto->ops->union(proto->ctx, u, callback, cookie);
+}
+
+static inline void other_types_async_reference_string(const other_types_async_reference_protocol_t* proto, const char* s, other_types_async_reference_string_callback callback, void* cookie) {
+    proto->ops->string(proto->ctx, s, callback, cookie);
+}
+
+static inline void other_types_async_reference_string_sized(const other_types_async_reference_protocol_t* proto, const char* s, other_types_async_reference_string_sized_callback callback, void* cookie) {
+    proto->ops->string_sized(proto->ctx, s, callback, cookie);
+}
+
+static inline void other_types_async_reference_string_sized2(const other_types_async_reference_protocol_t* proto, const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie) {
+    proto->ops->string_sized2(proto->ctx, s, callback, cookie);
 }
 
 
