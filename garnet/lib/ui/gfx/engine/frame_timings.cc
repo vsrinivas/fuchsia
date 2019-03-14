@@ -107,7 +107,7 @@ void FrameTimings::Finalize() {
   finalized_ = true;
 
   if (frame_scheduler_) {
-    frame_scheduler_->OnFramePresented(this);
+    frame_scheduler_->OnFramePresented(*this);
   }
 }
 

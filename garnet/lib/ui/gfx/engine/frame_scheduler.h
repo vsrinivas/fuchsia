@@ -92,7 +92,7 @@ class FrameScheduler {
 
   // Called when the frame drawn by RenderFrame() has been
   // presented to the display.
-  virtual void OnFramePresented(FrameTimings* timings) = 0;
+  virtual void OnFramePresented(const FrameTimings& timings) = 0;
 
   // Called when the frame drawn by RenderFrame() has finished rendering.
   virtual void OnFrameRendered(const FrameTimings& timings) = 0;

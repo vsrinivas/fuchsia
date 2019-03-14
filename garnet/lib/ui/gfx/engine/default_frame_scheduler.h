@@ -47,7 +47,7 @@ class DefaultFrameScheduler : public FrameScheduler {
 
  protected:
   // |FrameScheduler|
-  void OnFramePresented(FrameTimings* timings) override;
+  void OnFramePresented(const FrameTimings& timings) override;
 
   // |FrameScheduler|
   void OnFrameRendered(const FrameTimings& timings) override;

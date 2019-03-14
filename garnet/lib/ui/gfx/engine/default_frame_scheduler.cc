@@ -314,35 +314,35 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
   return needs_render;
 }
 
-void DefaultFrameScheduler::OnFramePresented(FrameTimings* timings) {
+void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   FXL_DCHECK(!outstanding_frames_.empty());
   // TODO(MZ-400): how should we handle this case?  It is theoretically
   // possible, but if if it happens then it means that the EventTimestamper is
   // receiving signals out-of-order and is therefore generating bogus data.
-  FXL_DCHECK(outstanding_frames_[0].get() == timings) << "out-of-order.";
+  FXL_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
 
-  if (timings->frame_was_dropped()) {
+  if (timings.frame_was_dropped()) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
-                  timings->frame_number());
+                  timings.frame_number());
   } else {
     // TODO(MZ-400): This needs to be generalized for multi-display support.
-    display_->set_last_vsync_time(timings->actual_presentation_time());
+    display_->set_last_vsync_time(timings.actual_presentation_time());
 
     // Log trace data.
     // TODO(MZ-400): just pass the whole Frame to a listener.
     int64_t target_vs_actual_usecs =
-        static_cast<int64_t>(timings->actual_presentation_time() -
-                             timings->target_presentation_time()) /
+        static_cast<int64_t>(timings.actual_presentation_time() -
+                             timings.target_presentation_time()) /
         1000;
 
     zx_time_t now = async_now(dispatcher_);
-    FXL_DCHECK(now >= timings->actual_presentation_time());
+    FXL_DCHECK(now >= timings.actual_presentation_time());
     uint64_t elapsed_since_presentation_usecs =
-        static_cast<int64_t>(now - timings->actual_presentation_time()) / 1000;
+        static_cast<int64_t>(now - timings.actual_presentation_time()) / 1000;
 
     TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number",
-                  timings->frame_number(), "presentation time (usecs)",
-                  timings->actual_presentation_time() / 1000,
+                  timings.frame_number(), "presentation time (usecs)",
+                  timings.actual_presentation_time() / 1000,
                   "target time missed by (usecs)", target_vs_actual_usecs,
                   "elapsed time since presentation (usecs)",
                   elapsed_since_presentation_usecs);
