@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #[deny(warnings)]
-use ansi_term::Colour;
 use chrono::TimeZone;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
@@ -25,11 +24,23 @@ use fidl_fuchsia_logger::{
 
 const DEFAULT_FILE_CAPACITY: u64 = 64000;
 
-pub static ANSI_RESET: &str = "\x1B[0m";
+type Color = &'static str;
+static ANSI_RESET: &str = "\x1B[1;0m";
+static WHITE_ON_RED: &str = "\x1B[41;37m";
+#[allow(dead_code)]
+static BLACK: &str = "\x1B[30;1m";
+static RED: &str = "\x1B[31;1m";
+static GREEN: &str = "\x1B[32;1m";
+static YELLOW: &str = "\x1B[33;1m";
+static BLUE: &str = "\x1B[34;1m";
+#[allow(dead_code)]
+static MAGENTA: &str = "\x1B[35;1m";
+#[allow(dead_code)]
+static CYAN: &str = "\x1B[36;1m";
 
 struct Decorator {
-    lines: HashMap<String, Colour>,
-    words: HashMap<String, Colour>,
+    lines: HashMap<String, Color>,
+    words: HashMap<String, Color>,
     is_active: bool,
 }
 
@@ -38,11 +49,11 @@ impl Decorator {
         Decorator { lines: HashMap::new(), words: HashMap::new(), is_active: false }
     }
 
-    pub fn add_line(&mut self, keyword: String, color: Colour) {
+    pub fn add_line(&mut self, keyword: String, color: Color) {
         self.lines.insert(keyword, color);
     }
 
-    pub fn add_word(&mut self, keyword: String, color: Colour) {
+    pub fn add_word(&mut self, keyword: String, color: Color) {
         self.words.insert(keyword, color);
     }
 
@@ -56,15 +67,22 @@ impl Decorator {
     }
 
     /// If line contains a keyword, color the entire line
-    fn colorize_line(&self, line: String, keyword: &str, color: &Colour) -> String {
+    fn colorize_line(&self, line: String, keyword: &str, color: Color) -> String {
         if line.contains(keyword) {
-            color.paint(line).to_string()
+            // format!("{}{}{}", color, line, ANSI_RESET)
+            [color, line.as_str(), ANSI_RESET].concat()
         } else {
             line
         }
     }
 
-    fn colorize_word(&self, line: String, keyword: &str, color: &Colour) -> String {
+    fn colorize_word(
+        &self,
+        line: String,
+        keyword: &str,
+        color: Color,
+        encompassing_color: Color,
+    ) -> String {
         let expr = format!(r#"(?i)(?P<k>(?:{}))"#, keyword);
         let re = Regex::new(expr.as_str()).expect("should create regex");
 
@@ -73,23 +91,29 @@ impl Decorator {
                 Some(n) => n.as_str(),
                 None => "",
             };
-            format!("{}{}", color.paint(keyword), ANSI_RESET)
+            // format!("{}{}{}{}", color, keyword, ANSI_RESET, encompassing_color)
+            [color, keyword, ANSI_RESET, encompassing_color].concat()
         })
         .to_string()
     }
 
     pub fn decorate(&self, line: String) -> String {
+        // TODO(porce): Support styles such as bold, italic, blink
         if !self.is_active {
             return line;
         }
 
         let mut colored = line.clone();
+        let mut encompassing_color = "";
         for (keyword, color) in &self.lines {
             colored = self.colorize_line(colored, keyword, &color);
+            if line.contains(keyword.as_str()) {
+                encompassing_color = color;
+            }
         }
         // TODO(porce): Proper handling of nested coloring.
         for (keyword, color) in &self.words {
-            colored = self.colorize_word(colored, keyword, &color);
+            colored = self.colorize_word(colored, keyword, &color, &encompassing_color);
         }
         colored
     }
@@ -526,15 +550,14 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
     };
 
     let mut d = Decorator::new();
-    d.add_line(" bt#".to_string(), Colour::Purple);
-    // TODO(porce): ansi_term's Colour::Fixed() and Colour::RGB()
-    // seemed to have a bug in resetting the style.
-    // TODO(porce): Support background color
-    // TODO(porce): Support styles such as bold, italic, blink
-    d.add_word("error".to_string(), Colour::Red);
-    d.add_word("info".to_string(), Colour::Yellow);
-    d.add_word("DHCP".to_string(), Colour::Green);
-    d.add_word("warning|warn".to_string(), Colour::Blue);
+    d.add_line("welcome to Zircon".to_string(), WHITE_ON_RED);
+    d.add_line("dm reboot".to_string(), WHITE_ON_RED);
+    d.add_line(" bt#".to_string(), WHITE_ON_RED);
+    d.add_line("OOM:".to_string(), WHITE_ON_RED);
+    d.add_word("error|err".to_string(), RED);
+    d.add_word("info".to_string(), YELLOW);
+    d.add_word("unknown".to_string(), GREEN);
+    d.add_word("warning|warn".to_string(), BLUE);
 
     if local_options.is_pretty {
         d.activate();
@@ -1119,11 +1142,8 @@ mod tests {
             [00229.964817][1170][1263][klog] INFO: bt#02: pc 0x644746c42725 sp 0x3279d688da00 (app:/boot/bin/sh,0x1b725)";
 
         let mut d = Decorator::new();
-        d.add_line(" bt#".to_string(), Colour::Purple);
-        d.add_word("error".to_string(), Colour::Red);
-        d.add_word("info".to_string(), Colour::Yellow);
-        d.add_word("DHCP".to_string(), Colour::Green);
-        d.add_word("wArN".to_string(), Colour::Blue);
+        d.add_word("error".to_string(), RED);
+        d.add_word("info".to_string(), YELLOW);
         d.activate();
 
         for line in syslog.split("\n") {
