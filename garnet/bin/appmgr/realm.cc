@@ -35,15 +35,15 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/strings.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/json/json_parser.h"
 #include "lib/pkg_url/url_resolver.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 namespace component {
 namespace {
@@ -207,30 +207,28 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
 RealmArgs RealmArgs::Make(
     Realm* parent, std::string label, std::string data_path,
     const std::shared_ptr<component::Services>& env_services,
-    bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom) {
+    bool run_virtual_console, fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
-          .inherit_parent_services = inherit_parent_services,
-          .kill_on_oom = kill_on_oom};
+          .options = std::move(options)};
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     Realm* parent, std::string label, std::string data_path,
     const std::shared_ptr<component::Services>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    bool inherit_parent_services, bool kill_on_oom) {
+    fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
-          .inherit_parent_services = inherit_parent_services,
-          .kill_on_oom = kill_on_oom};
+          .options = std::move(options)};
 }
 
 Realm::Realm(RealmArgs args)
@@ -240,7 +238,8 @@ Realm::Realm(RealmArgs args)
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
       environment_services_(args.environment_services),
-      allow_parent_runners_(args.allow_parent_runners) {
+      allow_parent_runners_(args.options.allow_parent_runners),
+      delete_storage_on_death_(args.options.delete_storage_on_death) {
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
   zx::unowned<zx::job> parent_job;
@@ -261,13 +260,13 @@ Realm::Realm(RealmArgs args)
   FXL_CHECK(!args.label.empty());
   label_ = args.label.substr(0, fuchsia::sys::kLabelMaxLength);
 
-  if (args.kill_on_oom) {
+  if (args.options.kill_on_oom) {
     size_t property_value = 1;
     job_.set_property(ZX_PROP_JOB_KILL_ON_OOM, &property_value,
                       sizeof(property_value));
   }
 
-  if (args.inherit_parent_services) {
+  if (args.options.inherit_parent_services) {
     default_namespace_ = fxl::MakeRefCounted<Namespace>(
         parent_->default_namespace_, this, std::move(args.additional_services),
         nullptr);
@@ -315,7 +314,16 @@ Realm::Realm(RealmArgs args)
   }
 }
 
-Realm::~Realm() { job_.kill(); }
+Realm::~Realm() {
+  job_.kill();
+
+  if (delete_storage_on_death_) {
+    if (!files::DeletePath(data_path(), true)) {
+      FXL_LOG(ERROR) << "Failed to delete storage for environment '" << label()
+                     << "' on death";
+    }
+  }
+}
 
 zx::channel Realm::OpenInfoDir() {
   return Util::OpenAsDirectory(&info_vfs_, hub_dir());
@@ -383,14 +391,11 @@ void Realm::CreateNestedEnvironment(
     args = RealmArgs::MakeWithAdditionalServices(
         this, label, nested_data_path, environment_services_,
         /*run_virtual_console=*/false, std::move(additional_services),
-        options.inherit_parent_services, options.kill_on_oom);
+        std::move(options));
   } else {
-    args =
-        RealmArgs::Make(this, label, nested_data_path, environment_services_,
-                        /*run_virtual_console=*/false,
-                        options.inherit_parent_services, options.kill_on_oom);
+    args = RealmArgs::Make(this, label, nested_data_path, environment_services_,
+                           /*run_virtual_console=*/false, std::move(options));
   }
-  args.allow_parent_runners = options.allow_parent_runners;
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
   Realm* child = controller->realm();
@@ -821,9 +826,7 @@ void Realm::CreateComponentFromPackage(
     const auto& sandbox = cmx.sandbox_meta();
     service_whitelist = &sandbox.services();
 
-    builder.AddConfigData(
-        sandbox,
-        fp.GetDefaultComponentName());
+    builder.AddConfigData(sandbox, fp.GetDefaultComponentName());
 
     builder.AddSandbox(
         sandbox,

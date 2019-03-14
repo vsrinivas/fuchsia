@@ -674,6 +674,7 @@ pub mod server {
                     inherit_parent_services: false,
                     allow_parent_runners: false,
                     kill_on_oom: false,
+                    delete_storage_on_death: false,
                 },
             ).context("creating isolated environment")?;
 

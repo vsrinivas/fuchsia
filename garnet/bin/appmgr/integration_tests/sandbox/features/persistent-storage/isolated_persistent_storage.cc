@@ -8,8 +8,10 @@
 #include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
-#include <test/appmgr/sandbox/cpp/fidl.h>
+#include <test/appmgr/integration/cpp/fidl.h>
 #include <zircon/syscalls.h>
+
+#include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 
 namespace {
 
@@ -24,17 +26,19 @@ constexpr char kTestFileName[] = "some-test-file";
 // included. (This is mentioned here since the manifests are JSON and can't have
 // comments)
 constexpr char kTestUtilURL[] =
-    "fuchsia-pkg://fuchsia.com/isolated_persistent_storage#meta/test_util.cmx";
+    "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx";
 constexpr char kDifferentTestUtilURL[] =
-    "fuchsia-pkg://fuchsia.com/isolated_persistent_storage#meta/test_util2.cmx";
+    "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util2.cmx";
 
-using test::appmgr::sandbox::DataFileReaderWriterPtr;
+using test::appmgr::integration::DataFileReaderWriterPtr;
 
 class IsolatedPersistentStorageTest
-    : public component::testing::TestWithEnvironment {
+    : virtual public component::testing::TestWithEnvironment,
+      public component::testing::DataFileReaderWriterUtil {
  protected:
   IsolatedPersistentStorageTest()
-      : env1_(CreateNewEnclosingEnvironment(kEnvironmentLabel1,
+      : TestWithEnvironment(),
+        env1_(CreateNewEnclosingEnvironment(kEnvironmentLabel1,
                                             CreateServices())),
         env2_(CreateNewEnclosingEnvironment(kEnvironmentLabel2,
                                             CreateServices())) {}
@@ -50,50 +54,19 @@ class IsolatedPersistentStorageTest
     test_file_content_ = std::string(random_bytes, sizeof(random_bytes));
   }
 
-  bool ReadFileSync(const DataFileReaderWriterPtr& util, std::string path,
-                    fidl::StringPtr* result) {
-    bool done = false;
-    util->ReadFile(path, [&](fidl::StringPtr contents) {
-      done = true;
-      *result = contents;
-    });
-    return RunLoopUntil([&] { return done; });
-  }
-
-  bool WriteFileSync(const DataFileReaderWriterPtr& util, std::string path,
-                     std::string contents, zx_status_t* result) {
-    bool done = false;
-    util->WriteFile(path, contents, [&](zx_status_t write_result) {
-      done = true;
-      *result = write_result;
-    });
-    return RunLoopUntil([&] { return done; });
-  }
-
   // Verify that a file written in one component's /data dir is not accessible
   // by the other component.
-  bool VerifyIsolated(component::Services services1,
+  void VerifyIsolated(component::Services services1,
                       component::Services services2) {
     DataFileReaderWriterPtr util1, util2;
     services1.ConnectToService(util1.NewRequest());
     services2.ConnectToService(util2.NewRequest());
 
-    // Can't use ASSERT_TRUE/ASSERT_EQ macros correctly here since this isn't
-    // the test body, and ASSERT_* macros just 'return;' to exit the test. Test
-    // body needs to assert return value here.
-    zx_status_t write_result;
-    fidl::StringPtr contents;
-    if (!WriteFileSync(util1, kTestFileName, test_file_content_, &write_result))
-      return false;
-    if (write_result != ZX_OK)
-      return false;
-    if (!ReadFileSync(util1, kTestFileName, &contents))
-      return false;
-    EXPECT_EQ(contents.get(), test_file_content_);
-    if (!ReadFileSync(util2, kTestFileName, &contents))
-      return false;
-    EXPECT_NE(contents.get(), test_file_content_);
-    return true;
+    // Can't use ASSERT_TRUE/ASSERT_EQ macros here since this isn't the test
+    // body, and ASSERT_* macros just 'return;' to exit the test.
+    EXPECT_EQ(WriteFileSync(util1, kTestFileName, test_file_content_), ZX_OK);
+    EXPECT_EQ(ReadFileSync(util1, kTestFileName).get(), test_file_content_);
+    EXPECT_NE(ReadFileSync(util2, kTestFileName).get(), test_file_content_);
   }
 
   std::unique_ptr<component::testing::EnclosingEnvironment> env1_;
@@ -117,7 +90,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentDifferentEnvironments) {
   env1_->CreateComponent(std::move(launch_info1), ctrl1.NewRequest());
   env2_->CreateComponent(std::move(launch_info2), ctrl2.NewRequest());
 
-  ASSERT_TRUE(VerifyIsolated(std::move(services1), std::move(services2)));
+  VerifyIsolated(std::move(services1), std::move(services2));
 }
 
 TEST_F(IsolatedPersistentStorageTest, SameComponentNestedEnvironments) {
@@ -141,7 +114,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentNestedEnvironments) {
   env1_->CreateComponent(std::move(launch_info1), ctrl1.NewRequest());
   env1_nested->CreateComponent(std::move(launch_info2), ctrl2.NewRequest());
 
-  ASSERT_TRUE(VerifyIsolated(std::move(services1), std::move(services2)));
+  VerifyIsolated(std::move(services1), std::move(services2));
 }
 
 TEST_F(IsolatedPersistentStorageTest, DifferentComponentsSameEnvironment) {
@@ -175,13 +148,8 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   env1_->CreateComponent(std::move(launch_info), ctrl.NewRequest());
   services.ConnectToService(util.NewRequest());
 
-  zx_status_t write_result;
-  fidl::StringPtr contents;
-  ASSERT_TRUE(
-      WriteFileSync(util, kTestFileName, test_file_content_, &write_result));
-  ASSERT_EQ(write_result, ZX_OK);
-  ASSERT_TRUE(ReadFileSync(util, kTestFileName, &contents));
-  EXPECT_EQ(contents.get(), test_file_content_);
+  EXPECT_EQ(WriteFileSync(util, kTestFileName, test_file_content_), ZX_OK);
+  EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);
 
   // Kill the component and then recreate it in the same environment.
   ctrl->Kill();
@@ -193,8 +161,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   services.ConnectToService(util.NewRequest());
 
   // File should still exist.
-  ASSERT_TRUE(ReadFileSync(util, kTestFileName, &contents));
-  EXPECT_EQ(contents.get(), test_file_content_);
+  EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);
 }
 
 }  // namespace

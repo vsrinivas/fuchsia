@@ -1,0 +1,74 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+fidl("data_file_reader_writer") {
+  testonly = true
+  name = "test.appmgr.integration"
+
+  sources = [
+    "data_file_reader_writer.fidl",
+  ]
+}
+
+source_set("data_file_reader_writer_util") {
+  testonly = true
+
+  sources = [
+    "data_file_reader_writer_util.cc",
+    "data_file_reader_writer_util.h",
+  ]
+
+  deps = [
+    ":data_file_reader_writer",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("persistent_storage_test_util_bin") {
+  testonly = true
+  output_name = "persistent_storage_test_util"
+
+  sources = [
+    "persistent_storage_test_util.cc",
+  ]
+
+  deps = [
+    ":data_file_reader_writer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("persistent_storage_test_util") {
+  deprecated_global_persistent_storage = "//build"
+  testonly = true
+
+  meta = [
+    # Same test util manifest gets added into package with two different names
+    # to enable testing isolation of components based on URL
+    {
+      path = "meta/util.cmx"
+      dest = "util.cmx"
+    },
+    {
+      path = "meta/util.cmx"
+      dest = "util2.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "persistent_storage_test_util"
+    },
+  ]
+
+  deps = [
+    ":persistent_storage_test_util_bin",
+  ]
+}

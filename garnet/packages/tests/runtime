@@ -21,6 +21,7 @@
         "//garnet/bin/appmgr/integration_tests/sandbox/services:multiple_components",
         "//garnet/bin/appmgr/integration_tests/sandbox/services:no_services",
         "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services",
+        "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
         "//garnet/bin/glob"
     ]
 }

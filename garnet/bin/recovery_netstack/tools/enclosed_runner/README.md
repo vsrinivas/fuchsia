@@ -30,12 +30,12 @@ to work.
 * If you want to start processes that use the `recovery_netstack`, like `net_cli` for example,
 you can `chrealm` into the realm created for `enclosed_runner`, like:
 ```
-$ chrealm /hub/r/sys/<koid>/r/env_for_test/<void>
+$ chrealm /hub/r/sys/<koid>/r/<env_name>/<koid>
 ```
-where `<koid>` is a kernel-assigned number and will change between different runs. `chrealm` will
-drop you into a nested shell environment that is mapping the `svc` folder to the enclosed
-environment where the `recovery_netstack` is running. You can `CTRL+D` out of `chrealm` to go back
-to the `sys` realm when you're done.
+where `<koid>` and `<env_name>` will both change between different runs. The chrealm command to run will be printed when starting `enclosed_runner`. `chrealm` will drop you into a nested shell
+environment that is mapping the `svc` folder to the enclosed environment where the
+`recovery_netstack` is running. You can `CTRL+D` out of `chrealm` to go back to the `sys` realm
+when you're done.
 * Because `enclosed_runner` will keep running in the background, you can kill it (and the
 `recovery_netstack` along with it) with `killall enclosed_runner.cmx`. And, because
 `recovery_netstack` is killed along with it, if you re-build of `recovery_netstack` and re-run

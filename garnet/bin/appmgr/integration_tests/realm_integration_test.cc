@@ -18,18 +18,20 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <test/appmgr/integration/cpp/fidl.h>
+#include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 #include "garnet/bin/appmgr/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace component {
 namespace {
@@ -39,10 +41,11 @@ using fuchsia::sys::TerminationReason;
 using ::testing::AnyOf;
 using ::testing::Eq;
 
+using test::appmgr::integration::DataFileReaderWriterPtr;
 using testing::EnclosingEnvironment;
 using testing::TestWithEnvironment;
 
-class RealmTest : public TestWithEnvironment {
+class RealmTest : virtual public TestWithEnvironment {
  protected:
   void SetUp() override {
     TestWithEnvironment::SetUp();
@@ -64,11 +67,15 @@ class RealmTest : public TestWithEnvironment {
   }
 
   fuchsia::sys::LaunchInfo CreateLaunchInfo(
-      const std::string& url, const std::vector<std::string>& args = {}) {
+      const std::string& url, zx::channel directory_request = zx::channel(),
+      const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
     for (const auto& a : args) {
       launch_info.arguments.push_back(a);
+    }
+    if (directory_request.is_valid()) {
+      launch_info.directory_request = std::move(directory_request);
     }
     launch_info.out = sys::CloneFileDescriptor(outf_);
     launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
@@ -77,9 +84,10 @@ class RealmTest : public TestWithEnvironment {
 
   fuchsia::sys::ComponentControllerPtr RunComponent(
       EnclosingEnvironment* enclosing_environment, const std::string& url,
+      zx::channel directory_request = zx::channel(),
       const std::vector<std::string>& args = {}) {
     return enclosing_environment->CreateComponent(
-        CreateLaunchInfo(url, std::move(args)));
+        CreateLaunchInfo(url, std::move(directory_request), std::move(args)));
   }
 
  private:
@@ -269,6 +277,50 @@ TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
   EXPECT_TRUE(RunLoopUntil([&] { return env_status == ZX_ERR_BAD_STATE; }));
   EXPECT_TRUE(
       RunLoopUntil([&] { return env_controller_status == ZX_ERR_BAD_STATE; }));
+}
+
+class EnvironmentOptionsTest
+    : public RealmTest,
+      public component::testing::DataFileReaderWriterUtil {};
+
+TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
+  constexpr char kTestFileName[] = "some-test-file";
+  constexpr char kTestFileContent[] = "the-best-file-content";
+
+  // Create an environment with 'delete_storage_on_death' option enabled.
+  component::Services services;
+  DataFileReaderWriterPtr util;
+  auto enclosing_environment = CreateNewEnclosingEnvironment(
+      kRealm, CreateServices(),
+      fuchsia::sys::EnvironmentOptions{.delete_storage_on_death = true});
+  auto ctrl = RunComponent(
+      enclosing_environment.get(),
+      "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx",
+      services.NewRequest());
+  services.ConnectToService(util.NewRequest());
+
+  // Write some arbitrary file content into the test util's "/data" dir, and
+  // verify that we can read it back.
+  ASSERT_EQ(WriteFileSync(util, kTestFileName, kTestFileContent), ZX_OK);
+  ASSERT_EQ(ReadFileSync(util, kTestFileName).get(), kTestFileContent);
+
+  // Kill the environment, which should automatically delete any persistent
+  // storage it owns.
+  bool killed = false;
+  enclosing_environment->Kill([&] { killed = true; });
+  ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
+
+  // Recreate the environment and component using the same environment label.
+  enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, CreateServices());
+  ctrl = RunComponent(
+      enclosing_environment.get(),
+      "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx",
+      services.NewRequest());
+  services.ConnectToService(util.NewRequest());
+
+  // Verify that the file no longer exists.
+  EXPECT_TRUE(ReadFileSync(util, kTestFileName).is_null());
 }
 
 using LabelAndValidity = std::tuple<std::string, bool>;

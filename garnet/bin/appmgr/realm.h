@@ -40,14 +40,14 @@ struct RealmArgs {
   static RealmArgs Make(
       Realm* parent, std::string label, std::string data_path,
       const std::shared_ptr<component::Services>& env_services,
-      bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom);
+      bool run_virtual_console, fuchsia::sys::EnvironmentOptions options);
 
   static RealmArgs MakeWithAdditionalServices(
       Realm* parent, std::string label, std::string data_path,
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console,
       fuchsia::sys::ServiceListPtr additional_services,
-      bool inherit_parent_services, bool kill_on_oom);
+      fuchsia::sys::EnvironmentOptions options);
 
   Realm* parent;
   std::string label;
@@ -55,9 +55,7 @@ struct RealmArgs {
   std::shared_ptr<component::Services> environment_services;
   bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
-  bool inherit_parent_services;
-  bool allow_parent_runners;
-  bool kill_on_oom;
+  fuchsia::sys::EnvironmentOptions options;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -182,6 +180,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   const std::shared_ptr<component::Services> environment_services_;
 
   bool allow_parent_runners_ = false;
+  bool delete_storage_on_death_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };

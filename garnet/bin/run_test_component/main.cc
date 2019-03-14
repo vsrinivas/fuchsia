@@ -7,11 +7,12 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
@@ -19,14 +20,14 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/component/cpp/testing/enclosing_environment.h"
 #include "lib/component/cpp/testing/test_util.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
-#include "lib/fxl/strings/string_printf.h"
 
 using fuchsia::sys::TerminationReason;
 
 namespace {
-constexpr char kEnv[] = "env_for_test";
+constexpr char kEnvPrefix[] = "env_for_test_";
 constexpr char kConfigPath[] =
     "/pkgfs/packages/run_test_component/0/data/environment.config";
 
@@ -181,8 +182,14 @@ int main(int argc, const char** argv) {
     for (auto& service : system_services) {
       env_services->AllowParentService(service);
     }
+
+    uint32_t rand;
+    zx_cprng_draw(&rand, sizeof(rand));
+    std::string env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, rand);
+    fuchsia::sys::EnvironmentOptions env_opt{.delete_storage_on_death = true};
     enclosing_env = component::testing::EnclosingEnvironment::Create(
-        kEnv, parent_env, std::move(env_services));
+        std::move(env_label), parent_env, std::move(env_services),
+        std::move(env_opt));
     launcher = enclosing_env->launcher_ptr();
   }
 

@@ -19,6 +19,9 @@ struct EnvironmentOptions {
     // situations by setting the ZX_PROP_JOB_KILL_ON_OOM property on this
     // environment's job.
     bool kill_on_oom;
+    // True if "persistent" storage requested by components in this environment should not actually
+    // be persistent, and instead be deleted when this environment is killed.
+    bool delete_storage_on_death;
 };
 
 // An interface for managing a set of applications.

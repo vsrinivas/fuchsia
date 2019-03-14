@@ -5,15 +5,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/outgoing.h>
 #include <lib/component/cpp/startup_context.h>
+#include <test/appmgr/integration/cpp/fidl.h>
+#include <string>
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include <test/appmgr/sandbox/cpp/fidl.h>
-#include <string>
 
 namespace {
 
 class IsolatedStorageTestUtil
-    : public test::appmgr::sandbox::DataFileReaderWriter {
+    : public test::appmgr::integration::DataFileReaderWriter {
  public:
   explicit IsolatedStorageTestUtil(const component::Outgoing& outgoing) {
     outgoing.AddPublicService(bindings_.GetHandler(this));

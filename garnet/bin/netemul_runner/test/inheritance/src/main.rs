@@ -131,6 +131,7 @@ async fn run_root() -> Result<(), Error> {
         inherit_parent_services: true,
         allow_parent_runners: true,
         kill_on_oom: true,
+        delete_storage_on_death: false,
     };
     let () = env.create_nested_environment(
         child_env_req,

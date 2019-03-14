@@ -12,7 +12,7 @@ use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fuchsia_app::client;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use std::fs::File;
+use std::fs::{self, File};
 use std::os::unix::io::AsRawFd;
 use structopt::StructOpt;
 
@@ -153,9 +153,11 @@ async fn main() -> Result<(), Error> {
         }
     }
 
+    let env_name = fs::read_to_string("/hub/name")?;
     println!("enclosed netstack is running...");
+    println!("environment name: {}", env_name);
     println!("run:");
-    println!("chrealm /hub/r/sys/[koid]/r/env_for_test/[koid]");
+    println!("chrealm /hub/r/sys/[koid]/r/{}/[koid]", env_name);
     println!("to shell into the tailored environment (you can use tab completions for koid)");
     println!("to stop the netstack and this environment, run:");
     println!("killall enclosed_runner.cmx");

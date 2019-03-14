@@ -19,7 +19,7 @@ group("deprecated_global_persistent_storage_whitelist") {
     # These first two entries do not need migration and will be updated when
     # deleting the 'deprecated-global-persistent-storage' feature.
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
-    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:isolated_persistent_storage",
+    "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
 
     "//garnet/bin/auth:account_handler",
     "//garnet/bin/auth:account_manager",

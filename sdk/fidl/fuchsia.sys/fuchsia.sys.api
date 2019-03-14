@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.sys/component_controller.fidl": "4c176283eb8af967ebb69c26f4e9af76",
-  "fidl/fuchsia.sys/environment.fidl": "971402629a93f4befb633be42d98d885",
+  "fidl/fuchsia.sys/environment.fidl": "021d3c58c01a962c6b450c9f1b0158f5",
   "fidl/fuchsia.sys/environment_controller.fidl": "442a1568b279349db19f4950582e0e82",
   "fidl/fuchsia.sys/flat_namespace.fidl": "ef5dfcefe090dde351751d8143996119",
   "fidl/fuchsia.sys/job_provider.fidl": "455afe28b7fad3edf3c52a14668b054a",
