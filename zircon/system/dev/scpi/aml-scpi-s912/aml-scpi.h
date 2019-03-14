@@ -10,11 +10,12 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/mailbox.h>
 #include <ddktl/protocol/scpi.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <hw/reg.h>
+#include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
@@ -137,7 +138,7 @@ private:
     ddk::PDev pdev_;
     ddk::MailboxProtocolClient mailbox_;
     mtx_t lock_;
-    scpi_opp_t* scpi_opp[MAX_DVFS_DOMAINS];
+    scpi_opp_t* scpi_opp[fuchsia_hardware_thermal_MAX_DVFS_DOMAINS];
 };
 
 } // namespace scpi

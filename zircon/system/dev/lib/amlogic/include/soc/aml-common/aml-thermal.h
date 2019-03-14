@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/io-buffer.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/scpi.h>
 #include <ddk/debug.h>

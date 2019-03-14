@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
-#include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
 

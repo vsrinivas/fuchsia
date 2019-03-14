@@ -17,7 +17,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/device/thermal.h>
 
 #include "aml-scpi.h"
 
@@ -89,7 +88,7 @@ zx_status_t AmlSCPI::ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
         uint8_t idx;
     } __PACKED aml_dvfs_idx_info;
 
-    if (!idx || power_domain >= MAX_DVFS_DOMAINS) {
+    if (!idx || power_domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -112,7 +111,7 @@ zx_status_t AmlSCPI::ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
         uint16_t idx;
     } __PACKED aml_dvfs_idx_info;
 
-    if (power_domain >= MAX_DVFS_DOMAINS) {
+    if (power_domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -132,10 +131,10 @@ zx_status_t AmlSCPI::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* out_opps)
         uint8_t reserved;
         uint8_t operating_points;
         uint16_t latency;
-        scpi_opp_entry_t opp[MAX_DVFS_OPPS];
+        scpi_opp_entry_t opp[fuchsia_hardware_thermal_MAX_DVFS_OPPS];
     } __PACKED aml_dvfs_info;
 
-    if (!out_opps || power_domain >= MAX_DVFS_DOMAINS) {
+    if (!out_opps || power_domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -157,8 +156,8 @@ zx_status_t AmlSCPI::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* out_opps)
     out_opps->count = aml_dvfs_info.operating_points;
     out_opps->latency = aml_dvfs_info.latency;
 
-    if (out_opps->count > MAX_DVFS_OPPS) {
-        SCPI_ERROR("Number of operating_points greater than MAX_DVFS_OPPS\n");
+    if (out_opps->count > fuchsia_hardware_thermal_MAX_DVFS_OPPS) {
+        SCPI_ERROR("Number of operating_points greater than fuchsia_hardware_thermal_MAX_DVFS_OPPS\n");
         status = ZX_ERR_INVALID_ARGS;
         return status;
     }

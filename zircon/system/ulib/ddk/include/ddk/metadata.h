@@ -62,6 +62,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // list of char[ZX_MAX_NAME_LEN]
 #define DEVICE_METADATA_NAME                      0x454D414E // NAME
 
+// type: fuchsia_hardware_thermal_ThermalDeviceInfo
+#define DEVICE_METADATA_THERMAL_CONFIG            0x54485243 // THRC
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

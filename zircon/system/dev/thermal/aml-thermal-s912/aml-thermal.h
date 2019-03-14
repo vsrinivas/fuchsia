@@ -13,7 +13,6 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/port.h>
 #include <threads.h>
-#include <zircon/device/thermal.h>
 
 #include <utility>
 
@@ -29,7 +28,7 @@ enum FanLevel {
 };
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Ioctlable, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Messageable, ddk::Unbindable>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
 class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
@@ -56,8 +55,6 @@ public:
     zx_status_t Init();
 
     // Ddk-required methods.
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkUnbind();
     void DdkRelease();

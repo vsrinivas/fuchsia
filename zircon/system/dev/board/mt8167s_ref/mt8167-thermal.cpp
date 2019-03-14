@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <soc/mt8167/mt8167-clk.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/device/thermal.h>
 
 #include "mt8167.h"
 
@@ -127,7 +128,7 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_dev_info = {
 
 constexpr pbus_metadata_t thermal_metadata[] = {
     {
-        .type = THERMAL_CONFIG_METADATA,
+        .type = DEVICE_METADATA_THERMAL_CONFIG,
         .data_buffer = &thermal_dev_info,
         .data_size = sizeof(thermal_dev_info)
     },

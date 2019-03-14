@@ -4,12 +4,12 @@
 
 #include "aml-thermal.h"
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/device/thermal.h>
 #include <zircon/syscalls/port.h>
 
 #include <utility>
@@ -77,7 +77,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     // Get the voltage-table & opp metadata.
     size_t actual;
     aml_opp_info_t opp_info;
-    zx_status_t status = device_get_metadata(device, VOLTAGE_DUTY_CYCLE_METADATA, &opp_info,
+    zx_status_t status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &opp_info,
                                              sizeof(opp_info_), &actual);
     if (status != ZX_OK || actual != sizeof(opp_info_)) {
         zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d\n", status);
@@ -86,7 +86,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
 
     // Get the thermal policy metadata.
     fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config;
-    status = device_get_metadata(device, THERMAL_CONFIG_METADATA, &thermal_config,
+    status = device_get_metadata(device, DEVICE_METADATA_THERMAL_CONFIG, &thermal_config,
                                  sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &actual);
     if (status != ZX_OK || actual != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
         zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d\n", status);
@@ -160,54 +160,6 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     // devmgr is now in charge of the memory for dev.
     __UNUSED auto ptr = thermal_device.release();
     return ZX_OK;
-}
-
-zx_status_t AmlThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_THERMAL_GET_TEMPERATURE: {
-        if (out_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto temperature = static_cast<uint32_t*>(out_buf);
-        *temperature = tsensor_->ReadTemperature();
-        *out_actual = sizeof(uint32_t);
-        return ZX_OK;
-    }
-
-    case IOCTL_THERMAL_GET_DEVICE_INFO: {
-        if (out_len != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(out_buf, &thermal_config_, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
-        *out_actual = sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo);
-        return ZX_OK;
-    }
-
-    case IOCTL_THERMAL_SET_DVFS_OPP: {
-        if (in_len != sizeof(dvfs_info_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto* dvfs_info = reinterpret_cast<const dvfs_info_t*>(in_buf);
-        if (dvfs_info->power_domain !=
-            fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return SetTarget(dvfs_info->op_idx);
-    }
-
-    case IOCTL_THERMAL_GET_STATE_CHANGE_PORT: {
-        if (out_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto* port = reinterpret_cast<zx_handle_t*>(out_buf);
-        *out_actual = sizeof(zx_handle_t);
-        return tsensor_->GetStateChangePort(port);
-    }
-
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 }
 
 zx_status_t AmlThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

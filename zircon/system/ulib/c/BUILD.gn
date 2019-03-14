@@ -273,7 +273,6 @@ if (toolchain.environment == "user" && current_toolchain == toolchain.shlib &&
       "zircon/device/qmi-transport.h",
       "zircon/device/scpi.h",
       "zircon/device/serial.h",
-      "zircon/device/thermal.h",
       "zircon/device/usb-peripheral-test.h",
       "zircon/device/usb-peripheral.h",
       "zircon/device/vfs.h",

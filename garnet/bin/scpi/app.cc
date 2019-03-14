@@ -12,7 +12,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <stdio.h>
-#include <zircon/device/thermal.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
 #include "lib/component/cpp/startup_context.h"

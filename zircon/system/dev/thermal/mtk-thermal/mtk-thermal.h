@@ -11,18 +11,18 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
-#include <zircon/device/thermal.h>
 
 #include "mtk-thermal-reg.h"
 
 namespace thermal {
 
 class MtkThermal;
-using DeviceType = ddk::Device<MtkThermal, ddk::Ioctlable, ddk::Messageable>;
+using DeviceType = ddk::Device<MtkThermal, ddk::Messageable>;
 
 class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
 public:
@@ -31,9 +31,6 @@ public:
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     void DdkRelease();
-
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* actual);
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

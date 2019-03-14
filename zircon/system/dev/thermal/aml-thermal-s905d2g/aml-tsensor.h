@@ -8,11 +8,11 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <optional>
 #include <threads.h>
-#include <zircon/device/thermal.h>
 
 namespace thermal {
 

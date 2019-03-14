@@ -5,6 +5,7 @@
 #include "mtk-thermal.h"
 
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/pdev.h>
@@ -108,7 +109,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 
     fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
     size_t actual;
-    status = device_get_metadata(parent, THERMAL_CONFIG_METADATA, &thermal_info,
+    status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &thermal_info,
                                  sizeof(thermal_info), &actual);
     if (status != ZX_OK || actual != sizeof(thermal_info)) {
         zxlogf(ERROR, "%s: device_get_metadata failed\n", __FILE__);
@@ -352,7 +353,7 @@ uint32_t MtkThermal::ReadTemperatureSensors() {
 }
 
 zx_status_t MtkThermal::SetDvfsOpp(uint16_t op_idx) {
-    const scpi_opp_t& opps =
+    const fuchsia_hardware_thermal_OperatingPoint& opps =
         thermal_info_.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
     if (op_idx >= opps.count) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -396,96 +397,6 @@ zx_status_t MtkThermal::SetDvfsOpp(uint16_t op_idx) {
     current_op_idx_ = op_idx;
 
     return ZX_OK;
-}
-
-zx_status_t MtkThermal::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                                 size_t out_len, size_t* actual) {
-    switch (op) {
-    case IOCTL_THERMAL_GET_TEMPERATURE:
-        if (out_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        *reinterpret_cast<uint32_t*>(out_buf) = ReadTemperatureSensors();
-        *actual = sizeof(uint32_t);
-        return ZX_OK;
-
-    case IOCTL_THERMAL_GET_DEVICE_INFO:
-        if (out_len != sizeof(thermal_info_)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        memcpy(out_buf, &thermal_info_, sizeof(thermal_info_));
-        *actual = sizeof(thermal_info_);
-        return ZX_OK;
-
-    case IOCTL_THERMAL_SET_DVFS_OPP: {
-        if (in_len != sizeof(dvfs_info_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        const dvfs_info_t* dvfs_info = reinterpret_cast<const dvfs_info_t*>(in_buf);
-        if (dvfs_info->power_domain !=
-            fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        return SetDvfsOpp(dvfs_info->op_idx);
-    }
-
-    case IOCTL_THERMAL_GET_DVFS_INFO: {
-        if (in_len != sizeof(uint32_t) || out_len != sizeof(thermal_info_.opps[0])) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        uint32_t domain = *reinterpret_cast<const uint32_t*>(in_buf);
-        if (domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        memcpy(out_buf, &thermal_info_.opps[domain], sizeof(thermal_info_.opps[0]));
-        *actual = sizeof(thermal_info_.opps[0]);
-        return ZX_OK;
-    }
-
-    case IOCTL_THERMAL_GET_DVFS_OPP: {
-        if (in_len != sizeof(uint32_t) || out_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        uint32_t domain = *reinterpret_cast<const uint32_t*>(in_buf);
-        if (domain != fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-
-        uint32_t* op_idx = reinterpret_cast<uint32_t*>(out_buf);
-
-        *op_idx = get_dvfs_opp();
-        *actual = sizeof(*op_idx);
-        return ZX_OK;
-    }
-
-    case IOCTL_THERMAL_GET_STATE_CHANGE_PORT: {
-        zx::port dup;
-        zx_status_t status = port_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        *reinterpret_cast<zx_handle_t*>(out_buf) = dup.release();
-        *actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-
-    case IOCTL_THERMAL_GET_INFO:
-    case IOCTL_THERMAL_SET_TRIP:
-    case IOCTL_THERMAL_GET_STATE_CHANGE_EVENT:
-    case IOCTL_THERMAL_SET_FAN_LEVEL:
-    case IOCTL_THERMAL_GET_FAN_LEVEL:
-    default:
-        break;
-    }
-
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t MtkThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

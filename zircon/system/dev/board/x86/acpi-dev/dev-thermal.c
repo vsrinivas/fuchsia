@@ -6,9 +6,9 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 
 #include <zircon/types.h>
-#include <zircon/device/thermal.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -89,71 +89,6 @@ static zx_status_t acpi_thermal_read(void* ctx, void* buf, size_t count, zx_off_
     *actual = sizeof(temp);
 
     return ZX_OK;
-}
-
-static zx_status_t acpi_thermal_ioctl(void* ctx, uint32_t op,
-                                      const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len, size_t* out_actual) {
-    acpi_thermal_device_t* dev = ctx;
-    switch (op) {
-    case IOCTL_THERMAL_GET_INFO: {
-        if (out_len != sizeof(fuchsia_hardware_thermal_ThermalInfo)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        // reading state clears the signal
-        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-
-        fuchsia_hardware_thermal_ThermalInfo info;
-        zx_status_t status = acpi_thermal_get_info(dev, &info);
-        if (status != ZX_OK) {
-            return status;
-        }
-        memcpy(out_buf, &info, sizeof(info));
-        *out_actual = sizeof(info);
-        return ZX_OK;
-    }
-    case IOCTL_THERMAL_SET_TRIP: {
-        if (in_len != sizeof(trip_point_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (dev->trip_point_count < 1) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        trip_point_t* tp = (trip_point_t*)in_buf;
-        // only one trip point for now
-        if (tp->id != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        ACPI_STATUS acpi_status = acpi_evaluate_method_intarg(dev->acpi_handle,
-                                                              "PAT0", tp->temp);
-        if (acpi_status != AE_OK) {
-            zxlogf(ERROR, "acpi-thermal: acpi error %d in PAT0\n", acpi_status);
-            return acpi_to_zx_status(acpi_status);
-        }
-        mtx_lock(&dev->lock);
-        dev->trip_points[0] = tp->temp;
-        mtx_unlock(&dev->lock);
-        return ZX_OK;
-    }
-    case IOCTL_THERMAL_GET_STATE_CHANGE_EVENT: {
-        if (out_len != sizeof(zx_handle_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        zx_handle_t* out = (zx_handle_t*)out_buf;
-        zx_status_t status = zx_handle_duplicate(dev->event, ZX_RIGHT_SAME_RIGHTS, out);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        // clear the signal before returning
-        zx_object_signal(dev->event, ZX_USER_SIGNAL_0, 0);
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    default:
-       return ZX_ERR_NOT_SUPPORTED;
-    }
 }
 
 static zx_status_t fidl_GetInfo(void* ctx, fidl_txn_t* txn) {
@@ -284,7 +219,6 @@ static void acpi_thermal_release(void* ctx) {
 static zx_protocol_device_t acpi_thermal_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = acpi_thermal_read,
-    .ioctl = acpi_thermal_ioctl,
     .release = acpi_thermal_release,
     .message = acpi_thermal_message,
 };

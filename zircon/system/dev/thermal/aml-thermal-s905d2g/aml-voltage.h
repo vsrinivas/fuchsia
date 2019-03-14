@@ -7,7 +7,6 @@
 #include "aml-pwm.h"
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
-#include <zircon/device/thermal.h>
 
 namespace thermal {
 // This class represents a voltage regulator

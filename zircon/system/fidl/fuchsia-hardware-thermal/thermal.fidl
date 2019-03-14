@@ -93,20 +93,6 @@ struct ThermalDeviceInfo {
     array<OperatingPoint>:MAX_DVFS_DOMAINS opps;
 };
 
-/// TODO(bradenkell): Remove this after converting the ioctls; id and temp can be passed to SetTrip
-///                   directly.
-struct TripPoint {
-    uint32 id;
-    uint32 temp;
-};
-
-/// TODO(bradenkell): Remove this after converting the ioctls; op_idx and power_domain can be passed
-///                   to SetDvfsOperatingPoint directly.
-struct DvfsInfo {
-    uint16 op_idx;
-    uint32 power_domain;
-};
-
 [Layout = "Simple"]
 protocol Device {
     /// Get information about the device's current state.

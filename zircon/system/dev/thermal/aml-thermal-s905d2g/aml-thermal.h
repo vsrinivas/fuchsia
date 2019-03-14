@@ -23,7 +23,6 @@ namespace thermal {
 class AmlThermal;
 using DeviceType = ddk::Device<AmlThermal,
                                ddk::Unbindable,
-                               ddk::Ioctlable,
                                ddk::Messageable>;
 
 class AmlThermal : public DeviceType,
@@ -47,8 +46,6 @@ public:
     // Ddk Hooks
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
 private:
