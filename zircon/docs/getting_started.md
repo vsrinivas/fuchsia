@@ -124,7 +124,7 @@ own from vanilla upstream sources.
 
  * The GCC toolchain is used to build Zircon by default.
  * The Clang toolchain is used to build Zircon if you build with
-   `variants = [ "clang" ]` or `cariants = [ "asan" ]`.
+   `variants = [ "clang" ]` or `variants = [ "asan" ]`.
  * The Clang toolchain is also used by default to build host-side code, but
    any C++14-capable toolchain for your build host should work fine.
 
