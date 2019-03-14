@@ -9,6 +9,7 @@ use {
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
     },
+    failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,
     fuchsia_zircon::Status,
@@ -27,14 +28,40 @@ use {
     void::{unreachable, Void},
 };
 
+/// Type of errors returned by the [`Controller::open`] future.
+#[derive(Debug, Fail)]
+pub enum OpenError {
+    /// Controlled directory has been destroyed.
+    #[fail(display = "Controlled directory has been destroyed.")]
+    Terminated,
+}
+
+/// Type of errors returned by the [`Controller::open_res`] future.
+#[derive(Debug, Fail)]
+pub enum OpenResError {
+    /// Controlled directory has been destroyed.
+    #[fail(display = "Controlled directory has been destroyed.")]
+    Terminated,
+    /// [`Controlled::open`] has returned an error.
+    #[fail(display = "`Controlled::open` has returned an error")]
+    OpenFailed(fidl::Error),
+}
+
 /// Type of errors returned by the [`Controller::add_entry`] future.
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum AddEntryError {
     /// Controlled directory has been destroyed.
+    #[fail(display = "Controlled directory has been destroyed.")]
     Terminated,
 }
 
 /// Type of errors returned by the [`Controller::add_entry_res`] future.
+// TODO #[derive(Fail)] does not work here, as it requres `Sync` and `DirectoryEntry` is not
+// necessarily `Sync`.  I can think of two solutions: parametrize the whole libary over `Sync`,
+// allowing `Fail` in case `DirectoryEntry` is also `Sync` and disalllowing otherwise.  Or
+// providing a conversion for this error that will drop the contained directory entry object.
+//
+// As there are no users for it, I will probably keep it unimplemented for now.
 pub enum AddEntryResError<'entries> {
     /// Controlled directory has been destroyed.
     Terminated,
@@ -54,25 +81,42 @@ impl<'entries> fmt::Debug for AddEntryResError<'entries> {
 }
 
 /// Type of errors returned by the [`Controller::remove_entry`] future.
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum RemoveEntryError {
     /// Controlled directory has been destroyed.
+    #[fail(display = "Controlled directory has been destroyed.")]
     Terminated,
 }
 
 /// Type of errors returned by the [`Controller::remove_entry_res`] future.
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum RemoveEntryResError {
     /// Controlled directory has been destroyed.
+    #[fail(display = "Controlled directory has been destroyed.")]
     Terminated,
     /// [`Controlled::remove_entry`] has returned an error.
+    #[fail(display = "`Controlled::remove_entry` has returned an error")]
     RemoveFailed(Status),
 }
 
+type OpenResponse = Result<(), fidl::Error>;
 type AddEntryResponse<'entries> = Result<(), (Status, Box<DirectoryEntry + 'entries>)>;
 type RemoveEntryResponse<'entries> = Result<Option<Box<DirectoryEntry + 'entries>>, Status>;
 
 enum Command<'entries> {
+    Open {
+        flags: u32,
+        mode: u32,
+        path: Vec<String>,
+        server_end: ServerEnd<NodeMarker>,
+    },
+    OpenAndRespond {
+        flags: u32,
+        mode: u32,
+        path: Vec<String>,
+        server_end: ServerEnd<NodeMarker>,
+        res_sender: oneshot::Sender<OpenResponse>,
+    },
     AddEntry {
         name: String,
         entry: Box<DirectoryEntry + 'entries>,
@@ -116,15 +160,90 @@ fn check_send_err_is_disconnection(context: &str, err: SendError) {
 }
 
 impl<'entries> Controller<'entries> {
+    /// Adds a connection to the directory controlled by this controller when `path` is empty, or
+    /// to a child entry specified by the `path`.
+    ///
+    /// In case of any error the `server_end` is dropped and the underlying channel is closed.  See
+    /// [`open_res`] in case you want to process errors.
+    // I wish we could do
+    //
+    //   pub fn open<Path, PathElem>(
+    //       &self,
+    //       flags: u32,
+    //       mode: u32,
+    //       path: Path,
+    //       server_end: ServerEnd<NodeMarker>,
+    //   ) -> impl Future<Output = Result<(), OpenError>> + 'entries
+    //   where
+    //       Path: Into<Vec<PathElem>>,
+    //       PathElem: Into<String>,
+    //
+    // as that would allow people to call open() with different arugments, but, unfortunately it
+    // does not really remove the allocation.  Only when open() is inlined and is passed a
+    // Vec<&str> the allocation seems to be optimized away.  But for the case when Vec<String> is
+    // used, the vector is reallocated.
+    pub fn open(
+        &self,
+        flags: u32,
+        mode: u32,
+        path: Vec<String>,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> impl Future<Output = Result<(), OpenError>> + 'entries {
+        // Cloning the sender allows us to generate a future that does not have any lifetime
+        // dependencies on self.
+        let mut controlled = self.controlled.clone();
+        async move {
+            await!(controlled.send(Command::Open { flags, mode, path, server_end })).map_err(
+                |send_err| {
+                    check_send_err_is_disconnection("Controller::open", send_err);
+                    OpenError::Terminated
+                },
+            )
+        }
+    }
+
+    /// Adds a connection to the directory controlled by this controller when `path` is empty, or
+    /// to a child entry specified by the `path`.
+    ///
+    /// In case of any error the `server_end` is dropped but the error is returned.  See
+    /// [`DirectoryEntry::open`] for details.
+    // TODO See open() above for discussion of the path argument.
+    pub fn open_res(
+        &self,
+        flags: u32,
+        mode: u32,
+        path: Vec<String>,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> impl Future<Output = Result<(), OpenResError>> + 'entries {
+        // Cloning the sender allows us to generate a future that does not have any lifetime
+        // dependencies on self.
+        let mut controlled = self.controlled.clone();
+        let (res_sender, res_receiver) = oneshot::channel();
+        async move {
+            await!(controlled.send(Command::OpenAndRespond {
+                flags,
+                mode,
+                path,
+                server_end,
+                res_sender
+            }))
+            .map_err(|send_err| {
+                check_send_err_is_disconnection("Controller::open", send_err);
+                OpenResError::Terminated
+            })?;
+
+            match await!(res_receiver) {
+                Ok(res) => res.map_err(OpenResError::OpenFailed),
+                Err(oneshot::Canceled) => Err(OpenResError::Terminated),
+            }
+        }
+    }
+
     /// Adds a child entry to the directory controlled by this controller.  The directory will own
     /// the child entry item and will run it as part of the directory own `poll()` invocation.
     ///
     /// In case of any error new entry is silently dropped.  But see [`add_entry_res`] in case you
     /// want to process errors.
-    ///
-    /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
-    ///   * An entry with the same name is already present in the directory.
     pub fn add_entry<Name, Entry>(
         &self,
         name: Name,
@@ -146,10 +265,6 @@ impl<'entries> Controller<'entries> {
     ///
     /// In case of any error new entry is silently dropped.  But see [`add_boxed_entry_res`] in case you
     /// want to process errors.
-    ///
-    /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
-    ///   * An entry with the same name is already present in the directory.
     pub fn add_boxed_entry<Name>(
         &self,
         name: Name,
@@ -230,9 +345,6 @@ impl<'entries> Controller<'entries> {
     /// Removes a child entry from this directory.  Existing entry is dropped.  But see
     /// [`remove_entry_res`] for an alternative.  If the entry was not found or in case of an error
     /// the call is just ignored.
-    ///
-    /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
     pub fn remove_entry<Name>(
         &self,
         name: Name,
@@ -348,6 +460,27 @@ impl<'entries> Controlled<'entries> {
 
     fn handle_command(&mut self, command: Command<'entries>) {
         match command {
+            Command::Open { flags, mode, path, server_end } => {
+                // As the controller did not ask for the result, we can only ignore any potential
+                // errors here.
+                let _ = self.controllable.open(
+                    flags,
+                    mode,
+                    &mut path.iter().map(|s| s.as_str()),
+                    server_end,
+                );
+            }
+            Command::OpenAndRespond { flags, mode, path, server_end, res_sender } => {
+                let res = self.controllable.open(
+                    flags,
+                    mode,
+                    &mut path.iter().map(|s| s.as_str()),
+                    server_end,
+                );
+                // Failure to send a response should indicate that the controller has been
+                // destroyed.
+                let _ = res_sender.send(res);
+            }
             Command::AddEntry { name, entry } => {
                 // As the controller did not ask for the result, we can only ignore any potential
                 // errors here.
@@ -427,15 +560,15 @@ impl<'entries> FusedFuture for Controlled<'entries> {
 mod tests {
     use super::*;
 
-    #[allow(unused)]
     use {
         crate::directory::{simple, test_utils},
-        crate::file::{read_only, read_write, write_only},
+        crate::file::read_only,
+        fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
-            DirectoryProxy, FileEvent, FileMarker, FileObject, NodeInfo, NodeMarker,
-            DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+            DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker, FileObject,
+            NodeInfo, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
+            OPEN_RIGHT_READABLE,
         },
-        futures::future::LocalFutureObj,
         proc_macro_hack::proc_macro_hack,
     };
 
@@ -494,6 +627,50 @@ mod tests {
     }
 
     #[test]
+    fn simple_open() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            controlled(simple::empty()),
+            async move |controller, _root| {
+                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
+                    .expect("Failed to create connection endpoints");
+
+                await!(controller.open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec![],
+                    ServerEnd::new(server_end.into_channel())
+                ))
+                .unwrap();
+                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn simple_open_res() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            controlled(simple::empty()),
+            async move |controller, _root| {
+                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
+                    .expect("Failed to create connection endpoints");
+
+                await!(controller.open_res(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec![],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
+                ))
+                .unwrap();
+                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
     fn simple_add_file() {
         run_server_client(
             OPEN_RIGHT_READABLE,
@@ -533,6 +710,107 @@ mod tests {
 
                 open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
                 assert_close!(root);
+            },
+        );
+    }
+
+    #[test]
+    fn in_tree_open() {
+        let controller;
+        let root = pseudo_directory! {
+            "etc" => controlled_pseudo_directory! {
+                controller ->
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+        };
+
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            (controller, root),
+            async move |controller, _root| {
+                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
+                    .expect("Failed to create connection endpoints");
+
+                await!(controller.open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec![],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
+                ))
+                .unwrap();
+
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                open_as_file_assert_content!(&proxy, flags, "ssh_config", "# Empty");
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn in_tree_open_path_one_component() {
+        let controller;
+        let root = pseudo_directory! {
+            "etc" => controlled_pseudo_directory! {
+                controller ->
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+        };
+
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            (controller, root),
+            async move |controller, _root| {
+                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
+                    .expect("Failed to create connection endpoints");
+
+                await!(controller.open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec_string!["ssh"],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
+                ))
+                .unwrap();
+
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                open_as_file_assert_content!(&proxy, flags, "ssh_config", "# Empty");
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn in_tree_open_path_two_components() {
+        let controller;
+        let root = pseudo_directory! {
+            "etc" => controlled_pseudo_directory! {
+                controller ->
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+        };
+
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            (controller, root),
+            async move |controller, _root| {
+                let (proxy, server_end) =
+                    create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
+
+                await!(controller.open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec_string!["ssh", "sshd_config"],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
+                ))
+                .unwrap();
+
+                assert_read!(&proxy, "# Empty");
+                assert_close!(proxy);
             },
         );
     }

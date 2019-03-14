@@ -346,10 +346,7 @@ macro_rules! open_get_directory_proxy_assert_ok {
             DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(
-                    info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject))),
-                );
+                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))),);
             }
         )
     };
@@ -411,10 +408,7 @@ macro_rules! clone_get_directory_proxy_assert_ok {
             DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(
-                    info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject))),
-                );
+                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))),);
             }
         )
     };
@@ -456,4 +450,8 @@ macro_rules! assert_read_dirents_err {
         assert_eq!(Status::from_raw(status), $expected_status);
         assert_eq!(entries.len(), 0);
     };
+}
+
+macro_rules! vec_string {
+    ($($x:expr),*) => (vec![$($x.to_string()),*]);
 }

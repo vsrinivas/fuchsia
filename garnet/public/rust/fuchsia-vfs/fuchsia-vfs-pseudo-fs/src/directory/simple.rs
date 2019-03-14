@@ -771,10 +771,7 @@ mod tests {
             await!(open_sender.send((flags, 0, Box::new(iter::empty()), server_end))).unwrap();
             assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
                 assert_eq!(s, ZX_OK);
-                assert_eq!(
-                    info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject)))
-                );
+                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))));
             });
         });
     }
