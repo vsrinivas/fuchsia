@@ -24,6 +24,7 @@
 #include "garnet/bin/crashpad/config.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -38,47 +39,69 @@ namespace {
 // class, without connecting through FIDL.
 class CrashpadAnalyzerImplTest : public ::testing::Test {
  public:
+  // The underlying crash analyzer is initialized with a default config, but can
+  // be reset via ResetAnalyzer() if a different config is necessary.
   void SetUp() override {
-    analyzer_ = CrashpadAnalyzerImpl::TryCreate(
-        Config{/*local_crashpad_database_path=*/database_path_.path(),
-               /*enable_upload_to_crash_server=*/false,
-               /*crash_server_url=*/nullptr});
+    ResetAnalyzer(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                         /*enable_upload_to_crash_server=*/false,
+                         /*crash_server_url=*/nullptr});
   }
 
  protected:
-  void CheckAttachments(const std::vector<std::string>& expected_attachments) {
-    const std::string attachments_dir = database_path_.path() + "/attachments";
+  // Resets the underlying crash analyzer using the given |config|.
+  void ResetAnalyzer(Config config) {
+    // "attachments" should be kept in sync with the value defined in
+    // //crashpad/client/crash_report_database_generic.cc
+    attachments_dir_ =
+        files::JoinPath(config.local_crashpad_database_path, "attachments");
+    analyzer_ = CrashpadAnalyzerImpl::TryCreate(std::move(config));
+    FXL_DCHECK(analyzer_);
+  }
 
-    std::vector<std::string> subdirs;
-    ASSERT_TRUE(files::ReadDirContents(attachments_dir, &subdirs));
-    RemoveCurrentDirectory(&subdirs);
+  // Checks that there is:
+  //   * only one set of attachments
+  //   * the set of attachment filenames match the |expected_attachments|
+  //   * no attachment is empty
+  // in the local Crashpad database.
+  void CheckAttachments(const std::vector<std::string>& expected_attachments) {
+    const std::vector<std::string> subdirs = GetAttachmentSubdirs();
     // We expect a single crash report to have been generated.
     ASSERT_EQ(subdirs.size(), 1u);
 
     std::vector<std::string> attachments;
     const std::string report_attachments_dir =
-        attachments_dir + "/" + subdirs[0];
+        files::JoinPath(attachments_dir_, subdirs[0]);
     ASSERT_TRUE(files::ReadDirContents(report_attachments_dir, &attachments));
     RemoveCurrentDirectory(&attachments);
     EXPECT_THAT(attachments,
                 testing::UnorderedElementsAreArray(expected_attachments));
     for (const std::string& attachment : attachments) {
       uint64_t size;
-      ASSERT_TRUE(
-          files::GetFileSize(report_attachments_dir + "/" + attachment, &size));
+      ASSERT_TRUE(files::GetFileSize(
+          files::JoinPath(report_attachments_dir, attachment), &size));
       EXPECT_GT(size, 0u) << "attachment file '" << attachment
                           << "' shouldn't be empty";
     }
   }
 
+  // Returns all the attachment subdirectories under the over-arching attachment
+  // directory. Each subdirectory corresponds to one local crash report.
+  std::vector<std::string> GetAttachmentSubdirs() {
+    std::vector<std::string> subdirs;
+    FXL_CHECK(files::ReadDirContents(attachments_dir_, &subdirs));
+    RemoveCurrentDirectory(&subdirs);
+    return subdirs;
+  }
+
   std::unique_ptr<CrashpadAnalyzerImpl> analyzer_;
+  files::ScopedTempDir database_path_;
 
  private:
   void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
     dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
   }
 
-  files::ScopedTempDir database_path_;
+  std::string attachments_dir_;
 };
 
 TEST_F(CrashpadAnalyzerImplTest, HandleNativeException_C_Basic) {
