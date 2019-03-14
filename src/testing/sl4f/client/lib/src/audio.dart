@@ -18,13 +18,18 @@ class Audio {
     _sl4f.close();
   }
 
-  Future<void> putInputAudio(File file) async {
+  Future<void> putInputAudio(int index, File file) async {
     final audioBytes = file.readAsBytesSync();
-    await _sl4f.request('audio_facade.PutInputAudio', base64Encode(audioBytes));
+    await _sl4f.request('audio_facade.PutInputAudio', {
+      'index': index,
+      'data': base64Encode(audioBytes),
+    });
   }
 
-  Future<void> startInputInjection() async {
-    await _sl4f.request('audio_facade.StartInputInjection');
+  Future<void> startInputInjection(int index) async {
+    await _sl4f.request('audio_facade.StartInputInjection', {
+      'index': index,
+    });
   }
 
   Future<void> startOutputSave() async {

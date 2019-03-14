@@ -188,7 +188,7 @@ struct AudioInput {
     // Rename once the virtual audio driver has an API to support this
     renderer_proxy: AudioRendererProxy,
     renderer_vmo: zx::Vmo,
-    renderer_data: Vec<u8>,
+    renderer_data: Vec<Vec<u8>>,
     renderer_packet_size: u64,
 
     state: Arc<RwLock<InjectState>>,
@@ -239,7 +239,7 @@ impl AudioInput {
         Ok(AudioInput {
             renderer_proxy,
             renderer_vmo,
-            renderer_data: vec![0u8; 0],
+            renderer_data: vec![],
             renderer_packet_size: packet_size,
 
             state: Arc::new(RwLock::new(InjectState { offset: 0, active: false })),
@@ -247,14 +247,14 @@ impl AudioInput {
         })
     }
 
-    pub fn play(&mut self) -> Result<(), Error> {
+    pub fn play(&mut self, index: usize) -> Result<(), Error> {
         self.state.write().active = true;
         // 8 Bytes for riff header
         // 28 bytes for wave fmt block
         // 8 bytes for data header
         self.state.write().offset = 44u64;
 
-        let render_data = self.renderer_data.clone();
+        let render_data = self.renderer_data[index].clone();
         let render_proxy = self.renderer_proxy.clone();
         let state = self.state.clone();
 
@@ -466,25 +466,33 @@ impl AudioFacade {
             //       fail in a way that will be meaningful to the caller.
 
             // Extract and decode base64 encoded wav data.
-            let mut wave_data_vec = base64::decode(args.as_str().unwrap())?;
+            let mut wave_data_vec = base64::decode(args["data"].as_str().unwrap())?;
+
+            // Make sure we have somewhere to store the wav data.
+            let sample_index = args["index"].as_u64().unwrap() as usize;
+            if self.audio_input.read().renderer_data.len() <= sample_index {
+                self.audio_input.write().renderer_data.resize(sample_index + 1, vec![]);
+            }
 
             // TODO(perley): check wave format for correct bits per sample and float/int.
             let byte_cnt = wave_data_vec.len();
 
-            self.audio_input.write().renderer_data.clear();
-            self.audio_input.write().renderer_data.append(&mut wave_data_vec);
+            self.audio_input.write().renderer_data[sample_index].clear();
+            self.audio_input.write().renderer_data[sample_index].append(&mut wave_data_vec);
             self.audio_input.write().have_data = true;
+
             Ok(to_value(byte_cnt)?)
         }
     }
 
-    pub fn start_input_injection(&self) -> Result<Value, Error> {
+    pub fn start_input_injection(&self, args: Value) -> Result<Value, Error> {
         if self.audio_input.read().state.read().active {
             bail!("StartInputInjection failed, already active.")
         } else if !self.audio_input.read().have_data {
             bail!("StartInputInjection failed, no Audio data to inject.")
         } else {
-            self.audio_input.write().play()?;
+            let sample_index = args["index"].as_u64().unwrap() as usize;
+            self.audio_input.write().play(sample_index)?;
             Ok(to_value(true)?)
         }
     }

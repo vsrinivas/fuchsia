@@ -15,7 +15,7 @@ pub async fn audio_method_to_fidl(
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         AudioMethod::PutInputAudio => facade.put_input_audio(args),
-        AudioMethod::StartInputInjection => facade.start_input_injection(),
+        AudioMethod::StartInputInjection => facade.start_input_injection(args),
         AudioMethod::StopInputInjection => facade.stop_input_injection(),
 
         AudioMethod::StartOutputSave => facade.start_output_save(),
