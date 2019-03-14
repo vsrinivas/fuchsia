@@ -4,6 +4,7 @@
         "garnet/packages/prod/bluetooth_drivers",
         "garnet/packages/prod/magma-vsl-gc",
         "garnet/packages/prod/usb_video",
+        "garnet/packages/prod/virtual_audio_driver",
         "garnet/packages/prod/vulkan",
         "garnet/packages/prod/wlan_drivers"
     ]

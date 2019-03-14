@@ -100,6 +100,7 @@
         "garnet/packages/prod/usb_video",
         "garnet/packages/prod/vboot_reference",
         "garnet/packages/prod/vim",
+        "garnet/packages/prod/virtual_audio_driver",
         "garnet/packages/prod/vulkan",
         "garnet/packages/prod/wlan",
         "garnet/packages/prod/wlan-ap-smoke-test",

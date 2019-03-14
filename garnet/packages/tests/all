@@ -109,7 +109,6 @@
         "garnet/packages/tests/url",
         "garnet/packages/tests/uuid",
         "garnet/packages/tests/virtual_audio",
-        "garnet/packages/tests/virtual_audio_driver",
         "garnet/packages/tests/virtual_audio_service",
         "garnet/packages/tests/vfs_cpp",
         "garnet/packages/tests/vulkan",
