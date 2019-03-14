@@ -6,15 +6,10 @@ package testrunner
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os/exec"
-	"syscall"
-	"time"
-)
 
-const (
-	defaultTimeout = 10 * time.Second
+	"fuchsia.googlesource.com/tools/botanist"
 )
 
 // SubprocessRunner is a Runner that runs commands as local subprocesses.
@@ -37,23 +32,6 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		Stderr:      stderr,
 		Dir:         r.WD,
 		Env:         r.Env,
-		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	done := make(chan error)
-	go func() {
-		done <- cmd.Wait()
-	}()
-
-	select {
-	case err := <-done:
-		return err
-	case <-ctx.Done():
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		return fmt.Errorf("process was killed because the context completed")
-	}
+	return botanist.Run(ctx, cmd)
 }

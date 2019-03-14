@@ -11,8 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
@@ -163,20 +161,15 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKey),
 	)
 
-	// Run command.
-	// The subcommand is put in its own process group so that no subprocesses it spins up
-	// are orphaned on cancelation.
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	cmd := exec.Cmd{
-		Path:        args[0],
-		Args:        args,
-		Env:         env,
-		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-		Stdout:      os.Stdout,
-		Stderr:      os.Stderr,
+		Path:   args[0],
+		Args:   args,
+		Env:    env,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
-
 	if r.cmdStdout != "" {
 		f, err := os.Create(r.cmdStdout)
 		if err != nil {
@@ -194,21 +187,13 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		cmd.Stderr = f
 	}
 
-	if err := cmd.Start(); err != nil {
+	if err := botanist.Run(ctx, cmd); err != nil {
+		if ctx.Err() != nil {
+			return fmt.Errorf("command timed out after %v", r.timeout)
+		}
 		return err
 	}
-	done := make(chan error)
-	go func() {
-		done <- cmd.Wait()
-	}()
-
-	select {
-	case err := <-done:
-		return err
-	case <-ctx.Done():
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	}
-	return fmt.Errorf("command timed out after %v", r.timeout)
+	return nil
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -277,11 +262,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	// Handle SIGTERM and make sure we send a reboot to the device.
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGTERM)
-
 	errs := make(chan error)
 	go func() {
 		if r.fastboot != "" {
@@ -309,7 +289,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	select {
 	case err := <-errs:
 		return err
-	case <-signals:
+	case <-ctx.Done():
 	}
 
 	return nil

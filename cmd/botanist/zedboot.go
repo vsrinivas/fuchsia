@@ -15,11 +15,9 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
@@ -178,33 +176,27 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	stdoutWriter := io.MultiWriter(os.Stdout, &stdoutBuf)
 	stderrWriter := io.MultiWriter(os.Stdout, &stderrBuf)
 
-	// Define host command
-	hostCmd := exec.CommandContext(ctx, cmd.hostCmd)
-	hostCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	hostCmd.Dir = tmpDir
-	hostCmd.Stdout = stdoutWriter
-	hostCmd.Stderr = stderrWriter
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Minute)
+	defer cancel()
 
-	// Set timeout to clean up all subprocesses of original cmd
-	time.AfterFunc(60*time.Minute, func() {
-		syscall.Kill(-hostCmd.Process.Pid, syscall.SIGKILL)
-	})
+	hostCmd := exec.Cmd{
+		Path:   cmd.hostCmd,
+		Args:   []string{cmd.hostCmd},
+		Dir:    tmpDir,
+		Stdout: stdoutWriter,
+		Stderr: stderrWriter,
+	}
 
-	// Execute host command
 	logger.Debugf(ctx, "executing command: %q\n", cmd.hostCmd)
-	hostCmd.Start()
-	hostCmdErr := hostCmd.Wait()
+	hostCmdErr := botanist.Run(ctx, hostCmd)
 
-	// Concatentate stderr after stdout
-	stdoutBuf.Write(stderrBuf.Bytes())
-
-	// Create summary JSON based on host command exit code
+	// Create summary JSON based on host command exit code.
 	summaryBuffer, err := cmd.hostSummaryJSON(ctx, hostCmdErr)
 	if err != nil {
 		return err
 	}
 
-	// Create tar archive
+	stdoutBuf.Write(stderrBuf.Bytes())
 	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
@@ -407,19 +399,14 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-
-	// Ensure cancel() is called on all return paths.
-	defer cancel()
-
-	// Handle SIGTERM and make sure we send a reboot to the device.
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGTERM)
 
 	imgs, err := build.LoadImages(cmd.imageManifests...)
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	errs := make(chan error)
 	go func() {
 		if cmd.fastboot != "" {
@@ -447,7 +434,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	select {
 	case err := <-errs:
 		return err
-	case <-signals:
+	case <-ctx.Done():
 	}
 
 	return nil

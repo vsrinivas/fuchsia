@@ -7,10 +7,12 @@ import (
 	"context"
 	"flag"
 	"os"
+	"syscall"
 
 	"github.com/google/subcommands"
 
 	"fuchsia.googlesource.com/tools/color"
+	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 )
 
@@ -39,6 +41,6 @@ func main() {
 
 	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr)
 	ctx := logger.WithLogger(context.Background(), log)
-
+	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
 	os.Exit(int(subcommands.Execute(ctx)))
 }
