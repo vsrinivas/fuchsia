@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fuchsia/device/manager/c/fidl.h>
@@ -139,51 +140,38 @@ bool BindDrivers() {
     END_TEST;
 }
 
-bool BindDevices() {
-    BEGIN_TEST;
+bool InitializeCoordinator(devmgr::Coordinator* coordinator) {
+    BEGIN_HELPER;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
-
-    zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
+    zx_status_t status = coordinator->InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
+
+    // Load the component driver
+    devmgr::load_driver(devmgr::kComponentDriverPath,
+                       fit::bind_member(coordinator, &devmgr::Coordinator::DriverAddedInit));
+
+    // Add the driver we're using as platform bus
+    devmgr::load_driver(kSystemDriverPath,
+                       fit::bind_member(coordinator, &devmgr::Coordinator::DriverAddedInit));
 
     // Initialize devfs.
-    devmgr::devfs_init(coordinator.root_device(), loop.dispatcher());
-    status = devmgr::devfs_publish(coordinator.root_device(), coordinator.test_device());
+    devmgr::devfs_init(coordinator->root_device(), coordinator->dispatcher());
+    status = devmgr::devfs_publish(coordinator->root_device(), coordinator->test_device());
+    status = devmgr::devfs_publish(coordinator->root_device(), coordinator->sys_device());
     ASSERT_EQ(ZX_OK, status);
-    coordinator.set_running(true);
+    coordinator->set_running(true);
 
-    // Add the device.
-    zx::channel local, remote;
-    status = zx::channel::create(0, &local, &remote);
-    ASSERT_EQ(ZX_OK, status);
-    fbl::RefPtr<devmgr::Device> device;
-    status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
-                                   nullptr /* props_data */, 0 /* props_count */, "mock-device",
-                                   ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
-                                   false /* invisible */, zx::channel() /* client_remote */,
-                                   &device);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_EQ(1, coordinator.devices().size_slow());
+    END_HELPER;
+}
 
-    // Add the driver.
-    devmgr::load_driver(kDriverPath,
-                        fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
-    loop.RunUntilIdle();
-    ASSERT_FALSE(coordinator.drivers().is_empty());
-
-    // Bind the device to a fake devhost.
-    fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
-    devmgr::Devhost host;
-    host.AddRef(); // refcount starts at zero, so bump it up to keep us from being cleaned up
-    dev->set_host(&host);
-    status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
-    ASSERT_EQ(ZX_OK, status);
+// Waits for a BindDriver request to come in on remote, checks that it is for
+// the expected driver, and then sends a ZX_OK response.
+bool CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver) {
+    BEGIN_HELPER;
 
     // Wait for the BindDriver request.
     zx_signals_t pending;
-    status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
+    zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
 
@@ -207,7 +195,10 @@ bool BindDevices() {
                          actual_bytes, handles, actual_handles, nullptr);
     ASSERT_EQ(ZX_OK, status);
     auto req = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverRequest*>(bytes);
-    ASSERT_STR_EQ(kDriverPath, req->driver_path.data);
+    ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
+    ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
+                    reinterpret_cast<const uint8_t*>(req->driver_path.data),
+                    req->driver_path.size, "");
 
     // Write the BindDriver response.
     memset(bytes, 0, sizeof(bytes));
@@ -220,12 +211,304 @@ bool BindDevices() {
     ASSERT_EQ(0, actual_handles);
     status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
     ASSERT_EQ(ZX_OK, status);
+
+    END_HELPER;
+}
+
+bool BindDevices() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+
+    ASSERT_TRUE(InitializeCoordinator(&coordinator));
+
+    // Add the device.
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    ASSERT_EQ(ZX_OK, status);
+    fbl::RefPtr<devmgr::Device> device;
+    status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
+                                   nullptr /* props_data */, 0 /* props_count */, "mock-device",
+                                   ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
+                                   false /* invisible */, zx::channel() /* client_remote */,
+                                   &device);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(1, coordinator.devices().size_slow());
+
+    // Add the driver.
+    devmgr::load_driver(kDriverPath,
+                       fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
+    loop.RunUntilIdle();
+    ASSERT_FALSE(coordinator.drivers().is_empty());
+
+    // Bind the device to a fake devhost.
+    fbl::RefPtr<devmgr::Device> dev = fbl::WrapRefPtr(&coordinator.devices().front());
+    devmgr::Devhost host;
+    host.AddRef(); // refcount starts at zero, so bump it up to keep us from being cleaned up
+    dev->set_host(&host);
+    status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Wait for the BindDriver request.
+    ASSERT_TRUE(CheckBindDriverReceived(remote, kDriverPath));
     loop.RunUntilIdle();
 
     // Reset the fake devhost connection.
     dev->set_host(nullptr);
     remote.reset();
     loop.RunUntilIdle();
+
+    END_TEST;
+}
+
+// Waits for a CreateDevice request to come in on remote, checks
+// expectations, and sends a ZX_OK response.
+bool CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_driver,
+                               zx::channel* device_remote) {
+    BEGIN_HELPER;
+
+    // Wait for the CreateDevice request.
+    zx_signals_t pending;
+    zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
+
+    // Read the CreateDevice request.
+    FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles, fbl::count_of(handles),
+                         &actual_handles);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_LT(0, actual_bytes);
+    ASSERT_EQ(2, actual_handles);
+    *device_remote = zx::channel(handles[0]);
+    status = zx_handle_close(handles[1]);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Validate the CreateDevice request.
+    auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+    ASSERT_EQ(fuchsia_device_manager_ControllerCreateDeviceOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_ControllerCreateDeviceRequestTable, bytes,
+                         actual_bytes, handles, actual_handles, nullptr);
+    ASSERT_EQ(ZX_OK, status);
+    auto req = reinterpret_cast<fuchsia_device_manager_ControllerCreateDeviceRequest*>(
+            bytes);
+    ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
+    ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
+                    reinterpret_cast<const uint8_t*>(req->driver_path.data), req->driver_path.size,
+                    "");
+
+    END_HELPER;
+}
+
+// Waits for a CreateCompositeDevice request to come in on remote, checks
+// expectations, and sends a ZX_OK response.
+bool CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
+                                        size_t expected_components_count) {
+    BEGIN_HELPER;
+
+    // Wait for the CreateCompositeDevice request.
+    zx_signals_t pending;
+    zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
+
+    // Read the CreateCompositeDevice request.
+    FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles, fbl::count_of(handles),
+                         &actual_handles);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_LT(0, actual_bytes);
+    ASSERT_EQ(1, actual_handles);
+    // Close the RPC channel to the device, since we don't actually need it
+    status = zx_handle_close(handles[0]);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Validate the CreateCompositeDevice request.
+    auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+    ASSERT_EQ(fuchsia_device_manager_ControllerCreateCompositeDeviceOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_ControllerCreateCompositeDeviceRequestTable, bytes,
+                         actual_bytes, handles, actual_handles, nullptr);
+    ASSERT_EQ(ZX_OK, status);
+    auto req = reinterpret_cast<fuchsia_device_manager_ControllerCreateCompositeDeviceRequest*>(
+            bytes);
+    ASSERT_EQ(req->name.size, strlen(expected_name));
+    ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_name),
+                    reinterpret_cast<const uint8_t*>(req->name.data), req->name.size, "");
+    ASSERT_EQ(expected_components_count, req->components.count);
+
+    // Write the CreateCompositeDevice response.
+    memset(bytes, 0, sizeof(bytes));
+    auto resp = reinterpret_cast<fuchsia_device_manager_ControllerCreateCompositeDeviceResponse*>(
+            bytes);
+    resp->hdr.ordinal = fuchsia_device_manager_ControllerCreateCompositeDeviceOrdinal;
+    resp->status = ZX_OK;
+    status = fidl_encode(&fuchsia_device_manager_ControllerCreateCompositeDeviceResponseTable,
+                         bytes, sizeof(*resp), handles, fbl::count_of(handles), &actual_handles,
+                         nullptr);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(0, actual_handles);
+    status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
+    ASSERT_EQ(ZX_OK, status);
+
+    END_HELPER;
+}
+
+// Helper for BindComposite for issuing an AddComposite for a composite with the
+// given components.  It's assumed that these components are children of
+// the platform_bus and have the given protocol_id
+bool BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bus,
+                                  const uint32_t* protocol_ids, size_t component_count,
+                                  const zx_device_prop_t* props, size_t props_count,
+                                  const char* name) {
+    BEGIN_HELPER;
+
+    auto components = std::make_unique<fuchsia_device_manager_DeviceComponent[]>(component_count);
+    for (size_t i = 0; i < component_count; ++i) {
+        // Define a union type to avoid violating the strict aliasing rule.
+        union InstValue {
+            zx_bind_inst_t inst;
+            uint64_t value;
+        };
+        InstValue always = {.inst = BI_MATCH()};
+        InstValue protocol = {.inst = BI_MATCH_IF(EQ, BIND_PROTOCOL, protocol_ids[i])};
+
+        fuchsia_device_manager_DeviceComponent* component = &components[i];
+        component->parts_count = 2;
+        component->parts[0].match_program_count = 1;
+        component->parts[0].match_program[0] = always.value;
+        component->parts[1].match_program_count = 1;
+        component->parts[1].match_program[0] = protocol.value;
+    }
+    devmgr::Coordinator* coordinator = platform_bus->coordinator;
+    ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, props, props_count,
+                                              components.get(), component_count,
+                                              0 /* coresident index */),
+              ZX_OK);
+
+    END_HELPER;
+}
+
+template <bool DefineCompositeBeforeDevices>
+bool BindComposite() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+
+    ASSERT_TRUE(InitializeCoordinator(&coordinator));
+    ASSERT_NONNULL(coordinator.component_driver());
+
+    // Create a mock devhost and connect the test device to it, so that all of
+    // its children show up there
+    devmgr::Devhost host;
+    zx::channel devhost_remote;
+    zx::channel platform_bus_devhost_remote;
+    host.AddRef(); // refcount starts at zero, so bump it up to keep us from being cleaned up
+    {
+        zx::channel local;
+        zx_status_t status = zx::channel::create(0, &local, &devhost_remote);
+        ASSERT_EQ(ZX_OK, status);
+        host.set_hrpc(local.release());
+    }
+
+    // Set up the sys device proxy
+    ASSERT_EQ(coordinator.PrepareProxy(coordinator.sys_device(), &host), ZX_OK);
+    loop.RunUntilIdle();
+    ASSERT_TRUE(CheckCreateDeviceReceived(devhost_remote, kSystemDriverPath,
+                                          &platform_bus_devhost_remote));
+    loop.RunUntilIdle();
+
+    // Create a child of the sys_device, since only directly children of it can
+    // issue AddComposite
+    fbl::RefPtr<devmgr::Device> platform_bus;
+    zx::channel platform_bus_remote;
+    {
+        zx::channel local;
+        zx_status_t status = zx::channel::create(0, &local, &platform_bus_remote);
+        ASSERT_EQ(ZX_OK, status);
+        status = coordinator.AddDevice(coordinator.sys_device()->proxy, std::move(local),
+                                       nullptr /* props_data */, 0 /* props_count */,
+                                       "platform-bus", 0, nullptr /* driver_path */,
+                                       nullptr /* args */, false /* invisible */,
+                                       zx::channel() /* client_remote */, &platform_bus);
+        ASSERT_EQ(ZX_OK, status);
+        ASSERT_EQ(1, coordinator.devices().size_slow());
+        loop.RunUntilIdle();
+    }
+
+    fbl::RefPtr<devmgr::Device> devices[2];
+    zx::channel device_rpcs[fbl::count_of(devices)];
+    uint32_t protocol_id[] = {
+        ZX_PROTOCOL_GPIO,
+        ZX_PROTOCOL_I2C,
+    };
+    static_assert(fbl::count_of(protocol_id) == fbl::count_of(devices));
+
+    const char* kCompositeDevName = "composite-dev";
+    if constexpr (DefineCompositeBeforeDevices) {
+        ASSERT_TRUE(BindCompositeDefineComposite(platform_bus, protocol_id,
+                                                 fbl::count_of(protocol_id),
+                                                 nullptr /* props */, 0, kCompositeDevName));
+    }
+
+    // Add the devices to construct the composite out of.
+    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+        zx::channel local;
+        zx_status_t status = zx::channel::create(0, &local, &device_rpcs[i]);
+        ASSERT_EQ(ZX_OK, status);
+        char name[32];
+        snprintf(name, sizeof(name), "device-%zu", i);
+        status = coordinator.AddDevice(platform_bus, std::move(local),
+                                       nullptr /* props_data */, 0 /* props_count */, name,
+                                       protocol_id[i], nullptr /* driver_path */,
+                                       nullptr /* args */, false /* invisible */,
+                                       zx::channel() /* client_remote */, &devices[i]);
+        ASSERT_EQ(ZX_OK, status);
+        ASSERT_EQ(i + 2, coordinator.devices().size_slow());
+        loop.RunUntilIdle();
+    }
+
+    if constexpr (!DefineCompositeBeforeDevices) {
+        ASSERT_TRUE(BindCompositeDefineComposite(platform_bus, protocol_id,
+                                                 fbl::count_of(protocol_id),
+                                                 nullptr /* props */, 0, kCompositeDevName));
+    }
+
+    fbl::RefPtr<devmgr::Device> component_devices[fbl::count_of(devices)];
+    zx::channel component_device_rpcs[fbl::count_of(devices)];
+    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+        // Wait for the components to get bound
+        fbl::String driver = coordinator.component_driver()->libname;
+        ASSERT_TRUE(CheckBindDriverReceived(device_rpcs[i], driver.data()));
+        loop.RunUntilIdle();
+
+        // Synthesize the AddDevice request the component driver would send
+        zx::channel local, remote;
+        zx_status_t status = zx::channel::create(0, &local, &component_device_rpcs[i]);
+        ASSERT_EQ(ZX_OK, status);
+        char name[32];
+        snprintf(name, sizeof(name), "composite-device-%zu", i);
+        status = coordinator.AddDevice(devices[i], std::move(local),
+                                       nullptr /* props_data */, 0 /* props_count */, name,
+                                       ZX_PROTOCOL_COMPOSITE, driver.data(),
+                                       nullptr /* args */, false /* invisible */,
+                                       zx::channel() /* client_remote */, &component_devices[i]);
+        ASSERT_EQ(ZX_OK, status);
+        loop.RunUntilIdle();
+    }
+
+    ASSERT_TRUE(CheckCreateCompositeDeviceReceived(devhost_remote, kCompositeDevName,
+                                                   fbl::count_of(devices)));
+
+    loop.RunUntilIdle();
+    host.devices().clear();
 
     END_TEST;
 }
@@ -239,4 +522,6 @@ RUN_TEST(DumpState)
 RUN_TEST(LoadDriver)
 RUN_TEST(BindDrivers)
 RUN_TEST(BindDevices)
+RUN_TEST(BindComposite<false>)
+RUN_TEST(BindComposite<true>)
 END_TEST_CASE(coordinator_tests)
