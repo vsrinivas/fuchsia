@@ -348,10 +348,16 @@ void ThreadImpl::SyncFramesForStack(std::function<void(const Err&)> callback) {
       request,
       [callback = std::move(callback), thread = weak_factory_.GetWeakPtr()](
           const Err& err, debug_ipc::ThreadStatusReply reply) {
+        if (err.has_error()) {
+          callback(err);
+          return;
+        }
+
         if (!thread) {
           callback(Err("Thread destroyed."));
           return;
         }
+
         thread->SetMetadata(reply.record);
         callback(Err());
       });
