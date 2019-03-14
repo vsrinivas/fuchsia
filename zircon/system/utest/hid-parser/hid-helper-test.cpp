@@ -641,6 +641,126 @@ bool unit_tests() {
     END_TEST;
 }
 
+bool insert_tests() {
+    BEGIN_TEST;
+    uint8_t report[8] = {};
+    size_t report_len = sizeof(report);
+    hid::Attributes attr = {};
+    uint32_t value_out;
+
+    attr.bit_sz = 1;
+    attr.offset = 0;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0xFFFFFFFF));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0x1, value_out);
+    for (int i = 0; i < 8; i++) {
+        report[i] = 0;
+    }
+
+    attr.bit_sz = 4;
+    attr.offset = 0;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0xFFFFFFFF));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0xF, value_out);
+    for (int i = 0; i < 8; i++) {
+        report[i] = 0;
+    }
+
+    attr.bit_sz = 8;
+    attr.offset = 4;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0xFFFFFFFF));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0xF0, report[0]);
+    EXPECT_EQ(0x0F, report[1]);
+    EXPECT_EQ(0xFF, value_out);
+
+    attr.bit_sz = 32;
+    attr.offset = 0;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0xFFFFFFFF));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0xFFFFFFFF, value_out);
+
+    attr.bit_sz = 32;
+    attr.offset = 0;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0x12345678));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0x12345678, value_out);
+
+    attr.bit_sz = 16;
+    attr.offset = 8;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0x12345678));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0x5678, value_out);
+
+    attr.bit_sz = 16;
+    attr.offset = 3;
+    ASSERT_TRUE(InsertUint(report, report_len, attr, 0x12345678));
+    ASSERT_TRUE(ExtractUint(report, report_len, attr, &value_out));
+    EXPECT_EQ(0x5678, value_out);
+
+    // Test that Insert and Extract give back the same number.
+    double double_out;
+    attr.logc_mm.min = 0;
+    attr.logc_mm.max = 200;
+    attr.phys_mm.min = 0;
+    attr.phys_mm.max = 200;
+    attr.offset = 5;
+    attr.bit_sz = 8;
+    ASSERT_TRUE(InsertAsUnit(report, report_len, attr, 100));
+    ASSERT_TRUE(ExtractAsUnit(report, report_len, attr, &double_out));
+    EXPECT_EQ(static_cast<int>(double_out), 100);
+
+    // Test that Insert and Extract give back the same number with scaling.
+    attr.logc_mm.min = 0;
+    attr.logc_mm.max = 100;
+    attr.phys_mm.min = 0;
+    attr.phys_mm.max = 200;
+    attr.offset = 5;
+    attr.bit_sz = 8;
+    ASSERT_TRUE(InsertAsUnit(report, report_len, attr, 100));
+    ASSERT_TRUE(ExtractAsUnit(report, report_len, attr, &double_out));
+    EXPECT_EQ(static_cast<int>(double_out), 100);
+
+    // Test that Insert and Extract accept negative numbers.
+    attr.logc_mm.min = -50;
+    attr.logc_mm.max = 50;
+    attr.phys_mm.min = -50;
+    attr.phys_mm.max = 50;
+    attr.offset = 5;
+    attr.bit_sz = 8;
+    ASSERT_TRUE(InsertAsUnit(report, report_len, attr, -5));
+    ASSERT_TRUE(ExtractAsUnit(report, report_len, attr, &double_out));
+    EXPECT_EQ(static_cast<int>(double_out), -5);
+
+    // Test InsertWithUnit
+    attr.logc_mm.min = 0;
+    attr.logc_mm.max = 256;
+    attr.phys_mm.min = 0;
+    attr.phys_mm.max = 256;
+    attr.offset = 5;
+    attr.bit_sz = 8;
+
+    hid::Unit unit_out;
+    unit_out.type = 0;
+    hid::unit::SetSystem(unit_out, hid::unit::System::si_linear);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 2;
+
+    hid::Unit unit_report;
+    unit_report.type = 0;
+    hid::unit::SetSystem(unit_report, hid::unit::System::si_linear);
+    hid::unit::SetLengthExp(unit_report, 1);
+    unit_report.exp = 1;
+
+    attr.unit = unit_report;
+
+    ASSERT_TRUE(InsertWithUnit(report, report_len, attr, unit_out, 20));
+    ASSERT_TRUE(ExtractWithUnit(report, report_len,  attr, unit_out, &double_out));
+    EXPECT_EQ(static_cast<int>(double_out), 20);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_helper_tests)
 RUN_TEST(parse_minmax_signed)
 RUN_TEST(parse_push_pop)
@@ -650,4 +770,5 @@ RUN_TEST(usage_operators)
 RUN_TEST(extract_tests)
 RUN_TEST(extract_as_unit_tests)
 RUN_TEST(unit_tests)
+RUN_TEST(insert_tests)
 END_TEST_CASE(hidparser_helper_tests)
