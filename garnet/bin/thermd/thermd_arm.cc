@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/gpu/clock/c/fidl.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -13,7 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/system.h>
@@ -75,6 +75,13 @@ int main(int argc, char** argv) {
     return -1;
   }
 
+  zx::handle handle;
+  st = fdio_get_service_handle(fd, handle.reset_and_get_address());
+  if (st != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get thermal service: %d\n", st);
+    return -1;
+  }
+
   zx::handle gpu_handle;
   st = fdio_get_service_handle(fd_gpu, gpu_handle.reset_and_get_address());
   if (st != ZX_OK) {
@@ -82,11 +89,13 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  thermal_device_info_t info;
-  ssize_t rc = ioctl_thermal_get_device_info(fd, &info);
-  if (rc != sizeof(info)) {
-    fprintf(stderr, "ERROR: Failed to get thermal info: %zd\n", rc);
-    return rc;
+  zx_status_t status2;
+  fuchsia_hardware_thermal_ThermalDeviceInfo info;
+  st = fuchsia_hardware_thermal_DeviceGetDeviceInfo(handle.get(), &status2,
+                                                    &info);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+    return -1;
   }
 
   if (info.num_trip_points == 0) {
@@ -102,10 +111,11 @@ int main(int argc, char** argv) {
   }
 
   zx_handle_t port = ZX_HANDLE_INVALID;
-  rc = ioctl_thermal_get_state_change_port(fd, &port);
-  if (rc != sizeof(port)) {
-    fprintf(stderr, "ERROR: Failed to get event: %zd\n", rc);
-    return rc;
+  st = fuchsia_hardware_thermal_DeviceGetStateChangePort(handle.get(), &status2,
+                                                         &port);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get event: %d %d\n", st, status2);
+    return -1;
   }
 
   for (;;) {
@@ -125,16 +135,17 @@ int main(int argc, char** argv) {
     if (info.passive_cooling) {
       uint32_t big_cluster_opp =
           info.trip_point_info[trip_idx].big_cluster_dvfs_opp;
-      dvfs_info_t dvfs_info;
 
       // Set DVFS Opp for Big Cluster.
-      dvfs_info.power_domain = BIG_CLUSTER_POWER_DOMAIN;
-      dvfs_info.op_idx = big_cluster_opp;
-      rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
-      if (rc < 0) {
-        fprintf(stderr, "ERROR: Failed to set DVFS OPP for big cluster: %zd\n",
-                rc);
-        return rc;
+      st = fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
+          handle.get(), big_cluster_opp,
+          fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
+          &status2);
+      if (st != ZX_OK || status2 != ZX_OK) {
+        fprintf(stderr,
+                "ERROR: Failed to set DVFS OPP for big cluster: %d %d\n", st,
+                status2);
+        return -1;
       }
 
       // Check if it's big little.
@@ -142,24 +153,25 @@ int main(int argc, char** argv) {
         // Set the DVFS Opp for Little Cluster.
         uint32_t little_cluster_opp =
             info.trip_point_info[trip_idx].little_cluster_dvfs_opp;
-        dvfs_info.power_domain = LITTLE_CLUSTER_POWER_DOMAIN;
-        dvfs_info.op_idx = little_cluster_opp;
-        rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
-        if (rc < 0) {
+        st = fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
+            handle.get(), little_cluster_opp,
+            fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
+            &status2);
+        if (st != ZX_OK || status2 != ZX_OK) {
           fprintf(stderr,
-                  "ERROR: Failed to set DVFS OPP for little cluster: %zd\n",
-                  rc);
-          return rc;
+                  "ERROR: Failed to set DVFS OPP for little cluster: %d %d\n",
+                  st, status2);
+          return -1;
         }
       }
     }
 
     if (info.active_cooling) {
       uint32_t fan_level = info.trip_point_info[trip_idx].fan_level;
-      rc = ioctl_thermal_set_fan_level(fd, &fan_level);
-      if (rc) {
-        fprintf(stderr, "ERROR: Failed to set fan level: %zd\n", rc);
-        return rc;
+      st = fuchsia_hardware_thermal_DeviceSetFanLevel(handle.get(), fan_level,
+                                                      &status2);
+      if (st != ZX_OK || status2 != ZX_OK) {
+        fprintf(stderr, "ERROR: Failed to set fan level: %d %d\n", st, status2);
       }
     }
 
@@ -167,7 +179,6 @@ int main(int argc, char** argv) {
       int gpu_clk_freq_source =
           info.trip_point_info[trip_idx].gpu_clk_freq_source;
       if (gpu_clk_freq_source != -1) {
-        zx_status_t status2;
         st = fuchsia_hardware_gpu_clock_ClockSetFrequencySource(
             gpu_handle.get(), gpu_clk_freq_source, &status2);
         if (st != ZX_OK || status2 != ZX_OK) {

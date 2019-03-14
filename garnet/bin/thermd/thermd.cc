@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/device/thermal.h>
 #include <zircon/syscalls.h>
@@ -13,6 +14,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
@@ -174,24 +176,28 @@ int main(int argc, char** argv) {
 
   // first sensor is ambient sensor
   // TODO: come up with a way to detect this is the ambient sensor
-  int fd = open("/dev/class/thermal/000", O_RDWR);
-  if (fd < 0) {
-    fprintf(stderr, "ERROR: Failed to open sensor: %d\n", fd);
+  fbl::unique_fd fd(open("/dev/class/thermal/000", O_RDWR));
+  if (fd.get() < 0) {
+    fprintf(stderr, "ERROR: Failed to open sensor: %d\n", fd.get());
     return -1;
   }
 
   uint32_t temp;
-  ssize_t rc = read(fd, &temp, sizeof(temp));
+  ssize_t rc = read(fd.get(), &temp, sizeof(temp));
   if (rc != sizeof(temp)) {
     return rc;
   }
   TRACE_COUNTER("thermal", "temp", 0, "ambient-c", to_celsius(temp));
 
-  thermal_info_t info;
-  rc = ioctl_thermal_get_info(fd, &info);
-  if (rc != sizeof(info)) {
-    fprintf(stderr, "ERROR: Failed to get thermal info: %zd\n", rc);
-    return rc;
+  fzl::FdioCaller caller(std::move(fd));
+
+  zx_status_t status2;
+  fuchsia_hardware_thermal_ThermalInfo info;
+  st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2,
+                                              &info);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+    return -1;
   }
 
   TRACE_COUNTER("thermal", "trip-point", 0, "passive-c",
@@ -199,10 +205,11 @@ int main(int argc, char** argv) {
                 to_celsius(info.critical_temp));
 
   zx_handle_t h = ZX_HANDLE_INVALID;
-  rc = ioctl_thermal_get_state_change_event(fd, &h);
-  if (rc != sizeof(h)) {
-    fprintf(stderr, "ERROR: Failed to get event: %zd\n", rc);
-    return rc;
+  st = fuchsia_hardware_thermal_DeviceGetStateChangeEvent(
+      caller.borrow_channel(), &status2, &h);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get event: %d %d\n", st, status2);
+    return -1;
   }
 
   if (info.max_trip_count == 0) {
@@ -211,21 +218,19 @@ int main(int argc, char** argv) {
   }
 
   // Set a trip point
-  trip_point_t tp = {
-      .id = 0,
-      .temp = info.passive_temp,
-  };
-  rc = ioctl_thermal_set_trip(fd, &tp);
-  if (rc) {
-    fprintf(stderr, "ERROR: Failed to set trip point: %zd\n", rc);
-    return rc;
+  st = fuchsia_hardware_thermal_DeviceSetTrip(caller.borrow_channel(), 0,
+                                              info.passive_temp, &status2);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to set trip point: %d %d\n", st, status2);
+    return -1;
   }
 
   // Update info
-  rc = ioctl_thermal_get_info(fd, &info);
-  if (rc != sizeof(info)) {
-    fprintf(stderr, "ERROR: Failed to get thermal info: %zd\n", rc);
-    return rc;
+  st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2,
+                                              &info);
+  if (st != ZX_OK || status2 != ZX_OK) {
+    fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+    return -1;
   }
   TRACE_COUNTER("thermal", "trip-point", 0, "passive-c",
                 to_celsius(info.passive_temp), "critical-c",
@@ -244,15 +249,17 @@ int main(int argc, char** argv) {
       return st;
     }
     if (observed & ZX_USER_SIGNAL_0) {
-      rc = ioctl_thermal_get_info(fd, &info);
-      if (rc != sizeof(info)) {
-        fprintf(stderr, "ERROR: Failed to get thermal info: %zd\n", rc);
-        return rc;
+      st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(),
+                                                  &status2, &info);
+      if (st != ZX_OK || status2 != ZX_OK) {
+        fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st,
+                status2);
+        return -1;
       }
       if (info.state) {
         set_pl1(PL1_MIN);  // decrease power limit
 
-        rc = read(fd, &temp, sizeof(temp));
+        rc = read(caller.fd().get(), &temp, sizeof(temp));
         if (rc != sizeof(temp)) {
           fprintf(stderr, "ERROR: Failed to read temperature: %zd\n", rc);
           return rc;
@@ -262,7 +269,7 @@ int main(int argc, char** argv) {
       }
     }
     if (st == ZX_ERR_TIMED_OUT) {
-      rc = read(fd, &temp, sizeof(temp));
+      rc = read(caller.fd().get(), &temp, sizeof(temp));
       if (rc != sizeof(temp)) {
         fprintf(stderr, "ERROR: Failed to read temperature: %zd\n", rc);
         return rc;
@@ -273,10 +280,12 @@ int main(int argc, char** argv) {
       if ((temp < info.active_trip[0] - COOL_TEMP_THRESHOLD) &&
           (pl1_mw != PL1_MAX)) {
         // make sure the state is clear
-        rc = ioctl_thermal_get_info(fd, &info);
-        if (rc != sizeof(info)) {
-          fprintf(stderr, "ERROR: Failed to get thermal info: %zd\n", rc);
-          return rc;
+        st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(),
+                                                    &status2, &info);
+        if (st != ZX_OK || status2 != ZX_OK) {
+          fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st,
+                  status2);
+          return -1;
         }
         if (!info.state) {
           set_pl1(PL1_MAX);
@@ -288,8 +297,6 @@ int main(int argc, char** argv) {
       }
     }
   }
-
-  close(fd);
 
   printf("thermd terminating: %d\n", st);
 
