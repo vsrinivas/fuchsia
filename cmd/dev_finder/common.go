@@ -46,6 +46,8 @@ type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice, chan<- error)
 
 // Contains common command information for embedding in other dev_finder commands.
 type devFinderCmd struct {
+	// Outputs in JSON format if true.
+	json bool
 	// The mDNS port to connect to.
 	mdnsPort int
 	// The timeout in ms to either give up or to exit the program after finding at least one
@@ -68,6 +70,7 @@ type fuchsiaDevice struct {
 }
 
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
+	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
 	f.IntVar(&cmd.mdnsPort, "port", 5353, "The port your mDNS servers operate on.")
 	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")

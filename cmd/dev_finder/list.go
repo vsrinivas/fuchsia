@@ -6,9 +6,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/google/subcommands"
@@ -19,6 +21,19 @@ import (
 const (
 	fuchsiaService = "_fuchsia._udp.local"
 )
+
+// jsonListOutput represents the output in JSON format.
+type jsonListOutput struct {
+	// List of devices found.
+	Devices []jsonListDevice `json:"devices"`
+}
+
+type jsonListDevice struct {
+	// Device IP address.
+	Addr string `json:"addr"`
+	// Device domain name. Only output with -full.
+	Domain string `json:"domain,omitempty"`
+}
 
 type listCmd struct {
 	devFinderCmd
@@ -102,6 +117,13 @@ func (cmd *listCmd) execute(ctx context.Context) error {
 		return fmt.Errorf("no devices with domain matching '%v'", cmd.domainFilter)
 	}
 
+	if cmd.json {
+		return cmd.outputJSON(filteredDevices)
+	}
+	return cmd.outputNormal(filteredDevices)
+}
+
+func (cmd *listCmd) outputNormal(filteredDevices []*fuchsiaDevice) error {
 	for _, device := range filteredDevices {
 		if cmd.fullInfo {
 			fmt.Printf("%v %v\n", device.addr, device.domain)
@@ -110,6 +132,22 @@ func (cmd *listCmd) execute(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (cmd *listCmd) outputJSON(filteredDevices []*fuchsiaDevice) error {
+	jsonOut := jsonListOutput{Devices: make([]jsonListDevice, 0, len(filteredDevices))}
+
+	for _, device := range filteredDevices {
+		dev := jsonListDevice{Addr: device.addr.String()}
+		if cmd.fullInfo {
+			dev.Domain = device.domain
+		}
+		jsonOut.Devices = append(jsonOut.Devices, dev)
+	}
+
+	e := json.NewEncoder(os.Stdout)
+	e.SetIndent("", "  ")
+	return e.Encode(jsonOut)
 }
 
 func (cmd *listCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
