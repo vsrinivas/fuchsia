@@ -138,7 +138,7 @@ template("dart_test") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "environment",
+                             "environments",
                            ])
     deps += [ ":$_snapshot_target_name" ]
     if (defined(invoker.non_dart_deps)) {
