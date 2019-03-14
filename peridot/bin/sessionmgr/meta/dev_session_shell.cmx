@@ -11,7 +11,9 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.tracelink.Registry",
+            "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager",
             "fuchsia.ui.viewsv1.ViewSnapshot"
         ]
     }

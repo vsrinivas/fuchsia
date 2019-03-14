@@ -7,7 +7,9 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
         ]
     }
 }

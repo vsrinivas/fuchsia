@@ -4,86 +4,104 @@
 
 #include "peridot/lib/fidl/view_host.h"
 
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
 namespace modular {
 
+struct ViewHost::ViewData {
+  explicit ViewData(scenic::Session* session) : host_node(session) {}
+
+  scenic::EntityNode host_node;
+};
+
 ViewHost::ViewHost(scenic::ViewContext view_context)
-    : BaseView(std::move(view_context), "ViewHost") {}
+    : V1BaseView(std::move(view_context), "ViewHost"),
+      container_node_(session()) {
+  parent_node().AddChild(container_node_);
+}
+
+ViewHost::~ViewHost() = default;
+
+void ViewHost::ConnectView(zx::eventpair view_holder_token) {
+  const uint32_t child_key = next_child_key_++;
+
+  auto view_data = std::make_unique<ViewData>(session());
+
+  zx::eventpair host_import_token;
+  view_data->host_node.ExportAsRequest(&host_import_token);
+  container_node_.AddChild(view_data->host_node);
+  views_.emplace(child_key, std::move(view_data));
+
+  GetViewContainer()->AddChild2(child_key, std::move(view_holder_token),
+                                std::move(host_import_token));
+  UpdateScene();
+}
 
 void ViewHost::ConnectView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  auto view_data =
-      std::make_unique<ViewData>(session(), std::move(view_holder_token));
-
-  root_node().AddChild(view_data->host_node);
-  views_.emplace(view_data->host_view_holder.id(), std::move(view_data));
-
-  UpdateScene();
-  InvalidateScene();
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
+  ConnectView(zx::eventpair(view_owner.TakeChannel().release()));
 }
 
 void ViewHost::OnPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties /*old_properties*/) {
+    fuchsia::ui::viewsv1::ViewProperties /*old_properties*/) {
   UpdateScene();
 }
 
-void ViewHost::OnScenicEvent(fuchsia::ui::scenic::Event event) {
-  switch (event.Which()) {
-    case fuchsia::ui::scenic::Event::Tag::kGfx:
-      switch (event.gfx().Which()) {
-        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          uint32_t view_holder_id =
-              event.gfx().view_disconnected().view_holder_id;
-          FXL_LOG(ERROR) << "View died unexpectedly, id=" << view_holder_id;
+void ViewHost::OnChildUnavailable(uint32_t child_key) {
+  FXL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
 
-          auto it = views_.find(view_holder_id);
-          FXL_DCHECK(it != views_.end());
-          it->second->host_node.Detach();
-          views_.erase(it);
+  auto it = views_.find(child_key);
+  FXL_DCHECK(it != views_.end());
 
-          UpdateScene();
-          InvalidateScene();
-          break;
-        }
-        default:
-          FXL_LOG(WARNING) << "ViewHost::OnScenicEvent: Got an unhandled GFX "
-                              "event.";
-          break;
-      }
-      break;
-    default:
-      FXL_DCHECK(false) << "ViewHost::OnScenicEvent: Got an unhandled Scenic "
-                           "event.";
-      break;
-  }
+  it->second->host_node.Detach();
+  views_.erase(it);
+
+  GetViewContainer()->RemoveChild2(child_key, zx::eventpair());
+  UpdateScene();
 }
 
 void ViewHost::UpdateScene() {
-  if (views_.empty() || !has_logical_size()) {
+  if (!properties().view_layout || views_.empty()) {
     return;
   }
 
   // Layout all children in a row.
-  const float width = logical_size().x / views_.size();
-  float offset = 0.f;
-  for (auto& [view_key, view_data] : views_) {
-    fuchsia::ui::gfx::ViewProperties view_properties = {
-        .bounding_box =
-            fuchsia::ui::gfx::BoundingBox{
-                .min = fuchsia::ui::gfx::vec3{.x = offset, .y = 0.f, .z = 0.f},
-                .max =
-                    fuchsia::ui::gfx::vec3{
-                        .x = offset + width, .y = logical_size().y, .z = 0.f},
-            },
-        .inset_from_min = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
-        .inset_from_max = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
-    };
+  uint32_t index = 0;
+  uint32_t space = logical_size().width;
+  uint32_t base = space / views_.size();
+  uint32_t excess = space % views_.size();
+  uint32_t offset = 0;
+  for (auto it = views_.begin(); it != views_.end(); ++it, ++index) {
+    ViewData* view_data = it->second.get();
 
-    view_data->host_node.SetTranslationRH(offset, 0.f, 0.f);
-    view_data->host_view_holder.SetViewProperties(view_properties);
-    offset += width;
+    // Distribute any excess width among the leading children.
+    uint32_t extent = base;
+    if (excess) {
+      extent++;
+      excess--;
+    }
+
+    fuchsia::math::RectF layout_bounds;
+    layout_bounds.x = offset;
+    layout_bounds.y = 0;
+    layout_bounds.width = extent;
+    layout_bounds.height = logical_size().height;
+    offset += extent;
+
+    auto view_properties = fuchsia::ui::viewsv1::ViewProperties::New();
+    view_properties->view_layout = fuchsia::ui::viewsv1::ViewLayout::New();
+    view_properties->view_layout->size = fuchsia::math::SizeF();
+    view_properties->view_layout->size.width = layout_bounds.width;
+    view_properties->view_layout->size.height = layout_bounds.height;
+    view_properties->view_layout->inset = fuchsia::math::InsetF();
+    GetViewContainer()->SetChildProperties(it->first,
+                                           std::move(view_properties));
+
+    view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
+
+  InvalidateScene();
 }
 
 }  // namespace modular
