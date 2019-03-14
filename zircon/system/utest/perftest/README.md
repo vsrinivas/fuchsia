@@ -1,11 +1,27 @@
 # Perf Tests
 
 These are Zircon's performance tests.
-When using a Fuchsia build, the tests can be run with
-`/system/test/sys/perf-test`.
-When using a standalone Zircon build the tests can be run with
-`/boot/test/sys/perf-test`.
 
+## Running
+
+### Standalone Zircon Build
+
+When using a standalone Zircon build the tests can be run with
+
+`/boot/test/sys/perf-test`
+
+### Fuchsia Build
+
+When using a Fuchsia build you must first ensure the right package is
+included. Try building with
+
+`fx set x64 --monolith garnet/packages/buildbot && fx full-build`
+
+You can then run the tests with
+
+`/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test`
+
+## Developing
 
 For examples of how to use the testing framework, as well as coding guidelines,
 please read:
