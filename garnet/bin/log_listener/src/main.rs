@@ -151,6 +151,7 @@ struct LocalOptions {
     time_format: String,
     is_pretty: bool,
     suppress: Vec<String>,
+    only: Vec<String>,
 }
 
 impl Default for LocalOptions {
@@ -163,6 +164,7 @@ impl Default for LocalOptions {
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
             is_pretty: false,
             suppress: vec![],
+            only: vec![],
         }
     }
 }
@@ -269,11 +271,16 @@ fn help(name: &str) -> String {
             Tag to ignore. Any logs containing at least one of the passed tags will not be
             printed.
 
+        --only <comma-separated-words>
+            Show log lines containing at least one of the specified words.
+            Ineffectve if not set.
+
         --pid <integer>:
             pid for the program to filter on.
 
-        --pretty:
-            Activate colorization and suppression
+        --pretty yes:
+            Activate colorization and suppression.
+            TODO(porce): Use structopt and convert this to boolean.
 
         --tid <integer>:
             tid for the program to filter on.
@@ -354,6 +361,12 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     ));
                 }
                 options.local.ignore_tags.insert(String::from(tag.as_ref()));
+            }
+            "--only" => {
+                options
+                    .local
+                    .only
+                    .append(&mut args[i + 1].split(",").map(|s| s.to_string()).collect());
             }
             "--pretty" => {
                 let ans = &args[i + 1];
@@ -490,8 +503,22 @@ where
             message.msg
         );
 
-        if self.local_options.suppress.len() > 0 {
+        if self.local_options.only.len() > 0 || self.local_options.suppress.len() > 0 {
             let line_lowercase = line.clone().to_lowercase();
+
+            if self.local_options.only.len() > 0 {
+                let mut has = false;
+                for k in &self.local_options.only {
+                    if line_lowercase.contains(k.to_lowercase().as_str()) {
+                        has = true;
+                        break;
+                    }
+                }
+                if !has {
+                    return;
+                }
+            }
+
             for k in &self.local_options.suppress {
                 if line_lowercase.contains(k.to_lowercase().as_str()) {
                     return;
@@ -628,6 +655,7 @@ mod tests {
         let tmp_dir = TempDir::new().expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
+
         let mut l = Listener {
             dropped_logs: HashMap::new(),
             writer: tmp_file,
@@ -698,6 +726,33 @@ mod tests {
         l.log(copy_log_message(&message));
         expected.push_str(s);
         expected.push_str("[636253.000631][123][321][tag1, tag2] WARNING: Dropped logs count: 2\n");
+
+        // Log message filter test
+        let mut message2 = LogMessage {
+            pid: 123,
+            tid: 321,
+            severity: 0,
+            time: 76352234564,
+            msg: "this is an interesting log".to_string(),
+            dropped_logs: 0,
+            tags: vec![],
+        };
+
+        let mut filter_options = LocalOptions::default();
+        filter_options.suppress.push("noisy".to_string());
+        filter_options.only.push("interesting".to_string());
+        l.local_options = filter_options;
+
+        l.log(copy_log_message(&message2));
+        expected.push_str("[00076.352234][123][321][] INFO: this is an interesting log\n");
+
+        message2.msg = "this is a noisy log".to_string();
+        l.log(copy_log_message(&message2));
+        // Above message is not expected to be logged.
+
+        message2.msg = "this is a noisy but interesting log".to_string();
+        l.log(copy_log_message(&message2));
+        // Above message is not expected to be logged.
 
         let mut tmp_file = File::open(&file_path).expect("should have opened the file");
         let mut content = String::new();
@@ -930,6 +985,20 @@ mod tests {
             expected.local.ignore_tags.insert("tag".to_string());
             expected.local.ignore_tags.insert("tag1".to_string());
             parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn only() {
+            let args = vec!["--only".to_string(), "x,yz,abc".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.only = vec!["x".to_string(), "yz".to_string(), "abc".to_string()];
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn only_fail() {
+            let args = vec!["--only".to_string()];
+            parse_flag_test_helper(&args, None);
         }
 
         #[test]
