@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -105,7 +106,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 		errChan <- err
 	})
 	m.AddWarningHandler(func(addr net.Addr, err error) {
-		fmt.Printf("from: %v warn: %v\n", addr, err)
+		log.Printf("from: %v warn: %v\n", addr, err)
 	})
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
 	defer cancel()
