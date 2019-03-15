@@ -43,6 +43,7 @@ DDK_PROTOCOL_DEF(USB_DCI,        'pUDC', "usb-dci", 0)  // Device Controller Int
 DDK_PROTOCOL_DEF(USB_DEVICE,     'pUSD', "usb-device", 0)
 DDK_PROTOCOL_DEF(USB_PERIPHERAL, 'pUSP', "usb-peripheral", 0)
 DDK_PROTOCOL_DEF(USB_FUNCTION,   'pUSF', "usb-function", 0)
+DDK_PROTOCOL_DEF(CACHE_TEST,     'pUSC', "usb-cache-test", 0)
 DDK_PROTOCOL_DEF(USB_HCI,        'pUHI', "usb-hci", 0)  // Host Controller Interface
 DDK_PROTOCOL_DEF(USB_MODE_SWITCH,'pUMS', "usb-mode-switch", 0)
 DDK_PROTOCOL_DEF(USB_DBC,        'pUDB', "usb-dbc", 0) // Debug Capability
