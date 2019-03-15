@@ -14,21 +14,33 @@ use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_modular::AppConfig;
 use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
 use fidl_fuchsia_modular_internal::{SessionContextMarker, SessionmgrMarker};
+use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fidl_fuchsia_ui_views::ViewHolderToken;
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
-use fuchsia_app::client::{App as LaunchedApp, LaunchOptions, Launcher};
+use fuchsia_app::{
+    client::{App as LaunchedApp, Launcher},
+    fuchsia_single_component_package_url,
+};
 use fuchsia_async as fasync;
 use fuchsia_scenic::{Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder};
 use fuchsia_syslog::{self as fx_log, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
+use futures::prelude::*;
 use rand::Rng;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 mod layout;
+mod replica;
 mod session_context;
 
 use crate::layout::{layout, ChildViewData};
+use crate::replica::make_replica_env;
 use crate::session_context::SessionContext;
+
+const CLOUD_PROVIDER_URI: &str = fuchsia_single_component_package_url!("cloud_provider_in_memory");
+const ERMINE_URI: &str = fuchsia_single_component_package_url!("ermine");
+const MONDRIAN_URI: &str = fuchsia_single_component_package_url!("mondrian");
 
 struct VoilaAppAssistant {}
 
@@ -42,23 +54,28 @@ impl AppAssistant for VoilaAppAssistant {
         _key: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
+        let cloud_provider = Launcher::new()?.launch(CLOUD_PROVIDER_URI.to_string(), None)?;
         Ok(Box::new(VoilaViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             circle_node: ShapeNode::new(session.clone()),
+            cloud_provider_app: Arc::new(cloud_provider),
             replicas: BTreeMap::new(),
         }))
     }
 }
 
+#[allow(unused)]
 struct VoilaViewAssistant {
     background_node: ShapeNode,
     circle_node: ShapeNode,
+    cloud_provider_app: Arc<LaunchedApp>,
     replicas: BTreeMap<u32, ReplicaData>,
 }
 
 /// Represents an emulated replica and holds its internal state.
+#[allow(unused)]
 struct ReplicaData {
-    #[allow(unused)]
+    environment_ctrl: EnvironmentControllerProxy,
     sessionmgr_app: LaunchedApp,
     view: ChildViewData,
 }
@@ -67,7 +84,6 @@ impl VoilaViewAssistant {
     fn create_replica(
         &mut self,
         profile_id: &str,
-        url: &str,
         session: &SessionPtr,
         root_node: &EntityNode,
     ) -> Result<(), Error> {
@@ -75,15 +91,10 @@ impl VoilaViewAssistant {
         let replica_id = format!("voila-r{}", replica_random_number.to_string());
         fx_log_info!("creating a replica {}", replica_id);
 
-        // Configure disk directory.
-        let data_origin = format!("/data/voila/{}", replica_id);
-        std::fs::create_dir_all(data_origin.clone())?;
-        let mut launch_options = LaunchOptions::new();
-        launch_options
-            .add_dir_to_namespace("/data".to_string(), std::fs::File::open(data_origin)?)?;
-
         // Launch an instance of sessionmgr for the replica.
-        let app = Launcher::new()?.launch_with_options(url.to_string(), None, launch_options)?;
+        let (server, environment_ctrl, app) =
+            make_replica_env(&replica_id, Arc::clone(&self.cloud_provider_app))?;
+        fasync::spawn(server.unwrap_or_else(|e| panic!("error providing services: {:?}", e)));
         let sessionmgr = app.connect_to_service(SessionmgrMarker)?;
 
         // Set up the emulated account.
@@ -97,14 +108,8 @@ impl VoilaViewAssistant {
         };
 
         // Set up shell configs.
-        let mut session_shell_config = AppConfig {
-            url: "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string(),
-            args: None,
-        };
-        let mut story_shell_config = AppConfig {
-            url: "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx".to_string(),
-            args: None,
-        };
+        let mut session_shell_config = AppConfig { url: ERMINE_URI.to_string(), args: None };
+        let mut story_shell_config = AppConfig { url: MONDRIAN_URI.to_string(), args: None };
 
         // Set up views.
         let (view_owner_client, view_owner_server) = create_endpoints::<ViewOwnerMarker>()?;
@@ -117,7 +122,11 @@ impl VoilaViewAssistant {
         root_node.add_child(&host_node);
 
         let view_data = ChildViewData::new(host_node, host_view_holder);
-        let session_data = ReplicaData { sessionmgr_app: app, view: view_data };
+        let session_data = ReplicaData {
+            environment_ctrl: environment_ctrl,
+            sessionmgr_app: app,
+            view: view_data,
+        };
         self.replicas.insert(session_data.view.id(), session_data);
 
         // Set up SessionContext.
@@ -152,6 +161,7 @@ impl VoilaViewAssistant {
 
 impl ViewAssistant for VoilaViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        fx_log_info!("setup");
         set_node_color(
             context.session,
             &self.background_node,
@@ -168,18 +178,8 @@ impl ViewAssistant for VoilaViewAssistant {
 
         let profile_random_number = rand::thread_rng().gen_range(1, 1000000);
         let profile_id = format!("voila-p{}", profile_random_number.to_string());
-        self.create_replica(
-            &profile_id,
-            "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx",
-            context.session,
-            context.root_node,
-        )?;
-        self.create_replica(
-            &profile_id,
-            "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx",
-            context.session,
-            context.root_node,
-        )?;
+        self.create_replica(&profile_id, context.session, context.root_node)?;
+        self.create_replica(&profile_id, context.session, context.root_node)?;
         Ok(())
     }
 
@@ -195,7 +195,7 @@ impl ViewAssistant for VoilaViewAssistant {
 
         let circle_radius = context.size.width.min(context.size.height) * 0.25;
         self.circle_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
-        self.circle_node.set_translation(center_x, center_y, -8.0);
+        self.circle_node.set_translation(center_x, center_y, 0.0);
 
         let mut views: Vec<&mut ChildViewData> =
             self.replicas.iter_mut().map(|(_key, child_session)| &mut child_session.view).collect();

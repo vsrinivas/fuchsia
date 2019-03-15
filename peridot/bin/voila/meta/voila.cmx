@@ -10,10 +10,15 @@
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.viewsv1.ViewManager"
+            "fuchsia.ui.viewsv1.ViewManager",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.vulkan.loader.Loader",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.fonts.Provider"
         ]
     }
 }
