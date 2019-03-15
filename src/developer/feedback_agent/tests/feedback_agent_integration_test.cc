@@ -9,8 +9,8 @@
 #include <lib/escher/test/gtest_vulkan.h>
 #include <zircon/errors.h>
 
-#include "garnet/bin/feedback_agent/annotations.h"
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
+#include "src/developer/feedback_agent/annotations.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

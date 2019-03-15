@@ -10,7 +10,7 @@
 #include <lib/sys/cpp/startup_context.h>
 #include <lib/syslog/cpp/logger.h>
 
-#include "feedback_agent.h"
+#include "src/developer/feedback_agent/feedback_agent.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback_agent"});

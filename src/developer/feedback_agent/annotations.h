@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_FEEDBACK_AGENT_ANNOTATIONS_H_
-#define GARNET_BIN_FEEDBACK_AGENT_ANNOTATIONS_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_ANNOTATIONS_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_ANNOTATIONS_H_
 
 #include <vector>
 
@@ -19,4 +19,4 @@ std::vector<Annotation> GetAnnotations();
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // GARNET_BIN_FEEDBACK_AGENT_ANNOTATIONS_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_ANNOTATIONS_H_

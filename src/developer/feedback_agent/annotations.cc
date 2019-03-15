@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/feedback_agent/annotations.h"
+#include "src/developer/feedback_agent/annotations.h"
 
 #include <fcntl.h>
 

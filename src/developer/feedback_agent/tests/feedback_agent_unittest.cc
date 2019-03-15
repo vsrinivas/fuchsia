@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/feedback_agent/feedback_agent.h"
+#include "src/developer/feedback_agent/feedback_agent.h"
 
 #include <stdint.h>
 

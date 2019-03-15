@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/feedback_agent/image_conversion.h"
+#include "src/developer/feedback_agent/image_conversion.h"
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/images/formatting.h>

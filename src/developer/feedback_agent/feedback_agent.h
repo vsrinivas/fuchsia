@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_FEEDBACK_DATA_FEEDBACK_AGENT_H_
-#define GARNET_BIN_FEEDBACK_DATA_FEEDBACK_AGENT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
 
 #include <memory>
 #include <string>
@@ -51,4 +51,4 @@ class FeedbackAgent : public DataProvider {
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // GARNET_BIN_FEEDBACK_DATA_FEEDBACK_AGENT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_FEEDBACK_AGENT_H_

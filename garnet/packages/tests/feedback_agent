@@ -5,6 +5,6 @@
         "garnet/packages/prod/vulkan"
     ],
     "packages": [
-        "//garnet/bin/feedback_agent/tests:feedback_agent_tests"
+        "//src/developer/feedback_agent/tests:feedback_agent_tests"
     ]
 }

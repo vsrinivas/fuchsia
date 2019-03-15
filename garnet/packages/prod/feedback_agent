@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/feedback_agent"
+        "//src/developer/feedback_agent"
     ]
 }
