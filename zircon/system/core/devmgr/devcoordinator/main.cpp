@@ -509,8 +509,7 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator)
     return fdio_service_connect_at(svchost_local.get(), "public", svchost_public_remote.release());
 }
 
-void fshost_start(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot_args,
-                  const devmgr::DevmgrArgs& args) {
+void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args) {
     // assemble handles to pass down to fshost
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t types[fbl::count_of(handles)];
@@ -570,7 +569,7 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot
         }
     }
 
-    // pass KERNEL FILE VMOS to fsboot
+    // pass KERNEL FILE VMOS to fshost
     for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
         uint32_t type = PA_HND(PA_VMO_KERNEL_FILE, m);
         if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
@@ -580,22 +579,23 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot
         }
     }
 
-    const char* argv[] = {"/boot/bin/fshost", "--netboot", nullptr, nullptr};
-    if (!boot_args.GetBool("netsvc.netboot", false) &&
-        !boot_args.GetBool("zircon.system.disable-automount", false)) {
-        argv[1] = args.disable_block_watcher ? "--disable-block-watcher" : nullptr;
-    } else {
-        if (args.disable_block_watcher) {
-            argv[2] = "--disable-block-watcher";
-        }
+    // pass command line to the fshost
+    fbl::Vector<const char*> args{"/boot/bin/fshost"};
+    if (coordinator->boot_args().GetBool("netsvc.netboot", false) ||
+        coordinator->boot_args().GetBool("zircon.system.disable-automount", false)) {
+        args.push_back("--netboot");
     }
+    if (devmgr_args.disable_block_watcher) {
+        args.push_back("--disable-block-watcher");
+    }
+    args.push_back(nullptr);
 
-    // Pass zircon.system.* options to the fshost as environment variables
+    // pass zircon.system.* options to the fshost as environment variables
     fbl::Vector<const char*> env;
-    boot_args.Collect("zircon.system", &env);
+    coordinator->boot_args().Collect("zircon.system", &env);
     env.push_back(nullptr);
 
-    devmgr::devmgr_launch(g_handles.svc_job, "fshost", argv, env.get(), -1, handles, types, n,
+    devmgr::devmgr_launch(g_handles.svc_job, "fshost", args.get(), env.get(), -1, handles, types, n,
                           nullptr, FS_BOOT | FS_DEV | FS_SVC);
 
     // switch to system loader service provided by fshost
@@ -619,8 +619,8 @@ zx::channel bootfs_root_clone() {
     return boot;
 }
 
-void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::BootArgs& boot_args,
-                     bool needs_svc_mount, const devmgr::DevmgrArgs& args) {
+void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
+                     bool needs_svc_mount) {
     printf("devcoordinator: vfs init\n");
 
     fdio_ns_t* ns;
@@ -638,7 +638,7 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::BootArgs& b
     }
 
     // Start fshost before binding /system, since it publishes it.
-    fshost_start(coordinator, boot_args, args);
+    fshost_start(coordinator, devmgr_args);
 
     if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
         printf("devcoordinator: cannot bind /system to namespace: %d\n", r);
@@ -994,7 +994,7 @@ int main(int argc, char** argv) {
     }
 
     const bool needs_svc_mount = !devmgr_args.use_system_svchost;
-    devmgr_vfs_init(&coordinator, boot_args, needs_svc_mount, devmgr_args);
+    devmgr_vfs_init(&coordinator, devmgr_args, needs_svc_mount);
 
     // If this is not a full Fuchsia build, do not setup appmgr services, as
     // this will delay startup.
