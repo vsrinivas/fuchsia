@@ -58,8 +58,6 @@ void UsbMassStorageDevice::DdkRelease() {
     }
     if (data_transfer_req_) {
         usb_request_release(data_transfer_req_);
-        // The release_cb of data_transfer_req does not free the req.
-        free(data_transfer_req_);
     }
     delete this;
 }
@@ -81,8 +79,33 @@ void UsbMassStorageDevice::DdkUnbind() {
             dev->DdkRemove();
         }
     }
+    // Wait for remaining requests to complete
+    while (pending_requests_.load()) {
+        sync_completion_wait(&txn_completion_, ZX_SEC(1));
+    }
     DdkRemove();
 }
+
+void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
+                                        const usb_request_complete_t* completion) {
+    fbl::AutoLock l(&txn_lock_);
+    pending_requests_++;
+    UsbRequestContext context;
+    context.completion = *completion;
+    usb_request_complete_t complete;
+    complete.callback = [](void* ctx, usb_request_t* req) {
+        UsbRequestContext context;
+        memcpy(&context, reinterpret_cast<unsigned char*>(req) +
+                             reinterpret_cast<UsbMassStorageDevice*>(ctx)->parent_req_size_,
+               sizeof(context));
+        reinterpret_cast<UsbMassStorageDevice*>(ctx)->pending_requests_--;
+        context.completion.callback(context.completion.ctx, req);
+    };
+    complete.ctx = this;
+    memcpy(reinterpret_cast<unsigned char*>(request) + parent_req_size_, &context, sizeof(context));
+    usb_.RequestQueue(request, &complete);
+}
+
 // Performs the object initialization.
 zx_status_t UsbMassStorageDevice::Init() {
     dead_ = false;
@@ -191,21 +214,21 @@ zx_status_t UsbMassStorageDevice::Init() {
 
     parent_req_size_ = usb.GetRequestSize();
     ZX_DEBUG_ASSERT(parent_req_size_ != 0);
+    size_t usb_request_size = parent_req_size_ + sizeof(UsbRequestContext);
+    status = usb_request_alloc(&cbw_req_, sizeof(ums_cbw_t), bulk_out_addr, usb_request_size);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = usb_request_alloc(&data_req_, PAGE_SIZE, bulk_in_addr, usb_request_size);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = usb_request_alloc(&csw_req_, sizeof(ums_csw_t), bulk_in_addr, usb_request_size);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    status = usb_request_alloc(&cbw_req_, sizeof(ums_cbw_t), bulk_out_addr, parent_req_size_);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = usb_request_alloc(&data_req_, PAGE_SIZE, bulk_in_addr, parent_req_size_);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = usb_request_alloc(&csw_req_, sizeof(ums_csw_t), bulk_in_addr, parent_req_size_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = usb_request_alloc(&data_transfer_req_, 0, bulk_in_addr, parent_req_size_);
+    status = usb_request_alloc(&data_transfer_req_, 0, bulk_in_addr, usb_request_size);
     if (status != ZX_OK) {
         return status;
     }
@@ -283,7 +306,7 @@ void UsbMassStorageDevice::SendCbw(uint8_t lun, uint32_t transfer_length, uint8_
     usb_request_complete_t complete = {
         .callback = ReqComplete, .ctx = &completion,
     };
-    usb_.RequestQueue(req, &complete);
+    RequestQueue(req, &complete);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
@@ -294,9 +317,8 @@ zx_status_t UsbMassStorageDevice::ReadCsw(uint32_t* out_residue) {
     };
 
     usb_request_t* csw_request = csw_req_;
-    usb_.RequestQueue(csw_request, &complete);
+    RequestQueue(csw_request, &complete);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
-
     csw_status_t csw_error = VerifyCsw(csw_request, out_residue);
 
     if (csw_error == CSW_SUCCESS) {
@@ -348,7 +370,7 @@ void UsbMassStorageDevice::QueueRead(uint16_t transfer_length) {
     usb_request_complete_t complete = {
         .callback = ReqComplete, .ctx = NULL,
     };
-    usb_.RequestQueue(read_request, &complete);
+    RequestQueue(read_request, &complete);
 }
 
 zx_status_t UsbMassStorageDevice::Inquiry(uint8_t lun, uint8_t* out_data) {
@@ -360,7 +382,6 @@ zx_status_t UsbMassStorageDevice::Inquiry(uint8_t lun, uint8_t* out_data) {
     SendCbw(lun, UMS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN, sizeof(command), &command);
     // read inquiry response
     QueueRead(UMS_INQUIRY_TRANSFER_LENGTH);
-
     // wait for CSW
     zx_status_t status = ReadCsw(NULL);
     if (status == ZX_OK) {
@@ -488,7 +509,7 @@ zx_status_t UsbMassStorageDevice::DataTransfer(Transaction* txn, zx_off_t offset
     usb_request_complete_t complete = {
         .callback = ReqComplete, .ctx = &completion,
     };
-    usb_.RequestQueue(req, &complete);
+    RequestQueue(req, &complete);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     status = req->response.status;
@@ -760,6 +781,11 @@ int UsbMassStorageDevice::WorkerThread() {
 
     DdkMakeVisible();
     bool wait = true;
+    if (CheckLunsReady() != ZX_OK) {
+        return status;
+    }
+
+    ums::Transaction* current_txn = nullptr;
     while (1) {
         if (wait) {
 #ifndef UNITTEST
@@ -788,6 +814,7 @@ int UsbMassStorageDevice::WorkerThread() {
             } else {
                 wait = false;
             }
+            current_txn = txn;
         }
         zxlogf(TRACE, "UMS PROCESS (%p)\n", &txn->op);
 
@@ -829,7 +856,13 @@ int UsbMassStorageDevice::WorkerThread() {
             status = ZX_ERR_INVALID_ARGS;
             break;
         }
-        txn->Complete(status);
+        {
+            fbl::AutoLock l(&txn_lock_);
+            if (current_txn == txn) {
+                txn->Complete(status);
+                current_txn = nullptr;
+            }
+        }
     }
 
     // complete any pending txns

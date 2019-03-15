@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
@@ -11,10 +12,14 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <fbl/array.h>
+#include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fuchsia/usb/virtualbus/c/fidl.h>
 #include <inttypes.h>
+#include <lib/async-loop/loop.h>
+#include <lib/fidl-async/bind.h>
 #include <lib/sync/completion.h>
 #include <memory>
 #include <threads.h>
@@ -49,6 +54,10 @@ struct Transaction {
 };
 
 class UsbMassStorageDevice;
+
+struct UsbRequestContext {
+    usb_request_complete_t completion;
+};
 
 using MassStorageDeviceType = ddk::Device<UsbMassStorageDevice, ddk::Unbindable>;
 class UsbMassStorageDevice : public MassStorageDeviceType {
@@ -108,6 +117,8 @@ private:
 
     int WorkerThread();
 
+    void RequestQueue(usb_request_t* request, const usb_request_complete_t* completion);
+
     usb::UsbDevice usb_;
 
     uint32_t tag_send_; // next tag to send in CBW
@@ -139,6 +150,8 @@ private:
     size_t parent_req_size_;
 
     thrd_t worker_thread_;
+
+    std::atomic_size_t pending_requests_ = 0;
 
     bool dead_;
 
