@@ -241,4 +241,68 @@ filesystem, found on EFI partitions and many USB sticks.
 
 ### FVM
 
-TODO: smklein
+[Fuchsia Volume Manager](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/dev/block/fvm/)
+is a "logical volume manager" that adds flexibility on top of existing block
+devices. The current features include ability to add, remove, extend and
+shrink virtual partitions. To make these features possible, internally, fvm
+maintains physical to virtual  mapping from (virtual partitions, blocks) to
+(slice, physical block). To keep maintenance overhead minimal, it allows to
+partitions to shrink/grow in chunks called slices. A slice is multiple of the
+native block size. Metadata aside, the rest of the device is divided into
+slices. Each slice is either free or it belongs to one and only one partition.
+If a slice belongs to a partition then FVM maintains metadata about which
+partition is using the slice, and the virtual address of the slice within
+that partition.
+
+[Superblock](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/fvm/include/fvm/format.h#27)
+at block zero describe the on-disk layout of the FVM, which may look like
+
+```c
+      +---------------------------------+ <- Physical block 0
+      |           metadata              |
+      | +-----------------------------+ |
+      | |       metadata copy 1       | |
+      | |  +------------------------+ | |
+      | |  |    superblock          | | |
+      | |  +------------------------+ | |
+      | |  |    partition table     | | |
+      | |  +------------------------+ | |
+      | |  | slice allocation table | | |
+      | |  +------------------------+ | |
+      | +-----------------------------+ | <- Size of metadata is described by
+      | |       metadata copy 2       | |    superblock
+      | +-----------------------------+ |
+      +---------------------------------+ <- Superblock describes start of
+      |                                 |    slices
+      |             Slice 1             |
+      +---------------------------------+
+      |                                 |
+      |             Slice 2             |
+      +---------------------------------+
+      |                                 |
+      |             Slice 3             |
+      +---------------------------------+
+      |                                 |
+```
+
+The partition table is made of several virtual partition
+entries(`vpart_entry_t`). In addition to containing name and partition
+identifiers, each of these vpart entries contains the number of allocated
+slices for this partition.
+
+The slice allocation table is made up of tightly packed slice entries
+(`slice_entry_t`). Each entry contains
+ * allocation status
+ * if it is allocated,
+   * what partition it belongs to and
+   * what logical slice within partition the slice maps to
+
+FVM library can be found
+[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/fvm/). During
+[paving](https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/workflows/paving.md),
+some partitions are copied from host to target. So the partitions and FVM
+file itself may be created on host. To do this there is host side utility
+[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/host/fvm).
+Integrity of the FVM device/file can be verbosely verified with
+[fvm-check](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/uapp/fvm-check)
+
