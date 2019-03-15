@@ -20,6 +20,7 @@
 #define KDRV_HISILICON_POWER 0x4F505348   // 'HSPO'
 #define KDRV_AMLOGIC_HDCP 0x484C4D41      // 'AMLH'
 #define KDRV_MSM_UART 0x554D534D          // 'MSMU'
+#define KDRV_MSM_POWER 1347244877         // 'MSMP'
 
 // kernel driver struct that can be used for simple drivers
 // used by KDRV_PL011_UART, KDRV_AMLOGIC_UART and KDRV_NXP_IMX_UART
@@ -43,6 +44,11 @@ typedef struct {
     uint64_t reboot_bootloader_args[3];
     uint64_t reboot_recovery_args[3];
 } dcfg_arm_psci_driver_t;
+
+typedef struct {
+    uint64_t soc_imem_phys;
+    uint64_t soc_imem_offset;
+} dcfg_msm_power_driver_t;
 
 // for KDRV_ARM_GIC_V2
 typedef struct {

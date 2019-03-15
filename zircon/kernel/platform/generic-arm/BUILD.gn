@@ -19,6 +19,7 @@ source_set("generic-arm") {
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/pdev/power",
     "$zx/kernel/dev/power/hisi",
+    "$zx/kernel/dev/power/msm",
     "$zx/kernel/dev/psci",
     "$zx/kernel/dev/timer/arm_generic",
     "$zx/kernel/dev/uart/amlogic_s905",

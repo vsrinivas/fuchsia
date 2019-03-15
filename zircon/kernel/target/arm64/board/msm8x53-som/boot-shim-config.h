@@ -89,6 +89,11 @@ static const dcfg_arm_psci_driver_t psci_driver = {
     .use_hvc = false,
 };
 
+static const dcfg_msm_power_driver_t power_driver = {
+    .soc_imem_phys = 0x8600000,
+    .soc_imem_offset = 0x65c,
+};
+
 static const dcfg_arm_generic_timer_driver_t timer_driver = {
     .irq_virt = 16 + 4,    // VIRT_PPI: GIC_PPI 4
 };
@@ -118,6 +123,8 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
                     sizeof(psci_driver));
     append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
                     sizeof(timer_driver));
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_MSM_POWER, &power_driver,
+                    sizeof(power_driver));
 
     // add platform ID
     append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
