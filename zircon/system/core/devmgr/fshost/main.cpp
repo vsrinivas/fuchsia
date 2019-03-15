@@ -35,6 +35,7 @@
 #include <string.h>
 #include <threads.h>
 
+#include <getopt.h>
 #include <utility>
 
 #include "fshost.h"
@@ -326,14 +327,27 @@ int main(int argc, char** argv) {
     printf("fshost: started.\n");
 
     bool netboot = false;
-    while (argc > 1) {
-        if (!strcmp(argv[1], "--netboot")) {
+    bool disable_block_watcher = false;
+
+    enum {
+        kNetboot,
+        kDisableBlockWatcher,
+    };
+    option options[] = {
+        {"netboot", no_argument, nullptr, kNetboot},
+        {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
+    };
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
+        switch (opt) {
+        case kNetboot:
             netboot = true;
-        } else {
-            printf("fshost: unknown option '%s'\n", argv[1]);
+            break;
+        case kDisableBlockWatcher:
+            disable_block_watcher = true;
+            break;
         }
-        argc--;
-        argv++;
     }
 
     zx::channel fs_root(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
@@ -387,9 +401,13 @@ int main(int argc, char** argv) {
             thrd_detach(th);
         }
     }
-
-    block_device_watcher(std::move(root), zx::job::default_job(), netboot);
-
+    if (!disable_block_watcher) {
+        block_device_watcher(std::move(root), zx::job::default_job(), netboot);
+    } else {
+        // Keep the process alive so that the loader service continues to be supplied
+        // to the devmgr. Otherwise the devmgr will segfault.
+        zx::nanosleep(zx::time::infinite());
+    }
     printf("fshost: terminating (block device watcher finished?)\n");
     return 0;
 }

@@ -189,6 +189,9 @@ struct DevmgrArgs {
     // Select whether to launch a new svchost or to just use the system provided
     // /svc directory.
     bool use_system_svchost = false;
+    // Disables the block watcher if set to true. This can be used for testing purposes,
+    // where it is not necessary to have the block watcher running.
+    bool disable_block_watcher = false;
 };
 
 struct CoordinatorConfig {

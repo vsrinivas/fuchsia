@@ -34,6 +34,8 @@ struct Args {
     fbl::unique_fd stdio;
     // Select whether to use the system svchost or to launch a new one
     bool use_system_svchost = false;
+    // If true, the block watcher will be disabled and will not start
+    bool disable_block_watcher = false;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it.

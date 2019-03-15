@@ -81,6 +81,7 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args args,
     devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
     devmgr_args.driver_search_paths.swap(args.driver_search_paths);
     devmgr_args.load_drivers.swap(args.load_drivers);
+    devmgr_args.disable_block_watcher = args.disable_block_watcher;
 
     zx_status_t status = GetBootdata(args.device_list, &devmgr_args.bootdata);
     if (status != ZX_OK) {

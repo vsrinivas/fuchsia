@@ -108,6 +108,9 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     if (args.use_system_svchost) {
         argv.push_back("--use-system-svchost");
     }
+    if (args.disable_block_watcher) {
+        argv.push_back("--disable-block-watcher");
+    }
     argv.push_back(nullptr);
 
     fbl::Vector<fdio_spawn_action_t> actions;

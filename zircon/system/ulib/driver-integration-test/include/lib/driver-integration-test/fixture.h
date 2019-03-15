@@ -24,6 +24,8 @@ public:
         fbl::Vector<const char*> load_drivers;
         // A list of vid/pid/did triplets to spawn in their own devhosts.
         fbl::Vector<board_test::DeviceEntry> device_list;
+        // If set to true, the block watcher will be disabled.
+        bool disable_block_watcher = true;
     };
 
     // Launch a new isolated devmgr.  The instance will be destroyed when
