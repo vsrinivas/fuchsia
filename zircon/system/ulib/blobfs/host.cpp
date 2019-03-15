@@ -645,11 +645,5 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
                               MerkleTree::GetTreeLength(inode.blob_size), 0,
                               inode.blob_size, digest);
 }
-} // namespace blobfs
 
-// This is used by the ioctl wrappers in magenta/device/device.h. It's not
-// called by host tools, so just satisfy the linker with a stub.
-ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf,
-                   size_t out_len) {
-    return -1;
-}
+} // namespace blobfs
