@@ -26,6 +26,7 @@ union Event {
     ViewDetachedFromSceneEvent view_detached_from_scene;
     ViewPropertiesChangedEvent view_properties_changed;
     ViewStateChangedEvent view_state_changed;
+    ViewHolderConnectedEvent view_holder_connected;
 };
 
 // Provides rendering target metrics information about the specified node.
@@ -86,6 +87,14 @@ struct ViewDisconnectedEvent {
 // If the ViewHolder is destroyed before the connection is established, then
 // this event will be delivered immediately when the View attempts to connect.
 struct ViewHolderDisconnectedEvent {
+    uint32 view_id;
+};
+
+// Delivered to a View's Session when its peer ViewHolder is connected.
+//
+// If the ViewHolder is destroyed before the connection is established, then
+// this event will not be delivered.
+struct ViewHolderConnectedEvent {
     uint32 view_id;
 };
 
