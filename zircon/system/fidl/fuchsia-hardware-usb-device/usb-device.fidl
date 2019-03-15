@@ -49,7 +49,7 @@ protocol Device {
     /// The worst case size for a UTF-8 encoded string descriptor payload should be
     /// 378 bytes (126 UTF-16 code units with a worst case expansion factor of 3)
     GetStringDescriptor(uint8 desc_id, uint16 lang_id) -> (zx.status s,
-                                                           vector<uint8>:MAX_STRING_DESC_SIZE desc,
+                                                           string:MAX_STRING_DESC_SIZE desc,
                                                            uint16 actual_lang_id);
 
     /// Selects an alternate setting for an interface on a USB device.

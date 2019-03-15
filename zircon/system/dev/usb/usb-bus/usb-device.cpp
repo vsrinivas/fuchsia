@@ -668,12 +668,12 @@ zx_status_t UsbDevice::MsgGetConfigurationDescriptor(uint8_t config, fidl_txn_t*
 }
 
 zx_status_t UsbDevice::MsgGetStringDescriptor(uint8_t desc_id, uint16_t lang_id, fidl_txn_t* txn) {
-    uint8_t buffer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
+    char buffer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
     size_t actual;
     auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id, buffer, sizeof(buffer),
                                          &actual);
-    return fuchsia_hardware_usb_device_DeviceGetStringDescriptor_reply(txn, status, buffer, actual,
-                                                                       lang_id);
+    return fuchsia_hardware_usb_device_DeviceGetStringDescriptor_reply(txn, status, buffer,
+                                                                       actual, lang_id);
 }
 
 zx_status_t UsbDevice::MsgSetInterface(uint8_t interface_number, uint8_t alt_setting,

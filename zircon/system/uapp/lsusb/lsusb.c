@@ -37,7 +37,7 @@ static void get_string_desc(zx_handle_t svc, uint8_t desc_id, char* buffer, size
         size_t actual;
         uint16_t actual_lang_id;
         zx_status_t res = fuchsia_hardware_usb_device_DeviceGetStringDescriptor(
-            svc, desc_id, EN_US, &status, (uint8_t*)buffer, buffer_size, &actual, &actual_lang_id);
+            svc, desc_id, EN_US, &status, buffer, buffer_size, &actual, &actual_lang_id);
         if (res == ZX_OK) res = status;
         if (res == ZX_OK) {
             if (actual < buffer_size) {
