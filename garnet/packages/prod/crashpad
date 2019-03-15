@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/crashpad:crashpad_analyzer"
-    ]
-}
-

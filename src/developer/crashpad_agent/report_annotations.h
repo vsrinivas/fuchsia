@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CRASHPAD_REPORT_ANNOTATIONS_H_
-#define GARNET_BIN_CRASHPAD_REPORT_ANNOTATIONS_H_
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ANNOTATIONS_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ANNOTATIONS_H_
 
 #include <map>
 #include <string>
@@ -34,4 +34,4 @@ std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
 }  // namespace crash
 }  // namespace fuchsia
 
-#endif  // GARNET_BIN_CRASHPAD_REPORT_ANNOTATIONS_H_
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_REPORT_ANNOTATIONS_H_

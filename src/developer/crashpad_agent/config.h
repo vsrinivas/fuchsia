@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CRASHPAD_CONFIG_H_
-#define GARNET_BIN_CRASHPAD_CONFIG_H_
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CONFIG_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_CONFIG_H_
 
 #include <stdint.h>
 
@@ -40,4 +40,4 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config);
 }  // namespace crash
 }  // namespace fuchsia
 
-#endif  // GARNET_BIN_CRASHPAD_CONFIG_H_
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_CONFIG_H_

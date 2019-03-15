@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CRASHPAD_CRASHPAD_ANALYZER_IMPL_H_
-#define GARNET_BIN_CRASHPAD_CRASHPAD_ANALYZER_IMPL_H_
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_ANALYZER_IMPL_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_ANALYZER_IMPL_H_
 
 #include <string>
 #include <utility>
@@ -17,20 +17,20 @@
 #include <lib/zx/thread.h>
 #include <zircon/status.h>
 
-#include "garnet/bin/crashpad/config.h"
+#include "src/developer/crashpad_agent/config.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
 namespace fuchsia {
 namespace crash {
 
-class CrashpadAnalyzerImpl : public Analyzer {
+class CrashpadAgent : public Analyzer {
  public:
   // Static factory methods.
-  // Returns nullptr if the analyzer cannot be instantiated, e.g., because the
+  // Returns nullptr if the agent cannot be instantiated, e.g., because the
   // local report database cannot be accessed.
-  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate();
-  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate(Config config);
+  static std::unique_ptr<CrashpadAgent> TryCreate();
+  static std::unique_ptr<CrashpadAgent> TryCreate(Config config);
 
   void HandleNativeException(zx::process process, zx::thread thread,
                              zx::port exception_port,
@@ -46,7 +46,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
       ProcessKernelPanicCrashlogCallback callback) override;
 
  private:
-  explicit CrashpadAnalyzerImpl(
+  explicit CrashpadAgent(
       Config config, std::unique_ptr<crashpad::CrashReportDatabase> database);
 
   zx_status_t HandleNativeException(zx::process process, zx::thread thread,
@@ -77,10 +77,10 @@ class CrashpadAnalyzerImpl : public Analyzer {
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAnalyzerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };
 
 }  // namespace crash
 }  // namespace fuchsia
 
-#endif  // GARNET_BIN_CRASHPAD_CRASHPAD_ANALYZER_IMPL_H_
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_ANALYZER_IMPL_H_

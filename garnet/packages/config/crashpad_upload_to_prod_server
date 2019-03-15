@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/crashpad:upload_to_prod_server_config"
+        "//src/developer/crashpad_agent:upload_to_prod_server_config"
     ]
 }

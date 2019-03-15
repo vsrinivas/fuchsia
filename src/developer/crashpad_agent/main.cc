@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "crashpad_analyzer_impl.h"
-
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
@@ -12,12 +10,14 @@
 #include <lib/sys/cpp/startup_context.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include "src/developer/crashpad_agent/crashpad_agent.h"
+
 int main(int argc, const char** argv) {
   syslog::InitLogger({"crash"});
 
-  std::unique_ptr<fuchsia::crash::CrashpadAnalyzerImpl> analyzer =
-      fuchsia::crash::CrashpadAnalyzerImpl::TryCreate();
-  if (!analyzer) {
+  std::unique_ptr<fuchsia::crash::CrashpadAgent> agent =
+      fuchsia::crash::CrashpadAgent::TryCreate();
+  if (!agent) {
     return EXIT_FAILURE;
   }
 
@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
   auto startup_context = sys::StartupContext::CreateFromStartupInfo();
   fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
   startup_context->outgoing().AddPublicService(
-      bindings.GetHandler(analyzer.get()));
+      bindings.GetHandler(agent.get()));
 
   loop.Run();
 

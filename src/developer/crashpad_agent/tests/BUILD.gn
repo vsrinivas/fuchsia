@@ -5,24 +5,24 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-test_package("crashpad_analyzer_tests") {
+test_package("crashpad_agent_tests") {
   tests = [
     {
       name = "config_unittest"
       environments = basic_envs
     },
     {
-      name = "crashpad_analyzer_impl_unittest"
+      name = "crashpad_agent_unittest"
       environments = basic_envs
     },
     {
-      name = "crashpad_analyzer_integration_test"
+      name = "crashpad_agent_integration_test"
       environments = basic_envs
     },
   ]
 
   binaries = [
-    # needed for crashpad_analyzer_impl_unittest
+    # needed for crashpad_agent_impl_unittest
     {
       name = "crasher_exe"
     },
@@ -69,8 +69,8 @@ test_package("crashpad_analyzer_tests") {
   deps = [
     ":config_unittest",
     ":crasher_exe",
-    ":crashpad_analyzer_impl_unittest",
-    ":crashpad_analyzer_integration_test",
+    ":crashpad_agent_integration_test",
+    ":crashpad_agent_unittest",
   ]
 }
 
@@ -82,8 +82,8 @@ executable("config_unittest") {
   ]
 
   deps = [
-    "//garnet/bin/crashpad:src",
     "//garnet/public/lib/syslog/cpp",
+    "//src/developer/crashpad_agent:src",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -96,18 +96,18 @@ executable("crasher_exe") {
   ]
 }
 
-executable("crashpad_analyzer_impl_unittest") {
+executable("crashpad_agent_unittest") {
   testonly = true
 
   sources = [
-    "crashpad_analyzer_impl_unittest.cc",
+    "crashpad_agent_unittest.cc",
   ]
 
   deps = [
-    "//garnet/bin/crashpad:src",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
+    "//src/developer/crashpad_agent:src",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-crash",
@@ -116,11 +116,11 @@ executable("crashpad_analyzer_impl_unittest") {
   ]
 }
 
-executable("crashpad_analyzer_integration_test") {
+executable("crashpad_agent_integration_test") {
   testonly = true
 
   sources = [
-    "crashpad_analyzer_integration_test.cc",
+    "crashpad_agent_integration_test.cc",
   ]
 
   deps = [

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/crashpad/crashpad_analyzer_impl.h"
+#include "src/developer/crashpad_agent/crashpad_agent.h"
 
 #include <stdio.h>
 
@@ -18,10 +18,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "garnet/bin/crashpad/config.h"
-#include "garnet/bin/crashpad/report_annotations.h"
-#include "garnet/bin/crashpad/report_attachments.h"
-#include "garnet/bin/crashpad/scoped_unlink.h"
+#include "src/developer/crashpad_agent/config.h"
+#include "src/developer/crashpad_agent/report_annotations.h"
+#include "src/developer/crashpad_agent/report_attachments.h"
+#include "src/developer/crashpad_agent/scoped_unlink.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "third_party/crashpad/client/crash_report_database.h"
@@ -48,17 +48,17 @@ namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] =
-    "/config/data/crashpad_analyzer/override_config.json";
+    "/config/data/crashpad_agent/override_config.json";
 
 }  // namespace
 
-std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
+std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate() {
   Config config;
 
   if (files::IsFile(kOverrideConfigPath)) {
     const zx_status_t status = ParseConfig(kOverrideConfigPath, &config);
     if (status == ZX_OK) {
-      return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+      return CrashpadAgent::TryCreate(std::move(config));
     }
     FX_LOGS(ERROR) << "failed to read override config file at "
                    << kOverrideConfigPath << ": " << status << " ("
@@ -70,7 +70,7 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
   // config was specified or we failed to parse it.
   const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
   if (status == ZX_OK) {
-    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
+    return CrashpadAgent::TryCreate(std::move(config));
   }
   FX_LOGS(ERROR) << "failed to read default config file at "
                  << kDefaultConfigPath << ": " << status << " ("
@@ -80,8 +80,7 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
   return nullptr;
 }
 
-std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
-    Config config) {
+std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(Config config) {
   if (!files::IsDirectory(config.local_crashpad_database_path)) {
     files::CreateDirectory(config.local_crashpad_database_path);
   }
@@ -101,17 +100,17 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
   database->GetSettings()->SetUploadsEnabled(
       config.enable_upload_to_crash_server);
 
-  return std::unique_ptr<CrashpadAnalyzerImpl>(
-      new CrashpadAnalyzerImpl(std::move(config), std::move(database)));
+  return std::unique_ptr<CrashpadAgent>(
+      new CrashpadAgent(std::move(config), std::move(database)));
 }
 
-CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
+CrashpadAgent::CrashpadAgent(
     Config config, std::unique_ptr<crashpad::CrashReportDatabase> database)
     : config_(std::move(config)), database_(std::move(database)) {
   FXL_DCHECK(database_);
 }
 
-void CrashpadAnalyzerImpl::HandleNativeException(
+void CrashpadAgent::HandleNativeException(
     zx::process process, zx::thread thread, zx::port exception_port,
     HandleNativeExceptionCallback callback) {
   const zx_status_t status = HandleNativeException(
@@ -123,7 +122,7 @@ void CrashpadAnalyzerImpl::HandleNativeException(
   PruneDatabase();
 }
 
-void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
+void CrashpadAgent::HandleManagedRuntimeException(
     ManagedRuntimeLanguage language, std::string component_url,
     std::string exception, fuchsia::mem::Buffer stack_trace,
     HandleManagedRuntimeExceptionCallback callback) {
@@ -137,7 +136,7 @@ void CrashpadAnalyzerImpl::HandleManagedRuntimeException(
   PruneDatabase();
 }
 
-void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
+void CrashpadAgent::ProcessKernelPanicCrashlog(
     fuchsia::mem::Buffer crashlog,
     ProcessKernelPanicCrashlogCallback callback) {
   const zx_status_t status = ProcessKernelPanicCrashlog(std::move(crashlog));
@@ -160,8 +159,9 @@ std::string GetPackageName(const zx::process& process) {
 
 }  // namespace
 
-zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
-    zx::process process, zx::thread thread, zx::port exception_port) {
+zx_status_t CrashpadAgent::HandleNativeException(zx::process process,
+                                                 zx::thread thread,
+                                                 zx::port exception_port) {
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
@@ -211,7 +211,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
                       /*read_annotations_from_minidump=*/true);
 }
 
-zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
+zx_status_t CrashpadAgent::HandleManagedRuntimeException(
     ManagedRuntimeLanguage language, std::string component_url,
     std::string exception, fuchsia::mem::Buffer stack_trace) {
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
@@ -251,7 +251,7 @@ zx_status_t CrashpadAnalyzerImpl::HandleManagedRuntimeException(
                       /*read_annotations_from_minidump=*/false);
 }
 
-zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
+zx_status_t CrashpadAgent::ProcessKernelPanicCrashlog(
     fuchsia::mem::Buffer crashlog) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
 
@@ -287,7 +287,7 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
                       /*read_annotations_from_minidump=*/false);
 }
 
-zx_status_t CrashpadAnalyzerImpl::UploadReport(
+zx_status_t CrashpadAgent::UploadReport(
     const crashpad::UUID& local_report_id,
     const std::map<std::string, std::string>* annotations,
     bool read_annotations_from_minidump) {
@@ -387,7 +387,7 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
   return ZX_OK;
 }
 
-void CrashpadAnalyzerImpl::PruneDatabase() {
+void CrashpadAgent::PruneDatabase() {
   // We need to create a new condition every time we prune as it internally
   // maintains a cumulated total size as it iterates over the reports in the
   // database and we want to reset that cumulated total size every time we

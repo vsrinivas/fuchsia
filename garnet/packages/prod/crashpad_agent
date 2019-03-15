@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//src/developer/crashpad_agent"
+    ]
+}
+

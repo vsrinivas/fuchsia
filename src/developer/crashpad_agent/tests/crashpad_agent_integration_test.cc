@@ -17,7 +17,7 @@ namespace {
 
 // Smoke-tests the real environment service for the fuchsia.crash.Analyzer FIDL
 // interface, connecting through FIDL.
-TEST(CrashpadAnalyzerIntegrationTest, SmokeTest) {
+TEST(CrashpadAgentIntegrationTest, SmokeTest) {
   AnalyzerSyncPtr crash_analyzer;
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(crash_analyzer.NewRequest());

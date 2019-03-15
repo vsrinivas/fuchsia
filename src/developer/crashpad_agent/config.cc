@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/crashpad/config.h"
+#include "src/developer/crashpad_agent/config.h"
 
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>

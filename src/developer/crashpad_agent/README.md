@@ -16,7 +16,7 @@ Crashpad report, but we do not upload it.
 We collect various info in addition to the stack trace, e.g., process names,
 board names, that we add as annotations to the crash reports. To add a new
 annotation, simply add a new field in the map returned by
-[::fuchsia::crash::MakeDefaultAnnotations()](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/crashpad/report_annotations.h).
+[::fuchsia::crash::MakeDefaultAnnotations()](https://fuchsia.googlesource.com/fuchsia/+/master/src/developer/crashpad_agent/report_annotations.h).
 
 ## Testing
 

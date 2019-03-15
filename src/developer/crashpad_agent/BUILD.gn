@@ -6,14 +6,14 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
 
-package("crashpad_analyzer") {
+package("crashpad_agent") {
   components = [ ":component" ]
 }
 
 fuchsia_component("component") {
-  binary = "crashpad_analyzer"
+  binary = "crashpad_agent"
 
-  manifest = "meta/crashpad_analyzer.cmx"
+  manifest = "meta/crashpad_agent.cmx"
 
   resources = [
     {
@@ -28,7 +28,7 @@ fuchsia_component("component") {
 }
 
 executable("main") {
-  output_name = "crashpad_analyzer"
+  output_name = "crashpad_agent"
 
   sources = [
     "main.cc",
@@ -47,8 +47,8 @@ source_set("src") {
   sources = [
     "config.cc",
     "config.h",
-    "crashpad_analyzer_impl.cc",
-    "crashpad_analyzer_impl.h",
+    "crashpad_agent.cc",
+    "crashpad_agent.h",
     "report_annotations.cc",
     "report_annotations.h",
     "report_attachments.cc",
@@ -80,6 +80,10 @@ source_set("src") {
 }
 
 config_data("upload_to_prod_server_config") {
-  sources = [ "configs/upload_to_prod_server.json" ]
-  outputs = [ "crashpad_analyzer/override_config.json" ]
+  sources = [
+    "configs/upload_to_prod_server.json",
+  ]
+  outputs = [
+    "crashpad_agent/override_config.json",
+  ]
 }

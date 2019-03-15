@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/crashpad/crashpad_analyzer_impl.h"
+#include "src/developer/crashpad_agent/crashpad_agent.h"
 
 #include <stdint.h>
 
@@ -24,7 +24,7 @@
 #include <zircon/errors.h>
 #include <zircon/time.h>
 
-#include "garnet/bin/crashpad/config.h"
+#include "src/developer/crashpad_agent/config.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -47,27 +47,27 @@ constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 //
 // This does not test the environment service. It directly instantiates the
 // class, without connecting through FIDL.
-class CrashpadAnalyzerImplTest : public ::testing::Test {
+class CrashpadAgentTest : public ::testing::Test {
  public:
-  // The underlying crash analyzer is initialized with a default config, but can
-  // be reset via ResetAnalyzer() if a different config is necessary.
+  // The underlying agent is initialized with a default config, but can
+  // be reset via ResetAgent() if a different config is necessary.
   void SetUp() override {
-    ResetAnalyzer(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                         /*max_crashpad_database_size_in_kb=*/
-                         kMaxTotalReportSizeInKb,
-                         /*enable_upload_to_crash_server=*/false,
-                         /*crash_server_url=*/nullptr});
+    ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                      /*max_crashpad_database_size_in_kb=*/
+                      kMaxTotalReportSizeInKb,
+                      /*enable_upload_to_crash_server=*/false,
+                      /*crash_server_url=*/nullptr});
   }
 
  protected:
-  // Resets the underlying crash analyzer using the given |config|.
-  void ResetAnalyzer(Config config) {
+  // Resets the underlying agent using the given |config|.
+  void ResetAgent(Config config) {
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ =
         files::JoinPath(config.local_crashpad_database_path, "attachments");
-    analyzer_ = CrashpadAnalyzerImpl::TryCreate(std::move(config));
-    FXL_DCHECK(analyzer_);
+    agent_ = CrashpadAgent::TryCreate(std::move(config));
+    FXL_DCHECK(agent_);
   }
 
   // Checks that there is:
@@ -105,7 +105,7 @@ class CrashpadAnalyzerImplTest : public ::testing::Test {
     return subdirs;
   }
 
-  std::unique_ptr<CrashpadAnalyzerImpl> analyzer_;
+  std::unique_ptr<CrashpadAgent> agent_;
   files::ScopedTempDir database_path_;
 
  private:
@@ -116,12 +116,12 @@ class CrashpadAnalyzerImplTest : public ::testing::Test {
   std::string attachments_dir_;
 };
 
-TEST_F(CrashpadAnalyzerImplTest, HandleNativeException_C_Basic) {
+TEST_F(CrashpadAgentTest, HandleNativeException_C_Basic) {
   // We create a parent job and a child job. The child job will spawn the
   // crashing program and analyze the crash. The parent job is just here to
   // swallow the exception potentially bubbling up from the child job once the
-  // exception has been handled by the test crash analyzer (today this is the
-  // case as the Crashpad exception handler RESUME_TRY_NEXTs the thread).
+  // exception has been handled by the test agent (today this is the case as the
+  // Crashpad exception handler RESUME_TRY_NEXTs the thread).
   zx::job parent_job;
   zx::port parent_exception_port;
   zx::job job;
@@ -165,30 +165,30 @@ TEST_F(CrashpadAnalyzerImplTest, HandleNativeException_C_Basic) {
 
   // Test crash analysis.
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->HandleNativeException(
+  agent_->HandleNativeException(
       std::move(process), std::move(thread), std::move(exception_port),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
   CheckAttachments({"build.snapshot", "kernel_log"});
 
   // The parent job just swallows the exception, i.e. not RESUME_TRY_NEXT it,
-  // to not trigger the real crash analyzer attached to the root job.
+  // to not trigger the real agent attached to the root job.
   thread.resume_from_exception(
       parent_exception_port,
       0u /*no options to mark the exception as handled*/);
 
   // We kill the job so that it doesn't try to reschedule the process, which
-  // would crash again, but this time would be handled by the real crash
-  // analyzer attached to the root job as the exception has already been handled
-  // by the parent and child jobs.
+  // would crash again, but this time would be handled by the real agent
+  // attached to the root job as the exception has already been handled by the
+  // parent and child jobs.
   job.kill();
 }
 
-TEST_F(CrashpadAnalyzerImplTest, HandleManagedRuntimeException_Dart_Basic) {
+TEST_F(CrashpadAgentTest, HandleManagedRuntimeException_Dart_Basic) {
   fuchsia::mem::Buffer stack_trace;
   ASSERT_TRUE(fsl::VmoFromString("#0", &stack_trace));
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->HandleManagedRuntimeException(
+  agent_->HandleManagedRuntimeException(
       ManagedRuntimeLanguage::DART, "component_url", "UnhandledException: Foo",
       std::move(stack_trace),
       [&out_status](zx_status_t status) { out_status = status; });
@@ -196,12 +196,12 @@ TEST_F(CrashpadAnalyzerImplTest, HandleManagedRuntimeException_Dart_Basic) {
   CheckAttachments({"build.snapshot", "DartError"});
 }
 
-TEST_F(CrashpadAnalyzerImplTest,
+TEST_F(CrashpadAgentTest,
        HandleManagedRuntimeException_Dart_ExceptionStringInBadFormat) {
   fuchsia::mem::Buffer stack_trace;
   ASSERT_TRUE(fsl::VmoFromString("#0", &stack_trace));
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->HandleManagedRuntimeException(
+  agent_->HandleManagedRuntimeException(
       ManagedRuntimeLanguage::DART, "component_url", "wrong format",
       std::move(stack_trace),
       [&out_status](zx_status_t status) { out_status = status; });
@@ -209,12 +209,11 @@ TEST_F(CrashpadAnalyzerImplTest,
   CheckAttachments({"build.snapshot", "DartError"});
 }
 
-TEST_F(CrashpadAnalyzerImplTest,
-       HandleManagedRuntimeException_OtherLanguage_Basic) {
+TEST_F(CrashpadAgentTest, HandleManagedRuntimeException_OtherLanguage_Basic) {
   fuchsia::mem::Buffer stack_trace;
   ASSERT_TRUE(fsl::VmoFromString("#0", &stack_trace));
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->HandleManagedRuntimeException(
+  agent_->HandleManagedRuntimeException(
       ManagedRuntimeLanguage::OTHER_LANGUAGE, "component_url", "error",
       std::move(stack_trace),
       [&out_status](zx_status_t status) { out_status = status; });
@@ -222,24 +221,24 @@ TEST_F(CrashpadAnalyzerImplTest,
   CheckAttachments({"build.snapshot", "stack_trace"});
 }
 
-TEST_F(CrashpadAnalyzerImplTest, ProcessKernelPanicCrashlog_Basic) {
+TEST_F(CrashpadAgentTest, ProcessKernelPanicCrashlog_Basic) {
   fuchsia::mem::Buffer crashlog;
   ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crashlog));
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->ProcessKernelPanicCrashlog(
+  agent_->ProcessKernelPanicCrashlog(
       std::move(crashlog),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
   CheckAttachments({"build.snapshot", "log"});
 }
 
-TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_ZeroSize) {
-  // We reset the analyzer with a max database size of 0, meaning reports will
-  // get cleaned up before the end of the |analyzer_| call.
-  ResetAnalyzer(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                       /*max_crashpad_database_size_in_kb=*/0u,
-                       /*enable_upload_to_crash_server=*/false,
-                       /*crash_server_url=*/nullptr});
+TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
+  // We reset the agent with a max database size of 0, meaning reports will
+  // get cleaned up before the end of the |agent_| call.
+  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                    /*max_crashpad_database_size_in_kb=*/0u,
+                    /*enable_upload_to_crash_server=*/false,
+                    /*crash_server_url=*/nullptr});
 
   // We generate a crash report, using ProcessKernelPanicCrashlog() because
   // there are fewer arguments!
@@ -247,7 +246,7 @@ TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_ZeroSize) {
   ASSERT_TRUE(
       fsl::VmoFromString("just big enough to be greater than 0", &crashlog));
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->ProcessKernelPanicCrashlog(
+  agent_->ProcessKernelPanicCrashlog(
       std::move(crashlog),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
@@ -264,12 +263,12 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
   return str;
 }
 
-TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_SizeForOneReport) {
-  // We reset the analyzer with a max database size equivalent to the expected
+TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
+  // We reset the agent with a max database size equivalent to the expected
   // size of a report plus the value of an especially large attachment.
   const uint64_t crashlog_size_in_kb = 2u * kMaxTotalReportSizeInKb;
   const std::string large_string = GenerateString(crashlog_size_in_kb);
-  ResetAnalyzer(
+  ResetAgent(
       Config{/*local_crashpad_database_path=*/database_path_.path(),
              /*max_crashpad_database_size_in_kb=*/kMaxTotalReportSizeInKb +
                  crashlog_size_in_kb,
@@ -282,7 +281,7 @@ TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_SizeForOneReport) {
   fuchsia::mem::Buffer crashlog;
   ASSERT_TRUE(fsl::VmoFromString(large_string, &crashlog));
   zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->ProcessKernelPanicCrashlog(
+  agent_->ProcessKernelPanicCrashlog(
       std::move(crashlog),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
@@ -299,7 +298,7 @@ TEST_F(CrashpadAnalyzerImplTest, PruneDatabase_SizeForOneReport) {
   fuchsia::mem::Buffer new_crashlog;
   ASSERT_TRUE(fsl::VmoFromString(large_string, &new_crashlog));
   zx_status_t new_out_status = ZX_ERR_UNAVAILABLE;
-  analyzer_->ProcessKernelPanicCrashlog(
+  agent_->ProcessKernelPanicCrashlog(
       std::move(new_crashlog),
       [&new_out_status](zx_status_t status) { new_out_status = status; });
   EXPECT_EQ(new_out_status, ZX_OK);

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CRASHPAD_SCOPED_UNLINK_H_
-#define GARNET_BIN_CRASHPAD_SCOPED_UNLINK_H_
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_SCOPED_UNLINK_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_SCOPED_UNLINK_H_
 
 #include <unistd.h>
 #include <string>
@@ -37,4 +37,4 @@ class ScopedUnlink {
 }  // namespace crash
 }  // namespace fuchsia
 
-#endif  // GARNET_BIN_CRASHPAD_SCOPED_UNLINK_H_
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_SCOPED_UNLINK_H_
