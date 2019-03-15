@@ -102,6 +102,13 @@ constexpr pbus_i2c_channel_t sensor_i2c[] = {
     },
 };
 
+constexpr pbus_bti_t isp_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_CAMERA,
+    },
+};
+
 constexpr pbus_mmio_t isp_mmios[] = {
     // HIU for clocks.
     {
@@ -198,6 +205,8 @@ static pbus_dev_t isp_dev = []() {
     dev.did = PDEV_DID_ARM_MALI_IV009;
     dev.mmio_list = isp_mmios;
     dev.mmio_count = countof(isp_mmios);
+    dev.bti_list = isp_btis;
+    dev.bti_count = countof(isp_btis);
     dev.irq_list = isp_irqs;
     dev.irq_count = countof(isp_irqs);
     dev.metadata_list = isp_metadata;

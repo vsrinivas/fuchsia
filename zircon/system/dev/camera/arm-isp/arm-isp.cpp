@@ -310,6 +310,14 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_t sensor_cal
         return status;
     }
 
+    // Get our bti.
+    zx::bti bti;
+    status = pdev.GetBti(0, &bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not obtain bti: %d\n", __func__, status);
+        return status;
+    }
+
     // Allocate buffers for ISP SW configuration and metering information.
     fbl::AllocChecker ac;
     mmio_buffer_t local_mmio_buffer;
@@ -330,6 +338,7 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_t sensor_cal
         std::move(*isp_mmio),
         local_mmio_buffer,
         std::move(isp_irq),
+        std::move(bti),
         sensor_callbacks));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;

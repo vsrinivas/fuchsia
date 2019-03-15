@@ -43,12 +43,14 @@ public:
                           ddk ::MmioBuffer isp_mmio,
                           mmio_buffer_t local_mmio,
                           zx::interrupt isp_irq,
+                          zx::bti bti,
                           isp_callbacks_t sensor_callbacks)
         : IspDeviceType(parent), pdev_(parent),
           hiu_mmio_(std::move(hiu_mmio)), power_mmio_(std::move(power_mmio)),
           memory_pd_mmio_(std::move(memory_pd_mmio)), reset_mmio_(std::move(reset_mmio)),
           isp_mmio_(std::move(isp_mmio)), isp_mmio_local_(local_mmio, 0),
-          isp_irq_(std::move(isp_irq)), sensor_callbacks_(sensor_callbacks) {}
+          isp_irq_(std::move(isp_irq)), bti_(std::move(bti)),
+          sensor_callbacks_(sensor_callbacks) {}
 
     ~ArmIspDevice();
 
@@ -97,6 +99,7 @@ private:
 
     zx::interrupt isp_irq_;
     thrd_t irq_thread_;
+    zx::bti bti_;
     std::atomic<bool> running_;
 
     isp_callbacks_t sensor_callbacks_;
