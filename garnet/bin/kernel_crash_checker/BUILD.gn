@@ -28,10 +28,10 @@ executable("main") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/lib/async-loop-cpp",
