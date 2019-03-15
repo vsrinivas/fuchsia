@@ -33,3 +33,11 @@ impl From<bt::Error> for Error {
         }
     }
 }
+
+impl From<fidl::Error> for Error {
+    fn from(err: fidl::Error) -> Error {
+        Error {
+            message: format!("FIDL error: {}", err),
+        }
+    }
+}
