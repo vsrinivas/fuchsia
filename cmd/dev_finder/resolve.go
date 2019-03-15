@@ -5,11 +5,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"github.com/google/subcommands"
 
@@ -62,6 +64,8 @@ func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
 	if len(domains) == 0 {
 		return errors.New("no domains supplied")
 	}
+
+	var outDevices []*fuchsiaDevice
 	for _, domain := range domains {
 		mDNSDomain := fmt.Sprintf("%s.local", domain)
 		devices, err := cmd.sendMDNSPacket(ctx, mdns.QuestionPacket(mDNSDomain))
@@ -79,10 +83,32 @@ func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
 		}
 
 		for _, device := range filteredDevices {
-			fmt.Printf("%v\n", device.addr)
+			outDevices = append(outDevices, device)
 		}
 	}
+
+	if cmd.json {
+		return cmd.outputJSON(outDevices)
+	}
+	return cmd.outputNormal(outDevices)
+}
+
+func (cmd *resolveCmd) outputNormal(devices []*fuchsiaDevice) error {
+	for _, device := range devices {
+		fmt.Println(device.addr)
+	}
 	return nil
+}
+
+func (cmd *resolveCmd) outputJSON(devices []*fuchsiaDevice) error {
+	jsonOut := jsonOutput{Devices: make([]jsonDevice, 0, len(devices))}
+	for _, device := range devices {
+		jsonOut.Devices = append(jsonOut.Devices, jsonDevice{Addr: device.addr.String()})
+	}
+
+	e := json.NewEncoder(os.Stdout)
+	e.SetIndent("", "  ")
+	return e.Encode(jsonOut)
 }
 
 func (cmd *resolveCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

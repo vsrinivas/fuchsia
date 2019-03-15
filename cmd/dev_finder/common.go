@@ -135,3 +135,16 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 		}
 	}
 }
+
+// jsonOutput represents the output in JSON format.
+type jsonOutput struct {
+	// List of devices found.
+	Devices []jsonDevice `json:"devices"`
+}
+
+type jsonDevice struct {
+	// Device IP address.
+	Addr string `json:"addr"`
+	// Device domain name. Can be omitted.
+	Domain string `json:"domain,omitempty"`
+}

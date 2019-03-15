@@ -22,19 +22,6 @@ const (
 	fuchsiaService = "_fuchsia._udp.local"
 )
 
-// jsonListOutput represents the output in JSON format.
-type jsonListOutput struct {
-	// List of devices found.
-	Devices []jsonListDevice `json:"devices"`
-}
-
-type jsonListDevice struct {
-	// Device IP address.
-	Addr string `json:"addr"`
-	// Device domain name. Only output with -full.
-	Domain string `json:"domain,omitempty"`
-}
-
 type listCmd struct {
 	devFinderCmd
 
@@ -135,10 +122,10 @@ func (cmd *listCmd) outputNormal(filteredDevices []*fuchsiaDevice) error {
 }
 
 func (cmd *listCmd) outputJSON(filteredDevices []*fuchsiaDevice) error {
-	jsonOut := jsonListOutput{Devices: make([]jsonListDevice, 0, len(filteredDevices))}
+	jsonOut := jsonOutput{Devices: make([]jsonDevice, 0, len(filteredDevices))}
 
 	for _, device := range filteredDevices {
-		dev := jsonListDevice{Addr: device.addr.String()}
+		dev := jsonDevice{Addr: device.addr.String()}
 		if cmd.fullInfo {
 			dev.Domain = device.domain
 		}
