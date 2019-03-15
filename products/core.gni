@@ -6,10 +6,10 @@ import("//products/bringup.gni")
 
 enable_netboot = false
 
-meta_package_labels += [ "//build/images:shell-commands" ]
-
 monolith += [ "garnet/packages/products/base" ]
 
 preinstall += []
 
-available += [ "bundles/tools" ]
+available += [
+  "bundles/tools",
+]
