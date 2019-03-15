@@ -12,7 +12,6 @@ import("//build/sdk/sdk_atom_alias.gni")
 # relevant parameters in this template are:
 #   - name;
 #   - sources;
-#   - cpp_legacy_callbacks.
 
 template("fidl_cpp_codegen") {
   if (defined(invoker.sources)) {
@@ -73,10 +72,6 @@ template("fidl_cpp_codegen") {
       "--generators",
       invoker.generator,
     ]
-
-    if (defined(invoker.cpp_legacy_callbacks) && invoker.cpp_legacy_callbacks) {
-      args += [ "--cpp-legacy-callbacks" ]
-    }
 
     deps = [
       ":$fidl_target_name($fidl_toolchain)",

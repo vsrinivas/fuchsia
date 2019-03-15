@@ -5,7 +5,6 @@
 package ir
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"math"
@@ -15,9 +14,6 @@ import (
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
 )
-
-var legacyCallbacks = flag.Bool("cpp-legacy-callbacks", false,
-	"use std::function instead of fit::function in C++ callbacks")
 
 const llcppMaxStackAllocSize = 512
 
@@ -251,9 +247,6 @@ type Root struct {
 }
 
 func (m *Method) CallbackWrapper() string {
-	if *legacyCallbacks {
-		return "std::function"
-	}
 	return "fit::function"
 }
 
