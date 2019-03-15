@@ -100,9 +100,7 @@ protocol Control {
     /// This will disconnect a device if it is connected.
     Forget(string device_id) -> (fuchsia.bluetooth.Status status);
 
-    /// Set IO Capabilities of the pairing delegate
-    /// TODO(bwb): move this to an internal management interface.
-    /// please do not use unless you are bt-mgr
+    /// Set local IO Capabilities to use during pairing.
     SetIOCapabilities(InputCapabilityType input, OutputCapabilityType output);
 
     // Events

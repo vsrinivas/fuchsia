@@ -27,8 +27,8 @@ use {
 mod config;
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["bt-mgr"]).expect("Can't init logger");
-    fx_log_info!("Starting bt-mgr...");
+    syslog::init_with_tags(&["bt-init"]).expect("Can't init logger");
+    fx_log_info!("Starting bt-init...");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let cfg = config::Config::load()?;
@@ -77,7 +77,7 @@ fn main() -> Result<(), Error> {
     let io_config_fut = cfg.set_capabilities();
     executor
         .run_singlethreaded(server.try_join(io_config_fut))
-        .context("bt-mgr failed to execute future")
+        .context("bt-init failed to execute future")
         .map_err(|e| e.into())
         .map(|_| ())
 }

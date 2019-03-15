@@ -167,11 +167,11 @@ example:
 
   ```
   ...
-    "fuchsia.bluetooth.bredr.Profile":  "fuchsia-pkg://fuchsia.com/bt-mgr#meta/bt-mgr.cmx",
-    "fuchsia.bluetooth.control.Control": "fuchsia-pkg://fuchsia.com/bt-mgr#meta/bt-mgr.cmx",
-    "fuchsia.bluetooth.gatt.Server":  "fuchsia-pkg://fuchsia.com/bt-mgr#meta/bt-mgr.cmx",
-    "fuchsia.bluetooth.le.Central":  "fuchsia-pkg://fuchsia.com/bt-mgr#meta/bt-mgr.cmx",
-    "fuchsia.bluetooth.le.Peripheral":  "fuchsia-pkg://fuchsia.com/bt-mgr#meta/bt-mgr.cmx",
+    "fuchsia.bluetooth.bredr.Profile":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
+    "fuchsia.bluetooth.control.Control": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
+    "fuchsia.bluetooth.gatt.Server":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
+    "fuchsia.bluetooth.le.Central":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
+    "fuchsia.bluetooth.le.Peripheral":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
     "fuchsia.bluetooth.snoop.Snoop":  "fuchsia-pkg://fuchsia.com/bt-snoop#meta/bt-snoop.cmx",
   ...
 

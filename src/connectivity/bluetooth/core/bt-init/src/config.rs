@@ -51,7 +51,7 @@ impl Config {
         let mut config = OpenOptions::new().read(true).write(false).open(CONFIG_FILE_PATH).unwrap();
 
         let mut contents = String::new();
-        config.read_to_string(&mut contents).expect("The bt-mgr config file is corrupted");
+        config.read_to_string(&mut contents).expect("The bt-init config file is corrupted");
 
         Ok(serde_json::from_str(contents.as_str())?)
     }

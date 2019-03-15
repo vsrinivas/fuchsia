@@ -21,7 +21,7 @@ src/connectivity/bluetooth/
     core/
         bt-gap/              # GAP daemon
         bt-host/             # bt-host driver and host subsystem
-        bt-mgr/              # Bluetooth system launcher
+        bt-init/             # Bluetooth subsystem launcher
     examples/                # various LE API examples
     hci/                     # bt-hci drivers
     lib/                     # protocol and rust utility libraries

@@ -36,7 +36,7 @@ rustc_binary("bin") {
   ]
 }
 
-package("bt-mgr") {
+package("bt-init") {
   deps = [
     ":bin",
   ]
@@ -45,8 +45,8 @@ package("bt-mgr") {
 
   meta = [
     {
-      path = rebase_path("meta/bt-mgr.cmx")
-      dest = "bt-mgr.cmx"
+      path = rebase_path("meta/bt-init.cmx")
+      dest = "bt-init.cmx"
     },
   ]
 
