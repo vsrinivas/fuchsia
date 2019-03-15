@@ -4,48 +4,39 @@
 
 //! An implementation of a client for a fidl interface.
 
-#[allow(unused_imports)] // for AsHandleRef (see https://github.com/rust-lang/rust/issues/53682)
+#[allow(unused_imports)]
+// for AsHandleRef (see https://github.com/rust-lang/rust/issues/53682)
 use {
     crate::{
         encoding::{
-            Encodable,
-            Decodable,
-            Encoder,
-            Decoder,
-            decode_transaction_header,
-            TransactionHeader,
-            TransactionMessage
+            decode_transaction_header, Decodable, Decoder, Encodable, Encoder, TransactionHeader,
+            TransactionMessage,
         },
         Error,
     },
     fuchsia_async::{
         self as fasync,
-        temp::{TempFutureExt, Either},
+        temp::{Either, TempFutureExt},
     },
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
-        future::{self, Future, Ready, AndThen, TryFutureExt},
+        future::{self, AndThen, Future, Ready, TryFutureExt},
         ready,
         stream::{FusedStream, Stream},
         task::{Poll, Waker},
     },
     parking_lot::Mutex,
     slab::Slab,
-    std::{
-        collections::VecDeque,
-        marker::Unpin,
-        mem,
-        ops::Deref,
-        pin::Pin,
-        sync::Arc,
-    },
+    std::{collections::VecDeque, marker::Unpin, mem, ops::Deref, pin::Pin, sync::Arc},
 };
 
 /// Decode a new value of a decodable type from a transaction.
 fn decode_transaction_body<D: Decodable>(mut buf: zx::MessageBuf) -> Result<D, Error> {
     let (bytes, handles) = buf.split_mut();
     let header_len = <TransactionHeader as Decodable>::inline_size();
-    if bytes.len() < header_len { return Err(Error::OutOfRange); }
+    if bytes.len() < header_len {
+        return Err(Error::OutOfRange);
+    }
     let (_header_bytes, body_bytes) = bytes.split_at(header_len);
 
     let mut output = D::new_empty();
@@ -67,11 +58,11 @@ pub struct Client {
 pub type RawQueryResponseFut = Either<Ready<Result<zx::MessageBuf, Error>>, MessageResponse>;
 
 /// A future representing the decoded response to a FIDL query.
-pub type QueryResponseFut<D> =
-    AndThen<
-        RawQueryResponseFut,
-        Ready<Result<D, Error>>,
-        fn(zx::MessageBuf) -> Ready<Result<D, Error>>>;
+pub type QueryResponseFut<D> = AndThen<
+    RawQueryResponseFut,
+    Ready<Result<D, Error>>,
+    fn(zx::MessageBuf) -> Ready<Result<D, Error>>,
+>;
 
 /// A FIDL transaction id. Will not be zero for a message that includes a response.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -111,7 +102,7 @@ impl Client {
                 channel: channel,
                 message_interests: Mutex::new(Slab::<MessageInterest>::new()),
                 event_channel: Mutex::<EventChannel>::default(),
-            })
+            }),
         }
     }
 
@@ -123,7 +114,7 @@ impl Client {
     pub fn into_channel(self) -> Result<fasync::Channel, Self> {
         match Arc::try_unwrap(self.inner) {
             Ok(ClientInner { channel, .. }) => Ok(channel),
-            Err(inner) => Err(Self { inner })
+            Err(inner) => Err(Self { inner }),
         }
     }
 
@@ -140,19 +131,13 @@ impl Client {
             }
         }
 
-        EventReceiver {
-            inner: Some(self.inner.clone()),
-        }
+        EventReceiver { inner: Some(self.inner.clone()) }
     }
 
     /// Send an encodable message without expecting a response.
     pub fn send<T: Encodable>(&self, body: &mut T, ordinal: u32) -> Result<(), Error> {
         let msg = &mut TransactionMessage {
-            header: TransactionHeader {
-                tx_id: 0,
-                flags: 0,
-                ordinal,
-            },
+            header: TransactionHeader { tx_id: 0, flags: 0, ordinal },
             body,
         };
         crate::encoding::with_tls_encoded(msg, |bytes, handles| {
@@ -161,16 +146,14 @@ impl Client {
     }
 
     /// Send an encodable query and receive a decodable response.
-    pub fn send_query<E: Encodable, D: Decodable>(&self, msg: &mut E, ordinal: u32)
-        -> QueryResponseFut<D>
-    {
+    pub fn send_query<E: Encodable, D: Decodable>(
+        &self,
+        msg: &mut E,
+        ordinal: u32,
+    ) -> QueryResponseFut<D> {
         let res_fut = self.send_raw_query(|tx_id, bytes, handles| {
             let msg = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: tx_id.as_raw_id(),
-                    flags: 0,
-                    ordinal,
-                },
+                header: TransactionHeader { tx_id: tx_id.as_raw_id(), flags: 0, ordinal },
                 body: msg,
             };
             Encoder::encode(bytes, handles, msg)?;
@@ -188,7 +171,7 @@ impl Client {
     /// Send a raw query and receive a response future.
     pub fn send_raw_query<F>(&self, msg_from_id: F) -> RawQueryResponseFut
     where
-        F: for<'a, 'b> FnOnce(Txid, &'a mut Vec<u8>, &'b mut Vec<zx::Handle>) -> Result<(), Error>
+        F: for<'a, 'b> FnOnce(Txid, &'a mut Vec<u8>, &'b mut Vec<zx::Handle>) -> Result<(), Error>,
     {
         let id = self.inner.register_msg_interest();
         let res = crate::encoding::with_tls_coding_bufs(|bytes, handles| {
@@ -199,10 +182,8 @@ impl Client {
 
         match res {
             Ok(()) => {
-                MessageResponse {
-                    id: Txid::from_interest_id(id),
-                    client: Some(self.inner.clone()),
-                }.right_future()
+                MessageResponse { id: Txid::from_interest_id(id), client: Some(self.inner.clone()) }
+                    .right_future()
             }
             Err(e) => futures::future::ready(Err(e)).left_future(),
         }
@@ -232,8 +213,7 @@ impl Future for MessageResponse {
 
         // Drop the client reference if the response has been received
         if let Poll::Ready(Ok(_)) = res {
-            let client = this.client.take()
-                .expect("MessageResponse polled after completion");
+            let client = this.client.take().expect("MessageResponse polled after completion");
             client.wake_any();
         }
 
@@ -249,7 +229,6 @@ impl Drop for MessageResponse {
         }
     }
 }
-
 
 /// An enum reprenting either a resolved message interest or a task on which to alert
 /// that a response message has arrived.
@@ -309,7 +288,7 @@ impl Stream for EventReceiver {
             Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => {
                 self.inner = None;
                 None
-            },
+            }
             Err(e) => Some(Err(e)),
         })
     }
@@ -341,7 +320,9 @@ enum EventListener {
 }
 
 impl Default for EventListener {
-    fn default() -> Self { EventListener::None }
+    fn default() -> Self {
+        EventListener::None
+    }
 }
 
 /// A shared client channel which tracks EXPECTED and received responses
@@ -376,14 +357,10 @@ impl ClientInner {
     fn register_msg_interest(&self) -> InterestId {
         // TODO(cramertj) use `try_from` here and assert that the conversion from
         // `usize` to `u32` hasn't overflowed.
-        InterestId(self.message_interests.lock().insert(
-            MessageInterest::WillPoll))
+        InterestId(self.message_interests.lock().insert(MessageInterest::WillPoll))
     }
 
-    fn poll_recv_event(
-        &self,
-        lw: &Waker,
-    ) -> Poll<Result<zx::MessageBuf, Error>> {
+    fn poll_recv_event(&self, lw: &Waker) -> Poll<Result<zx::MessageBuf, Error>> {
         let is_closed = self.recv_all(lw)?;
 
         let mut lock = self.event_channel.lock();
@@ -409,7 +386,8 @@ impl ClientInner {
 
         let mut message_interests = self.message_interests.lock();
         let interest_id = InterestId::from_txid(txid);
-        if message_interests.get(interest_id.as_raw_id())
+        if message_interests
+            .get(interest_id.as_raw_id())
             .expect("Polled unregistered interest")
             .is_received()
         {
@@ -419,9 +397,9 @@ impl ClientInner {
             Poll::Ready(Ok(buf))
         } else {
             // Set the current waker to be notified when a response arrives.
-            *message_interests.get_mut(interest_id.as_raw_id())
-                .expect("Polled unregistered interest") =
-                    MessageInterest::Waiting(lw.clone());
+            *message_interests
+                .get_mut(interest_id.as_raw_id())
+                .expect("Polled unregistered interest") = MessageInterest::Waiting(lw.clone());
 
             if is_closed {
                 Poll::Ready(Err(Error::ClientRead(zx::Status::PEER_CLOSED)))
@@ -434,10 +412,7 @@ impl ClientInner {
     /// Poll for the receipt of any response message or an event.
     ///
     /// Returns whether or not the channel is closed.
-    fn recv_all(
-        &self,
-        lw: &Waker,
-    ) -> Result<bool, Error> {
+    fn recv_all(&self, lw: &Waker) -> Result<bool, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
         // one happens on this call.
 
@@ -450,12 +425,17 @@ impl ClientInner {
                 Poll::Pending => return Ok(false),
             }
 
-            let (header, _) = decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
-            if header.tx_id == 0 { // received an event
+            let (header, _) =
+                decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            if header.tx_id == 0 {
+                // received an event
                 let mut lock = self.event_channel.lock();
                 lock.queue.push_back(buf);
-                if let EventListener::Some(ref waker) = lock.listener { waker.wake(); }
-            } else { // received a message response
+                if let EventListener::Some(ref waker) = lock.listener {
+                    waker.wake();
+                }
+            } else {
+                // received a message response
                 let recvd_interest_id = InterestId::from_txid(Txid(header.tx_id));
 
                 // Look for a message interest with the given ID.
@@ -504,7 +484,7 @@ impl ClientInner {
             for (_, message_interest) in lock.iter() {
                 if let MessageInterest::Waiting(waker) = message_interest {
                     waker.wake();
-                    return
+                    return;
                 }
             }
         }
@@ -551,11 +531,7 @@ pub mod sync {
             self.buf.clear();
             let (buf, handles) = self.buf.split_mut();
             let msg = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: 0,
-                    flags: 0,
-                    ordinal,
-                },
+                header: TransactionHeader { tx_id: 0, flags: 0, ordinal },
                 body: msg,
             };
             Encoder::encode(buf, handles, msg)?;
@@ -574,11 +550,7 @@ pub mod sync {
             self.buf.clear();
             let (buf, handles) = self.buf.split_mut();
             let msg = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: QUERY_TX_ID,
-                    flags: 0,
-                    ordinal,
-                },
+                header: TransactionHeader { tx_id: QUERY_TX_ID, flags: 0, ordinal },
                 body: msg,
             };
             Encoder::encode(buf, handles, msg)?;
@@ -587,18 +559,21 @@ pub mod sync {
             // Read the response
             self.buf.clear();
             match self.channel.read(&mut self.buf) {
-                Ok(()) => {},
+                Ok(()) => {}
                 Err(zx::Status::SHOULD_WAIT) => {
-                    let signals = self.channel.wait_handle(
-                        zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
-                        deadline,
-                    ).map_err(Error::ClientRead)?;
+                    let signals = self
+                        .channel
+                        .wait_handle(
+                            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+                            deadline,
+                        )
+                        .map_err(Error::ClientRead)?;
                     if !signals.contains(zx::Signals::CHANNEL_READABLE) {
                         debug_assert!(signals.contains(zx::Signals::CHANNEL_PEER_CLOSED));
                         return Err(Error::ClientRead(zx::Status::PEER_CLOSED));
                     }
                     self.channel.read(&mut self.buf).map_err(Error::ClientRead)?;
-                },
+                }
                 Err(e) => return Err(Error::ClientRead(e)),
             }
             let (buf, handles) = self.buf.split_mut();
@@ -618,12 +593,13 @@ mod tests {
     use super::*;
     use {
         failure::{Error, ResultExt},
-        futures::{FutureExt, StreamExt},
         fuchsia_async::TimeoutExt,
         fuchsia_zircon::DurationNum,
+        futures::{FutureExt, StreamExt},
         std::{io, thread},
     };
 
+    #[rustfmt::skip]
     const SEND_EXPECTED: &[u8] = &[
         0, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
         0, 0, 0, 0, // 32 bits for flags
@@ -653,7 +629,8 @@ mod tests {
         thread::spawn(move || {
             // Server
             let mut received = zx::MessageBuf::new();
-            server_end.wait_handle(zx::Signals::CHANNEL_READABLE, 5.seconds().after_now())
+            server_end
+                .wait_handle(zx::Signals::CHANNEL_READABLE, 5.seconds().after_now())
                 .expect("failed to wait for channel readable");
             server_end.read(&mut received).expect("failed to read on server end");
             let (buf, handles) = received.split_mut();
@@ -671,9 +648,9 @@ mod tests {
             Encoder::encode(buf, handles, response).expect("Encoding failure");
             server_end.write(buf, handles).expect("Server channel write failed");
         });
-        let response_data = client.send_query::<u8, u8>(
-            &mut SEND_DATA, SEND_ORDINAL, 5.seconds().after_now(),
-        ).context("sending query")?;
+        let response_data = client
+            .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL, 5.seconds().after_now())
+            .context("sending query")?;
         assert_eq!(SEND_DATA, response_data);
         Ok(())
     }
@@ -693,11 +670,10 @@ mod tests {
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receiver.on_timeout(
-            300.millis().after_now(),
-            || panic!("did not receive message in time!"));
+        let receiver = receiver
+            .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
 
-        let sender = fasync::Timer::new(100.millis().after_now()).map(|()|{
+        let sender = fasync::Timer::new(100.millis().after_now()).map(|()| {
             client.send(&mut SEND_DATA, SEND_ORDINAL).expect("failed to send msg");
         });
 
@@ -709,7 +685,7 @@ mod tests {
         const EXPECTED: &[u8] = &[
             1, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
             0, 0, 0, 0, // 32 bits for flags
-            42, 0, 0, 0, // 32 bit ordinal
+            42, 0, 0, 0,  // 32 bit ordinal
             55, // 8 bit data
             0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
         ];
@@ -729,11 +705,7 @@ mod tests {
                         // since FIDL txids start with `1`.
 
             let response = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: id,
-                    flags: 0,
-                    ordinal: 42,
-                },
+                header: TransactionHeader { tx_id: id, flags: 0, ordinal: 42 },
                 body: &mut 55,
             };
 
@@ -743,24 +715,17 @@ mod tests {
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receiver.on_timeout(
-            300.millis().after_now(),
-            || panic!("did not receiver message in time!"
-        ));
+        let receiver = receiver
+            .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
-        let sender = client.send_query::<u8, u8>(&mut 55, 42)
-            .map_ok(|x|assert_eq!(x, 55))
-            .map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::Other,
-                    &*format!("fidl error: {:?}", e))
-            });
+        let sender = client
+            .send_query::<u8, u8>(&mut 55, 42)
+            .map_ok(|x| assert_eq!(x, 55))
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, &*format!("fidl error: {:?}", e)));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let sender = sender.on_timeout(
-            300.millis().after_now(),
-            || panic!("did not receive response in time!")
-        );
+        let sender = sender
+            .on_timeout(300.millis().after_now(), || panic!("did not receive response in time!"));
 
         executor.run_singlethreaded(receiver.join(sender));
     }
@@ -796,11 +761,7 @@ mod tests {
         // Send the event from the server
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let event = &mut TransactionMessage {
-            header: TransactionHeader {
-                tx_id: 0,
-                flags: 0,
-                ordinal: 5,
-            },
+            header: TransactionHeader { tx_id: 0, flags: 0, ordinal: 5 },
             body: &mut 55i32,
         };
         let (bytes, handles) = (&mut vec![], &mut vec![]);
@@ -808,7 +769,8 @@ mod tests {
         server.write(bytes, handles).expect("Server channel write failed");
         drop(server);
 
-        let recv = client.take_event_receiver()
+        let recv = client
+            .take_event_receiver()
             .into_future()
             .then(|(x, stream)| {
                 let x = x.expect("should contain one element");
@@ -820,10 +782,8 @@ mod tests {
             .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let recv = recv.on_timeout(
-            300.millis().after_now(),
-            || panic!("did not receive event in time!")
-        );
+        let recv =
+            recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
 
         executor.run_singlethreaded(recv);
     }

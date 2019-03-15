@@ -40,7 +40,9 @@ pub enum Error {
     MaxRecursionDepth,
 
     /// There was an attempt read or write a null-valued object as a non-nullable type.
-    #[fail(display = "There was an attempt to read or write a null-valued object as a non-nullable FIDL type.")]
+    #[fail(
+        display = "There was an attempt to read or write a null-valued object as a non-nullable FIDL type."
+    )]
     NotNullable,
 
     /// Incorrectly encoded UTF8.
@@ -50,8 +52,11 @@ pub enum Error {
     /// A message was recieved for an ordinal value that the service does not understand.
     /// This generally results from an attempt to call a FIDL service of a type other than
     /// the one being served.
-    #[fail(display ="A message was received for ordinal value {} \
-                     that the FIDL service {} does not understand.", ordinal, service_name)]
+    #[fail(
+        display = "A message was received for ordinal value {} \
+                   that the FIDL service {} does not understand.",
+        ordinal, service_name
+    )]
     UnknownOrdinal {
         /// The unknown ordinal.
         ordinal: u32,
@@ -76,24 +81,38 @@ pub enum Error {
     InvalidResponseTxid,
 
     /// A FIDL server encountered an IO error writing a response to a channel.
-    #[fail(display = "A server encountered an IO error writing a FIDL response to a channel: {}", _0)]
+    #[fail(
+        display = "A server encountered an IO error writing a FIDL response to a channel: {}",
+        _0
+    )]
     ServerResponseWrite(#[cause] zx::Status),
 
     /// A FIDL server encountered an IO error reading incoming requests from a channel.
-    #[fail(display =
-          "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {}", _0)]
+    #[fail(
+        display = "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {}",
+        _0
+    )]
     ServerRequestRead(#[cause] zx::Status),
 
     /// A FIDL client encountered an IO error reading a response from a channel.
-    #[fail(display = "A FIDL client encountered an IO error reading a response from a channel: {}", _0)]
+    #[fail(
+        display = "A FIDL client encountered an IO error reading a response from a channel: {}",
+        _0
+    )]
     ClientRead(#[cause] zx::Status),
 
     /// A FIDL client encountered an IO error writing a request to a channel.
-    #[fail(display = "A FIDL client encountered an IO error writing a request into a channel: {}", _0)]
+    #[fail(
+        display = "A FIDL client encountered an IO error writing a request into a channel: {}",
+        _0
+    )]
     ClientWrite(#[cause] zx::Status),
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
-    #[fail(display = "There was an error creating a channel to be used for a FIDL client-server pair: {}", _0)]
+    #[fail(
+        display = "There was an error creating a channel to be used for a FIDL client-server pair: {}",
+        _0
+    )]
     ChannelPairCreate(#[cause] zx::Status),
 
     /// There was an error attaching a FIDL channel to the Tokio reactor.

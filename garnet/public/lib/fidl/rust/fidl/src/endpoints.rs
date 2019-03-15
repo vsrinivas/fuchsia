@@ -6,8 +6,7 @@
 
 use {
     crate::{Error, ServeInner},
-    fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     std::marker::PhantomData,
     std::sync::Arc,
 };
@@ -88,8 +87,8 @@ impl<T: ServiceMarker> ClientEnd<T> {
     /// Convert the `ClientEnd` into a `Proxy` through which FIDL calls may be made.
     pub fn into_proxy(self) -> Result<T::Proxy, Error> {
         Ok(T::Proxy::from_channel(
-            fasync::Channel::from_channel(self.inner)
-                .map_err(Error::AsyncChannel)?))
+            fasync::Channel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
+        ))
     }
 }
 
@@ -107,19 +106,13 @@ impl<T> From<ClientEnd<T>> for zx::Handle {
 
 impl<T> From<zx::Handle> for ClientEnd<T> {
     fn from(handle: zx::Handle) -> Self {
-        ClientEnd {
-            inner: handle.into(),
-            phantom: PhantomData,
-        }
+        ClientEnd { inner: handle.into(), phantom: PhantomData }
     }
 }
 
 impl<T> From<zx::Channel> for ClientEnd<T> {
     fn from(chan: zx::Channel) -> Self {
-        ClientEnd {
-            inner: chan,
-            phantom: PhantomData,
-        }
+        ClientEnd { inner: chan, phantom: PhantomData }
     }
 }
 
@@ -151,18 +144,21 @@ impl<T> ServerEnd<T> {
 
     /// Create a stream of requests off of the channel.
     pub fn into_stream(self) -> Result<T::RequestStream, Error>
-        where T: ServiceMarker,
+    where
+        T: ServiceMarker,
     {
         Ok(T::RequestStream::from_channel(
-            fasync::Channel::from_channel(self.inner)
-                .map_err(Error::AsyncChannel)?))
+            fasync::Channel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
+        ))
     }
 
     /// Create a stream of requests and an event-sending handle
     /// from the channel.
-    pub fn into_stream_and_control_handle(self)
-        -> Result<(T::RequestStream, <T::RequestStream as RequestStream>::ControlHandle), Error>
-        where T: ServiceMarker,
+    pub fn into_stream_and_control_handle(
+        self,
+    ) -> Result<(T::RequestStream, <T::RequestStream as RequestStream>::ControlHandle), Error>
+    where
+        T: ServiceMarker,
     {
         let stream = self.into_stream()?;
         let control_handle = stream.control_handle();
@@ -184,19 +180,13 @@ impl<T> From<ServerEnd<T>> for zx::Handle {
 
 impl<T> From<zx::Handle> for ServerEnd<T> {
     fn from(handle: zx::Handle) -> Self {
-        ServerEnd {
-            inner: handle.into(),
-            phantom: PhantomData,
-        }
+        ServerEnd { inner: handle.into(), phantom: PhantomData }
     }
 }
 
 impl<T> From<zx::Channel> for ServerEnd<T> {
     fn from(chan: zx::Channel) -> Self {
-        ServerEnd {
-            inner: chan,
-            phantom: PhantomData,
-        }
+        ServerEnd { inner: chan, phantom: PhantomData }
     }
 }
 
@@ -231,7 +221,8 @@ pub fn create_proxy<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Erro
 ///
 /// Useful for sending channel handles to calls that take arguments
 /// of type `SomeInterface`
-pub fn create_request_stream<T: ServiceMarker>() -> Result<(ClientEnd<T>, T::RequestStream), Error> {
+pub fn create_request_stream<T: ServiceMarker>() -> Result<(ClientEnd<T>, T::RequestStream), Error>
+{
     let (client, server) = create_endpoints()?;
     Ok((client, server.into_stream()?))
 }

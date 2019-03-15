@@ -7,14 +7,8 @@
 use {
     crate::{Error, Result},
     byteorder::{ByteOrder, LittleEndian},
-    fuchsia_zircon::{
-        self as zx,
-        HandleBased,
-    },
-    std::{
-        cell::RefCell,
-        mem, ptr, str, u32, u64,
-    },
+    fuchsia_zircon::{self as zx, HandleBased},
+    std::{cell::RefCell, mem, ptr, str, u32, u64},
 };
 
 thread_local!(static CODING_BUF: RefCell<zx::MessageBuf> = RefCell::new(zx::MessageBuf::new()));
@@ -22,9 +16,7 @@ thread_local!(static CODING_BUF: RefCell<zx::MessageBuf> = RefCell::new(zx::Mess
 /// Acquire a mutable reference to the thread-local encoding buffers.
 ///
 /// This function may not be called recursively.
-pub fn with_tls_coding_bufs<R>(
-    f: impl FnOnce(&mut Vec<u8>, &mut Vec<zx::Handle>) -> R,
-) -> R {
+pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<zx::Handle>) -> R) -> R {
     CODING_BUF.with(|buf| {
         let mut buf = buf.borrow_mut();
         let (bytes, handles) = buf.split_mut();
@@ -37,7 +29,7 @@ pub fn with_tls_coding_bufs<R>(
 /// Encodes the provided type into the thread-local encoding buffers.
 ///
 /// This function may not be called recursively.
-pub fn with_tls_encoded<T, E: From<Error>> (
+pub fn with_tls_encoded<T, E: From<Error>>(
     val: &mut (impl Encodable + ?Sized),
     f: impl FnOnce(&mut Vec<u8>, &mut Vec<zx::Handle>) -> std::result::Result<T, E>,
 ) -> std::result::Result<T, E> {
@@ -159,20 +151,14 @@ impl<'a> Encoder<'a> {
     pub fn encode<T: Encodable + ?Sized>(
         buf: &'a mut Vec<u8>,
         handles: &'a mut Vec<zx::Handle>,
-        x: &mut T
-    ) -> Result<()>
-    {
+        x: &mut T,
+    ) -> Result<()> {
         let inline_size = round_up_to_align(x.inline_size(), 8);
         buf.truncate(0);
         buf.resize(inline_size, 0);
         handles.truncate(0);
 
-        let mut encoder = Encoder {
-            offset: 0,
-            remaining_depth: MAX_RECURSION,
-            buf,
-            handles,
-        };
+        let mut encoder = Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles };
 
         x.encode(&mut encoder)
     }
@@ -180,7 +166,8 @@ impl<'a> Encoder<'a> {
     /// Runs the provided closure at at the next recursion depth level,
     /// erroring if the maximum recursion limit has been reached.
     pub fn recurse<F, R>(&mut self, f: F) -> Result<R>
-        where F: FnOnce(&mut Encoder) -> Result<R>
+    where
+        F: FnOnce(&mut Encoder) -> Result<R>,
     {
         if self.remaining_depth == 0 {
             return Err(Error::MaxRecursionDepth);
@@ -205,7 +192,8 @@ impl<'a> Encoder<'a> {
     /// Once the closure has completed, this function resets the offset
     /// to where it was at the beginning of the call.
     pub fn write_out_of_line<F>(&mut self, len: usize, f: F) -> Result<()>
-        where F: FnOnce(&mut Encoder) -> Result<()>
+    where
+        F: FnOnce(&mut Encoder) -> Result<()>,
     {
         let old_offset = self.offset;
         self.offset = self.buf.len();
@@ -238,8 +226,7 @@ impl<'a> Decoder<'a> {
         buf: &'a [u8],
         handles: &'a mut [zx::Handle],
         value: &mut T,
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         let out_of_line_offset = round_up_to_align(T::inline_size(), 8);
         if buf.len() < out_of_line_offset {
             return Err(Error::OutOfRange);
@@ -247,12 +234,7 @@ impl<'a> Decoder<'a> {
 
         let (buf, out_of_line_buf) = buf.split_at(out_of_line_offset);
 
-        let mut decoder = Decoder {
-            remaining_depth: MAX_RECURSION,
-            buf,
-            out_of_line_buf,
-            handles,
-        };
+        let mut decoder = Decoder { remaining_depth: MAX_RECURSION, buf, out_of_line_buf, handles };
 
         value.decode(&mut decoder)
     }
@@ -260,7 +242,8 @@ impl<'a> Decoder<'a> {
     /// Runs the provided closure at at the next recursion depth level,
     /// erroring if the maximum recursion limit has been reached.
     pub fn recurse<F, R>(&mut self, f: F) -> Result<R>
-        where F: FnOnce(&mut Decoder) -> Result<R>
+    where
+        F: FnOnce(&mut Decoder) -> Result<R>,
     {
         if self.remaining_depth == 0 {
             return Err(Error::MaxRecursionDepth);
@@ -278,7 +261,8 @@ impl<'a> Decoder<'a> {
     /// `absolute_offset` indicates the offset of the start of the out-of-line data to read,
     /// relative to the original start of the buffer.
     pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
-        where F: FnOnce(&mut Decoder) -> Result<R>
+    where
+        F: FnOnce(&mut Decoder) -> Result<R>,
     {
         // Currently, out-of-line points here:
         // [---------------------------------]
@@ -363,13 +347,19 @@ pub trait Encodable {
 /// A type which can be FIDL2-decoded from a buffer.
 pub trait Decodable {
     /// Returns the minimum required alignment of the inline portion of the encoded object.
-    fn inline_align() -> usize where Self: Sized;
+    fn inline_align() -> usize
+    where
+        Self: Sized;
 
     /// Returns the size of the inline portion of the encoded object.
-    fn inline_size() -> usize where Self: Sized;
+    fn inline_size() -> usize
+    where
+        Self: Sized;
 
     /// Creates a new value of this type with an "empty" representation.
-    fn new_empty() -> Self where Self: Sized;
+    fn new_empty() -> Self
+    where
+        Self: Sized;
 
     /// Decodes an object of this type from the provided buffer and list of handles.
     /// On success, returns `Self`, as well as the yet-unused tails of the data and handle buffers.
@@ -412,8 +402,12 @@ impl_codable_num!(
 );
 
 impl Encodable for bool {
-    fn inline_align(&self) -> usize { 1 }
-    fn inline_size(&self) -> usize { 1 }
+    fn inline_align(&self) -> usize {
+        1
+    }
+    fn inline_size(&self) -> usize {
+        1
+    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = if *self { 1 } else { 0 };
@@ -422,9 +416,15 @@ impl Encodable for bool {
 }
 
 impl Decodable for bool {
-    fn new_empty() -> Self { false }
-    fn inline_align() -> usize { 1 }
-    fn inline_size() -> usize { 1 }
+    fn new_empty() -> Self {
+        false
+    }
+    fn inline_align() -> usize {
+        1
+    }
+    fn inline_size() -> usize {
+        1
+    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let num = *split_off_first(&mut decoder.buf)?;
         *self = match num {
@@ -437,8 +437,12 @@ impl Decodable for bool {
 }
 
 impl Encodable for u8 {
-    fn inline_align(&self) -> usize { 1 }
-    fn inline_size(&self) -> usize { 1 }
+    fn inline_align(&self) -> usize {
+        1
+    }
+    fn inline_size(&self) -> usize {
+        1
+    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = *self;
@@ -447,9 +451,15 @@ impl Encodable for u8 {
 }
 
 impl Decodable for u8 {
-    fn new_empty() -> Self { 0 }
-    fn inline_align() -> usize { 1 }
-    fn inline_size() -> usize { 1 }
+    fn new_empty() -> Self {
+        0
+    }
+    fn inline_align() -> usize {
+        1
+    }
+    fn inline_size() -> usize {
+        1
+    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         *self = *split_off_first(&mut decoder.buf)?;
         Ok(())
@@ -457,8 +467,12 @@ impl Decodable for u8 {
 }
 
 impl Encodable for i8 {
-    fn inline_align(&self) -> usize { 1 }
-    fn inline_size(&self) -> usize { 1 }
+    fn inline_align(&self) -> usize {
+        1
+    }
+    fn inline_size(&self) -> usize {
+        1
+    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = *self as u8;
@@ -467,9 +481,15 @@ impl Encodable for i8 {
 }
 
 impl Decodable for i8 {
-    fn new_empty() -> Self { 0 }
-    fn inline_align() -> usize { 1 }
-    fn inline_size() -> usize { 1 }
+    fn new_empty() -> Self {
+        0
+    }
+    fn inline_align() -> usize {
+        1
+    }
+    fn inline_size() -> usize {
+        1
+    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         *self = *split_off_first(&mut decoder.buf)? as i8;
         Ok(())
@@ -536,6 +556,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
 // even though its part of the type (this will hopefully be added in the
 // future) so for now we implement encodable for only the first 33 fixed
 // size array types.
+#[rustfmt::skip]
 impl_codable_for_fixed_array!( 0,  1,  2,  3,  4,  5,  6,  7,
                                8,  9, 10, 11, 12, 13, 14, 15,
                               16, 17, 18, 19, 20, 21, 22, 23,
@@ -569,10 +590,7 @@ pub fn encode_absent_vector(encoder: &mut Encoder) -> Result<()> {
 }
 
 /// Encode an optional iterator over encodable elements into a FIDL vector-like representation.
-pub fn encode_encodable_iter<Iter, T>(
-    encoder: &mut Encoder,
-    iter_opt: Option<Iter>,
-) -> Result<()>
+pub fn encode_encodable_iter<Iter, T>(encoder: &mut Encoder, iter_opt: Option<Iter>) -> Result<()>
 where
     Iter: ExactSizeIterator<Item = T>,
     T: Encodable,
@@ -583,11 +601,7 @@ where
             // Two u64: (len, present)
             (iter.len() as u64).encode(encoder)?;
             ALLOC_PRESENT_U64.encode(encoder)?;
-            let mut first = if let Some(first) = iter.next() {
-                first
-            } else {
-                return Ok(())
-            };
+            let mut first = if let Some(first) = iter.next() { first } else { return Ok(()) };
             let bytes_len = (iter.len() + 1) * first.inline_size();
             encoder.write_out_of_line(bytes_len, |encoder| {
                 encoder.recurse(|encoder| {
@@ -613,16 +627,13 @@ fn decode_string(decoder: &mut Decoder, string: &mut String) -> Result<bool> {
 
     match present {
         ALLOC_ABSENT_U64 => return Ok(false),
-        ALLOC_PRESENT_U64 => {},
+        ALLOC_PRESENT_U64 => {}
         _ => return Err(Error::Invalid),
     };
     let len = len as usize;
     decoder.read_out_of_line(len, |decoder| {
         string.truncate(0);
-        string.push_str(
-            str::from_utf8(decoder.buf)
-                .map_err(|_| Error::Utf8Error)?
-        );
+        string.push_str(str::from_utf8(decoder.buf).map_err(|_| Error::Utf8Error)?);
         Ok(true)
     })
 }
@@ -638,7 +649,7 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
 
     match present {
         ALLOC_ABSENT_U64 => return Ok(false),
-        ALLOC_PRESENT_U64 => {},
+        ALLOC_PRESENT_U64 => {}
         _ => return Err(Error::Invalid),
     }
 
@@ -658,9 +669,13 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
 }
 
 impl<'a> Encodable for &'a str {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, Some(self.as_bytes()))
@@ -668,9 +683,13 @@ impl<'a> Encodable for &'a str {
 }
 
 impl Encodable for String {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, Some(self.as_bytes()))
@@ -682,9 +701,13 @@ impl Decodable for String {
         String::new()
     }
 
-    fn inline_align() -> usize { 8 }
+    fn inline_align() -> usize {
+        8
+    }
 
-    fn inline_size() -> usize { 16 }
+    fn inline_size() -> usize {
+        16
+    }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         if decode_string(decoder, self)? {
@@ -696,9 +719,13 @@ impl Decodable for String {
 }
 
 impl<'a> Encodable for Option<&'a str> {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
@@ -706,9 +733,13 @@ impl<'a> Encodable for Option<&'a str> {
 }
 
 impl Encodable for Option<String> {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
@@ -720,9 +751,13 @@ impl Decodable for Option<String> {
         None
     }
 
-    fn inline_align() -> usize { 8 }
+    fn inline_align() -> usize {
+        8
+    }
 
-    fn inline_size() -> usize { 16 }
+    fn inline_size() -> usize {
+        16
+    }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let was_some;
@@ -730,17 +765,21 @@ impl Decodable for Option<String> {
             let string = self.get_or_insert(String::new());
             was_some = decode_string(decoder, string)?;
         }
-        if !was_some { *self = None }
+        if !was_some {
+            *self = None
+        }
         Ok(())
     }
 }
 
-impl<'a, 'b: 'a, T: Encodable> Encodable for
-    &'a mut ExactSizeIterator<Item = T>
-{
-    fn inline_align(&self) -> usize { 8 }
+impl<'a, 'b: 'a, T: Encodable> Encodable for &'a mut ExactSizeIterator<Item = T> {
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, Some(self))
@@ -748,9 +787,13 @@ impl<'a, 'b: 'a, T: Encodable> Encodable for
 }
 
 impl<'a, T: Encodable> Encodable for &'a mut [T] {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, Some(self.iter_mut()))
@@ -758,9 +801,13 @@ impl<'a, T: Encodable> Encodable for &'a mut [T] {
 }
 
 impl<T: Encodable> Encodable for Vec<T> {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, Some(self.iter_mut()))
@@ -772,9 +819,13 @@ impl<T: Decodable> Decodable for Vec<T> {
         Vec::new()
     }
 
-    fn inline_align() -> usize { 8 }
+    fn inline_align() -> usize {
+        8
+    }
 
-    fn inline_size() -> usize { 16 }
+    fn inline_size() -> usize {
+        16
+    }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         if decode_vec(decoder, self)? {
@@ -785,12 +836,14 @@ impl<T: Decodable> Decodable for Vec<T> {
     }
 }
 
-impl<'a, 'b: 'a, T: Encodable> Encodable for
-    Option<&'a mut ExactSizeIterator<Item = T>>
-{
-    fn inline_align(&self) -> usize { 8 }
+impl<'a, 'b: 'a, T: Encodable> Encodable for Option<&'a mut ExactSizeIterator<Item = T>> {
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| &mut **x))
@@ -798,9 +851,13 @@ impl<'a, 'b: 'a, T: Encodable> Encodable for
 }
 
 impl<'a, T: Encodable> Encodable for Option<&'a mut [T]> {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
@@ -808,9 +865,13 @@ impl<'a, T: Encodable> Encodable for Option<&'a mut [T]> {
 }
 
 impl<T: Encodable> Encodable for Option<Vec<T>> {
-    fn inline_align(&self) -> usize { 8 }
+    fn inline_align(&self) -> usize {
+        8
+    }
 
-    fn inline_size(&self) -> usize { 16 }
+    fn inline_size(&self) -> usize {
+        16
+    }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
@@ -822,9 +883,13 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
         None
     }
 
-    fn inline_align() -> usize { 8 }
+    fn inline_align() -> usize {
+        8
+    }
 
-    fn inline_size() -> usize { 16 }
+    fn inline_size() -> usize {
+        16
+    }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let was_some;
@@ -832,7 +897,9 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
             let vec = self.get_or_insert(Vec::new());
             was_some = decode_vec(decoder, vec)?;
         }
-        if !was_some { *self = None }
+        if !was_some {
+            *self = None
+        }
         Ok(())
     }
 }
@@ -843,7 +910,7 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
 macro_rules! fidl_inline_size {
     ($type:ty) => {
         <$type as $crate::encoding::Decodable>::inline_size()
-    }
+    };
 }
 
 /// A shorthand macro for calling `Decodable::inline_align()` on a type
@@ -852,7 +919,7 @@ macro_rules! fidl_inline_size {
 macro_rules! fidl_inline_align {
     ($type:ty) => {
         <$type as $crate::encoding::Decodable>::inline_align()
-    }
+    };
 }
 
 /// A shorthand macro for calling `Encodable::encode()` on a type
@@ -861,7 +928,7 @@ macro_rules! fidl_inline_align {
 macro_rules! fidl_encode {
     ($val:expr, $encoder:expr) => {
         $crate::encoding::Encodable::encode($val, $encoder)
-    }
+    };
 }
 
 /// A shorthand macro for calling `Decodable::decode()` on a type
@@ -870,7 +937,7 @@ macro_rules! fidl_encode {
 macro_rules! fidl_decode {
     ($val:expr, $decoder:expr) => {
         $crate::encoding::Decodable::decode($val, $decoder)
-    }
+    };
 }
 
 /// A shorthand macro for calling `Decodable::new_empty()` on a type
@@ -879,7 +946,7 @@ macro_rules! fidl_decode {
 macro_rules! fidl_new_empty {
     ($type:ty) => {
         <$type as $crate::encoding::Decodable>::new_empty()
-    }
+    };
 }
 
 /// Declare a bits type and implement the FIDL coding traits for it.
@@ -1050,8 +1117,12 @@ macro_rules! fidl_enum {
 }
 
 impl Encodable for zx::Status {
-    fn inline_align(&self) -> usize { mem::size_of::<zx::sys::zx_status_t>() }
-    fn inline_size(&self) -> usize { mem::size_of::<zx::sys::zx_status_t>() }
+    fn inline_align(&self) -> usize {
+        mem::size_of::<zx::sys::zx_status_t>()
+    }
+    fn inline_size(&self) -> usize {
+        mem::size_of::<zx::sys::zx_status_t>()
+    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(mem::size_of::<zx::sys::zx_status_t>())?;
         LittleEndian::write_i32(slot, self.into_raw());
@@ -1059,11 +1130,16 @@ impl Encodable for zx::Status {
     }
 }
 
-
 impl Decodable for zx::Status {
-    fn new_empty() -> Self { Self::from_raw(0) }
-    fn inline_size() -> usize { mem::size_of::<zx::sys::zx_status_t>() }
-    fn inline_align() -> usize { mem::size_of::<zx::sys::zx_status_t>() }
+    fn new_empty() -> Self {
+        Self::from_raw(0)
+    }
+    fn inline_size() -> usize {
+        mem::size_of::<zx::sys::zx_status_t>()
+    }
+    fn inline_align() -> usize {
+        mem::size_of::<zx::sys::zx_status_t>()
+    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let end = mem::size_of::<zx::sys::zx_status_t>();
         let range = split_off_front(&mut decoder.buf, end)?;
@@ -1073,10 +1149,13 @@ impl Decodable for zx::Status {
 }
 
 impl Encodable for zx::Handle {
-    fn inline_align(&self) -> usize { 4 }
-    fn inline_size(&self) -> usize { 4 }
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()>
-    {
+    fn inline_align(&self) -> usize {
+        4
+    }
+    fn inline_size(&self) -> usize {
+        4
+    }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         ALLOC_PRESENT_U32.encode(encoder)?;
         let handle = take_handle(self);
         encoder.handles.push(handle);
@@ -1088,14 +1167,18 @@ impl Decodable for zx::Handle {
     fn new_empty() -> Self {
         zx::Handle::invalid()
     }
-    fn inline_align() -> usize { 4 }
-    fn inline_size() -> usize { 4 }
+    fn inline_align() -> usize {
+        4
+    }
+    fn inline_size() -> usize {
+        4
+    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let mut present: u32 = 0;
         present.decode(decoder)?;
         match present {
             ALLOC_ABSENT_U32 => return Err(Error::NotNullable),
-            ALLOC_PRESENT_U32 => {},
+            ALLOC_PRESENT_U32 => {}
             _ => return Err(Error::Invalid),
         }
         *self = decoder.take_handle()?;
@@ -1104,8 +1187,12 @@ impl Decodable for zx::Handle {
 }
 
 impl Encodable for Option<zx::Handle> {
-    fn inline_align(&self) -> usize { 4 }
-    fn inline_size(&self) -> usize { 4 }
+    fn inline_align(&self) -> usize {
+        4
+    }
+    fn inline_size(&self) -> usize {
+        4
+    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         match self {
             Some(handle) => handle.encode(encoder),
@@ -1115,9 +1202,15 @@ impl Encodable for Option<zx::Handle> {
 }
 
 impl Decodable for Option<zx::Handle> {
-    fn new_empty() -> Self { None }
-    fn inline_align() -> usize { 4 }
-    fn inline_size() -> usize { 4 }
+    fn new_empty() -> Self {
+        None
+    }
+    fn inline_align() -> usize {
+        4
+    }
+    fn inline_size() -> usize {
+        4
+    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let mut present: u32 = 0;
         present.decode(decoder)?;
@@ -1125,11 +1218,11 @@ impl Decodable for Option<zx::Handle> {
             ALLOC_ABSENT_U32 => {
                 *self = None;
                 Ok(())
-            },
+            }
             ALLOC_PRESENT_U32 => {
                 *self = Some(decoder.take_handle()?);
                 Ok(())
-            },
+            }
             _ => Err(Error::Invalid),
         }
     }
@@ -1329,9 +1422,7 @@ impl<'a, T: Autonull> Encodable for OutOfLine<'a, T> {
     }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         ALLOC_PRESENT_U64.encode(encoder)?;
-        encoder.write_out_of_line(
-            self.0.inline_size(),
-            |encoder| self.0.encode(encoder))
+        encoder.write_out_of_line(self.0.inline_size(), |encoder| self.0.encode(encoder))
     }
 }
 
@@ -1353,9 +1444,7 @@ impl<T: Autonull> Encodable for Box<T> {
     }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         ALLOC_PRESENT_U64.encode(encoder)?;
-        encoder.write_out_of_line(
-            (&**self).inline_size(),
-            |encoder| (&mut **self).encode(encoder))
+        encoder.write_out_of_line((&**self).inline_size(), |encoder| (&mut **self).encode(encoder))
     }
 }
 
@@ -1375,9 +1464,9 @@ impl<T: Autonull> Decodable for Box<T> {
         if present != ALLOC_PRESENT_U64 {
             return Err(Error::NotNullable);
         }
-        return decoder.read_out_of_line(
-            <T as Decodable>::inline_size(),
-            |decoder| (&mut **self).decode(decoder));
+        return decoder.read_out_of_line(<T as Decodable>::inline_size(), |decoder| {
+            (&mut **self).decode(decoder)
+        });
     }
 }
 
@@ -1463,7 +1552,7 @@ macro_rules! fidl_struct {
 /// Encode the provided value behind a FIDL "envelope".
 pub fn encode_in_envelope<T>(val: &mut Option<&mut T>, encoder: &mut Encoder) -> Result<()>
 where
-    T: Encodable + ?Sized
+    T: Encodable + ?Sized,
 {
     // u32 num_bytes
     // u32 num_handles
@@ -1974,7 +2063,9 @@ pub struct TransactionMessage<'a, T: 'a> {
 }
 
 impl<'a, T: Encodable> Encodable for TransactionMessage<'a, T> {
-    fn inline_align(&self) -> usize { 0 }
+    fn inline_align(&self) -> usize {
+        0
+    }
     fn inline_size(&self) -> usize {
         self.header.inline_size() + self.body.inline_size()
     }
@@ -1989,7 +2080,9 @@ impl<'a, T: Decodable> Decodable for TransactionMessage<'a, T> {
     fn new_empty() -> Self {
         panic!("cannot create an empty transaction message")
     }
-    fn inline_align() -> usize { 0 }
+    fn inline_align() -> usize {
+        0
+    }
     fn inline_size() -> usize {
         <TransactionHeader as Decodable>::inline_size() + T::inline_size()
     }
@@ -2005,7 +2098,9 @@ impl<'a, T: Decodable> Decodable for TransactionMessage<'a, T> {
 pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
     let mut header = TransactionHeader::new_empty();
     let header_len = <TransactionHeader as Decodable>::inline_size();
-    if bytes.len() < header_len { return Err(Error::OutOfRange); }
+    if bytes.len() < header_len {
+        return Err(Error::OutOfRange);
+    }
     let (header_bytes, body_bytes) = bytes.split_at(header_len);
     let handles = &mut [];
     Decoder::decode_into(header_bytes, handles, &mut header)?;
@@ -2157,25 +2252,42 @@ tuple_impls!(
 );
 
 impl Encodable for () {
-    fn inline_align(&self) -> usize { 0 }
-    fn inline_size(&self) -> usize { 0 }
+    fn inline_align(&self) -> usize {
+        0
+    }
+    fn inline_size(&self) -> usize {
+        0
+    }
     fn encode(&mut self, _: &mut Encoder) -> Result<()> {
         Ok(())
     }
 }
 
 impl Decodable for () {
-    fn new_empty() -> Self { () }
-    fn inline_size() -> usize { 0 }
-    fn inline_align() -> usize { 0 }
+    fn new_empty() -> Self {
+        ()
+    }
+    fn inline_size() -> usize {
+        0
+    }
+    fn inline_align() -> usize {
+        0
+    }
     fn decode(&mut self, _: &mut Decoder) -> Result<()> {
         Ok(())
     }
 }
 
-impl<'a, T> Encodable for &'a mut T where T: Encodable {
-    fn inline_align(&self) -> usize { (**self).inline_align() }
-    fn inline_size(&self) -> usize { (**self).inline_size() }
+impl<'a, T> Encodable for &'a mut T
+where
+    T: Encodable,
+{
+    fn inline_align(&self) -> usize {
+        (**self).inline_align()
+    }
+    fn inline_size(&self) -> usize {
+        (**self).inline_size()
+    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         (&mut **self).encode(encoder)
     }
@@ -2184,30 +2296,28 @@ impl<'a, T> Encodable for &'a mut T where T: Encodable {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::{fmt, u64, i64, f32, f64};
     use fuchsia_zircon::AsHandleRef;
+    use std::{f32, f64, fmt, i64, u64};
 
     fn encode_decode<T: Encodable + Decodable>(start: &mut T) -> T {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, start)
-            .expect("Encoding failed");
+        Encoder::encode(buf, handle_buf, start).expect("Encoding failed");
         let mut out = T::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut out)
-            .expect("Decoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
         out
     }
 
     fn encode_assert_bytes<T: Encodable>(mut data: T, encoded_bytes: &[u8]) {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut data)
-            .expect("Encoding failed");
+        Encoder::encode(buf, handle_buf, &mut data).expect("Encoding failed");
         assert_eq!(&**buf, encoded_bytes);
     }
 
     fn assert_identity<T>(mut x: T)
-        where T: Encodable + Decodable + Clone + PartialEq + fmt::Debug
+    where
+        T: Encodable + Decodable + Clone + PartialEq + fmt::Debug,
     {
         let cloned = x.clone();
         assert_eq!(cloned, encode_decode(&mut x));
@@ -2219,12 +2329,11 @@ mod test {
 
     #[test]
     fn encode_decode_byte() {
-        identities![
-            0u8, 57u8, 255u8, 0i8, -57i8, 12i8,
-        ];
+        identities![0u8, 57u8, 255u8, 0i8, -57i8, 12i8,];
     }
 
     #[test]
+    #[rustfmt::skip]
     fn encode_decode_multibyte() {
         identities![
             0u64, 1u64, u64::MAX, u64::MIN,
@@ -2270,8 +2379,7 @@ mod test {
 
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut handle)
-            .expect("Encoding failed");
+        Encoder::encode(buf, handle_buf, &mut handle).expect("Encoding failed");
 
         assert!(handle.is_invalid());
 
@@ -2344,14 +2452,14 @@ mod test {
         // These need to be manually compared because of missing `PartialEq` impls.
         for num in vec![0, 255, 256] {
             match encode_decode(&mut NumOrStr::Num(num)) {
-                NumOrStr::Num(out_num) if num == out_num => {},
+                NumOrStr::Num(out_num) if num == out_num => {}
                 x => panic!("unexpected decoded value {:?}", x),
             }
         }
 
         for string in vec![String::new(), "hello world!".to_string()] {
             match &encode_decode(&mut NumOrStr::Str(string.clone())) {
-                NumOrStr::Str(out_str) if out_str == &string => {},
+                NumOrStr::Str(out_str) if out_str == &string => {}
                 x => panic!("unexpected decoded value {:?}", x),
             }
         }
@@ -2388,8 +2496,9 @@ mod test {
         let out_foo = encode_decode(&mut Some(Box::new(Foo {
             byte: 5,
             bignum: 22,
-            string: "hello world".to_string()
-        }))).expect("should be some");
+            string: "hello world".to_string(),
+        })))
+        .expect("should be some");
 
         assert_eq!(out_foo.byte, 5);
         assert_eq!(out_foo.bignum, 22);
@@ -2401,19 +2510,13 @@ mod test {
 
     #[test]
     fn encode_decode_tuple() {
-        let mut start: (&mut u8, &mut u64, &mut String) = (
-            &mut 5,
-            &mut 10,
-            &mut "foo".to_string(),
-        );
+        let mut start: (&mut u8, &mut u64, &mut String) = (&mut 5, &mut 10, &mut "foo".to_string());
         let mut out: (u8, u64, String) = Decodable::new_empty();
 
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut start)
-            .expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out)
-            .expect("Decoding failed");
+        Encoder::encode(buf, handle_buf, &mut start).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
 
         assert_eq!(*start.0, out.0);
         assert_eq!(*start.1, out.1);
@@ -2427,10 +2530,8 @@ mod test {
 
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut start)
-            .expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out)
-            .expect("Decoding failed");
+        Encoder::encode(buf, handle_buf, &mut start).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
 
         assert_eq!(start.byte, out.0);
         assert_eq!(start.bignum, out.1);
@@ -2444,10 +2545,8 @@ mod test {
 
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut start)
-            .expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out)
-            .expect("Decoding failed");
+        Encoder::encode(buf, handle_buf, &mut start).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
 
         assert_eq!(*start.0, out.byte);
         assert_eq!(*start.1, out.bignum);
@@ -2562,10 +2661,7 @@ mod test {
 
     #[test]
     fn table_encode_prefix_decode_full() {
-        let mut table_prefix_in = TablePrefix {
-            num: Some(5),
-            num_none: None,
-        };
+        let mut table_prefix_in = TablePrefix { num: Some(5), num_none: None };
         let mut table_out: MyTable = Decodable::new_empty();
 
         let buf = &mut Vec::new();
@@ -2603,12 +2699,8 @@ mod test {
 
     #[test]
     fn table_decode_fails_on_unrecognized_tail() {
-        let mut table_in = MyTable {
-            num: Some(5),
-            num_none: None,
-            string: Some("foo".to_string()),
-            handle: None,
-        };
+        let mut table_in =
+            MyTable { num: Some(5), num_none: None, string: Some("foo".to_string()), handle: None };
         let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
         let buf = &mut Vec::new();
@@ -2616,7 +2708,7 @@ mod test {
         Encoder::encode(buf, handle_buf, &mut table_in).unwrap();
         let err = Decoder::decode_into(buf, handle_buf, &mut table_prefix_out).unwrap_err();
         match err {
-            Error::UnknownTableField => {},
+            Error::UnknownTableField => {}
             err => panic!("unexpected error decoding: {:?}", err),
         }
     }
@@ -2684,10 +2776,7 @@ mod test {
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ];
-        encode_assert_bytes(
-            SimpleTable { x: Some(42), y: Some(67) },
-            simple_table_with_xy,
-        )
+        encode_assert_bytes(SimpleTable { x: Some(42), y: Some(67) }, simple_table_with_xy)
     }
 
     #[test]
@@ -2707,10 +2796,7 @@ mod test {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ];
-        encode_assert_bytes(
-            SimpleTable { x: None, y: Some(67) },
-            simple_table_with_y,
-        )
+        encode_assert_bytes(SimpleTable { x: None, y: Some(67) }, simple_table_with_y)
     }
 
     #[test]
@@ -2728,11 +2814,7 @@ mod test {
             27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
         ];
         encode_assert_bytes(
-            TableWithStringAndVector {
-                foo: Some("hello".to_string()),
-                bar: Some(27),
-                baz: None,
-            },
+            TableWithStringAndVector { foo: Some("hello".to_string()), bar: Some(27), baz: None },
             table_with_string_and_vector_hello_27,
         )
     }
@@ -2744,10 +2826,7 @@ mod test {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
         ];
 
-        encode_assert_bytes(
-            SimpleTable { x: None, y: None },
-            empty_table,
-        )
+        encode_assert_bytes(SimpleTable { x: None, y: None }, empty_table)
     }
 
     #[derive(Debug, PartialEq)]
@@ -2831,10 +2910,7 @@ mod test {
             0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // content + padding
         ];
 
-        encode_assert_bytes(
-            TestSampleXUnion::U(0xdeadbeef),
-            xunion_u_bytes,
-        )
+        encode_assert_bytes(TestSampleXUnion::U(0xdeadbeef), xunion_u_bytes)
     }
 
     #[test]
@@ -2886,8 +2962,7 @@ mod test {
             .expect("encoding unknown variant failed");
 
         let mut out = TestSampleXUnionExpanded::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut out)
-            .expect("Decoding final output failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding final output failed");
 
         if let TestSampleXUnionExpanded::SomethinElse(handle_out) = out {
             assert_eq!(raw_handle, handle_out.raw_handle());
@@ -2898,11 +2973,7 @@ mod test {
 
     #[test]
     fn encode_decode_transaction_msg() {
-        let header = TransactionHeader {
-            tx_id: 4,
-            flags: 5,
-            ordinal: 6,
-        };
+        let header = TransactionHeader { tx_id: 4, flags: 5, ordinal: 6 };
         let body = "hello".to_string();
 
         let start = &mut TransactionMessage { header, body: &mut body.clone() };
@@ -2910,7 +2981,8 @@ mod test {
         let (buf, handles) = (&mut vec![], &mut vec![]);
         Encoder::encode(buf, handles, start).expect("Encoding failed");
 
-        let (out_header, out_buf) = decode_transaction_header(&**buf).expect("Decoding header failed");
+        let (out_header, out_buf) =
+            decode_transaction_header(&**buf).expect("Decoding header failed");
         assert_eq!(header, out_header);
 
         let mut body_out = String::new();
