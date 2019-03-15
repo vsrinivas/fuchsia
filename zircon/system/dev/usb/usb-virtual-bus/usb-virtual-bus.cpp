@@ -14,6 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/usb/virtualbus/c/fidl.h>
@@ -541,6 +542,10 @@ static zx_driver_ops_t driver_ops = [](){
 
 } // namespace usb_virtual_bus
 
-ZIRCON_DRIVER_BEGIN(usb_virtual_bus, usb_virtual_bus::driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+// clang-format off
+ZIRCON_DRIVER_BEGIN(usb_virtual_bus, usb_virtual_bus::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_USB_VBUS_TEST),
+    BI_MATCH()
 ZIRCON_DRIVER_END(usb_virtual_bus)
+// clang-format on
