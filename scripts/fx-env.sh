@@ -34,23 +34,27 @@ function __patched_path {
 # Add tools to path, removing prior tools directory if any. This also
 # matches the Zircon tools directory added by zset, so add it back too.
 function fx-update-path {
-  local rust_dir="$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n "${BUILDTOOLS_RUST_DIR}/bin")"
-
-  local build_dir="$(fx-config-read; echo "${FUCHSIA_BUILD_DIR}")"
-
-  local tools_dirs="${ZIRCON_TOOLS_DIR}"
-  if [[ -n "${build_dir}" ]]; then
-    tools_dirs="${build_dir}/tools:${tools_dirs}"
-  fi
+  local jiri_bin_dir="${FUCHSIA_DIR}/.jiri_root/bin"
+  export PATH="$(__patched_path "${jiri_bin_dir}" "${jiri_bin_dir}")"
 
   export PATH="$(__patched_path "${FUCHSIA_DIR}/scripts/git" "${FUCHSIA_DIR}/scripts/git")"
 
-  export PATH="$(__patched_path \
-      "${FUCHSIA_OUT_DIR}/[^/]*-[^/]*/tools" \
-      "${tools_dirs}"
-  )"
-
+  local rust_dir="$(source "${FUCHSIA_DIR}/buildtools/vars.sh" && echo -n "${BUILDTOOLS_RUST_DIR}/bin")"
   export PATH="$(__patched_path "${rust_dir}" "${rust_dir}")"
+
+  # XXX(raggi): these can get stale, so this really needs rework. Probably the
+  # only way to handle this more correctly is to wrap fx in a function that
+  # re-runs fx-update-path whenever `fx set` or `fx use` succeed.
+  local fuchsia_tools_dir="$(fx-config-read 2>/dev/null; echo "${FUCHSIA_BUILD_DIR}/tools")"
+  local zircon_tools_dir="$(fx-config-read 2>/dev/null; echo "${ZIRCON_TOOLS_DIR}")"
+
+  local tools_dirs="${zircon_tools_dir}:${fuchsia_tools_dir}"
+  if [[ "${tools_dirs}" != ":" ]]; then
+    export PATH="$(__patched_path \
+        "${FUCHSIA_OUT_DIR}/[^/]*/tools" \
+        "${tools_dirs}"
+    )"
+  fi
 }
 
 ### fx-prompt-info: prints the current configuration for display in a prompt
