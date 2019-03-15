@@ -2,26 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msm8x53-gpio.h"
+#include "qcom-gpio.h"
 
 #include <fbl/auto_call.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
-#include <soc/msm8x53/msm8x53-gpio.h>
 
 namespace {
-constexpr size_t kGpioRegSize = msm8x53::kGpioSize / sizeof(uint32_t); // in 32 bits chunks.
+constexpr size_t kGpioRegSize = 0x00300000 / sizeof(uint32_t); // in 32 bits chunks.
 } // namespace
 
 namespace gpio {
 
-class Msm8x53GpioDeviceTest : public Msm8x53GpioDevice {
+class QcomGpioDeviceTest : public QcomGpioDevice {
 public:
-    explicit Msm8x53GpioDeviceTest(ddk_mock::MockMmioRegRegion& gpio_regs)
-        : Msm8x53GpioDevice(nullptr, gpio_regs.GetMmioBuffer()) {
+    explicit QcomGpioDeviceTest(ddk_mock::MockMmioRegRegion& gpio_regs)
+        : QcomGpioDevice(nullptr, gpio_regs.GetMmioBuffer()) {
         // Fake interrupts.
-        interrupts_ = fbl::Array(new zx::interrupt[msm8x53::kGpioMax], msm8x53::kGpioMax);
+        interrupts_ = fbl::Array(new zx::interrupt[kGpioMax], kGpioMax);
     }
 };
 
@@ -29,7 +28,7 @@ TEST(GpioTest, AltMode) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x22000].ExpectRead(0x00000000).ExpectWrite(0x0000003C); // 4 GpioCfg bits for mode.
     EXPECT_OK(gpio.GpioImplSetAltFunction(0x22, 15));
@@ -40,7 +39,7 @@ TEST(GpioTest, NoPull0) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x00000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x00000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFDFF); // 1 GpioCfg bits for OE.
@@ -53,7 +52,7 @@ TEST(GpioTest, NoPullMid) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x43000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x43000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFDFF); // 1 GpioCfg bits for OE.
@@ -66,7 +65,7 @@ TEST(GpioTest, NoPullHigh) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x7C000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x7C000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFDFF); // 1 GpioCfg bits for OE.
@@ -77,7 +76,7 @@ TEST(GpioTest, NoPullHigh) {
 
 TEST(GpioTest, OutOfRange) {
     ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(unused);
+    QcomGpioDeviceTest gpio(unused);
 
     EXPECT_EQ(gpio.GpioImplConfigIn(kGpioRegSize, GPIO_NO_PULL), ZX_ERR_INVALID_ARGS);
 }
@@ -86,7 +85,7 @@ TEST(GpioTest, PullUp) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x21000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x21000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFDFF); // 1 GpioCfg bits for OE.
@@ -99,7 +98,7 @@ TEST(GpioTest, PullDown) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x20000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x20000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFDFF); // 1 GpioCfg bits for OE.
@@ -112,7 +111,7 @@ TEST(GpioTest, Out) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x19000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x19000].ExpectRead(0x00000000).ExpectWrite(0x00000200); // 1 GpioCfg bits for OE.
@@ -125,7 +124,7 @@ TEST(GpioTest, In) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x44000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFC3); // 4 GpioCfg bits for mode.
     gpios_mock[0x44000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFDFF); // 0 GpioCfg bits for OE.
@@ -148,7 +147,7 @@ TEST(GpioTest, GetInterrupt) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x55008].ExpectRead(0x00000000).ExpectWrite(0x00000008); // int detect to edge low.
     gpios_mock[0x55008].ExpectRead(0x00000000).ExpectWrite(0x00000002); // polarity + for any edge.
@@ -164,7 +163,7 @@ TEST(GpioTest, ReleaseInterrupt) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x66008].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFEF); // disable raw status.
     gpios_mock[0x66008].ExpectRead(0x00000000).ExpectWrite(0x000000E0); // don't route.
@@ -177,7 +176,7 @@ TEST(GpioTest, InterruptSetPolarityEdge) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x77008].ExpectRead(0x00000008);                         // edge low.
     gpios_mock[0x77008].ExpectRead(0x00000002);                         // polarity +;
@@ -197,7 +196,7 @@ TEST(GpioTest, InterruptSetPolarityLevel) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x88008].ExpectRead(0x00000000);                         // level.
     gpios_mock[0x88008].ExpectRead(0x00000002);                         // polarity +;
@@ -217,7 +216,7 @@ TEST(GpioTest, SetDriveStrength2) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x87000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFE3F); // strength to 0x0.
     EXPECT_OK(gpio.GpioImplSetDriveStrength(0x87, 2));
@@ -228,7 +227,7 @@ TEST(GpioTest, SetDriveStrength16) {
     fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
         fbl::Array(new ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(gpios_mock);
+    QcomGpioDeviceTest gpio(gpios_mock);
 
     gpios_mock[0x86000].ExpectRead(0x00000000).ExpectWrite(0x000001C0); // strength to 0x7.
     EXPECT_OK(gpio.GpioImplSetDriveStrength(0x86, 16));
@@ -237,13 +236,13 @@ TEST(GpioTest, SetDriveStrength16) {
 
 TEST(GpioTest, SetDriveStrengthOdd) {
     ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(unused);
+    QcomGpioDeviceTest gpio(unused);
     EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x85, 1));
 }
 
 TEST(GpioTest, SetDriveStrengthLarge) {
     ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
-    Msm8x53GpioDeviceTest gpio(unused);
+    QcomGpioDeviceTest gpio(unused);
     EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x84, 17));
 }
 

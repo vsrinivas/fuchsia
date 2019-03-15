@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <hwreg/bitfields.h>
-#include <soc/msm8x53/msm8x53-hw.h>
 #include <zircon/types.h>
 
 namespace gpio {
+
+constexpr uint32_t kGpioMax = 142;
 
 // GPIO Cfg defines PINMUX for this device
 class GpioCfgReg : public hwreg::RegisterBase<GpioCfgReg, uint32_t> {
@@ -64,7 +65,7 @@ protected:
 class GpioInOutReg : public GpioBitFieldView {
 public:
     explicit GpioInOutReg(mmio_buffer_t& mmio)
-        : GpioBitFieldView(mmio, 4, 0x1000 * msm8x53::kGpioMax) {}
+        : GpioBitFieldView(mmio, 4, 0x1000 * kGpioMax) {}
     bool GetVal(size_t idx) const { return static_cast<bool>(
         ddk::MmioView::GetBit<uint32_t>(0, Idx2Offset(idx))); }
     void SetVal(size_t idx, bool val) const {
@@ -83,7 +84,7 @@ enum class Mode {
 class GpioIntCfgReg : public GpioBitFieldView {
 public:
     explicit GpioIntCfgReg(mmio_buffer_t& mmio)
-        : GpioBitFieldView(mmio, 8, 0x1000 * msm8x53::kGpioMax) {}
+        : GpioBitFieldView(mmio, 8, 0x1000 * kGpioMax) {}
 
     void EnableCombined(size_t idx, bool val) const {
         uint32_t target_proc = 0x7; // NONE. Don't route to any processor subsystem.
@@ -141,7 +142,7 @@ protected:
 
 public:
     explicit TlmmDirConnIntReg(mmio_buffer_t& mmio)
-        : GpioBitFieldView(mmio, 0x102000, 4 * msm8x53::kGpioMax) {}
+        : GpioBitFieldView(mmio, 0x102000, 4 * kGpioMax) {}
     void Enable(size_t gpio_n, size_t dir_int_n) const {
         ModifyBits<uint32_t>(static_cast<uint32_t>(gpio_n), 0, 8, Idx2Offset(dir_int_n));
     }
@@ -150,7 +151,7 @@ public:
 class TlmmGpioIntrStatusReg : public GpioBitFieldView {
 public:
     explicit TlmmGpioIntrStatusReg(mmio_buffer_t& mmio)
-        : GpioBitFieldView(mmio, 0xC, 0x1000 * msm8x53::kGpioMax) {}
+        : GpioBitFieldView(mmio, 0xC, 0x1000 * kGpioMax) {}
     bool Status(size_t gpio_n) const {
         return static_cast<bool>(GetBit<uint32_t>(0, Idx2Offset(gpio_n)));
     }

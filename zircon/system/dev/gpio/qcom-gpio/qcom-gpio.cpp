@@ -7,12 +7,11 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <fbl/array.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <fbl/unique_ptr.h>
-#include <soc/msm8x53/msm8x53-hw.h>
 
-#include "msm8x53-gpio.h"
+#include "qcom-gpio.h"
 
 namespace {
 
@@ -22,7 +21,7 @@ uint64_t kPortKeyIrqMsg = 0x00;
 
 namespace gpio {
 
-int Msm8x53GpioDevice::Thread() {
+int QcomGpioDevice::Thread() {
     while (1) {
         zx_port_packet_t packet;
         auto status = port_.wait(zx::time::infinite(), &packet);
@@ -32,7 +31,7 @@ int Msm8x53GpioDevice::Thread() {
         }
         zxlogf(TRACE, "%s msg on port key %lu\n", __func__, packet.key);
         size_t index = 0;
-        status = enabled_ints_cache_.Find(true, 0, msm8x53::kGpioMax, 1, &index);
+        status = enabled_ints_cache_.Find(true, 0, kGpioMax, 1, &index);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s no interrupt found in cache %d\n", __func__, status);
         }
@@ -47,7 +46,7 @@ int Msm8x53GpioDevice::Thread() {
             } else {
                 zxlogf(ERROR, "%s interrupt %lu not enabled in reg\n", __func__, index);
             }
-            status = enabled_ints_cache_.Find(true, index + 1, msm8x53::kGpioMax, 1, &index);
+            status = enabled_ints_cache_.Find(true, index + 1, kGpioMax, 1, &index);
             if (status != ZX_ERR_NO_RESOURCES) { // not just not-found in cache.
                 zxlogf(ERROR, "%s error in reading from cache %d\n", __func__, status);
             }
@@ -56,8 +55,8 @@ int Msm8x53GpioDevice::Thread() {
     }
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     GpioCfgReg::SetMode(&gpio_mmio_, index, GpioCfgReg::kModeGpio);
@@ -75,8 +74,8 @@ zx_status_t Msm8x53GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) 
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     GpioCfgReg::SetMode(&gpio_mmio_, index, GpioCfgReg::kModeGpio);
@@ -84,8 +83,8 @@ zx_status_t Msm8x53GpioDevice::GpioImplConfigOut(uint32_t index, uint8_t initial
     return GpioImplWrite(index, initial_value);
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t function) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t function) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (function >= GpioCfgReg::kModeMax) {
@@ -95,8 +94,8 @@ zx_status_t Msm8x53GpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t f
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplSetDriveStrength(uint32_t index, uint8_t mA) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplSetDriveStrength(uint32_t index, uint8_t mA) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     uint8_t supported_mAs[] = {2, 4, 6, 8, 10, 12, 14, 16};
@@ -108,25 +107,25 @@ zx_status_t Msm8x53GpioDevice::GpioImplSetDriveStrength(uint32_t index, uint8_t 
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplRead(uint32_t index, uint8_t* out_value) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplRead(uint32_t index, uint8_t* out_value) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     *out_value = static_cast<uint8_t>(in_out_.GetVal(index));
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplWrite(uint32_t index, uint8_t value) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplWrite(uint32_t index, uint8_t value) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     in_out_.SetVal(index, value);
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
-                                                    zx::interrupt* out_irq) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
+                                                 zx::interrupt* out_irq) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -163,8 +162,8 @@ zx_status_t Msm8x53GpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t fla
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplReleaseInterrupt(uint32_t index) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplReleaseInterrupt(uint32_t index) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     interrupts_[index].destroy();
@@ -175,29 +174,29 @@ zx_status_t Msm8x53GpioDevice::GpioImplReleaseInterrupt(uint32_t index) {
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::GpioImplSetPolarity(uint32_t index, uint32_t polarity) {
-    if (index >= msm8x53::kGpioMax) {
+zx_status_t QcomGpioDevice::GpioImplSetPolarity(uint32_t index, uint32_t polarity) {
+    if (index >= kGpioMax) {
         return ZX_ERR_INVALID_ARGS;
     }
     int_cfg_.SetPolarity(index, static_cast<bool>(polarity));
     return ZX_OK;
 }
 
-void Msm8x53GpioDevice::ShutDown() {
+void QcomGpioDevice::ShutDown() {
     combined_int_.destroy();
     thrd_join(thread_, NULL);
 }
 
-void Msm8x53GpioDevice::DdkUnbind() {
+void QcomGpioDevice::DdkUnbind() {
     ShutDown();
     DdkRemove();
 }
 
-void Msm8x53GpioDevice::DdkRelease() {
+void QcomGpioDevice::DdkRelease() {
     delete this;
 }
 
-zx_status_t Msm8x53GpioDevice::Bind() {
+zx_status_t QcomGpioDevice::Bind() {
     auto status = pdev_.GetInterrupt(0, &combined_int_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s GetInterrupt failed %d\n", __func__, status);
@@ -217,18 +216,18 @@ zx_status_t Msm8x53GpioDevice::Bind() {
     }
 
     fbl::AllocChecker ac;
-    interrupts_ = fbl::Array(new (&ac) zx::interrupt[msm8x53::kGpioMax], msm8x53::kGpioMax);
+    interrupts_ = fbl::Array(new (&ac) zx::interrupt[kGpioMax], kGpioMax);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    auto cb = [](void* arg) -> int { return reinterpret_cast<Msm8x53GpioDevice*>(arg)->Thread(); };
-    int rc = thrd_create_with_name(&thread_, cb, this, "msm8x53-gpio-thread");
+    auto cb = [](void* arg) -> int { return reinterpret_cast<QcomGpioDevice*>(arg)->Thread(); };
+    int rc = thrd_create_with_name(&thread_, cb, this, "qcom-gpio-thread");
     if (rc != thrd_success) {
         return ZX_ERR_INTERNAL;
     }
 
-    status = DdkAdd("msm8x53-gpio");
+    status = DdkAdd("qcom-gpio");
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAdd failed %d\n", __func__, status);
         ShutDown();
@@ -237,7 +236,7 @@ zx_status_t Msm8x53GpioDevice::Bind() {
     return ZX_OK;
 }
 
-zx_status_t Msm8x53GpioDevice::Init() {
+zx_status_t QcomGpioDevice::Init() {
     pbus_protocol_t pbus;
     auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
@@ -256,10 +255,10 @@ zx_status_t Msm8x53GpioDevice::Init() {
         ShutDown();
         return status;
     }
-    return enabled_ints_cache_.Reset(msm8x53::kGpioMax); // Clear and resize.
+    return enabled_ints_cache_.Reset(kGpioMax); // Clear and resize.
 }
 
-zx_status_t Msm8x53GpioDevice::Create(zx_device_t* parent) {
+zx_status_t QcomGpioDevice::Create(zx_device_t* parent) {
     pdev_protocol_t pdev;
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
@@ -275,9 +274,9 @@ zx_status_t Msm8x53GpioDevice::Create(zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    auto dev = fbl::make_unique_checked<gpio::Msm8x53GpioDevice>(&ac, parent, gpio_mmio);
+    auto dev = fbl::make_unique_checked<gpio::QcomGpioDevice>(&ac, parent, gpio_mmio);
     if (!ac.check()) {
-        zxlogf(ERROR, "msm8x53_gpio_bind: ZX_ERR_NO_MEMORY\n");
+        zxlogf(ERROR, "qcom_gpio_bind: ZX_ERR_NO_MEMORY\n");
         return ZX_ERR_NO_MEMORY;
     }
     status = dev->Bind();
@@ -290,8 +289,8 @@ zx_status_t Msm8x53GpioDevice::Create(zx_device_t* parent) {
     return ptr->Init();
 }
 
-zx_status_t msm8x53_gpio_bind(void* ctx, zx_device_t* parent) {
-    return gpio::Msm8x53GpioDevice::Create(parent);
+zx_status_t qcom_gpio_bind(void* ctx, zx_device_t* parent) {
+    return gpio::QcomGpioDevice::Create(parent);
 }
 
 } // namespace gpio

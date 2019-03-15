@@ -22,19 +22,19 @@
 #include <lib/zx/port.h>
 #include <zircon/types.h>
 
-#include "msm8x53-gpio-regs.h"
+#include "qcom-gpio-regs.h"
 
 namespace gpio {
 
-class Msm8x53GpioDevice;
-using DeviceType = ddk::Device<Msm8x53GpioDevice, ddk::Unbindable>;
+class QcomGpioDevice;
+using DeviceType = ddk::Device<QcomGpioDevice, ddk::Unbindable>;
 
-class Msm8x53GpioDevice : public DeviceType,
-                          public ddk::GpioImplProtocol<Msm8x53GpioDevice, ddk::base_protocol> {
+class QcomGpioDevice : public DeviceType,
+                       public ddk::GpioImplProtocol<QcomGpioDevice, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 
-    explicit Msm8x53GpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio)
+    explicit QcomGpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio)
         : DeviceType(parent),
           gpio_mmio_(gpio_mmio),
           in_out_(gpio_mmio),
@@ -77,7 +77,7 @@ private:
     thrd_t thread_;
     ddk::PDev pdev_;
     // Cache for faster traversal finding triggered interrupts.
-    bitmap::RawBitmapGeneric<bitmap::FixedStorage<msm8x53::kGpioMax>> enabled_ints_cache_;
+    bitmap::RawBitmapGeneric<bitmap::DefaultStorage> enabled_ints_cache_;
     zx::interrupt combined_int_;
 };
 } // namespace gpio

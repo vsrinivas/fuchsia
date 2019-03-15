@@ -2,17 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("msm8x53") {
+driver("qcom-gpio") {
   sources = [
     "binding.cpp",
-    "msm8x53-gpio.cpp",
+    "qcom-gpio.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-gpioimpl",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -22,10 +21,11 @@ driver("msm8x53") {
   ]
 }
 
-test("msm8x53-gpio") {
+test("qcom-gpio-test") {
+  output_name = "qcom-gpio-test"
   sources = [
-    "msm8x53-gpio-test.cpp",
-    "msm8x53-gpio.cpp",
+    "qcom-gpio-test.cpp",
+    "qcom-gpio.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-gpioimpl",
@@ -33,7 +33,6 @@ test("msm8x53-gpio") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-mmio-reg",
-    "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

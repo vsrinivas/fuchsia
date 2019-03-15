@@ -6,8 +6,6 @@
 
 namespace msm8x53 {
 
-constexpr uint32_t kGpioMax = 142;
-
 // IRQ Table.
 // kIrqCombined is called "summary" in the docs (as opposed to the 8 dedicted "direct" interrupts).
 constexpr uint32_t kIrqCombined = 240;
