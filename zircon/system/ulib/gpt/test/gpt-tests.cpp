@@ -23,9 +23,9 @@ using gpt::KnownGuid;
 constexpr guid_t kGuid = {0x0, 0x1, 0x2, {0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa}};
 constexpr uint64_t kHoleSize = 10;
 
-// generate a random number between [1, max]
-uint64_t random_non_zero_length(uint64_t max) {
-    return (rand_r(&gRandSeed) % max) + 1;
+// generate a random number between [0, max)
+uint64_t random_length(uint64_t max) {
+    return (rand_r(&gRandSeed) % max);
 }
 
 constexpr uint64_t partition_size(const gpt_partition_t* p) {
@@ -131,7 +131,7 @@ Partitions::Partitions(uint32_t count, uint64_t first, uint64_t last) {
 
     memset(partitions_, 0, sizeof(partitions_));
     for (uint32_t i = 0; i < partition_count_; i++) {
-        part_last = part_first + random_non_zero_length(part_max_len);
+        part_last = part_first + random_length(part_max_len);
         guid.data1 = i;
         memcpy(partitions_[i].type, &guid, sizeof(partitions_[i].type));
         memcpy(partitions_[i].guid, &guid, sizeof(partitions_[i].type));
@@ -142,7 +142,11 @@ Partitions::Partitions(uint32_t count, uint64_t first, uint64_t last) {
         snprintf(reinterpret_cast<char*>(partitions_[i].name), sizeof(partitions_[i].name),
                  "%u_part", i);
 
+        // Set next first block
         part_first += part_max_len;
+
+        // Previous last block should be less than next first block
+        ZX_ASSERT(part_last < part_first);
     }
 }
 

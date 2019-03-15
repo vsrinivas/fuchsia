@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
             continue;
         }
     }
+    fprintf(stdout, "Starting test with %u\n", gRandSeed);
     srand(gRandSeed);
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
