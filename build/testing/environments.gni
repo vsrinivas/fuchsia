@@ -2,13 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # TODO(IN-819): Delete after bring-up.
-  # This can be overridden to ensure that only select builders run linux/mac
-  # tests in their own shards.
-  linux_and_mac_test_label = ""
-}
-
 ### Individual test environments ###
 
 qemu_env = {
@@ -44,7 +37,6 @@ linux_env = {
     os = "Linux"
     cpu = current_cpu
   }
-  label = linux_and_mac_test_label
 }
 
 mac_env = {
@@ -52,7 +44,6 @@ mac_env = {
     os = "Mac"
     cpu = current_cpu
   }
-  label = linux_and_mac_test_label
 }
 
 ### Select environment lists ###

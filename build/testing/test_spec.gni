@@ -229,13 +229,6 @@ template("test_spec") {
       assert(defined(env.label) && env.label == "vim2",
              "vim2s may not yet be targeted.")
     }
-
-    # TODO(IN-819): Delete this block once Linux VMs and Macs are ready to be
-    # targeted.
-    if (defined(dims.os)) {
-      assert(defined(env.label) && env.label == linux_and_mac_test_label,
-             "Linux VMs or Macs may not yet be targeted for tests.")
-    }
   }
 
   group(target_name) {
