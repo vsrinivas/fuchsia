@@ -310,32 +310,32 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     return ZX_OK;
 }
 
-zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> state) {
+zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
     // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
-    ZX_DEBUG_ASSERT(state->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
-    state->Resolve();
-    return writeback_->Enqueue(state->RemoveWork());
+    ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
+    transaction->Resolve();
+    return writeback_->Enqueue(transaction->RemoveWork());
 #else
-    return state->GetWork()->Complete();
+    return transaction->GetWork()->Complete();
 #endif
 }
 
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
-    fbl::unique_ptr<Transaction> state;
-    zx_status_t status = BeginTransaction(0, 0, &state);
+    fbl::unique_ptr<Transaction> transaction;
+    zx_status_t status = BeginTransaction(0, 0, &transaction);
 
     if (status != ZX_OK) {
         closure(status);
         return;
     }
 
-    state->GetWork()->SetSyncCallback(std::move(closure));
+    transaction->GetWork()->SetSyncCallback(std::move(closure));
 
     // This may return an error, but it doesn't matter - the closure will be called anyway.
-    status = CommitTransaction(std::move(state));
+    status = CommitTransaction(std::move(transaction));
 }
 #endif
 
@@ -540,8 +540,8 @@ zx_status_t Minfs::PurgeUnlinked() {
 
     // Loop through the unlinked list and free all allocated resources.
     while (next_ino != 0) {
-        fbl::unique_ptr<Transaction> state;
-        zx_status_t status = BeginTransaction(0, 0, &state);
+        fbl::unique_ptr<Transaction> transaction;
+        zx_status_t status = BeginTransaction(0, 0, &transaction);
         if (status != ZX_OK) {
             return status;
         }
@@ -554,7 +554,7 @@ zx_status_t Minfs::PurgeUnlinked() {
         ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == last_ino);
         ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
 
-        if ((status = InoFree(vn.get(), state->GetWork())) != ZX_OK) {
+        if ((status = InoFree(vn.get(), transaction->GetWork())) != ZX_OK) {
             return status;
         }
 
@@ -568,8 +568,8 @@ zx_status_t Minfs::PurgeUnlinked() {
             sb_->MutableInfo()->unlinked_tail = 0;
         }
 
-        sb_->Write(state->GetWork());
-        status = CommitTransaction(std::move(state));
+        sb_->Write(transaction->GetWork());
+        status = CommitTransaction(std::move(transaction));
         if (status != ZX_OK) {
             return status;
         }
@@ -633,14 +633,14 @@ fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookupInternal(uint32_t ino) {
 #endif
 }
 
-void Minfs::InoNew(Transaction* state, const Inode* inode, ino_t* out_ino) {
-    size_t allocated_ino = state->AllocateInode();
+void Minfs::InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino) {
+    size_t allocated_ino = transaction->AllocateInode();
     *out_ino = static_cast<ino_t>(allocated_ino);
     // Write the inode back to storage.
-    InodeUpdate(state->GetWork(), *out_ino, inode);
+    InodeUpdate(transaction->GetWork(), *out_ino, inode);
 }
 
-zx_status_t Minfs::VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
+zx_status_t Minfs::VnodeNew(Transaction* transaction, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
     TRACE_DURATION("minfs", "Minfs::VnodeNew");
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return ZX_ERR_INVALID_ARGS;
@@ -653,7 +653,7 @@ zx_status_t Minfs::VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, ui
 
     // Allocate the on-disk inode
     ino_t ino;
-    InoNew(state, vn->GetInode(), &ino);
+    InoNew(transaction, vn->GetInode(), &ino);
     vn->SetIno(ino);
     VnodeInsert(vn.get());
     *out = std::move(vn);
@@ -722,27 +722,27 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 }
 
 // Allocate a new data block from the block bitmap.
-void Minfs::BlockNew(Transaction* state, blk_t* out_bno) {
-    size_t allocated_bno = state->AllocateBlock();
+void Minfs::BlockNew(Transaction* transaction, blk_t* out_bno) {
+    size_t allocated_bno = transaction->AllocateBlock();
     *out_bno = static_cast<blk_t>(allocated_bno);
     ValidateBno(*out_bno);
 }
 
 #ifdef __Fuchsia__
-void Minfs::BlockSwap(Transaction* state, blk_t in_bno, blk_t* out_bno) {
+void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
     if (in_bno > 0) {
         ValidateBno(in_bno);
     }
 
-    size_t allocated_bno = state->SwapBlock(in_bno);
+    size_t allocated_bno = transaction->SwapBlock(in_bno);
     *out_bno = static_cast<blk_t>(allocated_bno);
     ValidateBno(*out_bno);
 }
 #endif
 
-void Minfs::BlockFree(WriteTxn* txn, blk_t bno) {
+void Minfs::BlockFree(WriteTxn* transaction, blk_t bno) {
     ValidateBno(bno);
-    block_allocator_->Free(txn, bno);
+    block_allocator_->Free(transaction, bno);
 }
 
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
@@ -794,7 +794,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
     const blk_t ino_start_block = offsets.InoStartBlock();
 #endif
 
-    fs::ReadTxn txn(bc.get());
+    fs::ReadTxn transaction(bc.get());
 
     // Block Bitmap allocator initialization.
     AllocatorFvmMetadata block_allocator_fvm = AllocatorFvmMetadata(
@@ -809,7 +809,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                               std::move(block_allocator_meta)));
 
     fbl::unique_ptr<Allocator> block_allocator;
-    if ((status = Allocator::Create(&txn, std::move(storage), &block_allocator)) != ZX_OK) {
+    if ((status = Allocator::Create(&transaction, std::move(storage), &block_allocator)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize block allocator: %d\n", status);
         return status;
     }
@@ -823,13 +823,13 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           &sb->MutableInfo()->inode_count);
 
     fbl::unique_ptr<InodeManager> inodes;
-    if ((status = InodeManager::Create(bc.get(), sb.get(), &txn, std::move(inode_allocator_meta),
+    if ((status = InodeManager::Create(bc.get(), sb.get(), &transaction, std::move(inode_allocator_meta),
                                        ino_start_block, info->inode_count, &inodes)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
         return status;
     }
 
-    if ((status = txn.Transact()) != ZX_OK) {
+    if ((status = transaction.Transact()) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to read initial blocks: %d\n", status);
         return status;
     }

@@ -154,7 +154,7 @@ public:
     zx_status_t VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino);
 
     // instantiate a vnode with a new inode
-    zx_status_t VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
+    zx_status_t VnodeNew(Transaction* transaction, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
 
     // Insert, lookup, and remove vnode from hash map.
     void VnodeInsert(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
@@ -162,14 +162,14 @@ public:
     void VnodeRelease(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
 
     // Allocate a new data block.
-    void BlockNew(Transaction* state, blk_t* out_bno);
+    void BlockNew(Transaction* transaction, blk_t* out_bno);
 
     // Mark |in_bno| for de-allocation (if it is > 0), and return a new block |*out_bno|.
     // The swap will not be persisted until the transaction is commited.
-    void BlockSwap(Transaction* state, blk_t in_bno, blk_t* out_bno);
+    void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
 
     // Free a data block.
-    void BlockFree(WriteTxn* txn, blk_t bno);
+    void BlockFree(WriteTxn* transaction, blk_t bno);
 
     // Free ino in inode bitmap, release all blocks held by inode.
     zx_status_t InoFree(VnodeMinfs* vn, WritebackWork* wb);
@@ -185,8 +185,8 @@ public:
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
-    void InodeUpdate(WriteTxn* txn, ino_t ino, const Inode* inode) {
-        inodes_->Update(txn, ino, inode);
+    void InodeUpdate(WriteTxn* transaction, ino_t ino, const Inode* inode) {
+        inodes_->Update(transaction, ino, inode);
     }
 
     // Reads an inode from the inode table into memory.
@@ -200,9 +200,9 @@ public:
     }
 
     zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                                 fbl::unique_ptr<Transaction>* out) __WARN_UNUSED_RESULT;
+                                 fbl::unique_ptr<Transaction>* transaction) __WARN_UNUSED_RESULT;
 
-    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> state) __WARN_UNUSED_RESULT;
+    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) __WARN_UNUSED_RESULT;
 
 #ifdef __Fuchsia__
     // Returns the capacity of the writeback buffer, in blocks.
@@ -297,10 +297,10 @@ private:
     fbl::RefPtr<VnodeMinfs> VnodeLookupInternal(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
 
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
-    void InoNew(Transaction* state, const Inode* inode, ino_t* out_ino);
+    void InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino);
 
     // Enqueues an update to the super block.
-    void WriteInfo(WriteTxn* txn);
+    void WriteInfo(WriteTxn* transaction);
 
     // Find an unallocated and unreserved block in the block bitmap starting from block |start|
     zx_status_t FindBlock(size_t start, size_t* blkno_out);
@@ -350,7 +350,7 @@ struct DirArgs {
     ino_t ino;
     uint32_t type;
     uint32_t reclen;
-    Transaction* state;
+    Transaction* transaction;
     DirectoryOffset offs;
 };
 
@@ -397,9 +397,9 @@ public:
 
 #ifdef __Fuchsia__
     // Minfs FIDL interface.
-    zx_status_t GetMetrics(fidl_txn_t* txn);
-    zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* txn);
-    zx_status_t GetAllocatedRegions(fidl_txn_t* txn) const;
+    zx_status_t GetMetrics(fidl_txn_t* transaction);
+    zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* transaction);
+    zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) const;
 #endif
 
     // TODO(rvargas): Make private.
@@ -442,11 +442,11 @@ private:
     // Internal functions
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
     zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
-    zx_status_t WriteInternal(Transaction* state, const void* data, size_t len,
+    zx_status_t WriteInternal(Transaction* transaction, const void* data, size_t len,
                               size_t off, size_t* actual);
-    zx_status_t WriteExactInternal(Transaction* state, const void* data, size_t len,
+    zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
                                    size_t off);
-    zx_status_t TruncateInternal(Transaction* state, size_t len);
+    zx_status_t TruncateInternal(Transaction* transaction, size_t len);
     // Lookup which can traverse '..'
     zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
@@ -479,7 +479,7 @@ private:
     // the same |args| that were passed into DirentCallbackFindSpace.
     zx_status_t AppendDirent(DirArgs* args);
 
-    zx_status_t UnlinkChild(Transaction* state, fbl::RefPtr<VnodeMinfs> child,
+    zx_status_t UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMinfs> child,
                             Dirent* de, DirectoryOffset* offs);
     // Remove the link to a vnode (referring to inodes exclusively).
     // Has no impact on direntries (or parent inode).
@@ -621,25 +621,25 @@ private:
     // Allocate an indirect or doubly indirect block at |offset| within the indirect vmo and clear
     // the in-memory block array
     // Assumes that vmo_indirect_ has already been initialized
-    void AllocateIndirect(Transaction* state, blk_t index, IndirectArgs* args);
+    void AllocateIndirect(Transaction* transaction, blk_t index, IndirectArgs* args);
 
     // Perform operation |op| on blocks as specified by |params|
     // The BlockOp methods should not be called directly
     // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
-    zx_status_t ApplyOperation(Transaction* state, BlockOp op, BlockOpArgs* params);
-    zx_status_t BlockOpDirect(Transaction* state, DirectArgs* params);
-    zx_status_t BlockOpIndirect(Transaction* state, IndirectArgs* params);
-    zx_status_t BlockOpDindirect(Transaction* state, DindirectArgs* params);
+    zx_status_t ApplyOperation(Transaction* transaction, BlockOp op, BlockOpArgs* params);
+    zx_status_t BlockOpDirect(Transaction* transaction, DirectArgs* params);
+    zx_status_t BlockOpIndirect(Transaction* transaction, IndirectArgs* params);
+    zx_status_t BlockOpDindirect(Transaction* transaction, DindirectArgs* params);
 
     // Get the disk block 'bno' corresponding to the 'n' block
-    // If 'txn' is non-null, new blocks are allocated for all un-allocated bnos.
+    // If 'transaction' is non-null, new blocks are allocated for all un-allocated bnos.
     // This can be extended to retrieve multiple contiguous blocks in one call
-    zx_status_t BlockGet(Transaction* state, blk_t n, blk_t* bno);
+    zx_status_t BlockGet(Transaction* transaction, blk_t n, blk_t* bno);
     // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
     // This can be extended to return indices of deleted bnos, or to delete a specific number of
     // bnos
-    zx_status_t BlocksShrink(Transaction* state, blk_t start);
+    zx_status_t BlocksShrink(Transaction* transaction, blk_t start);
 
     // Update the vnode's inode and write it to disk.
     void InodeSync(WritebackWork* wb, uint32_t flags);

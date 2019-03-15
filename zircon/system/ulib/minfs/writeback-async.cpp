@@ -43,13 +43,13 @@ bool Buffer::IsSpaceAvailable(blk_t blocks) const {
     // TODO(planders): Similar to minfs, make sure that we either have a fallback mechanism for
     // operations which are too large to be fully contained by the buffer, or that the
     // worst-case operation will always fit within the buffer.
-    ZX_ASSERT_MSG(blocks <= capacity_, "Requested txn (%u blocks) larger than buffer", blocks);
+    ZX_ASSERT_MSG(blocks <= capacity_, "Requested transaction (%u blocks) larger than buffer", blocks);
     return length_ + blocks <= capacity_;
 }
 
-void Buffer::CopyTransaction(WriteTxn* txn) {
-    ZX_DEBUG_ASSERT(!txn->IsBuffered());
-    auto& reqs = txn->Requests();
+void Buffer::CopyTransaction(WriteTxn* transaction) {
+    ZX_DEBUG_ASSERT(!transaction->IsBuffered());
+    auto& reqs = transaction->Requests();
     blk_t first_block = (start_ + length_) % capacity_;
 
     for (size_t i = 0; i < reqs.size(); i++) {
@@ -127,16 +127,16 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
         ZX_DEBUG_ASSERT(init_len == total_len);
     }
 
-    txn->SetBuffer(vmoid_, first_block);
+    transaction->SetBuffer(vmoid_, first_block);
 }
 
-bool Buffer::VerifyTransaction(WriteTxn* txn) const {
-    if (txn->CheckBuffer(vmoid_)) {
-        if (txn->BlockCount() > 0) {
+bool Buffer::VerifyTransaction(WriteTxn* transaction) const {
+    if (transaction->CheckBuffer(vmoid_)) {
+        if (transaction->BlockCount() > 0) {
             // If the work belongs to the WritebackQueue, verify that it matches up with the
             // buffer's start/len.
-            ZX_ASSERT(txn->BlockStart() == start_);
-            ZX_ASSERT(txn->BlockCount() <= length_);
+            ZX_ASSERT(transaction->BlockStart() == start_);
+            ZX_ASSERT(transaction->BlockCount() <= length_);
         }
 
         return true;
