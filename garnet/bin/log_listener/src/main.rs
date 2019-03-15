@@ -40,82 +40,107 @@ static CYAN: &str = "\x1B[36;1m";
 
 struct Decorator {
     lines: HashMap<String, Color>,
-    words: HashMap<String, Color>,
     is_active: bool,
+    regex_str: String,
+    decorator_regex_group: Vec<DecoratorRegexGroup>,
+    re: Option<Regex>,
+}
+
+struct DecoratorRegexGroup {
+    pub grp: String,
+    pub color: Color,
 }
 
 impl Decorator {
     pub fn new() -> Self {
-        Decorator { lines: HashMap::new(), words: HashMap::new(), is_active: false }
-    }
-
-    pub fn add_line(&mut self, keyword: String, color: Color) {
-        self.lines.insert(keyword, color);
-    }
-
-    pub fn add_word(&mut self, keyword: String, color: Color) {
-        self.words.insert(keyword, color);
-    }
-
-    pub fn activate(&mut self) {
-        self.is_active = true;
-    }
-
-    #[allow(dead_code)]
-    pub fn deactivate(&mut self) {
-        self.is_active = false;
-    }
-
-    /// If line contains a keyword, color the entire line
-    fn colorize_line(&self, line: String, keyword: &str, color: Color) -> String {
-        if line.contains(keyword) {
-            // format!("{}{}{}", color, line, ANSI_RESET)
-            [color, line.as_str(), ANSI_RESET].concat()
-        } else {
-            line
+        Decorator {
+            lines: HashMap::new(),
+            is_active: false,
+            regex_str: String::default(),
+            decorator_regex_group: Vec::new(),
+            re: None,
         }
     }
 
-    fn colorize_word(
-        &self,
-        line: String,
-        keyword: &str,
-        color: Color,
-        encompassing_color: Color,
-    ) -> String {
-        let expr = format!(r#"(?i)(?P<k>(?:{}))"#, keyword);
-        let re = Regex::new(expr.as_str()).expect("should create regex");
-
-        re.replace_all(line.as_str(), |caps: &Captures| {
-            let keyword = match caps.name("k") {
-                Some(n) => n.as_str(),
-                None => "",
-            };
-            // format!("{}{}{}{}", color, keyword, ANSI_RESET, encompassing_color)
-            [color, keyword, ANSI_RESET, encompassing_color].concat()
-        })
-        .to_string()
+    fn fail_if_active(&self) {
+        if self.is_active {
+            panic!("already active, cannot modify");
+        }
     }
 
-    pub fn decorate(&self, line: String) -> String {
+    pub fn add_line(&mut self, keyword: String, color: Color) {
+        self.fail_if_active();
+        self.lines.insert(keyword, color);
+    }
+
+    pub fn add_word(&mut self, keyword_regex: String, color: Color) {
+        self.fail_if_active();
+        let grp_no = self.decorator_regex_group.len();
+        let grp = format!("g{}", grp_no);
+        if self.regex_str.len() == 0 {
+            self.regex_str.push_str(&format!(r#"(?i)(?P<{}>(?:{}))"#, grp, keyword_regex));
+        } else {
+            self.regex_str.push_str(&format!(r#"|(?P<{}>(?:{}))"#, grp, keyword_regex));
+        }
+        let decorator_regex_group = DecoratorRegexGroup { grp, color };
+        self.decorator_regex_group.push(decorator_regex_group);
+    }
+
+    pub fn activate(&mut self) {
+        self.re = Some(
+            Regex::new(self.regex_str.as_str())
+                .expect(&format!("should create regex for {}", self.regex_str)),
+        );
+        self.is_active = true;
+    }
+
+    /// If line contains a keyword, color the entire line
+    fn colorize_line(&self, line: String, keyword: &str, color: &Color) -> (String, bool) {
+        if line.contains(keyword) {
+            ([color, line.as_str(), ANSI_RESET].concat(), true)
+        } else {
+            (line, false)
+        }
+    }
+
+    fn colorize_words(&self, line: String, encompassing_color: Color) -> String {
+        match &self.re {
+            None => line,
+            Some(regex) => regex
+                .replace_all(line.as_str(), |caps: &Captures| {
+                    for g in &self.decorator_regex_group {
+                        let grp_match = caps.name(&g.grp);
+                        match grp_match {
+                            None => continue,
+                            Some(keyword) => {
+                                let color = &g.color;
+                                return [color, keyword.as_str(), ANSI_RESET, encompassing_color]
+                                    .concat();
+                            }
+                        }
+                    }
+                    panic!("Code should not reach here. please file a bug");
+                })
+                .to_string(),
+        }
+    }
+
+    pub fn decorate(&self, mut line: String) -> String {
         // TODO(porce): Support styles such as bold, italic, blink
         if !self.is_active {
             return line;
         }
-
-        let mut colored = line.clone();
         let mut encompassing_color = "";
         for (keyword, color) in &self.lines {
-            colored = self.colorize_line(colored, keyword, &color);
-            if line.contains(keyword.as_str()) {
+            let ret = self.colorize_line(line, keyword, &color);
+            line = ret.0;
+            if ret.1 {
                 encompassing_color = color;
+                break;
             }
         }
-        // TODO(porce): Proper handling of nested coloring.
-        for (keyword, color) in &self.words {
-            colored = self.colorize_word(colored, keyword, &color, &encompassing_color);
-        }
-        colored
+
+        self.colorize_words(line, &encompassing_color)
     }
 }
 
@@ -577,16 +602,15 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
     };
 
     let mut d = Decorator::new();
-    d.add_line("welcome to Zircon".to_string(), WHITE_ON_RED);
-    d.add_line("dm reboot".to_string(), WHITE_ON_RED);
-    d.add_line(" bt#".to_string(), WHITE_ON_RED);
-    d.add_line("OOM:".to_string(), WHITE_ON_RED);
-    d.add_word("error|err".to_string(), RED);
-    d.add_word("info".to_string(), YELLOW);
-    d.add_word("unknown".to_string(), GREEN);
-    d.add_word("warning|warn".to_string(), BLUE);
-
     if local_options.is_pretty {
+        d.add_line("welcome to Zircon".to_string(), WHITE_ON_RED);
+        d.add_line("dm reboot".to_string(), WHITE_ON_RED);
+        d.add_line(" bt#".to_string(), WHITE_ON_RED);
+        d.add_line("OOM:".to_string(), WHITE_ON_RED);
+        d.add_word("error|err".to_string(), RED);
+        d.add_word("info".to_string(), YELLOW);
+        d.add_word("unknown".to_string(), GREEN);
+        d.add_word("warning|warn".to_string(), BLUE);
         d.activate();
     }
 
