@@ -32,6 +32,8 @@ public:
                                                 sync_completion_t frame_processing_signal);
     ~StatsManager();
 
+    void SensorStartStreaming() { sensor_->StartStreaming(); }
+
 private:
     int FrameProcessingThread();
 

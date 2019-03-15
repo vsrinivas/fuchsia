@@ -414,6 +414,7 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_protocol_t s
     }
 
     isp_device->InitIsp();
+    //isp_device->statsMgr_->SensorStartStreaming();
 
     status = isp_device->DdkAdd("arm-isp");
     if (status != ZX_OK) {

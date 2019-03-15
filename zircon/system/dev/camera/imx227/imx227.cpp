@@ -289,6 +289,7 @@ zx_status_t Imx227Device::IspCallbacksSetMode(uint8_t mode) {
 }
 
 void Imx227Device::IspCallbacksStartStreaming() {
+    zxlogf(INFO, "%s Camera Sensor Start Streaming\n",__func__);
     ctx_.streaming_flag = 1;
     WriteReg(0x0100, 0x01);
 }
