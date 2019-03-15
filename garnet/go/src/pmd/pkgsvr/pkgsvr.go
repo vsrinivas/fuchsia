@@ -7,9 +7,9 @@ package pkgsvr
 import (
 	"flag"
 	"log"
-
 	"syscall/zx"
-	"syscall/zx/mxruntime"
+
+	"app/context"
 
 	"fuchsia.googlesource.com/pmd/amberer"
 	"fuchsia.googlesource.com/pmd/pkgfs"
@@ -34,7 +34,7 @@ func Main() {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}
 
-	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
+	h := context.GetStartupHandle(context.HandleInfo{Type: context.HandleUser0, Arg: 0})
 	if h == zx.HandleInvalid {
 		log.Fatalf("pkgfs: mount failed, no serving handle supplied in startup arguments")
 	}

@@ -6,15 +6,40 @@ package context
 
 import (
 	"fmt"
-	"svc/svcns"
 	"sync"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
-	"syscall/zx/mxruntime"
+
+	"svc/svcns"
 
 	"fidl/fuchsia/sys"
 )
+
+// #include "zircon/process.h"
+import "C"
+
+const (
+	HandleDirectoryRequest HandleType = 0x3B
+	HandleAppServices      HandleType = 0x43
+
+	HandleUser0 HandleType = 0xF0
+	HandleUser1 HandleType = 0xF1
+	HandleUser2 HandleType = 0xF2
+)
+
+type HandleType uint16
+
+type HandleInfo struct {
+	Type HandleType
+	Arg  uint16
+}
+
+func GetStartupHandle(info HandleInfo) zx.Handle {
+	id := uint32(info.Arg)<<16 | uint32(info.Type)
+	h := C.zx_take_startup_handle(C.uint32_t(id))
+	return zx.Handle(h)
+}
 
 type Connector struct {
 	serviceRoot zx.Handle
@@ -29,12 +54,6 @@ type Context struct {
 	appServices     zx.Handle
 	serviceProvider sys.ServiceProviderService
 }
-
-// TODO: define these in syscall/zx/mxruntime
-const (
-	HandleDirectoryRequest mxruntime.HandleType = 0x3B
-	HandleAppServices      mxruntime.HandleType = 0x43
-)
 
 func getServiceRoot() zx.Handle {
 	c0, c1, err := zx.NewChannel(0)
@@ -124,9 +143,9 @@ func (c *Connector) ConnectToEnvServiceAt(name string, h zx.Channel) {
 }
 
 func CreateFromStartupInfo() *Context {
-	directoryRequest := mxruntime.GetStartupHandle(
-		mxruntime.HandleInfo{Type: HandleDirectoryRequest, Arg: 0})
-	appServices := mxruntime.GetStartupHandle(
-		mxruntime.HandleInfo{Type: HandleAppServices, Arg: 0})
+	directoryRequest := GetStartupHandle(
+		HandleInfo{Type: HandleDirectoryRequest, Arg: 0})
+	appServices := GetStartupHandle(
+		HandleInfo{Type: HandleAppServices, Arg: 0})
 	return New(getServiceRoot(), directoryRequest, appServices)
 }
