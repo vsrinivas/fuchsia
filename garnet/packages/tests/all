@@ -101,7 +101,7 @@
         "garnet/packages/tests/sysmgr_tests",
         "garnet/packages/tests/sysmgr",
         "garnet/packages/tests/system_monitor",
-        "garnet/packages/tests/system_ota",
+        "garnet/packages/tests/system_ota_tests",
         "garnet/packages/tests/telephony",
         "garnet/packages/tests/terminal",
         "garnet/packages/tests/tiles",
