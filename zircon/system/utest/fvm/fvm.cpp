@@ -337,6 +337,8 @@ class VmoBuf;
 class VmoClient : public fbl::RefCounted<VmoClient> {
 public:
     static bool Create(int fd, fbl::RefPtr<VmoClient>* out);
+
+    ~VmoClient();
     bool CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool Transaction(block_fifo_request_t* requests, size_t count) {
@@ -347,8 +349,6 @@ public:
 
     int fd() const { return fd_; }
     groupid_t group() { return 0; }
-    ~VmoClient() { block_fifo_release_client(client_); }
-
 private:
     int fd_;
     fuchsia_hardware_block_BlockInfo info_;
@@ -409,7 +409,6 @@ bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     BEGIN_HELPER;
     fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new VmoClient());
 
-
     fzl::UnownedFdioCaller disk_connection(fd);
     zx::unowned_channel channel(disk_connection.borrow_channel());
     zx_status_t status;
@@ -427,6 +426,13 @@ bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     vc->fd_ = fd;
     *out = std::move(vc);
     END_HELPER;
+}
+
+VmoClient::~VmoClient() {
+    fzl::UnownedFdioCaller disk_connection(fd());
+    zx_status_t status;
+    fuchsia_hardware_block_BlockCloseFifo(disk_connection.borrow_channel(), &status);
+    block_fifo_release_client(client_);
 }
 
 bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {
