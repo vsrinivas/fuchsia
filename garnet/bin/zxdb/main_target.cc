@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 #include <memory>
 #include <thread>
 

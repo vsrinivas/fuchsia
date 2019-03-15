@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #if defined(__Fuchsia__)
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include "garnet/lib/debug_ipc/helper/socket_watcher.h"
 #endif

@@ -7,7 +7,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 namespace cobalt {
 

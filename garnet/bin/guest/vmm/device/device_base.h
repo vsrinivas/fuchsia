@@ -12,7 +12,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/handles/object_info.h>
 #include <trace/event.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include "garnet/bin/guest/vmm/device/config.h"
 #include "garnet/bin/guest/vmm/device/phys_mem.h"

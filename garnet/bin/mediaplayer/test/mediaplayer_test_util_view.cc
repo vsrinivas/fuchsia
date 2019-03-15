@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <hid/usages.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 #include "garnet/bin/mediaplayer/graph/formatting.h"
 #include "garnet/bin/mediaplayer/test/mediaplayer_test_util_params.h"
 #include "lib/fidl/cpp/clone.h"

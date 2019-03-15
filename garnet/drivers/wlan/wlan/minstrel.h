@@ -15,7 +15,7 @@
 #include <wlan/protocol/mac.h>
 
 #include <fbl/unique_ptr.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 

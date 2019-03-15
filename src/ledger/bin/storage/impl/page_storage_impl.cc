@@ -25,6 +25,7 @@
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/memory/weak_ptr.h>
 #include <lib/fxl/strings/concatenate.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
 #include "src/lib/files/directory.h"
@@ -54,7 +55,6 @@
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
-#include "zx/time.h"
 
 namespace storage {
 

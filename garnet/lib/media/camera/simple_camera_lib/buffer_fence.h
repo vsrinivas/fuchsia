@@ -13,7 +13,7 @@
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
 #include <zircon/status.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 namespace simple_camera {
 

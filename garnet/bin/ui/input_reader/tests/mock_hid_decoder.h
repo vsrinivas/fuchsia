@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_INPUT_READER_TESTS_MOCK_HID_DECODER_H_
 
 #include <lib/fit/function.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "lib/fxl/memory/weak_ptr.h"

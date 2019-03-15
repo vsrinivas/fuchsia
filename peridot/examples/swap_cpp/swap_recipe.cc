@@ -13,7 +13,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <trace-provider/provider.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
 

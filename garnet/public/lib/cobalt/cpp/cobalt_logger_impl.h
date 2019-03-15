@@ -12,7 +12,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 namespace cobalt {
 

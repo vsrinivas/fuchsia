@@ -7,7 +7,7 @@
 
 #include <mutex>
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include "garnet/bin/guest/vmm/io.h"
 #include "garnet/bin/guest/vmm/platform_device.h"

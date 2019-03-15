@@ -10,8 +10,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-#include <zx/event.h>
-#include <zx/port.h>
+#include <lib/zx/event.h>
+#include <lib/zx/port.h>
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/util.h"

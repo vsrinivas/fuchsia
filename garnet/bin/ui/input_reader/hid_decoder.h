@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include "garnet/bin/ui/input_reader/mouse.h"
 #include "garnet/bin/ui/input_reader/touch.h"

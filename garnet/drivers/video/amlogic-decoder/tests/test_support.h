@@ -10,7 +10,7 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 class TestSupport {
  public:

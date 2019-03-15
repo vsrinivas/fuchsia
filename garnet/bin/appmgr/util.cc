@@ -7,7 +7,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <string>
 

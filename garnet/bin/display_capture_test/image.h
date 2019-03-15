@@ -7,7 +7,7 @@
 
 #include <inttypes.h>
 #include <zircon/pixelformat.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 namespace display_test {
 

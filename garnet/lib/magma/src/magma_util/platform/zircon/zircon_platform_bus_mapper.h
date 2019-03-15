@@ -8,7 +8,7 @@
 #include "platform_bus_mapper.h"
 #include "zircon_platform_buffer.h"
 #include <vector>
-#include <zx/pmt.h>
+#include <lib/zx/pmt.h>
 
 namespace magma {
 

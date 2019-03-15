@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_GFX_SWAPCHAIN_SWAPCHAIN_H_
 
 #include <lib/fit/function.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "garnet/lib/ui/gfx/engine/hardware_layer_assignment.h"
 

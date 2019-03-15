@@ -12,7 +12,7 @@
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 namespace modular {
 

@@ -13,8 +13,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
-#include <zx/channel.h>
-#include <zx/socket.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 
 #include "garnet/bin/guest/vmm/virtio_device.h"
 #include "garnet/bin/guest/vmm/virtio_queue_waiter.h"

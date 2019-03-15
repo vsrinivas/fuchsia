@@ -6,7 +6,7 @@
 
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
-#include <zx/thread.h>
+#include <lib/zx/thread.h>
 
 namespace debug_ipc {
 

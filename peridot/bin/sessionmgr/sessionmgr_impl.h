@@ -23,7 +23,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"

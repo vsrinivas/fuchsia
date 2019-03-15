@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include "lib/sys/cpp/startup_context.h"
 

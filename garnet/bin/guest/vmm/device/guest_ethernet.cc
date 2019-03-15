@@ -4,7 +4,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fxl/logging.h>
-#include <zx/fifo.h>
+#include <lib/zx/fifo.h>
 
 #include "guest_ethernet.h"
 

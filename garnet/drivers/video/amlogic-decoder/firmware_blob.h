@@ -7,7 +7,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include <map>
 #include <string>

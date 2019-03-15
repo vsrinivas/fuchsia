@@ -8,7 +8,7 @@
 #include <hid/hid.h>
 #include <hid/usages.h>
 #include <stdint.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include <vector>
 

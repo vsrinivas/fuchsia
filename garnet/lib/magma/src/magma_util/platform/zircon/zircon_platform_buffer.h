@@ -11,8 +11,8 @@
 #include "platform_object.h"
 #include "zircon_platform_handle.h"
 #include <limits.h> // PAGE_SIZE
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 namespace magma {
 

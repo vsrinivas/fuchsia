@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
 
 #include <ddk/io-buffer.h>
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 #include "memory_barriers.h"
 #include "registers.h"

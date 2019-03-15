@@ -16,7 +16,7 @@
 
 #include <lib/fit/function.h>
 #include <zircon/pixelformat.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 namespace scenic_impl {
 namespace gfx {

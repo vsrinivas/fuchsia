@@ -11,8 +11,8 @@
 #include <lib/async/task.h>
 #include <lib/fidl/cpp/thread_safe_binding_set.h>
 #include <lib/fit/function.h>
-#include <zx/channel.h>
-#include <zx/time.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 
 namespace wlan {
 namespace async {

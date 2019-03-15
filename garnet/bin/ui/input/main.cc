@@ -12,7 +12,7 @@
 #include <lib/async/default.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "garnet/bin/ui/input/inverse_keymap.h"
 #include "lib/component/cpp/connect.h"

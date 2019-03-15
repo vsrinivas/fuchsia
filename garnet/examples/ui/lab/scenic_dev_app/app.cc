@@ -20,7 +20,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 #include <string>
 
 #include "lib/component/cpp/connect.h"

@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/host_name.h"

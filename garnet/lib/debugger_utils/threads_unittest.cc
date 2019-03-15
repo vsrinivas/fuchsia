@@ -11,9 +11,9 @@
 #include <threads.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
-#include <zx/event.h>
-#include <zx/process.h>
-#include <zx/time.h>
+#include <lib/zx/event.h>
+#include <lib/zx/process.h>
+#include <lib/zx/time.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/threads.h"

@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <zircon/syscalls/exception.h>
-#include <zx/thread.h>
+#include <lib/zx/thread.h>
 
 #include "garnet/bin/debug_agent/arch_x64.h"
 

@@ -6,7 +6,7 @@
 #define ZIRCON_PLATFORM_HANDLE_H
 
 #include "platform_handle.h"
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 namespace magma {
 

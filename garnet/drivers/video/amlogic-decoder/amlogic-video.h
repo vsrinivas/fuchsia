@@ -13,7 +13,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 #include <future>
 #include <memory>

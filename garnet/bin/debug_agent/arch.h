@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_ARCH_H_
 #define GARNET_BIN_DEBUG_AGENT_ARCH_H_
 
-#include <zx/process.h>
-#include <zx/thread.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 #include "garnet/lib/debug_ipc/protocol.h"
 

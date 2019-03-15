@@ -8,7 +8,7 @@
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "lib/escher/escher.h"

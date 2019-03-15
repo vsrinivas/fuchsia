@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIAPLAYER_DEMUX_FILE_READER_H_
 
 #include <lib/async/dispatcher.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/mediaplayer/demux/reader.h"
 #include "src/lib/files/unique_fd.h"

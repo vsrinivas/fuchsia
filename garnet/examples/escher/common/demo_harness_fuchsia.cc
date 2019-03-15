@@ -7,7 +7,7 @@
 #include <hid/usages.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "garnet/examples/escher/common/demo.h"
 #include "lib/escher/util/trace_macros.h"

@@ -9,8 +9,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <zx/bti.h>
-#include <zx/vmo.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
 #include <memory>
 
 class CodecBuffer {

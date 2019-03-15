@@ -16,7 +16,7 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::ProjectProfile;

@@ -18,7 +18,7 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/system.h>
 
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 // TODO(braval): Combine thermd & thermd_arm and have a unified
 // code for the thermal deamon

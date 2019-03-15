@@ -5,7 +5,7 @@
 #include "magma_util/inflight_list.h"
 #include "gtest/gtest.h"
 #include <lib/fdio/io.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 struct TestConnection : public magma_connection {
     TestConnection() { zx::channel::create(0, &channel[0], &channel[1]); }

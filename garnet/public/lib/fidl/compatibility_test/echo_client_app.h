@@ -13,7 +13,7 @@
 #include <lib/sys/cpp/startup_context.h>
 #include <memory>
 #include <string>
-#include <zx/process.h>
+#include <lib/zx/process.h>
 
 namespace fidl {
 namespace test {

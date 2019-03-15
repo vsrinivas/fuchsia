@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"

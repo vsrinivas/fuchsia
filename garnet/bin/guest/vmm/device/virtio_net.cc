@@ -11,7 +11,7 @@
 #include <trace-provider/provider.h>
 #include <virtio/net.h>
 #include <zircon/device/ethernet.h>
-#include <zx/fifo.h>
+#include <lib/zx/fifo.h>
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/stream_base.h"

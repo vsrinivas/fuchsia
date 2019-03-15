@@ -10,8 +10,8 @@
 #include <inspector/inspector.h>
 #include <lib/fit/function.h>
 #include "src/lib/files/file.h"
-#include <zx/process.h>
-#include <zx/thread.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 namespace component {
 

@@ -12,7 +12,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"

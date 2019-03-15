@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_
 #define GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 #include <unordered_map>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"

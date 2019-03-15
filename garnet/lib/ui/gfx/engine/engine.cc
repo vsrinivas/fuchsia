@@ -11,7 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <trace/event.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"

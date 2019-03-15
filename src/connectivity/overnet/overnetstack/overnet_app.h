@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 #include <memory>
 #include "lib/component/cpp/startup_context.h"
 #include "src/connectivity/overnet/lib/endpoint/router_endpoint.h"

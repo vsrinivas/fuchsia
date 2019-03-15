@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "gtest/gtest.h"
 #include "lib/component/cpp/connect.h"

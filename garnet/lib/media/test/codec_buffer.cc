@@ -5,8 +5,8 @@
 #include <lib/media/test/codec_buffer.h>
 
 #include <lib/fxl/logging.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include <stdio.h>
 

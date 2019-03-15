@@ -5,7 +5,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <zx/thread.h>
+#include <lib/zx/thread.h>
 #include <vector>
 
 #include "garnet/lib/debug_ipc/records.h"

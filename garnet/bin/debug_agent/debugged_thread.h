@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_DEBUGGED_THREAD_H_
 #define GARNET_BIN_DEBUG_AGENT_DEBUGGED_THREAD_H_
 
-#include <zx/thread.h>
+#include <lib/zx/thread.h>
 
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"

@@ -5,8 +5,8 @@
 #include "platform_address_range.h"
 
 #include "magma_util/macros.h"
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 namespace magma {
 

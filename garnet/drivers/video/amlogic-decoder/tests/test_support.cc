@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/driver.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "gtest/gtest.h"
 

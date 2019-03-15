@@ -16,7 +16,7 @@
 #include <lib/fxl/logging.h>
 #include <trace-engine/types.h>
 #include <trace/event.h>
-#include <zx/fifo.h>
+#include <lib/zx/fifo.h>
 
 constexpr size_t kMaxPacketSize = 2048;
 

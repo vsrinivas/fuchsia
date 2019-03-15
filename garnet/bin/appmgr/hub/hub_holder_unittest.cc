@@ -6,7 +6,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "gtest/gtest.h"
 

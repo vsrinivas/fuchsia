@@ -10,7 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);

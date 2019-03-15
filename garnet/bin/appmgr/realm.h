@@ -6,7 +6,7 @@
 #define GARNET_BIN_APPMGR_REALM_H_
 
 #include <fs/synchronous-vfs.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <iosfwd>
 #include <memory>

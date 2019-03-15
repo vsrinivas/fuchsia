@@ -6,7 +6,7 @@
 
 #include <lib/fxl/logging.h>
 #include <zircon/syscalls/hypervisor.h>
-#include <zx/port.h>
+#include <lib/zx/port.h>
 
 #include "garnet/bin/guest/vmm/guest.h"
 

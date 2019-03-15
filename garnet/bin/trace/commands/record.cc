@@ -6,7 +6,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include <errno.h>
 #include <netdb.h>

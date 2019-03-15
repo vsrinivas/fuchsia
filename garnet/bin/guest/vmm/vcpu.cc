@@ -16,7 +16,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
-#include <zx/thread.h>
+#include <lib/zx/thread.h>
 
 #include "garnet/bin/guest/vmm/guest.h"
 #include "garnet/bin/guest/vmm/io.h"

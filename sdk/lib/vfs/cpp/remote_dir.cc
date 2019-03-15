@@ -4,9 +4,9 @@
 
 #include <lib/vfs/cpp/remote_dir.h>
 
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
-#include <zx/channel.h>
 
 namespace vfs {
 

@@ -7,7 +7,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
 #include <lib/async/cpp/task.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/gtest/real_loop_fixture.h"
 

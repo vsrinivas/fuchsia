@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 #include <functional>
 
 #include "garnet/lib/debug_ipc/helper/message_loop.h"

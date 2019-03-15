@@ -7,7 +7,7 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/media/codec_impl/codec_packet.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "firmware_blob.h"
 #include "macros.h"

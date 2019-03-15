@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/device/gpu_scanout.h"
 
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "garnet/bin/guest/vmm/device/gpu_resource.h"
 

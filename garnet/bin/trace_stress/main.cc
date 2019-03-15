@@ -17,7 +17,7 @@
 #include <trace/event.h>
 #include <trace/observer.h>
 #include <zircon/status.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 static constexpr int kDefaultCount = 1;
 static constexpr int kDefaultDelaySeconds = 0;

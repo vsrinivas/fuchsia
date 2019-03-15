@@ -10,8 +10,8 @@
 #include <shared_mutex>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <zx/guest.h>
-#include <zx/vmar.h>
+#include <lib/zx/guest.h>
+#include <lib/zx/vmar.h>
 
 #include "garnet/bin/guest/vmm/device/phys_mem.h"
 #include "garnet/bin/guest/vmm/guest_config.h"

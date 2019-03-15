@@ -6,23 +6,23 @@
 
 #include <sstream>
 
-#include <zx/channel.h>
-#include <zx/debuglog.h>
-#include <zx/event.h>
-#include <zx/eventpair.h>
-#include <zx/fifo.h>
-#include <zx/guest.h>
-#include <zx/interrupt.h>
-#include <zx/job.h>
-#include <zx/port.h>
-#include <zx/process.h>
-#include <zx/resource.h>
-#include <zx/socket.h>
-#include <zx/thread.h>
-#include <zx/time.h>
-#include <zx/timer.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/guest.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/job.h>
+#include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
+#include <lib/zx/timer.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"

@@ -5,7 +5,7 @@
 #include "src/ledger/bin/app/page_usage_db.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/lib/convert/convert.h"

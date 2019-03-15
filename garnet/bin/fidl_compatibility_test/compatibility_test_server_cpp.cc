@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/startup_context.h>
 #include <string>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
 

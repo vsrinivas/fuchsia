@@ -5,7 +5,7 @@
 #include "firmware_blob.h"
 
 #include <ddk/debug.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "macros.h"
 

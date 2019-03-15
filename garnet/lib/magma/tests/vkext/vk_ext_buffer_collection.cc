@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

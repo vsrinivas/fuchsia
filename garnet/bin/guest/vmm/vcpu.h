@@ -9,7 +9,7 @@
 #include <shared_mutex>
 
 #include <zircon/syscalls/port.h>
-#include <zx/vcpu.h>
+#include <lib/zx/vcpu.h>
 
 typedef struct zx_vcpu_state zx_vcpu_state_t;
 

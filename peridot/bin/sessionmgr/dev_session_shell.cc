@@ -23,7 +23,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"

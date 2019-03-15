@@ -7,16 +7,16 @@
 
 #include <ostream>
 
-#include <zx/channel.h>
-#include <zx/eventpair.h>
-#include <zx/fifo.h>
-#include <zx/object.h>
-#include <zx/process.h>
-#include <zx/resource.h>
-#include <zx/socket.h>
-#include <zx/thread.h>
-#include <zx/time.h>
-#include <zx/vmo.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/object.h>
+#include <lib/zx/process.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 
 namespace zx {
 

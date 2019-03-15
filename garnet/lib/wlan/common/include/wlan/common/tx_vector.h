@@ -11,7 +11,7 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include <cstdio>
 #include <optional>

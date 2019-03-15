@@ -4,7 +4,7 @@
 
 #include "garnet/bin/appmgr/namespace_builder.h"
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <string>
 #include <vector>

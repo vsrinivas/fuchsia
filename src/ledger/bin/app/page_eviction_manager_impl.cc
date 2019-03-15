@@ -10,7 +10,7 @@
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/strings/concatenate.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"

@@ -7,9 +7,9 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 
 #include <lib/fdio/unsafe.h>
-#include <zx/event.h>
-#include <zx/port.h>
-#include <zx/thread.h>
+#include <lib/zx/event.h>
+#include <lib/zx/port.h>
+#include <lib/zx/thread.h>
 
 namespace debug_ipc {
 

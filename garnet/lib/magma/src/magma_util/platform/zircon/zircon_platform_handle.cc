@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "zircon_platform_handle.h"
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 namespace magma {
 

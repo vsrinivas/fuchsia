@@ -20,8 +20,8 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
-#include <zx/time.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 

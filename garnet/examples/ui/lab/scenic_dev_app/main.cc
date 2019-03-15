@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "garnet/examples/ui/lab/scenic_dev_app/app.h"
 #include "lib/fxl/command_line.h"

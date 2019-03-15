@@ -9,8 +9,8 @@
 #include <fs/lazy-dir.h>
 #include <lib/component/cpp/exposed_object.h>
 #include <lib/fxl/strings/string_view.h>
-#include <zx/process.h>
-#include <zx/thread.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 namespace component {
 

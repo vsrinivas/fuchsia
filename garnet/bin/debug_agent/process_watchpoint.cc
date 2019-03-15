@@ -4,7 +4,7 @@
 
 #include "garnet/bin/debug_agent/process_watchpoint.h"
 
-#include <zx/port.h>
+#include <lib/zx/port.h>
 #include <zircon/syscalls/port.h>
 
 #include "garnet/bin/debug_agent/arch.h"

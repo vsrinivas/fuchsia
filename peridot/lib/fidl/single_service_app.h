@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 #include <memory>
 
 namespace modular {

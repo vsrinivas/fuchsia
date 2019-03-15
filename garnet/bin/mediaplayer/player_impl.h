@@ -8,7 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 #include <unordered_map>
 #include "garnet/bin/mediaplayer/core/player_core.h"
 #include "garnet/bin/mediaplayer/decode/decoder.h"
