@@ -12,6 +12,7 @@ driver("ums-function") {
     "$zx/system/banjo/ddk-protocol-usb-function",
     "$zx/system/banjo/ddk-protocol-usb-request",
     "$zx/system/dev/lib/usb",
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral-block:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
