@@ -22,6 +22,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "src/lib/files/unique_fd.h"
 #include "lib/sys/cpp/service_directory.h"
 
@@ -167,31 +168,53 @@ bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
   return true;
 }
 
-void PrintUsage() {
-  const char kUsage[] = R"(Usage
-
-  debug_agent --port=<port>
-
-Arguments
-
-  --aunwind
-      [Experimental] Use the unwinder from AOSP.
-
-  --async-message-loop
-      [Experimental] Use async-loop backend message loop.
-
-  --debug-mode
+const std::map<std::string, std::string>& GetOptions() {
+  static std::map<std::string, std::string> options = {
+      {"auwind", R"(
+      [Experimental] Use the unwinder from AOSP.)"},
+      {"async-message-loop", R"(
+      [Experimental] Use async-loop backend message loop.)"},
+      {"debug-mode", R"(
       Run the agent on debug mode. This will enable conditional logging messages
-      and timing profiling. Mainly useful for people developing zxdb.
+      and timing profiling. Mainly useful for people developing zxdb.)"},
+      {"help", R"(
+      Print this help.)"},
+      {"port", R"(
+      [Required] TCP port number to listen to incoming connections on.)"},
+  };
 
-  --help
-      Print this help.
+  return options;
+}
 
-  --port (required)
-      TCP port number to listen to incoming connections on.
+void PrintUsage() {
+  std::string usage = R"(Usage
+
+  debug_agent [options...] --port=<port>
+
+Options
+
 )";
 
-  fprintf(stderr, "%s", kUsage);
+  for (auto& [option, desc] : GetOptions()) {
+    usage.append(
+        fxl::StringPrintf("  --%s%s\n\n", option.c_str(), desc.c_str()));
+  }
+
+  fprintf(stderr, "%s", usage.c_str());
+}
+
+bool ValidateOptions(const fxl::CommandLine& cmdline) {
+  auto& options = debug_agent::GetOptions();
+  for (const auto& option : cmdline.options()) {
+    auto it = options.find(option.name);
+    if (it == options.end()) {
+      fprintf(stderr, "Unknown option \"%s\"\n\n", option.name.c_str());
+      debug_agent::PrintUsage();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace
@@ -201,10 +224,14 @@ Arguments
 
 int main(int argc, char* argv[]) {
   fxl::CommandLine cmdline = fxl::CommandLineFromArgcArgv(argc, argv);
+
   if (cmdline.HasOption("help")) {
     debug_agent::PrintUsage();
     return 0;
   }
+
+  if (!debug_agent::ValidateOptions(cmdline))
+    return 1;
 
   if (cmdline.HasOption("aunwind")) {
     // Use the Android unwinder.
