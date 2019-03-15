@@ -18,6 +18,10 @@ import("//build/testing/platforms.gni")
 #     [string]: Unique reference to a test, e.g., a filesystem path or a
 #     fuchsia URI.
 #
+#   command (optional)
+#     [list of strings]: Command to invoke to run the test. If unset, location
+#     will be invoked upon execution.
+#
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
 #
@@ -198,6 +202,7 @@ template("test_spec") {
       if (is_linux || is_mac) {
         # Trim leading //.
         location = rebase_path(location, root_build_dir)
+        forward_variables_from(invoker, ["command"])
       }
       os = current_os
       cpu = current_cpu
