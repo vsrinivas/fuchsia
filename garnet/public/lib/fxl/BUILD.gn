@@ -123,7 +123,6 @@ source_set("functional") {
   sources = [
     "functional/apply.h",
     "functional/cancelable_callback.h",
-    "functional/closure.h",
   ]
 
   public_deps = [

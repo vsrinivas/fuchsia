@@ -5,12 +5,12 @@
 #ifndef LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 #define LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 
 #include <lib/async/cpp/wait.h>
 #include "lib/escher/flib/fence.h"
 #include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -27,7 +27,7 @@ class FenceSetListener {
   // will be invoked on the current message loop.
   // Can only be called after any previous WaitReadyAsync has invoked the
   // callback. |ready_callback| must be non-null.
-  void WaitReadyAsync(fxl::Closure ready_callback);
+  void WaitReadyAsync(fit::closure ready_callback);
 
   // Returns whether all the fences have been signalled.
   bool ready() const { return num_signalled_fences_ == fences_.size(); }
@@ -45,7 +45,7 @@ class FenceSetListener {
   // index in |fences_|. The size of this array must match that of |fences_|.
   std::vector<std::unique_ptr<async::Wait>> waiters_;
 
-  fxl::Closure ready_callback_;
+  fit::closure ready_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FenceSetListener);
 };

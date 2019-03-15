@@ -15,7 +15,7 @@ namespace escher {
 FenceSetListener::FenceSetListener(::std::vector<zx::event> fence_listeners)
     : fences_(std::move(fence_listeners)) {}
 
-void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
+void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {
   if (!ready_callback)
     return;
 
@@ -62,7 +62,7 @@ void FenceSetListener::OnFenceSignalled(size_t waiter_index, zx_status_t status,
     waiters_[waiter_index].reset();
 
     if (ready()) {
-      fxl::Closure callback = std::move(ready_callback_);
+      fit::closure callback = std::move(ready_callback_);
       waiters_.clear();
 
       callback();

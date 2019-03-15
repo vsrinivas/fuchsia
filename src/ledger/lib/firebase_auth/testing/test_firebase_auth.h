@@ -7,7 +7,6 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/closure.h>
 
 #include "src/ledger/lib/firebase_auth/firebase_auth.h"
 

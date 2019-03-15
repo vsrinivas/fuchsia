@@ -6,8 +6,6 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/fxl/functional/closure.h"
-
 namespace fxl {
 namespace {
 
@@ -54,7 +52,7 @@ TEST(CancelableCallbackTest, MultipleCancel) {
 
 TEST(CancelableCallbackTest, CancelOnDestruction) {
   int count = 0;
-  Closure callback;
+  fit::closure callback;
 
   {
     CancelableClosure cancelable([&count] { count++; });

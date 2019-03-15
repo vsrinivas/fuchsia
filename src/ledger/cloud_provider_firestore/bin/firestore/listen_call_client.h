@@ -10,7 +10,6 @@
 
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <grpc++/grpc++.h>
-#include <lib/fxl/functional/closure.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 

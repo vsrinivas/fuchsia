@@ -9,7 +9,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/cancellable_helper.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/closure.h>
 
 namespace firebase_auth {
 

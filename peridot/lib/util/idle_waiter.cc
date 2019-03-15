@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fxl/functional/closure.h>
 
 namespace util {
 
@@ -46,7 +45,7 @@ IdleWaiter::ActivityToken IdleWaiter::RegisterOngoingActivity() {
   }
 }
 
-void IdleWaiter::WaitUntilIdle(fxl::Closure callback) {
+void IdleWaiter::WaitUntilIdle(fit::closure callback) {
   callbacks_.push_back(std::move(callback));
   PostIdleCheck();
 }

@@ -8,7 +8,6 @@
 #include <string>
 
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/functional/closure.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"

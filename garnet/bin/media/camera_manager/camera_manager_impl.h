@@ -14,7 +14,6 @@
 #include <garnet/bin/media/camera_manager/video_device_client.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/io/device_watcher.h>
-#include <lib/fxl/functional/closure.h>
 
 namespace camera {
 // Implements camera::Manager FIDL service.  Keeps track of the cameras and

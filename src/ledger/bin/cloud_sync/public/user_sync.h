@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include <lib/fxl/functional/closure.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 

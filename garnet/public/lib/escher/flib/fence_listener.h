@@ -6,11 +6,11 @@
 #define LIB_ESCHER_FLIB_FENCE_LISTENER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <zircon/syscalls/port.h>
 
 #include "lib/escher/flib/fence.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -31,7 +31,7 @@ class FenceListener {
   // be invoked on the current message loop.
   // Can only be called after any previous WaitReadyAsync has invoked the
   // callback. |ready_callback| must be non-null.
-  void WaitReadyAsync(fxl::Closure ready_callback);
+  void WaitReadyAsync(fit::closure ready_callback);
 
   // Returns whether this fence has been signalled.
   bool ready() const { return ready_; }
@@ -46,7 +46,7 @@ class FenceListener {
   zx::event fence_;
 
   async::Wait waiter_;
-  fxl::Closure ready_callback_;
+  fit::closure ready_callback_;
   bool ready_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FenceListener);

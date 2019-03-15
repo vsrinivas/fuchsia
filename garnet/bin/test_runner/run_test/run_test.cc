@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/test_runner/cpp/test_runner.h"
 
 class QuitObserver : public test_runner::TestRunObserver {
@@ -43,12 +42,8 @@ int main(int argc, char** argv) {
   args.erase(args.begin());
 
   QuitObserver observer(&loop);
-  test_runner::TestRunContext context(
-      app_context,
-      &observer,
-      "test",
-      url,
-      args);
+  test_runner::TestRunContext context(app_context, &observer, "test", url,
+                                      args);
 
   loop.Run();
   return !observer.success();

@@ -8,7 +8,6 @@
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {
@@ -42,7 +41,7 @@ bool FenceListener::WaitReady(fxl::TimeDelta timeout) {
   return ready_;
 }
 
-void FenceListener::WaitReadyAsync(fxl::Closure ready_callback) {
+void FenceListener::WaitReadyAsync(fit::closure ready_callback) {
   if (!ready_callback)
     return;
 
@@ -69,7 +68,7 @@ void FenceListener::OnFenceSignalled(zx_status_t status,
     FXL_DCHECK(ready_callback_);
 
     ready_ = true;
-    fxl::Closure callback = std::move(ready_callback_);
+    fit::closure callback = std::move(ready_callback_);
     waiter_.Cancel();
 
     callback();

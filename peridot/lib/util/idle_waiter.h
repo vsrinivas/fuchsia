@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/functional/closure.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
@@ -69,7 +69,7 @@ class IdleWaiter final {
   //   included
   // * when no outstanding copies of |ActivityToken|s created by
   //   |RegisterOngoingActivity| are held by the instrumented app
-  void WaitUntilIdle(fxl::Closure callback);
+  void WaitUntilIdle(fit::closure callback);
 
  private:
   // Idle checks must be performed outside of the main message loop, so
@@ -78,7 +78,7 @@ class IdleWaiter final {
   void PostIdleCheck();
 
   async::Loop* loop_{};
-  std::vector<fxl::Closure> callbacks_;
+  std::vector<fit::closure> callbacks_;
 
   Activity* activity_ = nullptr;
   bool idle_check_pending_ = false;
