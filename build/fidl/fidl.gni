@@ -36,10 +36,6 @@ import("//build/rust/toolchain.gni")
 #     explicitly acknowledged. It is mandatory for publication categories of
 #     "partner" or "public".
 #     Defaults to "<target name>.api".
-#
-#   cpp_legacy_callbacks (optional)
-#     If true, uses std::function instead of fit::function.
-#     Defaults to true while migration is in progress.
 
 template("fidl") {
   if (defined(invoker.sdk_category)) {
@@ -47,9 +43,6 @@ template("fidl") {
   }
   if (defined(invoker.api)) {
     not_needed(invoker, [ "api" ])
-  }
-  if (defined(invoker.cpp_legacy_callbacks)) {
-    not_needed(invoker, [ "cpp_legacy_callbacks" ])
   }
 
   if (current_toolchain == dart_toolchain) {
