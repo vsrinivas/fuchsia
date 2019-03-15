@@ -23,6 +23,11 @@ declare_args() {
 #     The list of all sources in this library.
 #     These sources must be within source_dir.
 #
+#   sources_required (optional)
+#     Whether complete source files are required by the rule. If true, all
+#     files under the source_dir must be included in sources.
+#     Defaults to false.
+#
 #   package_root (optional)
 #     Path to the directory hosting the library.
 #     This is useful for generated content, and can be ignored otherwise.
@@ -181,6 +186,45 @@ if (current_toolchain == dart_toolchain) {
                "--deps",
              ] + rebase_path(package_files)
     }
+
+    ################################
+    # Dart source "verification"
+    # Warn if there are dart sources included in the build directory that are
+    # not explicitly part of sources. This may cause a failure when syncing to
+    # google3, as they will be exluded from the resulting BUILD file.
+    sources_required = false
+    if (defined(invoker.sources_required)) {
+      sources_required = invoker.sources_required
+    }
+
+    if (sources_required) {
+      source_verification_target_name = "${target_name}_source_verification"
+      output_file = "$target_gen_dir/$target_name.missing"
+
+      action(source_verification_target_name) {
+        script = "//build/dart/verify_sources.py"
+
+        outputs = [
+          output_file,
+        ]
+
+        args = [
+          "--package_root",
+          rebase_path(package_root),
+          "--source_dir",
+          source_dir,
+          "--stamp",
+          rebase_path(output_file),
+        ]
+
+        foreach(source, invoker.sources) {
+          args += [ source ]
+        }
+      }
+      group_deps += [ ":$source_verification_target_name" ]
+    }
+
+    ################################
 
     # Don't run the analyzer if it is explicitly disabled or if we are using
     # a custom-built Dart SDK in a cross-build.
