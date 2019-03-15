@@ -44,6 +44,9 @@ declare_args() {
 #   test (optional, default: false)
 #     Whether this target defines a test.
 #
+#   with_test_spec (optional, default: true)
+#     Whether or not to generate a test_spec for a test.
+#
 #   test_environments (optional)
 #     If defining a test, what environments this should target. Only used here
 #     for linux and mac tests, with a default value of a general linux/mac
@@ -66,7 +69,9 @@ template("go_build") {
   # Test specs are used for linux and mac tests to record metadata for testing
   # instruction; this happens within package.gni for fuchsia tests.
   test_spec_target_name = "${target_name}_spec"
-  if (defined(invoker.test) && invoker.test && (is_linux || is_mac)) {
+  if (defined(invoker.test) && invoker.test &&
+      defined(invoker.with_test_spec) && invoker.with_test_spec &&
+      (is_linux || is_mac)) {
     test_spec(test_spec_target_name) {
       name = invoker.target_name
       location = output_path
@@ -187,7 +192,8 @@ template("go_build") {
     if (defined(invoker.test) && invoker.test) {
       args += [ "--is-test=true" ]
 
-      if (is_linux || is_mac) {
+      if (defined(invoker.with_test_spec) && invoker.with_test_spec &&
+          (is_linux || is_mac)) {
         deps += [ ":$test_spec_target_name" ]
       }
     }

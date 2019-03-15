@@ -7,8 +7,10 @@
 import("//build/go/go_build.gni")
 
 template("go_test") {
+  is_disabled = defined(invoker.disabled) && invoker.disabled
   go_build(target_name) {
     test = true
+    with_test_spec = !is_disabled
     forward_variables_from(invoker, "*", [ "environments" ])
     if (defined(invoker.environments)) {
       test_environments = invoker.environments
