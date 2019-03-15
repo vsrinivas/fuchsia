@@ -38,15 +38,9 @@ package("ril-ctl") {
   binaries = [
     {
       name = "ril_ctl"
+      dest = "ril-ctl"
       path = "rust_crates/ril_ctl"
       shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ril-ctl.cmx")
-      dest = "ril-ctl.cmx"
     },
   ]
 }

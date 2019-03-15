@@ -35,11 +35,17 @@ See the [telephony/tools](tools/) directory for the source code.
 
 #### ril-ctl
 The `ril-ctl` package is used for interacting with devices that expose the FRIL interface.
-The interactive CLI is currently incompatible with the standard `run` command, so you need to
-call the binary from `pkgfs` directly.
+Interactive CLIs are currently incompatible with the standard `run` command, so these are launched
+through /bin
 
+connection owned by modem-mgr:
 ```
-$ run fuchsia-pkg://fuchsia.com/ril-ctl#meta/ril-ctl.cmx -d /dev/class/qmi-transport/000
+$ ril-ctl
+```
+
+exclusive connection to device:
+```
+$ ril-ctl -d /dev/class/qmi-transport/000
 ```
 
 ### Running Tests

@@ -1,9 +1,0 @@
-{
-    "program": {
-        "binary": "bin/ril_ctl"
-    },
-    "sandbox": {
-        "dev": [ "class/qmi-transport" ],
-        "services": [ "fuchsia.telephony.manager.Manager", "fuchsia.sys.Launcher", "ril-qmi" ]
-    }
-}
