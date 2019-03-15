@@ -82,51 +82,17 @@ void ViewState::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
             view_listener()->OnPropertiesChanged(std::move(v1props), []() {});
             break;
           }
-          case fuchsia::ui::gfx::Event::Tag::kImportUnbound:
-            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
-                                "(fuchsia.ui.gfx.ImportUnboundEvent).";
-            break;
-          case fuchsia::ui::gfx::Event::Tag::kViewConnected:
-            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
-                                "(fuchsia.ui.gfx.ViewConnectedEvent).";
-            break;
-          case fuchsia::ui::gfx::Event::Tag::kViewDisconnected:
-            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
-                                "(fuchsia.ui.gfx.ViewDisconnectedEvent).";
-            break;
           case fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected:
             registry_->OnViewDied(this, "View connection closed");
             break;
-          case fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene:
-            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
-                                "(fuchsia.ui.gfx.ViewAttachedToScene).";
-            break;
-          case fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene:
-            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
-                                "(fuchsia.ui.gfx.ViewDetachedFromScene).";
-            break;
-          case fuchsia::ui::gfx::Event::Tag::kViewStateChanged:
-            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
-                                "(fuchsia.ui.gfx.ViewStateChanged).";
-            break;
-          case fuchsia::ui::gfx::Event::Tag::Invalid:
-            FXL_DCHECK(false) << "ViewState::OnScenicEvent: Got an invalid GFX "
-                                 "event.";
-            break;
           default:
-            FXL_DCHECK(false) << "ViewState::OnScenicEvent: Unhandled GFX "
-                                 "event.";
+            // Do nothing.
             break;
         }
         break;
-      case fuchsia::ui::scenic::Event::Tag::kInput:
-        FXL_LOG(WARNING) << "ViewState::OnScenicEvent: "
-                            "Unhandled input event.";
-
+      default:
+        // Do nothing.
         break;
-      default: {
-        FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled Scenic event.";
-      }
     }
   }
 }
