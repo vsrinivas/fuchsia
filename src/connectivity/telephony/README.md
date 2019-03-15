@@ -39,7 +39,7 @@ The interactive CLI is currently incompatible with the standard `run` command, s
 call the binary from `pkgfs` directly.
 
 ```
-$ run ril-ctl -d /dev/class/qmi-transport/000
+$ run fuchsia-pkg://fuchsia.com/ril-ctl#meta/ril-ctl.cmx -d /dev/class/qmi-transport/000
 ```
 
 ### Running Tests
