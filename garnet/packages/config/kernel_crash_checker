@@ -3,6 +3,6 @@
         "garnet/packages/config/services"
     ],
     "packages": [
-        "//garnet/bin/kernel_crash_checker:config"
+        "//src/developer/kernel_crash_checker:config"
     ]
 }

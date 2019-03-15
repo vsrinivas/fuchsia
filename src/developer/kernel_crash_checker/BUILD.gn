@@ -42,7 +42,7 @@ executable("main") {
 
 config_data("config") {
   sources = [
-    "kernel_crash_checker.config",
+    "config/config.json",
   ]
   outputs = [
     "sysmgr/kernel_crash_checker.config",
