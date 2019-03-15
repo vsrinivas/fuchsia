@@ -124,6 +124,7 @@ source_set("functional") {
     "functional/apply.h",
     "functional/cancelable_callback.h",
     "functional/closure.h",
+    "functional/make_copyable.h",
   ]
 
   public_deps = [
@@ -175,9 +176,7 @@ source_set("printers") {
 group("fxl_printers") {
   testonly = true
 
-  public_deps = [
-    ":printers",
-  ]
+  public_deps = [ ":printers" ]
 }
 
 executable("fxl_unittests") {
@@ -195,6 +194,7 @@ executable("fxl_unittests") {
     "command_line_unittest.cc",
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
+    "functional/make_copyable_unittest.cc",
     "log_settings_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
