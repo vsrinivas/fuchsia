@@ -155,7 +155,11 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
                 log(ERROR, "devcoordinator: device %p name='%s' rpc status: %d\n", dev.get(),
                     dev->name.data(), r);
             }
-            dev->coordinator->RemoveDevice(dev, true);
+            // If this device isn't already dead (removed), remove it. RemoveDevice() may
+            // have been called by the RPC handler, in particular for the RemoveDevice RPC.
+            if ((dev->flags & DEV_CTX_DEAD) == 0) {
+                dev->coordinator->RemoveDevice(dev, true);
+            }
             // Do not start waiting again on this device's channel again
             return;
         }
