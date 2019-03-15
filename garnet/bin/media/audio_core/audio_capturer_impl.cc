@@ -44,10 +44,9 @@ AudioCapturerImpl::AudioCapturerImpl(
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false) {
-  // TODO(johngro) : See ZX-940. Eliminate this priority boost as soon as we
+  // TODO(johngro) : See MG-940. Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
-  mix_domain_ = ::dispatcher::ExecutionDomain::Create(
-      24, "garnet/bin/media/audio_core/audio_capturer_impl");
+  mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
   mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
   mix_timer_ = ::dispatcher::Timer::Create();
 

@@ -98,8 +98,7 @@ public:
     };
 
     static constexpr uint32_t DEFAULT_PRIORITY = 16;
-    static fbl::RefPtr<ExecutionDomain> Create(uint32_t priority = DEFAULT_PRIORITY,
-                                               const char* profile_name = nullptr);
+    static fbl::RefPtr<ExecutionDomain> Create(uint32_t priority = DEFAULT_PRIORITY);
 
     void Deactivate() __TA_EXCLUDES(domain_token_) { Deactivate(true); }
     void DeactivateFromWithinDomain() __TA_REQUIRES(domain_token_) { Deactivate(false); }

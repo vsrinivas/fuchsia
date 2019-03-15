@@ -12,7 +12,7 @@
 namespace dispatcher {
 
 // static
-fbl::RefPtr<ExecutionDomain> ExecutionDomain::Create(uint32_t priority, const char* profile_name) {
+fbl::RefPtr<ExecutionDomain> ExecutionDomain::Create(uint32_t priority) {
     zx::event evt;
     if (zx::event::create(0, &evt) != ZX_OK)
         return nullptr;
@@ -21,7 +21,7 @@ fbl::RefPtr<ExecutionDomain> ExecutionDomain::Create(uint32_t priority, const ch
         return nullptr;
 
     fbl::RefPtr<ThreadPool> thread_pool;
-    zx_status_t res = ThreadPool::Get(&thread_pool, priority, profile_name);
+    zx_status_t res = ThreadPool::Get(&thread_pool, priority);
     if (res != ZX_OK)
         return nullptr;
     ZX_DEBUG_ASSERT(thread_pool != nullptr);

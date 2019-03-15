@@ -9,9 +9,6 @@
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
-#include <fuchsia/scheduler/c/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
 
 #include <utility>
 
@@ -20,15 +17,13 @@
 namespace dispatcher {
 
 fbl::Mutex ThreadPool::active_pools_lock_;
-fbl::WAVLTree<ThreadPool::PriorityAndProfileName, fbl::RefPtr<ThreadPool>, ThreadPool::PoolsTraits>
-    ThreadPool::active_pools_;
+fbl::WAVLTree<uint32_t, fbl::RefPtr<ThreadPool>> ThreadPool::active_pools_;
 bool ThreadPool::system_shutdown_ = false;
 
 static constexpr uint32_t MAX_THREAD_PRIORITY = 31;
 
 // static
-zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority,
-                            const char* profile_name) {
+zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority) {
     if ((pool_out == nullptr) || (priority > MAX_THREAD_PRIORITY))
         return ZX_ERR_INVALID_ARGS;
 
@@ -42,7 +37,7 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
 
     // Do we already have a pool running at the desired priority?  If so, just
     // return a reference to it.
-    auto iter = active_pools_.find(PriorityAndProfileName{priority, profile_name});
+    auto iter = active_pools_.find(priority);
     if (iter.IsValid()) {
         *pool_out = iter.CopyPointer();
         return ZX_OK;
@@ -51,7 +46,7 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
     // Looks like we don't have an appropriate pool just yet.  Try to create one
     // and add it to the active set of pools.
     fbl::AllocChecker ac;
-    auto new_pool = fbl::AdoptRef(new (&ac) ThreadPool(priority, profile_name));
+    auto new_pool = fbl::AdoptRef(new (&ac) ThreadPool(priority));
     if (!ac.check()) {
         printf("Failed to allocate new thread pool (prio %u)\n", priority);
         return ZX_ERR_NO_MEMORY;
@@ -70,7 +65,7 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
 
 // static
 void ThreadPool::ShutdownAll() {
-    fbl::WAVLTree<PriorityAndProfileName, fbl::RefPtr<ThreadPool>, PoolsTraits> shutdown_targets;
+    fbl::WAVLTree<uint32_t, fbl::RefPtr<ThreadPool>> shutdown_targets;
 
     {
         fbl::AutoLock lock(&active_pools_lock_);
@@ -183,41 +178,12 @@ void ThreadPool::PrintDebugPrefix() {
 
 zx_status_t ThreadPool::Init() {
     ZX_DEBUG_ASSERT(!port_.is_valid());
-    ZX_DEBUG_ASSERT(!profile_.is_valid());
 
     zx_status_t res = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
     if (res != ZX_OK) {
         LOG("Failed to create thread pool port (res %d)!\n", res);
         return res;
     }
-
-    zx::channel ch0, ch1;
-    res = zx::channel::create(0u, &ch0, &ch1) != ZX_OK;
-    if (res != ZX_OK) {
-        LOG("Failed to create channel (res %d)!\n", res);
-        return res;
-    }
-
-    res = fdio_service_connect("/svc/" fuchsia_scheduler_ProfileProvider_Name, ch0.get());
-    if (res != ZX_OK) {
-        LOG("Failed to connect to ProfileProvider (res %d)!\n", res);
-        return res;
-    }
-
-    zx_status_t fidl_status;
-    zx_handle_t profile;
-    res = fuchsia_scheduler_ProfileProviderGetProfile(ch1.get(), priority_, profile_name_,
-                                                      profile_name_ ? strlen(profile_name_) : 0,
-                                                      &fidl_status, &profile);
-    if (res != ZX_OK) {
-        LOG("Failed to create profile (res %d)!\n", res);
-        return res;
-    }
-    if (fidl_status != ZX_OK) {
-        LOG("Failed to create profile (fidl_status %d)!\n", fidl_status);
-        return fidl_status;
-    }
-    profile_ = zx::profile(profile);
 
     return ZX_OK;
 }
@@ -329,7 +295,7 @@ int ThreadPool::Thread::Main() {
     ZX_DEBUG_ASSERT(pool_ != nullptr);
     DEBUG_LOG("Thread Starting\n");
 
-    res = zx_object_set_profile(zx_thread_self(), pool_->profile().get(), 0);
+    res = zx_thread_set_priority(pool_->priority());
     if (res != ZX_OK) {
         DEBUG_LOG("WARNING - Failed to set thread priority (res %d)\n", res);
     }
