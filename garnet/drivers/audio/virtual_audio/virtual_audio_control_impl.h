@@ -46,8 +46,8 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   //
   // virtualaudio.Control interface
   //
-  void Enable() override;
-  void Disable() override;
+  void Enable(EnableCallback callback) override;
+  void Disable(DisableCallback callback) override;
 
   void ReleaseBindings();
   bool enabled() const { return enabled_; }

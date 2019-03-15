@@ -92,7 +92,7 @@ class VirtualAudioOutputImpl : public VirtualAudioDeviceImpl,
                                               hardwired, can_notify);
   }
 
-  void ResetConfig() override { Init(); };
+  void ResetConfiguration() override { Init(); };
 
   //
   // Device forwarding

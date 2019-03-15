@@ -7,9 +7,9 @@ library fuchsia.media;
 // AudioCapturer
 //
 // An AudioCapturer is an interface returned from an fuchsia.media.Audio's
-// CreateAudioCapturer method, which may be used by clients to capture audio from
-// either the current default audio input device, or the current default audio
-// output device depending on the flags passed during creation.
+// CreateAudioCapturer method, which may be used by clients to capture audio
+// from either the current default audio input device, or the current default
+// audio output device depending on the flags passed during creation.
 //
 // TODO(mpuryear): Routing policy needs to become more capable than this.
 // Clients will need to be able to request sets of inputs/outputs/renderers,
@@ -20,11 +20,11 @@ library fuchsia.media;
 //
 // ** Format support **
 //
-// See (Get|Set)StreamType below.  By default, the captured stream type will be
+// See (Get|Set)StreamType below. By default, the captured stream type will be
 // initially determined by the currently configured stream type of the source
-// that the AudioCapturer was bound to at creation time.  Users may either fetch this
-// type using GetStreamType, or they may choose to have the media
-// resampled/converted to a type of their choosing by calling SetStreamType.
+// that the AudioCapturer was bound to at creation time. Users may either fetch
+// this type using GetStreamType, or they may choose to have the media
+// resampled or converted to a type of their choosing by calling SetStreamType.
 // Note: the stream type may only be set while the system is not running,
 // meaning that there are no pending capture regions (specified using CaptureAt)
 // and that the system is not currently running in 'async' capture mode.
@@ -83,8 +83,8 @@ library fuchsia.media;
 // an OnEndOfStream event will be produced.  While an AudioCapturer will never
 // overwrite any region of the payload buffer after a completed region is
 // returned, it may overwrite the unfilled portions of a partially filled
-// buffer which has been returned as a result of a DiscardAllPackets
-// operation.
+// buffer which has been returned as a result of a DiscardAllPackets operation.
+//
 // TODO(mpuryear): Add a new method to replace `DiscardAllPackets`, which will
 // be removed from `StreamSource`.
 //
@@ -109,8 +109,8 @@ library fuchsia.media;
 //    shared payload buffer simultaneously.
 // ++ To send a region to capture into using the CaptureAt method while the
 //    AudioCapturer instance is running in 'async' mode.
-// ++ To attempt to call DiscardAllPackets while the AudioCapturer instance is running
-//    in 'async' mode.
+// ++ To attempt to call DiscardAllPackets while the AudioCapturer instance is
+//    running in 'async' mode.
 // ++ To attempt to re-start 'async' mode capturing without having first
 //    stopped.
 // ++ To attempt any operation except for SetGain while in the process of
@@ -183,12 +183,12 @@ library fuchsia.media;
 // rounding error based on whether or not the units of the capture timeline
 // (CLOCK_MONOTONIC) are divisible by the chosen audio frame rate.
 //
-// Users should always expect the first StreamPacket produced by an AudioCapturer
-// to have the discontinuous flag set on it (as there is no previous packet to
-// be continuous with).  Similarly, the first StreamPacket after a
-// DiscardAllPackets or a Stop/Start cycle will always be discontinuous.  After
-// that, there are only two reasons that a StreamPacket will ever be
-// discontinuous.
+// Users should always expect the first StreamPacket produced by an
+// AudioCapturer to have the discontinuous flag set on it (as there is no
+// previous packet to be continuous with). Similarly, the first StreamPacket
+// after a DiscardAllPackets or a Stop/Start cycle will always be
+// discontinuous. After that, there are only two reasons that a StreamPacket
+// will ever be discontinuous:
 //
 // 1) The user is operating an synchronous mode and does not supply regions to
 //    be filled quickly enough.  If the next continuous frame of data has not
@@ -261,8 +261,8 @@ protocol AudioCapturer {
 
     // Sets the stream type of the stream to be delivered.  Causes the source
     // material to be reformatted/resampled if needed in order to produce the
-    // requested stream type.  Note that the stream type may not be changed after
-    // the payload buffer has been established.
+    // requested stream type. Note that the stream type may not be changed
+    // after the payload buffer has been established.
     SetPcmStreamType(AudioStreamType stream_type);
 
     // Explicitly specify a region of the shared payload buffer for the audio
@@ -270,10 +270,10 @@ protocol AudioCapturer {
     CaptureAt(uint32 payload_buffer_id, uint32 payload_offset,
               uint32 frames) -> (StreamPacket captured_packet);
 
-    // Place the AudioCapturer into 'async' capture mode and begin to produce packets
-    // of exactly 'frames_per_packet' number of frames each. The
-    // OnPacketProduced event (of StreamSink) will be used to inform the client of
-    // produced packets.
+    // Place the AudioCapturer into 'async' capture mode and begin to produce
+    // packets of exactly 'frames_per_packet' number of frames each. The
+    // OnPacketProduced event (of StreamSink) will be used to inform the client
+    // of produced packets.
     StartAsyncCapture(uint32 frames_per_packet);
 
     // Stop capturing in 'async' capture mode and (optionally) deliver a
@@ -285,28 +285,29 @@ protocol AudioCapturer {
     // Binds to the gain control for this AudioCapturer.
     BindGainControl(request<GainControl> gain_control_request);
 
-    /////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // StreamBufferSet methods
     // See stream.fidl.
 
-    /////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // StreamSource methods
     // See stream.fidl.
 
-    /////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // Methods to be deprecated
     // These methods will go away.
 
-    // Gets the currently configured stream type. Note: for an AudioCapturer which was
-    // just created and has not yet had its stream type explicitly set, this will
-    // retrieve the stream type -- at the time the AudioCapturer was created -- of the
-    // source (input or looped-back output) to which the AudioCapturer is bound.
+    // Gets the currently configured stream type. Note: for an AudioCapturer
+    // which was just created and has not yet had its stream type explicitly
+    // set, this will retrieve the stream type -- at the time the AudioCapturer
+    // was created -- of the source (input or looped-back output) to which the
+    // AudioCapturer is bound.
     //
-    // TODO(mpuryear): Get rid of this. Eventually, AudioCapturers will be bindable to
-    // a set of inputs/outputs/renderers, so the concept of a "native" stream type
-    // will go away. Mechanisms will need to be put in place to allow users to
-    // enumerate the configuration of these bind-able endpoints (and perhaps to
-    // exercise control over them), but it will be the user of the AudioCapturer's job
-    // to specify the format they want.
+    // TODO(mpuryear): Get rid of this. Eventually, AudioCapturers will be
+    // bindable to a set of inputs/outputs/renderers, so the concept of a
+    // "native" stream type will go away. Mechanisms will need to be put in
+    // place to allow users to enumerate the configuration of these bind-able
+    // endpoints (and perhaps to exercise control over them), but it will be
+    // the user of the AudioCapturer's job to specify the format they want.
     GetStreamType() -> (StreamType stream_type);
 };

@@ -155,14 +155,19 @@ void VirtualAudioControlImpl::ReleaseBindings() {
 
 // Allow subsequent new stream creation -- but do not automatically reactivate
 // any streams that may have been deactivated (removed) by the previous Disable.
-// Upon construction, the default state of this object is Enabled.
-void VirtualAudioControlImpl::Enable() { enabled_ = true; }
+// Upon construction, the default state of this object is Enabled. The (empty)
+// callback is used to synchronize with other in-flight asynchronous operations.
+void VirtualAudioControlImpl::Enable(EnableCallback enable_callback) {
+  enabled_ = true;
+  enable_callback();
+}
 
 // Deactivate active streams and prevent subsequent new stream creation. Audio
-// devices disappear from the dev tree (VirtualAudioStream objects are freed),
-// but Input and Output channels remain open and can be reconfigured. Once
-// Enable is called; they can be readded without losing configuration state.
-void VirtualAudioControlImpl::Disable() {
+// devices vanish from the dev tree (VirtualAudioStream objects are freed), but
+// Input and Output channels remain open and can be reconfigured. Once Enable is
+// called; they can be re-added without losing configuration state. The (empty)
+// callback is used to synchronize with other in-flight asynchronous operations.
+void VirtualAudioControlImpl::Disable(DisableCallback disable_callback) {
   if (enabled_) {
     for (auto& binding : input_bindings_.bindings()) {
       auto stream = binding->impl()->stream();
@@ -179,6 +184,8 @@ void VirtualAudioControlImpl::Disable() {
 
     enabled_ = false;
   }
+
+  disable_callback();
 }
 
 }  // namespace virtual_audio
