@@ -29,10 +29,6 @@ std::ostream& operator<<(std::ostream& stream,
 
 std::ostream& operator<<(
     std::ostream& stream,
-    const fuchsia::ui::gfx::ViewHolderConnectedEvent& event);
-
-std::ostream& operator<<(
-    std::ostream& stream,
     const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event);
 
 std::ostream& operator<<(

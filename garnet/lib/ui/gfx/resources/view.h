@@ -81,7 +81,6 @@ class View final : public Resource {
   void LinkDisconnected();
 
   // Sends an event to our SessionListener.
-  void SendViewHolderConnectedEvent();
   void SendViewHolderDisconnectedEvent();
 
   ViewLinker::ImportLink link_;

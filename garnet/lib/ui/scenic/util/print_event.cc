@@ -27,8 +27,6 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << event.view_connected();
     case Event::Tag::kViewDisconnected:
       return stream << event.view_disconnected();
-    case Event::Tag::kViewHolderConnected:
-      return stream << event.view_holder_connected();
     case Event::Tag::kViewHolderDisconnected:
       return stream << event.view_holder_disconnected();
     case Event::Tag::kViewAttachedToScene:
@@ -64,27 +62,19 @@ std::ostream& operator<<(std::ostream& stream,
 
 std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ViewConnectedEvent& event) {
-  return stream << "ViewConnectedEvent(view_holder_id=" << event.view_holder_id
-                << ")";
+  return stream << "ViewConnectedEvent(view_id=" << event.view_holder_id << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ViewDisconnectedEvent& event) {
-  return stream << "ViewDisconnectedEvent(view_holder_id=" << event.view_holder_id
+  return stream << "ViewDisconnectedEvent(view_id=" << event.view_holder_id
                 << ")";
-}
-
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewHolderConnectedEvent& event) {
-  return stream << "ViewHolderConnectedEvent(view_id="
-                << event.view_id << ")";
 }
 
 std::ostream& operator<<(
     std::ostream& stream,
     const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event) {
-  return stream << "ViewHolderDisconnectedEvent(view_id="
+  return stream << "ViewHolderDisconnectedEvent(view_holder_id="
                 << event.view_id << ")";
 }
 
