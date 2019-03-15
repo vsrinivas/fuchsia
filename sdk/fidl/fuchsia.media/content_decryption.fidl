@@ -19,6 +19,13 @@ const string ENCRYPTION_MODE_CBC1 = "cbc1";
 const string ENCRYPTION_MODE_CENS = "cens";
 const string ENCRYPTION_MODE_CBCS = "cbcs";
 
+// Common initialization data formats. These are defined as strings rather than
+// enums so as to not limit the types a ContentDecryptionModule may support.
+const string LICENSE_INIT_DATA_TYPE_CENC = "cenc";
+const string LICENSE_INIT_DATA_TYPE_KEYIDS = "keyids";
+const string LICENSE_INIT_DATA_TYPE_WEBM = "webm";
+const string LICENSE_INIT_DATA_TYPE_HLS = "hls";
+
 enum LicenseSessionType {
     /// A session for which the license, keys, and record of the session are not
     /// persisted.
@@ -55,7 +62,10 @@ enum KeyStatus {
 };
 
 struct LicenseInitData {
-    LicenseInitDataType type;
+    /// The type is a string that indicates the format of the accompanying init
+    /// data. Common types include "cenc", "keyids", "webm", and "hls". CDMs may
+    /// also define their own.
+    string type;
     bytes:MAX_INIT_DATA_SIZE data;
 };
 
@@ -95,12 +105,12 @@ struct KeyInfo {
     KeyStatus status;
 };
 
-struct DecryptorParams {
+table DecryptorParams {
     /// Requires the decryptor to only output to secure buffers.
-    bool require_secure_mode;
+    1: bool require_secure_mode;
 
     /// Initial format details for the StreamProcessor.
-    FormatDetails input_details;
+    2: FormatDetails input_details;
 };
 
 protocol LicenseSession {
