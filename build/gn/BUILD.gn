@@ -14,7 +14,7 @@ testonly = true
 
 group("default") {
   deps = [
-    ":host_tests",
+    ":copy_host_tests",
     "//build/images:packages",
   ]
   if (preinstall_package_labels != [] || monolith_package_labels != []) {
@@ -25,30 +25,11 @@ group("default") {
   }
 }
 
-# Copy host test binaries to $root_build_dir/host_tests.
-# TODO(IN-819): Delete this copy target once host tests are no longer run out
-# of a single directory.
-if (package_host_tests != []) {
-  copy("host_tests") {
-    deps = []
-    sources = []
-    bindir = get_label_info("//anything($host_toolchain)", "root_out_dir")
-
-    # package_host_tests may contain duplicate entries. Those entries must be
-    # de-duplicated here to avoid output collisions.
-    foreach(label, package_host_tests) {
-      _full_label = "$label($host_toolchain)"
-      deps += [ _full_label ]
-      binary = get_label_info(label, "name")
-      sources += [ "$bindir/$binary" ]
-    }
-
-    outputs = [
-      "$root_build_dir/host_tests/{{source_file_part}}",
-    ]
-  }
-} else {
-  group("host_tests") {
+group("host_tests") {
+  visibility = [ ":*" ]
+  public_deps = []
+  foreach(label, package_host_tests) {
+    public_deps += [ "$label($host_toolchain)" ]
   }
 }
 
@@ -65,6 +46,40 @@ generated_file("tests") {
   deps = [
     ":host_tests",
     "//build/images:packages",
+  ]
+}
+
+# Copy host test binaries to $root_build_dir/host_tests.
+# TODO(IN-819): Delete this copy target once host tests are no longer run out
+# of a single directory.
+action("copy_host_tests") {
+  script = "copy_host_tests.py"
+
+  inputs = [
+    "$root_build_dir/tests.json",
+  ]
+
+  outputs = [
+    "$target_gen_dir/copy_host_tests.stamp",
+  ]
+
+  depfile = "$target_gen_dir/copy_host_tests.d"
+
+  args = [
+    "--json",
+    rebase_path(inputs[0]),
+    "--dest-dir",
+    rebase_path("$root_build_dir/host_tests"),
+    "--stamp",
+    rebase_path(outputs[0]),
+    "--depfile",
+    rebase_path(depfile),
+  ]
+
+  deps = [
+    ":host_tests",
+    "//build/images:packages",
+    ":tests",
   ]
 }
 
