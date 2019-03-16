@@ -5,6 +5,9 @@
 #ifndef LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
 #define LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
 
+#include <string>
+#include <vector>
+
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/log_settings.h"
 
@@ -36,6 +39,11 @@ bool ParseLogSettings(const fxl::CommandLine& command_line,
 //
 // See |ParseLogSettings| for syntax.
 bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line);
+
+// Do the opposite of |ParseLogSettings()|: Convert |settings| to the
+// command line arguments to pass to a program. The result is empty if
+// |settings| is the default.
+std::vector<std::string> LogSettingsToArgv(const LogSettings& settings);
 
 }  // namespace fxl
 

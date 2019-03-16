@@ -158,5 +158,43 @@ TEST_F(LogSettingsFixture, SetInvalidLogFile) {
   EXPECT_NE(0, access(new_settings.log_file.c_str(), R_OK));
 }
 
+TEST_F(LogSettingsFixture, ToArgv) {
+  LogSettings settings;
+  EXPECT_TRUE(LogSettingsToArgv(settings).empty());
+
+  EXPECT_TRUE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              std::vector<std::string>{"--quiet=1"});
+
+  EXPECT_TRUE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              std::vector<std::string>{"--quiet=3"});
+
+  EXPECT_TRUE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              std::vector<std::string>{"--verbose=1"});
+
+  EXPECT_TRUE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--verbose=3"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              std::vector<std::string>{"--verbose=3"});
+
+  // Reset |settings| back to defaults so we don't pick up previous tests.
+  settings = LogSettings{};
+  EXPECT_TRUE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--log-file=/foo"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              std::vector<std::string>{"--log-file=/foo"}) << LogSettingsToArgv(settings)[0];
+
+  EXPECT_TRUE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--verbose", "--log-file=/foo"}),
+      &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              (std::vector<std::string>{"--verbose=1", "--log-file=/foo"}));
+}
+
 }  // namespace
 }  // namespace fxl
