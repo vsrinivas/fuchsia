@@ -13,7 +13,7 @@ import (
 	"os/exec"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/netboot"
 )
 
@@ -75,16 +75,16 @@ func checkHealth(n *netboot.Client, nodename string) HealthCheckResult {
 	return HealthCheckResult{nodename, healthyState, ""}
 }
 
-func reboot(properties botanist.DeviceProperties) error {
-	if properties.PDU == nil {
-		return fmt.Errorf("Failed to reboot the device: missing PDU info in botanist config file.")
+func reboot(config target.DeviceConfig) error {
+	if config.Power == nil {
+		return fmt.Errorf("Failed to reboot the device: missing power management info in botanist config file.")
 	}
-	signers, err := botanist.SSHSignersFromDeviceProperties([]botanist.DeviceProperties{properties})
+	signers, err := target.SSHSignersFromConfigs([]target.DeviceConfig{config})
 	if err != nil {
 		return fmt.Errorf("Failed to reboot the device: %v.", err)
 	}
 
-	if err = botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
+	if err = config.Power.RebootDevice(signers, config.Nodename); err != nil {
 		return fmt.Errorf("Failed to reboot the device: %v.", err)
 	}
 	return nil
@@ -116,20 +116,19 @@ func init() {
 func main() {
 	flag.Parse()
 	client := netboot.NewClient(timeout)
-	var devices []botanist.DeviceProperties
-	devices, err := botanist.LoadDeviceProperties(configFile)
+	configs, err := target.LoadDeviceConfigs(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var checkResultSlice []HealthCheckResult
-	for _, deviceProperties := range devices {
-		nodename := deviceProperties.Nodename
+	for _, config := range configs {
+		nodename := config.Nodename
 		if nodename == "" {
 			log.Fatal("Failed to retrieve nodename from config file")
 		}
 		checkResult := checkHealth(client, nodename)
 		if checkResult.State == unhealthyState && rebootIfUnhealthy {
-			if rebootErr := reboot(deviceProperties); rebootErr != nil {
+			if rebootErr := reboot(config); rebootErr != nil {
 				checkResult.ErrorMsg += "; " + rebootErr.Error()
 			}
 		}

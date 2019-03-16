@@ -1,17 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package botanist
+package target
 
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"fuchsia.googlesource.com/tools/botanist/power"
 	"fuchsia.googlesource.com/tools/sshutil"
 )
 
-func TestLoadDevicePropertiesSlice(t *testing.T) {
+func TestLoadConfigs(t *testing.T) {
 	tests := []struct {
 		name        string
 		jsonStr     string
@@ -19,11 +20,9 @@ func TestLoadDevicePropertiesSlice(t *testing.T) {
 		expectErr   bool
 	}{
 		// Valid configs.
-		{"ValidListConfig", `[{"nodename":"upper-drank-wick-creek"},{"nodename":"siren-swoop-wick-hasty"}]`, 2, false},
-		{"ValidSingleConfig", `{"nodename":"upper-drank-wick-creek"}`, 1, false},
+		{"ValidConfig", `[{"nodename":"upper-drank-wick-creek"},{"nodename":"siren-swoop-wick-hasty"}]`, 2, false},
 		// Invalid configs.
-		{"InvalidListConfig", `{{"nodename":"upper-drank-wick-creek"},{"nodename":"siren-swoop-wick-hasty"}}`, 0, true},
-		{"InvalidSingleConfig", `{"upper-drank-wick-creek"}`, 0, true},
+		{"InvalidConfig", `{{"nodename":"upper-drank-wick-creek"},{"nodename":"siren-swoop-wick-hasty"}}`, 0, true},
 	}
 	for _, test := range tests {
 		tmpfile, err := ioutil.TempFile(os.TempDir(), "common_test")
@@ -37,7 +36,7 @@ func TestLoadDevicePropertiesSlice(t *testing.T) {
 			t.Fatalf("Failed to write to test device properties file: %s", err)
 		}
 
-		propertiesSlice, err := LoadDeviceProperties(tmpfile.Name())
+		configs, err := LoadDeviceConfigs(tmpfile.Name())
 
 		if test.expectErr && err == nil {
 			t.Errorf("Test%v: Exepected errors; no errors found", test.name)
@@ -47,8 +46,8 @@ func TestLoadDevicePropertiesSlice(t *testing.T) {
 			t.Errorf("Test%v: Exepected no errors; found error - %v", test.name, err)
 		}
 
-		if len(propertiesSlice) != test.expectedLen {
-			t.Errorf("Test%v: Expected %d nodes; found %d", test.name, test.expectedLen, len(propertiesSlice))
+		if len(configs) != test.expectedLen {
+			t.Errorf("Test%v: Expected %d nodes; found %d", test.name, test.expectedLen, len(configs))
 		}
 
 		if err := tmpfile.Close(); err != nil {
@@ -57,7 +56,7 @@ func TestLoadDevicePropertiesSlice(t *testing.T) {
 	}
 }
 
-func TestSSHSignersFromDeviceProperties(t *testing.T) {
+func TestSSHSignersFromConfigs(t *testing.T) {
 	tests := []struct {
 		name        string
 		device1Keys []string
@@ -118,11 +117,11 @@ func TestSSHSignersFromDeviceProperties(t *testing.T) {
 		for _, keyName := range test.device2Keys {
 			keyPaths2 = append(keyPaths2, keyNameToPath[keyName])
 		}
-		devices := []DeviceProperties{
-			DeviceProperties{"device1", &Config{}, keyPaths1},
-			DeviceProperties{"device2", &Config{}, keyPaths2},
+		configs := []DeviceConfig{
+			{"device1", &power.Client{}, keyPaths1},
+			{"device2", &power.Client{}, keyPaths2},
 		}
-		signers, err := SSHSignersFromDeviceProperties(devices)
+		signers, err := SSHSignersFromConfigs(configs)
 		if test.expectErr && err == nil {
 			t.Errorf("Test%v: Expected errors; no errors found", test.name)
 		}

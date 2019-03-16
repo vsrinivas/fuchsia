@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package botanist
+package power
 
 import (
 	"context"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist/pdu/amt"
-	"fuchsia.googlesource.com/tools/botanist/pdu/wol"
+	"fuchsia.googlesource.com/tools/botanist/power/amt"
+	"fuchsia.googlesource.com/tools/botanist/power/wol"
 	"fuchsia.googlesource.com/tools/sshutil"
 
 	"golang.org/x/crypto/ssh"
@@ -29,36 +29,36 @@ const (
 	sshUser = "fuchsia"
 )
 
-// Config represents a PDU configuration for a particular device.
-type Config struct {
-	// Type is the type of PDU to use.
+// Client represents a power management configuration for a particular device.
+type Client struct {
+	// Type is the type of manager to use.
 	Type string `json:"type"`
 
-	// Host is the network hostname of the PDU e.g. fuchsia-tests-pdu-001.
+	// Host is the network hostname of the manager, e.g. fuchsia-tests-pdu-001.
 	Host string `json:"host"`
 
-	// HostHwAddr is the ethernet MAC address of the PDU e.g. 10:10:10:10:10:10
+	// HostHwAddr is the ethernet MAC address of the manager,  e.g. 10:10:10:10:10:10
 	HostMACAddr string `json:"host_mac_addr"`
 
-	// Username is the username used to log in to the PDU.
+	// Username is the username used to log in to the manager.
 	Username string `json:"username"`
 
-	// Password is the password used to log in to the PDU.
+	// Password is the password used to log in to the manager..
 	Password string `json:"password"`
 }
 
 // RebootDevice attempts to reboot the specified device into recovery, and
 // additionally uses the given configuration to reboot the device if specified.
-func RebootDevice(cfg *Config, signers []ssh.Signer, nodename string) error {
+func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
 	// Always attempt to soft reboot the device to recovery.
 	err := rebootRecovery(nodename, signers)
 
 	// Hard reboot the device if specified in the config.
-	switch cfg.Type {
+	switch c.Type {
 	case "amt":
-		return amt.Reboot(cfg.Host, cfg.Username, cfg.Password)
+		return amt.Reboot(c.Host, c.Username, c.Password)
 	case "wol":
-		return wol.Reboot(botBroadcastAddr, botInterface, cfg.HostMACAddr)
+		return wol.Reboot(botBroadcastAddr, botInterface, c.HostMACAddr)
 	}
 
 	return err

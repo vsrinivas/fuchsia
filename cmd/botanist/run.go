@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
@@ -30,7 +31,7 @@ const netstackTimeout time.Duration = 1 * time.Minute
 // RunCommand is a Command implementation for booting a device and running a
 // given command locally.
 type RunCommand struct {
-	// DeviceFile is the path to a file of device properties.
+	// DeviceFile is the path to a file of device config.
 	deviceFile string
 
 	// ImageManifests is a list of paths to image manifests (e.g., images.json)
@@ -79,7 +80,7 @@ func (*RunCommand) Synopsis() string {
 }
 
 func (r *RunCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&r.deviceFile, "device", "/etc/botanist/config.json", "path to file of device properties")
+	f.StringVar(&r.deviceFile, "device", "/etc/botanist/config.json", "path to file of device config")
 	f.Var(&r.imageManifests, "images", "paths to image manifests")
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.StringVar(&r.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
@@ -208,16 +209,16 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load images: %v", err)
 	}
 
-	propertiesSlice, err := botanist.LoadDeviceProperties(r.deviceFile)
+	configs, err := target.LoadDeviceConfigs(r.deviceFile)
 	if err != nil {
-		return fmt.Errorf("failed to load device properties file %q", r.deviceFile)
-	} else if len(propertiesSlice) != 1 {
-		return fmt.Errorf("expected 1 entry in the device properties file; found %d", len(propertiesSlice))
+		return fmt.Errorf("failed to load device config file %q", r.deviceFile)
+	} else if len(configs) != 1 {
+		return fmt.Errorf("expected 1 entry in the device config file; found %d", len(configs))
 	}
-	properties := propertiesSlice[0]
+	config := configs[0]
 
 	// Merge config file and command-line keys.
-	privKeyPaths := properties.SSHKeys
+	privKeyPaths := config.SSHKeys
 	if r.sshKey != "" {
 		privKeyPaths = append(privKeyPaths, r.sshKey)
 	}
@@ -265,12 +266,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer syslog.Close()
 	}
 
-	if properties.PDU != nil {
+	if config.Power != nil {
 		defer func() {
-			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
+			logger.Debugf(ctx, "rebooting the node %q\n", config.Nodename)
 
-			if err := botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
-				logger.Errorf(ctx, "failed to reboot %q: %v\n", properties.Nodename, err)
+			if err := config.Power.RebootDevice(signers, config.Nodename); err != nil {
+				logger.Errorf(ctx, "failed to reboot %q: %v\n", config.Nodename, err)
 			}
 		}()
 	}
@@ -298,7 +299,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKeyPaths[0], signers, syslog)
+		errs <- r.runCmd(ctx, imgs, config.Nodename, args, privKeyPaths[0], signers, syslog)
 	}()
 
 	select {

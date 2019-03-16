@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
@@ -43,8 +44,8 @@ type ZedbootCommand struct {
 	// Netboot tells botanist to netboot (and not to pave).
 	netboot bool
 
-	// PropertiesFile is the path to a file where deviceProperties have been written.
-	propertiesFile string
+	// ConfigFile is the path to a file containing the target config.
+	configFile string
 
 	// TestResultsDir is the directory on target to where test results will be written.
 	testResultsDir string
@@ -92,7 +93,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.outputArchive, "out", "output.tar", "path on host to output tarball of test results")
 	f.StringVar(&cmd.summaryFilename, "summary-name", runtests.TestSummaryFilename, "name of the file in the test directory")
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
-	f.StringVar(&cmd.propertiesFile, "properties", "/etc/botanist/config.json", "path to file of device properties")
+	f.StringVar(&cmd.configFile, "config", "/etc/botanist/config.json", "path to file of device config")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 	f.StringVar(&cmd.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
 	f.StringVar(&cmd.hostCmd, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
@@ -197,7 +198,7 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodes []botanist.DeviceProperties, cmdlineArgs []string, signers []ssh.Signer) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodes []target.DeviceConfig, cmdlineArgs []string, signers []ssh.Signer) error {
 	var err error
 
 	// Set up log listener and dump kernel output to stdout.
@@ -359,26 +360,26 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 }
 
 func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) error {
-	propertiesSlice, err := botanist.LoadDeviceProperties(cmd.propertiesFile)
+	configs, err := target.LoadDeviceConfigs(cmd.configFile)
 
 	if err != nil {
-		return fmt.Errorf("failed to load device properties file %q", cmd.propertiesFile)
+		return fmt.Errorf("failed to load target config file %q", cmd.configFile)
 	}
 
-	signers, err := botanist.SSHSignersFromDeviceProperties(propertiesSlice)
+	signers, err := target.SSHSignersFromConfigs(configs)
 	if err != nil {
 		return err
 	}
 
-	for _, properties := range propertiesSlice {
-		if properties.PDU != nil {
-			defer func(pdu *botanist.Config, nodename string) {
-				logger.Debugf(ctx, "rebooting the node %q\n", nodename)
+	for _, config := range configs {
+		if config.Power != nil {
+			defer func(cfg *target.DeviceConfig) {
+				logger.Debugf(ctx, "rebooting the node %q\n", cfg.Nodename)
 
-				if err := botanist.RebootDevice(pdu, signers, nodename); err != nil {
+				if err := cfg.Power.RebootDevice(signers, cfg.Nodename); err != nil {
 					logger.Errorf(ctx, "failed to reboot the device: %v", err)
 				}
-			}(properties.PDU, properties.Nodename)
+			}(&config)
 		}
 	}
 
@@ -410,7 +411,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 				return
 			}
 		}
-		errs <- cmd.runTests(ctx, imgs, propertiesSlice, cmdlineArgs, signers)
+		errs <- cmd.runTests(ctx, imgs, configs, cmdlineArgs, signers)
 	}()
 
 	select {
@@ -423,8 +424,8 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 }
 
 func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	propertiesFlag := f.Lookup("properties")
-	logger.Debugf(ctx, "properties flag: %v\n", propertiesFlag.Value)
+	configFlag := f.Lookup("config")
+	logger.Debugf(ctx, "config flag: %v\n", configFlag.Value)
 
 	// Aggregate command-line arguments.
 	cmdlineArgs := f.Args()
