@@ -255,6 +255,12 @@ bool BlockDevice::InitFtl() {
         return false;
     }
 
+    Volume::Stats stats;
+    if (volume_->GetStats(&stats) == ZX_OK) {
+        zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%\n", stats.wear_count,
+               stats.garbage_level);
+    }
+
     zxlogf(INFO, "FTL: InitFtl ok\n");
     return true;
 }
