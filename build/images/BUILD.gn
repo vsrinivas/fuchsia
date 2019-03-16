@@ -88,6 +88,12 @@ images = [
   },
 ]
 
+group("meta_packages") {
+  testonly = true
+  visibility = [ ":*" ]
+  public_deps = meta_package_labels
+}
+
 group("monolith_packages") {
   testonly = true
   visibility = [ ":*" ]

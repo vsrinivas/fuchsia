@@ -4,6 +4,8 @@
 
 enable_netboot = true
 
+meta_package_labels = [ "//build/images:config-data" ]
+
 monolith = []
 
 preinstall = []
