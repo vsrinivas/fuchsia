@@ -42,10 +42,7 @@ driver_module("rtl88xx_driver") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-package("rtl88xx") {
-  # Fuchsia does not yet support loading drivers out of packages.
-  deprecated_system_image = true
-
+driver_package("rtl88xx") {
   deps = [
     ":rtl88xx_driver",
   ]

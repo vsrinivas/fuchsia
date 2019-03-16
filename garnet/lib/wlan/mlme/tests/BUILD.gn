@@ -256,9 +256,8 @@ executable("common_tests") {
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
 }
 
-package("wlanphy-testdev-driver") {
+driver_package("wlanphy-testdev-driver") {
   testonly = true
-  deprecated_system_image = true
 
   drivers = [
     {

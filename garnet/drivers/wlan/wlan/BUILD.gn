@@ -80,9 +80,7 @@ test_package("wlan_drivers_tests") {
   ]
 }
 
-package("wlan") {
-  deprecated_system_image = true
-
+driver_package("wlan") {
   deps = [
     ":wlan_driver",
   ]

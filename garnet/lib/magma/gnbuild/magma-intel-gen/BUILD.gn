@@ -6,9 +6,8 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-package("magma-intel-gen") {
+driver_package("magma-intel-gen") {
   if (build_intel_gen) {
-    deprecated_system_image = true
     if (magma_enable_developer_build) {
       testonly = true
     }

@@ -5,9 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-package("qmi-usb-transport") {
-  deprecated_system_image = true
-
+driver_package("qmi-usb-transport") {
   deps = [
     ":qmi_driver",
   ]

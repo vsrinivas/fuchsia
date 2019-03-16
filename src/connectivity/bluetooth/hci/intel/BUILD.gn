@@ -56,9 +56,7 @@ if (internal_access) {
   }
 }
 
-package("intel") {
-  deprecated_system_image = true
-
+driver_package("intel") {
   deps = [
     ":driver",
   ]

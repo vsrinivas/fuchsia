@@ -59,9 +59,7 @@ if (internal_access) {
   }
 }
 
-package("atheros") {
-  deprecated_system_image = true
-
+driver_package("atheros") {
   deps = [
     ":driver",
   ]

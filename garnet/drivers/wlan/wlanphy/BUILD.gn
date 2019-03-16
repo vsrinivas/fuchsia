@@ -33,9 +33,7 @@ driver_module("wlanphy_driver") {
   ]
 }
 
-package("wlanphy") {
-  deprecated_system_image = true
-
+driver_package("wlanphy") {
   deps = [
     ":wlanphy_driver",
   ]

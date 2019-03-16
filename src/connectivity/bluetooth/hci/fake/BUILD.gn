@@ -34,8 +34,7 @@ driver_module("driver") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-package("fake") {
-  deprecated_system_image = true
+driver_package("fake") {
   testonly = true
 
   deps = [

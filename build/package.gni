@@ -229,10 +229,6 @@ template("pm_build_package") {
 #
 #     TODO(PKG-46): Will be removed entirely eventually.
 #
-#     If this package uses the `drivers` parameter,
-#     `deprecated_system_image` must be set to `true` because we are not
-#     yet sophisticated enough to load drivers out of packages.
-#
 #   meta (optional)
 #     [list of scopes] Defines the metadata entries in the package. A metadata
 #     entry is typically a source file and is placed in the `meta/` directory of
@@ -321,17 +317,8 @@ template("pm_build_package") {
 #             the Infrastructure team. Labels are used as an escape hatch from
 #             the default testing pipeline for special tests or environments.
 #
-#   drivers (optional)
-#     [list of scopes] Defines the drivers in the package. A driver is
-#     typically produced by the build system and is placed in the `driver/`
-#     directory of the assembled package.
-#
-#     Requires `deprecated_system_image` to be `true`.
-#
-#     Entries in a scope in the drivers list:
-#
-#       name (required)
-#         [string] Name of the driver.
+#   drivers (private)
+#      Disallowed for direct use. Use the driver_package template.
 #
 #   loadable_modules (optional)
 #     [list of scopes] Defines the loadable modules in the package.  These
@@ -407,6 +394,7 @@ template("package") {
                                "binary",
                                "components",
                                "data_deps",
+                               "_defined_by_driver_package_template",
                                "deprecated_global_persistent_storage",
                                "deprecated_system_image",
                                "deps",
@@ -480,7 +468,7 @@ template("package") {
 
       # Only appmgr can contribute binaries to /system/bin.
       assert(pkg.binaries == [] || pkg.package_name == "appmgr",
-              "no new packages are allowed to add binaries to /system/bin")
+             "no new packages are allowed to add binaries to /system/bin")
 
       assert(pkg.tests == [], "tests are not allowed in /system")
     } else {
@@ -497,6 +485,10 @@ template("package") {
         ]
       }
     }
+    assert(pkg.drivers == [] ||
+               (defined(pkg._defined_by_driver_package_template) &&
+                    pkg._defined_by_driver_package_template),
+           "$pkg_desc drivers can only be supplied by driver_package")
 
     # Validate .cmx files
     foreach(meta, pkg.meta) {
@@ -673,6 +665,11 @@ template("package") {
 
     # TODO(mcgrathr): Remove this when we can!  Packages installing
     # libraries in the system image is all kinds of wrong.
+    # NOTE(raggi): Only used (other than drivers) by vulkan_loader (Q1 2019)
+    assert(pkg.libraries == [] ||
+               (defined(pkg._defined_by_driver_package_template) ||
+                    pkg.package_name == "vulkan_loader"),
+           "Only drivers or the vulkan loader can add libraries to /system")
     foreach(library, pkg.libraries) {
       pkg_manifest += [
         {
@@ -682,14 +679,11 @@ template("package") {
             dest = library.name
           }
           dest = "lib/${dest}"
-          if (defined(library.source)) {
-            source = library.source
-          } else {
-            # TODO(mcgrathr): This breaks when everything is a variant so
-            # that only this here is using the non-variant shlib build.
-            source = get_label_info(shlib_toolchain, "name")
-            source += "/${library.name}"
-          }
+
+          # TODO(mcgrathr): This breaks when everything is a variant so
+          # that only this here is using the non-variant shlib build.
+          source = get_label_info(shlib_toolchain, "name")
+          source += "/${library.name}"
           source = rebase_path(source, "", root_out_dir)
         },
       ]
@@ -841,5 +835,91 @@ template("package") {
 
     # Suppress unused variable warnings.
     not_needed(invoker, "*")
+  }
+}
+
+# A driver package is a package that contributes one or more drivers to the
+# system, optionally with associated firmware.
+#
+# Note: for now, drivers are in fact just members of the system package.
+#
+# Parameters
+#
+#   drivers (optional)
+#     [list of scopes] Defines the drivers in the package. A driver is
+#     typically produced by the build system and is placed in the `driver/`
+#     directory of the assembled package.
+#
+#     Requires `deprecated_system_image` to be `true`.
+#
+#     Entries in a scope in the drivers list:
+#
+#       name (required)
+#         [string] Name of the driver.
+#
+#   loadable_modules (optional)
+#     [list of scopes] Defines the loadable modules in the package.  These
+#     are produced by `loadable_module()` GN targets, and are typically
+#     placed in the `lib/` directory of the assembled packaged.
+#
+#     Entries in a scope in the loadable_modules list:
+#
+#       name (required)
+#         [string] Name of the loadable_module.
+#
+#       dest (optional, default: "lib")
+#         [string] Location the binary will be placed in the package.
+#
+#   libraries (optional, *DEPRECATED*)
+#     [list of scopes] Defines the (shared) libraries in the package. A library
+#     is placed in the `lib/` directory of the assembled package.
+#
+#     Entries in a scope in the libraries list:
+#
+#       name (required)
+#         [string] Name of the library
+#
+#       dest (optional)
+#         [path] Location the binary will be placed within `lib/`
+#
+#   resources (optional)
+#     [list of scopes] Defines the resources in the package. A resource is a
+#     data file that may be produced by the build system, checked in to a
+#     source repository, or produced by another system that runs before the
+#     build. Resources are placed in the `data/` directory of the assembled
+#     package.
+#
+#     Entries in a scope in the resources list:
+#
+#       path (required)
+#         [path] Location of resource in source or build directory. If the
+#         resource is checked in, this will typically be specified as a
+#         path relative to the BUILD.gn file containing the `package()`
+#         target. If the resource is generated, this will typically be
+#         specified relative to `$target_gen_dir`.
+#
+#       dest (required)
+#         [path] Location the resource will be placed within `data/`.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   data_deps (optional)
+#   testonly (optional)
+#     Usual GN meanings.
+template("driver_package") {
+  package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "drivers",
+                             "libraries",
+                             "public_deps",
+                             "resources",
+                             "testonly",
+                             "visibility",
+                           ])
+    deprecated_system_image = true
+    _defined_by_driver_package_template = true
   }
 }

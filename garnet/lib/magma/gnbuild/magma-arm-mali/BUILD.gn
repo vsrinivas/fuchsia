@@ -10,9 +10,8 @@ if (have_prebuilt_libvulkan_arm) {
   libvulkan_gen_path = "$target_gen_dir/libvulkan"
 }
 
-package("magma-arm-mali") {
+driver_package("magma-arm-mali") {
   if (build_msd_arm_mali) {
-    deprecated_system_image = true
     if (magma_enable_developer_build) {
       testonly = true
     }
