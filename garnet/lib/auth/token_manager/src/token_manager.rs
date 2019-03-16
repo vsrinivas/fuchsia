@@ -360,14 +360,12 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             challenge: Some("".to_string()),
         };
 
-        let scopes_copy = app_scopes.iter().map(|x| &**x).collect::<Vec<_>>();
-
         let (status, updated_credential, access_token, auth_challenge) =
             await!(auth_provider_proxy.get_app_access_token_from_assertion_jwt(
                 attestation_signer,
                 &mut assertion_jwt_params,
                 &refresh_token,
-                &mut scopes_copy.into_iter(),
+                &mut app_scopes.iter().map(|x| &**x),
             ))
             .map_err(|err| {
                 self.discard_auth_provider_proxy(auth_provider_type);
@@ -414,11 +412,10 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
 
-        let scopes_copy = app_scopes.iter().map(|x| &**x).collect::<Vec<_>>();
         let (status, provider_token) = await!(auth_provider_proxy.get_app_access_token(
             &refresh_token,
             app_config.client_id.as_ref().map(|x| &**x),
-            &mut scopes_copy.into_iter(),
+            &mut app_scopes.iter().map(|x| &**x),
         ))
         .map_err(|err| {
             self.discard_auth_provider_proxy(auth_provider_type);
@@ -718,8 +715,8 @@ impl Responder for TokenManagerListProfileIdsResponder {
 
     fn send_raw(self, status: Status, data: Option<Vec<String>>) -> Result<(), fidl::Error> {
         match data {
-            None => self.send(status, &mut std::iter::empty::<&str>()),
-            Some(mut profile_ids) => self.send(status, &mut profile_ids.iter_mut().map(|x| &**x)),
+            None => self.send(status, &mut std::iter::empty()),
+            Some(profile_ids) => self.send(status, &mut profile_ids.iter().map(|x| &**x)),
         }
     }
 }
