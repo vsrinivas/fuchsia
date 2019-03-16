@@ -121,7 +121,9 @@ if (internal_access) {
   }
 }
 
-driver_package("ath10k") {
+package("ath10k") {
+  deprecated_system_image = true
+
   deps = [
     ":ath10k_driver",
   ]

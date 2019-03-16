@@ -5,7 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_package("qmi-fake-transport") {
+package("qmi-fake-transport") {
+  deprecated_system_image = true
   testonly = true
 
   deps = [

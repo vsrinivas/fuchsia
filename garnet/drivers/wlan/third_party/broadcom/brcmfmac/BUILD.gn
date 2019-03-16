@@ -138,7 +138,9 @@ if (internal_access) {
   }
 }
 
-driver_package("brcmfmac") {
+package("brcmfmac") {
+  deprecated_system_image = true
+
   deps = [
     ":brcmfmac_driver",
   ]

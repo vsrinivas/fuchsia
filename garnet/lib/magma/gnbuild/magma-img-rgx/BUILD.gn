@@ -5,7 +5,8 @@
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-driver_package("magma-img-rgx-mtk") {
+package("magma-img-rgx-mtk") {
+  deprecated_system_image = true
   deps = [
     "//garnet/drivers/gpu/msd-img-rgx/mtk:msd_img_rgx_mtk",
   ]

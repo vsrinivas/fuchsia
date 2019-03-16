@@ -5,8 +5,9 @@
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-driver_package("magma-vsl-gc") {
+package("magma-vsl-gc") {
   if (build_vsl_gc) {
+    deprecated_system_image = true
     if (magma_enable_developer_build) {
       testonly = true
     }

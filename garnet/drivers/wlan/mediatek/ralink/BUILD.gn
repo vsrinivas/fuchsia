@@ -50,7 +50,9 @@ if (internal_access) {
   }
 }
 
-driver_package("ralink") {
+package("ralink") {
+  deprecated_system_image = true
+
   deps = [
     ":ralink_driver",
   ]

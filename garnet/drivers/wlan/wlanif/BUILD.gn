@@ -34,7 +34,9 @@ driver_module("wlanif_driver") {
   ]
 }
 
-driver_package("wlanif") {
+package("wlanif") {
+  deprecated_system_image = true
+
   deps = [
     ":wlanif_driver",
   ]

@@ -44,7 +44,9 @@ driver_module("usb_video_driver") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-driver_package("usb_video") {
+package("usb_video") {
+  deprecated_system_image = true
+
   deps = [
     ":usb_video_driver",
   ]

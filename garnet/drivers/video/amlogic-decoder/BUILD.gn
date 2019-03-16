@@ -170,7 +170,8 @@ copy("test_files") {
   ]
 }
 
-driver_package("amlogic_video_decoder") {
+package("amlogic_video_decoder") {
+  deprecated_system_image = true
 
   # internal access is needed to get the firmware
   if (target_cpu == "arm64" && internal_access) {
@@ -233,7 +234,8 @@ driver_package("amlogic_video_decoder") {
 
 # This package causes both versions of the driver to be built, so compile
 # errors in tests are hit on the CQ. It doesn't actually package any files.
-group("amlogic_video_decoder_test_build") {
+package("amlogic_video_decoder_test_build") {
+  deprecated_system_image = true
   testonly = true
 
   if (target_cpu == "arm64") {

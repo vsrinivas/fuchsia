@@ -23,7 +23,9 @@ driver_module("driver") {
   ]
 }
 
-driver_package("bt-hog") {
+package("bt-hog") {
+  deprecated_system_image = true
+
   deps = [
     ":driver",
   ]

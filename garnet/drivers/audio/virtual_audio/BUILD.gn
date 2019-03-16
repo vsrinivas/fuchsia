@@ -5,7 +5,9 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_package("virtual_audio") {
+package("virtual_audio") {
+  deprecated_system_image = true
+
   deps = [
     ":virtual_audio_driver",
   ]

@@ -27,7 +27,9 @@ driver_module("wlanif-test-driver") {
   ]
 }
 
-driver_package("wlanif-test") {
+package("wlanif-test") {
+  deprecated_system_image = true
+
   deps = [
     ":wlanif-test-driver",
   ]

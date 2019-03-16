@@ -24,7 +24,9 @@ driver_module("driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-driver_package("passthrough") {
+package("passthrough") {
+  deprecated_system_image = true
+
   deps = [
     ":driver",
   ]

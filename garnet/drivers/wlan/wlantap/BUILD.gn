@@ -37,7 +37,9 @@ driver_module("wlantap_driver") {
   ]
 }
 
-driver_package("wlantap") {
+package("wlantap") {
+  deprecated_system_image = true
+
   deps = [
     ":wlantap_driver",
   ]
