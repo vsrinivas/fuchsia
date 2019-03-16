@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_METADATA_NAND_H_
+#define DDK_METADATA_NAND_H_
 
 #include <ddk/metadata/bad-block.h>
 
@@ -25,3 +26,5 @@ typedef struct nand_config {
     uint32_t extra_partition_config_count;
     nand_partition_config_t extra_partition_config[NAND_PARTITION_MAX];
 } nand_config_t;
+
+#endif  // DDK_METADATA_NAND_H_

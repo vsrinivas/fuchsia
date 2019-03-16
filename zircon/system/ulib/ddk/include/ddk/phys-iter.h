@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_PHYS_ITER_H_
+#define DDK_PHYS_ITER_H_
 
 #include <zircon/types.h>
 
@@ -131,3 +132,5 @@ private:
 
 } // namespace ddk
 #endif
+
+#endif  // DDK_PHYS_ITER_H_

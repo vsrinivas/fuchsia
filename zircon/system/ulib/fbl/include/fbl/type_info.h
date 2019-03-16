@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TYPE_INFO_H_
+#define FBL_TYPE_INFO_H_
 
 #include <stddef.h>
 #include <utility>
@@ -88,3 +89,5 @@ private:
 };
 
 } // namespace fbl
+
+#endif  // FBL_TYPE_INFO_H_

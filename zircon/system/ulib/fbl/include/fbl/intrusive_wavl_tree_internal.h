@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_INTRUSIVE_WAVL_TREE_INTERNAL_H_
+#define FBL_INTRUSIVE_WAVL_TREE_INTERNAL_H_
 
 #include <stdint.h>
 
@@ -76,3 +77,5 @@ struct WAVLTreeNodeState<PtrType, int32_t> : public WAVLTreeNodeStateBase<PtrTyp
 };
 
 }  // namespace fbl
+
+#endif  // FBL_INTRUSIVE_WAVL_TREE_INTERNAL_H_

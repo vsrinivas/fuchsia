@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_INTRUSIVE_CONTAINER_UTILS_H_
+#define FBL_INTRUSIVE_CONTAINER_UTILS_H_
 
 #include <fbl/intrusive_pointer_traits.h>
 
@@ -199,3 +200,5 @@ constexpr bool valid_sentinel_ptr(const T* ptr) {
 }
 
 }  // namespace fbl::internal
+
+#endif  // FBL_INTRUSIVE_CONTAINER_UTILS_H_

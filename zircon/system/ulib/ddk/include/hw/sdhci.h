@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HW_SDHCI_H_
+#define HW_SDHCI_H_
 
 
 //Fields of command register
@@ -158,3 +159,5 @@ typedef struct sdhci_regs {
 #define SDHCI_VERSION_2 0x01
 #define SDHCI_VERSION_3 0x02
 } __PACKED sdhci_regs_t;
+
+#endif  // HW_SDHCI_H_

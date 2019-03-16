@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_DRIVER_H_
+#define DDK_DRIVER_H_
 
 #include <zircon/types.h>
 #include <zircon/listnode.h>
@@ -216,3 +217,5 @@ enum {
 };
 
 __END_CDECLS
+
+#endif  // DDK_DRIVER_H_

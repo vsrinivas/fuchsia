@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_REF_PTR_H_
+#define FBL_REF_PTR_H_
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -294,3 +295,5 @@ RefPtr<T> MakeRefCountedChecked(AllocChecker* ac, Args&&... args) {
 }
 
 } // namespace fbl
+
+#endif  // FBL_REF_PTR_H_

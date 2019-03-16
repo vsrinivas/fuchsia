@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_METADATA_H_
+#define DDK_METADATA_H_
 
 #include <assert.h>
 #include <zircon/boot/image.h>
@@ -75,3 +76,5 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 static inline bool is_private_metadata(uint32_t type) {
     return ((type & DEVICE_METADATA_PRIVATE_MASK) == DEVICE_METADATA_PRIVATE);
 }
+
+#endif  // DDK_METADATA_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_PROTOCOL_PCI_LIB_H_
+#define DDK_PROTOCOL_PCI_LIB_H_
 
 #include <ddk/protocol/pci.h>
 #include <ddk/mmio-buffer.h>
@@ -69,3 +70,5 @@ static inline uint8_t pci_get_first_capability(const pci_protocol_t* pci, uint8_
 }
 
 __END_CDECLS
+
+#endif  // DDK_PROTOCOL_PCI_LIB_H_

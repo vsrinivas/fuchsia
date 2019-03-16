@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HW_SDIO_H_
+#define HW_SDIO_H_
 
 #include <ddk/device.h>
 #include <zircon/compiler.h>
@@ -192,3 +193,4 @@ static const uint32_t sdio_cis_tpl_funce_tran_speed_val[16] =
 static const uint32_t sdio_cis_tpl_funce_tran_speed_unit[8] =
     {1, 10, 100, 1000, 0, 0, 0, 0 }; //Kbit/sec
 
+#endif  // HW_SDIO_H_

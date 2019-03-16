@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HW_SDMMC_H_
+#define HW_SDMMC_H_
 
 #include <ddk/device.h>
 #include <zircon/compiler.h>
@@ -178,3 +179,5 @@ __BEGIN_CDECLS
 #define MMC_STATUS_APP_CMD              (1 << 5)
 
 __END_CDECLS
+
+#endif  // HW_SDMMC_H_

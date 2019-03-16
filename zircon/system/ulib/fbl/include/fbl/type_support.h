@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TYPE_SUPPORT_H_
+#define FBL_TYPE_SUPPORT_H_
 
 namespace fbl {
 
@@ -336,3 +337,5 @@ template <typename... Ts>
 using void_t = typename internal::make_void<Ts...>::type;
 
 }  // namespace fbl
+
+#endif  // FBL_TYPE_SUPPORT_H_

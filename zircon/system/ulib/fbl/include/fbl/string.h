@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_STRING_H_
+#define FBL_STRING_H_
 
 #include <atomic>
 #include <fbl/alloc_checker.h>
@@ -331,3 +332,5 @@ inline bool operator>=(const String& lhs, const String& rhs) {
 }
 
 } // namespace fbl
+
+#endif  // FBL_STRING_H_

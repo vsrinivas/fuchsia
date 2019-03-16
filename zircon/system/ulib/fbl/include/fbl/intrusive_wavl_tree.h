@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_INTRUSIVE_WAVL_TREE_H_
+#define FBL_INTRUSIVE_WAVL_TREE_H_
 
 #include <zircon/assert.h>
 #include <fbl/algorithm.h>
@@ -1800,3 +1801,5 @@ template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeT
 constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, Obs>::IsSequenced;
 
 }  // namespace fbl
+
+#endif  // FBL_INTRUSIVE_WAVL_TREE_H_

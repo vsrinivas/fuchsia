@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_INTRUSIVE_DOUBLE_LIST_H_
+#define FBL_INTRUSIVE_DOUBLE_LIST_H_
 
 #include <zircon/assert.h>
 #include <fbl/algorithm.h>
@@ -680,3 +681,5 @@ template <typename T, typename NodeTraits>
 constexpr bool DoublyLinkedList<T, NodeTraits>::IsSequenced;
 
 }  // namespace fbl
+
+#endif  // FBL_INTRUSIVE_DOUBLE_LIST_H_

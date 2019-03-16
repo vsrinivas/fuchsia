@@ -6,7 +6,8 @@
 // with string-like objects such as fbl::StringPiece, fbl::String, std::string,
 // and std::string_view.
 
-#pragma once
+#ifndef FBL_STRING_TRAITS_H_
+#define FBL_STRING_TRAITS_H_
 
 #include <stddef.h>
 #include <type_traits>
@@ -44,3 +45,5 @@ template <typename T>
 inline constexpr bool is_string_like_v = is_string_like<T>::value;
 
 } // namespace fbl
+
+#endif  // FBL_STRING_TRAITS_H_

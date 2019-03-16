@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_FUNCTION_H_
+#define FBL_FUNCTION_H_
 
 #include <new>
 #include <stddef.h>
@@ -486,3 +487,5 @@ auto BindMember(T* instance, R (T::*fn)(Args...)) {
 }
 
 } // namespace fbl
+
+#endif  // FBL_FUNCTION_H_

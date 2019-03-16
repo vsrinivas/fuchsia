@@ -5,7 +5,8 @@
 // All code doing MMIO access must go through this API rather than using direct
 // pointer dereferences.
 
-#pragma once
+#ifndef HW_REG_H_
+#define HW_REG_H_
 
 #include <stdint.h>
 
@@ -102,3 +103,5 @@ static inline uint64_t readll(const volatile void* a) {
 
 #define set_bitsll(v, a) writell(readll(a) | (v), (a))
 #define clr_bitsll(v, a) writell(readll(a) & (uint64_t)~(v), (a))
+
+#endif  // HW_REG_H_

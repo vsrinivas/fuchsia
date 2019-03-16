@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_RECYCLER_H_
+#define FBL_RECYCLER_H_
 
 #include <zircon/assert.h>
 #include <fbl/type_support.h>
@@ -142,3 +143,5 @@ private:
 };
 
 }  // namespace fbl
+
+#endif  // FBL_RECYCLER_H_

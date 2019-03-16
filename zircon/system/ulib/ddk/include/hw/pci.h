@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HW_PCI_H_
+#define HW_PCI_H_
 
 // clang-format off
 
@@ -213,3 +214,5 @@ static inline void pcie_write16(volatile uint16_t* reg, uint16_t val) { *reg = h
 static inline void pcie_write32(volatile uint32_t* reg, uint32_t val) { *reg = htole32(val); }
 
 __END_CDECLS
+
+#endif  // HW_PCI_H_

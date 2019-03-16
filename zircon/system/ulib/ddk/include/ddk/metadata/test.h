@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_METADATA_TEST_H_
+#define DDK_METADATA_TEST_H_
 
 #include <zircon/types.h>
 
@@ -28,3 +29,5 @@ struct DeviceList {
 };
 
 } // namespace board_test
+
+#endif  // DDK_METADATA_TEST_H_

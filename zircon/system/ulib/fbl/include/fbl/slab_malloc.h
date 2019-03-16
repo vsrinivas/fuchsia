@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_SLAB_MALLOC_H_
+#define FBL_SLAB_MALLOC_H_
 #include <stdlib.h>
 
 namespace fbl {
@@ -52,3 +53,4 @@ struct SlabMalloc {
 }  // namespace internal
 }  // namespace fbl
 
+#endif  // FBL_SLAB_MALLOC_H_

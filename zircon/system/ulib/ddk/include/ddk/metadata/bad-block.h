@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_METADATA_BAD_BLOCK_H_
+#define DDK_METADATA_BAD_BLOCK_H_
 
 #include <zircon/types.h>
 
@@ -21,3 +22,5 @@ typedef struct {
         } aml;
     };
 } bad_block_config_t;
+
+#endif  // DDK_METADATA_BAD_BLOCK_H_

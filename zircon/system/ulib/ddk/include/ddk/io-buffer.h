@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_IO_BUFFER_H_
+#define DDK_IO_BUFFER_H_
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -187,3 +188,5 @@ private:
 } // namespace ddk
 
 #endif // __cplusplus
+
+#endif  // DDK_IO_BUFFER_H_

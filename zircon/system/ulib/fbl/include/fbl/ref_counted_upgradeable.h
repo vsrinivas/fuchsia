@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_REF_COUNTED_UPGRADEABLE_H_
+#define FBL_REF_COUNTED_UPGRADEABLE_H_
 
 #include <zircon/assert.h>
 #include <fbl/macros.h>
@@ -153,3 +154,5 @@ inline RefPtr<T> MakeRefPtrUpgradeFromRaw(T* ptr, const LockCapability& lock) __
 }
 
 }  // namespace fbl
+
+#endif  // FBL_REF_COUNTED_UPGRADEABLE_H_

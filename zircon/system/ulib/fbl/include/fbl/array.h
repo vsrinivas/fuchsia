@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_ARRAY_H_
+#define FBL_ARRAY_H_
 
 #include <zircon/assert.h>
 #include <fbl/macros.h>
@@ -114,3 +115,5 @@ private:
 };
 
 }  // namespace fbl
+
+#endif  // FBL_ARRAY_H_

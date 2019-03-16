@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_DEBUG_H_
+#define DDK_DEBUG_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -124,3 +125,5 @@ static inline uint32_t driver_get_log_flags(void) {
 }
 
 __END_CDECLS
+
+#endif  // DDK_DEBUG_H_

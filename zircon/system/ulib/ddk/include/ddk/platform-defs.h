@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_PLATFORM_DEFS_H_
+#define DDK_PLATFORM_DEFS_H_
 
 #include <zircon/compiler.h>
 
@@ -199,3 +200,5 @@ __BEGIN_CDECLS
 #define PDEV_DID_QUALCOMM_GPIO       1
 
 __END_CDECLS
+
+#endif  // DDK_PLATFORM_DEFS_H_

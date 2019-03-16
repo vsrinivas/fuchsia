@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_FUTEX_H_
+#define FBL_FUTEX_H_
 
 #include <zircon/types.h>
 
@@ -47,3 +48,5 @@ private:
 };
 
 }  // namespace fbl
+
+#endif  // FBL_FUTEX_H_

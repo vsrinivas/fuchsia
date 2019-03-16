@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_LIMITS_H_
+#define FBL_LIMITS_H_
 
 #include <limits.h>
 
@@ -96,3 +97,5 @@ SPECIALIZE_UNSIGNED(unsigned long long, 0, ULLONG_MAX);
 #undef SPECIALIZE_INT
 
 }  // namespace fbl
+
+#endif  // FBL_LIMITS_H_

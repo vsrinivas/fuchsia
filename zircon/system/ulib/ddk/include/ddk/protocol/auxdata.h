@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_PROTOCOL_AUXDATA_H_
+#define DDK_PROTOCOL_AUXDATA_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -26,3 +27,5 @@ typedef struct {
 } auxdata_i2c_device_t;
 
 __END_CDECLS
+
+#endif  // DDK_PROTOCOL_AUXDATA_H_

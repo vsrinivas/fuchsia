@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_ALGORITHM_H_
+#define FBL_ALGORITHM_H_
 
 #include <fbl/type_support.h>
 #include <stdlib.h>
@@ -255,3 +256,5 @@ T accumulate(InputIterator first, InputIterator last, T initial_value, BinaryOp 
 }
 
 }  // namespace fbl
+
+#endif  // FBL_ALGORITHM_H_

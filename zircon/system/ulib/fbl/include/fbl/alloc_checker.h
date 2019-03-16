@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_ALLOC_CHECKER_H_
+#define FBL_ALLOC_CHECKER_H_
 
 #include <new>
 #include <stddef.h>
@@ -37,3 +38,5 @@ void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac)
 
 void* operator new(size_t size, fbl::AllocChecker* ac) noexcept;
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept;
+
+#endif  // FBL_ALLOC_CHECKER_H_

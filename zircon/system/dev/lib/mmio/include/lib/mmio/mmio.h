@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MMIO_MMIO_H_
+#define LIB_MMIO_MMIO_H_
 
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
@@ -384,3 +385,5 @@ public:
 };
 
 } //namespace ddk
+
+#endif  // LIB_MMIO_MMIO_H_

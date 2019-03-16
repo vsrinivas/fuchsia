@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HW_ARCH_OPS_H_
+#define HW_ARCH_OPS_H_
 
 #if defined(__aarch64__)
 
@@ -17,3 +18,5 @@
 #define hw_wmb()   __asm__ volatile ("sfence" ::: "memory")
 
 #endif
+
+#endif  // HW_ARCH_OPS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_STRING_PIECE_H_
+#define FBL_STRING_PIECE_H_
 
 #include <string.h>
 #include <type_traits>
@@ -120,3 +121,5 @@ inline bool operator>=(const StringPiece& lhs, const StringPiece& rhs) {
 }
 
 } // namespace fbl
+
+#endif  // FBL_STRING_PIECE_H_

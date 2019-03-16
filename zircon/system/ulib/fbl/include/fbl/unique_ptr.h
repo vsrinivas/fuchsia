@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_UNIQUE_PTR_H_
+#define FBL_UNIQUE_PTR_H_
 
 #include <stdlib.h>
 #include <fbl/alloc_checker.h>
@@ -244,3 +245,5 @@ make_unique_checked(AllocChecker* ac, Args&&... args) {
 }
 
 }  // namespace fbl
+
+#endif  // FBL_UNIQUE_PTR_H_

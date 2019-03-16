@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_MACROS_H_
+#define FBL_MACROS_H_
 
 #include <type_traits>
 
@@ -79,3 +80,5 @@ public:                                                                         
 };                                                                                \
 template <typename T>                                                             \
 static inline constexpr bool trait_name ## _v = trait_name<T>::value
+
+#endif  // FBL_MACROS_H_

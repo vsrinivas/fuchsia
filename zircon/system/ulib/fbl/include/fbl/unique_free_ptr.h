@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_UNIQUE_FREE_PTR_H_
+#define FBL_UNIQUE_FREE_PTR_H_
 
 #include <stdlib.h>
 #include <fbl/macros.h>
@@ -97,3 +98,5 @@ static inline bool operator!=(decltype(nullptr), const unique_free_ptr<T>& ptr) 
 }
 
 }  // namespace fbl
+
+#endif  // FBL_UNIQUE_FREE_PTR_H_

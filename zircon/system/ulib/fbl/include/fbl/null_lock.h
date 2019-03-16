@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_NULL_LOCK_H_
+#define FBL_NULL_LOCK_H_
 
 #ifdef __cplusplus
 #include <zircon/compiler.h>
@@ -24,3 +25,5 @@ public:
 
 }  // namespace fbl
 #endif  // ifdef __cplusplus
+
+#endif  // FBL_NULL_LOCK_H_

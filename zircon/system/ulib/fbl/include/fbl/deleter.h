@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_DELETER_H_
+#define FBL_DELETER_H_
 
 #include <stdlib.h>
 
@@ -39,3 +40,5 @@ struct default_delete<T[n]> {
 };
 
 } // namespace fbl
+
+#endif  // FBL_DELETER_H_

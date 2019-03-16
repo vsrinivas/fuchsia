@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_INTRUSIVE_HASH_TABLE_H_
+#define FBL_INTRUSIVE_HASH_TABLE_H_
 
 #include <zircon/assert.h>
 #include <fbl/intrusive_container_utils.h>
@@ -553,3 +554,5 @@ HASH_TABLE_PROP(bool, IsSequenced);
 #undef HASH_TABLE_PROP
 
 }  // namespace fbl
+
+#endif  // FBL_INTRUSIVE_HASH_TABLE_H_

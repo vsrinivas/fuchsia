@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_DEVICE_H_
+#define DDK_DEVICE_H_
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
@@ -301,3 +302,5 @@ static inline void device_state_clr(zx_device_t* dev, zx_signals_t stateflag) {
 }
 
 __END_CDECLS
+
+#endif  // DDK_DEVICE_H_

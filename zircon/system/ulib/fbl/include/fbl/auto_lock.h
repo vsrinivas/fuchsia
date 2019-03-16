@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_AUTO_LOCK_H_
+#define FBL_AUTO_LOCK_H_
 #ifdef __cplusplus
 
 #include <fbl/macros.h>
@@ -77,3 +78,5 @@ private:
 }  // namespace fbl
 
 #endif  // #ifdef __cplusplus
+
+#endif  // FBL_AUTO_LOCK_H_

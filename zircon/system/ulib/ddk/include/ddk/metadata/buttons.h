@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDK_METADATA_BUTTONS_H_
+#define DDK_METADATA_BUTTONS_H_
 
 #include <zircon/types.h>
 
@@ -48,3 +49,5 @@ typedef struct GpioConfig {
         uint8_t output_value;   // Only applicable to BUTTONS_GPIO_TYPE_MATRIX_OUTPUT.
     };
 } buttons_gpio_config_t;
+
+#endif  // DDK_METADATA_BUTTONS_H_

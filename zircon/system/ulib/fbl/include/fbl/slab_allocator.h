@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_SLAB_ALLOCATOR_H_
+#define FBL_SLAB_ALLOCATOR_H_
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -924,3 +925,5 @@ fbl::SlabAllocator<ALLOC_TRAITS>::allocator_
 
 
 }  // namespace fbl
+
+#endif  // FBL_SLAB_ALLOCATOR_H_
