@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/intent_test_parent_module"
     },
     "sandbox": {
         "services": [

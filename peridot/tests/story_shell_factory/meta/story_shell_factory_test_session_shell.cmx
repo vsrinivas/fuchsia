@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/story_shell_factory_test_session_shell"
     },
     "sandbox": {
         "services": [

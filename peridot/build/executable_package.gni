@@ -28,7 +28,6 @@ template("executable_package") {
                            [
                              "deps",
                              "deprecated_global_persistent_storage",
-                             "deprecated_system_image",
                              "public_deps",
                              "testonly",
                              "meta",
@@ -43,14 +42,10 @@ template("executable_package") {
       ]
     }
 
-    if (!defined(deprecated_system_image) || !deprecated_system_image) {
-      binary = binary_name
-    } else {
-      binaries = [
-        {
-          name = binary_name
-        },
-      ]
-    }
+    binaries = [
+      {
+        name = binary_name
+      },
+    ]
   }
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/trigger_test_module"
     },
     "sandbox": {
         "services": [

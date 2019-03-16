@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/test_driver_module"
     },
     "sandbox": {
         "features": [

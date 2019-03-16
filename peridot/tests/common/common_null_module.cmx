@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.module": {
             "@version": 2,
-            "binary": "bin/app",
+            "binary": "bin/common_null_module",
             "composition_pattern": "ticker",
             "intent_filters": [
                 {
@@ -14,7 +14,7 @@
         }
     },
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/common_null_module"
     },
     "sandbox": {
         "services": [

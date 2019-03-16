@@ -39,7 +39,11 @@ package("common_null_module") {
     ":common_null_module_bin",
   ]
 
-  binary = "common_null_module"
+  binaries = [
+    {
+      name = "common_null_module"
+    },
+  ]
 
   meta = [
     {
@@ -74,7 +78,11 @@ package("common_active_module") {
     ":common_active_module_bin",
   ]
 
-  binary = "common_active_module"
+  binaries = [
+    {
+      name = "common_active_module"
+    },
+  ]
 
   meta = [
     {

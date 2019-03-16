@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/modular_benchmark_story_module"
     },
     "sandbox": {
         "services": [

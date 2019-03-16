@@ -39,7 +39,11 @@ package("voila") {
     ":bin",
   ]
 
-  binary = "voila"
+  binaries = [
+    {
+      name = "voila"
+    },
+  ]
 
   meta = [
     {

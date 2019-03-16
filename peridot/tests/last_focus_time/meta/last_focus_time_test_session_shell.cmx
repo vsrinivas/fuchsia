@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/last_focus_time_test_session_shell"
     },
     "sandbox": {
         "services": [

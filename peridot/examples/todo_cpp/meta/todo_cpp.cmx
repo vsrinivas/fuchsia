@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/todo_cpp"
     },
     "sandbox": {
         "features": [],
