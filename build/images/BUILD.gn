@@ -43,6 +43,10 @@ declare_args() {
   signed_image = false
 }
 
+assert(
+    meta_package_labels != [],
+    "Missing meta_package_labels. Are you using a supported product configuration? Check your args.gn file for an import of a product configuration.")
+
 config_package("config-data") {
   visibility = [ ":*" ]
   testonly = true
