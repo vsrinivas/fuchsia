@@ -99,13 +99,28 @@ h1 {
 <script async src=js></script>
 `
 
-type wrapperWriter struct {
-	io.WriteCloser
+type gzipWriter struct {
 	http.ResponseWriter
+	*gzip.Writer
 }
 
-func (w wrapperWriter) Write(b []byte) (int, error) {
-	return w.WriteCloser.Write(b)
+func (w *gzipWriter) Header() http.Header {
+	return w.ResponseWriter.Header()
+}
+
+func (w *gzipWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func (w *gzipWriter) Flush() {
+	if err := w.Writer.Flush(); err != nil {
+		panic(err)
+	}
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	} else {
+		log.Fatal("server misconfigured, can not flush")
+	}
 }
 
 type loggingWriter struct {
@@ -119,8 +134,15 @@ func (lw *loggingWriter) WriteHeader(status int) {
 }
 
 func (lw *loggingWriter) Flush() {
-	lw.ResponseWriter.(http.Flusher).Flush()
+	if f, ok := lw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	} else {
+		log.Fatal("server misconfigured, can not flush")
+	}
 }
+
+var _ http.Flusher = &loggingWriter{}
+var _ http.Flusher = &gzipWriter{}
 
 var (
 	mu          sync.Mutex
@@ -306,12 +328,12 @@ func Run(cfg *build.Config, args []string) error {
 
 	return http.ListenAndServe(*listen, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			gw := wrapperWriter{
-				gzip.NewWriter(w),
+			gw := &gzipWriter{
 				w,
+				gzip.NewWriter(w),
 			}
 			defer gw.Close()
-			w.Header().Set("Content-Encoding", "gzip")
+			gw.Header().Set("Content-Encoding", "gzip")
 			w = gw
 		}
 		lw := &loggingWriter{w, 0}
