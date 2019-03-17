@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//src/connectivity/overnet/examples/echo:overnet-echo",
-        "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing"
-    ]
-}

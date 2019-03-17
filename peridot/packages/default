@@ -1,7 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/garnet",
-        "garnet/packages/tools/all",
-        "peridot/packages/all"
-    ]
-}

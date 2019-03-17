@@ -1,7 +1,0 @@
-{
-    "packages": [
-        "//src/connectivity/bluetooth/hci/fake",
-        "//src/connectivity/bluetooth/tools",
-        "//src/connectivity/bluetooth/tools/bt-snoop"
-    ]
-}

@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//src/ledger/third_party/bup:bup_tests"
-    ]
-}

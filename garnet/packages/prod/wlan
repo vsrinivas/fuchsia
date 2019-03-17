@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/wlan-hw-sim",
-        "garnet/packages/prod/wlancfg",
-        "garnet/packages/prod/wlanstack",
-        "garnet/packages/tools/wlan"
-    ]
-}

@@ -1,9 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/tennis:tennis_service",
-        "//garnet/bin/tennis:tennis_viewer",
-        "//garnet/bin/tennis:tennis_sysmgr_config",
-        "//garnet/bin/tennis/bots/example_ai:tennis_example_ai",
-        "//garnet/bin/tennis/bots/manual_player:tennis_manual_player"
-    ]
-}

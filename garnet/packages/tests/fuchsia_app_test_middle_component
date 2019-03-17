@@ -1,5 +1,0 @@
-{
-  "packages": [
-    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_middle_component"
-  ]
-}

@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/go/src/benchmarking:go_benchmarking_tests"
-    ]
-}

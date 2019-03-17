@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/benchmarks:buildbot",
+    "//garnet/packages/benchmarks:garnet",
+    "//garnet/packages/benchmarks:zircon",
+  ]
+}
+
+group("buildbot") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/catapult_converter",
+    "//garnet/testing/runbenchmarks",
+  ]
+}
+
+group("garnet") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/examples:benchmark",
+    "//garnet/packages/examples:scenic",
+    "//garnet/packages/tests:scenic",
+    "//garnet/tests/benchmarks:garnet_benchmarks",
+  ]
+}
+
+group("zircon") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/zircon_benchmarks",
+  ]
+}

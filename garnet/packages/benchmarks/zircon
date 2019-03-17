@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/zircon_benchmarks"
-    ]
-}

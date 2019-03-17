@@ -1,8 +1,0 @@
-{
-    "labels": [
-        "//garnet/bin/kms:kms"
-    ],
-    "packages": [
-        "//garnet/bin/kms:kms"
-    ]
-}

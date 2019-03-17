@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/testing:environment_delegating_runner",
+    "//garnet/packages/testing:netemul_runner",
+    "//garnet/packages/testing:run_test_component",
+    "//garnet/packages/testing:views",
+  ]
+}
+
+group("environment_delegating_runner") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/component/cpp/testing/environment_delegating_runner",
+  ]
+}
+
+group("views") {
+  testonly = true
+  public_deps = [
+    "//garnet/testing/views:test_views",
+  ]
+}
+
+group("run_test_component") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/run_test_component",
+  ]
+}
+
+group("netemul_runner") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/netemul_runner:netemul_sandbox",
+    "//garnet/bin/netemul_runner/runner:netemul_runner",
+  ]
+}

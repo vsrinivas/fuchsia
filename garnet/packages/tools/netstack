@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/go/src/netstack:netstack_tools"
-    ]
-}

@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//src/developer/crashpad_agent:upload_to_prod_server_config"
-    ]
-}

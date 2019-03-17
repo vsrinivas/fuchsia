@@ -1,7 +1,0 @@
-{
-    "packages": [
-        "//garnet/drivers/wlan/third_party/broadcom/brcmfmac",
-        "//garnet/drivers/wlan/wlanif",
-        "//garnet/drivers/wlan/wlanphy"
-    ]
-}

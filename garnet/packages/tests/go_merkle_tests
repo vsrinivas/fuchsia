@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/go/src/merkle:go_merkle_tests"
-    ]
-}

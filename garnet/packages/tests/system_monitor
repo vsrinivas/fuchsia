@@ -1,5 +1,0 @@
-{
-    "host_tests": [
-        "//garnet/lib/system_monitor:system_monitor_tests"
-    ]
-}

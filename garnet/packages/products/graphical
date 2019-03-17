@@ -1,6 +1,0 @@
-{
-  "imports": [
-    "garnet/packages/prod/scenic",
-    "garnet/packages/products/base"
-  ]
-}

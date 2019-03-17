@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/lib/process:process_unittests"
-    ]
-}

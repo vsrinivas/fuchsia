@@ -1,0 +1,82 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("ledger") {
+  testonly = true
+  public_deps = [
+    "//src/ledger/bin",
+  ]
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//peridot/packages/prod:clipboard_agent",
+    "//peridot/packages/prod:cloud_provider_firestore",
+    "//peridot/packages/prod:integration_testing",
+    "//peridot/packages/prod:ledger",
+    "//peridot/packages/prod:maxwell",
+    "//peridot/packages/prod:modular",
+    "//peridot/packages/prod:module_resolver",
+    "//peridot/packages/prod:sessionctl",
+  ]
+}
+
+group("sessionctl") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/sessionctl",
+  ]
+}
+
+group("cloud_provider_firestore") {
+  testonly = true
+  public_deps = [
+    "//src/ledger/cloud_provider_firestore/bin",
+  ]
+}
+
+group("clipboard_agent") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/agents/clipboard:clipboard_agent",
+  ]
+}
+
+group("integration_testing") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:test_runner",
+    "//peridot/bin/basemgr:dev_base_shell",
+    "//peridot/bin/sessionmgr:dev_session_shell",
+    "//peridot/bin/sessionmgr/story_runner:dev_story_shell",
+    "//peridot/bin/test_driver:test_driver_module",
+    "//peridot/packages/prod:modular",
+  ]
+}
+
+group("maxwell") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/context_engine",
+    "//peridot/bin/suggestion_engine",
+  ]
+}
+
+group("module_resolver") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/module_resolver",
+    "//peridot/bin/module_resolver/module_package_indexer",
+  ]
+}
+
+group("modular") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/basemgr",
+    "//peridot/bin/sessionmgr",
+    "//peridot/cloud/go/src/remote_module_resolver:host",
+  ]
+}

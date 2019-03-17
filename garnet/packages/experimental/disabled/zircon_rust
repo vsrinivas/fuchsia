@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/public/rust/fuchsia-zircon/examples:zircon_rust_examples"
-    ]
-}

@@ -1,6 +1,0 @@
-{
-    "labels": [
-        "//garnet/tools/vboot_reference:futility_host",
-        "//garnet/tools/vboot_reference:cgpt_host"
-    ]
-}

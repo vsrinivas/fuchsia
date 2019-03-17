@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/stash"
-    ],
-    "packages": [
-        "//garnet/bin/stash:stash_tests",
-        "//garnet/bin/stash_ctl:stash_ctl_tests"
-    ]
-}

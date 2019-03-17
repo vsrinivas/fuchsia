@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
-        "//third_party/crashpad:crashpad_test"
-    ]
-}

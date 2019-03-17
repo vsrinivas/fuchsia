@@ -1,6 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/products/interactive_base",
-        "garnet/packages/prod/fonts"
-    ]
-}

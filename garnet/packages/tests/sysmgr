@@ -1,8 +1,0 @@
-{
-    "imports": [
-       "garnet/packages/prod/sysmgr"
-    ],
-    "packages": [
-        "//garnet/bin/sysmgr/integration_tests"
-    ]
-}

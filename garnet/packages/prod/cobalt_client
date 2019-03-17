@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//src/cobalt/bin/app:cobalt",
-        "//src/cobalt/bin/system-metrics:cobalt_system_metrics"
-    ]
-}

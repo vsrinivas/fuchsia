@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/kms:kms_tests"
-    ]
-}

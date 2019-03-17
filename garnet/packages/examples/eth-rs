@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/examples/rust/eth-rs:eth-rs"
-    ]
-}

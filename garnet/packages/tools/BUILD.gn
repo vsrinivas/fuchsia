@@ -1,0 +1,181 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("scenic") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/ui:gltf_export",
+    "//garnet/bin/ui:input",
+    "//garnet/bin/ui:present_view",
+    "//garnet/bin/ui:print_input",
+    "//garnet/bin/ui:screencap",
+    "//garnet/bin/ui:set_renderer_params",
+    "//garnet/bin/ui:set_root_view",
+    "//garnet/bin/ui:snapshot",
+  ]
+}
+
+group("audio") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/media/signal_generator",
+    "//garnet/bin/media/vol",
+    "//garnet/bin/media/wav_recorder",
+  ]
+}
+
+group("dockyard_host") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/system_monitor/dockyard_host:host_tools",
+  ]
+}
+
+group("zxdb") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/zxdb:zxdb_host",
+  ]
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/tools:audio",
+    "//garnet/packages/tools:banjo_toolchain",
+    "//garnet/packages/tools:bluetooth",
+    "//garnet/packages/tools:crashpad_database_util",
+    "//garnet/packages/tools:cs",
+    "//garnet/packages/tools:curl",
+    "//garnet/packages/tools:dockyard_host",
+    "//garnet/packages/tools:fidlmerge",
+    "//garnet/packages/tools:iperf",
+    "//garnet/packages/tools:magma",
+    "//garnet/packages/tools:make-efi",
+    "//garnet/packages/tools:make-fuchsia-vol",
+    "//garnet/packages/tools:mediasession",
+    "//garnet/packages/tools:netstack",
+    "//garnet/packages/tools:runmany",
+    "//garnet/packages/tools:scenic",
+    "//garnet/packages/tools:scenic",
+    "//garnet/packages/tools:sl4f",
+    "//garnet/packages/tools:tiles",
+    "//garnet/packages/tools:wlan",
+    "//garnet/packages/tools:zxdb",
+  ]
+}
+
+group("make-efi") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/make-efi:host",
+  ]
+}
+
+group("netstack") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/netstack:netstack_tools",
+  ]
+}
+
+group("iperf") {
+  testonly = true
+  public_deps = [
+    "//third_party/iperf",
+  ]
+}
+
+group("crashpad_database_util") {
+  testonly = true
+  public_deps = [
+    "//third_party/crashpad:crashpad_database_util",
+  ]
+}
+
+group("runmany") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/runmany",
+  ]
+}
+
+group("curl") {
+  testonly = true
+  public_deps = [
+    "//third_party/curl",
+  ]
+}
+
+group("make-fuchsia-vol") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/make-fuchsia-vol:host",
+  ]
+}
+
+group("tiles") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/developer/tiles_ctl",
+  ]
+}
+
+group("wlan") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:wlan_tools",
+  ]
+}
+
+group("magma") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma:magma-tools",
+  ]
+}
+
+group("sl4f") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sl4f",
+  ]
+}
+
+group("bluetooth") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/bluetooth/hci/fake",
+    "//src/connectivity/bluetooth/tools",
+    "//src/connectivity/bluetooth/tools/bt-snoop",
+  ]
+}
+
+group("banjo_toolchain") {
+  testonly = true
+  public_deps = [
+    "//tools/banjo/banjo:banjo_bin",
+  ]
+}
+
+group("mediasession") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/mediasession:mediasession_cli_tool",
+  ]
+}
+
+group("cs") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cs",
+  ]
+}
+
+group("fidlmerge") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/fidlmerge:host",
+  ]
+}

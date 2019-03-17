@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//src/connectivity/bluetooth/profiles/bt-a2dp-sink"
-    ]
-}

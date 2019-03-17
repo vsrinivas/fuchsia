@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/config/network"
-    ],
-    "packages": [
-        "//garnet/go/src/amber:config"
-    ]
-}

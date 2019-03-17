@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/bluetooth_hci"
-    ],
-    "packages": [
-        "//src/connectivity/bluetooth/hci/intel"
-    ]
-}

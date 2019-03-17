@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//src/connectivity/overnet/overnetstack",
-        "//src/connectivity/overnet/tools/onet"
-    ]
-}

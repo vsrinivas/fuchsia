@@ -1,7 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/benchmarks/garnet",
-        "garnet/packages/benchmarks/buildbot",
-        "garnet/packages/benchmarks/zircon"
-    ]
-}

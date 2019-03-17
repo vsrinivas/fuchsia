@@ -1,5 +1,0 @@
-{
-    "host_tests": [
-        "//src/connectivity/telephony/lib/qmi-protocol:qmi_host_tests"
-    ]
-}

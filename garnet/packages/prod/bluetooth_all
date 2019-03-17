@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/bluetooth_core",
-        "garnet/packages/prod/bluetooth_profiles",
-        "garnet/packages/prod/bluetooth_atheros",
-        "garnet/packages/prod/bluetooth_intel"
-    ]
-}

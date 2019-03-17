@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/tests/fuchsia_app_test_middle_component",
-        "garnet/packages/tests/fuchsia_app_test_inner_component"
-    ],
-    "packages": [
-        "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_outer_component"
-    ]
-}

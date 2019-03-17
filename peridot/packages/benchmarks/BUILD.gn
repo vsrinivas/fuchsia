@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("ledger") {
+  testonly = true
+  public_deps = [
+    "//peridot/packages/prod:ledger",
+    "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
+  ]
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//peridot/packages/benchmarks:ledger",
+    "//peridot/packages/benchmarks:modular",
+    "//peridot/packages/benchmarks:peridot",
+  ]
+}
+
+group("peridot") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/benchmarks:buildbot",
+    "//peridot/packages/benchmarks:ledger",
+    "//peridot/tests/benchmarks:peridot_benchmarks",
+  ]
+}
+
+group("modular") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/benchmarks:buildbot",
+    "//peridot/packages/prod:modular",
+    "//peridot/tests/benchmarks:modular_benchmarks",
+    "//peridot/tests/benchmarks/story:modular_benchmark_story_module",
+    "//peridot/tests/benchmarks/story:modular_benchmark_story_session_shell",
+  ]
+}

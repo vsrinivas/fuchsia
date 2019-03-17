@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/lib:garnet_lib_tests"
-    ]
-}

@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//third_party/go:go_stdlib_tests",
-        "//third_party/go:go_fidl_tests"
-    ]
-}

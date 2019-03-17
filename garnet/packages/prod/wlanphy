@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//garnet/drivers/wlan/wlanphy",
-        "//garnet/drivers/wlan/wlan"
-    ]
-}

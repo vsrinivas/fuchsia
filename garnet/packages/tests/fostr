@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/public/lib/fostr:tests_package"
-    ]
-}

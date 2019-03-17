@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/network"
-    ],
-    "packages": [
-        "//garnet/examples/tcp/tcp_file_sender"
-    ]
-}

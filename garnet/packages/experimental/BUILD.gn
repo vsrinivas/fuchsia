@@ -1,0 +1,107 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("a11y") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/a11y:a11y_tests",
+    "//garnet/bin/a11y/a11y_manager",
+    "//garnet/bin/a11y/a11y_toggler",
+    "//garnet/bin/a11y/fuchsiavox",
+  ]
+}
+
+group("auth") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/auth:account_handler",
+    "//garnet/bin/auth:account_handler",
+    "//garnet/bin/auth:account_manager",
+    "//garnet/bin/auth:account_manager",
+  ]
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/experimental:a11y",
+    "//garnet/packages/experimental:auth",
+    "//garnet/packages/experimental:biscotti",
+    "//garnet/packages/experimental:kms",
+    "//garnet/packages/experimental:linux_guest",
+    "//garnet/packages/experimental:network_settings_server",
+    "//garnet/packages/experimental:sys",
+    "//garnet/packages/experimental:tennis",
+    "//garnet/packages/experimental:wayland_bridge",
+    "//garnet/packages/experimental:zircon_guest",
+  ]
+}
+
+group("linux_guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/linux_guest",
+    "//garnet/packages/prod:guest_runner",
+  ]
+}
+
+group("wayland_bridge") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/wayland/bridge",
+  ]
+}
+
+group("network_settings_server") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/network_settings_server",
+  ]
+}
+
+group("sys") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sys/component_manager",
+    "//garnet/bin/sys/component_manager:component_manager_tests",
+    "//sdk/fidl/fuchsia.data",
+    "//sdk/fidl/fuchsia.sys2",
+  ]
+}
+
+group("biscotti") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/biscotti_guest/bin:biscotti",
+    "//garnet/packages/experimental:wayland_bridge",
+    "//garnet/packages/prod:guest_runner",
+  ]
+}
+
+group("kms") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/kms:kms",
+    "//garnet/bin/kms:kms",
+  ]
+}
+
+group("zircon_guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/zircon_guest",
+    "//garnet/packages/prod:guest_runner",
+  ]
+}
+
+group("tennis") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/tennis:tennis_service",
+    "//garnet/bin/tennis:tennis_sysmgr_config",
+    "//garnet/bin/tennis:tennis_viewer",
+    "//garnet/bin/tennis/bots/example_ai:tennis_example_ai",
+    "//garnet/bin/tennis/bots/manual_player:tennis_manual_player",
+  ]
+}

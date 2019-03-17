@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//garnet/examples/testing:test_with_context_example_test",
-        "//garnet/examples/testing/test_with_environment:test_with_environment_example_test"
-    ]
-}

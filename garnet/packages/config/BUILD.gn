@@ -1,0 +1,129 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("thermd") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/thermd:config",
+    "//garnet/packages/config:services",
+  ]
+}
+
+group("network") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sysmgr:network_config",
+    "//garnet/packages/config:services",
+  ]
+}
+
+group("vim2_media_config") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/media/vim2_media_config:vim2_media_config",
+  ]
+}
+
+group("netconnector") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/netconnector:netconnector_config",
+    "//garnet/packages/config:network",
+  ]
+}
+
+group("openssh_keys") {
+  testonly = true
+  public_deps = [
+    "//third_party/openssh-portable/fuchsia/developer-keys",
+  ]
+}
+
+group("mdns") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/mdns/service:mdns_config",
+    "//garnet/packages/config:network",
+  ]
+}
+
+group("kernel_crash_checker") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/config:services",
+    "//src/developer/kernel_crash_checker:config",
+  ]
+}
+
+group("crashpad_upload_to_prod_server") {
+  testonly = true
+  public_deps = [
+    "//src/developer/crashpad_agent:upload_to_prod_server_config",
+  ]
+}
+
+group("router") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sysmgr:router_config",
+    "//garnet/packages/config:services",
+  ]
+}
+
+group("wlan") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/wlan/wlancfg:config",
+  ]
+}
+
+group("amber") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/amber:config",
+    "//garnet/packages/config:network",
+  ]
+}
+
+group("sl4f") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sl4f:sl4f_sysmgr_config",
+  ]
+}
+
+group("amber_auto_ota") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/amber/ota_config:amber_flags",
+  ]
+}
+
+group("terminal") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/terminal:tiles_with_terminal_config",
+  ]
+}
+
+group("services") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sysmgr:services_config",
+  ]
+}
+
+group("mediasession") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/mediasession:mediasession_config",
+  ]
+}
+
+group("virtual_audio") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/media/virtual_audio/service:virtual_audio_config",
+  ]
+}

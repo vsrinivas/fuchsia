@@ -11,26 +11,7 @@ import sys
 from prepreprocess_build_packages import PackageImportsResolver, PackageLabelObserver
 
 
-USE_GN_LABELS = False
-
-
-def legacy_bundle_to_label(bundle):
-    # If the bundle starts with "//", then it is already a label.
-    if bundle.startswith("//"):
-        return bundle
-    parts = bundle.rsplit('/', 1)
-    return "//%s:%s" % (parts[0], parts[1])
-
-
 def preprocess_packages(packages):
-    if USE_GN_LABELS:
-        return  {
-            "host_tests": None,
-            "data_deps": None,
-            "files_read": None,
-            "targets": map(legacy_bundle_to_label, packages),
-        }
-
     observer = PackageLabelObserver()
     imports_resolver = PackageImportsResolver(observer)
     imported = imports_resolver.resolve_imports(packages)

@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/guest_runner",
-        "garnet/packages/experimental/wayland_bridge"
-    ],
-    "packages": [
-        "//garnet/bin/guest/pkg/biscotti_guest/bin:biscotti"
-    ]
-}

@@ -1,7 +1,0 @@
-{
-    "packages": [
-        "//garnet/drivers/wlan/mediatek/ralink",
-        "//garnet/drivers/wlan/wlan",
-        "//garnet/drivers/wlan/wlanphy"
-    ]
-}

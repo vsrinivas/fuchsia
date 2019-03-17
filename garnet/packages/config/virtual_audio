@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/media/virtual_audio/service:virtual_audio_config"
-    ]
-}

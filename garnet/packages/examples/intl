@@ -1,6 +1,0 @@
-{
-  "packages": [
-    "//garnet/examples/intl:intl_wisdom",
-    "//garnet/examples/intl/test:intl_wisdom_test"
-  ]
-}

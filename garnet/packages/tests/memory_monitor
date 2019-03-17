@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/memory_monitor/test:memory_monitor_tests"
-    ]
-}

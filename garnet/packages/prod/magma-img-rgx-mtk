@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-img-rgx-mtk"
-    ]
-}
-

@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/testing/run_test_component"
-    ],
-    "packages": [
-        "//garnet/bin/run_test_component:run_test_component_unittests",
-        "//garnet/bin/run_test_component/test:run_test_component_test"
-    ]
-}

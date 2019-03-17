@@ -10,6 +10,9 @@ import paths
 import sys
 
 
+USE_GN_LABELS = True
+
+
 class PackageImportsResolver:
     """Recursively resolves imports in build packages. See
        https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/packages.md
@@ -53,6 +56,11 @@ class PackageImportsResolver:
         while import_queue:
             config_name = import_queue.pop()
             config_path = os.path.join(paths.FUCHSIA_ROOT, config_name)
+            if USE_GN_LABELS and not os.path.isfile(config_path):
+                dir_path = os.path.dirname(config_path)
+                if os.path.isfile(os.path.join(dir_path, "BUILD.gn")):
+                    self.observer.import_resolved_from_gn(config_name)
+                    continue
             try:
                 with open(config_path) as f:
                     try:
@@ -84,6 +92,14 @@ path did not contain a '/'. Did you mean 'build/gn/%s' instead?
         return imported
 
 
+def legacy_config_name_to_label(config_name):
+    # If the bundle starts with "//", then it is already a label.
+    if config_name.startswith("//"):
+        return config_name
+    parts = config_name.rsplit('/', 1)
+    return "//%s:%s" % (parts[0], parts[1])
+
+
 class PackageLabelObserver:
     def __init__(self):
         self.json_result = {
@@ -92,6 +108,9 @@ class PackageLabelObserver:
             'host_tests': [],
             'files_read': [],
         }
+
+    def import_resolved_from_gn(self, config_name):
+        self.json_result["targets"].append(legacy_config_name_to_label(config_name))
 
     def import_resolved(self, config, config_path):
         self.json_result['targets'] += config.get('packages', [])

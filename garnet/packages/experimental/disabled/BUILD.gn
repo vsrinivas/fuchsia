@@ -1,0 +1,86 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples_escher_linux") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/escher/build_linux:examples",
+  ]
+}
+
+group("test_amlogic_video") {
+  testonly = true
+  public_deps = [
+    "//garnet/drivers/video/amlogic-decoder:test_amlogic_codec_factory_package",
+    "//garnet/examples/media:use_h264_decoder_test",
+  ]
+}
+
+group("tests_escher_linux") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/escher/build_linux:tests",
+  ]
+}
+
+group("rfb_layer") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan/third_party/layers:rfb_layer",
+    "//garnet/packages/prod:vulkan",
+  ]
+}
+
+group("fidl_fuzz") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/fidl/fuzz:host",
+  ]
+}
+
+group("biscotti_guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/biscotti_guest",
+    "//garnet/packages/prod:guest_runner",
+  ]
+}
+
+group("zircon_rust") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/rust/fuchsia-zircon/examples:zircon_rust_examples",
+  ]
+}
+
+group("dev_escher_linux") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/escher/build_linux:examples",
+    "//garnet/public/lib/escher/build_linux:tests",
+  ]
+}
+
+group("tests_magma") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
+  ]
+}
+
+group("screenshot_layer") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan/third_party/layers:screenshot_layer",
+    "//garnet/packages/prod:vulkan",
+  ]
+}
+
+group("debian_guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/debian_guest",
+    "//garnet/packages/prod:guest_runner",
+  ]
+}

@@ -1,5 +1,0 @@
-{
-  "packages": [
-    "//garnet/bin/media/vim2_media_config:vim2_media_config"
-  ]
-}

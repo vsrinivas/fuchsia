@@ -1,7 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/media/signal_generator",
-        "//garnet/bin/media/vol",
-        "//garnet/bin/media/wav_recorder"
-    ]
-}

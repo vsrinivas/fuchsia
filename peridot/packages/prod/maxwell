@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//peridot/bin/context_engine",
-        "//peridot/bin/suggestion_engine"
-    ]
-}

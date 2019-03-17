@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//sdk/lib/ui/scenic/cpp/tests:scenic_cpp_tests"
-    ]
-}

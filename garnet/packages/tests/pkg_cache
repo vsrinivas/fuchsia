@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/pkg_cache"
-    ],
-    "packages": [
-        "//garnet/bin/pkg_cache:pkg_cache_tests"
-    ]
-}

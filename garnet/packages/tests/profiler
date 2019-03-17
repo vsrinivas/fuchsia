@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//garnet/examples/profiler:profiler_example",
-        "//garnet/lib/profiler/tests:profiler_tests"
-    ]
-}

@@ -1,8 +1,0 @@
-{
-    "labels": [
-        "//build/tools/json_merge:install"
-    ],
-    "host_tests": [
-        "//build/tools/json_merge:json_merge_test"
-    ]
-}

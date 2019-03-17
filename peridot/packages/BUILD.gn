@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//peridot/packages/benchmarks:all",
+    "//peridot/packages/examples:all",
+    "//peridot/packages/prod:all",
+    "//peridot/packages/tests:all",
+    "//peridot/packages/tools:all",
+  ]
+}
+
+group("peridot") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages:garnet",
+    "//peridot/packages/prod:all",
+  ]
+}
+
+group("buildbot") {
+  testonly = true
+  public_deps = [
+    "//bundles:tools",
+    "//garnet/packages:garnet",
+    "//peridot/packages:all",
+  ]
+}
+
+group("kitchen_sink") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages:kitchen_sink",
+    "//peridot/packages:all",
+  ]
+}
+
+group("default") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages:garnet",
+    "//garnet/packages/tools:all",
+    "//peridot/packages:all",
+  ]
+}

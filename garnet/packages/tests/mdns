@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/run"
-    ],
-    "packages": [
-        "//garnet/bin/mdns/service:mdns_tests",
-        "//garnet/bin/mdns/service:mdns_fuzzers"
-    ]
-}

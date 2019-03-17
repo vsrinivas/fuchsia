@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/dhcpd_test_client"
-    ]
-}

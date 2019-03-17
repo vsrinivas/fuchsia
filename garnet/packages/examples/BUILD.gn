@@ -1,0 +1,243 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("components") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/glob",
+    "//garnet/examples/components:component_hello_world",
+    "//garnet/examples/components:component_hello_world_tests",
+    "//garnet/examples/components/v2:hello_world_hippo",
+  ]
+}
+
+group("carnelian") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:scenic",
+    "//garnet/public/rust/carnelian:button_rs",
+    "//garnet/public/rust/carnelian:embedding_rs",
+    "//garnet/public/rust/carnelian:perf_test_01_rs",
+    "//garnet/public/rust/carnelian:perf_test_02_rs",
+    "//garnet/public/rust/carnelian:perf_test_03_rs",
+    "//garnet/public/rust/carnelian:perf_test_04_rs",
+    "//garnet/public/rust/carnelian:spinning_square_rs",
+  ]
+}
+
+group("scenic") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/ui/sketchy:sketchy_service",
+    "//garnet/examples/ui:bouncing_ball",
+    "//garnet/examples/ui:direct_input",
+    "//garnet/examples/ui:direct_input_child",
+    "//garnet/examples/ui:embedder",
+    "//garnet/examples/ui:pose_buffer",
+    "//garnet/examples/ui:pose_buffer_provider",
+    "//garnet/examples/ui:scenic_dev_app",
+    "//garnet/examples/ui:shadertoy_client",
+    "//garnet/examples/ui:shadertoy_service",
+    "//garnet/examples/ui:simplest_app",
+    "//garnet/examples/ui:simplest_app",
+    "//garnet/examples/ui:simplest_embedder",
+    "//garnet/examples/ui:sketchy_client",
+    "//garnet/examples/ui:spinning_square_view",
+    "//garnet/examples/ui:standalone_app",
+    "//garnet/examples/ui:stereo_app",
+    "//garnet/examples/ui:tile_view",
+    "//garnet/examples/ui:video_display",
+    "//garnet/examples/ui:yuv_to_image_pipe",
+    "//garnet/packages/prod:scenic",
+  ]
+}
+
+group("escher") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/escher:escher_waterfall",
+    "//garnet/examples/escher:escher_waterfall2",
+  ]
+}
+
+group("crust") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/rust/staticlib:crust",
+  ]
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/examples:benchmark",
+    "//garnet/packages/examples:bluetooth",
+    "//garnet/packages/examples:carnelian",
+    "//garnet/packages/examples:components",
+    "//garnet/packages/examples:crust",
+    "//garnet/packages/examples:escher",
+    "//garnet/packages/examples:eth-rs",
+    "//garnet/packages/examples:fidl",
+    "//garnet/packages/examples:http",
+    "//garnet/packages/examples:intl",
+    "//garnet/packages/examples:media",
+    "//garnet/packages/examples:mediaplayer",
+    "//garnet/packages/examples:mediasession",
+    "//garnet/packages/examples:netstack",
+    "//garnet/packages/examples:overnet",
+    "//garnet/packages/examples:rust",
+    "//garnet/packages/examples:scenic",
+    "//garnet/packages/examples:tcp",
+    "//garnet/packages/examples:vkcube",
+    "//garnet/packages/examples:vkcube_on_fb",
+    "//garnet/packages/examples:vkcube_on_scenic",
+    "//garnet/packages/examples:vulkaninfo",
+  ]
+}
+
+group("eth-rs") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/rust/eth-rs:eth-rs",
+  ]
+}
+
+group("netstack") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/network:nc",
+  ]
+}
+
+group("http") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/http/example_http_server",
+    "//garnet/examples/http/httpget_cpp",
+    "//garnet/examples/http/httpget_rust",
+    "//garnet/examples/http/postfile",
+    "//garnet/packages/prod:network",
+  ]
+}
+
+group("fidl") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/fidl/echo_client_cpp",
+    "//garnet/examples/fidl/echo_client_go",
+    "//garnet/examples/fidl/echo_client_llcpp",
+    "//garnet/examples/fidl/echo_client_rust",
+    "//garnet/examples/fidl/echo_client_rust_synchronous",
+    "//garnet/examples/fidl/echo_server_c",
+    "//garnet/examples/fidl/echo_server_cpp",
+    "//garnet/examples/fidl/echo_server_go",
+    "//garnet/examples/fidl/echo_server_llcpp",
+    "//garnet/examples/fidl/echo_server_rust",
+    "//garnet/examples/fidl/heartbeat_client_go",
+    "//garnet/examples/fidl/heartbeat_server_go",
+    "//garnet/go/src/fidl/examples",
+  ]
+}
+
+group("overnet") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/overnet/examples/echo:overnet-echo",
+    "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing",
+  ]
+}
+
+group("vkcube") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma:vkcube",
+  ]
+}
+
+group("mediaplayer") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/mediaplayer:mediaplayer_examples",
+  ]
+}
+
+group("media") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/media:fx",
+    "//garnet/examples/media:simple_sine",
+    "//garnet/examples/media:simple_sine_sync",
+    "//garnet/examples/media:tones",
+    "//garnet/examples/media:tts",
+    "//garnet/examples/media:use_aac_decoder_test",
+    "//garnet/examples/media:use_h264_decoder_test",
+    "//garnet/examples/media:use_media_decoder",
+  ]
+}
+
+group("vkcube_on_scenic") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan:vkcube_on_scenic",
+  ]
+}
+
+group("vulkaninfo") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan:vulkaninfo",
+    "//garnet/packages/prod:vulkan",
+  ]
+}
+
+group("benchmark") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/benchmark",
+  ]
+}
+
+group("intl") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/intl:intl_wisdom",
+    "//garnet/examples/intl/test:intl_wisdom_test",
+  ]
+}
+
+group("bluetooth") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/bluetooth/examples",
+  ]
+}
+
+group("tcp") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/tcp/tcp_file_sender",
+    "//garnet/packages/prod:network",
+  ]
+}
+
+group("rust") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/rust:garnet-rust-examples",
+  ]
+}
+
+group("mediasession") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/mediasession:sine_player",
+  ]
+}
+
+group("vkcube_on_fb") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan:vkcube_on_fb",
+  ]
+}

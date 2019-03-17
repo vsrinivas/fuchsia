@@ -1,5 +1,0 @@
-{
-    "host_tests": [
-        "//tools/banjo/banjo:banjo_host_tests"
-    ]
-}

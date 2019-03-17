@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/media_audio"
-    ],
-    "packages": [
-        "//src/speech/tts:tts_service"
-    ]
-}

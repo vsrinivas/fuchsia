@@ -1,8 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/prod/debug_agent"
-    ],
-    "packages": [
-        "//garnet/bin/debug_agent:debug_agent_tests"
-    ]
-}

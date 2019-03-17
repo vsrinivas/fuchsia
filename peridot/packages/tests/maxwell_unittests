@@ -1,7 +1,0 @@
-{
-    "packages": [
-        "//peridot/bin/context_engine:context_engine_unittests",
-        "//peridot/bin/module_resolver:module_resolver_unittests",
-        "//peridot/bin/suggestion_engine:suggestion_engine_unittests"
-    ]
-}

@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/lib/vulkan:vkcube_on_fb"
-    ]
-}

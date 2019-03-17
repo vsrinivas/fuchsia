@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/iquery/testing:iquery_golden_test"
-    ]
-}

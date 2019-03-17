@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//third_party/crashpad:crashpad_database_util"
-    ]
-}

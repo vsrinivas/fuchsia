@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/test_runner:test_runner_tests"
-    ]
-}

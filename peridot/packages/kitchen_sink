@@ -1,6 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/kitchen_sink",
-        "peridot/packages/all"
-    ]
-}

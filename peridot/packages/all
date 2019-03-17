@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "peridot/packages/benchmarks/all",
-        "peridot/packages/examples/all",
-        "peridot/packages/prod/all",
-        "peridot/packages/tests/all",
-        "peridot/packages/tools/all"
-    ]
-}

@@ -1,0 +1,1138 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("svc") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/svc:svc_tests",
+  ]
+}
+
+group("netfilter") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/netfilter:netfilter_tests",
+  ]
+}
+
+group("broadcom") {
+  testonly = true
+  public_deps = [
+    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac/test:brcmfmac_test",
+  ]
+}
+
+group("fidlext_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext:fidl_fuchsia_hardware_ethernet_ext_tests",
+    "//garnet/lib/rust/fidl_fuchsia_net_ext:fidl_fuchsia_net_ext_tests",
+    "//garnet/lib/rust/fidl_fuchsia_net_policy_ext:fidl_fuchsia_net_policy_ext_tests",
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext:fidl_fuchsia_net_stack_ext_tests",
+    "//garnet/lib/rust/fidl_fuchsia_netstack_ext:fidl_fuchsia_netstack_ext_tests",
+  ]
+}
+
+group("fonts") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fonts:font_provider_tests",
+    "//garnet/packages/prod:fonts",
+  ]
+}
+
+group("tracing") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/trace/tests:trace_tests",
+    "//garnet/bin/trace_stress",
+    "//garnet/packages/prod:tracing",
+  ]
+}
+
+group("fidl_compatibility_test_bin") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_bin",
+  ]
+}
+
+group("sse") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/sse:sse_test($host_toolchain)",
+  ]
+}
+
+group("system_ota_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/tests/system_ota_tests",
+  ]
+}
+
+group("scenic") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/ui:ime_service_tests",
+    "//garnet/bin/ui:scenic_tests",
+    "//garnet/bin/ui/benchmarks/image_grid_cpp",
+    "//garnet/bin/ui/tests/performance:scenic_benchmarks",
+    "//garnet/bin/ui/tests/performance:vulkan_is_supported",
+    "//garnet/bin/ui/text/test_suite:text_test_suite",
+    "//garnet/bin/ui/text/test_suite:text_test_suite_tests",
+    "//garnet/lib/ui/gfx/tests:mock_pose_buffer_provider",
+    "//garnet/lib/ui/gfx/tests/rotated_square_test",
+    "//garnet/packages/examples:scenic",
+    "//garnet/packages/prod:scenic",
+  ]
+}
+
+group("cmc") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cmc:cmc_host_tests($host_toolchain)",
+  ]
+}
+
+group("vfs_cpp") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/vfs/cpp:vfs_cpp_tests",
+  ]
+}
+
+group("fidl_compatibility_test_server_go") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidl_compatibility_test/golang:fidl_compatibility_test_server_go",
+  ]
+}
+
+group("network") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/http:http_service_tests",
+    "//garnet/bin/http/tests/manual/mwget",
+    "//garnet/packages/prod:network",
+  ]
+}
+
+group("cpuperf") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cpuperf/print/tests:cpuperf_raw_printer_test($host_toolchain)",
+    "//garnet/bin/cpuperf/tests:cpuperf_tests",
+    "//garnet/packages/prod:cpuperf",
+  ]
+}
+
+group("netcfg_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/netcfg:netcfg_tests",
+  ]
+}
+
+group("fostr") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/fostr:tests_package",
+  ]
+}
+
+group("iquery_golden_test") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/iquery/testing:iquery_golden_test",
+  ]
+}
+
+group("feedback_agent") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:feedback_agent",
+    "//garnet/packages/prod:scenic",
+    "//garnet/packages/prod:vulkan",
+    "//src/developer/feedback_agent/tests:feedback_agent_tests",
+  ]
+}
+
+group("auth") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/auth:auth_bin_tests",
+    "//garnet/bin/auth/tests/account_manager_integration:account_manager_integration_test_pkg",
+    "//garnet/bin/auth/tests/token_manager_integration:token_manager_integration_tests",
+    "//garnet/lib/auth:auth_lib_unittests",
+    "//garnet/packages/prod:auth",
+  ]
+}
+
+group("elflib") {
+  testonly = true
+  public_deps = [
+    "//src/lib/elflib:elflib_tests($host_toolchain)",
+  ]
+}
+
+group("component_cpp") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/sys/cpp/tests:component_cpp_tests",
+  ]
+}
+
+group("process") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/process:process_unittests",
+  ]
+}
+
+group("escher") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/escher:escher_tests",
+    "//garnet/public/lib/escher/test:escher_unittests($host_toolchain)",
+  ]
+}
+
+group("sysmgr") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sysmgr/integration_tests",
+    "//garnet/packages/prod:sysmgr",
+  ]
+}
+
+group("zxdb") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/zxdb:zxdb_tests($host_toolchain)",
+  ]
+}
+
+group("debugserver") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/debugserver:debugserver_tests",
+    "//garnet/lib/debugger_utils:debugger_utils_tests",
+    "//garnet/lib/inferior_control:inferior_control_tests",
+    "//garnet/packages/prod:debugserver",
+  ]
+}
+
+group("examples") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/testing:test_with_context_example_test",
+    "//garnet/examples/testing/test_with_environment:test_with_environment_example_test",
+  ]
+}
+
+group("boringssl") {
+  testonly = true
+  public_deps = [
+    "//third_party/boringssl:boringssl_fuzzers",
+    "//third_party/boringssl:boringssl_tests",
+  ]
+}
+
+group("go_far_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/far:go_far_tests",
+  ]
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/tests:amber",
+    "//garnet/packages/tests:asio",
+    "//garnet/packages/tests:async_promise",
+    "//garnet/packages/tests:ath10k",
+    "//garnet/packages/tests:auth",
+    "//garnet/packages/tests:banjo",
+    "//garnet/packages/tests:bluetooth",
+    "//garnet/packages/tests:boringssl",
+    "//garnet/packages/tests:broadcom",
+    "//garnet/packages/tests:camera_client",
+    "//garnet/packages/tests:chrealm",
+    "//garnet/packages/tests:cmc",
+    "//garnet/packages/tests:cmx",
+    "//garnet/packages/tests:cobalt_client",
+    "//garnet/packages/tests:component_cpp",
+    "//garnet/packages/tests:components_binary_test",
+    "//garnet/packages/tests:cpuperf",
+    "//garnet/packages/tests:crashpad",
+    "//garnet/packages/tests:debug_agent",
+    "//garnet/packages/tests:debugserver",
+    "//garnet/packages/tests:device_settings",
+    "//garnet/packages/tests:dhcp_tests",
+    "//garnet/packages/tests:display_capture_test",
+    "//garnet/packages/tests:e2e_input_tests",
+    "//garnet/packages/tests:elflib",
+    "//garnet/packages/tests:escher",
+    "//garnet/packages/tests:examples",
+    "//garnet/packages/tests:feedback_agent",
+    "//garnet/packages/tests:fidl",
+    "//garnet/packages/tests:fidl_compatibility_test",
+    "//garnet/packages/tests:fidl_compatibility_test_bin",
+    "//garnet/packages/tests:fidl_compatibility_test_server_cpp",
+    "//garnet/packages/tests:fidl_compatibility_test_server_go",
+    "//garnet/packages/tests:fidl_compatibility_test_server_rust",
+    "//garnet/packages/tests:fidlcat",
+    "//garnet/packages/tests:fidlext_tests",
+    "//garnet/packages/tests:fonts",
+    "//garnet/packages/tests:fostr",
+    "//garnet/packages/tests:fsl",
+    "//garnet/packages/tests:fuchsia_app_component_test",
+    "//garnet/packages/tests:fuchsia_app_test_inner_component",
+    "//garnet/packages/tests:fuchsia_app_test_middle_component",
+    "//garnet/packages/tests:fxl",
+    "//garnet/packages/tests:gfxlatency",
+    "//garnet/packages/tests:go_benchmarking_tests",
+    "//garnet/packages/tests:go_far_tests",
+    "//garnet/packages/tests:go_merkle_tests",
+    "//garnet/packages/tests:go_stdlib_tests",
+    "//garnet/packages/tests:guest",
+    "//garnet/packages/tests:image_pipe_swapchain",
+    "//garnet/packages/tests:inspect_unittests",
+    "//garnet/packages/tests:iquery_golden_test",
+    "//garnet/packages/tests:iquery_test",
+    "//garnet/packages/tests:json",
+    "//garnet/packages/tests:kms",
+    "//garnet/packages/tests:lib",
+    "//garnet/packages/tests:lib_component",
+    "//garnet/packages/tests:libc",
+    "//garnet/packages/tests:log_listener",
+    "//garnet/packages/tests:logger",
+    "//garnet/packages/tests:magma",
+    "//garnet/packages/tests:mdns",
+    "//garnet/packages/tests:media",
+    "//garnet/packages/tests:mediaplayer",
+    "//garnet/packages/tests:mediasession",
+    "//garnet/packages/tests:memory_monitor",
+    "//garnet/packages/tests:mime_sniffer",
+    "//garnet/packages/tests:netcfg_tests",
+    "//garnet/packages/tests:netemul",
+    "//garnet/packages/tests:netfilter",
+    "//garnet/packages/tests:netstack",
+    "//garnet/packages/tests:network",
+    "//garnet/packages/tests:network_time",
+    "//garnet/packages/tests:overnet",
+    "//garnet/packages/tests:pkg_cache",
+    "//garnet/packages/tests:pkg_ctl",
+    "//garnet/packages/tests:pkg_resolver",
+    "//garnet/packages/tests:pkg_url",
+    "//garnet/packages/tests:pm",
+    "//garnet/packages/tests:pmd",
+    "//garnet/packages/tests:power_manager",
+    "//garnet/packages/tests:process",
+    "//garnet/packages/tests:profiler",
+    "//garnet/packages/tests:rapidjson_utils",
+    "//garnet/packages/tests:recovery_netstack",
+    "//garnet/packages/tests:run_test_component",
+    "//garnet/packages/tests:run_tests",
+    "//garnet/packages/tests:runtime",
+    "//garnet/packages/tests:rust_crates",
+    "//garnet/packages/tests:scenic",
+    "//garnet/packages/tests:scenic_cpp",
+    "//garnet/packages/tests:scpi",
+    "//garnet/packages/tests:setui_service",
+    "//garnet/packages/tests:sse",
+    "//garnet/packages/tests:stash",
+    "//garnet/packages/tests:svc",
+    "//garnet/packages/tests:syslog",
+    "//garnet/packages/tests:sysmem_connector",
+    "//garnet/packages/tests:sysmgr",
+    "//garnet/packages/tests:sysmgr_tests",
+    "//garnet/packages/tests:system_monitor",
+    "//garnet/packages/tests:system_ota_tests",
+    "//garnet/packages/tests:telephony",
+    "//garnet/packages/tests:terminal",
+    "//garnet/packages/tests:tiles",
+    "//garnet/packages/tests:timezone",
+    "//garnet/packages/tests:tracing",
+    "//garnet/packages/tests:url",
+    "//garnet/packages/tests:uuid",
+    "//garnet/packages/tests:vfs_cpp",
+    "//garnet/packages/tests:virtual_audio",
+    "//garnet/packages/tests:virtual_audio_service",
+    "//garnet/packages/tests:vulkan",
+    "//garnet/packages/tests:wayland",
+    "//garnet/packages/tests:wlan",
+    "//garnet/packages/tests:wlan-hw-sim",
+    "//garnet/packages/tests:zircon",
+    "//garnet/packages/tests:zxdb",
+  ]
+}
+
+group("pmd") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/pmd:pmd_tests",
+  ]
+}
+
+group("fidlcat") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidlcat:fidlcat_tests",
+  ]
+}
+
+group("async_promise") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/async_promise:async_promise_unittests_package",
+  ]
+}
+
+group("cmx") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/cmx:cmx_unittests",
+    "//garnet/public/lib/cmx_facet_parser:cmx_facet_parser_unittests",
+  ]
+}
+
+group("pm") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/pm:pm_build_test($host_toolchain)",
+    "//garnet/go/src/pm:pm_cmd_pm_genkey_test($host_toolchain)",
+    "//garnet/go/src/pm:pm_keys_test($host_toolchain)",
+    "//garnet/go/src/pm:pm_repo_test($host_toolchain)",
+  ]
+}
+
+group("libc") {
+  testonly = true
+  public_deps = [
+    "//third_party/libc-tests",
+  ]
+}
+
+group("inspect_unittests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/inspect_unittests",
+  ]
+}
+
+group("memory_monitor") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/memory_monitor/test:memory_monitor_tests",
+  ]
+}
+
+group("netstack") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/netstack_tests:netstack_bsdsocket_c_api_test($host_toolchain)",
+    "//garnet/bin/netstack_tests:netstack_c_api_tests",
+    "//garnet/bin/netstack_tests:netstack_integration_tests",
+    "//garnet/bin/netstack_tests/test_filter_client",
+    "//garnet/bin/netstack_tests/test_ioctl_client",
+    "//garnet/bin/netstack_tests/test_no_network_client",
+    "//garnet/go/src/netstack:netstack_gotests",
+    "//garnet/go/src/netstack:netstack_non_component_gotests",
+    "//garnet/go/src/netstack/dns:netstack_dns_gotests",
+    "//garnet/go/src/netstack/link/bridge:netstack_link_bridge_test($host_toolchain)",
+    "//garnet/go/src/netstack/routes:netstack_routes_gotests",
+    "//garnet/go/src/netstack/tests:netstack_manual_tests",
+    "//garnet/go/src/netstack/util:netstack_util_test($host_toolchain)",
+    "//garnet/packages/prod:netstack",
+  ]
+}
+
+group("recovery_netstack") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/recovery_netstack:recovery_netstack_tests",
+  ]
+}
+
+group("fidl") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
+    "//garnet/go/src/fidl:fidlgen_cpp_ir_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_cpp_overnet_internal_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_cpp_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_golang_ir_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_golang_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_llcpp_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_rust_test($host_toolchain)",
+    "//garnet/public/lib/fidl/rust/fidl:rust_fidl_tests",
+    "//garnet/tests/fidl-changes",
+    "//garnet/tests/fidl-dangerous-identifiers",
+    "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
+    "//sdk/lib/fidl/cpp:fidl_tests",
+  ]
+}
+
+group("netemul") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/netemul_runner/test:netemul_sandbox_test",
+    "//garnet/packages/prod:netstack",
+    "//garnet/packages/testing:netemul_runner",
+    "//garnet/public/lib/netemul:netemul_lib_test",
+  ]
+}
+
+group("overnet") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/overnet/examples:overnet_examples_tests",
+    "//src/connectivity/overnet/lib:host_overnet_fuzzers",
+    "//src/connectivity/overnet/lib:overnet_fuzzers",
+    "//src/connectivity/overnet/lib:overnet_tests",
+    "//src/connectivity/overnet/lib:overnet_unittests($host_toolchain)",
+    "//src/connectivity/overnet/overnetstack:overnetstack_tests",
+  ]
+}
+
+group("syslog") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/syslog/cpp:tests",
+    "//garnet/public/lib/syslog/go/src/syslog:syslog_gotests",
+  ]
+}
+
+group("fsl") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/fsl:package",
+  ]
+}
+
+group("setui_service") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/setui:setui_service_tests",
+    "//garnet/packages/prod:setui_service",
+  ]
+}
+
+group("rapidjson_utils") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/rapidjson_utils:rapidjson_utils_unittests",
+  ]
+}
+
+group("go_benchmarking_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/benchmarking:go_benchmarking_tests",
+  ]
+}
+
+group("pkg_url") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/pkg_url:pkg_url_unittests",
+  ]
+}
+
+group("guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/integration:guest_integration_tests",
+    "//garnet/bin/guest/manager:guest_manager_tests",
+    "//garnet/bin/guest/vmm:vmm_tests",
+    "//garnet/bin/vsock_service:vsock_service-tests",
+    "//garnet/packages/experimental:linux_guest",
+    "//garnet/packages/experimental:zircon_guest",
+  ]
+}
+
+group("pkg_ctl") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/pkg_ctl:pkg_ctl_tests",
+    "//garnet/packages/prod:pkg_ctl",
+  ]
+}
+
+group("scpi") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/scpi:scpi_server_tests",
+  ]
+}
+
+group("lib") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib:garnet_lib_tests",
+  ]
+}
+
+group("uuid") {
+  testonly = true
+  public_deps = [
+    "//src/lib/uuid:uuid_tests",
+  ]
+}
+
+group("fuchsia_app_component_test") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/tests:fuchsia_app_test_inner_component",
+    "//garnet/packages/tests:fuchsia_app_test_middle_component",
+    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_outer_component",
+  ]
+}
+
+group("image_pipe_swapchain") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan:image-pipe-swapchain-tests",
+  ]
+}
+
+group("sysmgr_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sysmgr/test:sysmgr_tests",
+  ]
+}
+
+group("url") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/url:url_tests",
+  ]
+}
+
+group("fidl_compatibility_test_server_rust") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_rust",
+  ]
+}
+
+group("fuchsia_app_test_inner_component") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_inner_component",
+  ]
+}
+
+group("mdns") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/mdns/service:mdns_fuzzers",
+    "//garnet/bin/mdns/service:mdns_tests",
+    "//garnet/packages/prod:run",
+  ]
+}
+
+group("go_stdlib_tests") {
+  testonly = true
+  public_deps = [
+    "//third_party/go:go_fidl_tests",
+    "//third_party/go:go_stdlib_tests",
+  ]
+}
+
+group("cobalt_client") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:cobalt_client",
+    "//src/cobalt/bin:cobalt_tests",
+  ]
+}
+
+group("banjo") {
+  testonly = true
+  public_deps = [
+    "//tools/banjo/banjo:banjo_host_tests($host_toolchain)",
+  ]
+}
+
+group("gfxlatency") {
+  testonly = true
+  public_deps = [
+    "//garnet/tests/gfxlatency",
+  ]
+}
+
+group("mediaplayer") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/mediaplayer:mediaplayer_test_util",
+    "//garnet/bin/mediaplayer:mediaplayer_tests",
+  ]
+}
+
+group("log_listener") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/log_listener:log_listener_tests",
+    "//garnet/packages/prod:log_listener",
+  ]
+}
+
+group("media") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/media/audio_core/mixer:audio_mixer_tests",
+    "//garnet/bin/media/audio_core/test:audio_device_tests",
+    "//garnet/bin/media/audio_core/test:audio_fidl_tests",
+    "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg_tests",
+    "//garnet/bin/media/codecs/test:raw_frames_test",
+    "//garnet/examples/media:use_aac_decoder_test",
+    "//garnet/packages/prod:media_audio",
+    "//garnet/packages/testing:run_test_component",
+    "//garnet/packages/tests:virtual_audio",
+    "//garnet/public/lib/media/audio_dfx:audio_dfx_tests",
+    "//garnet/public/lib/media/timeline:media_lib_timeline_tests",
+  ]
+}
+
+group("system_monitor") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/system_monitor:system_monitor_tests($host_toolchain)",
+  ]
+}
+
+group("ath10k") {
+  testonly = true
+  public_deps = [
+    "//garnet/drivers/wlan/third_party/atheros/ath10k:ath10k_test",
+  ]
+}
+
+group("pkg_cache") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/pkg_cache:pkg_cache_tests",
+    "//garnet/packages/prod:pkg_cache",
+  ]
+}
+
+group("power_manager") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/power_manager:power_manager_tests",
+    "//garnet/go/src/power_manager:power_manager_gotests",
+    "//garnet/packages/prod:power_manager",
+  ]
+}
+
+group("wlan-hw-sim") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/wlan/wlan-hw-sim:wlan-hw-sim-tests",
+    "//garnet/packages/prod:wlan-hw-sim",
+  ]
+}
+
+group("fidl_compatibility_test") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidl_compatibility_test:package",
+    "//garnet/packages/tests:fidl_compatibility_test_bin",
+    "//garnet/packages/tests:fidl_compatibility_test_server_cpp",
+    "//garnet/packages/tests:fidl_compatibility_test_server_go",
+    "//garnet/packages/tests:fidl_compatibility_test_server_rust",
+  ]
+}
+
+group("camera_client") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/camera/camera_client:example_camera_client",
+    "//garnet/lib/media/camera/simple_camera_lib:camera_tests",
+  ]
+}
+
+group("mime_sniffer") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/mime_sniffer:mime_sniffer_unittests",
+  ]
+}
+
+group("network_time") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/network_time:network_time_tests",
+    "//garnet/bin/network_time/test:system_time_updater_test",
+    "//garnet/packages/prod:network_time",
+  ]
+}
+
+group("logger") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/logger:logger_tests",
+    "//garnet/bin/logger/tests:logger_integration_tests",
+    "//garnet/packages/prod:logger",
+  ]
+}
+
+group("telephony") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/telephony/lib/qmi-protocol:qmi_host_tests($host_toolchain)",
+  ]
+}
+
+group("profiler") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/profiler:profiler_example",
+    "//garnet/lib/profiler/tests:profiler_tests",
+  ]
+}
+
+group("tiles") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/developer/tiles:tiles_tests",
+  ]
+}
+
+group("timezone") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/timezone/test:timezone_tests",
+  ]
+}
+
+group("crashpad") {
+  testonly = true
+  public_deps = [
+    "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
+    "//third_party/crashpad:crashpad_test",
+  ]
+}
+
+group("wlan") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/wlan/wlancfg:wlancfg-tests",
+    "//garnet/bin/wlan/wlanstack:wlanstack2-tests",
+    "//garnet/bin/wlan/wlantool:wlantool2-tests",
+    "//garnet/drivers/wlan/wlan:wlan_drivers_tests",
+    "//garnet/lib/rust/wlan-common:wlan-common-tests",
+    "//garnet/lib/rust/wlan-mlme:wlan-mlme-tests",
+    "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
+    "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
+    "//garnet/lib/wlan/mlme/tests:wlan_tests",
+  ]
+}
+
+group("scenic_cpp") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/ui/scenic/cpp/tests:scenic_cpp_tests",
+  ]
+}
+
+group("kms") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/kms:kms_tests",
+  ]
+}
+
+group("run_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/run/test:run_test_exiter",
+    "//garnet/bin/run/test:run_tests",
+  ]
+}
+
+group("vulkan") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:vulkan",
+    "//third_party/vulkan_loader_and_validation_layers/layers:vulkan_loader_and_layers_tests",
+  ]
+}
+
+group("magma") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
+    "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
+    "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
+    "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests",
+    "//garnet/lib/magma/tests:magma_abi_conformance_tests",
+    "//garnet/lib/magma/tests:magma_nonhardware_tests",
+    "//garnet/lib/magma/tests:tests",
+    "//garnet/lib/magma/tests:vulkan-tests",
+    "//garnet/packages/prod:vulkan",
+  ]
+}
+
+group("dhcp_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/dhcp:dhcp_tests",
+  ]
+}
+
+group("json") {
+  testonly = true
+  public_deps = [
+    "//build/tools/json_merge:json_merge_test($host_toolchain)",
+    "//garnet/public/lib/json:json_unittests",
+  ]
+}
+
+group("components_binary_test") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/appmgr/integration_tests/components:components_binary_test",
+  ]
+}
+
+group("display_capture_test") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/display_capture_test",
+  ]
+}
+
+group("pkg_resolver") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/pkg_resolver:pkg_resolver_tests",
+    "//garnet/packages/prod:pkg_resolver",
+  ]
+}
+
+group("chrealm") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/chrealm/integration_tests:chrealm_integrationtests",
+    "//garnet/bin/chrealm/integration_tests:chrealm_test_get_message",
+    "//garnet/packages/prod:chrealm",
+  ]
+}
+
+group("amber") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/amber:amber_tests",
+    "//garnet/go/src/amber:test_config",
+    "//garnet/go/src/amber/system_updater:system_updater_tests",
+    "//garnet/packages/prod:amber",
+  ]
+}
+
+group("iquery_test") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/iquery:iquery_test",
+  ]
+}
+
+group("zircon") {
+  testonly = true
+  public_deps = [
+    "//garnet/tests/zircon:zircon_fuzzers",
+    "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
+  ]
+}
+
+group("runtime") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/appmgr:appmgr_unittests",
+    "//garnet/bin/appmgr/integration_tests:appmgr_integration_tests",
+    "//garnet/bin/appmgr/integration_tests/inspect:inspect_integration_tests",
+    "//garnet/bin/appmgr/integration_tests/inspect:inspect_test_app",
+    "//garnet/bin/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
+    "//garnet/bin/appmgr/integration_tests/mock_runner:fake_component_for_runner",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/build-info:build_info_tests",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_isolated_persistent_storage",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:isolated_persistent_storage",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:no_persistent_storage",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:has_shell",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/shell:no_shell",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:has_system_temp",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp",
+    "//garnet/bin/appmgr/integration_tests/sandbox/services:multiple_components",
+    "//garnet/bin/appmgr/integration_tests/sandbox/services:no_services",
+    "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services",
+    "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
+    "//garnet/bin/glob",
+    "//garnet/packages/prod:runtime",
+  ]
+}
+
+group("go_merkle_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/merkle:go_merkle_tests",
+  ]
+}
+
+group("asio") {
+  testonly = true
+  public_deps = [
+    "//third_party/asio:asio_unittests",
+  ]
+}
+
+group("fxl") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/fxl:fxl_tests",
+    "//garnet/public/lib/fxl:fxl_unittests($host_toolchain)",
+  ]
+}
+
+group("device_settings") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/device_settings:device_settings_gotests",
+    "//garnet/packages/prod:device_settings",
+  ]
+}
+
+group("terminal") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/terminal:terminal_tests",
+  ]
+}
+
+group("virtual_audio_service") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/media/virtual_audio/service:virtual_audio_service",
+  ]
+}
+
+group("run_test_component") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/run_test_component:run_test_component_unittests",
+    "//garnet/bin/run_test_component/test:run_test_component_test",
+    "//garnet/packages/testing:run_test_component",
+  ]
+}
+
+group("bluetooth") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:bluetooth_core",
+    "//src/connectivity/bluetooth/core/bt-gap:tests",
+    "//src/connectivity/bluetooth/hci/fake",
+    "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
+    "//src/connectivity/bluetooth/tests",
+    "//src/connectivity/bluetooth/tools/bt-snoop:tests",
+  ]
+}
+
+group("rust_crates") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cmc:cmc_integration_test",
+    "//garnet/bin/rolldice:rolldice-tests",
+    "//garnet/lib/rust/cm_fidl_translator:cm_fidl_translator_tests",
+    "//garnet/lib/rust/cm_fidl_validator:cm_fidl_validator_tests",
+    "//garnet/lib/rust/cm_json:cm_json_tests",
+    "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
+    "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
+    "//garnet/lib/rust/ethernet:ethernet-tests",
+    "//garnet/lib/rust/fidl_fuchsia_pkg_ext:fidl_fuchsia_pkg_ext_tests",
+    "//garnet/lib/rust/fuchsia_uri:fuchsia_uri_tests",
+    "//garnet/public/rust:rust-crates-tests",
+  ]
+}
+
+group("stash") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/stash:stash_tests",
+    "//garnet/bin/stash_ctl:stash_ctl_tests",
+    "//garnet/packages/prod:stash",
+  ]
+}
+
+group("lib_component") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/component/cpp/test:lib_component_test",
+  ]
+}
+
+group("fidl_compatibility_test_server_cpp") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_cpp",
+  ]
+}
+
+group("wayland") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/wayland:wayland_tests",
+    "//garnet/packages/experimental:wayland_bridge",
+  ]
+}
+
+group("mediasession") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/mediasession:mediasession_tests",
+  ]
+}
+
+group("fuchsia_app_test_middle_component") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/rust/fuchsia-app/isolated_component_test:fuchsia_app_test_middle_component",
+  ]
+}
+
+group("virtual_audio") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/config:virtual_audio",
+    "//garnet/packages/tests:virtual_audio_service",
+  ]
+}
+
+group("e2e_input_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/tests/e2e_input_tests:e2e_input_tests",
+  ]
+}
+
+group("debug_agent") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/debug_agent:debug_agent_tests",
+    "//garnet/packages/prod:debug_agent",
+  ]
+}
+
+group("sysmem_connector") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/sysmem_connector:sysmem_connector_test",
+  ]
+}

@@ -1,9 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/config/services"
-    ],
-    "packages": [
-        "//garnet/bin/memory_monitor",
-        "//garnet/bin/memory_monitor:config"
-    ]
-}

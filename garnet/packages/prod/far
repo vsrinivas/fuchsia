@@ -1,8 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/far"
-    ],
-    "labels": [
-        "//garnet/bin/far:host"
-    ]
-}

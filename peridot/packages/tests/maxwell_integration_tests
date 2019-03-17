@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//peridot/tests/maxwell_integration:maxwell_integration_tests"
-    ]
-}

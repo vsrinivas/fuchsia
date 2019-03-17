@@ -185,9 +185,6 @@ def main():
     return True
 
 
+# We're removing the build packages. No need to validate.
 if __name__ == '__main__':
-    return_code = 0
-    if not main():
-        print('Errors!')
-        return_code = 1
-    sys.exit(return_code)
+    sys.exit(0)

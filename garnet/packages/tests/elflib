@@ -1,5 +1,0 @@
-{
-    "host_tests": [
-        "//src/lib/elflib:elflib_tests"
-    ]
-}

@@ -1,5 +1,0 @@
-{
-    "packages": [
-        "//garnet/go/src/far:go_far_tests"
-    ]
-}
