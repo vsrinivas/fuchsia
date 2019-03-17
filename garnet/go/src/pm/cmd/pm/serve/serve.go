@@ -327,7 +327,7 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	return http.ListenAndServe(*listen, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		if !strings.HasPrefix(r.RequestURI, "/blobs") && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gw := &gzipWriter{
 				w,
 				gzip.NewWriter(w),
