@@ -11,15 +11,16 @@ import os
 
 def main():
     parser = argparse.ArgumentParser('Copy host tests to host_tests')
-    parser.add_argument('--json', help='test.json file', required=True)
+    parser.add_argument('--json', help='a test.json-like file', action='append', required=True)
     parser.add_argument('--dest-dir', help='Where to copy the tests to', required=True)
     parser.add_argument('--stamp', help='File to touch when done', required=True)
     parser.add_argument('--depfile', help='Where to output dependency file', required=True)
     args = parser.parse_args()
 
-    tests_json = None
-    with open(args.json, 'r') as f:
-        tests_json = json.load(f)
+    tests_json = []
+    for test_json in args.json:
+        with open(test_json, 'r') as f:
+            tests_json.extend(json.load(f))
 
     try:
         os.mkdir(args.dest_dir)

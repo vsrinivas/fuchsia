@@ -49,6 +49,19 @@ generated_file("tests") {
   ]
 }
 
+# TODO(IN-819): Provides supplementary metadata for tests no yet contributing
+# test spec metadata (e.g., flutter_test).
+generated_file("pseudo_tests") {
+  outputs = [
+    "$root_build_dir/pseudo_tests.json",
+  ]
+  data_keys = [ "pseudo_test_spec" ]
+  output_conversion = "json"
+  deps = [
+    ":host_tests",
+  ]
+}
+
 # Copy host test binaries to $root_build_dir/host_tests.
 # TODO(IN-819): Delete this copy target once host tests are no longer run out
 # of a single directory.
@@ -57,6 +70,7 @@ action("copy_host_tests") {
 
   inputs = [
     "$root_build_dir/tests.json",
+    "$root_build_dir/pseudo_tests.json",
   ]
 
   outputs = [
@@ -68,6 +82,8 @@ action("copy_host_tests") {
   args = [
     "--json",
     rebase_path(inputs[0]),
+    "--json",
+    rebase_path(inputs[1]),
     "--dest-dir",
     rebase_path("$root_build_dir/host_tests"),
     "--stamp",
@@ -78,8 +94,9 @@ action("copy_host_tests") {
 
   deps = [
     ":host_tests",
-    "//build/images:packages",
+    ":pseudo_tests",
     ":tests",
+    "//build/images:packages",
   ]
 }
 
