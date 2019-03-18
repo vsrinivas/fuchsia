@@ -92,7 +92,8 @@ class PageEvictionManagerImpl : public PageEvictionManager,
     FXL_DISALLOW_COPY_AND_ASSIGN(Completer);
   };
 
-  // Removes the page from the local storage.
+  // Removes the page from the local storage. The caller of this method must
+  // ensure that the given page exists.
   void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                  fit::function<void(Status)> callback);
 

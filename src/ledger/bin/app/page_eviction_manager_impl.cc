@@ -247,11 +247,7 @@ void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name,
                                         fit::function<void(Status)> callback) {
   FXL_DCHECK(delegate_);
   // We cannot delete the page storage and mark the deletion atomically. We thus
-  // delete the page first, and then mark it as evicted in Page Usage DB. If at
-  // some point a page gets deleted, but marking fails, on the next attempt to
-  // evict it we will get a |PAGE_NOT_FOUND| error, indicating we should remove
-  // the entry then. Therefore, |PAGE_NOT_FOUND| errors are handled internally
-  // and never returned to the callback.
+  // delete the page first, and then mark it as evicted in Page Usage DB.
   delegate_->DeletePageStorage(
       ledger_name, page_id,
       [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
@@ -351,7 +347,11 @@ Status PageEvictionManagerImpl::SynchronousTryEvictPage(
       status = CanEvictPage(handler, ledger_name, page_id, &can_evict);
   }
   if (status == Status::PAGE_NOT_FOUND) {
-    // The page was already removed. Mark it as evicted in Page Usage DB.
+    // |PAGE_NOT_FOUND| is not an error: It is possible that the page was
+    // removed in a previous run, but for some reason marking failed (e.g.
+    // Ledger was shut down before the operation finished). Mark the page as
+    // evicted in Page Usage DB, and set |was_evicted| to false, since the page
+    // was not actually evicted here.
     MarkPageEvicted(ledger_name, page_id);
     *was_evicted = PageWasEvicted(false);
     return Status::OK;
@@ -361,6 +361,8 @@ Status PageEvictionManagerImpl::SynchronousTryEvictPage(
     return status;
   }
 
+  // At this point, the requirements for calling |EvictPage| are met: the page
+  // exists and can be evicted.
   auto sync_call_status = coroutine::SyncCall(
       handler,
       [this, ledger_name = std::move(ledger_name),
