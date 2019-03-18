@@ -62,6 +62,7 @@ public:
     void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
     zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
+    bool IsDirectory() const final { return true; }
 
 private:
     static constexpr uint64_t kDotId = 1u;

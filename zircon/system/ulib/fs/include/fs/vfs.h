@@ -44,6 +44,10 @@ namespace fs {
 class Connection;
 class Vnode;
 
+inline constexpr bool IsVnodeRefOnly(uint32_t flags) {
+    return flags & ZX_FS_FLAG_VNODE_REF_ONLY;
+}
+
 inline constexpr bool IsWritable(uint32_t flags) {
     return flags & ZX_FS_RIGHT_WRITABLE;
 }
@@ -52,8 +56,8 @@ inline constexpr bool IsReadable(uint32_t flags) {
     return flags & ZX_FS_RIGHT_READABLE;
 }
 
-inline constexpr bool IsPathOnly(uint32_t flags) {
-    return flags & ZX_FS_FLAG_VNODE_REF_ONLY;
+inline constexpr bool HasAdminRight(uint32_t flags) {
+    return flags & ZX_FS_RIGHT_ADMIN;
 }
 
 // A storage class for a vdircookie which is passed to Readdir.
@@ -135,7 +139,12 @@ public:
     void OnConnectionClosedRemotely(Connection* connection) FS_TA_EXCLUDES(vfs_lock_);
 
     // Serves a Vnode over the specified channel (used for creating new filesystems)
-    zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel);
+    zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel, uint32_t rights);
+
+    // Convenience wrapper over |ServeDirectory| with maximum default permissions.
+    zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel) {
+        return ServeDirectory(vn, std::move(channel), ZX_FS_RIGHTS);
+    }
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
     zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_EXCLUDES(vfs_lock_);

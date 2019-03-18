@@ -135,6 +135,10 @@ void Vnode::SetRemote(zx::channel remote) {
 }
 #endif
 
+bool Vnode::IsDirectory() const {
+    return false;
+}
+
 DirentFiller::DirentFiller(void* ptr, size_t len)
     : ptr_(static_cast<char*>(ptr)), pos_(0), len_(len) {}
 

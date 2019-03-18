@@ -76,7 +76,8 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         if (status != ZX_OK) {
             return status;
         }
-        status = fdio_ns_connect(ns, "/svc", ZX_FS_RIGHT_READABLE, svc_server.release());
+        status = fdio_ns_connect(ns, "/svc", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                                 svc_server.release());
         if (status != ZX_OK) {
             return status;
         }
@@ -133,7 +134,7 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     if (args.use_system_svchost) {
         actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-                    .ns = { .prefix = "/svc", .handle = svc_client.release() },
+            .ns = { .prefix = "/svc", .handle = svc_client.release() },
         });
     }
     if (args.bootdata) {

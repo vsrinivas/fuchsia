@@ -151,6 +151,8 @@ zx_status_t get_arguments(zx::vmo* args_vmo, size_t* args_size) {
     }
     status = fdio_service_connect(kArgumentsPath, remote.release());
     if (status != ZX_OK) {
+        fprintf(stderr, "devcoordinator: get_arguments: fdio_service_connect returned %d\n",
+                status);
         return status;
     }
     return fuchsia_boot_ArgumentsGet(local.get(), args_vmo->reset_and_get_address(), args_size);
@@ -888,8 +890,8 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        fprintf(stderr, "devcoordinator: failed to get boot arguments, assuming test "
-                        "environment and continuing\n");
+        fprintf(stderr, "devcoordinator: failed to get boot arguments (status: %d), assuming test "
+                        "environment and continuing\n", status);
     }
 
     if (boot_args.GetBool("devmgr.verbose", false)) {

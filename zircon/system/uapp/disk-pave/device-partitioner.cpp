@@ -136,7 +136,7 @@ zx_status_t OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
         return ZX_ERR_STOP;
     };
 
-    fbl::unique_fd dir_fd(openat(devfs_root.get(), path, O_RDWR));
+    fbl::unique_fd dir_fd(openat(devfs_root.get(), path, O_RDONLY));
     if (!dir_fd) {
         return ZX_ERR_IO;
     }
@@ -286,7 +286,7 @@ const char* PartitionName(Partition type) {
 }
 
 fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
-    fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
 #if defined(__x86_64__)
     if ((CrosDevicePartitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
@@ -308,7 +308,7 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
  *====================================================*/
 
 bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, fbl::String* out) {
-    fbl::unique_fd d_fd(openat(devfs_root.get(), kBlockDevPath, O_RDWR));
+    fbl::unique_fd d_fd(openat(devfs_root.get(), kBlockDevPath, O_RDONLY));
     if (!d_fd) {
         ERROR("Cannot inspect block devices\n");
         return false;
@@ -1048,7 +1048,7 @@ zx_status_t SkipBlockDevicePartitioner::Initialize(
 
     // TODO(surajmalhtora): Use common devfs_root fd for both block and
     // skip-block devices.
-    fbl::unique_fd block_devfs_root(open("/dev", O_RDWR));
+    fbl::unique_fd block_devfs_root(open("/dev", O_RDONLY));
 
     if (!HasSkipBlockDevice(devfs_root)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -1147,7 +1147,7 @@ zx_status_t SkipBlockDevicePartitioner::WipePartitions() {
 
     const char* parent = dirname(name);
 
-    fbl::unique_fd parent_fd(open(parent, O_RDWR));
+    fbl::unique_fd parent_fd(open(parent, O_RDONLY));
     if (!parent_fd) {
         ERROR("Warning: Unable to open block parent device.\n");
         return ZX_ERR_IO;

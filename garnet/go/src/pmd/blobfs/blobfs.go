@@ -25,7 +25,7 @@ type Manager struct {
 
 // New constructs a new Manager for the blobfs mount at the given root.
 func New(root string) (*Manager, error) {
-	rootFDIO, err := syscall.OpenPath(root, 0, 0644)
+	rootFDIO, err := syscall.OpenPath(root, syscall.O_RDONLY, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: blobfs: can't open %q: %s", root, err)
 	}
@@ -68,7 +68,7 @@ func (m *Manager) HasBlob(root string) bool {
 	// the final method chosen here for now is to open the blob for writing,
 	// non-exclusively. That will be rejected if the blob has already been fully
 	// written.
-	f, err := syscall.Open(m.bpath(root), syscall.O_WRONLY|syscall.O_APPEND, 0)
+	f, err := syscall.Open(m.bpath(root), syscall.O_WRONLY|syscall.O_APPEND, 0400)
 	if os.IsNotExist(err) {
 		return false
 	}

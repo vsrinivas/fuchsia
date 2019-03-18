@@ -42,7 +42,7 @@ zx_status_t Directory::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
 }
 
 zx_status_t Directory::ValidateFlags(uint32_t flags) {
-    if (flags & ZX_FS_RIGHT_WRITABLE) {
+    if (flags & ZX_FS_FLAG_NOT_DIRECTORY) {
         return ZX_ERR_NOT_FILE;
     }
     return ZX_OK;
@@ -207,7 +207,7 @@ public:
     using DirectoryConnectionBinder = fidl::Binder<DirectoryConnection>;
 
     DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                    uint32_t flags)
+                        uint32_t flags)
             : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
 
 private:

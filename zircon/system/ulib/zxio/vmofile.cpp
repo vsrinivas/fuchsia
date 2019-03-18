@@ -59,7 +59,10 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
     if (status != ZX_OK) {
         return status;
     }
-    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
+    // TODO(yifeit): Switch to fuchsia_io_CLONE_FLAG_SAME_RIGHTS
+    // once all vfs implementations speak the hierarchical concepts.
+    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE |
+                     fuchsia_io_CLONE_FLAG_SAME_RIGHTS;
     status = fuchsia_io_NodeClone(file->control, flags, remote.release());
     if (status != ZX_OK) {
         return status;

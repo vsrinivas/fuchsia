@@ -34,6 +34,7 @@ public:
     zx_status_t Getattr(vnattr_t* a) final;
     bool IsRemote() const final;
     zx_handle_t GetRemote() const final;
+    bool IsDirectory() const final { return true; }
 
 private:
     zx::channel const remote_dir_client_;
