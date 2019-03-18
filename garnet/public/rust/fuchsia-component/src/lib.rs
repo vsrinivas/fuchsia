@@ -9,6 +9,7 @@
 
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
 use {
+    byteorder::{LittleEndian, WriteBytesExt},
     failure::{Error, ResultExt, Fail, bail, format_err},
     fdio::fdio_sys,
     fuchsia_async as fasync,
@@ -32,6 +33,7 @@ use {
         OPEN_RIGHT_WRITABLE,
         OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_POSIX,
     },
     fidl_fuchsia_sys::{
@@ -50,6 +52,7 @@ use {
     std::{
         collections::hash_map::{HashMap, Entry},
         fs::File,
+        io::Write,
         marker::{PhantomData, Unpin},
         os::unix::io::IntoRawFd,
         pin::Pin,
@@ -348,6 +351,13 @@ pub mod server {
                 ServiceFsNode::Service(_) => panic!("ServiceFs expected directory"),
             }
         }
+
+        fn to_dirent_type(&self) -> u8 {
+            match self {
+                ServiceFsNode::Directory { .. } => fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY,
+                ServiceFsNode::Service(_) => fidl_fuchsia_io::DIRENT_TYPE_SERVICE,
+            }
+        }
     }
 
     /// A filesystem which connects clients to services.
@@ -379,7 +389,7 @@ pub mod server {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
     const OPEN_REQ_SUPPORTED_FLAGS: u32 =
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX |
-        OPEN_FLAG_DIRECTORY;
+        OPEN_FLAG_DIRECTORY | OPEN_FLAG_NODE_REFERENCE;
 
     impl<Output: 'static> ServiceFs<ServiceObjLocal<Output>> {
         /// Create a new `ServiceFs` that is singlethreaded-only and does not
@@ -698,6 +708,11 @@ pub mod server {
         }
     }
 
+    enum ConnectionState {
+        Open,
+        Closed,
+    }
+
     /// A client connection to `ServiceFs`.
     ///
     /// This type also implements the `Future` trait and resolves to itself
@@ -712,6 +727,9 @@ pub mod server {
         /// The current node of the `ClientConnection` in the `ServiceFs`
         /// filesystem.
         position: usize,
+
+        /// Buffer and position of current DirectoryRequest::ReadDirents
+        dirents_buf: Option<(Vec<u8>, usize)>,
     }
 
     impl ClientConnection {
@@ -731,6 +749,7 @@ pub mod server {
                     ClientConnection {
                         stream: self.stream.take(),
                         position: self.position,
+                        dirents_buf: self.dirents_buf.take(),
                     },
                 )
             }))
@@ -787,6 +806,7 @@ pub mod server {
             self.client_connections.push(ClientConnection {
                 stream: Some(stream),
                 position,
+                dirents_buf: None,
             });
             Ok(())
         }
@@ -794,9 +814,9 @@ pub mod server {
         fn handle_request(
             &mut self,
             request: DirectoryRequest,
-            position: usize,
-        ) -> Result<Option<ServiceObjTy::Output>, Error> {
-            assert!(self.nodes.len() > position);
+            connection: &mut ClientConnection,
+        ) -> Result<(Option<ServiceObjTy::Output>, ConnectionState), Error> {
+            assert!(self.nodes.len() > connection.position);
 
             macro_rules! unsupported {
                 ($responder:ident $($args:tt)*) => {
@@ -822,24 +842,29 @@ pub mod server {
                 DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                     handle_potentially_unsupported_flags!(object, flags, CLONE_REQ_SUPPORTED_FLAGS);
 
-                    if let Err(e) = self.serve_connection_at(object.into_channel(), position, flags)
+                    if let Err(e) = self.serve_connection_at(object.into_channel(),
+                                                             connection.position, flags)
                     {
                         eprintln!("ServiceFs failed to clone: {:?}", e);
                     }
                 }
-                DirectoryRequest::Close { responder, } => responder.send(zx::sys::ZX_OK)?,
+                DirectoryRequest::Close { responder, } => {
+                    responder.send(zx::sys::ZX_OK)?;
+                    return Ok((None, ConnectionState::Closed));
+                },
                 DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _, } => {
                     handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
 
                     let channel = object.into_channel();
-                    let node = self.nodes.get(position)
+                    let node = self.nodes.get(connection.position)
                         .expect("ServiceFs client connected at missing node");
 
                     if path == "." {
-                        if let Err(e) = self.serve_connection_at(channel, position, flags) {
+                        if let Err(e) = self.serve_connection_at(channel, connection.position,
+                                                                 flags) {
                             eprintln!("ServiceFS failed to open '.': {:?}", e);
                         }
-                        return Ok(None);
+                        return Ok((None, ConnectionState::Open));
                     }
 
                     let children = if let ServiceFsNode::Directory { children } = node {
@@ -860,7 +885,8 @@ pub mod server {
                                 }
                             }
                             ServiceFsNode::Service(service) => {
-                                return Ok(service.service().connect(channel));
+                                return Ok((service.service().connect(channel),
+                                           ConnectionState::Open));
                             }
                         }
                     }
@@ -887,19 +913,59 @@ pub mod server {
                 }
                 DirectoryRequest::Sync { responder, } => unsupported!(responder)?,
                 DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
-                DirectoryRequest::ReadDirents { max_bytes: _, responder, } => {
-                    // FIXME(cramertj) actually respond by listing out the
-                    // children in the ServiceFs at this position
-                    unsupported!(responder, &mut std::iter::empty())?
+                DirectoryRequest::ReadDirents { max_bytes, responder, } => {
+                    let node = self.nodes.get(connection.position)
+                        .expect("ServiceFs client listing a missing node");
+                    let children = if let ServiceFsNode::Directory { children } = node {
+                        children
+                    } else {
+                        panic!("ServiceFs client listing a service node, expected dir node")
+                    };
+
+                    let dirents_buf = connection.dirents_buf.get_or_insert_with(|| {
+                        (self.to_dirent_bytes(&children), 0)
+                    });
+                    let (dirents_buf, offset) = (&mut dirents_buf.0, &mut dirents_buf.1);
+                    if *offset >= dirents_buf.len() {
+                        responder.send(zx::sys::ZX_OK, &mut std::iter::empty())?;
+                    } else {
+                        let new_offset = std::cmp::min(dirents_buf.len(), *offset + max_bytes as usize);
+                        responder.send(zx::sys::ZX_OK,
+                                       &mut dirents_buf[*offset..new_offset].iter().cloned())?;
+                        *offset = new_offset;
+                    }
                 }
-                DirectoryRequest::Rewind { responder, } => unsupported!(responder)?,
+                DirectoryRequest::Rewind { responder, } => {
+                    connection.dirents_buf = None;
+                    responder.send(zx::sys::ZX_OK)?;
+                },
                 DirectoryRequest::GetToken { responder, } => unsupported!(responder, None)?,
                 DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
             }
-            Ok(None)
+            Ok((None, ConnectionState::Open))
         }
+
+        fn to_dirent_bytes(&self, nodes: &HashMap<String, usize>) -> Vec<u8> {
+            let mut buf = vec![];
+            for (name, node) in nodes.iter() {
+                let typ = self.nodes.get(*node).expect("missing child").to_dirent_type();
+                if let Err(e) = write_dirent_bytes(&mut buf, *node as u64, typ, name) {
+                    eprintln!("failed encoding dirent for node {}: {}", *node, e);
+                }
+            }
+            buf
+        }
+    }
+
+    fn write_dirent_bytes(buf: &mut Vec<u8>, ino: u64, typ: u8, name: &str) -> Result<(), Error> {
+        // Safe to unwrap since `Write::write` on a `Vec` should never fail.
+        buf.write_u64::<LittleEndian>(ino).unwrap();
+        buf.write_u8(name.len() as u8).unwrap();
+        buf.write_u8(typ as u8).unwrap();
+        buf.write(name.as_ref()).unwrap();
+        Ok(())
     }
 
     fn has_unsupported_flags(flags: u32, supported_flags_bitmask: u32) -> bool {
@@ -913,7 +979,7 @@ pub mod server {
 
         fn poll_next(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
             loop {
-                let (request, client_connection) =
+                let (request, mut client_connection) =
                     match ready!(self.client_connections.poll_next_unpin(waker)) {
                         // a client request
                         Some(Some(x)) => x,
@@ -929,10 +995,12 @@ pub mod server {
                         continue
                     }
                 };
-                match self.handle_request(request, client_connection.position) {
-                    Ok(value) => {
-                        // Requeue the client to receive new requests
-                        self.client_connections.push(client_connection);
+                match self.handle_request(request, &mut client_connection) {
+                    Ok((value, connection_state)) => {
+                        if let ConnectionState::Open = connection_state {
+                            // Requeue the client to receive new requests
+                            self.client_connections.push(client_connection);
+                        }
                         if let Some(value) = value {
                             return Poll::Ready(Some(value));
                         }
