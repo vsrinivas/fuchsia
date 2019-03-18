@@ -9,3 +9,28 @@ group("tools") {
     "//garnet/packages/tools:all",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/tests:all",
+    "//peridot/packages/tests:all",
+    "//topaz/packages/tests:all",
+  ]
+}
+
+group("buildbot") {
+  testonly = true
+  public_deps = [
+    "//bundles:tools",
+    "//garnet/packages:all",
+    "//peridot/packages:all",
+  ]
+}
+
+group("kitchen_sink") {
+  testonly = true
+  public_deps = [
+    "//topaz/packages:kitchen_sink",
+  ]
+}

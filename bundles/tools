@@ -1,6 +1,0 @@
-{
-    "imports": [
-        "garnet/packages/products/devtools",
-        "garnet/packages/tools/all"
-    ]
-}
