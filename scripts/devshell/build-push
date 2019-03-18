@@ -16,6 +16,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
 fx-config-read
 
 function main {
@@ -39,12 +40,7 @@ function main {
 
   fx-command-run build "${args[@]}"
 
-  if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
-    echo >&2
-    fx-warn "It looks like serve-updates is not running."
-    fx-warn "You probably need to start \"fx serve\""
-    echo >&2
-  fi
+  check-for-amber-server || return -1
 
   fx-command-run push-package "${targets[@]}"
 }

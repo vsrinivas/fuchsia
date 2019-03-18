@@ -20,6 +20,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
 fx-config-read
 
 function main {
@@ -44,11 +45,7 @@ function main {
     shift
   esac
 
-  if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
-    fx-error "It looks like amber-srv is not running."
-    fx-error "You probably need to start \"fx serve-updates\""
-    exit 1
-  fi
+  check-for-amber-server || return -1
 
   echo -e "Building ..."
   # build all packages as there is no way to only build one and push it to
