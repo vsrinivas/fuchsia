@@ -4,13 +4,13 @@
 
 declare_args() {
   # Use a prebuilt ffmpeg binary rather than building it locally.  See
-  # //garnet/lib/media/ffmpeg/README.md for details.  This is ignored when
+  # //src/media/lib/ffmpeg/README.md for details.  This is ignored when
   # building in variant builds for which there is no prebuilt.  In that
   # case, ffmpeg is always built from source so as to be built with the
   # selected variant's config.  When this is false (either explicitly or in
   # a variant build) then //third_party/ffmpeg must be in the source tree,
   # which requires:
-  # `jiri import -name garnet manifest/ffmpeg https://fuchsia.googlesource.com/garnet`
+  # `jiri import -name integration third_party/ffmpeg https://fuchsia.googlesource.com/integration`
   use_prebuilt_ffmpeg = true
 }
 
@@ -71,7 +71,7 @@ if (use_prebuilt_ffmpeg) {
     variant_prefix += "/"
   }
 
-  prebuilt_dir = "prebuilt/arch/$current_cpu"
+  prebuilt_dir = "//prebuilt/third_party/ffmpeg/arch/$current_cpu"
   libffmpeg = "$prebuilt_dir/lib/${variant_prefix}libffmpeg.so"
   libffmpeg_debug = "$prebuilt_dir/debug/${variant_prefix}libffmpeg.so"
 
@@ -98,7 +98,7 @@ if (use_prebuilt_ffmpeg) {
   config("prebuilt_ffmpeg_config") {
     visibility = [ ":prebuilt_ffmpeg" ]
 
-    ffmpeg_include = "prebuilt/pkg/ffmpeg/include"
+    ffmpeg_include = "//prebuilt/third_party/ffmpeg/pkg/ffmpeg/include"
     if (current_cpu == "x64") {
       ffmpeg_config = "max"
     } else {
