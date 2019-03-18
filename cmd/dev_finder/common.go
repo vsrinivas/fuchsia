@@ -114,7 +114,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
 	defer cancel()
 	if err := m.Start(ctx, cmd.mdnsPort); err != nil {
-		errChan <- fmt.Errorf("starting mdns: %v", err)
+		return nil, fmt.Errorf("starting mdns: %v", err)
 	}
 	m.Send(packet)
 	devices := make([]*fuchsiaDevice, 0)
