@@ -94,13 +94,11 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
     return (kReservedEntryBlocks + 2 * blk_size) / blk_size;
 };
 
-
 // Helper function to auto-deduce type.
 template <typename T>
 fbl::unique_ptr<T> WrapUnique(T* ptr) {
     return fbl::unique_ptr<T>(ptr);
 }
-
 
 zx_status_t OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
                           fbl::Function<bool(const fbl::unique_fd&)> should_filter_file,
@@ -267,6 +265,25 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
 }
 
 } // namespace
+
+const char* PartitionName(Partition type) {
+    switch (type) {
+    case Partition::kBootloader: return "Bootloader";
+    case Partition::kKernelC: return "Kernel C";
+    case Partition::kEfi: return "EFI";
+    case Partition::kZirconA: return "Zircon A";
+    case Partition::kZirconB: return "Zircon B";
+    case Partition::kZirconR: return "Zircon R";
+    case Partition::kVbMetaA: return "VBMeta A";
+    case Partition::kVbMetaB: return "VBMeta B";
+    case Partition::kFuchsiaVolumeManager: return "Fuchsia Volume Manager";
+    case Partition::kInstallType: return "Install";
+    case Partition::kSystem: return "System";
+    case Partition::kBlob: return "Blob";
+    case Partition::kData: return "Data";
+    default: return "Unknown";
+    }
+}
 
 fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create() {
     fbl::unique_fd devfs_root(open("/dev", O_RDWR));
@@ -944,6 +961,11 @@ zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
     return ZX_OK;
 }
 
+zx_status_t FixedDevicePartitioner::AddPartition(Partition partition_type, fbl::unique_fd* out_fd) {
+    ERROR("Cannot add partitions to a fixed-map partition device\n");
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t FixedDevicePartitioner::FindPartition(Partition partition_type,
                                                   fbl::unique_fd* out_fd) const {
     uint8_t type[GPT_GUID_LEN];
@@ -1035,6 +1057,12 @@ zx_status_t SkipBlockDevicePartitioner::Initialize(
     *partitioner = WrapUnique(new SkipBlockDevicePartitioner(std::move(devfs_root),
                                                              std::move(block_devfs_root)));
     return ZX_OK;
+}
+
+zx_status_t SkipBlockDevicePartitioner::AddPartition(Partition partition_type,
+                                                     fbl::unique_fd* out_fd) {
+    ERROR("Cannot add partitions to a skip-block, fixed partition device\n");
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,

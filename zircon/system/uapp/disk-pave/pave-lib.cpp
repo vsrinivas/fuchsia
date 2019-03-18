@@ -951,6 +951,10 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
             ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
             return status;
         }
+
+        LOG("Coud not find \"%s\" Partition on device. Attemping to add new partition\n",
+            PartitionName(partition_type));
+
         if ((status = partitioner->AddPartition(partition_type, &partition_fd)) != ZX_OK) {
             ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
             return status;

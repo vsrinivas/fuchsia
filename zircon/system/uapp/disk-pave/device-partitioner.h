@@ -40,6 +40,8 @@ enum class Partition {
     kData,
 };
 
+const char* PartitionName(Partition type);
+
 // A special filter for test injection.
 // API should return true if device passed in should be filtered out.
 extern bool (*TestBlockFilter)(const fbl::unique_fd&);
@@ -206,9 +208,7 @@ public:
 
     bool UseSkipBlockInterface() const override { return false; }
 
-    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
 
     zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
@@ -239,9 +239,7 @@ public:
 
     bool UseSkipBlockInterface() const override { return true; }
 
-    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t AddPartition(Partition partition_type, fbl::unique_fd* out_fd) override;
 
     zx_status_t FindPartition(Partition partition_type, fbl::unique_fd* out_fd) const override;
 
