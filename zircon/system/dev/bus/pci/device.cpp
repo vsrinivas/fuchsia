@@ -225,9 +225,17 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
     // until the probe operation has been completed. Hopefully these special
     // systems are quiescent at this point in time, otherwise they might see
     // some minor glitching while access is disabled.
-    uint16_t cmd_backup = cfg_->Read(Config::kCommand);
+    bool enabled = MmioEnabled() || IoEnabled();
+    uint16_t cmd_backup = ReadCmdLocked();
     ModifyCmdLocked(PCI_COMMAND_MEM_EN | PCI_COMMAND_IO_EN, cmd_backup);
     uint32_t addr_mask = (bar_info.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
+
+    // For enabled devices save the original address in the BAR. If the device
+    // is enabled then we should assume the bios configured it and we should
+    // attempt to retain the BAR allocation.
+    if (enabled) {
+        bar_info.address = bar_val & addr_mask;
+    }
 
     // Write ones to figure out the size of the BAR
     cfg_->Write(Config::kBar(bar_id), UINT32_MAX);
@@ -244,17 +252,32 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
         // BAR. We already verified the bar_id is valid above.
         bars_[bar_id + 1].size = 0;
         bars_[bar_id + 1].bar_id = bar_id;
+
+        // Retain the high 32bits of the  address if the device was enabled.
+        if (enabled) {
+            bar_info.address = static_cast<uint64_t>(cfg_->Read(Config::kBar(bar_id + 1))) << 32;
+        }
+
         // Get the high 32 bits of size for the 64 bit BAR by repeating the
         // steps of writing 1s and then reading the value of the next BAR.
         cfg_->Write(Config::kBar(bar_id + 1), UINT32_MAX);
         size_mask |= static_cast<uint64_t>(~cfg_->Read(Config::kBar(bar_id + 1))) << 32;
     }
 
-    // No matter what configuration we've found, |size_mask| should contain a mask
-    // representing all the valid bits that can be set in the address.
+    // No matter what configuration we've found, |size_mask| should contain a
+    // mask representing all the valid bits that can be set in the address.
     bar_info.size = size_mask + 1;
 
-    // All done, re-enable IO/MMIO access that was disabled prior
+    // Restore the original bar address values cached above if enabled coming
+    // into this probe.
+    if (enabled) {
+        cfg_->Write(Config::kBar(bar_id), static_cast<uint32_t>(bar_info.address));
+        if (bar_info.is_64bit) {
+            cfg_->Write(Config::kBar(bar_id + 1), static_cast<uint32_t>(bar_info.address >> 32));
+        }
+    }
+
+    // All done, re-enable IO/MMIO access that was disabled prior.
     AssignCmdLocked(cmd_backup);
     cleanup.cancel();
     return ZX_OK;
@@ -264,15 +287,16 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     ZX_DEBUG_ASSERT(upstream_);
     ZX_DEBUG_ASSERT(bar_id < bar_count_);
 
+    zx_status_t status;
     PciAllocator* allocator;
-    BarInfo& bar = bars_[bar_id];
+    BarInfo& bar_info = bars_[bar_id];
     // TODO(cja): It's possible that we may have an unlikely configuration of a prefetchable
     // window that starts below 4GB, ends above 4GB and then has a prefetchable 32bit BAR. If
     // that BAR already had an address we would request it here and be fine, but if it didn't
     // then the below code could potentially fail because it received an address that didn't fit
     // in 32 bits.
-    if (bar.is_mmio) {
-        if (bar.is_64bit || bar.is_prefetchable) {
+    if (bar_info.is_mmio) {
+        if (bar_info.is_64bit || bar_info.is_prefetchable) {
             allocator = &upstream_->pf_mmio_regions();
         } else {
             allocator = &upstream_->mmio_regions();
@@ -281,23 +305,44 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
         allocator = &upstream_->pio_regions();
     }
 
-    // Request a base address of zero to signal we'll take any location in the window.
-    zx_status_t status = allocator->GetRegion(0, bar.size, &bar.allocation);
-    if (status != ZX_OK) {
-        pci_errorf("%s couldn't allocate %#zx for bar %u: %d\n", cfg_->addr(), bar.size, bar.bar_id,
-                   status);
-        return status;
+    // If we have an address it was found earlier in the probe and we'll try to
+    // preserve it.
+    if (bar_info.address) {
+        status = allocator->GetRegion(bar_info.address, bar_info.size, &bar_info.allocation);
+        if (status != ZX_OK) {
+            pci_errorf("%s failed to preserve BAR %u address %lx, reallocating: %d\n",
+                       cfg_->addr(), bar_info.bar_id, bar_info.address, status);
+            bar_info.address = 0;
+        }
+
+        // If we successfully grabbed the allocation then we're finished because
+        // our metadata already matches what we requested from the allocator.
+        pci_tracef("%s preserved BAR %u's existing allocation.\n", cfg_->addr(), bar_info.bar_id);
+        return ZX_OK;
+    }
+
+    // If we had no address, or we failed to preseve the address, then it's time
+    // to take any allocation window possible.
+    if (!bar_info.address) {
+        status = allocator->GetRegion(bar_info.size, &bar_info.allocation);
+        // Request a base address of zero to signal we'll take any location in
+        // the window.
+        if (status != ZX_OK) {
+            pci_errorf("%s couldn't allocate %#zx for bar %u: %d\n", cfg_->addr(), bar_info.size,
+                    bar_info.bar_id, status);
+            return status;
+        }
     }
 
     // Now write the allocated address space to the BAR.
     uint16_t cmd_backup = cfg_->Read(Config::kCommand);
     ModifyCmdLocked(PCI_COMMAND_MEM_EN | PCI_COMMAND_IO_EN, cmd_backup);
-    cfg_->Write(Config::kBar(bar_id), static_cast<uint32_t>(bar.allocation->base()));
-    if (bar.is_64bit) {
-        uint32_t addr_hi = static_cast<uint32_t>(bar.allocation->base() >> 32);
+    cfg_->Write(Config::kBar(bar_id), static_cast<uint32_t>(bar_info.allocation->base()));
+    if (bar_info.is_64bit) {
+        uint32_t addr_hi = static_cast<uint32_t>(bar_info.allocation->base() >> 32);
         cfg_->Write(Config::kBar(bar_id + 1), addr_hi);
     }
-    bar.address = bar.allocation->base();
+    bar_info.address = bar_info.allocation->base();
     AssignCmdLocked(cmd_backup);
 
     return ZX_OK;
@@ -377,9 +422,9 @@ void Device::Dump() const {
                       (bar.is_mmio) ? ((bar.is_64bit) ? "64bit mmio" : "32bit mmio") : "io",
                       (bar.is_prefetchable) ? "pf" : "no-pf", bar.address, bar.size);
             if (bar.is_64bit) {
-                printf("%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
+                zxlogf(INFO, "%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
             }
-            printf("%08x ]\n", cfg_->Read(Config::kBar(bar.bar_id)));
+            zxlogf(INFO, "%08x ]\n", cfg_->Read(Config::kBar(bar.bar_id)));
         }
     }
 }

@@ -228,10 +228,23 @@ protected:
     zx_status_t InitLocked() TA_REQ(dev_lock_);
     fbl::Mutex* dev_lock() { return &dev_lock_; }
 
+    // Read the value of the Command register, requires the dev_lock.
+    uint16_t ReadCmdLocked() TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_) {
+        fbl::AutoLock cmd_lock(&cmd_reg_lock_);
+        return cfg_->Read(Config::kCommand);
+    }
     void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits)
         TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_);
     void AssignCmdLocked(uint16_t value) TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_) {
         ModifyCmdLocked(0xFFFF, value);
+    }
+
+    bool IoEnabled() TA_REQ(dev_lock_) {
+        return ReadCmdLocked() & PCI_COMMAND_IO_EN;
+    }
+
+    bool MmioEnabled() TA_REQ(dev_lock_) {
+        return ReadCmdLocked() & PCI_COMMAND_MEM_EN;
     }
 
     // TODO(cja): port zx_status_t ProbeCapabilitiesLocked();

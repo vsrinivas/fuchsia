@@ -138,12 +138,14 @@ public:
     PciAllocator(PciAllocator&&) = delete;
     PciAllocator& operator=(const PciAllocator&) = delete;
     PciAllocator& operator=(PciAllocator&&) = delete;
-    // Called by a client to get a chunk of address space from this allocator.
+    // Request a region of address space spanning from |base| to |base| + |size|.
     virtual zx_status_t GetRegion(zx_paddr_t base,
                                   size_t size,
                                   fbl::unique_ptr<PciAllocation>* out_alloc) = 0;
-    // Called to provide backing address space to this allocator from an
-    // allocation provided upstream.
+    // Request a region of address space of size |size| anywhere in the window.
+    zx_status_t GetRegion(size_t size, fbl::unique_ptr<PciAllocation>* out_alloc) {
+        return GetRegion(/* base */ 0, size, out_alloc);
+    }
     virtual zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) = 0;
 
 protected:
