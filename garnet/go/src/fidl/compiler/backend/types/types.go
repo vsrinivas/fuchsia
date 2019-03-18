@@ -296,6 +296,11 @@ func (el Attributes) LookupAttribute(name Identifier) (Attribute, bool) {
 	return Attribute{}, false
 }
 
+func (el Attributes) HasAttribute(name Identifier) bool {
+        _, ok := el.LookupAttribute(name)
+        return ok
+}
+
 func (el Attributes) GetAttribute(name Identifier) Attribute {
 	attr, _ := el.LookupAttribute(name)
 	return attr

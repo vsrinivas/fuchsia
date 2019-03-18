@@ -6,6 +6,9 @@ package templates
 
 const Union = `
 {{- define "UnionDeclaration" }}
+{{- if .HasAttribute "Result" }}
+type {{ .Name }} = std::result::Result< {{(index .Members 0).Type }} , {{ (index .Members 1).Type }} >;
+{{ else }}
 fidl_union! {
   name: {{ .Name }},
   members: [
@@ -19,5 +22,6 @@ fidl_union! {
   size: {{ .Size }},
   align: {{ .Alignment }},
 }
+{{- end }}
 {{- end }}
 `

@@ -1753,6 +1753,111 @@ macro_rules! fidl_table {
     }
 }
 
+impl<O, E> Encodable for std::result::Result<O, E>
+where
+    O: Decodable + Encodable,
+    E: Decodable + Encodable,
+{
+    fn inline_align(&self) -> usize {
+        // Alignment factor of union is defined by the maximal alignment factor of the tag field and any of its options.
+        // tag field will always be same size as E in the case of results
+        std::cmp::max(fidl_inline_align!(O), fidl_inline_align!(u32))
+    }
+
+    fn inline_size(&self) -> usize {
+        // Size of union is the size of the tag field plus the size of the largest option including padding necessary
+        // to satisfy its alignment requirements.
+        round_up_to_align(
+            std::cmp::max(fidl_inline_size!(O), fidl_inline_size!(E)) + fidl_inline_size!(u32),
+            fidl_inline_align!(Self),
+        )
+    }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        match self {
+            Ok(val) => {
+                // Encode success tag
+                fidl_encode!(&mut 0, encoder)?;
+
+                // Padding
+                encoder.next_slice(4)?;
+
+                // Encode success value
+                fidl_encode!(val, encoder)?;
+            }
+            Err(val) => {
+                // Encode Error tag
+                fidl_encode!(&mut 1, encoder)?;
+
+                // Padding
+                encoder.next_slice(4)?;
+
+                // Encode Error value
+                fidl_encode!(val, encoder)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<O, E> Decodable for std::result::Result<O, E>
+where
+    O: Decodable,
+    E: Decodable,
+{
+    fn new_empty() -> Self {
+        return Ok(<O as Decodable>::new_empty());
+    }
+
+    fn inline_align() -> usize {
+        std::cmp::max(fidl_inline_align!(O), fidl_inline_align!(u32))
+    }
+
+    fn inline_size() -> usize {
+        round_up_to_align(
+            std::cmp::max(fidl_inline_size!(O), fidl_inline_size!(E)) + fidl_inline_size!(u32),
+            fidl_inline_align!(Self),
+        )
+    }
+
+    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        let mut tag: u32 = 0;
+        fidl_decode!(&mut tag, decoder)?;
+        decoder.next_slice(4)?;
+
+        match tag {
+            0 => {
+                loop {
+                    match self {
+                        Ok(val) => {
+                            fidl_decode!(val, decoder)?;
+                            break;
+                        }
+                        _ => {}
+                    }
+                    *self = Ok(<O as Decodable>::new_empty())
+                }
+                Ok(())
+            }
+
+            1 => {
+                loop {
+                    match self {
+                        Err(val) => {
+                            fidl_decode!(val, decoder)?;
+                            break;
+                        }
+                        _ => {}
+                    }
+                    *self = Err(<E as Decodable>::new_empty())
+                }
+                Ok(())
+            }
+            _ => Err(Error::UnknownUnionTag), // this would indicate it is not actually a result
+        }
+    }
+}
+
 /// A macro which declares a new FIDL union as a Rust enum and implements the
 /// FIDL encoding and decoding traits for it.
 #[macro_export]
@@ -2429,6 +2534,53 @@ mod test {
             Animal::from_primitive(0).expect("should be dog"),
             Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
         ];
+    }
+
+    #[test]
+    fn result_and_union_compat() {
+        fidl_union! {
+            name: OkayOrError,
+            members: [
+                Okay {
+                    ty: u64,
+                    offset: 8,
+                },
+                Error {
+                    ty: u32,
+                    offset: 8,
+                },
+            ],
+            size: 24,
+            align: 8,
+        };
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        let mut out: std::result::Result<u64, u32> = Decodable::new_empty();
+
+        Encoder::encode(buf, handle_buf, &mut OkayOrError::Okay(42u64)).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, Ok(42));
+
+        Encoder::encode(buf, handle_buf, &mut OkayOrError::Error(3u32)).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, Err(3));
+    }
+
+    #[test]
+    fn encode_decode_result() {
+        let mut test_result: std::result::Result<String, u32> = Ok("fuchsia".to_string());
+        let mut test_result_err: std::result::Result<String, u32> = Err(5);
+
+        match encode_decode(&mut test_result) {
+            Ok(ref out_str) if "fuchsia".to_string() == *out_str => {}
+            x => panic!("unexpected decoded value {:?}", x),
+        }
+
+        match &encode_decode(&mut test_result_err) {
+            Err(err_code) if *err_code == 5 => {}
+            x => panic!("unexpected decoded value {:?}", x),
+        }
     }
 
     #[test]
