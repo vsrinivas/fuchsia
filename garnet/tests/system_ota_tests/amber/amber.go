@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,19 +33,24 @@ func (lw *loggingWriter) WriteHeader(status int) {
 }
 
 // ServeRepository serves the amber repository in an http server.
-func ServeRepository(t *testing.T, repoDir string) {
-	log.Printf("Serving %s", repoDir)
-
+func ServeRepository(t *testing.T, repoDir string) (int, error) {
 	http.Handle("/", http.FileServer(http.Dir(repoDir)))
-	err := http.ListenAndServe(":8083", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	log.Printf("Serving %s on :%d", repoDir, port)
+
+	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		lw := &loggingWriter{w, 0}
 		http.DefaultServeMux.ServeHTTP(lw, r)
 		log.Printf("%s [pm serve] %d %s\n",
 			time.Now().Format("2006-01-02 15:04:05"), lw.status, r.RequestURI)
 	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	return port, nil
 }
 
 type keyConfig struct {
@@ -65,7 +71,7 @@ type sourceConfig struct {
 }
 
 // WriteConfig writes the source config to the repository.
-func WriteConfig(repoDir string, localHostname string) (configURL string, configHash string, err error) {
+func WriteConfig(repoDir string, localHostname string, port int) (configURL string, configHash string, err error) {
 	f, err := os.Open(filepath.Join(repoDir, "root.json"))
 	if err != nil {
 		return "", "", err
@@ -93,7 +99,7 @@ func WriteConfig(repoDir string, localHostname string) (configURL string, config
 	}
 
 	hostname := strings.SplitN(localHostname, "%", 2)[0]
-	repoURL := fmt.Sprintf("http://[%s]:8083", hostname)
+	repoURL := fmt.Sprintf("http://[%s]:%d", hostname, port)
 	configURL = fmt.Sprintf("%s/devhost/config.json", repoURL)
 
 	config, err := json.Marshal(&sourceConfig{

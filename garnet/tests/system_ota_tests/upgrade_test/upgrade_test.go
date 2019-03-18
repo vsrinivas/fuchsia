@@ -59,14 +59,17 @@ func TestUpgrade(t *testing.T) {
 	}
 
 	// Serve the repository before the test begins.
-	go amber.ServeRepository(t, repoDir)
+	port, err := amber.ServeRepository(t, repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Tell the device to connect to our repository.
 	localHostname, err := c.LocalHostname()
 	if err != nil {
 		t.Fatal(err)
 	}
-	device.RegisterAmberSource(repoDir, localHostname)
+	device.RegisterAmberSource(repoDir, localHostname, port)
 
 	// Get the device's current /boot/config/demvgr. Error out if it is the
 	// same version we are about to OTA to.
