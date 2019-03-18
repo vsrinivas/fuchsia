@@ -17,6 +17,7 @@
 
 namespace devmgr {
 
+class CompositeDevice;
 class CompositeDeviceComponent;
 class Coordinator;
 class Devhost;
@@ -66,6 +67,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
                               uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                               zx::channel rpc, bool invisible, zx::channel client_remote,
                               fbl::RefPtr<Device>* device);
+    static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
+                                       const CompositeDevice& composite, zx::channel rpc,
+                                       fbl::RefPtr<Device>* device);
     zx_status_t CreateProxy();
 
     static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,

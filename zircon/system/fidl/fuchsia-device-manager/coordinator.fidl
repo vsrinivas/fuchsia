@@ -114,6 +114,19 @@ protocol Controller {
     /// Ask the devhost to remove this device.  On success, the remote end of
     /// this interface channel will close instead of returning a result.
     RemoveDevice();
+
+    /// Introduce a composite device that has the given name and properties.
+    /// |components| will be a list of all of the composite's components,
+    /// described using devhost local device ids.  The order of the components
+    /// will match the original composite creation request.  The new device will
+    /// communicate with devcoordinator via |rpc|.
+    ///
+    /// |local_device_id| will be a unique value within the device's devhost, identifying
+    /// the resulting composite device.
+    CreateCompositeDevice(handle<channel> rpc,
+                          vector<LocalDeviceId>:COMPONENTS_MAX components,
+                          string:DEVICE_NAME_MAX name, LocalDeviceId local_device_id)
+        -> (zx.status status);
 };
 
 /// Interface for the devices in devhosts to coordinate with the devcoordinator.

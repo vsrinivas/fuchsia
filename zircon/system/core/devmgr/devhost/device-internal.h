@@ -7,6 +7,7 @@
 #include <atomic>
 #include <ddk/device.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/recycler.h>
 #include <fbl/ref_counted_upgradeable.h>
@@ -83,8 +84,12 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
       return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
     }
 
+    // Check if this devhost has a device with the given ID, and if so returns a
+    // reference to it.
+    static fbl::RefPtr<zx_device> GetDeviceFromLocalId(uint64_t local_id);
+
     uint64_t local_id() const { return local_id_; }
-    void set_local_id(uint64_t id) { local_id_ = id; }
+    void set_local_id(uint64_t id);
 
     uintptr_t magic = DEV_MAGIC;
 
@@ -140,6 +145,18 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
     char name[ZX_DEVICE_NAME_MAX + 1] = {};
 
+    // Trait structures for the local ID map
+    struct LocalIdNode {
+        static fbl::WAVLTreeNodeState<fbl::RefPtr<zx_device>>& node_state(zx_device& obj) {
+            return obj.local_id_node_;
+        }
+    };
+    struct LocalIdKeyTraits {
+        static uint64_t GetKey(const zx_device& obj) { return obj.local_id_; }
+        static bool LessThan(const uint64_t& key1, const uint64_t& key2)  { return key1 <  key2; }
+        static bool EqualTo (const uint64_t& key1, const uint64_t& key2)  { return key1 == key2; }
+    };
+
 private:
     zx_device() = default;
 
@@ -161,6 +178,8 @@ private:
             (*op)(ctx, args...);
         }
     }
+
+    fbl::WAVLTreeNodeState<fbl::RefPtr<zx_device>> local_id_node_;
 
     // Identifier assigned by devmgr that can be used to assemble composite
     // devices.

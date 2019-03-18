@@ -929,10 +929,7 @@ zx_status_t Coordinator::AddCompositeDevice(
     return ZX_OK;
 
     // TODO:
-    // - Logic for creating the new bindpoint once the bookkeeping finds
-    //   everything is ready
     // - Logic for sending an unbind() when some component goes away
-    // - Implementation of Composite Banjo protocol
     //
     // Tests to write:
     // - Introducing a composite device when all components are already ready

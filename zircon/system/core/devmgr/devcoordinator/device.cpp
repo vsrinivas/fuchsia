@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <ddk/driver.h>
 #include "../shared/log.h"
 #include "coordinator.h"
 #include "devfs.h"
@@ -102,6 +103,51 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     }
     real_parent->children.push_back(dev.get());
     log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name.data());
+
+    *device = std::move(dev);
+    return ZX_OK;
+}
+
+zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
+                                    const CompositeDevice& composite, zx::channel rpc,
+                                    fbl::RefPtr<Device>* device) {
+    const auto& composite_props = composite.properties();
+    fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[composite_props.size()],
+                                       composite_props.size());
+    memcpy(props.get(), composite_props.get(), props.size() * sizeof(props[0]));
+
+    auto dev = fbl::MakeRefCounted<Device>(coordinator);
+    if (!dev) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = dev->SetProps(std::move(props));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    dev->name = composite.name();
+    dev->set_channel(std::move(rpc));
+    dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);
+    // We exist within our parent's device host
+    dev->set_host(devhost);
+
+    // TODO: Record composite membership
+
+    // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of
+    // the root device?
+    if ((status = devfs_publish(coordinator->root_device(), dev)) < 0) {
+        return status;
+    }
+
+    if ((status = Device::BeginWait(dev, coordinator->dispatcher())) != ZX_OK) {
+        return status;
+    }
+
+    dev->host_->AddRef();
+    dev->host_->devices().push_back(dev.get());
+
+    log(DEVLC, "devcoordinator: composite dev created %p name='%s'\n", dev.get(), dev->name.data());
 
     *device = std::move(dev);
     return ZX_OK;

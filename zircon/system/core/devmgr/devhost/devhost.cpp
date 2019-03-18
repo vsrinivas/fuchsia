@@ -44,6 +44,7 @@
 #include "../shared/env.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
+#include "composite-device.h"
 #include "main.h"
 #include "tracing.h"
 
@@ -477,6 +478,69 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
     return ZX_OK;
 }
 
+static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc,
+                                              const uint64_t* component_local_ids_data,
+                                              size_t component_local_ids_count,
+                                              const char* name_data, size_t name_size,
+                                              uint64_t device_local_id, fidl_txn_t* txn) {
+    auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
+    zx::channel rpc(raw_rpc);
+    fbl::StringPiece name(name_data, name_size);
+
+    log(RPC_IN, "devhost[%s] create composite device %.*s'\n", ctx->path,
+        static_cast<int>(name_size), name_data);
+
+    auto newconn = fbl::make_unique<DevcoordinatorConnection>();
+    if (!newconn) {
+        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, ZX_ERR_NO_MEMORY);
+    }
+
+    // Convert the component IDs into zx_device references
+    CompositeComponents components_list(new fbl::RefPtr<zx_device>[component_local_ids_count],
+                                        component_local_ids_count);
+    {
+        // Acquire the API lock so that we don't have to worry about concurrent
+        // device removes
+        ApiAutoLock lock;
+
+        for (size_t i = 0; i < component_local_ids_count; ++i) {
+            uint64_t local_id = component_local_ids_data[i];
+            fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
+            if (dev == nullptr || (dev->flags & DEV_FLAG_DEAD)) {
+                return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(
+                        txn, ZX_ERR_NOT_FOUND);
+            }
+            components_list[i] = std::move(dev);
+        }
+    }
+
+    fbl::RefPtr<zx_device_t> dev;
+    zx_status_t status = zx_device::Create(&dev);
+    if (status != ZX_OK) {
+        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, status);
+    }
+    static_assert(fuchsia_device_manager_DEVICE_NAME_MAX + 1 >= sizeof(dev->name));
+    memcpy(dev->name, name_data, name_size);
+    dev->name[name_size] = 0;
+    dev->rpc = zx::unowned_channel(rpc);
+    dev->set_local_id(device_local_id);
+
+    status = InitializeCompositeDevice(dev, std::move(components_list));
+    if (status != ZX_OK) {
+        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, status);
+    }
+
+    newconn->dev = dev;
+
+    newconn->set_channel(std::move(rpc));
+    log(RPC_IN, "devhost[%s] creating new composite conn=%p\n", ctx->path, newconn.get());
+    if ((status = DevcoordinatorConnection::BeginWait(std::move(newconn),
+                                                 DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, status);
+    }
+    return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, ZX_OK);
+}
+
 static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
                                    size_t driver_path_size, zx_handle_t raw_driver_vmo,
                                    fidl_txn_t* txn) {
@@ -566,6 +630,7 @@ static fuchsia_device_manager_Controller_ops_t fidl_ops = {
     .ConnectProxy = fidl_ConnectProxy,
     .Suspend = fidl_Suspend,
     .RemoveDevice = fidl_RemoveDevice,
+    .CreateCompositeDevice = fidl_CreateCompositeDevice,
 };
 
 static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* conn) {
@@ -996,6 +1061,9 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
     zx_status_t call_status;
     zx_status_t status = fuchsia_device_manager_CoordinatorRemoveDevice(rpc.get(), &call_status);
     log_rpc_result("remove-device", status, call_status);
+
+    // Forget our local ID, to release the reference stored by the local ID map
+    dev->set_local_id(0);
 
     // Forget about our rpc channel since after the port_queue below it may be
     // closed.

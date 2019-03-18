@@ -92,7 +92,7 @@ class CompositeDevice {
 public:
     // Only public because of make_unique.  You probably want Create().
     CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
-                    uint32_t coresident_device_index);
+                    uint32_t components_count, uint32_t coresident_device_index);
 
     CompositeDevice(CompositeDevice&&) = delete;
     CompositeDevice& operator=(CompositeDevice&&) = delete;
@@ -114,6 +114,7 @@ public:
     const fbl::Array<const zx_device_prop_t>& properties() const {
         return properties_;
     }
+    uint32_t components_count() const { return components_count_; }
 
     // Attempt to match any of the unbound components against |dev|.  Returns true
     // if a component was match.  |*component_out| will be set to the index of
@@ -141,6 +142,7 @@ private:
 
     const fbl::String name_;
     const fbl::Array<const zx_device_prop_t> properties_;
+    const uint32_t components_count_;
     const uint32_t coresident_device_index_;
 
     ComponentList unbound_;

@@ -338,5 +338,8 @@ zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc
 zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo driver);
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy);
 zx_status_t dh_send_suspend(const Device* dev, uint32_t flags);
+zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite_dev,
+                                            const CompositeDevice& composite,
+                                            const uint64_t* component_local_ids, zx::channel rpc);
 
 } // namespace devmgr

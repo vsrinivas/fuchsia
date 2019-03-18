@@ -19,6 +19,7 @@ library("driver") {
   static = false
   sources = [
     "api.cpp",
+    "composite-device.cpp",
     "core.cpp",
     "devhost.cpp",
     "rpc-server.cpp",
@@ -27,6 +28,7 @@ library("driver") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-io:c",
@@ -42,8 +44,8 @@ library("driver") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/trace-provider:static",
-    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxio",

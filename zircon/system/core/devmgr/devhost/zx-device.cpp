@@ -6,6 +6,8 @@
 
 #include "devhost.h"
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {
     *out_dev = fbl::AdoptRef(new zx_device());
@@ -57,4 +59,33 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
     if (devmgr::devhost_enumerators == 0) {
         devmgr::devhost_finalize();
     }
+}
+
+static fbl::Mutex local_id_map_lock_;
+static fbl::WAVLTree<uint64_t, fbl::RefPtr<zx_device>, zx_device::LocalIdKeyTraits,
+        zx_device::LocalIdNode> local_id_map_ TA_GUARDED(local_id_map_lock_);
+
+void zx_device::set_local_id(uint64_t id) {
+    // If this is the last reference, we want it to go away outside of the lock
+    fbl::RefPtr<zx_device> old_entry;
+
+    fbl::AutoLock guard(&local_id_map_lock_);
+    if (local_id_ != 0) {
+        old_entry = local_id_map_.erase(*this);
+        ZX_ASSERT(old_entry.get() == this);
+    }
+
+    local_id_ = id;
+    if (id != 0) {
+        local_id_map_.insert(fbl::WrapRefPtr(this));
+    }
+}
+
+fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
+    fbl::AutoLock guard(&local_id_map_lock_);
+    auto itr = local_id_map_.find(local_id);
+    if (itr == local_id_map_.end()) {
+        return nullptr;
+    }
+    return fbl::WrapRefPtr(&*itr);
 }

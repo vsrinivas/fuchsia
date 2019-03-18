@@ -5,6 +5,7 @@
 #include "composite-device.h"
 
 #include <utility>
+#include <zircon/status.h>
 #include "../shared/log.h"
 #include "binding-internal.h"
 #include "coordinator.h"
@@ -14,13 +15,9 @@ namespace devmgr {
 // CompositeDevice methods
 
 CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
-                                 uint32_t coresident_device_index)
+                                 uint32_t components_count, uint32_t coresident_device_index)
     : name_(std::move(name)), properties_(std::move(properties)),
-      coresident_device_index_(coresident_device_index) {
-    // TODO(teisenbe): Remove this when the index is used elsewhere.  Clang and
-    // GCC do not agree on whether this is unused, so either tagging it as used
-    // or unused causes one of them to error.
-    (void)coresident_device_index_;
+      components_count_(components_count), coresident_device_index_(coresident_device_index) {
 }
 
 CompositeDevice::~CompositeDevice() = default;
@@ -30,13 +27,17 @@ zx_status_t CompositeDevice::Create(const fbl::StringPiece& name,
                                     const fuchsia_device_manager_DeviceComponent* components,
                                     size_t components_count, uint32_t coresident_device_index,
                                     std::unique_ptr<CompositeDevice>* out) {
+    if (components_count > UINT32_MAX) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     fbl::String name_obj(name);
     fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[props_count], props_count);
     memcpy(properties.get(), props_data, props_count * sizeof(props_data[0]));
 
     auto dev = std::make_unique<CompositeDevice>(std::move(name), std::move(properties),
-                                                 coresident_device_index);
-    for (size_t i = 0; i < components_count; ++i) {
+                                                 components_count, coresident_device_index);
+    for (uint32_t i = 0; i < components_count; ++i) {
         const auto& fidl_component = components[i];
         size_t parts_count = fidl_component.parts_count;
         fbl::Array<ComponentPartDescriptor> parts(new ComponentPartDescriptor[parts_count],
@@ -118,6 +119,9 @@ zx_status_t CompositeDevice::TryAssemble() {
         }
     }
 
+    Coordinator* coordinator = nullptr;
+    uint64_t component_local_ids[fuchsia_device_manager_COMPONENTS_MAX] = {};
+
     // Create all of the proxies for the component devices, in the same process
     for (auto& component : bound_) {
         const fbl::RefPtr<Device>& dev = component.component_device();
@@ -128,7 +132,8 @@ zx_status_t CompositeDevice::TryAssemble() {
             log(ERROR, "devcoordinator: cannot create composite, proxies in different processes\n");
             return ZX_ERR_BAD_STATE;
         }
-        zx_status_t status = dev->coordinator->PrepareProxy(dev, devhost);
+        coordinator = dev->coordinator;
+        zx_status_t status = coordinator->PrepareProxy(dev, devhost);
         if (status != ZX_OK) {
             return status;
         }
@@ -137,9 +142,39 @@ zx_status_t CompositeDevice::TryAssemble() {
             devhost = dev->proxy->host();
             ZX_ASSERT(devhost != nullptr);
         }
+        // Stash the local ID after the proxy has been created
+        component_local_ids[component.index()] = dev->proxy->local_id();
     }
-    // TODO: Create the composite device and wire everything up
-    return ZX_ERR_NOT_SUPPORTED;
+
+    zx::channel rpc_local, rpc_remote;
+    zx_status_t status = zx::channel::create(0, &rpc_local, &rpc_remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::RefPtr<Device> new_device;
+    status = Device::CreateComposite(coordinator, devhost, *this, std::move(rpc_local),
+                                     &new_device);
+    if (status != ZX_OK) {
+        return status;
+    }
+    coordinator->devices().push_back(new_device);
+
+    // Create the composite device in the devhost
+    status = dh_send_create_composite_device(devhost, new_device.get(), *this, component_local_ids,
+                                             std::move(rpc_remote));
+    if (status != ZX_OK) {
+        log(ERROR, "devcoordinator: create composite device request failed: %s\n",
+            zx_status_get_string(status));
+        return status;
+    }
+
+    status = new_device->SignalReadyForBind();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 // CompositeDeviceComponent methods
