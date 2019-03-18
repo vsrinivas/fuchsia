@@ -369,23 +369,9 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		return fmt.Errorf("failed to load device properties file %q", cmd.propertiesFile)
 	}
 
-	processedKeys := make(map[string]bool)
-	var signers []ssh.Signer
-	for _, properties := range propertiesSlice {
-		for _, keyPath := range properties.SSHKeys {
-			if !processedKeys[keyPath] {
-				processedKeys[keyPath] = true
-				p, err := ioutil.ReadFile(keyPath)
-				if err != nil {
-					return err
-				}
-				s, err := ssh.ParsePrivateKey(p)
-				if err != nil {
-					return err
-				}
-				signers = append(signers, s)
-			}
-		}
+	signers, err := botanist.SSHSignersFromDeviceProperties(propertiesSlice)
+	if err != nil {
+		return err
 	}
 
 	for _, properties := range propertiesSlice {

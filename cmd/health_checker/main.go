@@ -26,8 +26,9 @@ running in Zedboot.
 
 // Command line flag values
 var (
-	timeout    time.Duration
-	configFile string
+	timeout           time.Duration
+	configFile        string
+	rebootIfUnhealthy bool
 )
 
 const (
@@ -50,20 +51,20 @@ type HealthCheckResult struct {
 func checkHealth(n *netboot.Client, nodename string) HealthCheckResult {
 	netsvcAddr, err := n.Discover(nodename, false)
 	if err != nil {
-		err = fmt.Errorf("Failed to discover netsvc addr: %v\n", err)
+		err = fmt.Errorf("Failed to discover netsvc addr: %v.", err)
 		return HealthCheckResult{nodename, unhealthyState, err.Error()}
 	}
 	netsvcIpAddr := &net.IPAddr{IP: netsvcAddr.IP, Zone: netsvcAddr.Zone}
 	cmd := exec.Command("ping", "-6", netsvcIpAddr.String(), "-c", "1")
 	if _, err = cmd.Output(); err != nil {
-		err = fmt.Errorf("Failed to ping netsvc addr %s: %v\n", netsvcIpAddr, err)
+		err = fmt.Errorf("Failed to ping netsvc addr %s: %v.", netsvcIpAddr, err)
 		return HealthCheckResult{nodename, unhealthyState, err.Error()}
 	}
 
 	// Device should be in Zedboot, so fuchsia address should be unpingable
 	fuchsiaAddr, err := n.Discover(nodename, true)
 	if err != nil {
-		err = fmt.Errorf("Failed to discover fuchsia addr: %v\n", err)
+		err = fmt.Errorf("Failed to discover fuchsia addr: %v.", err)
 		return HealthCheckResult{nodename, unhealthyState, err.Error()}
 	}
 	fuchsiaIpAddr := &net.IPAddr{IP: fuchsiaAddr.IP, Zone: fuchsiaAddr.Zone}
@@ -72,6 +73,21 @@ func checkHealth(n *netboot.Client, nodename string) HealthCheckResult {
 		return HealthCheckResult{nodename, unhealthyState, "Device is in Fuchsia, should be in Zedboot."}
 	}
 	return HealthCheckResult{nodename, healthyState, ""}
+}
+
+func reboot(properties botanist.DeviceProperties) error {
+	if properties.PDU == nil {
+		return fmt.Errorf("Failed to reboot the device: missing PDU info in botanist config file.")
+	}
+	signers, err := botanist.SSHSignersFromDeviceProperties([]botanist.DeviceProperties{properties})
+	if err != nil {
+		return fmt.Errorf("Failed to reboot the device: %v.", err)
+	}
+
+	if err = botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
+		return fmt.Errorf("Failed to reboot the device: %v.", err)
+	}
+	return nil
 }
 
 func printHealthCheckResults(checkResults []HealthCheckResult) error {
@@ -94,6 +110,7 @@ func init() {
 		"The path of the json config file that contains the nodename of the device. Format is defined in https://fuchsia.googlesource.com/tools/+/master/botanist/common.go")
 	flag.DurationVar(&timeout, "timeout", 3*time.Second,
 		"The timeout for checking each device. The format should be a value acceptable to time.ParseDuration.")
+	flag.BoolVar(&rebootIfUnhealthy, "reboot", false, "If true, attempt to reboot the device if unhealthy.")
 }
 
 func main() {
@@ -111,6 +128,11 @@ func main() {
 			log.Fatal("Failed to retrieve nodename from config file")
 		}
 		checkResult := checkHealth(client, nodename)
+		if checkResult.State == unhealthyState && rebootIfUnhealthy {
+			if rebootErr := reboot(deviceProperties); rebootErr != nil {
+				checkResult.ErrorMsg += "; " + rebootErr.Error()
+			}
+		}
 		checkResultSlice = append(checkResultSlice, checkResult)
 	}
 	if err = printHealthCheckResults(checkResultSlice); err != nil {
