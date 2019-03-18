@@ -274,19 +274,23 @@ void ConsoleContext::OutputThreadContext(
 
   // Frame (current position will always be frame 0).
   const Stack& stack = thread->GetStack();
-  FXL_DCHECK(!stack.empty());
-  const Location& location = stack[0]->GetLocation();
-  out.Append(FormatLocation(location, false, false));
-  if (location.has_symbols()) {
-    out.Append("\n");
+  if (stack.empty()) {
+    out.Append(" (no location information)\n");
+    console->Output(out);
   } else {
-    out.Append(" (no symbol info)\n");
+    const Location& location = stack[0]->GetLocation();
+    out.Append(FormatLocation(location, false, false));
+    if (location.has_symbols()) {
+      out.Append("\n");
+    } else {
+      out.Append(" (no symbol info)\n");
+    }
+    console->Output(out);
+    Err err = OutputSourceContext(thread->GetProcess(), location,
+                                  GetSourceAffinityForThread(thread));
+    if (err.has_error())
+      console->Output(err);
   }
-  console->Output(out);
-  Err err = OutputSourceContext(thread->GetProcess(), location,
-                                GetSourceAffinityForThread(thread));
-  if (err.has_error())
-    console->Output(err);
 }
 
 Err ConsoleContext::FillOutCommand(Command* cmd) const {
@@ -457,8 +461,8 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
   if (autoattached_to_new_process) {
     out.Append(Syntax::kComment,
         "\n  The process is currently in an initializing state. You can "
-        "only set\n  pending breakpoints (symbols haven't been loaded yet) "
-        "or \"continue\" (DX-912).");
+        "set pending\n  breakpoints (symbols haven't been loaded yet) "
+        "and \"continue\".");
   }
   Console::get()->Output(out);
 }

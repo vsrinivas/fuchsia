@@ -28,10 +28,10 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
                                uint64_t ip, uint64_t sp, uint64_t bp,
                                size_t max_depth,
                                std::vector<debug_ipc::StackFrame>* stack) {
-  ModuleVector modules;
-  zx_status_t status = GetModulesForProcess(process, dl_debug_addr, &modules);
-  if (status != ZX_OK)
-    return status;
+  // Ignore errors getting modules, the empty case can at least give the
+  // current location, and maybe more if there are stack pointers.
+  ModuleVector modules;  // Sorted by load address.
+  GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(),
             [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
               return a.base < b.base;
@@ -62,7 +62,7 @@ zx_status_t UnwindStackAndroid(const zx::process& process,
   }
 
   unwindstack::RegsFuchsia regs;
-  status = regs.Read(thread.get());
+  zx_status_t status = regs.Read(thread.get());
   if (status != ZX_OK)
     return status;
 
@@ -127,11 +127,10 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process,
                                 std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
-  // Get the modules sorted by load address.
-  ModuleVector modules;
-  zx_status_t status = GetModulesForProcess(process, dl_debug_addr, &modules);
-  if (status != ZX_OK)
-    return status;
+  // Ignore errors getting modules, the empty case can at least give the
+  // current location, and maybe more if there are stack pointers.
+  ModuleVector modules;  // Sorted by load address.
+  GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(),
             [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
               return a.base < b.base;
