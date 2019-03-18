@@ -8,6 +8,11 @@
 
 export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true
 export LC_ALL=C LANGUAGE=C LANG=C
+
+# Force configure base-passwd before configuring all other packages. This resolves a conflict
+# between base-passwd and base-files that's not captured by dependencies due to both packages
+# being marked "essential".
+dpkg --configure --force-depends base-passwd
 dpkg --configure -a
 
 # Create default account.
