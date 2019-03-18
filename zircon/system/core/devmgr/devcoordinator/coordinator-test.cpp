@@ -20,10 +20,12 @@ zx::channel fs_clone(const char* path) {
 }
 } // namespace devmgr
 
-static constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
-static constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
+namespace {
 
-static devmgr::CoordinatorConfig default_config(async_dispatcher_t* dispatcher) {
+constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
+constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
+
+devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher) {
     devmgr::CoordinatorConfig config{};
     config.dispatcher = dispatcher;
     config.require_system = false;
@@ -31,10 +33,10 @@ static devmgr::CoordinatorConfig default_config(async_dispatcher_t* dispatcher) 
     return config;
 }
 
-bool initialize_core_devices() {
+bool InitializeCoreDevices() {
     BEGIN_TEST;
 
-    devmgr::Coordinator coordinator(default_config(nullptr));
+    devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
@@ -42,10 +44,10 @@ bool initialize_core_devices() {
     END_TEST;
 }
 
-bool open_virtcon() {
+bool OpenVirtcon() {
     BEGIN_TEST;
 
-    devmgr::Coordinator coordinator(default_config(nullptr));
+    devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
@@ -74,14 +76,14 @@ bool open_virtcon() {
     END_TEST;
 }
 
-bool dump_state() {
+bool DumpState() {
     BEGIN_TEST;
-    devmgr::Coordinator coordinator(default_config(nullptr));
+    devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
-    constexpr int32_t kBufSize  = 256;
+    constexpr int32_t kBufSize = 256;
     char buf[kBufSize + 1] = {0};
 
     zx::vmo vmo;
@@ -100,7 +102,7 @@ bool dump_state() {
     END_TEST;
 }
 
-bool load_driver() {
+bool LoadDriver() {
     BEGIN_TEST;
 
     bool found_driver = false;
@@ -114,11 +116,11 @@ bool load_driver() {
     END_TEST;
 }
 
-bool bind_drivers() {
+bool BindDrivers() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    devmgr::Coordinator coordinator(default_config(loop.dispatcher()));
+    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
@@ -137,11 +139,11 @@ bool bind_drivers() {
     END_TEST;
 }
 
-bool bind_devices() {
+bool BindDevices() {
     BEGIN_TEST;
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    devmgr::Coordinator coordinator(default_config(loop.dispatcher()));
+    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
@@ -228,11 +230,13 @@ bool bind_devices() {
     END_TEST;
 }
 
+} // namespace
+
 BEGIN_TEST_CASE(coordinator_tests)
-RUN_TEST(initialize_core_devices)
-RUN_TEST(open_virtcon)
-RUN_TEST(dump_state)
-RUN_TEST(load_driver)
-RUN_TEST(bind_drivers)
-RUN_TEST(bind_devices)
+RUN_TEST(InitializeCoreDevices)
+RUN_TEST(OpenVirtcon)
+RUN_TEST(DumpState)
+RUN_TEST(LoadDriver)
+RUN_TEST(BindDrivers)
+RUN_TEST(BindDevices)
 END_TEST_CASE(coordinator_tests)
