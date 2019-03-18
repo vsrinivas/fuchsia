@@ -61,8 +61,8 @@ class Db {
       std::string* value) = 0;
 
   // Checks whether |key| is stored in this database. Returns |OK| if the key
-  // was found, |NOT_FOUND| if not, or another type of error in case of failure
-  // to look up.
+  // was found, |INTERNAL_NOT_FOUND| if not, or another type of error in case of
+  // failure to look up.
   FXL_WARN_UNUSED_RESULT virtual Status HasKey(
       coroutine::CoroutineHandler* handler,
       convert::ExtendedStringView key) = 0;

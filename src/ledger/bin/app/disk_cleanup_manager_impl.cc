@@ -15,7 +15,9 @@ DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment,
 
 DiskCleanupManagerImpl::~DiskCleanupManagerImpl() {}
 
-Status DiskCleanupManagerImpl::Init() { return page_eviction_manager_.Init(); }
+storage::Status DiskCleanupManagerImpl::Init() {
+  return page_eviction_manager_.Init();
+}
 
 void DiskCleanupManagerImpl::SetPageEvictionDelegate(
     PageEvictionManager::Delegate* delegate) {
@@ -30,7 +32,8 @@ bool DiskCleanupManagerImpl::IsEmpty() {
   return page_eviction_manager_.IsEmpty();
 }
 
-void DiskCleanupManagerImpl::TryCleanUp(fit::function<void(Status)> callback) {
+void DiskCleanupManagerImpl::TryCleanUp(
+    fit::function<void(storage::Status)> callback) {
   page_eviction_manager_.TryEvictPages(policy_.get(), std::move(callback));
 }
 
@@ -49,12 +52,14 @@ void DiskCleanupManagerImpl::OnPageUnused(fxl::StringView ledger_name,
   page_eviction_manager_.TryEvictPage(
       ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
       [ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](
-          Status status, PageWasEvicted) {
-        if (status != Status::OK && status != Status::INTERNAL_ERROR) {
-          FXL_LOG(ERROR)
-              << "Failed to check if page is empty and/or evict it. Status: "
-              << fidl::ToUnderlying(status) << ". Ledger name: " << ledger_name
-              << ". Page ID: " << convert::ToHex(page_id);
+          storage::Status status, PageWasEvicted) {
+        if (status != storage::Status::OK &&
+            status != storage::Status::INTERNAL_ERROR) {
+          FXL_LOG(ERROR) << "Failed to check if page is empty and/or evict it. "
+                            "storage::Status: "
+                         << fidl::ToUnderlying(status)
+                         << ". Ledger name: " << ledger_name
+                         << ". Page ID: " << convert::ToHex(page_id);
         }
       });
 }

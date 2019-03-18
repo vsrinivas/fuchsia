@@ -127,7 +127,7 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
       *object_status = possible_status;
       return Status::OK;
     }
-    if (key_found_status != Status::NOT_FOUND) {
+    if (key_found_status != Status::INTERNAL_NOT_FOUND) {
       return key_found_status;
     }
   }
@@ -158,10 +158,10 @@ Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
 Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
                                   const CommitId& commit_id, bool* is_synced) {
   Status status = db_->HasKey(handler, UnsyncedCommitRow::GetKeyFor(commit_id));
-  if (status != Status::OK && status != Status::NOT_FOUND) {
+  if (status != Status::OK && status != Status::INTERNAL_NOT_FOUND) {
     return status;
   }
-  *is_synced = (status == Status::NOT_FOUND);
+  *is_synced = (status == Status::INTERNAL_NOT_FOUND);
   return Status::OK;
 }
 
@@ -196,7 +196,7 @@ Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
 Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
                                 bool* page_is_online) {
   Status status = db_->HasKey(handler, PageIsOnlineRow::kKey);
-  if (status != Status::OK && status != Status::NOT_FOUND) {
+  if (status != Status::OK && status != Status::INTERNAL_NOT_FOUND) {
     return status;
   }
   *page_is_online = (status == Status::OK);

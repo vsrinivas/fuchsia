@@ -15,7 +15,7 @@ void FakeDbFactory::GetOrCreateDb(
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   if (!files::IsDirectoryAt(db_path.root_fd(), db_path.path())) {
     if (on_db_not_found == DbFactory::OnDbNotFound::RETURN) {
-      callback(Status::NOT_FOUND, nullptr);
+      callback(Status::PAGE_NOT_FOUND, nullptr);
       return;
     }
     // Create the path to fake the creation of the Db at the expected
@@ -23,7 +23,7 @@ void FakeDbFactory::GetOrCreateDb(
     if (!files::CreateDirectoryAt(db_path.root_fd(), db_path.path())) {
       FXL_LOG(ERROR) << "Failed to create the storage directory in "
                      << db_path.path();
-      callback(Status::INTERNAL_IO_ERROR, nullptr);
+      callback(Status::INTERNAL_ERROR, nullptr);
       return;
     }
   }

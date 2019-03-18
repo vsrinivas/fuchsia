@@ -51,7 +51,8 @@ void CommitBatch::AddToBatch(
               }
               return;
             }
-            if (status == storage::Status::NOT_FOUND && !missing_ids.empty()) {
+            if (status == storage::Status::INTERNAL_NOT_FOUND &&
+                !missing_ids.empty()) {
               delegate_->RequestCommits(device_, std::move(missing_ids));
               return;
             }

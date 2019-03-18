@@ -103,7 +103,7 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
   if (key.empty()) {
     *index = 0;
     return !entries_.empty() && entries_[0].key.empty() ? Status::OK
-                                                        : Status::NOT_FOUND;
+                                                        : Status::KEY_NOT_FOUND;
   }
   auto it =
       std::lower_bound(entries_.begin(), entries_.end(), key,
@@ -112,13 +112,13 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
                        });
   if (it == entries_.end()) {
     *index = entries_.size();
-    return Status::NOT_FOUND;
+    return Status::KEY_NOT_FOUND;
   }
   *index = it - entries_.begin();
   if (it->key == key) {
     return Status::OK;
   }
-  return Status::NOT_FOUND;
+  return Status::KEY_NOT_FOUND;
 }
 
 const ObjectIdentifier& TreeNode::GetIdentifier() const { return identifier_; }

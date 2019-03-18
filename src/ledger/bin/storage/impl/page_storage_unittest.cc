@@ -129,8 +129,8 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
                      callback) override {
     auto value_found = digest_to_value_.find(object_identifier);
     if (value_found == digest_to_value_.end()) {
-      callback(Status::NOT_FOUND, ChangeSource::CLOUD, IsObjectSynced::NO,
-               nullptr);
+      callback(Status::INTERNAL_NOT_FOUND, ChangeSource::CLOUD,
+               IsObjectSynced::NO, nullptr);
       return;
     }
     std::string& value = value_found->second;
@@ -669,7 +669,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
                                         &status, &lookup_commit));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
   EXPECT_FALSE(lookup_commit);
 
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -749,7 +749,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
 }
 
 TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
@@ -781,7 +781,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
                         &missing_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
@@ -1167,7 +1167,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
               ExtractObjectDigestData(object_identifier.object_digest()));
 
     std::unique_ptr<const Object> object;
-    EXPECT_EQ(Status::NOT_FOUND,
+    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
               ReadObject(handler, object_identifier, &object));
     // Inline objects do not need to ever be tracked.
     EXPECT_TRUE(ObjectIsUntracked(object_identifier, false));
@@ -1392,9 +1392,9 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
   storage_->SetSyncDelegate(nullptr);
   ObjectData other_data("_Some other data_", InlineBehavior::PREVENT);
   TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
-                   PageStorage::Location::LOCAL, Status::NOT_FOUND);
+                   PageStorage::Location::LOCAL, Status::INTERNAL_NOT_FOUND);
   TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
-                   PageStorage::Location::NETWORK, Status::NOT_CONNECTED_ERROR);
+                   PageStorage::Location::NETWORK, Status::NETWORK_ERROR);
 }
 
 TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
@@ -1466,9 +1466,9 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   storage_->SetSyncDelegate(nullptr);
   ObjectData other_data("Some other data", InlineBehavior::PREVENT);
   TryGetObject(other_data.object_identifier, PageStorage::Location::LOCAL,
-               Status::NOT_FOUND);
+               Status::INTERNAL_NOT_FOUND);
   TryGetObject(other_data.object_identifier, PageStorage::Location::NETWORK,
-               Status::NOT_CONNECTED_ERROR);
+               Status::NETWORK_ERROR);
 }
 
 TEST_F(PageStorageTest, FullDownloadAfterPartial) {
@@ -1495,7 +1495,8 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(data_str.substr(offset, size), convert::ToString(object_part_data));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
-  TryGetObject(object_identifier, PageStorage::LOCAL, Status::NOT_FOUND);
+  TryGetObject(object_identifier, PageStorage::LOCAL,
+               Status::INTERNAL_NOT_FOUND);
 
   std::unique_ptr<const Object> object =
       TryGetObject(object_identifier, PageStorage::Location::NETWORK);
@@ -1942,7 +1943,7 @@ TEST_F(PageStorageTest, SyncMetadata) {
                                &returned_value));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
-    EXPECT_EQ(Status::NOT_FOUND, status);
+    EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
 
     storage_->SetSyncMetadata(
         key, value,
@@ -2070,7 +2071,7 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::NOT_FOUND, status);
+  ASSERT_EQ(Status::KEY_NOT_FOUND, status);
 
   for (int i = 0; i < size; ++i) {
     std::string expected_key = fxl::StringPrintf("key%05d", i);
@@ -2319,7 +2320,7 @@ TEST_F(PageStorageTest, AddCommitsMissingParent) {
                         &missing_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
   EXPECT_THAT(missing_ids, ElementsAre(commit_parent->GetId()));
 }
 

@@ -93,7 +93,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
 }
 
 TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
-  // Try to get a non existing Db and expect a |NOT_FOUND| status.
+  // Try to get a non existing Db and expect a |PAGE_NOT_FOUND| status.
   Status status;
   std::unique_ptr<Db> db;
   bool called;
@@ -102,7 +102,7 @@ TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
   EXPECT_EQ(nullptr, db);
 }
 

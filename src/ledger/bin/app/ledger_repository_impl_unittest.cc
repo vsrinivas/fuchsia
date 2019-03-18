@@ -89,7 +89,7 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
 
   // Call the cleanup manager callback and expect to see an ok status for both
   // pending callbacks.
-  disk_cleanup_manager_->cleanup_callback(Status::OK);
+  disk_cleanup_manager_->cleanup_callback(storage::Status::OK);
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called1);
   EXPECT_TRUE(callback_called2);

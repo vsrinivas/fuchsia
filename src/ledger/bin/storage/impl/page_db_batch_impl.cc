@@ -73,7 +73,7 @@ Status PageDbBatchImpl::WriteObject(
     return SetObjectStatus(handler, std::move(object_identifier),
                            object_status);
   }
-  if (status != Status::NOT_FOUND) {
+  if (status != Status::INTERNAL_NOT_FOUND) {
     return status;
   }
 

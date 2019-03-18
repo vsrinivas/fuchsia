@@ -32,7 +32,7 @@ class PageEvictionManagerImpl : public PageEvictionManager,
 
   // Initializes this PageEvictionManager. |IO_ERROR| will be returned in case
   // of an error while initializing the underlying database.
-  Status Init();
+  storage::Status Init();
 
   // Sets the delegate for this PageEvictionManagerImpl. The delegate should
   // outlive this object.
@@ -44,7 +44,7 @@ class PageEvictionManagerImpl : public PageEvictionManager,
   bool IsEmpty() override;
 
   void TryEvictPages(PageEvictionPolicy* policy,
-                     fit::function<void(Status)> callback) override;
+                     fit::function<void(storage::Status)> callback) override;
 
   void MarkPageOpened(fxl::StringView ledger_name,
                       storage::PageIdView page_id) override;
@@ -56,7 +56,7 @@ class PageEvictionManagerImpl : public PageEvictionManager,
   void TryEvictPage(
       fxl::StringView ledger_name, storage::PageIdView page_id,
       PageEvictionCondition condition,
-      fit::function<void(Status, PageWasEvicted)> callback) override;
+      fit::function<void(storage::Status, PageWasEvicted)> callback) override;
 
  private:
   // A token that performs a given action on destruction. ExpiringToken objects
@@ -72,20 +72,20 @@ class PageEvictionManagerImpl : public PageEvictionManager,
 
     // Completes the operation with the given status and unblocks all pending
     // |WaitUntilDone| calls. |Complete| can only be called once.
-    void Complete(Status status);
+    void Complete(storage::Status status);
 
     // Blocks execution until |Complete| is called, and then returns its status.
     // If the operation is already completed, |WaitUntilDone| returns
     // immediately with the result status.
-    Status WaitUntilDone(coroutine::CoroutineHandler* handler);
+    storage::Status WaitUntilDone(coroutine::CoroutineHandler* handler);
 
    private:
     // Marks the Completer as completed with the given status and calls the
     // pending callbacks.
-    void CallCallbacks(Status status);
+    void CallCallbacks(storage::Status status);
 
     bool completed_ = false;
-    Status status_;
+    storage::Status status_;
     // Closures invoked upon completion to unblock the waiting coroutines.
     std::vector<fit::closure> callbacks_;
 
@@ -95,30 +95,31 @@ class PageEvictionManagerImpl : public PageEvictionManager,
   // Removes the page from the local storage. The caller of this method must
   // ensure that the given page exists.
   void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
-                 fit::function<void(Status)> callback);
+                 fit::function<void(storage::Status)> callback);
 
   // Checks whether a page can be evicted. A page can be evicted if it is
   // currently closed and either:
   // - has no unsynced commits or objects, or
   // - is empty and offline, i.e. was never synced to the cloud or a peer.
-  Status CanEvictPage(coroutine::CoroutineHandler* handler,
-                      fxl::StringView ledger_name, storage::PageIdView page_id,
-                      bool* can_evict);
+  storage::Status CanEvictPage(coroutine::CoroutineHandler* handler,
+                               fxl::StringView ledger_name,
+                               storage::PageIdView page_id, bool* can_evict);
 
   // Checks whether a page is closed, offline and empty, and thus can be
   // evicted.
-  Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler,
-                           fxl::StringView ledger_name,
-                           storage::PageIdView page_id, bool* can_evict);
+  storage::Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler,
+                                    fxl::StringView ledger_name,
+                                    storage::PageIdView page_id,
+                                    bool* can_evict);
 
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
 
-  Status SynchronousTryEvictPage(coroutine::CoroutineHandler* handler,
-                                 std::string ledger_name,
-                                 storage::PageId page_id,
-                                 PageEvictionCondition condition,
-                                 PageWasEvicted* was_evicted);
+  storage::Status SynchronousTryEvictPage(coroutine::CoroutineHandler* handler,
+                                          std::string ledger_name,
+                                          storage::PageId page_id,
+                                          PageEvictionCondition condition,
+                                          PageWasEvicted* was_evicted);
 
   ExpiringToken NewExpiringToken();
 

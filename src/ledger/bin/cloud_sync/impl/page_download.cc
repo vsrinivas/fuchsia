@@ -73,7 +73,7 @@ void PageDownload::StartDownload() {
         // we haven't received any remote commits yet. In this case an empty
         // timestamp is the right value.
         if (status != storage::Status::OK &&
-            status != storage::Status::NOT_FOUND) {
+            status != storage::Status::INTERNAL_NOT_FOUND) {
           HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }
@@ -182,7 +182,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
                                    storage::Status status,
                                    std::string last_commit_token_id) {
         if (status != storage::Status::OK &&
-            status != storage::Status::NOT_FOUND) {
+            status != storage::Status::INTERNAL_NOT_FOUND) {
           HandleDownloadCommitError("Failed to retrieve the sync metadata.");
           return;
         }

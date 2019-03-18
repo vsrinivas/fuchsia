@@ -63,7 +63,7 @@ class LedgerRepositoryFactoryImpl
       std::string user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository>
           repository_request,
-      fit::function<void(Status)> callback);
+      fit::function<void(storage::Status)> callback);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
@@ -72,7 +72,7 @@ class LedgerRepositoryFactoryImpl
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(RepositoryInformation repository_information);
 
-  Status DeleteRepositoryDirectory(
+  storage::Status DeleteRepositoryDirectory(
       const RepositoryInformation& repository_information);
 
   Environment* const environment_;

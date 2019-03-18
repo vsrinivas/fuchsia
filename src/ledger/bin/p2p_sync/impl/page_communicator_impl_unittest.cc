@@ -96,7 +96,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
                      callback) override {
     auto it = commits_.find(commit_id);
     if (it == commits_.end()) {
-      callback(storage::Status::NOT_FOUND, nullptr);
+      callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
       return;
     }
     callback(storage::Status::OK, it->second.Clone());
@@ -110,7 +110,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
                                   callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
-        callback(storage::Status::NOT_FOUND, nullptr);
+        callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
         return;
       }
       callback(storage::Status::OK, std::make_unique<storage::fake::FakeObject>(
@@ -133,7 +133,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
                                   callback = std::move(callback)]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
-        callback(storage::Status::NOT_FOUND, false);
+        callback(storage::Status::INTERNAL_NOT_FOUND, false);
         return;
       }
       callback(storage::Status::OK, synced_objects_.find(object_identifier) !=
@@ -740,7 +740,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
                      }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::NOT_FOUND, status);
+  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status);
   EXPECT_FALSE(data);
 }
 
@@ -872,7 +872,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
       }));
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(storage::Status::NOT_FOUND, status);
+  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status);
   EXPECT_FALSE(data);
 }
 
@@ -1015,22 +1015,22 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
 
   // All requests are terminated with a not found status.
   EXPECT_TRUE(called1);
-  EXPECT_EQ(storage::Status::NOT_FOUND, status1);
+  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status1);
   EXPECT_EQ(storage::ChangeSource::P2P, source1);
   EXPECT_FALSE(data1);
 
   EXPECT_TRUE(called2);
-  EXPECT_EQ(storage::Status::NOT_FOUND, status2);
+  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status2);
   EXPECT_EQ(storage::ChangeSource::P2P, source2);
   EXPECT_FALSE(data2);
 
   EXPECT_TRUE(called3);
-  EXPECT_EQ(storage::Status::NOT_FOUND, status3);
+  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status3);
   EXPECT_EQ(storage::ChangeSource::P2P, source3);
   EXPECT_FALSE(data3);
 
   EXPECT_TRUE(called4);
-  EXPECT_EQ(storage::Status::NOT_FOUND, status4);
+  EXPECT_EQ(storage::Status::INTERNAL_NOT_FOUND, status4);
   EXPECT_EQ(storage::ChangeSource::P2P, source4);
   EXPECT_FALSE(data4);
 }
@@ -1159,7 +1159,8 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   ASSERT_EQ(1u, storage_2.commits_from_sync_.size());
   EXPECT_EQ(2u, storage_2.commits_from_sync_[0].first.size());
   // Return that we miss one commit
-  storage_2.commits_from_sync_[0].second(storage::Status::NOT_FOUND, {"id 0"});
+  storage_2.commits_from_sync_[0].second(storage::Status::INTERNAL_NOT_FOUND,
+                                         {"id 0"});
 
   // |page_communicator_2| should ask for the base, "id 0" commit.
   ASSERT_EQ(2u, mesh.messages_.size());

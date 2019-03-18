@@ -55,7 +55,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         return;
       }
       // All requests have returned and none is valid: return an error.
-      callback_(storage::Status::NOT_FOUND, storage::ChangeSource::P2P,
+      callback_(storage::Status::INTERNAL_NOT_FOUND, storage::ChangeSource::P2P,
                 storage::IsObjectSynced::NO, nullptr);
       if (on_empty_) {
         on_empty_();
@@ -516,7 +516,7 @@ void PageCommunicatorImpl::ProcessCommitRequest(
                      callback = commit_waiter->NewCallback()](
                         storage::Status status,
                         std::unique_ptr<const storage::Commit> commit) mutable {
-            if (status == storage::Status::NOT_FOUND) {
+            if (status == storage::Status::INTERNAL_NOT_FOUND) {
               // Not finding an commit is okay in this context: we'll just
               // reply we don't have it. There is not need to abort
               // processing the request.
@@ -569,7 +569,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(
               [callback = response_waiter->NewCallback(), &response](
                   storage::Status status,
                   std::unique_ptr<const storage::Object> object) mutable {
-                if (status == storage::Status::NOT_FOUND) {
+                if (status == storage::Status::INTERNAL_NOT_FOUND) {
                   // Not finding an object is okay in this context: we'll just
                   // reply we don't have it. There is not need to abort
                   // processing the request.
@@ -583,7 +583,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(
               std::move(identifier),
               [callback = response_waiter->NewCallback(), &response](
                   storage::Status status, bool is_synced) {
-                if (status == storage::Status::NOT_FOUND) {
+                if (status == storage::Status::INTERNAL_NOT_FOUND) {
                   // Not finding an object is okay in this context: we'll just
                   // reply we don't have it. There is not need to abort
                   // processing the request.

@@ -31,7 +31,7 @@ class PageEvictionPolicy {
   // page was evited.
   virtual void SelectAndEvict(
       std::unique_ptr<storage::Iterator<const PageInfo>> pages,
-      fit::function<void(Status)> callback) = 0;
+      fit::function<void(storage::Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionPolicy);
@@ -64,7 +64,7 @@ class PageEvictionDelegate {
   virtual void TryEvictPage(
       fxl::StringView ledger_name, storage::PageIdView page_id,
       PageEvictionCondition condition,
-      fit::function<void(Status, PageWasEvicted)> callback) = 0;
+      fit::function<void(storage::Status, PageWasEvicted)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionDelegate);

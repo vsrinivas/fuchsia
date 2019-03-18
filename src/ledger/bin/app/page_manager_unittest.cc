@@ -104,7 +104,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   EXPECT_FALSE(on_empty_called);
 
   bool called;
-  Status status;
+  storage::Status status;
   PagePtr page1;
   PagePtr page2;
 
@@ -114,7 +114,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, status);
 
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
   page_manager.AddPageImpl(
@@ -122,7 +122,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, status);
 
   page1.Unbind();
   page2.Unbind();
@@ -138,7 +138,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, status);
   EXPECT_FALSE(page_manager.IsEmpty());
 
   page3.Unbind();
@@ -166,7 +166,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
       PageManager::PageStorageState::NEEDS_SYNC);
 
   bool called;
-  Status status;
+  storage::Status status;
   PagePtr page;
   auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
   page_manager->AddPageImpl(
@@ -174,7 +174,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, status);
   bool page_closed;
   page.set_error_handler([callback = callback::SetWhenCalled(&page_closed)](
                              zx_status_t status) { callback(); });
@@ -198,25 +198,26 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   EXPECT_TRUE(page_manager.IsEmpty());
 
   bool called;
-  Status status;
+  storage::Status internal_status;
   PagePtr page1;
   PagePtr page2;
   auto page_impl1 = std::make_unique<PageImpl>(page_id_, page1.NewRequest());
   page_manager.AddPageImpl(
       std::move(page_impl1),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, internal_status);
 
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
   page_manager.AddPageImpl(
       std::move(page_impl2),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, internal_status);
 
+  Status status;
   page1->Put(convert::ToArray("key1"), convert::ToArray("value1"),
              callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -266,12 +267,12 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   bool called;
-  Status status;
+  storage::Status internal_status;
   PagePtr page;
   auto page_impl1 = std::make_unique<PageImpl>(page_id_, page.NewRequest());
   page_manager.AddPageImpl(
       std::move(page_impl1),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   // The page should be bound, but except from GetId, no other method should
   // be executed, until the sync backlog is downloaded.
   DrainLoop();
@@ -287,6 +288,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_EQ(expected_page_id.id, found_page_id.id);
 
   // Clear should not be executed.
+  Status status;
   page->Clear(callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   EXPECT_FALSE(called);
@@ -302,10 +304,10 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page.NewRequest());
   page_manager.AddPageImpl(
       std::move(page_impl2),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, internal_status);
 
   page->GetId(
       callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
@@ -332,7 +334,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   bool called;
-  Status status;
+  storage::Status status;
   PagePtr page;
   auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
   page_manager.AddPageImpl(
@@ -340,7 +342,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, status);
 
   page->GetId(
       callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
@@ -396,7 +398,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   bool called;
-  Status status;
+  storage::Status status;
   PagePtr page;
   auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
   page_manager.AddPageImpl(
@@ -405,7 +407,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   // The page should be bound immediately.
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, status);
 
   page->GetId(
       callback::Capture(callback::SetWhenCalled(&called), &std::ignore));

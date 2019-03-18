@@ -35,8 +35,8 @@ class LedgerStorage {
 
   // Deletes the storage related to the page with |page_id|. This includes the
   // local copy of the page storage with all commits, tree nodes and values.
-  // This method can fail with a |NOT_FOUND| error if the page is not present in
-  // the local storage, or with an |IO_ERROR| if deletion fails.
+  // This method can fail with a |PAGE_NOT_FOUND| error if the page is not
+  // present in the local storage, or with an |IO_ERROR| if deletion fails.
   virtual void DeletePageStorage(PageIdView page_id,
                                  fit::function<void(Status)> callback) = 0;
 

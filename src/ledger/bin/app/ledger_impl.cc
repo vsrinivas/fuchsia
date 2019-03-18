@@ -17,6 +17,7 @@
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_impl.h"
+#include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
 
 namespace ledger {
@@ -38,7 +39,8 @@ void LedgerImpl::GetRootPageNew(fidl::InterfaceRequest<Page> page_request,
                                 fit::function<void(Status)> callback) {
   delegate_->GetPage(
       kRootPageId, Delegate::PageState::NAMED, std::move(page_request),
-      TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_root_page"));
+      TRACE_CALLBACK(PageUtils::AdaptStatusCallback(std::move(callback)),
+                     "ledger", "ledger_get_root_page"));
 }
 
 void LedgerImpl::GetPage(PageIdPtr id,
@@ -61,7 +63,8 @@ void LedgerImpl::GetPageNew(PageIdPtr id,
   }
   delegate_->GetPage(
       id->id, page_state, std::move(page_request),
-      TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_page"));
+      TRACE_CALLBACK(PageUtils::AdaptStatusCallback(std::move(callback)),
+                     "ledger", "ledger_get_page"));
 }
 
 void LedgerImpl::SetConflictResolverFactory(

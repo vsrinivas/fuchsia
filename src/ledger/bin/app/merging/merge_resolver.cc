@@ -58,7 +58,7 @@ class MergeResolver::MergeCandidates {
   void OnMergeSuccess();
 
   // Should be called after an unsuccessful merge.
-  void OnMergeError(Status status);
+  void OnMergeError(storage::Status status);
 
   // Should be called when new commits are available.
   void OnNewCommits();
@@ -95,8 +95,8 @@ std::pair<size_t, size_t> MergeResolver::MergeCandidates::GetCurrentPair() {
 
 void MergeResolver::MergeCandidates::OnMergeSuccess() { needs_reset_ = true; }
 
-void MergeResolver::MergeCandidates::OnMergeError(Status status) {
-  if (status == Status::NETWORK_ERROR) {
+void MergeResolver::MergeCandidates::OnMergeError(storage::Status status) {
+  if (status == storage::Status::NETWORK_ERROR) {
     // The contents of the common ancestor are unavailable locally and it wasn't
     // possible to retrieve them through the network: Ignore this pair of heads
     // for now.
@@ -279,7 +279,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                   commits) mutable {
             if (status != storage::Status::OK) {
               FXL_LOG(ERROR)
-                  << "Failed to retrieve head commits. Status: " << status;
+                  << "Failed to retrieve head commits. storage::Status: "
+                  << status;
               return;
             }
             FXL_DCHECK(commits.size() == 2);
@@ -558,7 +559,7 @@ storage::Status MergeResolver::RecursiveMergeSync(
   FXL_DCHECK(!common_ancestors.empty());
 
   // MergeSetSync has 3 possible results:
-  //  - a non-OK Status
+  //  - a non-OK storage::Status
   //  - a commit returned in merge_base
   //  - OK with an empty merge_base
   std::unique_ptr<const storage::Commit> merge_base;
@@ -573,12 +574,12 @@ storage::Status MergeResolver::RecursiveMergeSync(
 
   has_merged_ = true;
 
-  Status merge_status;
+  storage::Status merge_status;
   auto sync_call_status = coroutine::SyncCall(
       handler,
       [this, left = std::move(left), right = std::move(right),
        merge_base = std::move(merge_base)](
-          fit::function<void(Status)> callback) mutable {
+          fit::function<void(storage::Status)> callback) mutable {
         strategy_->Merge(storage_, page_manager_, std::move(left),
                          std::move(right), std::move(merge_base),
                          TRACE_CALLBACK(std::move(callback), "ledger",
@@ -588,7 +589,7 @@ storage::Status MergeResolver::RecursiveMergeSync(
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
     return storage::Status::INTERRUPTED;
   }
-  if (merge_status != Status::OK) {
+  if (merge_status != storage::Status::OK) {
     merge_candidates_->OnMergeError(merge_status);
     return storage::Status::ILLEGAL_STATE;
   }

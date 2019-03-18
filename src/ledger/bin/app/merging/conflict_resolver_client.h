@@ -34,7 +34,7 @@ class ConflictResolverClient
       std::unique_ptr<const storage::Commit> left,
       std::unique_ptr<const storage::Commit> right,
       std::unique_ptr<const storage::Commit> ancestor,
-      fit::function<void(Status)> callback);
+      fit::function<void(storage::Status)> callback);
   ~ConflictResolverClient() override;
 
   void Start();
@@ -50,15 +50,15 @@ class ConflictResolverClient
 
   // Rolls back journal, closes merge result provider and invokes callback_ with
   // |status|. This method must be called at most once.
-  void Finalize(Status status);
+  void Finalize(storage::Status status);
 
-  // Performs a diff of the given type on the conflict. Return a |Status|
-  // different than OK if an error occured. If no error, return an
-  // |IterationStatus|.
+  // Performs a diff of the given type on the conflict. Return a
+  // |storage::Status| different than OK if an error occured. If no error,
+  // return an |IterationStatus|.
   void GetDiff(
       diff_utils::DiffType type, std::unique_ptr<Token> token,
-      fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,
-                         std::unique_ptr<Token>)>
+      fit::function<void(storage::Status, IterationStatus,
+                         std::vector<DiffEntry>, std::unique_ptr<Token>)>
           callback);
 
   // MergeResultProviderNotifierDelegate:
@@ -84,7 +84,7 @@ class ConflictResolverClient
   // object is not deleted, then return |false|.
   static bool IsInValidStateAndNotify(
       const fxl::WeakPtr<ConflictResolverClient>& weak_this,
-      const fit::function<void(Status)>& callback,
+      const fit::function<void(storage::Status)>& callback,
       storage::Status status = storage::Status::OK);
 
   storage::PageStorage* const storage_;
@@ -96,7 +96,7 @@ class ConflictResolverClient
   std::unique_ptr<const storage::Commit> const ancestor_;
 
   // Called when the merge process is finished.
-  fit::function<void(Status)> callback_;
+  fit::function<void(storage::Status)> callback_;
 
   // |has_merged_values_| is true when |Merge| has been called to set some
   // values. It is used as an optimization in |MergeNonConflictingEntries|.

@@ -18,7 +18,7 @@ class DbFactory {
   // Defines the action to be taken if |GetOrCreate| is called for a path that
   // doesn't already contain a Db.
   enum class OnDbNotFound {
-    // |GetOrCreateDb| should return with a |NOT_FOUND| status.
+    // |GetOrCreateDb| should return with a |PAGE_NOT_FOUND| status.
     RETURN,
     // |GetOrCreateDb| should create a new Db instance.
     CREATE

@@ -174,8 +174,9 @@ TEST_F(PageDbTest, Commits) {
         RandomObjectIdentifier(environment_.random()), std::move(parents));
 
     std::string storage_bytes;
-    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
-                                     handler, commit->GetId(), &storage_bytes));
+    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
+              page_db_.GetCommitStorageBytes(handler, commit->GetId(),
+                                             &storage_bytes));
 
     EXPECT_EQ(Status::OK,
               page_db_.AddCommitStorageBytes(handler, commit->GetId(),
@@ -185,8 +186,9 @@ TEST_F(PageDbTest, Commits) {
     EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
 
     EXPECT_EQ(Status::OK, page_db_.RemoveCommit(handler, commit->GetId()));
-    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
-                                     handler, commit->GetId(), &storage_bytes));
+    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
+              page_db_.GetCommitStorageBytes(handler, commit->GetId(),
+                                             &storage_bytes));
   });
 }
 
@@ -198,7 +200,7 @@ TEST_F(PageDbTest, ObjectStorage) {
     std::unique_ptr<const Object> object;
     PageDbObjectStatus object_status;
 
-    EXPECT_EQ(Status::NOT_FOUND,
+    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
               page_db_.ReadObject(handler, object_identifier, &object));
     ASSERT_EQ(Status::OK,
               page_db_.WriteObject(handler, object_identifier,
@@ -374,7 +376,7 @@ TEST_F(PageDbTest, SyncMetadata) {
       auto key = key_and_value.first;
       auto value = key_and_value.second;
       std::string returned_value;
-      EXPECT_EQ(Status::NOT_FOUND,
+      EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
                 page_db_.GetSyncMetadata(handler, key, &returned_value));
 
       EXPECT_EQ(Status::OK, page_db_.SetSyncMetadata(handler, key, value));

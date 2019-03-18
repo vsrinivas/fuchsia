@@ -113,7 +113,7 @@ void LevelDbFactory::GetOrCreateDb(
     return;
   }
   if (on_db_not_found == DbFactory::OnDbNotFound::RETURN) {
-    callback(Status::NOT_FOUND, nullptr);
+    callback(Status::PAGE_NOT_FOUND, nullptr);
     return;
   }
   // If creating the pre-cached db failed at some point it will likely fail

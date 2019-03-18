@@ -239,7 +239,7 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
       std::find_if(watchers_.begin(), watchers_.end(),
                    [watcher](CommitWatcher* w) { return w == watcher; });
   if (watcher_it == watchers_.end()) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
   watchers_.erase(watcher_it);
   return Status::OK;
@@ -454,7 +454,7 @@ void PageStorageImpl::GetObjectPart(
       [this, object_identifier, offset, max_size, location,
        callback = std::move(callback)](
           Status status, std::unique_ptr<const Object> object) mutable {
-        if (status == Status::NOT_FOUND) {
+        if (status == Status::INTERNAL_NOT_FOUND) {
           // The root piece is missing; download it (if we have network), as
           // well as all the descendent pieces that we might need to read the
           // requested part.
@@ -472,7 +472,7 @@ void PageStorageImpl::GetObjectPart(
                                 std::move(callback));
                 });
           } else {
-            callback(Status::NOT_FOUND, nullptr);
+            callback(Status::INTERNAL_NOT_FOUND, nullptr);
           }
           return;
         }
@@ -498,7 +498,7 @@ void PageStorageImpl::GetObjectPart(
           int64_t length = GetObjectPartLength(max_size, data.size(), start);
 
           if (!fsl::VmoFromString(data.substr(start, length), &buffer)) {
-            callback(Status::INTERNAL_IO_ERROR, nullptr);
+            callback(Status::INTERNAL_ERROR, nullptr);
             return;
           }
           callback(Status::OK, std::move(buffer));
@@ -520,7 +520,7 @@ void PageStorageImpl::GetObjectPart(
         zx_status_t zx_status = zx::vmo::create(length, 0, &raw_vmo);
         if (zx_status != ZX_OK) {
           FXL_LOG(WARNING) << "Unable to create VMO of size: " << length;
-          callback(Status::INTERNAL_IO_ERROR, nullptr);
+          callback(Status::INTERNAL_ERROR, nullptr);
           return;
         }
         fsl::SizedVmo vmo(std::move(raw_vmo), length);
@@ -533,7 +533,7 @@ void PageStorageImpl::GetObjectPart(
         zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
         if (zx_status != ZX_OK) {
           FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
-          callback(Status::INTERNAL_IO_ERROR, nullptr);
+          callback(Status::INTERNAL_ERROR, nullptr);
           return;
         }
 
@@ -641,7 +641,7 @@ void PageStorageImpl::GetEntryFromCommit(
       return;
     }
     if (s == Status::OK) {
-      callback(Status::NOT_FOUND, Entry());
+      callback(Status::KEY_NOT_FOUND, Entry());
       return;
     }
     callback(s, Entry());
@@ -793,7 +793,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
             global_size, current_position, object_size, location,
             callback = std::move(callback)](
                Status status, std::unique_ptr<const Object> object) mutable {
-             if (status == Status::NOT_FOUND) {
+             if (status == Status::INTERNAL_NOT_FOUND) {
                // If we encounter a missing piece, we should download it
                // together with a subtree needed for the request.
                // Note that a similar mechanism is at play in |GetObjectPart|
@@ -801,7 +801,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
                // cover the case where the root piece was present and we started
                // recursing in the tree but eventually found a missing piece.
                if (location != Location::NETWORK) {
-                 callback(Status::NOT_FOUND);
+                 callback(Status::INTERNAL_NOT_FOUND);
                  return;
                }
                DownloadObjectPart(
@@ -874,7 +874,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
         vmo.vmo().write(read_substr.data(), write_offset, read_write_size);
     if (zx_status != ZX_OK) {
       FXL_LOG(ERROR) << "Unable to write to vmo. Status: " << zx_status;
-      callback(Status::INTERNAL_IO_ERROR);
+      callback(Status::INTERNAL_ERROR);
       return;
     }
     callback(Status::OK);
@@ -918,7 +918,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
         vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
     if (zx_status != ZX_OK) {
       FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
-      callback(Status::INTERNAL_IO_ERROR);
+      callback(Status::INTERNAL_ERROR);
       return;
     }
     FillBufferWithObjectContent(child_identifier, std::move(vmo_copy),
@@ -935,7 +935,7 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
                                          int64_t current_position,
                                          fit::function<void(Status)> callback) {
   if (!page_sync_) {
-    callback(Status::NOT_CONNECTED_ERROR);
+    callback(Status::NETWORK_ERROR);
     return;
   }
   FXL_DCHECK(
@@ -1049,7 +1049,7 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
           // recursively.
           if (status == Status::OK) {
             continue;
-          } else if (status != Status::NOT_FOUND) {
+          } else if (status != Status::INTERNAL_NOT_FOUND) {
             callback(status);
             return;
           }
@@ -1167,7 +1167,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
       continue;
     }
 
-    if (status != Status::NOT_FOUND) {
+    if (status != Status::INTERNAL_NOT_FOUND) {
       return status;
     }
 
@@ -1315,7 +1315,7 @@ Status PageStorageImpl::SynchronousAddCommits(
       // The commit is already here. We can safely skip it.
       continue;
     }
-    if (s != Status::NOT_FOUND) {
+    if (s != Status::INTERNAL_NOT_FOUND) {
       return s;
     }
     // Now, we know we are adding a new commit.
@@ -1346,14 +1346,14 @@ Status PageStorageImpl::SynchronousAddCommits(
           FXL_LOG(ERROR) << "Failed to find parent commit \""
                          << ToHex(parent_id) << "\" of commit \""
                          << convert::ToHex(commit->GetId()) << "\".";
-          if (s == Status::NOT_FOUND) {
+          if (s == Status::INTERNAL_NOT_FOUND) {
             if (missing_ids) {
               missing_ids->push_back(parent_id.ToString());
             }
             orphaned_commit = true;
             continue;
           }
-          return Status::INTERNAL_IO_ERROR;
+          return Status::INTERNAL_ERROR;
         }
       }
       // Remove the parent from the list of heads.
@@ -1402,7 +1402,7 @@ Status PageStorageImpl::SynchronousAddCommits(
           << "Failed adding commits. Found " << orphaned_commits
           << " orphaned commits (one of their parent was not found).";
     }
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
 
   // Update heads in Db.
@@ -1456,7 +1456,7 @@ Status PageStorageImpl::SynchronousAddPiece(
           data->Get()));
 
   Status status = db_->HasObject(handler, object_identifier);
-  if (status == Status::NOT_FOUND) {
+  if (status == Status::INTERNAL_NOT_FOUND) {
     PageDbObjectStatus object_status;
     switch (is_object_synced) {
       case IsObjectSynced::NO:

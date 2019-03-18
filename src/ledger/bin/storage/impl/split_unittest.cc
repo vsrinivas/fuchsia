@@ -371,7 +371,7 @@ TEST(SplitTest, CollectPiecesError) {
       [&called](ObjectIdentifier identifier,
                 fit::function<void(Status, fxl::StringView)> callback) {
         if (called >= nb_successfull_called) {
-          callback(Status::INTERNAL_IO_ERROR, "");
+          callback(Status::INTERNAL_ERROR, "");
           return;
         }
         ++called;

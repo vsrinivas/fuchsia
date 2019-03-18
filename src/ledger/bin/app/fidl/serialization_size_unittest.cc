@@ -295,7 +295,7 @@ TEST_F(SerializationSizeTest, GetEntries) {
             n_entries * GetEntrySize(key_size) +  // Vector of entries.
             kPointerSize +                        // Pointer to next_token.
             GetByteVectorSize(key_size) +         // next_token.
-            kStatusEnumSize                       // Status.
+            kStatusEnumSize                       // storage::Status.
       );
   const size_t expected_handles = n_entries;
   EXPECT_TRUE(

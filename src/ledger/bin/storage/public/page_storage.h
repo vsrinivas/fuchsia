@@ -199,7 +199,7 @@ class PageStorage : public PageSyncClient {
                                  fit::function<void(Status)> on_done) = 0;
 
   // Retrieves the entry with the given |key| and calls |on_done| with the
-  // result. The status of |on_done| will be |OK| on success, |NOT_FOUND| if
+  // result. The status of |on_done| will be |OK| on success, |KEY_NOT_FOUND| if
   // there is no such key in the given commit or an error status on failure.
   virtual void GetEntryFromCommit(
       const Commit& commit, std::string key,

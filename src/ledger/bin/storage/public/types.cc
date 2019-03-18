@@ -133,18 +133,24 @@ fxl::StringView StatusToString(Status status) {
       return "OK";
     case Status::IO_ERROR:
       return "IO_ERROR";
-    case Status::NOT_FOUND:
-      return "NOT_FOUND";
+    case Status::PAGE_NOT_FOUND:
+      return "PAGE_NOT_FOUND";
+    case Status::KEY_NOT_FOUND:
+      return "KEY_NOT_FOUND";
+    case Status::REFERENCE_NOT_FOUND:
+      return "REFERENCE_NOT_FOUND";
     case Status::FORMAT_ERROR:
       return "FORMAT_ERROR";
     case Status::ILLEGAL_STATE:
       return "ILLEGAL_STATE";
-    case Status::INTERNAL_IO_ERROR:
-      return "INTERNAL_IO_ERROR";
+    case Status::INTERNAL_NOT_FOUND:
+      return "INTERNAL_NOT_FOUND";
+    case Status::INTERNAL_ERROR:
+      return "INTERNAL_ERROR";
     case Status::INTERRUPTED:
       return "INTERRUPTED";
-    case Status::NOT_CONNECTED_ERROR:
-      return "NOT_CONNECTED_ERROR";
+    case Status::NETWORK_ERROR:
+      return "NETWORK_ERROR";
     case Status::NO_SUCH_CHILD:
       return "NO_SUCH_CHILD";
     case Status::OBJECT_DIGEST_MISMATCH:

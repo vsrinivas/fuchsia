@@ -22,7 +22,7 @@ void ReadDataSource(
                 DataSource::Status status) mutable {
         if (status == DataSource::Status::ERROR) {
           FXL_LOG(WARNING) << "Error while reading data source content.";
-          callback(Status::INTERNAL_IO_ERROR, nullptr);
+          callback(Status::INTERNAL_ERROR, nullptr);
           return;
         }
 

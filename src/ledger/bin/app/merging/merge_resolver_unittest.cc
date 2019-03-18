@@ -122,7 +122,7 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
             removed_commit_ids_.end() ||
         removed_commit_ids_.find(other_commit.GetId()) !=
             removed_commit_ids_.end()) {
-      on_done(storage::Status::NOT_CONNECTED_ERROR);
+      on_done(storage::Status::NETWORK_ERROR);
       return;
     }
     storage_->GetCommitContentsDiff(base_commit, other_commit,
@@ -152,7 +152,7 @@ class RecordingTestStrategy : public MergeStrategy {
              std::unique_ptr<const storage::Commit> merge_head_1,
              std::unique_ptr<const storage::Commit> merge_head_2,
              std::unique_ptr<const storage::Commit> merge_ancestor,
-             fit::function<void(Status)> merge_callback) override {
+             fit::function<void(storage::Status)> merge_callback) override {
     EXPECT_TRUE(storage::Commit::TimestampOrdered(merge_head_1, merge_head_2));
     storage_ = storage;
     page_manager_ = page_manager;
@@ -179,7 +179,7 @@ class RecordingTestStrategy : public MergeStrategy {
   std::unique_ptr<const storage::Commit> head_1;
   std::unique_ptr<const storage::Commit> head_2;
   std::unique_ptr<const storage::Commit> ancestor;
-  fit::function<void(Status)> callback;
+  fit::function<void(storage::Status)> callback;
 
   uint32_t merge_calls = 0;
   uint32_t cancel_calls = 0;
@@ -394,7 +394,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   CreateMergeCommit(strategy_ptr->head_1->GetId(),
                     strategy_ptr->head_2->GetId(),
                     AddKeyValueToJournal("key_foo", "abc"));
-  strategy_ptr->callback(Status::OK);
+  strategy_ptr->callback(storage::Status::OK);
   strategy_ptr->callback = nullptr;
   RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
@@ -740,7 +740,7 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   CreateMergeCommit(strategy_ptr->head_1->GetId(),
                     strategy_ptr->head_2->GetId(),
                     AddKeyValueToJournal("key3", "val3.0"));
-  strategy_ptr->callback(Status::OK);
+  strategy_ptr->callback(storage::Status::OK);
   strategy_ptr->callback = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
@@ -939,7 +939,7 @@ TEST_F(MergeResolverTest, ReuseExistingMerge) {
   CreateMergeCommit(strategy_ptr->head_1->GetId(),
                     strategy_ptr->head_2->GetId(),
                     AddKeyValueToJournal("k", "merge"));
-  strategy_ptr->callback(Status::OK);
+  strategy_ptr->callback(storage::Status::OK);
   RunLoopUntilIdle();
 
   // There is only one head now
@@ -1001,7 +1001,7 @@ TEST_F(MergeResolverTest, RecursiveMerge) {
     if (strategy_ptr->callback) {
       MergeCommitsAsSets(*strategy_ptr->head_1, *strategy_ptr->head_2,
                          *strategy_ptr->ancestor);
-      strategy_ptr->callback(Status::OK);
+      strategy_ptr->callback(storage::Status::OK);
     }
     strategy_ptr->callback = nullptr;
     RunLoopUntilIdle();

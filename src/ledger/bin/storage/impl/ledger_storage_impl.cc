@@ -64,7 +64,7 @@ Status LedgerStorageImpl::Init() {
   if (!files::CreateDirectoryAt(storage_dir_.root_fd(), storage_dir_.path())) {
     FXL_LOG(ERROR) << "Failed to create the storage directory in "
                    << storage_dir_.path();
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
   return Status::OK;
 }
@@ -111,7 +111,7 @@ void LedgerStorageImpl::DeletePageStorage(
       [path = std::move(path), staging_dir = staging_dir_,
        callback = std::move(final_callback)]() mutable {
         if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
-          callback(Status::NOT_FOUND);
+          callback(Status::PAGE_NOT_FOUND);
           return;
         }
         files::ScopedTempDirAt tmp_directory(staging_dir.root_fd(),

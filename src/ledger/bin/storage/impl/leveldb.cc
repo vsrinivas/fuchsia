@@ -36,11 +36,11 @@ Status MakeEmptySyncCallAndCheck(async_dispatcher_t* dispatcher,
 
 Status ConvertStatus(leveldb::Status s) {
   if (s.IsNotFound()) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
   if (!s.ok()) {
     FXL_LOG(ERROR) << "LevelDB error: " << s.ToString();
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
   return Status::OK;
 }
@@ -141,7 +141,7 @@ class RowIterator
   }
 
   Status GetStatus() const override {
-    return it_->status().ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
+    return it_->status().ok() ? Status::OK : Status::INTERNAL_ERROR;
   }
 
   const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
@@ -187,7 +187,7 @@ Status LevelDb::Init() {
   TRACE_DURATION("ledger", "leveldb_init");
   if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
     FXL_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
   fxl::UniqueFD unique_fd;
   ledger::DetachedPath db_path = db_path_;
@@ -197,7 +197,7 @@ Status LevelDb::Init() {
     if (!unique_fd.is_valid()) {
       FXL_LOG(ERROR) << "Unable to open directory at " << db_path_.path()
                      << ". errno: " << errno;
-      return Status::INTERNAL_IO_ERROR;
+      return Status::INTERNAL_ERROR;
     }
   }
   env_ = leveldb::MakeFuchsiaEnv(db_path.root_fd());
@@ -217,18 +217,18 @@ Status LevelDb::Init() {
     if (!files::DeletePathAt(db_path_.root_fd(), db_path_.path(), true)) {
       FXL_LOG(ERROR) << "Failed to delete corrupted ledger at "
                      << db_path_.path();
-      return Status::INTERNAL_IO_ERROR;
+      return Status::INTERNAL_ERROR;
     }
     leveldb::Status status = leveldb::DB::Open(options, db_path.path(), &db);
     if (!status.ok()) {
       FXL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_.path()
                      << " with leveldb status: " << status.ToString();
-      return Status::INTERNAL_IO_ERROR;
+      return Status::INTERNAL_ERROR;
     }
   } else if (!status.ok()) {
     FXL_LOG(ERROR) << "Failed to open ledger at " << db_path_.path()
                    << " with leveldb status: " << status.ToString();
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
   db_.reset(db);
   return Status::OK;
@@ -247,7 +247,7 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
           if (!status.ok()) {
             FXL_LOG(ERROR) << "Failed to execute batch with status: "
                            << status.ToString();
-            return Status::INTERNAL_IO_ERROR;
+            return Status::INTERNAL_ERROR;
           }
         }
         return Status::OK;
@@ -269,7 +269,7 @@ Status LevelDb::HasKey(CoroutineHandler* handler,
   iterator->Seek(key);
 
   if (!iterator->Valid() || iterator->key() != key) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
@@ -283,7 +283,7 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
   iterator->Seek(key);
 
   if (!iterator->Valid() || iterator->key() != key) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
 
   *object = std::make_unique<LevelDBObject>(std::move(object_identifier),

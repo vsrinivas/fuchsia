@@ -26,7 +26,7 @@ class FakeDiskCleanupManager : public DiskCleanupManager,
 
   bool IsEmpty() override { return true; }
 
-  void TryCleanUp(fit::function<void(Status)> callback) override {
+  void TryCleanUp(fit::function<void(storage::Status)> callback) override {
     // Do not call the callback directly.
     cleanup_callback = std::move(callback);
   }
@@ -48,7 +48,7 @@ class FakeDiskCleanupManager : public DiskCleanupManager,
   int page_opened_count = 0;
   int page_closed_count = 0;
   int page_unused_count = 0;
-  fit::function<void(Status)> cleanup_callback;
+  fit::function<void(storage::Status)> cleanup_callback;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeDiskCleanupManager);

@@ -86,7 +86,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
                                              &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
 }
 
 TEST_F(TreeNodeTest, GetEntryChild) {
@@ -131,16 +131,16 @@ TEST_F(TreeNodeTest, FindKeyOrChild) {
   EXPECT_EQ(Status::OK, node->FindKeyOrChild("key09", &index));
   EXPECT_EQ(9, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("0", &index));
+  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("0", &index));
   EXPECT_EQ(0, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("key001", &index));
+  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("key001", &index));
   EXPECT_EQ(1, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("key020", &index));
+  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("key020", &index));
   EXPECT_EQ(3, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("key999", &index));
+  EXPECT_EQ(Status::KEY_NOT_FOUND, node->FindKeyOrChild("key999", &index));
   EXPECT_EQ(10, index);
 }
 

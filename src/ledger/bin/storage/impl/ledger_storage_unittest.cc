@@ -58,7 +58,7 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
                                  &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
   EXPECT_EQ(nullptr, page_storage);
 
   storage_.CreatePageStorage(
@@ -114,7 +114,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
                                  &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
   EXPECT_EQ(nullptr, page_storage);
 }
 
@@ -127,7 +127,7 @@ TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
       page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
 }
 
 }  // namespace

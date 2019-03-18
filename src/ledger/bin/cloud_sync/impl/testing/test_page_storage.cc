@@ -177,7 +177,7 @@ void TestPageStorage::GetSyncMetadata(
   auto it = sync_metadata.find(key.ToString());
   if (it == sync_metadata.end()) {
     async::PostTask(dispatcher_, [callback = std::move(callback)] {
-      callback(storage::Status::NOT_FOUND, "");
+      callback(storage::Status::INTERNAL_NOT_FOUND, "");
     });
     return;
   }

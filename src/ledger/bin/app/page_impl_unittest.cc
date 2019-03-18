@@ -75,14 +75,14 @@ class PageImplTest : public TestWithEnvironment {
         &environment_, std::move(fake_storage), nullptr, std::move(resolver),
         PageManager::PageStorageState::NEEDS_SYNC);
     bool called;
-    Status status;
+    storage::Status status;
     auto page_impl =
         std::make_unique<PageImpl>(page_id1_, page_ptr_.NewRequest());
     manager_->AddPageImpl(
         std::move(page_impl),
         callback::Capture(callback::SetWhenCalled(&called), &status));
     EXPECT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(storage::Status::OK, status);
     DrainLoop();
   }
 
@@ -1569,16 +1569,16 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
 
 TEST_F(PageImplTest, ParallelPut) {
   bool called;
-  Status status;
+  storage::Status storage_status;
   PagePtr page_ptr2;
   auto page_impl =
       std::make_unique<PageImpl>(page_id1_, page_ptr2.NewRequest());
   manager_->AddPageImpl(
       std::move(page_impl),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status));
   DrainLoop();
   ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(storage::Status::OK, storage_status);
 
   std::string key("some_key");
   std::string value1("a small value");
@@ -1587,6 +1587,7 @@ TEST_F(PageImplTest, ParallelPut) {
   PageSnapshotPtr snapshot1;
   PageSnapshotPtr snapshot2;
 
+  Status status;
   page_ptr_->StartTransaction(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();

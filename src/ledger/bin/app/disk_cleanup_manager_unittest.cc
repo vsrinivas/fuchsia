@@ -23,21 +23,23 @@ class FakeDelegate : public PageEvictionManager::Delegate {
  public:
   void PageIsClosedAndSynced(
       fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/,
-      fit::function<void(Status, PagePredicateResult)> callback) override {
-    callback(Status::OK, PagePredicateResult::YES);
+      fit::function<void(storage::Status, PagePredicateResult)> callback)
+      override {
+    callback(storage::Status::OK, PagePredicateResult::YES);
   }
 
   void PageIsClosedOfflineAndEmpty(
       fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(Status, PagePredicateResult)> callback) override {
-    callback(Status::OK, closed_offline_empty);
+      fit::function<void(storage::Status, PagePredicateResult)> callback)
+      override {
+    callback(storage::Status::OK, closed_offline_empty);
   }
 
-  void DeletePageStorage(fxl::StringView /*ledger_name*/,
-                         storage::PageIdView page_id,
-                         fit::function<void(Status)> callback) override {
+  void DeletePageStorage(
+      fxl::StringView /*ledger_name*/, storage::PageIdView page_id,
+      fit::function<void(storage::Status)> callback) override {
     deleted_pages.push_back(page_id.ToString());
-    callback(Status::OK);
+    callback(storage::Status::OK);
   }
 
   std::vector<storage::PageId> deleted_pages;
@@ -54,7 +56,7 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
 
   // gtest::TestLoopFixture:
   void SetUp() override {
-    EXPECT_EQ(Status::OK, disk_cleanup_manager_.Init());
+    EXPECT_EQ(storage::Status::OK, disk_cleanup_manager_.Init());
     RunLoopUntilIdle();
     disk_cleanup_manager_.SetPageEvictionDelegate(&delegate_);
   }

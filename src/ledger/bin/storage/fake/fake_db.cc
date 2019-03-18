@@ -126,7 +126,7 @@ class PrefixIterator
                convert::ExtendedStringView(prefix_);
   }
 
-  storage::Status GetStatus() const override { return storage::Status::OK; }
+  Status GetStatus() const override { return Status::OK; }
 
   const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
   operator*() const override {
@@ -176,7 +176,7 @@ Status FakeDb::Get(coroutine::CoroutineHandler* handler,
   FXL_DCHECK(value);
   auto it = key_value_store_.find(key.ToString());
   if (it == key_value_store_.end()) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
   *value = it->second;
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
@@ -186,7 +186,7 @@ Status FakeDb::HasKey(coroutine::CoroutineHandler* handler,
                       convert::ExtendedStringView key) {
   auto it = key_value_store_.find(key.ToString());
   if (it == key_value_store_.end()) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
@@ -197,7 +197,7 @@ Status FakeDb::GetObject(coroutine::CoroutineHandler* handler,
                          std::unique_ptr<const Object>* object) {
   auto it = key_value_store_.find(key.ToString());
   if (it == key_value_store_.end()) {
-    return Status::NOT_FOUND;
+    return Status::INTERNAL_NOT_FOUND;
   }
   if (object) {
     *object = std::make_unique<FakeObject>(object_identifier, it->second);

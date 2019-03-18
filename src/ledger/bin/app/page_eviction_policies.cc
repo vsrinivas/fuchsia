@@ -11,7 +11,7 @@ namespace {
 
 // Computes the list of PageInfo for all pages that are not currently open,
 // ordered by the timestamp of their last usage, in ascending order.
-Status GetPagesByTimestamp(
+storage::Status GetPagesByTimestamp(
     std::unique_ptr<storage::Iterator<const PageInfo>> pages_it,
     std::vector<PageInfo>* sorted_pages) {
   std::vector<PageInfo> pages;
@@ -33,7 +33,7 @@ Status GetPagesByTimestamp(
       });
 
   sorted_pages->swap(pages);
-  return Status::OK;
+  return storage::Status::OK;
 }
 
 class LeastRecentlyUsedPageEvictionPolicy : public PageEvictionPolicy {
@@ -43,7 +43,7 @@ class LeastRecentlyUsedPageEvictionPolicy : public PageEvictionPolicy {
       PageEvictionDelegate* delegate);
 
   void SelectAndEvict(std::unique_ptr<storage::Iterator<const PageInfo>> pages,
-                      fit::function<void(Status)> callback) override;
+                      fit::function<void(storage::Status)> callback) override;
 
  private:
   PageEvictionDelegate* delegate_;
@@ -59,14 +59,16 @@ LeastRecentlyUsedPageEvictionPolicy::LeastRecentlyUsedPageEvictionPolicy(
 
 void LeastRecentlyUsedPageEvictionPolicy::SelectAndEvict(
     std::unique_ptr<storage::Iterator<const PageInfo>> pages_it,
-    fit::function<void(Status)> callback) {
+    fit::function<void(storage::Status)> callback) {
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this, pages_it = std::move(pages_it)](
-                               coroutine::CoroutineHandler* handler,
-                               fit::function<void(Status)> callback) mutable {
+      std::move(callback),
+      [this, pages_it = std::move(pages_it)](
+          coroutine::CoroutineHandler* handler,
+          fit::function<void(storage::Status)> callback) mutable {
         std::vector<PageInfo> pages;
-        Status status = GetPagesByTimestamp(std::move(pages_it), &pages);
-        if (status != Status::OK) {
+        storage::Status status =
+            GetPagesByTimestamp(std::move(pages_it), &pages);
+        if (status != storage::Status::OK) {
           callback(status);
           return;
         }
@@ -82,15 +84,15 @@ void LeastRecentlyUsedPageEvictionPolicy::SelectAndEvict(
               },
               &status, &was_evicted);
           if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {
-            callback(Status::INTERNAL_ERROR);
+            callback(storage::Status::INTERNAL_ERROR);
             return;
           }
-          if (status != Status::OK || was_evicted) {
+          if (status != storage::Status::OK || was_evicted) {
             callback(status);
             return;
           }
         }
-        callback(Status::OK);
+        callback(storage::Status::OK);
       });
 }
 

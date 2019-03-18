@@ -61,10 +61,10 @@ void LedgerRepositoryImpl::BindRepository(
 
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
     fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status, PagePredicateResult)> callback) {
+    fit::function<void(storage::Status, PagePredicateResult)> callback) {
   LedgerManager* ledger_manager;
-  Status status = GetLedgerManager(ledger_name, &ledger_manager);
-  if (status != Status::OK) {
+  storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != storage::Status::OK) {
     callback(status, PagePredicateResult::PAGE_OPENED);
     return;
   }
@@ -75,10 +75,10 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
 
 void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
     fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status, PagePredicateResult)> callback) {
+    fit::function<void(storage::Status, PagePredicateResult)> callback) {
   LedgerManager* ledger_manager;
-  Status status = GetLedgerManager(ledger_name, &ledger_manager);
-  if (status != Status::OK) {
+  storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != storage::Status::OK) {
     callback(status, PagePredicateResult::PAGE_OPENED);
     return;
   }
@@ -88,10 +88,10 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
 
 void LedgerRepositoryImpl::DeletePageStorage(
     fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status)> callback) {
+    fit::function<void(storage::Status)> callback) {
   LedgerManager* ledger_manager;
-  Status status = GetLedgerManager(ledger_name, &ledger_manager);
-  if (status != Status::OK) {
+  storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != storage::Status::OK) {
     callback(status);
     return;
   }
@@ -110,7 +110,7 @@ LedgerRepositoryImpl::Unbind() {
   return handles;
 }
 
-Status LedgerRepositoryImpl::GetLedgerManager(
+storage::Status LedgerRepositoryImpl::GetLedgerManager(
     convert::ExtendedStringView ledger_name, LedgerManager** ledger_manager) {
   FXL_DCHECK(!ledger_name.empty());
 
@@ -118,7 +118,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(
   auto it = ledger_managers_.find(ledger_name);
   if (it != ledger_managers_.end()) {
     *ledger_manager = &(it->second);
-    return Status::OK;
+    return storage::Status::OK;
   }
 
   std::string name_as_string = convert::ToString(ledger_name);
@@ -129,7 +129,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(
       GetPathFor(name_as_string));
   storage::Status status = ledger_storage->Init();
   if (status != storage::Status::OK) {
-    return PageUtils::ConvertStatus(status);
+    return status;
   }
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
   if (user_sync_) {
@@ -144,7 +144,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(
                             page_usage_listener_));
   FXL_DCHECK(result.second);
   *ledger_manager = &(result.first->second);
-  return Status::OK;
+  return storage::Status::OK;
 }
 
 void LedgerRepositoryImpl::GetLedger(
@@ -158,9 +158,9 @@ void LedgerRepositoryImpl::GetLedger(
   }
 
   LedgerManager* ledger_manager;
-  Status status = GetLedgerManager(ledger_name, &ledger_manager);
-  if (status != Status::OK) {
-    callback(status);
+  storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != storage::Status::OK) {
+    callback(PageUtils::ConvertStatus(status));
     return;
   }
   FXL_DCHECK(ledger_manager);
@@ -196,13 +196,14 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
   if (cleanup_callbacks_.size() > 1) {
     return;
   }
-  disk_cleanup_manager_->TryCleanUp([this](Status status) {
+  disk_cleanup_manager_->TryCleanUp([this](storage::Status status) {
     FXL_DCHECK(!cleanup_callbacks_.empty());
 
     auto callbacks = std::move(cleanup_callbacks_);
     cleanup_callbacks_.clear();
+    Status ledger_status = PageUtils::ConvertStatus(status);
     for (auto& callback : callbacks) {
-      callback(status);
+      callback(ledger_status);
     }
   });
 }

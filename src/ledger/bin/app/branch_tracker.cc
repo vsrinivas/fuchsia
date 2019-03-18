@@ -186,9 +186,9 @@ class BranchTracker::PageWatcherContainer {
         callback::MakeScoped(
             weak_factory_.GetWeakPtr(),
             [this, new_commit = std::move(current_commit_)](
-                Status status,
+                storage::Status status,
                 std::pair<PageChangePtr, std::string> page_change_ptr) mutable {
-              if (status != Status::OK) {
+              if (status != storage::Status::OK) {
                 // This change notification is abandonned. At the next commit,
                 // we will try again (but not before). The next notification
                 // will cover both this change and the next.
@@ -277,18 +277,18 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
 
 BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
 
-void BranchTracker::Init(fit::function<void(Status)> on_done) {
+void BranchTracker::Init(fit::function<void(storage::Status)> on_done) {
   std::vector<storage::CommitId> commit_ids;
   storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
   if (status != storage::Status::OK) {
-    on_done(PageUtils::ConvertStatus(status));
+    on_done(status);
     return;
   }
 
   FXL_DCHECK(!commit_ids.empty());
   InitCommitAndSetWatcher(std::move(commit_ids[0]));
 
-  on_done(Status::OK);
+  on_done(storage::Status::OK);
 }
 
 void BranchTracker::set_on_empty(fit::closure on_empty_callback) {

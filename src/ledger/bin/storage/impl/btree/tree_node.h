@@ -61,9 +61,9 @@ class TreeNode {
                     callback) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
-  // returned and index contains the index of the entry. If not, |NOT_FOUND|
-  // is returned and index stores the index of the child node where the key
-  // might be found.
+  // returned and index contains the index of the entry. If not,
+  // |INTERNAL_NOT_FOUND| is returned and index stores the index of the child
+  // node where the key might be found.
   Status FindKeyOrChild(convert::ExtendedStringView key, int* index) const;
 
   const ObjectIdentifier& GetIdentifier() const;

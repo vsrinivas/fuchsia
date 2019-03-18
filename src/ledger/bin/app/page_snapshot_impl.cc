@@ -28,8 +28,9 @@ namespace {
 
 // Transform a SizedVmo to an optional Buffer. Returns null when
 // status is not OK, or a not-null transport otherwise.
-fuchsia::mem::BufferPtr ToOptionalTransport(Status status, fsl::SizedVmo vmo) {
-  if (status != Status::OK) {
+fuchsia::mem::BufferPtr ToOptionalTransport(storage::Status status,
+                                            fsl::SizedVmo vmo) {
+  if (status != storage::Status::OK) {
     return nullptr;
   }
   return fidl::MakeOptional(std::move(vmo).ToTransport());
@@ -160,7 +161,7 @@ void FillEntries(
         [priority = entry.priority, waiter_callback = waiter->NewCallback()](
             storage::Status status,
             std::unique_ptr<const storage::Object> object) {
-          if (status == storage::Status::NOT_FOUND &&
+          if (status == storage::Status::INTERNAL_NOT_FOUND &&
               priority == storage::KeyPriority::LAZY) {
             waiter_callback(storage::Status::OK, nullptr);
           } else {
@@ -349,17 +350,22 @@ void PageSnapshotImpl::Get(std::vector<uint8_t> key, GetCallback callback) {
       [this, callback = std::move(timed_callback)](
           storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   nullptr);
+          callback(PageUtils::ConvertStatus(status), nullptr);
           return;
         }
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, 0u,
             std::numeric_limits<int64_t>::max(),
-            storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
-            [callback = std::move(callback)](Status status,
+            storage::PageStorage::Location::LOCAL,
+            [callback = std::move(callback)](storage::Status status,
                                              fsl::SizedVmo data) {
-              callback(status, ToOptionalTransport(status, std::move(data)));
+              Status ledger_status =
+                  status == storage::Status::INTERNAL_NOT_FOUND
+                      ? Status::NEEDS_FETCH
+                      : PageUtils::ConvertStatus(status);
+
+              callback(ledger_status,
+                       ToOptionalTransport(status, std::move(data)));
             });
       });
 }
@@ -374,17 +380,20 @@ void PageSnapshotImpl::GetInline(std::vector<uint8_t> key,
       [this, callback = std::move(timed_callback)](
           storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   nullptr);
+          callback(PageUtils::ConvertStatus(status), nullptr);
           return;
         }
         PageUtils::ResolveObjectIdentifierAsStringView(
             page_storage_, entry.object_identifier,
-            storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
-            [callback = std::move(callback)](Status status,
+            storage::PageStorage::Location::LOCAL,
+            [callback = std::move(callback)](storage::Status status,
                                              fxl::StringView data_view) {
-              if (status != Status::OK) {
-                callback(status, nullptr);
+              Status ledger_status =
+                  status == storage::Status::INTERNAL_NOT_FOUND
+                      ? Status::NEEDS_FETCH
+                      : PageUtils::ConvertStatus(status);
+              if (ledger_status != Status::OK) {
+                callback(ledger_status, nullptr);
                 return;
               }
               if (fidl_serialization::GetByteVectorSize(data_view.size()) +
@@ -395,7 +404,7 @@ void PageSnapshotImpl::GetInline(std::vector<uint8_t> key,
               }
               auto inlined_value = std::make_unique<InlinedValue>();
               inlined_value->value = convert::ToArray(data_view);
-              callback(status, std::move(inlined_value));
+              callback(Status::OK, std::move(inlined_value));
             });
       });
 }
@@ -409,17 +418,17 @@ void PageSnapshotImpl::Fetch(std::vector<uint8_t> key, FetchCallback callback) {
       [this, callback = std::move(timed_callback)](
           storage::Status status, storage::Entry entry) mutable {
         if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   nullptr);
+          callback(PageUtils::ConvertStatus(status), nullptr);
           return;
         }
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, 0u,
             std::numeric_limits<int64_t>::max(),
-            storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-            [callback = std::move(callback)](Status status,
+            storage::PageStorage::Location::NETWORK,
+            [callback = std::move(callback)](storage::Status status,
                                              fsl::SizedVmo data) {
-              callback(status, ToOptionalTransport(status, std::move(data)));
+              callback(PageUtils::ConvertStatus(status),
+                       ToOptionalTransport(status, std::move(data)));
             });
       });
 }
@@ -434,18 +443,21 @@ void PageSnapshotImpl::FetchPartial(std::vector<uint8_t> key, int64_t offset,
       *commit_, convert::ToString(key),
       [this, offset, max_size, callback = std::move(timed_callback)](
           storage::Status status, storage::Entry entry) mutable {
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
-                   nullptr);
+        Status ledger_status = status == storage::Status::INTERNAL_NOT_FOUND
+                                   ? Status::NEEDS_FETCH
+                                   : PageUtils::ConvertStatus(status);
+        if (ledger_status != Status::OK) {
+          callback(ledger_status, nullptr);
           return;
         }
 
         PageUtils::ResolveObjectIdentifierAsBuffer(
             page_storage_, entry.object_identifier, offset, max_size,
-            storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-            [callback = std::move(callback)](Status status,
+            storage::PageStorage::Location::NETWORK,
+            [callback = std::move(callback)](storage::Status status,
                                              fsl::SizedVmo data) {
-              callback(status, ToOptionalTransport(status, std::move(data)));
+              callback(PageUtils::ConvertStatus(status),
+                       ToOptionalTransport(status, std::move(data)));
             });
       });
 }

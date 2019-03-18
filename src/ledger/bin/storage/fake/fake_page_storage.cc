@@ -38,7 +38,7 @@ Status ToBuffer(convert::ExtendedStringView value, int64_t offset,
   }
   size_t length = max_size < 0 ? value.size() : max_size;
   bool result = fsl::VmoFromString(value.substr(start, length), buffer);
-  return result ? Status::OK : Status::INTERNAL_IO_ERROR;
+  return result ? Status::OK : Status::INTERNAL_ERROR;
 }
 
 }  // namespace
@@ -86,7 +86,7 @@ void FakePageStorage::GetCommit(
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   auto it = journals_.find(commit_id.ToString());
   if (it == journals_.end()) {
-    callback(Status::NOT_FOUND, nullptr);
+    callback(Status::INTERNAL_NOT_FOUND, nullptr);
     return;
   }
 
@@ -245,7 +245,7 @@ void FakePageStorage::GetPiece(
        callback = std::move(callback)] {
         auto it = objects_.find(object_identifier);
         if (it == objects_.end()) {
-          callback(Status::NOT_FOUND, nullptr);
+          callback(Status::INTERNAL_NOT_FOUND, nullptr);
           return;
         }
 
@@ -263,7 +263,7 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
                                         fit::function<void(Status)> on_done) {
   FakeJournalDelegate* journal = journals_[commit.GetId()].get();
   if (!journal) {
-    on_done(Status::NOT_FOUND);
+    on_done(Status::INTERNAL_NOT_FOUND);
     return;
   }
 
@@ -281,13 +281,13 @@ void FakePageStorage::GetEntryFromCommit(
     fit::function<void(Status, Entry)> callback) {
   FakeJournalDelegate* journal = journals_[commit.GetId()].get();
   if (!journal) {
-    callback(Status::NOT_FOUND, Entry());
+    callback(Status::INTERNAL_NOT_FOUND, Entry());
     return;
   }
   const fake::FakeJournalDelegate::Data& data = journal->GetData();
   auto it = data.find(key);
   if (it == data.end()) {
-    callback(Status::NOT_FOUND, Entry());
+    callback(Status::INTERNAL_NOT_FOUND, Entry());
     return;
   }
   callback(Status::OK, it->second);

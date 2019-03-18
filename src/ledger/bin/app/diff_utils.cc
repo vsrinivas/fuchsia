@@ -39,9 +39,9 @@ const std::string& GetKey(const storage::ThreeWayChange& change) {
 ValuePtr GetValueFromEntry(
     storage::PageStorage* const storage,
     const std::unique_ptr<storage::Entry>& entry,
-    fit::function<void(Status, fsl::SizedVmo)> callback) {
+    fit::function<void(storage::Status, fsl::SizedVmo)> callback) {
   if (!entry) {
-    callback(Status::OK, fsl::SizedVmo());
+    callback(storage::Status::OK, fsl::SizedVmo());
     return nullptr;
   }
   ValuePtr value = Value::New();
@@ -56,7 +56,7 @@ ValuePtr GetValueFromEntry(
   PageUtils::ResolveObjectIdentifierAsBuffer(
       storage, entry->object_identifier, 0u,
       std::numeric_limits<int64_t>::max(),
-      storage::PageStorage::Location::LOCAL, Status::OK, std::move(callback));
+      storage::PageStorage::Location::LOCAL, std::move(callback));
   return value;
 }
 
@@ -73,7 +73,7 @@ void ComputePageChange(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& other, std::string prefix_key, std::string min_key,
     PaginationBehavior pagination_behavior,
-    fit::function<void(Status, std::pair<PageChangePtr, std::string>)>
+    fit::function<void(storage::Status, std::pair<PageChangePtr, std::string>)>
         callback) {
   struct Context {
     // The PageChangePtr to be returned through the callback.
@@ -87,7 +87,8 @@ void ComputePageChange(
   };
 
   auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, fsl::SizedVmo>>(Status::OK);
+      fxl::MakeRefCounted<callback::Waiter<storage::Status, fsl::SizedVmo>>(
+          storage::Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp().get();
@@ -137,8 +138,7 @@ void ComputePageChange(
     PageUtils::ResolveObjectIdentifierAsBuffer(
         storage, change.entry.object_identifier, 0u,
         std::numeric_limits<int64_t>::max(),
-        storage::PageStorage::Location::LOCAL, Status::OK,
-        waiter->NewCallback());
+        storage::PageStorage::Location::LOCAL, waiter->NewCallback());
     return true;
   };
 
@@ -149,14 +149,14 @@ void ComputePageChange(
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: "
                      << fidl::ToUnderlying(status);
-      callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
+      callback(status, std::make_pair(nullptr, ""));
       return;
     }
     if (context->page_change->changed_entries.empty()) {
       if (context->page_change->deleted_keys.empty()) {
-        callback(Status::OK, std::make_pair(nullptr, ""));
+        callback(storage::Status::OK, std::make_pair(nullptr, ""));
       } else {
-        callback(Status::OK,
+        callback(storage::Status::OK,
                  std::make_pair(std::move(context->page_change), ""));
       }
       return;
@@ -167,9 +167,9 @@ void ComputePageChange(
     // asynchronous calls and |result_callback| processes them.
     auto result_callback = [context = std::move(context),
                             callback = std::move(callback)](
-                               Status status,
+                               storage::Status status,
                                std::vector<fsl::SizedVmo> results) mutable {
-      if (status != Status::OK) {
+      if (status != storage::Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
             << fidl::ToUnderlying(status);
@@ -183,8 +183,9 @@ void ComputePageChange(
         context->page_change->changed_entries.at(i).value =
             fidl::MakeOptional(std::move(results[i]).ToTransport());
       }
-      callback(Status::OK, std::make_pair(std::move(context->page_change),
-                                          std::move(context->next_token)));
+      callback(storage::Status::OK,
+               std::make_pair(std::move(context->page_change),
+                              std::move(context->next_token)));
     };
     waiter->Finalize(std::move(result_callback));
   };
@@ -196,7 +197,8 @@ void ComputeThreeWayDiff(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
-    fit::function<void(Status, std::pair<std::vector<DiffEntry>, std::string>)>
+    fit::function<void(storage::Status,
+                       std::pair<std::vector<DiffEntry>, std::string>)>
         callback) {
   struct Context {
     // The array to be returned through the callback.
@@ -214,7 +216,8 @@ void ComputeThreeWayDiff(
   // values are always returned in a specific order (base, left, right). Some
   // values may be empty, to denote a lack of diff.
   auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, fsl::SizedVmo>>(Status::OK);
+      fxl::MakeRefCounted<callback::Waiter<storage::Status, fsl::SizedVmo>>(
+          storage::Status::OK);
 
   auto context = std::make_unique<Context>();
 
@@ -270,12 +273,12 @@ void ComputeThreeWayDiff(
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Unable to compute diff for PageChange: "
                      << fidl::ToUnderlying(status);
-      callback(PageUtils::ConvertStatus(status),
-               std::make_pair(std::vector<DiffEntry>(), ""));
+      callback(status, std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }
     if (context->changes.empty()) {
-      callback(Status::OK, std::make_pair(std::vector<DiffEntry>(), ""));
+      callback(storage::Status::OK,
+               std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }
 
@@ -284,9 +287,9 @@ void ComputeThreeWayDiff(
     // asynchronous calls and |result_callback| processes them.
     auto result_callback = [context = std::move(context),
                             callback = std::move(callback)](
-                               Status status,
+                               storage::Status status,
                                std::vector<fsl::SizedVmo> results) mutable {
-      if (status != Status::OK) {
+      if (status != storage::Status::OK) {
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
             << fidl::ToUnderlying(status);
@@ -308,8 +311,9 @@ void ComputeThreeWayDiff(
               fidl::MakeOptional(std::move(results[3 * i + 2]).ToTransport());
         }
       }
-      callback(Status::OK, std::make_pair(std::move(context->changes),
-                                          std::move(context->next_token)));
+      callback(storage::Status::OK,
+               std::make_pair(std::move(context->changes),
+                              std::move(context->next_token)));
     };
     waiter->Finalize(std::move(result_callback));
   };

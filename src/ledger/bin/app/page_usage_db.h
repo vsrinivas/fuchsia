@@ -38,38 +38,40 @@ class PageUsageDb {
 
   // Marks the page with the given id as opened. |INTERNAL_ERROR| is returned if
   // the operation is interrupted.
-  Status MarkPageOpened(coroutine::CoroutineHandler* handler,
-                        fxl::StringView ledger_name,
-                        storage::PageIdView page_id);
+  storage::Status MarkPageOpened(coroutine::CoroutineHandler* handler,
+                                 fxl::StringView ledger_name,
+                                 storage::PageIdView page_id);
 
   // Marks the page with the given id as closed. |INTERNAL_ERROR| is returned if
   // the operation is interrupted.
-  Status MarkPageClosed(coroutine::CoroutineHandler* handler,
-                        fxl::StringView ledger_name,
-                        storage::PageIdView page_id);
+  storage::Status MarkPageClosed(coroutine::CoroutineHandler* handler,
+                                 fxl::StringView ledger_name,
+                                 storage::PageIdView page_id);
 
   // Marks the page with the given id as evicted. |INTERNAL_ERROR| is returned
   // if the operation is interrupted.
-  Status MarkPageEvicted(coroutine::CoroutineHandler* handler,
-                         fxl::StringView ledger_name,
-                         storage::PageIdView page_id);
+  storage::Status MarkPageEvicted(coroutine::CoroutineHandler* handler,
+                                  fxl::StringView ledger_name,
+                                  storage::PageIdView page_id);
 
   // Marks all open pages as closed. |INTERNAL_ERROR| is returned if the
   // operation is interrupted.
-  Status MarkAllPagesClosed(coroutine::CoroutineHandler* handler);
+  storage::Status MarkAllPagesClosed(coroutine::CoroutineHandler* handler);
 
   // Updates |pages| to contain an iterator over all entries of page
   // information.
-  Status GetPages(coroutine::CoroutineHandler* handler,
-                  std::unique_ptr<storage::Iterator<const PageInfo>>* pages);
+  storage::Status GetPages(
+      coroutine::CoroutineHandler* handler,
+      std::unique_ptr<storage::Iterator<const PageInfo>>* pages);
 
  private:
   // Inserts the given |key|-|value| pair in the underlying database.
-  Status Put(coroutine::CoroutineHandler* handler, fxl::StringView key,
-             fxl::StringView value);
+  storage::Status Put(coroutine::CoroutineHandler* handler, fxl::StringView key,
+                      fxl::StringView value);
 
   // Deletes the row with the given |key| in the underlying database.
-  Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
+  storage::Status Delete(coroutine::CoroutineHandler* handler,
+                         fxl::StringView key);
 
   timekeeper::Clock* clock_;
   std::unique_ptr<storage::Db> db_;

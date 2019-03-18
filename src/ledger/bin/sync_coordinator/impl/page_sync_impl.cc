@@ -208,7 +208,7 @@ void PageSyncImpl::GetObject(
       storage::Status,
       std::tuple<storage::ChangeSource, storage::IsObjectSynced,
                  std::unique_ptr<storage::DataSource::DataChunk>>>>(
-      storage::Status::OK, storage::Status::NOT_FOUND,
+      storage::Status::OK, storage::Status::INTERNAL_NOT_FOUND,
       std::tuple<storage::ChangeSource, storage::IsObjectSynced,
                  std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {

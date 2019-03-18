@@ -82,7 +82,7 @@ Status VmoObject::GetVmo(fsl::SizedVmo* vmo) const {
       vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to duplicate a vmo. Status: " << zx_status;
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
   return Status::OK;
 }
@@ -99,7 +99,7 @@ Status VmoObject::Initialize() const {
       &allocate_address);
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to allocate VMAR. Error: " << zx_status;
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
 
   char* mapped_address;
@@ -109,7 +109,7 @@ Status VmoObject::Initialize() const {
   if (zx_status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map VMO. Error: " << zx_status;
     vmar_.reset();
-    return Status::INTERNAL_IO_ERROR;
+    return Status::INTERNAL_ERROR;
   }
 
   data_ = fxl::StringView(mapped_address, vmo_.size());
