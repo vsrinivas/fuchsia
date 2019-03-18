@@ -31,11 +31,12 @@ type SubprocessTester struct {
 }
 
 func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
-	var command []string
-	if len(test.Path) > 0 {
+	command := test.Command
+	if len(test.Command) == 0 {
+		if test.Path == "" {
+			return fmt.Errorf("test %q has no `command` or `path` set", test.Name)
+		}
 		command = []string{test.Path}
-	} else {
-		command = test.Command
 	}
 
 	runner := &testrunner.SubprocessRunner{
