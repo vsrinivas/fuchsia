@@ -169,16 +169,16 @@ public:
     void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
 
     // Free a data block.
-    void BlockFree(WriteTxn* transaction, blk_t bno);
+    void BlockFree(Transaction* transaction, blk_t bno);
 
     // Free ino in inode bitmap, release all blocks held by inode.
-    zx_status_t InoFree(VnodeMinfs* vn, WritebackWork* wb);
+    zx_status_t InoFree(Transaction* transaction, VnodeMinfs* vn);
 
     // Mark |vn| to be unlinked.
-    void AddUnlinked(WritebackWork* wb, VnodeMinfs* vn);
+    void AddUnlinked(Transaction* transaction, VnodeMinfs* vn);
 
     // Remove |vn| from the list of unlinked vnodes.
-    void RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn);
+    void RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn);
 
     // Free resources of all vnodes marked unlinked.
     zx_status_t PurgeUnlinked();
@@ -199,9 +199,15 @@ public:
         ZX_DEBUG_ASSERT(bno < Info().block_count);
     }
 
+    // Begin a transaction with a WritebackWork, |reserve_inodes| inodes reserved,
+    // and |reserve_blocks| blocks reserved.
     zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                  fbl::unique_ptr<Transaction>* transaction) __WARN_UNUSED_RESULT;
 
+    // Enqueues a WritebackWork to the WritebackQueue.
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) __WARN_UNUSED_RESULT;
+
+    // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
     zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) __WARN_UNUSED_RESULT;
 
 #ifdef __Fuchsia__
@@ -274,6 +280,10 @@ public:
         return limits_;
     }
 
+#ifdef __Fuchsia__
+    fbl::Mutex* GetLock() const { return &txn_lock_; }
+#endif
+
     // TODO(rvargas): Make private.
     fbl::unique_ptr<Bcache> bc_;
 
@@ -318,11 +328,12 @@ private:
     fbl::unique_ptr<Allocator> block_allocator_;
     fbl::unique_ptr<InodeManager> inodes_;
 
+#ifdef __Fuchsia__
+    mutable fbl::Mutex txn_lock_; // Lock required to start a new Transaction.
+    fbl::Mutex hash_lock_; // Lock required to access the vnode_hash_.
+#endif
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
-#ifdef __Fuchsia__
-    fbl::Mutex hash_lock_;
-#endif
     HashTable vnode_hash_ FS_TA_GUARDED(hash_lock_){};
 
     bool collecting_metrics_ = false;
@@ -408,9 +419,9 @@ public:
 private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
-    friend zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb);
-    friend void Minfs::AddUnlinked(WritebackWork* wb, VnodeMinfs* vn);
-    friend void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn);
+    friend zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn);
+    friend void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn);
+    friend void Minfs::RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn);
 
     VnodeMinfs(Minfs* fs);
 
@@ -440,8 +451,9 @@ private:
 #endif
 
     // Internal functions
-    zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
-    zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
+    zx_status_t ReadInternal(Transaction* transaction, void* data, size_t len, size_t off,
+                             size_t* actual);
+    zx_status_t ReadExactInternal(Transaction* transaction, void* data, size_t len, size_t off);
     zx_status_t WriteInternal(Transaction* transaction, const void* data, size_t len,
                               size_t off, size_t* actual);
     zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
@@ -483,7 +495,7 @@ private:
                             Dirent* de, DirectoryOffset* offs);
     // Remove the link to a vnode (referring to inodes exclusively).
     // Has no impact on direntries (or parent inode).
-    void RemoveInodeLink(WritebackWork* wb);
+    void RemoveInodeLink(Transaction* transaction);
 
     // Although file sizes don't need to be block-aligned, the underlying VMO is
     // always kept at a size which is a multiple of |kMinfsBlockSize|.
@@ -649,13 +661,13 @@ private:
     // Must only be called on Vnodes which
     // - Have no open fds
     // - Are fully unlinked (link count == 0)
-    void Purge(WritebackWork* wb);
+    void Purge(Transaction* transaction);
 
 #ifdef __Fuchsia__
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
-    zx_status_t InitVmo();
+    zx_status_t InitVmo(Transaction* transaction);
     zx_status_t InitIndirectVmo();
 
     // Loads indirect blocks up to and including the doubly indirect block at |index|.

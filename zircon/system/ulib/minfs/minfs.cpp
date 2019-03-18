@@ -288,38 +288,27 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
     ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
-    fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_.get()));
-    fbl::unique_ptr<AllocatorPromise> inode_promise(new AllocatorPromise());
-    fbl::unique_ptr<AllocatorPromise> block_promise(new AllocatorPromise());
-
     // Reserve blocks from allocators before returning WritebackWork to client.
-    zx_status_t status;
-    if (reserve_inodes &&
-        (status = inodes_->Reserve(work.get(), reserve_inodes, inode_promise.get())) != ZX_OK) {
-        return status;
-    }
+    return Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(),
+                               block_allocator_.get(), out);
+}
 
-    if (reserve_blocks &&
-        (status = block_promise->Initialize(work.get(), reserve_blocks,
-                                            block_allocator_.get())) != ZX_OK) {
-        return status;
-    }
-
-    (*out).reset(
-        new Transaction(std::move(work), std::move(inode_promise), std::move(block_promise)));
-    return ZX_OK;
+zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
+#ifdef __Fuchsia__
+    return writeback_->Enqueue(std::move(work));
+#else
+    return work->Complete();
+#endif
 }
 
 zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
-    // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
+    // TODO(planders): Move this check to Journal enqueue.
     ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
     transaction->Resolve();
-    return writeback_->Enqueue(transaction->RemoveWork());
-#else
-    return transaction->GetWork()->Complete();
 #endif
+    return EnqueueWork(transaction->RemoveWork());
 }
 
 #ifdef __Fuchsia__
@@ -366,10 +355,10 @@ zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) cons
 }
 #endif
 
-zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
+zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
     TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->ino_);
 
-    inodes_->Free(wb, vn->ino_);
+    inodes_->Free(transaction->GetWork(), vn->ino_);
     uint32_t block_count = vn->inode_.block_count;
 
     // release all direct blocks
@@ -379,7 +368,7 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
         }
         ValidateBno(vn->inode_.dnum[n]);
         block_count--;
-        block_allocator_->Free(wb, vn->inode_.dnum[n]);
+        block_allocator_->Free(transaction->GetWork(), vn->inode_.dnum[n]);
     }
 
     // release all indirect blocks
@@ -407,11 +396,11 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
                 continue;
             }
             block_count--;
-            block_allocator_->Free(wb, entry[m]);
+            block_allocator_->Free(transaction->GetWork(), entry[m]);
         }
         // release the direct block itself
         block_count--;
-        block_allocator_->Free(wb, vn->inode_.inum[n]);
+        block_allocator_->Free(transaction->GetWork(), vn->inode_.inum[n]);
     }
 
     // release doubly indirect blocks
@@ -457,16 +446,16 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
                 }
 
                 block_count--;
-                block_allocator_->Free(wb, entry[k]);
+                block_allocator_->Free(transaction->GetWork(), entry[k]);
             }
 
             block_count--;
-            block_allocator_->Free(wb, dentry[m]);
+            block_allocator_->Free(transaction->GetWork(), dentry[m]);
         }
 
         // release the doubly indirect block itself
         block_count--;
-        block_allocator_->Free(wb, vn->inode_.dinum[n]);
+        block_allocator_->Free(transaction->GetWork(), vn->inode_.dinum[n]);
     }
 
     ZX_DEBUG_ASSERT(block_count == 0);
@@ -474,7 +463,7 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb) {
     return ZX_OK;
 }
 
-void Minfs::AddUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
+void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn) {
     ZX_DEBUG_ASSERT(vn->inode_.link_count == 0);
     ZX_DEBUG_ASSERT(vn->fd_count_ > 0);
 
@@ -496,14 +485,14 @@ void Minfs::AddUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
         vn->inode_.last_inode = last_vn->ino_;
         info->unlinked_tail = vn->ino_;
 
-        last_vn->InodeSync(wb, kMxFsSyncDefault);
-        vn->InodeSync(wb, kMxFsSyncDefault);
+        last_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
+        vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
     }
 
-    sb_->Write(wb);
+    sb_->Write(transaction->GetWork());
 }
 
-void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
+void Minfs::RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn) {
     if (vn->inode_.last_inode == 0) {
         // If |vn| is the first unlinked inode, we just need to update the list head
         // to the next inode (which may not exist).
@@ -515,7 +504,7 @@ void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
         fbl::RefPtr<VnodeMinfs> last_vn = VnodeLookupInternal(vn->inode_.last_inode);
         ZX_DEBUG_ASSERT(last_vn != nullptr);
         last_vn->inode_.next_inode = vn->inode_.next_inode;
-        last_vn->InodeSync(wb, kMxFsSyncDefault);
+        last_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
     }
 
     if (vn->inode_.next_inode == 0) {
@@ -529,7 +518,7 @@ void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
         fbl::RefPtr<VnodeMinfs> next_vn = VnodeLookupInternal(vn->inode_.next_inode);
         ZX_DEBUG_ASSERT(next_vn != nullptr);
         next_vn->inode_.last_inode = vn->inode_.last_inode;
-        next_vn->InodeSync(wb, kMxFsSyncDefault);
+        next_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
     }
 }
 
@@ -540,13 +529,12 @@ zx_status_t Minfs::PurgeUnlinked() {
 
     // Loop through the unlinked list and free all allocated resources.
     while (next_ino != 0) {
+        zx_status_t status;
+        fbl::RefPtr<VnodeMinfs> vn;
         fbl::unique_ptr<Transaction> transaction;
-        zx_status_t status = BeginTransaction(0, 0, &transaction);
-        if (status != ZX_OK) {
+        if ((status = BeginTransaction(0, 0, &transaction)) != ZX_OK) {
             return status;
         }
-
-        fbl::RefPtr<VnodeMinfs> vn;
         if ((status = VnodeMinfs::Recreate(this, next_ino, &vn)) != ZX_OK) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -554,7 +542,7 @@ zx_status_t Minfs::PurgeUnlinked() {
         ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == last_ino);
         ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
 
-        if ((status = InoFree(vn.get(), transaction->GetWork())) != ZX_OK) {
+        if ((status = InoFree(transaction.get(), vn.get())) != ZX_OK) {
             return status;
         }
 
@@ -573,6 +561,7 @@ zx_status_t Minfs::PurgeUnlinked() {
         if (status != ZX_OK) {
             return status;
         }
+
         unlinked_count++;
     }
 
@@ -740,9 +729,9 @@ void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
 }
 #endif
 
-void Minfs::BlockFree(WriteTxn* transaction, blk_t bno) {
+void Minfs::BlockFree(Transaction* transaction, blk_t bno) {
     ValidateBno(bno);
-    block_allocator_->Free(transaction, bno);
+    block_allocator_->Free(transaction->GetWork(), bno);
 }
 
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {

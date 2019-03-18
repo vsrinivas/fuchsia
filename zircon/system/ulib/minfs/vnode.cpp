@@ -256,7 +256,7 @@ zx_status_t VnodeMinfs::InitIndirectVmo() {
 // TODO(smklein): Even this hack can be optimized; a bitmap could be used to
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
-zx_status_t VnodeMinfs::InitVmo() {
+zx_status_t VnodeMinfs::InitVmo(Transaction* transaction) {
     if (vmo_.is_valid()) {
         return ZX_OK;
     }
@@ -275,7 +275,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         vmo_.reset();
         return status;
     }
-    fs::ReadTxn transaction(fs_->bc_.get());
+    fs::ReadTxn read_transaction(fs_->bc_.get());
     uint32_t dnum_count = 0;
     uint32_t inum_count = 0;
     uint32_t dinum_count = 0;
@@ -291,7 +291,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
             dnum_count++;
-            transaction.Enqueue(vmoid_.id, d, bno + fs_->Info().dat_block, 1);
+            read_transaction.Enqueue(vmoid_.id, d, bno + fs_->Info().dat_block, 1);
         }
     }
 
@@ -315,7 +315,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                 if ((bno = ientry[j]) != 0) {
                     fs_->ValidateBno(bno);
                     uint32_t n = kMinfsDirect + i * kMinfsDirectPerIndirect + j;
-                    transaction.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
+                    read_transaction.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
                 }
             }
         }
@@ -357,7 +357,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                             fs_->ValidateBno(bno);
                             uint32_t n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect
                                          + j * kMinfsDirectPerIndirect + k;
-                            transaction.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
+                            read_transaction.Enqueue(vmoid_.id, n, bno + fs_->Info().dat_block, 1);
                         }
                     }
                 }
@@ -365,7 +365,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         }
     }
 
-    status = transaction.Transact();
+    status = read_transaction.Transact();
     ValidateVmoTail();
     return status;
 }
@@ -398,7 +398,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* transaction, DirectArgs* para
             case BlockOp::kDelete: {
                 // If we found a valid block, delete it.
                 if (bno) {
-                    fs_->BlockFree(transaction->GetWork(), bno);
+                    fs_->BlockFree(transaction, bno);
                     params->SetBno(i, 0);
                     inode_.block_count--;
                 }
@@ -486,7 +486,7 @@ zx_status_t VnodeMinfs::BlockOpIndirect(Transaction* transaction, IndirectArgs* 
         if (params->GetOp() == BlockOp::kDelete
             && direct_params.GetCount() == kMinfsDirectPerIndirect) {
             // release the direct block itself
-            fs_->BlockFree(transaction->GetWork(), params->GetBno(i));
+            fs_->BlockFree(transaction, params->GetBno(i));
             params->SetBno(i, 0);
             inode_.block_count--;
         } else if (dirty || direct_params.IsDirty()) {
@@ -551,7 +551,7 @@ zx_status_t VnodeMinfs::BlockOpDindirect(Transaction* transaction, DindirectArgs
         if (params->GetOp() == BlockOp::kDelete &&
             indirect_params.GetCount() == kMinfsDirectPerDindirect) {
             // release the doubly indirect block itself
-            fs_->BlockFree(transaction->GetWork(), params->GetBno(i));
+            fs_->BlockFree(transaction, params->GetBno(i));
             params->SetBno(i, 0);
             inode_.block_count--;
         } else if (dirty || indirect_params.IsDirty()) {
@@ -729,9 +729,10 @@ zx_status_t VnodeMinfs::BlockGet(Transaction* transaction, blk_t n, blk_t* bno) 
     return ApplyOperation(transaction, transaction ? BlockOp::kWrite : BlockOp::kRead, &op_args);
 }
 
-zx_status_t VnodeMinfs::ReadExactInternal(void* data, size_t len, size_t off) {
+zx_status_t VnodeMinfs::ReadExactInternal(Transaction* transaction, void* data, size_t len,
+                                          size_t off) {
     size_t actual;
-    zx_status_t status = ReadInternal(data, len, off, &actual);
+    zx_status_t status = ReadInternal(transaction, data, len, off, &actual);
     if (status != ZX_OK) {
         return status;
     } else if (actual != len) {
@@ -798,7 +799,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* transaction,
     // back to "de" and "de_prev".
     if (!(de->reclen & kMinfsReclenLast)) {
         size_t len = MINFS_DIRENT_SIZE;
-        if ((status = ReadExactInternal(&de_next, len, off_next)) != ZX_OK) {
+        if ((status = ReadExactInternal(transaction, &de_next, len, off_next)) != ZX_OK) {
             FS_TRACE_ERROR("unlink: Failed to read next dirent\n");
             return status;
         } else if ((status = ValidateDirent(&de_next, len, off_next)) != ZX_OK) {
@@ -813,7 +814,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* transaction,
     }
     if (off_prev != off) {
         size_t len = MINFS_DIRENT_SIZE;
-        if ((status = ReadExactInternal(&de_prev, len, off_prev)) != ZX_OK) {
+        if ((status = ReadExactInternal(transaction, &de_prev, len, off_prev)) != ZX_OK) {
             FS_TRACE_ERROR("unlink: Failed to read previous dirent\n");
             return status;
         } else if ((status = ValidateDirent(&de_prev, len, off_prev)) != ZX_OK) {
@@ -851,14 +852,16 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* transaction,
         // Child directory had '..' which pointed to parent directory
         inode_.link_count--;
     }
-    childvn->RemoveInodeLink(transaction->GetWork());
+
+    childvn->RemoveInodeLink(transaction);
     transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
     transaction->GetWork()->PinVnode(childvn);
     return kDirIteratorSaveSync;
 }
 
-void VnodeMinfs::RemoveInodeLink(WritebackWork* wb) {
+void VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
     ZX_ASSERT(inode_.link_count > 0);
+
     // This effectively 'unlinks' the target node without deleting the direntry
     inode_.link_count--;
     if (MinfsMagicType(inode_.magic) == kMinfsTypeDir) {
@@ -872,13 +875,13 @@ void VnodeMinfs::RemoveInodeLink(WritebackWork* wb) {
 
     if (IsUnlinked()) {
         if (fd_count_ == 0) {
-            Purge(wb);
+            Purge(transaction);
         } else {
-            fs_->AddUnlinked(wb, this);
+            fs_->AddUnlinked(transaction, this);
         }
     }
 
-    InodeSync(wb, kMxFsSyncMtime);
+    InodeSync(transaction->GetWork(), kMxFsSyncMtime);
 }
 
 // caller is expected to prevent unlink of "." or ".."
@@ -954,7 +957,8 @@ zx_status_t VnodeMinfs::DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs> vndi
     // the parent (link count of 1), but the new directory will ALSO have a ".."
     // entry, making the rename operation idempotent w.r.t. the parent link
     // count.
-    vn->RemoveInodeLink(args->transaction->GetWork());
+
+    vn->RemoveInodeLink(args->transaction);
 
     de->ino = args->ino;
     status = vndir->WriteExactInternal(args->transaction, de, DirentSize(de->namelen), args->offs.off);
@@ -1012,7 +1016,8 @@ zx_status_t VnodeMinfs::AppendDirent(DirArgs* args) {
     char data[kMinfsMaxDirentSize];
     Dirent* de = reinterpret_cast<Dirent*>(data);
     size_t r;
-    zx_status_t status = ReadInternal(data, kMinfsMaxDirentSize, args->offs.off, &r);
+    zx_status_t status = ReadInternal(args->transaction, data, kMinfsMaxDirentSize, args->offs.off,
+                                      &r);
     if (status != ZX_OK) {
         return status;
     } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
@@ -1091,7 +1096,8 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
     while (args->offs.off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
         FS_TRACE_DEBUG("Reading dirent at offset %zd\n", args->offs.off);
         size_t r;
-        zx_status_t status = ReadInternal(data, kMinfsMaxDirentSize, args->offs.off, &r);
+        zx_status_t status = ReadInternal(args->transaction, data, kMinfsMaxDirentSize,
+                                          args->offs.off, &r);
         if (status != ZX_OK) {
             return status;
         } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
@@ -1175,19 +1181,19 @@ zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     return ZX_OK;
 }
 
-void VnodeMinfs::Purge(WritebackWork* wb) {
+void VnodeMinfs::Purge(Transaction* transaction) {
     ZX_DEBUG_ASSERT(fd_count_ == 0);
     ZX_DEBUG_ASSERT(IsUnlinked());
     fs_->VnodeRelease(this);
 #ifdef __Fuchsia__
     // TODO(smklein): Only init indirect vmo if it's needed
     if (InitIndirectVmo() == ZX_OK) {
-        fs_->InoFree(this, wb);
+        fs_->InoFree(transaction, this);
     } else {
         FS_TRACE_ERROR("minfs: Failed to Init Indirect VMO while purging %u\n", ino_);
     }
 #else
-    fs_->InoFree(this, wb);
+    fs_->InoFree(transaction, this);
 #endif
 }
 
@@ -1196,10 +1202,13 @@ zx_status_t VnodeMinfs::Close() {
     fd_count_--;
 
     if (fd_count_ == 0 && IsUnlinked()) {
+        zx_status_t status;
         fbl::unique_ptr<Transaction> transaction;
-        ZX_ASSERT(fs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
-        fs_->RemoveUnlinked(transaction->GetWork(), this);
-        Purge(transaction->GetWork());
+        if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+            return status;
+        }
+        fs_->RemoveUnlinked(transaction.get(), this);
+        Purge(transaction.get());
         return fs_->CommitTransaction(std::move(transaction));
     }
     return ZX_OK;
@@ -1218,15 +1227,13 @@ zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_act
         fs_->UpdateReadMetrics(*out_actual, ticker.End());
     });
 
-    zx_status_t status = ReadInternal(data, len, off, out_actual);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return ZX_OK;
+    Transaction transaction(fs_);
+    return ReadInternal(&transaction, data, len, off, out_actual);
 }
 
 // Internal read. Usable on directories.
-zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
+zx_status_t VnodeMinfs::ReadInternal(Transaction* transaction, void* data, size_t len, size_t off,
+                                     size_t* actual) {
     // clip to EOF
     if (off >= inode_.size) {
         *actual = 0;
@@ -1238,7 +1245,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
 
     zx_status_t status;
 #ifdef __Fuchsia__
-    if ((status = InitVmo()) != ZX_OK) {
+    if ((status = InitVmo(transaction)) != ZX_OK) {
         return status;
     } else if ((status = vmo_.read(data, off, len)) != ZX_OK) {
         return status;
@@ -1341,7 +1348,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
 #ifdef __Fuchsia__
     // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
     ZX_DEBUG_ASSERT(len < TransactionLimits::kMaxWriteBytes);
-    if ((status = InitVmo()) != ZX_OK) {
+    if ((status = InitVmo(transaction)) != ZX_OK) {
         return status;
     }
 #else
@@ -1350,12 +1357,9 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
 
     // Write to data blocks must be done in a separate transaction from the metadata updates to ensure that
     // all user data goes out to disk before associated metadata.
-    fbl::unique_ptr<Transaction> data_state;
     if (!IsDirectory()) {
         // Since this transaction is only writing user data, no block reservation is needed.
-        if ((status = fs_->BeginTransaction(0, 0, &data_state)) != ZX_OK) {
-            return status;
-        }
+        transaction->InitDataWork();
     }
 
     const void* const start = data;
@@ -1395,7 +1399,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
         if (IsDirectory()) {
             transaction->GetWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
         } else {
-            data_state->GetWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
+            transaction->GetDataWork()->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
         }
 #else // __Fuchsia__
         blk_t bno;
@@ -1440,12 +1444,10 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
     *actual = len;
     ValidateVmoTail();
 
-#ifdef __Fuchsia__
     if (!IsDirectory()) {
-        data_state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-        return fs_->CommitTransaction(std::move(data_state));
+        transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
+        return fs_->EnqueueWork(transaction->RemoveDataWork());
     }
-#endif
     return ZX_OK;
 }
 
@@ -1484,6 +1486,7 @@ zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringP
 
 zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
     FS_TRACE_DEBUG("minfs_getattr() vn=%p(#%u)\n", this, ino_);
+    Transaction transaction(fs_);
     a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) |
             V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     a->inode = ino_;
@@ -1512,8 +1515,11 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     }
     if (dirty) {
         // write to disk, but don't overwrite the time
+        zx_status_t status;
         fbl::unique_ptr<Transaction> transaction;
-        ZX_ASSERT(fs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
+        if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+            return status;
+        }
         InodeSync(transaction->GetWork(), kMxFsSyncDefault);
         transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
         return fs_->CommitTransaction(std::move(transaction));
@@ -1557,7 +1563,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
                 FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent; dirent reclen too large\n");
                 goto fail;
             }
-            zx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off_recovered, &r);
+            zx_status_t status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off_recovered, &r);
             if ((status != ZX_OK) || (ValidateDirent(de, r, off_recovered) != ZX_OK)) {
                 FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent unreadable/failed validation\n");
                 goto fail;
@@ -1568,7 +1574,7 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
     }
 
     while (off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
-        zx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off, &r);
+        zx_status_t status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off, &r);
         if (status != ZX_OK) {
             FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent\n");
             goto fail;
@@ -1739,6 +1745,7 @@ constexpr const char kFsName[] = "minfs";
 zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
                   "Minfs name too long");
+    Transaction transaction(fs_);
     memset(info, 0, sizeof(*info));
     info->block_size = kMinfsBlockSize;
     info->max_filename_size = kMinfsMaxNameSize;
@@ -1807,7 +1814,9 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     }
     zx_status_t status;
     fbl::unique_ptr<Transaction> transaction;
-    ZX_ASSERT(fs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
+    if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+        return status;
+    }
     DirArgs args = DirArgs();
     args.name = name;
     args.type = must_be_dir ? kMinfsTypeDir : 0;
@@ -1856,7 +1865,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
 #ifdef __Fuchsia__
     // TODO(smklein): We should only init up to 'len'; no need
     // to read in the portion of a large file we plan on deleting.
-    if ((status = InitVmo()) != ZX_OK) {
+    if ((status = InitVmo(transaction)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: Truncate failed to initialize VMO: %d\n", status);
         return ZX_ERR_IO;
     }
@@ -1927,15 +1936,11 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
                 if (IsDirectory()) {
                     transaction->GetWork()->Enqueue(vmo_.get(), rel_bno, bno + fs_->Info().dat_block, 1);
                 } else {
-                    fbl::unique_ptr<Transaction> data_state;
-                    if ((status = fs_->BeginTransaction(0, 0, &data_state)) != ZX_OK) {
-                        return status;
-                    }
-
-                    data_state->GetWork()->Enqueue(vmo_.get(), rel_bno,
+                    transaction->InitDataWork();
+                    transaction->GetDataWork()->Enqueue(vmo_.get(), rel_bno,
                                                    bno + fs_->Info().dat_block, 1);
-                    data_state->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-                    if ((status = fs_->CommitTransaction(std::move(data_state))) != ZX_OK) {
+                    transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
+                    if ((status = fs_->EnqueueWork(transaction->RemoveDataWork())) != ZX_OK) {
                         return status;
                     }
                 }

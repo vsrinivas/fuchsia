@@ -28,6 +28,8 @@
 
 namespace minfs {
 
+class InodeManager;
+class Minfs;
 class VnodeMinfs;
 
 // A wrapper around a WriteTxn, holding references to the underlying Vnodes
@@ -79,40 +81,30 @@ private:
 
 // Tracks the current transaction, including any enqueued writes, and reserved blocks
 // and inodes. Also handles allocation of previously reserved blocks/inodes.
+// Upon construction, acquires a lock to ensure that all work being done within the
+// scope of the transaction is thread-safe. Specifically, the Minfs superblock, block bitmap, and
+// inode table, as well as the Vnode block count and inode size may in the near future be modified
+// asynchronously. Since these modifications require a Transaction to be in progress, this lock
+// will protect against multiple simultaneous writes to these structures.
 class Transaction {
 public:
-    Transaction(fbl::unique_ptr<WritebackWork> work,
-                fbl::unique_ptr<AllocatorPromise> inode_promise,
-                fbl::unique_ptr<AllocatorPromise> block_promise)
-        : work_(std::move(work)),
-          inode_promise_(std::move(inode_promise)),
-          block_promise_(std::move(block_promise)) {}
+    static zx_status_t Create(Minfs* minfs, size_t reserve_inodes, size_t reserve_blocks,
+                              InodeManager* inode_manager, Allocator* block_allocator,
+                              fbl::unique_ptr<Transaction>* out);
 
-    size_t AllocateInode() {
-        ZX_DEBUG_ASSERT(inode_promise_ != nullptr);
-        return inode_promise_->Allocate(GetWork());
+    Transaction() = delete;
+
+    Transaction(Minfs* minfs);
+
+    ~Transaction() {
+        // Unreserve all reserved inodes/blocks while the lock is still held.
+        inode_promise_.Cancel();
+        block_promise_.Cancel();
     }
 
-    size_t AllocateBlock() {
-        ZX_DEBUG_ASSERT(block_promise_ != nullptr);
-        return block_promise_->Allocate(GetWork());
-    }
-
-#ifdef __Fuchsia__
-    size_t SwapBlock(size_t old_bno) {
-        ZX_DEBUG_ASSERT(block_promise_ != nullptr);
-        return block_promise_->Swap(old_bno);
-    }
-
-    void Resolve() {
-        if (block_promise_->IsInitialized()) {
-            block_promise_->SwapCommit(GetWork());
-        }
-    }
-#endif
-
-    void SetWork(fbl::unique_ptr<WritebackWork> work) {
-        work_ = std::move(work);
+    void InitWork() {
+        ZX_DEBUG_ASSERT(work_ == nullptr);
+        work_.reset(new WritebackWork(bc_));
     }
 
     WritebackWork* GetWork() {
@@ -121,14 +113,71 @@ public:
     }
 
     fbl::unique_ptr<WritebackWork> RemoveWork() {
+        ZX_DEBUG_ASSERT(data_work_ == nullptr);
         ZX_DEBUG_ASSERT(work_ != nullptr);
         return std::move(work_);
     }
 
+    void InitDataWork() {
+        ZX_DEBUG_ASSERT(work_ != nullptr);
+        ZX_DEBUG_ASSERT(data_work_ == nullptr);
+        data_work_.reset(new WritebackWork(bc_));
+    }
+
+    WritebackWork* GetDataWork() {
+        ZX_DEBUG_ASSERT(data_work_ != nullptr);
+        return data_work_.get();
+    }
+
+    fbl::unique_ptr<WritebackWork> RemoveDataWork() {
+        ZX_DEBUG_ASSERT(data_work_ != nullptr);
+        return std::move(data_work_);
+    }
+
+    size_t AllocateInode() {
+        ZX_DEBUG_ASSERT(inode_promise_.IsInitialized());
+        return inode_promise_.Allocate(GetWork());
+    }
+
+    size_t AllocateBlock() {
+        ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
+        return block_promise_.Allocate(GetWork());
+    }
+
+#ifdef __Fuchsia__
+    size_t SwapBlock(size_t old_bno) {
+        ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
+        return block_promise_.Swap(old_bno);
+    }
+
+    void Resolve() {
+        if (block_promise_.IsInitialized()) {
+            block_promise_.SwapCommit(GetWork());
+        }
+    }
+
+    // Removes |requested| blocks from block_promise_ and gives them to |other_promise|.
+    void SplitBlockPromise(size_t requested, AllocatorPromise* other_promise) {
+        ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
+        block_promise_.Split(requested, other_promise);
+    }
+
+    // Removes |requested| blocks from |other_promise| and gives them to block_promise_.
+    void MergeBlockPromise(AllocatorPromise* other_promise) {
+        other_promise->Split(other_promise->GetReserved(), &block_promise_);
+    }
+#endif
+
 private:
+#ifdef __Fuchsia__
+    fbl::AutoLock<fbl::Mutex> lock_;
+#endif
+
+    Bcache* bc_;
     fbl::unique_ptr<WritebackWork> work_;
-    fbl::unique_ptr<AllocatorPromise> inode_promise_;
-    fbl::unique_ptr<AllocatorPromise> block_promise_;
+    fbl::unique_ptr<WritebackWork> data_work_;
+    AllocatorPromise inode_promise_;
+    AllocatorPromise block_promise_;
 };
 
 } // namespace minfs

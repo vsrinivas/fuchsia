@@ -181,7 +181,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
     while (true) {
         uint32_t data[MINFS_DIRENT_SIZE];
         size_t actual;
-        status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, off, &actual);
+        status = vn->ReadInternal(nullptr, data, MINFS_DIRENT_SIZE, off, &actual);
         if (status != ZX_OK || actual != MINFS_DIRENT_SIZE) {
             FS_TRACE_ERROR("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
             if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
@@ -208,7 +208,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino,
         } else {
             // Re-read the dirent to acquire the full name
             uint32_t record_full[DirentSize(NAME_MAX)];
-            status = vn->ReadInternal(record_full, DirentSize(de->namelen), off, &actual);
+            status = vn->ReadInternal(nullptr, record_full, DirentSize(de->namelen), off, &actual);
             if (status != ZX_OK || actual != DirentSize(de->namelen)) {
                 FS_TRACE_ERROR("check: Error reading dirent of size: %u\n", DirentSize(de->namelen));
                 return ZX_ERR_IO;

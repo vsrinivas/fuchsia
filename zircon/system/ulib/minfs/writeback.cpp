@@ -143,6 +143,42 @@ zx_status_t WritebackWork::Complete() {
     return status;
 }
 
+zx_status_t Transaction::Create(Minfs* minfs, size_t reserve_inodes, size_t reserve_blocks,
+                                InodeManager* inode_manager, Allocator* block_allocator,
+                                fbl::unique_ptr<Transaction>* out) {
+    fbl::unique_ptr<Transaction> transaction(new Transaction(minfs));
+    transaction->InitWork();
+
+    if (reserve_inodes) {
+        // The inode allocator is currently not accessed asynchronously.
+        // However, acquiring the reservation may cause the superblock to be modified via extension,
+        // so we still need to acquire the lock first.
+        zx_status_t status = inode_manager->Reserve(transaction->GetWork(), reserve_inodes,
+                                                    &transaction->inode_promise_);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    if (reserve_blocks) {
+        zx_status_t status = transaction->block_promise_.Initialize(transaction->GetWork(),
+                                                                    reserve_blocks,
+                                                                    block_allocator);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    *out = std::move(transaction);
+    return ZX_OK;
+}
+
+Transaction::Transaction(Minfs* minfs) :
+#ifdef __Fuchsia__
+    lock_(minfs->GetLock()),
+#endif
+    bc_(minfs->bc_.get()) {}
+
 #ifdef __Fuchsia__
 void WritebackWork::SetSyncCallback(SyncCallback closure) {
     ZX_DEBUG_ASSERT(!sync_cb_);
@@ -155,6 +191,6 @@ void WritebackWork::ResetCallbacks(zx_status_t status) {
         sync_cb_ = nullptr;
     }
 }
-#endif
+#endif  // __Fuchsia__
 
 } // namespace minfs
