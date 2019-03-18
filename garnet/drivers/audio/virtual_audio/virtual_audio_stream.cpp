@@ -288,6 +288,14 @@ zx_status_t VirtualAudioStream::Stop() {
 }
 
 // Called by parent SimpleAudioStream::Shutdown, during DdkUnbind.
-void VirtualAudioStream::ShutdownHook() { parent_->RemoveStream(); }
+// If our parent is not shutting down, then someone else called our DdkUnbind
+// (perhaps the DevHost is removing our driver), and we should let our parent
+// know so that it does not later try to Unbind us. Knowing who started the
+// unwinding allows this to proceed in an orderly way, in all cases.
+void VirtualAudioStream::ShutdownHook() {
+  if (!shutdown_by_parent_) {
+    parent_->ClearStream();
+  }
+}
 
 }  // namespace virtual_audio

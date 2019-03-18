@@ -13,22 +13,28 @@ namespace virtual_audio {
 
 // static
 //
-// Always called after any published children have been unbound.
-// Shut down any async loop; make sure there is nothing in flight.
+// Unbind any published children (which will remove them), shut down any async
+// loop, ensure nothing is in flight, then remove ourselves from the dev tree.
+//
+// Unbind proceeds "down" from parent to child, while Release proceeds "up"
+// (called for parent once all children have been released).
 void VirtualAudioControlImpl::DdkUnbind(void* ctx) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
 
   auto self = static_cast<VirtualAudioControlImpl*>(ctx);
 
-  // By now, the stream lists should be empty.
-  // Close/free any remaining control (or stream) bindings.
+  // Close any remaining control (or stream) bindings, freeing those drivers.
   self->ReleaseBindings();
+
+  // Now remove the control device itself (this later calls our DdkRelease).
+  device_remove(self->dev_node());
 }
 
 // static
 //
 // Always called after DdkUnbind, which should guarantee that lists are emptied.
-// Any last cleanup or logical consistency checks would be done here.
+// Any last cleanup or logical consistency checks would be done here. By the
+// time this is called, all child devices have already been released.
 void VirtualAudioControlImpl::DdkRelease(void* ctx) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
 
@@ -170,16 +176,10 @@ void VirtualAudioControlImpl::Enable(EnableCallback enable_callback) {
 void VirtualAudioControlImpl::Disable(DisableCallback disable_callback) {
   if (enabled_) {
     for (auto& binding : input_bindings_.bindings()) {
-      auto stream = binding->impl()->stream();
-      if (stream) {
-        stream->DdkUnbind();
-      }
+      binding->impl()->RemoveStream();
     }
     for (auto& binding : output_bindings_.bindings()) {
-      auto stream = binding->impl()->stream();
-      if (stream) {
-        stream->DdkUnbind();
-      }
+      binding->impl()->RemoveStream();
     }
 
     enabled_ = false;

@@ -14,26 +14,32 @@ VirtualAudioDeviceImpl::VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner)
   ZX_DEBUG_ASSERT(owner_);
 }
 
-VirtualAudioDeviceImpl::~VirtualAudioDeviceImpl() {
-  if (stream_ != nullptr) {
-    // TODO(mpuryear): This is not quite the right way to safely unwind in all
-    // cases: it makes some threading assumptions that cannot necessarily be
-    // enforced. But until ZX-3461 is addressed, the current VAD code appears to
-    // be safe (all Unbind callers are on the devhost primary thread).
-    stream_->DdkUnbind();
-  }
-}
+// If we have not already destroyed our child stream, do so now.
+VirtualAudioDeviceImpl::~VirtualAudioDeviceImpl() { RemoveStream(); }
 
-// Called from our stream's ShutdownHook, as a result of DdkUnbind being called.
+// Allows a child stream to signal to its parent that it has gone away.
+void VirtualAudioDeviceImpl::ClearStream() { stream_ = nullptr; }
+
+// Removes this device's child stream by calling its Unbind method. This may
+// already have occurred, so first check it for null.
+//
+// TODO(mpuryear): This is not quite the right way to safely unwind in all
+// cases: it makes some threading assumptions that cannot necessarily be
+// enforced. But until ZX-3461 is addressed, the current VAD code appears to
+// be safe (all Unbind callers are on the devhost primary thread).
 void VirtualAudioDeviceImpl::RemoveStream() {
   if (stream_ != nullptr) {
-    stream_.reset();
+    // This bool tells the stream that its Unbind is originating from us (the
+    // parent), so that it doesn't call us back.
+    stream_->shutdown_by_parent_ = true;
+    stream_->DdkUnbind();
   }
 }
 
 //
 // Device implementation
 //
+// Create a virtual audio device using the currently-specified configuration.
 void VirtualAudioDeviceImpl::Add() {
   if (!owner_->enabled()) {
     zxlogf(TRACE, "%s: Disabled, cannot add stream\n", __PRETTY_FUNCTION__);
@@ -52,6 +58,7 @@ void VirtualAudioDeviceImpl::Add() {
   }
 }
 
+// Remove the associated virtual audio device.
 void VirtualAudioDeviceImpl::Remove() {
   if (!owner_->enabled()) {
     zxlogf(TRACE, "%s: Disabled, no streams for removal\n",
@@ -66,12 +73,14 @@ void VirtualAudioDeviceImpl::Remove() {
     return;
   }
 
-  // This will result in our stream_ being reset. SimpleAudioStream::DdkUnbind
-  // leads to SimpleAudioStream::Shutdown/VirtualAudioStream::ShutdownHook,
-  // which calls its parent (that's us!) VirtualAudioDeviceImpl::RemoveStream.
-  stream_->DdkUnbind();
+  // If stream_ exists, null our copy and call SimpleAudioStream::DdkUnbind
+  // (which eventually calls ShutdownHook and re-nulls). This is necessary
+  // because stream terminations can come either from "device" (direct DdkUnbind
+  // call), or from "parent" (Control::Disable, Device::Remove, ~DeviceImpl).
+  RemoveStream();
 }
 
+// Change the plug state on-the-fly for this active virtual audio device.
 void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time,
                                              bool plugged) {
   if (!owner_->enabled()) {

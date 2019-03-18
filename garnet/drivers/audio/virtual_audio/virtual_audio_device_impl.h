@@ -19,7 +19,7 @@ class VirtualAudioDeviceImpl : public VirtualAudioConfigImpl {
  public:
   virtual bool CreateStream(zx_device_t* devnode) = 0;
   void RemoveStream();
-  VirtualAudioStream* stream() { return stream_.get(); }
+  void ClearStream();
 
   //
   // virtualaudio.Device interface

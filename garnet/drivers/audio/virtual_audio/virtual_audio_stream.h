@@ -25,6 +25,9 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
  public:
   void ChangePlugState(bool plugged) __TA_EXCLUDES(msg_queue_lock_);
 
+  // Only set by DeviceImpl -- on dtor, Disable or Remove
+  bool shutdown_by_parent_ = false;
+
  protected:
   friend class ::audio::SimpleAudioStream;
   friend class fbl::RefPtr<VirtualAudioStream>;
