@@ -30,10 +30,15 @@ function main {
   set -- "${FX_ARGV[@]}"
 
   config_type="devhost"
+  port="8083"
   source_name=""
   disable_source=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
+      --port)
+        port="$2"
+        shift
+        ;;
       --type)
         config_type="$2"
         shift
@@ -70,12 +75,12 @@ function main {
     exit 1
   fi
 
-  config_url="http://[${local_addr}]:8083/config.json"
+  config_url="http://[${local_addr}]:${port}/config.json"
 
   if [[ "${config_type}" == "devhost" ]]; then
-    repo_url="http://[${local_addr}]:8083"
+    repo_url="http://[${local_addr}]:${port}"
   elif [[ "${config_type}" == "localhost" ]]; then
-    repo_url="http://127.0.0.1:8083"
+    repo_url="http://127.0.0.1:${port}"
   else
     echo >&2 "Unknown config type. Valid options: devhost, localhost"
     exit 1

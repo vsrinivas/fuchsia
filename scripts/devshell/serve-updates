@@ -18,6 +18,7 @@ function usage {
 fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
 
+port="8083"
 serve_flags=()
 verbose=false
 very_verbose=false
@@ -25,6 +26,7 @@ while (($#)); do
   case "$1" in
     -l)
       shift
+      port="${1##*:}"
       serve_flags+=(-l "$1")
       ;;
     -v|--verbose)
@@ -107,7 +109,7 @@ while true; do
 
   if [[ "$state" == "config" ]]; then
     log "Registering devhost as update source"
-    if fx-command-run add-update-source; then
+    if fx-command-run add-update-source --port "${port}"; then
       log "Ready to push packages!"
       state="ready"
     else
