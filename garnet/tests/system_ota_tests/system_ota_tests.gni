@@ -10,7 +10,7 @@ _default_system_ota_tests =
 # The system OTA tests replaces the device kernel, so it cannot be run
 # concurrently with other tests. We'll accomplish this by restricting
 # ourselves to only run on test builders that use our custom label.
-_environment_label = "system_ota_tests"
+_environment_label = "system-ota-tests"
 
 # The service account that allows the test to download build artifacts.
 _environment_service_account =
