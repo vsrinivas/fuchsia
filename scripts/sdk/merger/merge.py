@@ -242,17 +242,17 @@ def main():
     parser = argparse.ArgumentParser(
             description=('Merges the contents of two SDKs'))
     alpha_group = parser.add_mutually_exclusive_group(required=True)
-    alpha_group.add_argument('--alpha-archive',
+    alpha_group.add_argument('--alpha-archive', '--first-archive',
                              help='Path to the first SDK - as an archive',
                              default='')
-    alpha_group.add_argument('--alpha-directory',
+    alpha_group.add_argument('--alpha-directory', '--first-directory',
                              help='Path to the first SDK - as a directory',
                              default='')
     beta_group = parser.add_mutually_exclusive_group(required=True)
-    beta_group.add_argument('--beta-archive',
+    beta_group.add_argument('--beta-archive', '--second-archive',
                             help='Path to the second SDK - as an archive',
                             default='')
-    beta_group.add_argument('--beta-directory',
+    beta_group.add_argument('--beta-directory', '--second-directory',
                             help='Path to the second SDK - as a directory',
                             default='')
     output_group = parser.add_mutually_exclusive_group(required=True)
