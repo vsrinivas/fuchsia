@@ -102,6 +102,7 @@ ImagePtr ImagePipe::CreateImage(Session* session, ResourceId id,
 }
 
 void ImagePipe::RemoveImage(uint32_t image_id) {
+  TRACE_DURATION("gfx", "ImagePipe::RemoveImage", "image_id", image_id);
   size_t erased_count = images_.erase(image_id);
   if (erased_count == 0) {
     session()->error_reporter()->ERROR()
@@ -116,6 +117,9 @@ void ImagePipe::PresentImage(
     ::std::vector<zx::event> acquire_fences,
     ::std::vector<zx::event> release_fences,
     fuchsia::images::ImagePipe::PresentImageCallback callback) {
+  TRACE_DURATION("gfx", "ImagePipe::PresentImage", "image_id", image_id);
+  TRACE_FLOW_END("gfx", "image_pipe_present_image", image_id);
+
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
     session()->error_reporter()->ERROR()
@@ -146,6 +150,7 @@ void ImagePipe::PresentImage(
                                                    ImagePipePtr(weak.get()));
         }
       });
+  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image_to_update", image_id);
   frames_.push(Frame{
       image_it->second, presentation_time, std::move(acquire_fences_listener),
       fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
@@ -195,6 +200,7 @@ bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
     if (frames_.front().present_image_callback) {
       frames_.front().present_image_callback(std::move(info));
     }
+    TRACE_FLOW_END("gfx", "image_pipe_present_image_to_update", next_image_id);
     frames_.pop();
     present_next_image = true;
   }

@@ -4,6 +4,8 @@
 
 #include "garnet/examples/ui/shadertoy/service/imagepipe_shadertoy.h"
 
+#include <trace/event.h>
+
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/resources/resource_recycler.h"
@@ -118,6 +120,7 @@ static zx::event DuplicateEvent(const zx::event& evt) {
 
 void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
                                            float animation_time) {
+  TRACE_DURATION("gfx", "ShadertoyStateForImagePipe::DrawFrame");
   // Prepare arguments.
   auto& fb = framebuffers_[next_framebuffer_index_];
   next_framebuffer_index_ = (next_framebuffer_index_ + 1) % kNumFramebuffers;
@@ -157,6 +160,7 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   acquire_fences.push_back(std::move(acquire_fence));
   std::vector<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
+  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", fb.image_pipe_id);
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
                             std::move(acquire_fences),
                             std::move(release_fences), present_image_callback);
