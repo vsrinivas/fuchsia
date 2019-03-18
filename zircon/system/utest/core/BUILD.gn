@@ -11,7 +11,6 @@ core_tests = [
   "channel",
   "clock",
   "cookies",
-  "echo",
   "elf-tls",
   "event-pair",
   "fifo",
