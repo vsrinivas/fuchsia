@@ -172,7 +172,7 @@ components written in a variety of languages interact seamlessly.
 #### **Flutter**
 
 [Flutter](https://flutter.io/) is a functional-reactive user interface framework optimized for
-Fuchsia and is used by many system components. Flutter also runs on a variety of other platform,
+Fuchsia and is used by many system components. Flutter also runs on a variety of other platforms,
 including Android and iOS. Fuchsia itself does not require you to use any particular language or
 user interface framework.
 
@@ -211,14 +211,14 @@ well as all the FIDL protocols are part of the Fuchsia System Interface.
 
 Fuchsia Volume Manager is a partition manager providing dynamically allocated groups of blocks known
 as slices into a virtual block address space. The FVM partitions provide a block interface enabling
-filesystems to interact with it in a manner largely consistent with a regular block device. -
-[Filesystems](the-book/filesystems.md)
+filesystems to interact with it in a manner largely consistent with a regular block device.
+- [Filesystems](the-book/filesystems.md)
 
 #### **GN**
 
-GN is a meta-build system which generates build files so that Fuchsia can be built with [Ninja]
-(#ninja). GN is fast and comes with solid tools to manage and explore dependencies. GN files, named
-`BUILD.gn`, are located all over the repository.
+GN is a meta-build system which generates build files so that Fuchsia can be built with
+[Ninja](#ninja). GN is fast and comes with solid tools to manage and explore dependencies. GN files,
+named `BUILD.gn`, are located all over the repository.
 - [Language and operation](https://gn.googlesource.com/gn/+/master/docs/language.md)
 - [Reference](https://gn.googlesource.com/gn/+/master/docs/reference.md)
 - [Fuchsia build overview](development/build/overview.md)
@@ -226,7 +226,7 @@ GN is a meta-build system which generates build files so that Fuchsia can be bui
 #### **Handle**
 
 A Handle is how a userspace process refers to a [kernel object](#Kernel-Object). They can be passed
-to other processes over [Channel](#Channel)s.
+to other processes over [Channels](#Channel).
 - [Reference](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/handles.md)
 
 ###  **Hardware Driver**
@@ -396,8 +396,8 @@ from a filesystem. Its primary purpose is to load the second process,
 
 The vDSO is a Virtual Shared Library -- it is provided by the [Zircon](#Zircon) kernel and does not
 appear in the filesystem or a package.  It provides the Zircon System Call API/ABI to userspace
-processes in the form of an ELF library that's "always there." In the Fuchsia SDK and [Zircon DDK]
-(#DDK) it exists as `libzircon.so` for the purpose of having something to pass to the linker
+processes in the form of an ELF library that's "always there." In the Fuchsia SDK and [Zircon
+DDK](#DDK) it exists as `libzircon.so` for the purpose of having something to pass to the linker
 representing the vDSO.
 
 #### **VMAR**
