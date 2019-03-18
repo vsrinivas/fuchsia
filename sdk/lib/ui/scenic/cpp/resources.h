@@ -302,6 +302,7 @@ class ViewHolder;
 class EntityNode : public ContainerNode {
  public:
   explicit EntityNode(Session* session);
+  EntityNode(EntityNode&& moved);
   ~EntityNode();
 
   void SetClip(uint32_t clip_id, bool clip_to_self);
@@ -350,6 +351,7 @@ class ViewHolder final : public Resource {
              const std::string& debug_name);
   ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,
              const std::string& debug_name);
+  ViewHolder(ViewHolder&& moved);
   ~ViewHolder();
 
   // Set properties of the attached view.
@@ -381,6 +383,7 @@ class View final : public Resource {
   View(Session* session, zx::eventpair token, const std::string& debug_name);
   View(Session* session, fuchsia::ui::views::ViewToken token,
        const std::string& debug_name);
+  View(View&& moved);
   ~View();
 
   void AddChild(const Node& child) const;

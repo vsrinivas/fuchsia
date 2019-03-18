@@ -272,6 +272,10 @@ EntityNode::EntityNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateEntityNodeCmd(id()));
 }
 
+EntityNode::EntityNode(EntityNode&& moved) : ContainerNode(std::move(moved)) {}
+
+EntityNode::~EntityNode() = default;
+
 void EntityNode::Attach(const ViewHolder& view_holder) {
   session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
 }
@@ -279,8 +283,6 @@ void EntityNode::Attach(const ViewHolder& view_holder) {
 void EntityNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
   session()->Enqueue(NewTakeSnapshotCmdHACK(id(), std::move(callback)));
 }
-
-EntityNode::~EntityNode() = default;
 
 void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
   session()->Enqueue(NewSetClipCmd(id(), clip_id, clip_to_self));
@@ -337,6 +339,8 @@ ViewHolder::ViewHolder(Session* session,
   session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
 }
 
+ViewHolder::ViewHolder(ViewHolder&& moved) : Resource(std::move(moved)) {}
+
 ViewHolder::~ViewHolder() = default;
 
 void ViewHolder::SetViewProperties(const float bounding_box_min[3],
@@ -367,6 +371,8 @@ View::View(Session* session, fuchsia::ui::views::ViewToken token,
     : Resource(session) {
   session->Enqueue(NewCreateViewCmd(id(), std::move(token), debug_name));
 }
+
+View::View(View&& moved) : Resource(std::move(moved)) {}
 
 View::~View() = default;
 
