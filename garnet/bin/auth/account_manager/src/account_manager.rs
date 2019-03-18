@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId};
+use account_common::{
+    AccountAuthState, AccountManagerError, FidlAccountAuthState, FidlLocalAccountId, LocalAccountId,
+};
 use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::AuthProviderConfig;
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
 use fidl_fuchsia_auth_account::{
-    AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
+    AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Status,
 };
 use futures::lock::Mutex;
@@ -21,6 +23,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::account_event_emitter::{AccountEvent, AccountEventEmitter};
 use crate::account_handler_connection::AccountHandlerConnection;
 use crate::account_handler_context::AccountHandlerContext;
 
@@ -55,6 +58,9 @@ pub struct AccountManager {
 
     /// An object to service requests for contextual information from AccountHandlers.
     context: Arc<AccountHandlerContext>,
+
+    /// Contains the client ends of all AccountListeners which are subscribed to account events.
+    event_emitter: AccountEventEmitter,
 }
 
 impl AccountManager {
@@ -71,6 +77,7 @@ impl AccountManager {
                 &DEFAULT_AUTH_PROVIDER_CONFIG,
                 account_dir_parent,
             )),
+            event_emitter: AccountEventEmitter::new(),
         })
     }
 
@@ -99,7 +106,7 @@ impl AccountManager {
                 responder.send(await!(self.get_account(id.into(), auth_context_provider, account)))
             }
             AccountManagerRequest::RegisterAccountListener { listener, options, responder } => {
-                responder.send(self.register_account_listener(listener, options))
+                responder.send(await!(self.register_account_listener(listener, options)))
             }
             AccountManagerRequest::RemoveAccount { id, responder } => {
                 responder.send(await!(self.remove_account(id.into())))
@@ -145,7 +152,7 @@ impl AccountManager {
         await!(self.ids_to_handlers.lock()).keys().map(|id| id.clone().into()).collect()
     }
 
-    async fn get_account_auth_states(&self) -> (Status, Vec<AccountAuthState>) {
+    async fn get_account_auth_states(&self) -> (Status, Vec<FidlAccountAuthState>) {
         // TODO(jsankey): Collect authentication state from AccountHandler instances rather than
         // returning a fixed value. This will involve opening account handler connections (in
         // parallel) for all of the accounts where encryption keys for the account's data partition
@@ -155,7 +162,7 @@ impl AccountManager {
             Status::Ok,
             ids_to_handlers_lock
                 .keys()
-                .map(|id| AccountAuthState {
+                .map(|id| FidlAccountAuthState {
                     account_id: id.clone().into(),
                     auth_state: DEFAULT_AUTH_STATE,
                 })
@@ -185,13 +192,32 @@ impl AccountManager {
         )
     }
 
-    fn register_account_listener(
+    async fn register_account_listener(
         &self,
-        _listener: ClientEnd<AccountListenerMarker>,
-        _options: AccountListenerOptions,
+        listener: ClientEnd<AccountListenerMarker>,
+        options: AccountListenerOptions,
     ) -> Status {
-        // TODO(jsankey): Implement this method
-        Status::InternalError
+        let ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        let account_auth_states: Vec<AccountAuthState> = ids_to_handlers_lock
+            .keys()
+            // TODO(dnordstrom): Get the real auth states
+            .map(|id| AccountAuthState { account_id: id.clone() })
+            .collect();
+        std::mem::drop(ids_to_handlers_lock);
+        let proxy = match listener.into_proxy() {
+            Ok(proxy) => proxy,
+            Err(err) => {
+                warn!("Could not convert AccountListener client end to proxy {:?}", err);
+                return Status::InvalidRequest;
+            }
+        };
+        match await!(self.event_emitter.add_listener(proxy, options, &account_auth_states)) {
+            Ok(()) => Status::Ok,
+            Err(err) => {
+                warn!("Could not instantiate AccountListener client {:?}", err);
+                Status::UnknownError
+            }
+        }
     }
 
     async fn remove_account(&self, id: LocalAccountId) -> Status {
@@ -205,6 +231,8 @@ impl AccountManager {
                 await!(account_handler.terminate());
             }
         }
+        let event = AccountEvent::AccountRemoved(id.clone());
+        await!(self.event_emitter.publish(&event));
         Status::Ok
     }
 
@@ -234,6 +262,8 @@ impl AccountManager {
             return (Status::UnknownError, None);
         }
         ids_to_handlers_lock.insert(account_id.clone(), Some(account_handler));
+        let event = AccountEvent::AccountAdded(account_id.clone());
+        await!(self.event_emitter.publish(&event));
         (Status::Ok, Some(account_id.into()))
     }
 
@@ -250,8 +280,11 @@ impl AccountManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
-    use fidl_fuchsia_auth_account::{AccountManagerProxy, AccountManagerRequestStream};
+    use fidl::endpoints::{create_request_stream, RequestStream};
+    use fidl_fuchsia_auth::AuthChangeGranularity;
+    use fidl_fuchsia_auth_account::{
+        AccountListenerRequest, AccountManagerProxy, AccountManagerRequestStream,
+    };
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
 
@@ -285,6 +318,7 @@ mod tests {
                 existing_ids.into_iter().map(|id| (LocalAccountId::new(id), None)).collect(),
             ),
             context: Arc::new(AccountHandlerContext::new(&vec![], TEST_ACCOUNT_DIR)),
+            event_emitter: AccountEventEmitter::new(),
         }
     }
 
@@ -339,6 +373,76 @@ mod tests {
                 Ok(())
             },
         );
+    }
+
+    /// Sets up an AccountListener which receives two events, init and remove.
+    #[test]
+    fn test_account_listener() {
+        let mut options = AccountListenerOptions {
+            initial_state: true,
+            add_account: true,
+            remove_account: true,
+            granularity: AuthChangeGranularity { summary_changes: false },
+        };
+
+        // TODO(dnordstrom): Use run_until_stalled macro instead.
+        request_stream_test(create_test_object(vec![1, 2]), async move |proxy| {
+            let (client_end, mut stream) =
+                create_request_stream::<AccountListenerMarker>().unwrap();
+            let serve_fut = async move {
+                let request = await!(stream.try_next()).expect("stream error");
+                if let Some(AccountListenerRequest::OnInitialize {
+                    account_auth_states,
+                    responder,
+                }) = request
+                {
+                    assert_eq!(
+                        account_auth_states,
+                        vec![
+                            FidlAccountAuthState::from(&AccountAuthState {
+                                account_id: LocalAccountId::new(1)
+                            }),
+                            FidlAccountAuthState::from(&AccountAuthState {
+                                account_id: LocalAccountId::new(2)
+                            }),
+                        ]
+                    );
+                    responder.send().unwrap();
+                } else {
+                    panic!("Unexpected message received");
+                };
+                let request = await!(stream.try_next()).expect("stream error");
+                if let Some(AccountListenerRequest::OnAccountRemoved { id, responder }) = request {
+                    assert_eq!(LocalAccountId::from(id), LocalAccountId::new(1));
+                    responder.send().unwrap();
+                } else {
+                    panic!("Unexpected message received");
+                };
+                if let Some(_) = await!(stream.try_next()).expect("stream error") {
+                    panic!("Unexpected message, channel should be closed");
+                }
+            };
+            let request_fut = async move {
+                // The registering itself triggers the init event.
+                assert_eq!(
+                    await!(proxy.register_account_listener(client_end, &mut options)).unwrap(),
+                    Status::Ok
+                );
+
+                // Non-existing account removal shouldn't trigger any event.
+                assert_eq!(
+                    await!(proxy.remove_account(LocalAccountId::new(42).as_mut())).unwrap(),
+                    Status::NotFound
+                );
+                // Removal of existing account triggers the remove event.
+                assert_eq!(
+                    await!(proxy.remove_account(LocalAccountId::new(1).as_mut())).unwrap(),
+                    Status::Ok
+                );
+            };
+            await!(request_fut.join(serve_fut));
+            Ok(())
+        });
     }
 
 }
