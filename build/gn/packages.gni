@@ -9,9 +9,6 @@ declare_args() {
 
   # These arguments should be set by the product definition gni file.
 
-  # A list of labels for meta packages to be included in the monolith.
-  meta_package_labels = []
-
   # a list of packages included in OTA images, base system images, and the
   # distribution repository.
   monolith = []

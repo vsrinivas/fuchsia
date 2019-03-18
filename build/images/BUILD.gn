@@ -32,6 +32,20 @@ declare_args() {
   # You can still build //build/images:netboot explicitly even if enable_netboot is false.
   enable_netboot = false
 
+  # A list of labels for meta packages to be included in the monolith.
+  meta_package_labels = []
+
+  # a list of labels for packages to include in OTA images, base system images,
+  # and the distribution repository.
+  base_package_labels = []
+
+  # a list of labels for packages to pre-cached on the system (also added to
+  # the distribution repository)
+  cache_package_labels = []
+
+  # a list of labels for packages to add to the distribution repository
+  universe_package_labels = []
+
   # arguments to fx flash script
   zircon_a_partition = ""
   zircon_b_partition = ""
@@ -94,19 +108,19 @@ group("meta_packages") {
 group("monolith_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = monolith_package_labels
+  public_deps = monolith_package_labels + base_package_labels
 }
 
 group("preinstall_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = preinstall_package_labels
+  public_deps = preinstall_package_labels + cache_package_labels
 }
 
 group("available_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = available_package_labels + [
+  public_deps = available_package_labels + universe_package_labels + [
                   ":monolith_packages",
                   ":preinstall_packages",
                 ]
