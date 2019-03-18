@@ -105,8 +105,10 @@ template("fidl") {
           fidlgen_generator = "overnet_internal"
           output_stem = "cpp/overnet_internal"
           additional_public_deps =
-              hlcpp_public_deps +
-              [ "//src/connectivity/overnet/lib/protocol:fidl_stream" ]
+              hlcpp_public_deps + [
+                "//src/connectivity/overnet/lib/protocol:fidl_stream",
+                ":$target_name",
+              ]
         },
       ]
       generators += llcpp_generators
