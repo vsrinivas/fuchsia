@@ -59,9 +59,10 @@ class TestModule {
  public:
   TestPoint initialized_{"Parent module initialized"};
   TestModule(modular::ModuleHost* module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
-      : module_host_(module_host) {
+             fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
+                 view_provider_request)
+      : module_host_(module_host),
+        app_view_provider_(std::move(view_provider_request)) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
     TestStartWithModuleControllerRequest();
@@ -121,6 +122,10 @@ class TestModule {
   modular::ModuleHost* module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
   fuchsia::modular::ModuleControllerPtr child_module_second_;
+
+  // We keep the view provider around so that story shell can hold a view for
+  // us, but don't do anything with it.
+  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> app_view_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };

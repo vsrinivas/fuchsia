@@ -21,8 +21,9 @@ namespace {
 class TestModule : fuchsia::modular::IntentHandler {
  public:
   TestModule(modular::ModuleHost* module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/) {
+             fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
+                 view_provider_request)
+      : app_view_provider_(std::move(view_provider_request)) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     module_host->startup_context()
         ->outgoing()
@@ -54,6 +55,9 @@ class TestModule : fuchsia::modular::IntentHandler {
   }
 
   fidl::BindingSet<fuchsia::modular::IntentHandler> bindings_;
+  // We keep the view provider around so that story shell can hold a view for
+  // us, but don't do anything with it.
+  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> app_view_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };
