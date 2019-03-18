@@ -84,12 +84,6 @@ class DartLibrary(object):
         self.deps = []
 
 
-class Images(object):
-
-    def __init__(self, arches):
-        self.arches = arches
-
-
 class TestWorkspace(object):
 
     def __init__(self, sdk_path, with_cc, with_dart):

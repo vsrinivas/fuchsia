@@ -277,28 +277,6 @@ class BazelBuilder(Frontend):
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
 
 
-    def install_image_atom(self, atom):
-        # 'image_file' contains a relative path that is good enough to be stored
-        # under the top-level SDK directory. No 'root' or 'destination' is
-        # needed.
-        root = ''
-        dest = ''
-        target_architectures = {}
-        for image_file in atom['file'].itervalues():
-            self._copy_file(image_file, root, dest)
-            # The image file looks like this: target/x64/fuchsia.zbi
-            # where x64 is the architecture
-            target, arch = os.path.split(os.path.dirname(image_file))
-            if target not in target_architectures:
-                target_architectures[target] = set()
-            target_architectures[target].add(arch)
-
-        for target in target_architectures:
-            data = model.Images(list(target_architectures[target]))
-            self.write_file(self.dest(os.path.join(target, 'BUILD')), 'images',
-                            data)
-
-
 def main():
     parser = argparse.ArgumentParser(
             description='Lays out a Bazel workspace for a given SDK tarball.')

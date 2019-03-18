@@ -97,7 +97,7 @@ class BazelTester(object):
                 targets = list(all_targets - all_ignored_targets)
 
         # Build the tests targets.
-        print('Building test targets')
+        print('Building targets')
         if self._build(targets):
             return False
 
@@ -105,6 +105,9 @@ class BazelTester(object):
         args = ('attr("tags", "^((?!compile-only).)*$",' +
                 ' kind(".*test rule", //...))')
         test_targets = list(self._query(args))
+        if not test_targets:
+            print('No test to run, done')
+            return True
         print('Running test targets')
         return self._test(test_targets) == 0
 
