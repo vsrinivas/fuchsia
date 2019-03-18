@@ -95,6 +95,8 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
+set -e
+
 function find_config {
   local config_type="$1"
   local config_name="$2"
@@ -310,30 +312,30 @@ function main {
     gn_args+=" use_ccache=true"
   fi
 
-  if [[ ${#universe[@]} -ne 0 ]]; then
-    gn_args+=" available+=["
-    for package in ${universe[@]}; do
-      gn_args+="\"${package}\","
-    done
-    gn_args+="]"
-  fi
+  gn_args+="
+# See: fx args --list=base_package_labels
+base_package_labels+=[]
+
+# See: fx args --list=cache_package_labels
+cache_package_labels+=[]
+
+# See: fx args --list=universe_package_labels
+universe_package_labels+=["
+
+  for package in ${universe[@]}; do
+    gn_args+="\"${package}\","
+  done
+  gn_args+="]"
 
   if [[ -n "${variant}" ]]; then
     gn_args+=" select_variant=[${variant}]"
   fi
 
-  # Using a subshell with -x prints out the gn command precisely with shell
-  # quoting so a cut&paste to the command line works.  Always show the real
-  # meaning of what this script does so everyone learns how GN works.
-  (
-    set -x -e
-    # Zircon's `gn gen` phase has to be done before Fuchsia's `gn gen`.
-    # The former produces the legacy-$cpu.json file consumed by the latter.
-    "${FUCHSIA_DIR}/scripts/build-zircon.sh" "${zircon_args[@]}"
-    "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" \
-                                   "${gn_switches[@]}" --args="${gn_args}" "$@"
-  # If GN failed, don't update .config.
-  ) || return
+  # Zircon's `gn gen` phase has to be done before Fuchsia's `gn gen`.
+  # The former produces the legacy-$cpu.json file consumed by the latter.
+  "${FUCHSIA_DIR}/scripts/build-zircon.sh" "${zircon_args[@]}"
+  "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" \
+                                  "${gn_switches[@]}" --args="${gn_args}" "$@"
 
   fx-config-write "${config_build_dir}"
 
