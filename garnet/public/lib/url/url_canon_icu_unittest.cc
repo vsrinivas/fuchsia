@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "lib/url/url_canon_icu.h"
-#include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_stdstring.h"
 #include "lib/url/url_test_utils.h"
@@ -14,15 +13,6 @@ namespace url {
 using test_utils::WStringToUTF16;
 
 namespace {
-
-class URLCanonIcuTest : public url::test::IcuUnitTestBase {
- public:
-  URLCanonIcuTest() {}
-  ~URLCanonIcuTest() override {}
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(URLCanonIcuTest);
-};
 
 // Wrapper around a UConverter object that managers creation and destruction.
 class UConvScoper {
@@ -44,7 +34,7 @@ class UConvScoper {
   UConverter* converter_;
 };
 
-TEST_F(URLCanonIcuTest, ICUCharsetConverter) {
+TEST(URLCanonIcuTest, ICUCharsetConverter) {
   struct ICUCase {
     const wchar_t* input;
     const char* encoding;
@@ -97,7 +87,7 @@ TEST_F(URLCanonIcuTest, ICUCharsetConverter) {
   }
 }
 
-TEST_F(URLCanonIcuTest, QueryWithConverter) {
+TEST(URLCanonIcuTest, QueryWithConverter) {
   struct QueryCase {
     const char* input8;
     const char* encoding;

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 static_library("url") {
@@ -51,51 +52,55 @@ static_library("url") {
   ]
 }
 
-# TODO(kulakowski) Restore app tests. Adding a dummy target means not
-# having to change the packages manifest, which is JSON and hence
-# commentless.
-executable("url_apptests") {
+source_set("url_unittests_main") {
   testonly = true
   sources = [
-    "dummy_unittest.cc",
+    "url_unittests_main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//third_party/icu",
   ]
 }
 
-package("url_tests") {
+executable("url_unittests") {
   testonly = true
+  sources = [
+    "gurl_unittest.cc",
+    "url_canon_icu_unittest.cc",
+    "url_canon_unittest.cc",
+    "url_parse_unittest.cc",
+    "url_test_utils.h",
+    "url_util_unittest.cc",
+  ]
 
   deps = [
-    ":url_apptests",
+    ":url",
+    ":url_unittests_main",
+    "//third_party/googletest:gtest",
+    "//third_party/icu",
+  ]
+}
+
+test_package("url_tests") {
+  deps = [
+    ":url_unittests",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
   ]
 
   tests = [
     {
-      name = "url_apptests"
+      name = "url_unittests"
       environments = basic_envs
     },
   ]
 }
-# mojo_native_application("url_apptests") {
-#   testonly = true
-#   sources = [
-#     "gurl_unittest.cc",
-#     "test/icu_unittest_base.h",
-#     "url_canon_icu_unittest.cc",
-#     "url_canon_unittest.cc",
-#     "url_parse_unittest.cc",
-#     "url_test_utils.h",
-#     "url_util_unittest.cc",
-#   ]
-#
-#   deps = [
-#     ":url",
-#     "//garnet/public/lib/fxl",
-#     "//mojo/public/cpp/application:standalone",
-#     "//mojo/public/cpp/application:test_support_standalone",
-#     "//mojo/system",
-#     "//third_party/googletest:gtest",
-#     "//third_party/icu",
-#   ]
-#
-#   libs = [ "zircon" ]
-# }

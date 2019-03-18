@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_internal.h"
@@ -16,15 +15,6 @@
 namespace url {
 
 namespace {
-
-class URLCanonTest : public url::test::IcuUnitTestBase {
- public:
-  URLCanonTest() {}
-  ~URLCanonTest() override {}
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(URLCanonTest);
-};
 
 struct ComponentCase {
   const char* input;
@@ -69,7 +59,7 @@ std::string BytesToHexString(unsigned char bytes[16], size_t length) {
 
 }  // namespace
 
-TEST_F(URLCanonTest, DoAppendUTF8) {
+TEST(URLCanonTest, DoAppendUTF8) {
   struct UTF8Case {
     unsigned input;
     const char* output;
@@ -100,7 +90,7 @@ TEST_F(URLCanonTest, DoAppendUTF8) {
 #else
 #define MAYBE_DoAppendUTF8Invalid DISABLED_DoAppendUTF8Invalid
 #endif
-TEST_F(URLCanonTest, MAYBE_DoAppendUTF8Invalid) {
+TEST(URLCanonTest, MAYBE_DoAppendUTF8Invalid) {
   std::string out_str;
   StdStringCanonOutput output(&out_str);
   // Invalid code point (too large).
@@ -114,7 +104,7 @@ TEST_F(URLCanonTest, MAYBE_DoAppendUTF8Invalid) {
 }
 #endif  // defined(GTEST_HAS_DEATH_TEST)
 
-TEST_F(URLCanonTest, UTF) {
+TEST(URLCanonTest, UTF) {
   // Low-level test that we handle reading, canonicalization, and writing
   // UTF-8/UTF-16 strings properly.
   struct UTFCase {
@@ -158,7 +148,7 @@ TEST_F(URLCanonTest, UTF) {
   }
 }
 
-TEST_F(URLCanonTest, Scheme) {
+TEST(URLCanonTest, Scheme) {
   // Here, we're mostly testing that unusual characters are handled properly.
   // The canonicalizer doesn't do any parsing or whitespace detection. It will
   // also do its best on error, and will escape funny sequences (these won't be
@@ -212,7 +202,7 @@ TEST_F(URLCanonTest, Scheme) {
   EXPECT_EQ(0U, out_comp.len());
 }
 
-TEST_F(URLCanonTest, Host) {
+TEST(URLCanonTest, Host) {
   IPAddressCase host_cases[] = {
       // Basic canonicalization, uppercase should be converted to lowercase.
       {"GoOgLe.CoM", "google.com", Component(0, 10), CanonHostInfo::NEUTRAL, -1,
@@ -472,7 +462,7 @@ TEST_F(URLCanonTest, Host) {
   }
 }
 
-TEST_F(URLCanonTest, IPv4) {
+TEST(URLCanonTest, IPv4) {
   IPAddressCase host_cases[] = {
       // Empty is not an IP address.
       {"", "", Component(), CanonHostInfo::NEUTRAL, -1, ""},
@@ -595,7 +585,7 @@ TEST_F(URLCanonTest, IPv4) {
   }
 }
 
-TEST_F(URLCanonTest, IPv6) {
+TEST(URLCanonTest, IPv6) {
   IPAddressCase cases[] = {
       // Empty is not an IP address.
       {"", "", Component(), CanonHostInfo::NEUTRAL, -1, ""},
@@ -746,7 +736,7 @@ TEST_F(URLCanonTest, IPv6) {
   }
 }
 
-TEST_F(URLCanonTest, IPEmpty) {
+TEST(URLCanonTest, IPEmpty) {
   std::string out_str1;
   StdStringCanonOutput output1(&out_str1);
   CanonHostInfo host_info;
@@ -760,7 +750,7 @@ TEST_F(URLCanonTest, IPEmpty) {
   EXPECT_FALSE(host_info.IsIPAddress());
 }
 
-TEST_F(URLCanonTest, UserInfo) {
+TEST(URLCanonTest, UserInfo) {
   // Note that the canonicalizer should escape and treat empty components as
   // not being there.
 
@@ -821,7 +811,7 @@ TEST_F(URLCanonTest, UserInfo) {
   }
 }
 
-TEST_F(URLCanonTest, Port) {
+TEST(URLCanonTest, Port) {
   // We only need to test that the number gets properly put into the output
   // buffer. The parser unit tests will test scanning the number correctly.
   //
@@ -864,7 +854,7 @@ TEST_F(URLCanonTest, Port) {
   }
 }
 
-TEST_F(URLCanonTest, Path) {
+TEST(URLCanonTest, Path) {
   DualComponentCase path_cases[] = {
       // ----- path collapsing tests -----
       {"/././foo", "/foo", Component(0, 4), true},
@@ -973,7 +963,7 @@ TEST_F(URLCanonTest, Path) {
   EXPECT_EQ("/ab%00c", out_str);
 }
 
-TEST_F(URLCanonTest, Query) {
+TEST(URLCanonTest, Query) {
   struct QueryCase {
     const char* input8;
     const char* expected;
@@ -1023,7 +1013,7 @@ TEST_F(URLCanonTest, Query) {
   EXPECT_EQ("?a%20%00z%01", out_str);
 }
 
-TEST_F(URLCanonTest, Ref) {
+TEST(URLCanonTest, Ref) {
   // Refs are trivial, it just checks the encoding.
   DualComponentCase ref_cases[] = {
       // Regular one, we shouldn't escape spaces, et al.
@@ -1076,7 +1066,7 @@ TEST_F(URLCanonTest, Ref) {
   EXPECT_EQ("#abz", out_str);
 }
 
-TEST_F(URLCanonTest, CanonicalizeStandardURL) {
+TEST(URLCanonTest, CanonicalizeStandardURL) {
   // The individual component canonicalize tests should have caught the cases
   // for each of those components. Here, we just need to test that the various
   // parts are included or excluded properly, and have the correct separators.
@@ -1145,7 +1135,7 @@ TEST_F(URLCanonTest, CanonicalizeStandardURL) {
   }
 }
 
-TEST_F(URLCanonTest, CanonicalizeFileURL) {
+TEST(URLCanonTest, CanonicalizeFileURL) {
   struct URLCase {
     const char* input;
     const char* expected;
@@ -1208,7 +1198,7 @@ TEST_F(URLCanonTest, CanonicalizeFileURL) {
   }
 }
 
-TEST_F(URLCanonTest, CanonicalizePathURL) {
+TEST(URLCanonTest, CanonicalizePathURL) {
   // Path URLs should get canonicalized schemes but nothing else.
   struct PathCase {
     const char* input;
@@ -1245,7 +1235,7 @@ TEST_F(URLCanonTest, CanonicalizePathURL) {
   }
 }
 
-TEST_F(URLCanonTest, CanonicalizeMailtoURL) {
+TEST(URLCanonTest, CanonicalizeMailtoURL) {
   struct URLCase {
     const char* input;
     size_t url_len_override;  // if != 0, use this instead of strlen
@@ -1318,7 +1308,7 @@ TEST_F(URLCanonTest, CanonicalizeMailtoURL) {
   }
 }
 
-TEST_F(URLCanonTest, IntToString) {
+TEST(URLCanonTest, IntToString) {
   // We fill the buffer with 0xff to ensure that it's getting properly
   // null-terminated. We also allocate one byte more than what we tell
   // IntToString about, and ensure that the extra byte is untouched.
@@ -1373,7 +1363,7 @@ static bool ParsedIsEqual(const Parsed& a, const Parsed& b) {
          ComponentIsEqual(a.query, b.query) && ComponentIsEqual(a.ref, b.ref);
 }
 
-TEST_F(URLCanonTest, ResolveRelativeURL) {
+TEST(URLCanonTest, ResolveRelativeURL) {
   struct RelativeCase {
     const char* base;       // Input base URL: MUST BE CANONICAL
     bool is_base_hier;      // Is the base URL hierarchical
