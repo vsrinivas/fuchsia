@@ -10,6 +10,8 @@ meta_package_labels += [ "//build/images:shell-commands" ]
 
 monolith += [
   "garnet/packages/config/kernel_crash_checker",
+  "garnet/packages/prod/crashpad_agent",
+  "garnet/packages/prod/feedback_agent",
   "garnet/packages/prod/kernel_crash_checker",
   "garnet/packages/products/base",
 ]

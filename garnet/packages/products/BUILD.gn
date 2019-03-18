@@ -146,7 +146,6 @@ group("base") {
     "//garnet/packages/prod:bluetooth_profiles",
     "//garnet/packages/prod:build_info",
     "//garnet/packages/prod:cobalt_client",
-    "//garnet/packages/prod:crashpad_agent",
     "//garnet/packages/prod:device_settings",
     "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:logger",
