@@ -812,7 +812,8 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
                           &sb->MutableInfo()->inode_count);
 
     fbl::unique_ptr<InodeManager> inodes;
-    if ((status = InodeManager::Create(bc.get(), sb.get(), &transaction, std::move(inode_allocator_meta),
+    if ((status = InodeManager::Create(bc.get(), sb.get(), &transaction,
+                                       std::move(inode_allocator_meta),
                                        ino_start_block, info->inode_count, &inodes)) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
         return status;

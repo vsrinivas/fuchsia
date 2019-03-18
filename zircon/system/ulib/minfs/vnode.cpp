@@ -191,17 +191,18 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
         }
     }
 
-    fs::ReadTxn transaction(fs_->bc_.get());
+    fs::ReadTxn read_transaction(fs_->bc_.get());
 
     for (uint32_t i = 0; i < count; i++) {
         blk_t ibno;
         if ((ibno = iarray[i]) != 0) {
             fs_->ValidateBno(ibno);
-            transaction.Enqueue(vmoid_indirect_.id, offset + i, ibno + fs_->Info().dat_block, 1);
+            read_transaction.Enqueue(vmoid_indirect_.id, offset + i,
+                                     ibno + fs_->Info().dat_block, 1);
         }
     }
 
-    return transaction.Transact();
+    return read_transaction.Transact();
 }
 
 zx_status_t VnodeMinfs::LoadIndirectWithinDoublyIndirect(uint32_t dindex) {
@@ -961,7 +962,8 @@ zx_status_t VnodeMinfs::DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs> vndi
     vn->RemoveInodeLink(args->transaction);
 
     de->ino = args->ino;
-    status = vndir->WriteExactInternal(args->transaction, de, DirentSize(de->namelen), args->offs.off);
+    status = vndir->WriteExactInternal(args->transaction, de, DirentSize(de->namelen),
+                                       args->offs.off);
     if (status != ZX_OK) {
         return status;
     }
@@ -1355,8 +1357,9 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
     size_t max_size = off + len;
 #endif
 
-    // Write to data blocks must be done in a separate transaction from the metadata updates to ensure that
-    // all user data goes out to disk before associated metadata.
+    // Write to data blocks must be done in a separate transaction from the metadata updates to
+    // ensure that all user data goes out to disk before associated metadata.
+    fbl::unique_ptr<Transaction> data_state;
     if (!IsDirectory()) {
         // Since this transaction is only writing user data, no block reservation is needed.
         transaction->InitDataWork();
@@ -1773,7 +1776,8 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
 zx_status_t VnodeMinfs::GetMetrics(fidl_txn_t* transaction) {
     fuchsia_minfs_Metrics metrics;
     zx_status_t status = fs_->GetMetrics(&metrics);
-    return fuchsia_minfs_MinfsGetMetrics_reply(transaction, status, status == ZX_OK ? &metrics : nullptr);
+    return fuchsia_minfs_MinfsGetMetrics_reply(transaction, status,
+                                               status == ZX_OK ? &metrics : nullptr);
 }
 
 zx_status_t VnodeMinfs::ToggleMetrics(bool enable, fidl_txn_t* transaction) {
@@ -1910,7 +1914,8 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
             if (bno != 0) {
                 size_t adjust = len % kMinfsBlockSize;
 #ifdef __Fuchsia__
-                // Write to data blocks must be done in a separate transaction from the metadata updates.
+                // Write to data blocks must be done in a separate transaction from the metadata
+                // updates.
                 if (!IsDirectory()) {
                     // No more than 1 block will be allocated here. A new block is only required if
                     // the block at |len| already exists. If any indirect blocks would be needed,
@@ -1934,7 +1939,8 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
                 }
 
                 if (IsDirectory()) {
-                    transaction->GetWork()->Enqueue(vmo_.get(), rel_bno, bno + fs_->Info().dat_block, 1);
+                    transaction->GetWork()->Enqueue(vmo_.get(), rel_bno,
+                                                    bno + fs_->Info().dat_block, 1);
                 } else {
                     transaction->InitDataWork();
                     transaction->GetDataWork()->Enqueue(vmo_.get(), rel_bno,

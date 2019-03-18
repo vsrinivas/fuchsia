@@ -37,14 +37,15 @@ zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_bl
 }
 #endif
 
-void PersistentStorage::Load(fs::ReadTxn* txn, ReadData data) {
-    txn->Enqueue(data, 0, metadata_.MetadataStartBlock(), PoolBlocks());
+void PersistentStorage::Load(fs::ReadTxn* read_transaction, ReadData data) {
+    read_transaction->Enqueue(data, 0, metadata_.MetadataStartBlock(), PoolBlocks());
 }
 
-zx_status_t PersistentStorage::Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) {
+zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData data,
+                                      GrowMapCallback grow_map) {
 #ifdef __Fuchsia__
     TRACE_DURATION("minfs", "Minfs::PersistentStorage::Extend");
-    ZX_DEBUG_ASSERT(txn != nullptr);
+    ZX_DEBUG_ASSERT(write_transaction != nullptr);
     if (!metadata_.UsingFvm()) {
         return ZX_ERR_NO_SPACE;
     }
@@ -99,18 +100,19 @@ zx_status_t PersistentStorage::Extend(WriteTxn* txn, WriteData data, GrowMapCall
 
     metadata_.Fvm().SetDataSlices(data_slices_new);
     metadata_.SetPoolTotal(pool_size);
-    sb_->Write(txn);
+    sb_->Write(write_transaction);
 
     // Update the block bitmap.
-    PersistRange(txn, data, old_pool_size, pool_size - old_pool_size);
+    PersistRange(write_transaction, data, old_pool_size, pool_size - old_pool_size);
     return ZX_OK;
 #else
     return ZX_ERR_NO_SPACE;
 #endif
 }
 
-void PersistentStorage::PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) {
-    ZX_DEBUG_ASSERT(txn != nullptr);
+void PersistentStorage::PersistRange(WriteTxn* write_transaction, WriteData data, size_t index,
+                                     size_t count) {
+    ZX_DEBUG_ASSERT(write_transaction != nullptr);
     // Determine the blocks containing the first and last indices.
     blk_t first_rel_block = static_cast<blk_t>(index / kMinfsBlockBits);
     blk_t last_rel_block = static_cast<blk_t>((index + count - 1) / kMinfsBlockBits);
@@ -119,19 +121,19 @@ void PersistentStorage::PersistRange(WriteTxn* txn, WriteData data, size_t index
     blk_t block_count = last_rel_block - first_rel_block + 1;
 
     blk_t abs_block = metadata_.MetadataStartBlock() + first_rel_block;
-    txn->Enqueue(data, first_rel_block, abs_block, block_count);
+    write_transaction->Enqueue(data, first_rel_block, abs_block, block_count);
 }
 
-void PersistentStorage::PersistAllocate(WriteTxn* txn, size_t count) {
-    ZX_DEBUG_ASSERT(txn != nullptr);
+void PersistentStorage::PersistAllocate(WriteTxn* write_transaction, size_t count) {
+    ZX_DEBUG_ASSERT(write_transaction != nullptr);
     metadata_.PoolAllocate(static_cast<blk_t>(count));
-    sb_->Write(txn);
+    sb_->Write(write_transaction);
 }
 
-void PersistentStorage::PersistRelease(WriteTxn* txn, size_t count) {
-    ZX_DEBUG_ASSERT(txn != nullptr);
+void PersistentStorage::PersistRelease(WriteTxn* write_transaction, size_t count) {
+    ZX_DEBUG_ASSERT(write_transaction != nullptr);
     metadata_.PoolRelease(static_cast<blk_t>(count));
-    sb_->Write(txn);
+    sb_->Write(write_transaction);
 }
 
 } // namespace minfs
