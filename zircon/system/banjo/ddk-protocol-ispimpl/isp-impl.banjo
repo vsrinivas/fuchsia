@@ -116,6 +116,6 @@ interface IspCallbacks {
 
 [Layout = "ddk-protocol"]
 interface IspImpl {
-    RegisterCallbacks(IspCallbacks cb) -> (zx.status s);
+    RegisterCallbacks(IspCallbacks intf) -> (zx.status s);
     DeRegisterCallbacks() -> (zx.status s);
 };

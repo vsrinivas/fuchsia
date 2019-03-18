@@ -61,10 +61,8 @@ public:
     static zx_status_t Create(zx_device_t* parent);
     Imx227Device(zx_device_t* device)
         : DeviceType(device), pdev_(device), i2c_(device),
-          clk_(device), mipi_(device), ispimpl_(device),
-          isp_callbacks_{&this->isp_callbacks_ops_, this} {}
+          clk_(device), mipi_(device), ispimpl_(device) {}
 
-    const isp_callbacks_t* proto() const { return &isp_callbacks_; }
     // Methods required by the ddk mixins.
     void DdkUnbind();
     void DdkRelease();
@@ -95,8 +93,6 @@ private:
     ddk::ClockProtocolClient clk_;
     ddk::MipiCsiProtocolClient mipi_;
     ddk::IspImplProtocolClient ispimpl_;
-
-    const isp_callbacks_t isp_callbacks_;
 
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);
