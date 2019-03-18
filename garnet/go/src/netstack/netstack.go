@@ -570,6 +570,9 @@ func (ns *Netstack) addLoopback() error {
 	ns.mu.countNIC++
 
 	linkID := loopback.New()
+	linkID, ifs.bridgeable = bridge.NewEndpoint(linkID)
+	ifs.endpoint = ifs.bridgeable
+
 	if sniff {
 		linkID = sniffer.New(linkID)
 	}

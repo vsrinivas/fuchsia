@@ -61,7 +61,7 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	var path string
 	if eth := ifs.eth; eth != nil {
 		mac = &ethernet.MacAddress{}
-		copy(mac.Octets[:], ifs.statsEP.LinkAddress())
+		copy(mac.Octets[:], ifs.endpoint.LinkAddress())
 		path = eth.Path()
 	}
 
@@ -70,7 +70,7 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 		Properties: stack.InterfaceProperties{
 			Path:             path,
 			Mac:              mac,
-			Mtu:              uint32(ifs.statsEP.MTU()),
+			Mtu:              uint32(ifs.endpoint.MTU()),
 			EnablementStatus: enablementStatus,
 			PhysicalStatus:   physicalStatus,
 			Features:         ifs.mu.nic.Features,

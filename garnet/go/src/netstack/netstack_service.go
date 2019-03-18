@@ -102,7 +102,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		Addr:      fidlconv.ToNetIpAddress(ifs.mu.nic.Addr),
 		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(ifs.mu.nic.Netmask)),
 		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
-		Hwaddr:    []uint8(ifs.statsEP.LinkAddress()[:]),
+		Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
 		Ipv6addrs: toSubnets(ifs.mu.nic.Ipv6addrs),
 	}, nil
 }
