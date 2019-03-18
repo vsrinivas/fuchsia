@@ -84,6 +84,9 @@ bool LineInputBase::OnInput(char c) {
     case SpecialCharacters::kKeyControlB:
       MoveLeft();
       break;
+    case SpecialCharacters::kKeyControlD:
+      HandleEndOfFile();
+      return true;
     case SpecialCharacters::kKeyControlE:
       MoveEnd();
       break;
@@ -299,6 +302,11 @@ void LineInputBase::HandleEndOfTransimission() {
   pos_ -= diff;
   cur_line() = std::move(new_line);
   RepaintLine();
+}
+
+void LineInputBase::HandleEndOfFile() {
+  eof_ = true;
+  editing_ = false;
 }
 
 void LineInputBase::HandleFormFeed() {

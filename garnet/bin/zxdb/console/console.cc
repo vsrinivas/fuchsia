@@ -224,7 +224,10 @@ void Console::OnFDReadable(int fd) {
   char ch;
   while (read(STDIN_FILENO, &ch, 1) > 0) {
     if (line_input_.OnInput(ch)) {
-      Result result = ProcessInputLine(line_input_.line());
+      std::string line = line_input_.line();
+      if (line_input_.eof())
+        line = "quit";
+      Result result = ProcessInputLine(line);
       if (result == Result::kQuit)
         return;
       line_input_.BeginReadLine();

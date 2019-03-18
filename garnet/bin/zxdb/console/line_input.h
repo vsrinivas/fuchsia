@@ -17,6 +17,7 @@ namespace zxdb {
 struct SpecialCharacters {
   static constexpr char kKeyControlA = 1;
   static constexpr char kKeyControlB = 2;
+  static constexpr char kKeyControlD = 4;
   static constexpr char kKeyControlE = 5;
   static constexpr char kKeyControlF = 6;
   static constexpr char kKeyControlH = 8;
@@ -69,6 +70,9 @@ class LineInputBase {
 
   // Returns the current line text.
   const std::string& line() const { return history_[history_index_]; }
+
+  // Returns whether a Ctrl-D has been read.
+  bool eof() const { return eof_; }
 
   // Returns the current insert position.
   size_t pos() const { return pos_; }
@@ -125,6 +129,8 @@ class LineInputBase {
   void HandleNegAck();
   // EndOfTransimission is the name for Ctrl-W in ASCII world.
   void HandleEndOfTransimission();
+  // EndOfFile means Ctrl-D
+  void HandleEndOfFile();
 
   void Insert(char c);
   void MoveLeft();
@@ -150,6 +156,10 @@ class LineInputBase {
 
   // Indicates whether a line edit is in progress.
   bool editing_ = false;
+
+  // Set to true once a Ctrl-D is read, indicating that the main loop should
+  // exit.
+  bool eof_ = false;
 
   // The history is basically the line stack going back in time as indices
   // increase. The currently viewed line is at [history_index_] and this is
