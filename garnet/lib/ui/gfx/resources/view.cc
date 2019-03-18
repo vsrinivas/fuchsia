@@ -52,6 +52,8 @@ void View::LinkResolved(ViewHolder* view_holder) {
   FXL_DCHECK(!view_holder_);
   view_holder_ = view_holder;
   view_holder_->AddChild(node_);
+
+  SendViewHolderConnectedEvent();
 }
 
 void View::LinkDisconnected() {
@@ -65,6 +67,12 @@ void View::LinkDisconnected() {
   InvalidateRenderEventHandle();
 
   SendViewHolderDisconnectedEvent();
+}
+
+void View::SendViewHolderConnectedEvent() {
+  fuchsia::ui::gfx::Event event;
+  event.set_view_holder_connected({.view_id = id()});
+  session()->EnqueueEvent(std::move(event));
 }
 
 void View::SendViewHolderDisconnectedEvent() {
