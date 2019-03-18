@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"app/context"
 	"netstack/fidlconv"
@@ -37,14 +38,29 @@ type icmpOutput struct {
 }
 
 type statsOutput struct {
-	icmp icmpOutput
-	ip   netstack.IpStats
-	tcp  netstack.TcpStats
-	udp  netstack.UdpStats
+	icmp   icmpOutput
+	ip     netstack.IpStats
+	tcp    netstack.TcpStats
+	udp    netstack.UdpStats
+	totals netstack.NetInterfaceStats
 }
 
 func (h icmpHistogram) String() string {
 	return fmt.Sprintf("\t\techo request: %d\n\t\techo replies: %d", h.echoRequests, h.echoReplies)
+}
+
+type netInterfaceStats netstack.NetInterfaceStats
+
+func (s netInterfaceStats) String() string {
+	return fmt.Sprintf(
+		`%d total packets received
+%d total bytes received
+%d total packets sent
+%d total bytes sent`,
+		s.Rx.PktsTotal,
+		s.Rx.BytesTotal,
+		s.Tx.PktsTotal,
+		s.Tx.BytesTotal)
 }
 
 func (o *statsOutput) String() string {
@@ -78,7 +94,8 @@ ICMP:
 	%d ICMP messages sent
 	%d ICMP messages failed
 	ICMP output histogram:
-%v`,
+%v
+%s`,
 		o.ip.PacketsReceived,
 		o.ip.InvalidAddressesReceived,
 		o.ip.PacketsDelivered,
@@ -102,19 +119,52 @@ ICMP:
 		o.icmp.inputHistogram,
 		o.icmp.sent,
 		o.icmp.sentFailed,
-		o.icmp.outputHistogram)
+		o.icmp.outputHistogram,
+		netInterfaceStats(o.totals))
 }
 
 func (o *statsOutput) add(stats netstack.NetInterfaceStats) {
 	tx := stats.Tx
 	rx := stats.Rx
 
+	o.totals.Rx.PktsTotal += rx.PktsTotal
+	o.totals.Rx.BytesTotal += rx.BytesTotal
+	o.totals.Tx.PktsTotal += tx.PktsTotal
+	o.totals.Tx.BytesTotal += tx.BytesTotal
 	o.icmp.sent += tx.PktsEchoReq + tx.PktsEchoReqV6 + tx.PktsEchoRep + tx.PktsEchoRepV6
 	o.icmp.received += rx.PktsEchoReq + rx.PktsEchoReqV6 + rx.PktsEchoRep + rx.PktsEchoRepV6
 	o.icmp.outputHistogram.echoRequests += tx.PktsEchoReq + tx.PktsEchoReqV6
 	o.icmp.outputHistogram.echoReplies += tx.PktsEchoRep + tx.PktsEchoRepV6
 	o.icmp.inputHistogram.echoRequests += rx.PktsEchoReq + rx.PktsEchoReqV6
 	o.icmp.inputHistogram.echoReplies += rx.PktsEchoRep + rx.PktsEchoRepV6
+}
+
+func interfaceStats(a *netstatApp, name string) error {
+	nics, err := a.netstack.GetInterfaces2()
+	if err != nil {
+		errorf("Failed to get interfaces: %v\n.", err)
+		return nil
+	}
+
+	var candidate *netstack.NetInterface2
+	var found bool
+	var knownInterfaces []string
+	for i, iface := range nics {
+		knownInterfaces = append(knownInterfaces, iface.Name)
+		if strings.HasPrefix(iface.Name, name) {
+			candidate = &nics[i]
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("no interface matched %s in %s", name, knownInterfaces)
+	}
+	s, err := a.netstack.GetStats(candidate.Id)
+	if err != nil {
+		return fmt.Errorf("couldn't get stats for interface: %s", err)
+	}
+	fmt.Printf("%s\n", netInterfaceStats(s))
+	return nil
 }
 
 func dumpStats(a *netstatApp) {
@@ -208,8 +258,10 @@ func main() {
 
 	var showRouteTables bool
 	var showStats bool
+	var iface string
 	flag.BoolVar(&showRouteTables, "r", false, "Dump the Route Tables")
 	flag.BoolVar(&showStats, "s", false, "Show network statistics")
+	flag.StringVar(&iface, "interface", "", "Choose an interface")
 	flag.Parse()
 
 	req, pxy, err := netstack.NewNetstackInterfaceRequest()
@@ -221,10 +273,19 @@ func main() {
 	a.ctx.ConnectToEnvService(req)
 
 	if showRouteTables {
+		if iface != "" {
+			fmt.Printf("scoping route table to interface not supported, printing all routes:\n")
+		}
 		dumpRouteTables(a)
 	}
 	if showStats {
-		dumpStats(a)
+		if iface != "" {
+			if err := interfaceStats(a, iface); err != nil {
+				fmt.Printf("couldn't get interface stats: %s\n", err)
+			}
+		} else {
+			dumpStats(a)
+		}
 	}
 
 	if hasErrors {

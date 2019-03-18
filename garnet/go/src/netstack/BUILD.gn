@@ -36,17 +36,12 @@ package("netstack") {
 package("netstack_tools") {
   deps = [
     "ifconfig",
-    "ifinfo",
     "netstat",
   ]
 
   binaries = [
     {
       name = "ifconfig"
-      shell = true
-    },
-    {
-      name = "ifinfo"
       shell = true
     },
     {
