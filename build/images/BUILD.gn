@@ -45,7 +45,9 @@ declare_args() {
 
 assert(
     meta_package_labels != [],
-    "Missing meta_package_labels. Are you using a supported product configuration? Check your args.gn file for an import of a product configuration.")
+    "Missing meta_package_labels. Are you using a supported product configuration? " +
+    "Check your args.gn file for an import of a product configuration, and consider " +
+    "using one of the products in the `//products` or `//vendor/*/products` directories.")
 
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
