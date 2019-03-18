@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+if (is_fuchsia) {
+  test("fidl-utils") {
+    sources = [
+      "binding_tests.cpp",
+    ]
+    deps = [
+      ":fidl.test.fidlutils.c",
+      "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zircon",
+    ]
+  }
+}
+
+fidl_library("fidl.test.fidlutils") {
+  visibility = [ ":*" ]
+  sources = [
+    "binding_tests.fidl",
+  ]
+}

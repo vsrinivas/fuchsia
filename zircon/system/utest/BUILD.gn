@@ -89,6 +89,7 @@ if (current_cpu != "") {
       "fidl",
       "fidl-llcpp-interop",
       "fidl-simple",
+      "fidl-utils",
       "fit",
       "fpu",
       "fs",
