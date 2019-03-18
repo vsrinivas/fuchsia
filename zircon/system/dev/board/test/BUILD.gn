@@ -9,6 +9,7 @@ simple_drivers = [
   "child-2",
   "child-3",
   "parent",
+  "composite",
 ]
 
 group("test") {
@@ -62,6 +63,7 @@ foreach(driver, simple_drivers) {
       "test/$driver.c",
     ]
     deps = [
+      "$zx/system/banjo/ddk-protocol-composite",
       "$zx/system/banjo/ddk-protocol-gpio",
       "$zx/system/banjo/ddk-protocol-platform-device",
       "$zx/system/ulib/ddk",

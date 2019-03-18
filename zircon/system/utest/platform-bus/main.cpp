@@ -103,6 +103,10 @@ bool enumeration_test() {
                                    "sys/platform/11:01:1/child-1/child-3-top/child-3/component",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "composite-dev/composite",
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
 
     const int dirfd = devmgr.devfs_root().get();
     struct stat st;
@@ -117,6 +121,7 @@ bool enumeration_test() {
               0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top/child-3/component", &st, 0),
               0);
+    EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
 
     END_TEST;
 }
