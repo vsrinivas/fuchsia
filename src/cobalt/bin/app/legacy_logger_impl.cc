@@ -481,4 +481,44 @@ void LegacyLoggerImpl::LogCustomEvent(
   AddEncodedObservation(&result, std::move(callback));
 }
 
+void LegacyLoggerImpl::LogCobaltEvent(
+    fuchsia::cobalt::CobaltEvent event,
+    fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
+  if (event.payload.is_event_count()) {
+    LogEventCount(event.metric_id, event.event_codes[0], event.component,
+                  event.payload.event_count().period_duration_micros,
+                  event.payload.event_count().count, std::move(callback));
+    return;
+  }
+
+  if (event.payload.is_int_histogram()) {
+    LogIntHistogram(event.metric_id, event.event_codes[0], event.component,
+                    std::move(event.payload.int_histogram()),
+                    std::move(callback));
+    return;
+  }
+
+  callback(Status::INVALID_ARGUMENTS);
+}
+
+void LegacyLoggerImpl::LogCobaltEvents(
+    std::vector<fuchsia::cobalt::CobaltEvent> events,
+    fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
+  int failures = 0;
+
+  for (auto& event : events) {
+    LogCobaltEvent(std::move(event), [failures](Status status) mutable {
+      if (status != Status::OK) {
+        failures += 1;
+      }
+    });
+  }
+
+  if (failures == 0) {
+    callback(Status::OK);
+  } else {
+    callback(Status::INTERNAL_ERROR);
+  }
+}
+
 }  // namespace cobalt

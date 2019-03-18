@@ -167,4 +167,52 @@ void LoggerImpl::EndTimer(
   AddTimerObservationIfReady(std::move(timer_val_ptr), std::move(callback));
 }
 
+void LoggerImpl::LogCobaltEvent(
+    fuchsia::cobalt::CobaltEvent event,
+    fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
+  if (event.payload.is_event_count()) {
+    callback(ToCobaltStatus(logger_.LogEventCount(
+        event.metric_id, event.event_codes, event.component,
+        event.payload.event_count().period_duration_micros,
+        event.payload.event_count().count)));
+  } else if (event.payload.is_int_histogram()) {
+    auto histogram = std::move(event.payload.int_histogram());
+    logger::HistogramPtr histogram_ptr(
+        new google::protobuf::RepeatedPtrField<HistogramBucket>());
+    for (auto it = histogram.begin(); histogram.end() != it; it++) {
+      auto bucket = histogram_ptr->Add();
+      bucket->set_index((*it).index);
+      bucket->set_count((*it).count);
+    }
+    callback(ToCobaltStatus(
+        logger_.LogIntHistogram(event.metric_id, event.event_codes,
+                                event.component, std::move(histogram_ptr))));
+
+  } else {
+    callback(Status::INVALID_ARGUMENTS);
+  }
+}
+
+void LoggerImpl::LogCobaltEvents(
+    std::vector<fuchsia::cobalt::CobaltEvent> events,
+    fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
+  auto failures = 0;
+
+  auto end = std::make_move_iterator(events.end());
+
+  for (auto it = std::make_move_iterator(events.begin()); it != end; it++) {
+    LogCobaltEvent(std::move(*it), [failures](Status status) mutable {
+      if (status != Status::OK) {
+        failures += 1;
+      }
+    });
+  }
+
+  if (failures == 0) {
+    callback(Status::OK);
+  } else {
+    callback(Status::INTERNAL_ERROR);
+  }
+}
+
 }  // namespace cobalt

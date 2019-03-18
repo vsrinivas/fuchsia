@@ -78,6 +78,14 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
       std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
       fuchsia::cobalt::LoggerBase::EndTimerCallback callback) override;
 
+  void LogCobaltEvent(
+      fuchsia::cobalt::CobaltEvent event,
+      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
+
+  void LogCobaltEvents(
+      std::vector<fuchsia::cobalt::CobaltEvent> events,
+      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
+
  private:
   logger::Logger logger_;
   TimerManager* timer_manager_;

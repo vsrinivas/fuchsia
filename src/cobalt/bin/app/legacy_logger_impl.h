@@ -115,6 +115,14 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
       std::vector<fuchsia::cobalt::CustomEventValue> event_values,
       fuchsia::cobalt::Logger::LogCustomEventCallback callback) override;
 
+  void LogCobaltEvent(
+      fuchsia::cobalt::CobaltEvent event,
+      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
+
+  void LogCobaltEvents(
+      std::vector<fuchsia::cobalt::CobaltEvent> events,
+      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
+
   cobalt::encoder::Encoder encoder_;
   encoder::ObservationStore* observation_store_;      // not owned
   util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
