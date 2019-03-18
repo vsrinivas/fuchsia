@@ -7,35 +7,24 @@
 
 #pragma once
 
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
 // Forward declarations
-
-
-
 typedef struct bar bar_t;
 typedef struct foo foo_t;
 
-
-
-
-
 // Declarations
-
-
-
-struct foo {
-    bar_t b;
-};
-
 struct bar {
     foo_t f;
 };
 
-
+struct foo {
+    bar_t b;
+};
 
 
 __END_CDECLS;

@@ -7,22 +7,21 @@
 
 #pragma once
 
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
 // Forward declarations
-
+#define x INT32_C(23)
 typedef struct hello_protocol hello_protocol_t;
 
 // Declarations
-
-#define x INT32_C(23)
-
 typedef struct hello_protocol_ops {
     void (*say)(void* ctx, const char* req, char* out_response, size_t response_capacity);
 } hello_protocol_ops_t;
+
 
 struct hello_protocol {
     hello_protocol_ops_t* ops;
@@ -32,5 +31,7 @@ struct hello_protocol {
 static inline void hello_say(const hello_protocol_t* proto, const char* req, char* out_response, size_t response_capacity) {
     proto->ops->say(proto->ctx, req, out_response, response_capacity);
 }
+
+
 
 __END_CDECLS;

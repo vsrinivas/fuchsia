@@ -7,7 +7,7 @@ use {
     failure::Fail,
     pest::iterators::{Pair, Pairs},
     serde_derive::Serialize,
-    std::collections::{BTreeMap, HashMap, HashSet, VecDeque},
+    std::collections::{BTreeMap, HashSet, VecDeque},
     std::fmt,
     std::str::FromStr,
 };
@@ -34,18 +34,18 @@ pub enum ParseError {
     UnknownDecl,
 }
 
-#[derive(PartialEq, Eq, Serialize, Default, Debug, Clone, Hash)]
+#[derive(PartialEq, Eq, Serialize, Default, Debug, Clone, Hash, PartialOrd, Ord)]
 pub struct Attr {
     pub key: String,
     pub val: Option<String>,
 }
 
-#[derive(PartialEq, Eq, Serialize, Default, Debug, Clone, Hash)]
+#[derive(PartialEq, Eq, Serialize, Default, Debug, Clone, Hash, PartialOrd, Ord)]
 pub struct Attrs(pub Vec<Attr>);
 
 // namespace is only populated if it's not the current/default one
 // TODO(bwb) consider populating it or renaming to be more explicit
-#[derive(PartialEq, Debug, Eq, Serialize, Clone, Hash)]
+#[derive(PartialEq, Debug, Eq, Serialize, Clone, Hash, PartialOrd, Ord)]
 pub struct Ident {
     namespace: Option<String>,
     name: String,
@@ -155,7 +155,7 @@ impl Attrs {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub struct Constant(pub String);
 
 impl Constant {
@@ -170,7 +170,7 @@ impl std::fmt::Display for Constant {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub enum HandleTy {
     Handle,
     Process,
@@ -194,7 +194,7 @@ pub enum HandleTy {
     DebugLog,
 }
 
-#[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub enum Ty {
     Voidptr,
     USize,
@@ -400,7 +400,7 @@ impl Ty {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub struct StructField {
     pub attributes: Attrs,
     pub ty: Ty,
@@ -431,7 +431,7 @@ impl StructField {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub struct UnionField {
     pub attributes: Attrs,
     pub ty: Ty,
@@ -449,7 +449,7 @@ impl UnionField {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub struct EnumVariant {
     pub attributes: Attrs,
     pub name: String,
@@ -466,7 +466,7 @@ impl EnumVariant {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub struct Method {
     pub attributes: Attrs,
     pub name: String,
@@ -524,14 +524,14 @@ impl Method {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub enum Decl {
     Struct { attributes: Attrs, name: Ident, fields: Vec<StructField> },
-    Interface { attributes: Attrs, name: Ident, methods: Vec<Method> },
-    Alias(Ident, Ident),
-    Constant { attributes: Attrs, name: Ident, ty: Ty, value: Constant },
     Union { attributes: Attrs, name: Ident, fields: Vec<UnionField> },
     Enum { attributes: Attrs, name: Ident, ty: Ty, variants: Vec<EnumVariant> },
+    Constant { attributes: Attrs, name: Ident, ty: Ty, value: Constant },
+    Interface { attributes: Attrs, name: Ident, methods: Vec<Method> },
+    Alias(Ident, Ident),
 }
 
 #[derive(PartialEq, Serialize, Debug)]
@@ -885,12 +885,12 @@ impl BanjoAst {
         Ok(edges)
     }
 
-    // Validates that the declarations are cycle free.
-    fn validate_declaration_deps(&self) -> Result<(), ParseError> {
+    /// Validates that the declarations are cycle free and returns declaration ordering.
+    pub fn validate_declaration_deps(&self) -> Result<Vec<&Decl>, ParseError> {
         // The number of undelcared dependencies for each decl.
-        let mut degrees: HashMap<&Decl, u32> = HashMap::new();
+        let mut degrees: BTreeMap<&Decl, u32> = BTreeMap::new();
         // Records the decls that depend on each other.
-        let mut inverse_dependencies: HashMap<&Decl, Vec<&Decl>> = HashMap::new();
+        let mut inverse_dependencies: BTreeMap<&Decl, Vec<&Decl>> = BTreeMap::new();
 
         for decl in self.namespaces.iter().flat_map(|(_, decls)| decls.iter()) {
             degrees.insert(&decl, 0);
@@ -941,7 +941,24 @@ impl BanjoAst {
             )));
         }
 
-        Ok(())
+        Ok(decl_order
+            .into_iter()
+            .filter(|decl| {
+                let ident = match decl {
+                    Decl::Interface { name, .. } => name,
+                    Decl::Struct { name, .. } => name,
+                    Decl::Union { name, .. } => name,
+                    Decl::Enum { name, .. } => name,
+                    Decl::Alias(to, _from) => to,
+                    Decl::Constant { name, .. } => name,
+                };
+                if let Some(ref ns) = ident.fq().0 {
+                    ns == &self.primary_namespace
+                } else {
+                    true
+                }
+            })
+            .collect())
     }
 
     // Validates that the constants are of the right type.
@@ -1079,9 +1096,10 @@ impl BanjoAst {
             }
         }
 
-        let ast = BanjoAst { primary_namespace: primary_namespace.unwrap(), namespaces };
+        let ast =
+            BanjoAst { primary_namespace: primary_namespace.unwrap(), namespaces: namespaces };
 
-        ast.validate_declaration_deps()?;
+        let _ = ast.validate_declaration_deps()?;
         ast.validate_constants()?;
 
         Ok(ast)

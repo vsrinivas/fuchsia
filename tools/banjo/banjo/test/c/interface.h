@@ -14,30 +14,22 @@
 __BEGIN_CDECLS;
 
 // Forward declarations
-
 typedef uint32_t cookie_kind_t;
 #define COOKIE_KIND_CHOCOLATE UINT32_C(0)
 #define COOKIE_KIND_GINGERBREAD UINT32_C(1)
 #define COOKIE_KIND_SNICKERDOODLE UINT32_C(2)
-
-
-
-
-
-typedef struct cookie_maker cookie_maker_t;
-
-typedef struct baker_protocol baker_protocol_t;
-
 typedef void (*cookie_maker_prep_callback)(void* ctx, uint64_t token);
 typedef void (*cookie_maker_bake_callback)(void* ctx, zx_status_t s);
+typedef struct cookie_maker cookie_maker_t;
+typedef struct baker_protocol baker_protocol_t;
 
 // Declarations
-
 typedef struct cookie_maker_ops {
     void (*prep)(void* ctx, cookie_kind_t cookie, cookie_maker_prep_callback callback, void* cookie);
     void (*bake)(void* ctx, uint64_t token, zx_time_t time, cookie_maker_bake_callback callback, void* cookie);
     zx_status_t (*deliver)(void* ctx, uint64_t token);
 } cookie_maker_ops_t;
+
 
 struct cookie_maker {
   cookie_maker_ops_t* ops;
@@ -60,7 +52,6 @@ static inline void cookie_maker_bake(const cookie_maker_t* proto, uint64_t token
 static inline zx_status_t cookie_maker_deliver(const cookie_maker_t* proto, uint64_t token) {
     return proto->ops->deliver(proto->ctx, token);
 }
-
 
 
 typedef struct baker_protocol_ops {
@@ -88,6 +79,7 @@ static inline void baker_register(const baker_protocol_t* proto, void* intf_ctx,
 static inline void baker_de_register(const baker_protocol_t* proto) {
     proto->ops->de_register(proto->ctx);
 }
+
 
 
 __END_CDECLS;

@@ -239,6 +239,7 @@ fn get_out_params(
                             name = to_c_name(name))
                 }
             },
+            ast::Ty::Handle {..} => format!("{}* out_{}", ty_name, to_c_name(name)),
             _ => format!("{}{}* out_{}", ty_name, nullable, to_c_name(name))
         }
     }).collect(), return_param))

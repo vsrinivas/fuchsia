@@ -14,31 +14,12 @@
 __BEGIN_CDECLS;
 
 // Forward declarations
-
-
-
-
-
-
-
-
-
+#define array_size UINT32_C(32)
 typedef struct array_protocol array_protocol_t;
 typedef struct array2_protocol array2_protocol_t;
 typedef struct arrayof_arrays_protocol arrayof_arrays_protocol_t;
 
-
-
 // Declarations
-
-#define array_size UINT32_C(32)
-
-
-
-
-
-
-
 typedef struct array_protocol_ops {
     void (*bool)(void* ctx, const bool b[1], bool out_b[1]);
     void (*int8)(void* ctx, const int8_t i8[1], int8_t out_i8[1]);
@@ -247,6 +228,7 @@ static inline void arrayof_arrays_float64(const arrayof_arrays_protocol_t* proto
 static inline void arrayof_arrays_handle(const arrayof_arrays_protocol_t* proto, const zx_handle_t u64[array_size][4], zx_handle_t out_f64[array_size][4]) {
     proto->ops->handle(proto->ctx, u64, out_f64);
 }
+
 
 
 __END_CDECLS;

@@ -14,31 +14,12 @@
 __BEGIN_CDECLS;
 
 // Forward declarations
-
-
-
-
-
-
-
-
-
+#define vector_size UINT32_C(32)
 typedef struct vector_protocol vector_protocol_t;
 typedef struct vector2_protocol vector2_protocol_t;
 typedef struct vector_of_vectors_protocol vector_of_vectors_protocol_t;
 
-
-
 // Declarations
-
-#define vector_size UINT32_C(32)
-
-
-
-
-
-
-
 typedef struct vector_protocol_ops {
     void (*bool)(void* ctx, const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual);
     void (*int8)(void* ctx, const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual);
@@ -247,6 +228,7 @@ static inline void vector_of_vectors_float64(const vector_of_vectors_protocol_t*
 static inline void vector_of_vectors_handle(const vector_of_vectors_protocol_t* proto, const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) {
     proto->ops->handle(proto->ctx, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
 }
+
 
 
 __END_CDECLS;

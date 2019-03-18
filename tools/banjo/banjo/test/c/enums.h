@@ -14,10 +14,6 @@
 __BEGIN_CDECLS;
 
 // Forward declarations
-
-typedef int8_t int8_enum_t;
-#define INT8_ENUM_KNEGATIVEONE INT8_C(-1)
-#define INT8_ENUM_KONE INT8_C(1)
 typedef int16_t int16_enum_t;
 #define INT16_ENUM_KNEGATIVEONE INT16_C(-1)
 #define INT16_ENUM_KONE INT16_C(1)
@@ -33,12 +29,9 @@ typedef int64_t int64_enum_t;
 #define INT64_ENUM_KTWO INT64_C(2)
 #define INT64_ENUM_KTHREE INT64_C(3)
 #define INT64_ENUM_KFOUR INT64_C(4)
-typedef uint8_t uint8_enum_t;
-#define UINT8_ENUM_KONE UINT8_C(1)
-#define UINT8_ENUM_KTWO UINT8_C(2)
-#define UINT8_ENUM_KTHREE UINT8_C(3)
-#define UINT8_ENUM_KFOUR UINT8_C(4)
-#define UINT8_ENUM_KFIVE UINT8_C(5)
+typedef int8_t int8_enum_t;
+#define INT8_ENUM_KNEGATIVEONE INT8_C(-1)
+#define INT8_ENUM_KONE INT8_C(1)
 typedef uint16_t uint16_enum_t;
 #define UINT16_ENUM_KONE UINT16_C(1)
 #define UINT16_ENUM_KTWO UINT16_C(2)
@@ -63,19 +56,14 @@ typedef uint64_t uint64_enum_t;
 #define UINT64_ENUM_KSIX UINT64_C(6)
 #define UINT64_ENUM_KSEVEN UINT64_C(7)
 #define UINT64_ENUM_KEIGHT UINT64_C(8)
-
-
-
-
-
-
+typedef uint8_t uint8_enum_t;
+#define UINT8_ENUM_KONE UINT8_C(1)
+#define UINT8_ENUM_KTWO UINT8_C(2)
+#define UINT8_ENUM_KTHREE UINT8_C(3)
+#define UINT8_ENUM_KFOUR UINT8_C(4)
+#define UINT8_ENUM_KFIVE UINT8_C(5)
 
 // Declarations
-
-
-
-
-
 
 
 __END_CDECLS;
