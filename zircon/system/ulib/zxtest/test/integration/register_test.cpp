@@ -13,7 +13,14 @@ TEST(Test, AutoRegister) {}
 
 class TestFixture : public zxtest::Test {
 public:
-    ~TestFixture() override{};
+    ~TestFixture() override {}
+
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
+
+protected:
+    void SetUp() override {}
+    void TearDown() override {}
 };
 
 TEST_F(TestFixture, AutoRegister) {}

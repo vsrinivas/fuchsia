@@ -81,7 +81,6 @@ The following example illustrates how to use a fixture to set up state before an
 class RamdiskFixture : public zxtest::Test {
 public:
     const fbl::String& ramdisk_path() const { return ramdisk_path_;}
-protected:
 
     // Called before this test case's first test runs.
     // Optional: Defaults to nothing.
@@ -91,6 +90,7 @@ protected:
     // Optional: Defaults to nothing.
     static void TearDownTestCase() {}
 
+protected:
     // Called before every test of this test case.
     // Optional: Defaults to nothing.
     void SetUp() override {
