@@ -62,7 +62,6 @@ class LedgerStorageImpl : public LedgerStorage {
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
   ledger::DetachedPath GetPathFor(PageIdView page_id);
-  ledger::DetachedPath GetDeprecatedPathFor(PageIdView page_id);
 
   ledger::Environment* const environment_;
   encryption::EncryptionService* const encryption_service_;
