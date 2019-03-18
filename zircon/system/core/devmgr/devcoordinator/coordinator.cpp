@@ -175,6 +175,8 @@ void ContinueSuspend(devmgr::SuspendContext* ctx, const zx::resource& root_resou
 
 namespace devmgr {
 
+const char* kComponentDriverPath = "/boot/driver/component.so";
+
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 Coordinator::Coordinator(CoordinatorConfig config)
@@ -1821,7 +1823,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
     }
 
     // Record the special component driver when we see it
-    if (!strcmp(driver->libname.data(), "/boot/driver/component.so")) {
+    if (!strcmp(driver->libname.data(), kComponentDriverPath)) {
         component_driver_ = driver.get();
         driver->never_autoselect = true;
     }

@@ -342,4 +342,7 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
                                             const CompositeDevice& composite,
                                             const uint64_t* component_local_ids, zx::channel rpc);
 
+// Path to driver that should be bound to components of composite devices
+extern const char* kComponentDriverPath;
+
 } // namespace devmgr
