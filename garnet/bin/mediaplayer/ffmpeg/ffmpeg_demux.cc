@@ -350,9 +350,12 @@ void FfmpegDemuxImpl::Worker() {
     if (packet_requested) {
       size_t stream_index{};
       PacketPtr packet = PullPacket(&stream_index);
-      FXL_DCHECK(packet);
-
-      PutOutputPacket(std::move(packet), stream_index);
+      // TODO(MTWN-247): Replace check with DCHECK.
+      // We should always get a packet from |PullPacket|. See the comment in
+      // |PullEndOfStreamPacket|.
+      if (packet) {
+        PutOutputPacket(std::move(packet), stream_index);
+      }
     }
   }
 }
