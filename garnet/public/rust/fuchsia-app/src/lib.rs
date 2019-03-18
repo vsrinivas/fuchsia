@@ -427,13 +427,34 @@ pub mod server {
             arguments: Option<Vec<String>>,
             environment_label: &str,
         ) -> Result<(FdioServer, EnvironmentControllerProxy, crate::client::App), Error> {
+            let (fdio_server, new_env_controller, app) = self
+                .launch_component_in_nested_environment_with_options(
+                    url,
+                    arguments,
+                    client::LaunchOptions::new(),
+                    environment_label,
+                )?;
+            Ok((fdio_server, new_env_controller, app))
+        }
+
+        /// Starts a new component inside an isolated environment with custom launch
+        /// options, see the comment for |launch_component_in_nested_environment()|
+        /// above.
+        pub fn launch_component_in_nested_environment_with_options(
+            self,
+            url: String,
+            arguments: Option<Vec<String>>,
+            options: client::LaunchOptions,
+            environment_label: &str,
+        ) -> Result<(FdioServer, EnvironmentControllerProxy, crate::client::App), Error> {
             let env = crate::client::connect_to_service::<EnvironmentMarker>()
                 .context("connecting to current environment")?;
             let services_with_loader = self.add_proxy_service::<LoaderMarker>();
             let (fdio_server, mut service_list) = services_with_loader.start_services_list()?;
 
             let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
-            let (new_env_controller, new_env_controller_server_end) = fidl::endpoints::create_proxy()?;
+            let (new_env_controller, new_env_controller_server_end) =
+                fidl::endpoints::create_proxy()?;
             env.create_nested_environment(
                 new_env_server_end,
                 new_env_controller_server_end,
@@ -445,14 +466,16 @@ pub mod server {
                     kill_on_oom: false,
                     delete_storage_on_death: false,
                 },
-            ).context("creating isolated environment")?;
+            )
+            .context("creating isolated environment")?;
 
             let (launcher_proxy, launcher_server_end) = fidl::endpoints::create_proxy()?;
-            new_env.get_launcher(launcher_server_end)
+            new_env
+                .get_launcher(launcher_server_end)
                 .context("getting nested environment launcher")?;
 
             let launcher = crate::client::Launcher::from(launcher_proxy);
-            let app = launcher.launch(url, arguments)?;
+            let app = launcher.launch_with_options(url, arguments, options)?;
 
             Ok((fdio_server, new_env_controller, app))
         }
