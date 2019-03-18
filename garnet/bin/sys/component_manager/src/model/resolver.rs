@@ -23,7 +23,7 @@ pub trait Resolver {
 
 /// Resolves a component URI using a resolver selected based on the URI's scheme.
 pub struct ResolverRegistry {
-    resolvers: HashMap<String, Box<dyn Resolver>>,
+    resolvers: HashMap<String, Box<dyn Resolver + Send + Sync + 'static>>,
 }
 
 impl ResolverRegistry {
@@ -31,7 +31,11 @@ impl ResolverRegistry {
         ResolverRegistry { resolvers: HashMap::new() }
     }
 
-    pub fn register(&mut self, scheme: String, resolver: Box<dyn Resolver>) {
+    pub fn register(
+        &mut self,
+        scheme: String,
+        resolver: Box<dyn Resolver + Send + Sync + 'static>,
+    ) {
         self.resolvers.insert(scheme, resolver);
     }
 }
@@ -144,7 +148,7 @@ mod tests {
 
     struct MockErrorResolver {
         pub expected_uri: String,
-        pub error: Box<dyn Fn(&str) -> ResolverError>,
+        pub error: Box<dyn Fn(&str) -> ResolverError + Send + Sync + 'static>,
     }
 
     impl Resolver for MockErrorResolver {

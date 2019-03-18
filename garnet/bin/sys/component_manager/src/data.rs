@@ -21,9 +21,7 @@ impl DictionaryExt for fdata::Dictionary {
 
 // TODO: Delete clone functions once the Rust FIDL bindings provide cloning out of the box.
 pub fn clone_dictionary(v: &fdata::Dictionary) -> fdata::Dictionary {
-    fdata::Dictionary {
-        entries: v.entries.iter().map(|x| clone_entry(x)).collect(),
-    }
+    fdata::Dictionary { entries: v.entries.iter().map(|x| clone_entry(x)).collect() }
 }
 
 pub fn clone_option_dictionary(v: &Option<fdata::Dictionary>) -> Option<fdata::Dictionary> {
@@ -31,20 +29,11 @@ pub fn clone_option_dictionary(v: &Option<fdata::Dictionary>) -> Option<fdata::D
 }
 
 pub fn clone_entry(v: &fdata::Entry) -> fdata::Entry {
-    fdata::Entry {
-        key: v.key.clone(),
-        value: clone_option_boxed_value(&v.value),
-    }
+    fdata::Entry { key: v.key.clone(), value: clone_option_boxed_value(&v.value) }
 }
 
 pub fn clone_vector(v: &fdata::Vector) -> fdata::Vector {
-    fdata::Vector {
-        values: v
-            .values
-            .iter()
-            .map(|x| clone_option_boxed_value(x))
-            .collect(),
-    }
+    fdata::Vector { values: v.values.iter().map(|x| clone_option_boxed_value(x)).collect() }
 }
 
 pub fn clone_option_vector(v: &Option<fdata::Vector>) -> Option<fdata::Vector> {

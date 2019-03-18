@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    std::{cell::RefCell, collections::HashMap, rc::Rc},
+    std::{collections::HashMap, sync::Arc},
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -27,7 +27,7 @@ pub struct ModelParams {
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
     /// The default runner used in the root realm (nominally runs ELF binaries).
-    pub root_default_runner: Box<dyn Runner>,
+    pub root_default_runner: Box<dyn Runner + Send + Sync + 'static>,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -39,7 +39,7 @@ pub struct ModelParams {
 /// delegates external interfacing concerns to other objects that implement traits such as
 /// `Runner` and `Resolver`.
 pub struct Model {
-    root_realm: Rc<RefCell<Realm>>,
+    root_realm: Arc<Mutex<Realm>>,
 }
 
 /// A realm is a container for an individual component instance and its children.  It is provided
@@ -47,13 +47,13 @@ pub struct Model {
 ///
 /// The realm's properties influence the runtime behavior of the subtree of component instances
 /// that it contains, including component resolution, execution, and service discovery.
-type ChildRealmMap = HashMap<ChildMoniker, Rc<RefCell<Realm>>>;
+type ChildRealmMap = HashMap<ChildMoniker, Arc<Mutex<Realm>>>;
 struct Realm {
     /// The registry for resolving component URIs within the realm.
-    resolver_registry: Rc<ResolverRegistry>,
+    resolver_registry: Arc<ResolverRegistry>,
     /// The default runner (nominally runs ELF binaries) for executing components
     /// within the realm that do not explicitly specify a runner.
-    default_runner: Rc<Box<dyn Runner>>,
+    default_runner: Arc<Box<dyn Runner + Send + Sync + 'static>>,
     /// The component that has been instantiated within the realm.
     instance: Instance,
 }
@@ -73,8 +73,8 @@ struct Instance {
 impl Instance {
     fn make_child_realms(
         component: &fsys::Component,
-        resolver_registry: Rc<ResolverRegistry>,
-        default_runner: Rc<Box<dyn Runner>>,
+        resolver_registry: Arc<ResolverRegistry>,
+        default_runner: Arc<Box<dyn Runner + Send + Sync + 'static>>,
     ) -> Result<ChildRealmMap, ModelError> {
         let mut child_realms = HashMap::new();
         if component.decl.is_none() {
@@ -85,7 +85,7 @@ impl Instance {
                 let child_name = child_decl.name.as_ref().unwrap().clone();
                 let child_uri = child_decl.uri.as_ref().unwrap().clone();
                 let moniker = ChildMoniker::new(child_name);
-                let realm = Rc::new(RefCell::new(Realm {
+                let realm = Arc::new(Mutex::new(Realm {
                     resolver_registry: resolver_registry.clone(),
                     default_runner: default_runner.clone(),
                     instance: Instance {
@@ -198,9 +198,9 @@ impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
         Model {
-            root_realm: Rc::new(RefCell::new(Realm {
-                resolver_registry: Rc::new(params.root_resolver_registry),
-                default_runner: Rc::new(params.root_default_runner),
+            root_realm: Arc::new(Mutex::new(Realm {
+                resolver_registry: Arc::new(params.root_resolver_registry),
+                default_runner: Arc::new(params.root_default_runner),
                 instance: Instance {
                     component_uri: params.root_component_uri,
                     execution: Mutex::new(None),
@@ -231,11 +231,11 @@ impl Model {
     /// after this function returns.
     async fn bind_instance_in_realm(
         &self,
-        realm_cell: Rc<RefCell<Realm>>,
-    ) -> Result<Vec<Rc<RefCell<Realm>>>, ModelError> {
+        realm_cell: Arc<Mutex<Realm>>,
+    ) -> Result<Vec<Arc<Mutex<Realm>>>, ModelError> {
         // There can only be one task manipulating an instance's execution at a time.
         let Realm { ref resolver_registry, ref default_runner, ref mut instance } =
-            *realm_cell.borrow_mut();
+            *await!(realm_cell.lock());
         let Instance { ref component_uri, ref execution, ref mut child_realms, startup: _ } =
             instance;
         let mut execution_lock = await!(execution.lock());
@@ -278,7 +278,8 @@ impl Model {
         let mut eager_children = vec![];
         if started {
             for child_realm in child_realms.as_ref().unwrap().values() {
-                match child_realm.borrow().instance.startup {
+                let startup = await!(child_realm.lock()).instance.startup;
+                match startup {
                     fsys::StartupMode::Eager => {
                         eager_children.push(child_realm.clone());
                     }
@@ -292,12 +293,12 @@ impl Model {
     async fn look_up_realm(
         &self,
         abs_moniker: AbsoluteMoniker,
-    ) -> Result<Rc<RefCell<Realm>>, ModelError> {
+    ) -> Result<Arc<Mutex<Realm>>, ModelError> {
         let mut cur_realm = self.root_realm.clone();
         for moniker in abs_moniker.path().iter() {
             cur_realm = {
                 let Realm { ref resolver_registry, ref default_runner, ref mut instance } =
-                    *cur_realm.borrow_mut();
+                    *await!(cur_realm.lock());
                 if instance.child_realms.is_none() {
                     let component = await!(resolver_registry.resolve(&instance.component_uri))?;
                     instance.child_realms = Some(Instance::make_child_realms(
@@ -375,10 +376,9 @@ mod tests {
     use super::*;
     use fidl_fuchsia_io::DirectoryMarker;
     use fidl_fuchsia_sys2::{CapabilityType, ComponentNamespace, UseDecl};
-    use futures::future::{self, FutureObj};
+    use futures::future::FutureObj;
     use lazy_static::lazy_static;
     use regex::Regex;
-    use std::cell::RefCell;
     use std::collections::HashSet;
     use std::path::PathBuf;
 
@@ -389,23 +389,21 @@ mod tests {
 
     struct MockResolver {
         // Map of parent component instance to its children component instances.
-        children: Rc<RefCell<HashMap<String, Vec<ChildInfo>>>>,
+        children: Arc<Mutex<HashMap<String, Vec<ChildInfo>>>>,
         // Map of component instance to vec of UseDecls of the component instance.
-        uses: Rc<RefCell<HashMap<String, UseDeclsOpt>>>,
+        uses: Arc<Mutex<HashMap<String, Option<Vec<UseDecl>>>>>,
     }
-
     lazy_static! {
         static ref NAME_RE: Regex = Regex::new(r"test:///([0-9a-z\-\._]+)$").unwrap();
     }
-
-    impl Resolver for MockResolver {
-        fn resolve(
+    impl MockResolver {
+        async fn resolve_async(
             &self,
-            component_uri: &str,
-        ) -> FutureObj<Result<fsys::Component, ResolverError>> {
-            let caps = NAME_RE.captures(component_uri).unwrap();
+            component_uri: String,
+        ) -> Result<fsys::Component, ResolverError> {
+            let caps = NAME_RE.captures(&component_uri).unwrap();
             let name = &caps[1];
-            let children = self.children.borrow();
+            let children = await!(self.children.lock());
             let mut decl = new_component_decl();
             if let Some(children) = children.get(name) {
                 decl.children = Some(
@@ -419,40 +417,51 @@ mod tests {
                         .collect(),
                 );
             }
-            let mut uses = self.uses.borrow_mut();
+            let mut uses = await!(self.uses.lock());
             if let Some(uses) = uses.remove(name) {
                 decl.uses = uses;
             }
-
-            FutureObj::new(Box::new(future::ok(fsys::Component {
+            Ok(fsys::Component {
                 resolved_uri: Some(format!("test:///{}_resolved", name)),
                 decl: Some(decl),
                 package: None,
-            })))
+            })
         }
     }
-
-    struct MockRunner {
-        uris_run: Rc<RefCell<Vec<String>>>,
-        namespaces: Rc<RefCell<HashMap<String, ComponentNamespace>>>,
-        outgoing_dirs: Rc<RefCell<HashMap<String, ServerEnd<DirectoryMarker>>>>,
+    impl Resolver for MockResolver {
+        fn resolve(
+            &self,
+            component_uri: &str,
+        ) -> FutureObj<Result<fsys::Component, ResolverError>> {
+            FutureObj::new(Box::new(self.resolve_async(component_uri.to_string())))
+        }
     }
-
+    struct MockRunner {
+        uris_run: Arc<Mutex<Vec<String>>>,
+        namespaces: Arc<Mutex<HashMap<String, ComponentNamespace>>>,
+        outgoing_dirs: Arc<Mutex<HashMap<String, ServerEnd<DirectoryMarker>>>>,
+    }
+    impl MockRunner {
+        async fn start_async(
+            &self,
+            start_info: fsys::ComponentStartInfo,
+        ) -> Result<(), RunnerError> {
+            let resolved_uri = start_info.resolved_uri.unwrap();
+            await!(self.uris_run.lock()).push(resolved_uri.clone());
+            await!(self.namespaces.lock()).insert(resolved_uri.clone(), start_info.ns.unwrap());
+            await!(self.outgoing_dirs.lock())
+                .insert(resolved_uri.clone(), start_info.outgoing_dir.unwrap());
+            Ok(())
+        }
+    }
     impl Runner for MockRunner {
         fn start(
             &self,
             start_info: fsys::ComponentStartInfo,
         ) -> FutureObj<Result<(), RunnerError>> {
-            let resolved_uri = start_info.resolved_uri.unwrap();
-            self.uris_run.borrow_mut().push(resolved_uri.clone());
-            self.namespaces.borrow_mut().insert(resolved_uri.clone(), start_info.ns.unwrap());
-            self.outgoing_dirs
-                .borrow_mut()
-                .insert(resolved_uri.clone(), start_info.outgoing_dir.unwrap());
-            FutureObj::new(Box::new(future::ok(())))
+            FutureObj::new(Box::new(self.start_async(start_info)))
         }
     }
-
     fn new_component_decl() -> fsys::ComponentDecl {
         fsys::ComponentDecl {
             program: None,
@@ -463,20 +472,19 @@ mod tests {
             children: None,
         }
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_root() {
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
             Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
@@ -489,28 +497,26 @@ mod tests {
         let res = await!(model.bind_instance(AbsoluteMoniker::root()));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-
-        let actual_uris: &Vec<String> = &uris_run.borrow();
+        let actual_uris = await!(uris_run.lock());
         let expected_uris: Vec<String> = vec!["test:///root_resolved".to_string()];
-        assert_eq!(actual_uris, &expected_uris);
-
-        let actual_children = get_children(&model.root_realm.borrow());
+        assert_eq!(*actual_uris, expected_uris);
+        let root_realm = await!(model.root_realm.lock());
+        let actual_children = get_children(&root_realm);
         assert!(actual_children.is_empty());
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_root_non_existent() {
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
             Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
@@ -527,31 +533,30 @@ mod tests {
             AbsoluteMoniker::new(vec![ChildMoniker::new("no-such-instance".to_string())]),
         ));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-        let actual_uris: &Vec<String> = &uris_run.borrow();
+        let actual_uris = await!(uris_run.lock());
         let expected_uris: Vec<String> = vec![];
-        assert_eq!(actual_uris, &expected_uris);
+        assert_eq!(*actual_uris, expected_uris);
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_child() {
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert(
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        await!(children.lock()).insert(
             "root".to_string(),
             vec![
                 ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy },
                 ChildInfo { name: "echo".to_string(), startup: fsys::StartupMode::Lazy },
             ],
         );
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
             Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
@@ -561,7 +566,6 @@ mod tests {
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
         });
-
         // bind to system
         {
             let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
@@ -569,64 +573,60 @@ mod tests {
             ),])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
-
         // Validate children. system is resolved, but not echo.
         {
-            let actual_children = get_children(&model.root_realm.borrow());
+            let actual_children = get_children(&*await!(model.root_realm.lock()));
             let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
             expected_children.insert(ChildMoniker::new("system".to_string()));
             expected_children.insert(ChildMoniker::new("echo".to_string()));
             assert_eq!(actual_children, expected_children);
         }
         {
-            let system_realm = get_child_realm(&model.root_realm.borrow(), "system");
-            let echo_realm = get_child_realm(&model.root_realm.borrow(), "echo");
-            let actual_children = get_children(&system_realm.borrow());
+            let system_realm = get_child_realm(&*await!(model.root_realm.lock()), "system");
+            let echo_realm = get_child_realm(&*await!(model.root_realm.lock()), "echo");
+            let actual_children = get_children(&*await!(system_realm.lock()));
             assert!(actual_children.is_empty());
-            assert!(echo_realm.borrow().instance.child_realms.is_none());
+            assert!(await!(echo_realm.lock()).instance.child_realms.is_none());
         }
-
         // bind to echo
         {
             let res = await!(model
                 .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("echo".to_string()),])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> =
                 vec!["test:///system_resolved".to_string(), "test:///echo_resolved".to_string()];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
-
         // Validate children. Now echo is resolved.
         {
-            let echo_realm = get_child_realm(&model.root_realm.borrow(), "echo");
-            let actual_children = get_children(&echo_realm.borrow());
+            let echo_realm = get_child_realm(&*await!(model.root_realm.lock()), "echo");
+            let actual_children = get_children(&*await!(echo_realm.lock()));
             assert!(actual_children.is_empty());
         }
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_child_non_existent() {
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert(
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        await!(children.lock()).insert(
             "root".to_string(),
             vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
         );
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
             Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
@@ -636,7 +636,6 @@ mod tests {
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
         });
-
         // bind to system
         {
             let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
@@ -644,11 +643,10 @@ mod tests {
             ),])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
-
         // can't bind to logger: it does not exist
         {
             let moniker = AbsoluteMoniker::new(vec![
@@ -658,42 +656,41 @@ mod tests {
             let res = await!(model.bind_instance(moniker.clone()));
             let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_eager_child() {
         // Create a hierarchy of children. The two components in the middle enable eager binding.
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert(
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        await!(children.lock()).insert(
             "root".to_string(),
             vec![ChildInfo { name: "a".to_string(), startup: fsys::StartupMode::Lazy }],
         );
-        children.borrow_mut().insert(
+        await!(children.lock()).insert(
             "a".to_string(),
             vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Eager }],
         );
-        children.borrow_mut().insert(
+        await!(children.lock()).insert(
             "b".to_string(),
             vec![ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Eager }],
         );
-        children.borrow_mut().insert(
+        await!(children.lock()).insert(
             "c".to_string(),
             vec![ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy }],
         );
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
             Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
@@ -710,40 +707,40 @@ mod tests {
                 .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string()),])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec![
                 "test:///a_resolved".to_string(),
                 "test:///b_resolved".to_string(),
                 "test:///c_resolved".to_string(),
             ];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_instance_recursive_child() {
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert(
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        await!(children.lock()).insert(
             "root".to_string(),
             vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
         );
-        children.borrow_mut().insert(
+        await!(children.lock()).insert(
             "system".to_string(),
             vec![
                 ChildInfo { name: "logger".to_string(), startup: fsys::StartupMode::Lazy },
                 ChildInfo { name: "netstack".to_string(), startup: fsys::StartupMode::Lazy },
             ],
         );
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
         resolver.register(
             "test".to_string(),
             Box::new(MockResolver { children: children.clone(), uses: uses.clone() }),
@@ -753,7 +750,6 @@ mod tests {
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
         });
-
         // bind to logger (before ever binding to system)
         {
             let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![
@@ -762,11 +758,10 @@ mod tests {
             ])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec!["test:///logger_resolved".to_string()];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
-
         // bind to netstack
         {
             let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![
@@ -775,14 +770,13 @@ mod tests {
             ])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec![
                 "test:///logger_resolved".to_string(),
                 "test:///netstack_resolved".to_string(),
             ];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
-
         // finally, bind to system
         {
             let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
@@ -790,62 +784,60 @@ mod tests {
             ),])));
             let expected_res: Result<(), ModelError> = Ok(());
             assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let actual_uris = await!(uris_run.lock());
             let expected_uris: Vec<String> = vec![
                 "test:///logger_resolved".to_string(),
                 "test:///netstack_resolved".to_string(),
                 "test:///system_resolved".to_string(),
             ];
-            assert_eq!(actual_uris, &expected_uris);
+            assert_eq!(*actual_uris, expected_uris);
         }
-
         // validate children
         {
-            let actual_children = get_children(&model.root_realm.borrow());
+            let actual_children = get_children(&*await!(model.root_realm.lock()));
             let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
             expected_children.insert(ChildMoniker::new("system".to_string()));
             assert_eq!(actual_children, expected_children);
         }
-        let system_realm = get_child_realm(&model.root_realm.borrow(), "system");
+        let system_realm = get_child_realm(&*await!(model.root_realm.lock()), "system");
         {
-            let actual_children = get_children(&system_realm.borrow());
+            let actual_children = get_children(&*await!(system_realm.lock()));
             let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
             expected_children.insert(ChildMoniker::new("logger".to_string()));
             expected_children.insert(ChildMoniker::new("netstack".to_string()));
             assert_eq!(actual_children, expected_children);
         }
         {
-            let logger_realm = get_child_realm(&system_realm.borrow(), "logger");
-            let actual_children = get_children(&logger_realm.borrow());
+            let logger_realm = get_child_realm(&*await!(system_realm.lock()), "logger");
+            let actual_children = get_children(&*await!(logger_realm.lock()));
             assert!(actual_children.is_empty());
         }
         {
-            let netstack_realm = get_child_realm(&system_realm.borrow(), "netstack");
-            let actual_children = get_children(&netstack_realm.borrow());
+            let netstack_realm = get_child_realm(&*await!(system_realm.lock()), "netstack");
+            let actual_children = get_children(&*await!(netstack_realm.lock()));
             assert!(actual_children.is_empty());
         }
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn check_namespace_from_using() {
         let mut resolver = ResolverRegistry::new();
-        let uris_run = Rc::new(RefCell::new(vec![]));
-        let namespaces = Rc::new(RefCell::new(HashMap::new()));
-        let outgoing_dirs = Rc::new(RefCell::new(HashMap::new()));
+        let uris_run = Arc::new(Mutex::new(vec![]));
+        let namespaces = Arc::new(Mutex::new(HashMap::new()));
+        let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
         let runner = MockRunner {
             uris_run: uris_run.clone(),
             namespaces: namespaces.clone(),
             outgoing_dirs: outgoing_dirs.clone(),
         };
-        let children = Rc::new(RefCell::new(HashMap::new()));
-        children.borrow_mut().insert(
+        let children = Arc::new(Mutex::new(HashMap::new()));
+        await!(children.lock()).insert(
             "root".to_string(),
             vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
         );
-        let uses = Rc::new(RefCell::new(HashMap::new()));
+        let uses = Arc::new(Mutex::new(HashMap::new()));
 
         // The system component will request namespaces of "/pkg" to its "/root_pkg" and "/foo/bar"
-        uses.borrow_mut().insert(
+        await!(uses.lock()).insert(
             "system".to_string(),
             Some(vec![
                 UseDecl {
@@ -869,24 +861,20 @@ mod tests {
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
         });
-
         // bind to system
         let res = await!(model
             .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("system".to_string()),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-
         // Verify system has the expected namespaces.
-        let mut actual_namespaces = namespaces.borrow_mut();
+        let mut actual_namespaces = await!(namespaces.lock());
         assert!(actual_namespaces.contains_key("test:///system_resolved"));
         let ns = actual_namespaces.get_mut("test:///system_resolved").unwrap();
-
         // "/pkg" is missing because we don't supply package in MockResolver.
         assert_eq!(ns.paths, ["/root_pkg", "/foo/bar"]);
         assert_eq!(ns.directories.len(), 2);
-
         // /root_pkg and /foo/bar are both pointed to the test component's /pkg.
-        // Verify that we can read the dummy component manifest.
+        // Verify that we can read the dummy component manifest
         for _i in 0..ns.directories.len() {
             let dir = ns.directories.pop().unwrap();
             let dir_proxy = dir.into_proxy().unwrap();
@@ -895,12 +883,10 @@ mod tests {
             await!(io_util::read_file(&file_proxy)).expect("could not read cm");
         }
     }
-
     fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
         realm.instance.child_realms.as_ref().unwrap().keys().map(|m| m.clone()).collect()
     }
-
-    fn get_child_realm(realm: &Realm, child: &str) -> Rc<RefCell<Realm>> {
+    fn get_child_realm(realm: &Realm, child: &str) -> Arc<Mutex<Realm>> {
         realm.instance.child_realms.as_ref().unwrap()[&ChildMoniker::new(child.to_string())].clone()
     }
 }

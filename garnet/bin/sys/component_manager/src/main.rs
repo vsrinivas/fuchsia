@@ -19,7 +19,7 @@ mod ns_util;
 use {
     elf_runner::ElfRunner,
     failure::{self, Error, ResultExt},
-    fidl_fuchsia_pkg::{PackageResolverMarker},
+    fidl_fuchsia_pkg::PackageResolverMarker,
     fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
     fuchsia_boot_resolver::FuchsiaBootResolver,
@@ -29,8 +29,10 @@ use {
     model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
     std::env,
     std::process,
-    std::rc::Rc,
+    std::sync::Arc,
 };
+
+const NUM_THREADS: usize = 2;
 
 struct Opt {
     pub root_component_uri: String,
@@ -42,9 +44,7 @@ fn parse_args() -> Result<Opt, Error> {
         println!("Usage: {} <root-component-uri>", &args[0]);
         return Err(failure::err_msg("Invalid arguments"));
     }
-    Ok(Opt {
-        root_component_uri: args.remove(1),
-    })
+    Ok(Opt { root_component_uri: args.remove(1) })
 }
 
 fn main() -> Result<(), Error> {
@@ -56,10 +56,8 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
     let mut resolver_registry = ResolverRegistry::new();
-    resolver_registry.register(
-        fuchsia_boot_resolver::SCHEME.to_string(),
-        Box::new(FuchsiaBootResolver::new()),
-    );
+    resolver_registry
+        .register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(FuchsiaBootResolver::new()));
     let pkg_resolver = connect_to_service::<PackageResolverMarker>()
         .context("error connecting to package resolver")?;
     resolver_registry.register(
@@ -73,14 +71,14 @@ fn main() -> Result<(), Error> {
         root_default_runner: Box::new(ElfRunner::new()),
     };
 
-    let model = Rc::new(Model::new(params));
+    let model = Arc::new(Model::new(params));
 
     // TODO: Bring up the hub (backed by the model) before running the root component.
-    executor.run_singlethreaded(run_root(model));
+    executor.run(run_root(model), NUM_THREADS);
     Ok(())
 }
 
-async fn run_root(model: Rc<Model>) {
+async fn run_root(model: Arc<Model>) {
     match await!(model.bind_instance(AbsoluteMoniker::root())) {
         Ok(()) => {
             // TODO: Exit the component manager when the root component's binding is lost
@@ -89,10 +87,7 @@ async fn run_root(model: Rc<Model>) {
             await!(future::empty::<()>())
         }
         Err(error) => {
-            fx_log_err!(
-                "Failed to bind to root component, exiting.  Error: {}",
-                error
-            );
+            fx_log_err!("Failed to bind to root component, exiting.  Error: {}", error);
             process::exit(1)
         }
     }
