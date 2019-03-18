@@ -21,6 +21,7 @@
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <fuchsia/blobfs/c/fidl.h>
+#include <id_allocator/id_allocator.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
@@ -55,7 +56,8 @@ public:
 // from being persisted too early.
 class Allocator : private ExtentReserver, private NodeReserver, public NodeFinder {
 public:
-    Allocator(SpaceManager* space_manager, RawBitmap block_map, fzl::ResizeableVmoMapper node_map);
+    Allocator(SpaceManager* space_manager, RawBitmap block_map, fzl::ResizeableVmoMapper node_map,
+              std::unique_ptr<id_allocator::IdAllocator> nodes_bitmap);
     ~Allocator();
 
     using ExtentReserver::ReservedBlockCount;
@@ -138,6 +140,9 @@ public:
     // allocated extent container
     void MarkContainerNodeAllocated(const ReservedNode& node, uint32_t previous_node);
 
+    // Mark a node allocated. The node may or may not be reserved.
+    void MarkNodeAllocated(uint32_t node_index);
+
     // Frees a node which has already been committed.
     void FreeNode(uint32_t node_index);
 
@@ -190,10 +195,14 @@ private:
 
     void LogAllocationFailure(uint64_t num_blocks) const;
 
+    // Grow allocator
+    zx_status_t Grow();
+
     SpaceManager* space_manager_;
 
     RawBitmap block_map_ = {};
     fzl::ResizeableVmoMapper node_map_;
+    std::unique_ptr<id_allocator::IdAllocator> node_bitmap_;
 
     vmoid_t block_map_vmoid_ = VMOID_INVALID;
     vmoid_t node_map_vmoid_ = VMOID_INVALID;

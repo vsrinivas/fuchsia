@@ -22,7 +22,11 @@
 #include <zircon/types.h>
 
 namespace id_allocator {
+#ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+#else
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
+#endif
 
 // IdAllocator treats ids like a resource; one can reserve and free - one
 // at a time.

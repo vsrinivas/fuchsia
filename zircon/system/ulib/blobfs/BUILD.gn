@@ -18,6 +18,7 @@ library("blobfs") {
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
     "$zx/system/ulib/fs:headers",
+    "$zx/system/ulib/id_allocator:headers",
 
     # <blobfs/format.h> has #include <digest/digest.h>.
     "$zx/system/ulib/digest:headers",
@@ -37,6 +38,7 @@ library("blobfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio:headers",
     "$zx/system/ulib/fvm",
+    "$zx/system/ulib/id_allocator",
     "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",

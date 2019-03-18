@@ -37,26 +37,16 @@ protected:
     //
     // If |node_index| is lower than the lowest known free node, update our
     // assumption of the lowest possible free node.
-    void SetFreeNodeLowerBoundIfSmallest(uint32_t node_index);
 
     // Informs the NodeReserver that |node_index| is the lower bound on free nodes.
     //
     // Should only be invoked when it is known that all nodes from [0, node_index) are
     // free. Does not guarantee |node_index| is free.
-    void SetFreeNodeLowerBound(uint32_t node_index);
 
     // Returns the earliest possible free node.
-    uint32_t FreeNodeLowerBound() const;
 
 private:
-    // free_node_lower_bound_ is lower bound on free nodes, meaning we are sure that
-    // there are no free nodes with indices less than free_node_lower_bound_.
-    //
-    // By "free", in this context, we mean both "unreserved and unallocated".
-    //
-    // This doesn't mean that free_node_lower_bound_ is a free node; it just means that one can
-    // start looking for a free node from free_node_lower_bound_.
-    uint32_t free_node_lower_bound_ = 0;
+    // TODO(auradkar): Investigate the need for reserved_nodes_
     bitmap::RleBitmap reserved_nodes_ = {};
 };
 

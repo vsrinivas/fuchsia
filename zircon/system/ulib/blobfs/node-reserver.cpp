@@ -27,27 +27,11 @@ void NodeReserver::Unreserve(uint32_t node_index) {
     ZX_DEBUG_ASSERT(reserved_nodes_.Get(node_index, node_index + 1, nullptr));
     zx_status_t status = reserved_nodes_.Clear(node_index, node_index + 1);
     ZX_DEBUG_ASSERT(status == ZX_OK);
-
-    SetFreeNodeLowerBoundIfSmallest(node_index);
 }
 
 uint32_t NodeReserver::ReservedNodeCount() const {
     ZX_DEBUG_ASSERT(reserved_nodes_.num_bits() < std::numeric_limits<uint32_t>::max());
     return static_cast<uint32_t>(reserved_nodes_.num_bits());
-}
-
-void NodeReserver::SetFreeNodeLowerBoundIfSmallest(uint32_t node_index) {
-    if (free_node_lower_bound_ > node_index) {
-        SetFreeNodeLowerBound(node_index);
-    }
-}
-
-void NodeReserver::SetFreeNodeLowerBound(uint32_t node_index) {
-    free_node_lower_bound_ = node_index;
-}
-
-uint32_t NodeReserver::FreeNodeLowerBound() const {
-    return free_node_lower_bound_;
 }
 
 ReservedNode::ReservedNode(NodeReserver* reserver, uint32_t node)

@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <blobfs/allocator.h>
+#include <id_allocator/id_allocator.h>
 #include <unittest/unittest.h>
 
 #include "utils.h"
 
 namespace blobfs {
 namespace {
+using id_allocator::IdAllocator;
 bool MakeBitmapFrom(const fbl::Vector<uint8_t>& bit_vector, RawBitmap* out_bitmap) {
     BEGIN_HELPER;
 
@@ -45,7 +47,11 @@ bool FullTest() {
     fbl::Vector<uint8_t> bit_vector = {1};
     ASSERT_TRUE(MakeBitmapFrom(bit_vector, &block_map));
 
-    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map));
+    std::unique_ptr<IdAllocator> id_allocator;
+    ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
+
+    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                        std::move(id_allocator));
     allocator.SetLogging(false);
 
     fbl::Vector<BlockRegion> regions = allocator.GetAllocatedRegions();
@@ -66,7 +72,11 @@ bool FragmentedTest() {
     fbl::Vector<uint8_t> bit_vector = {1, 0, 1, 0, 1};
     ASSERT_TRUE(MakeBitmapFrom(bit_vector, &block_map));
 
-    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map));
+    std::unique_ptr<IdAllocator> id_allocator;
+    ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
+
+    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                        std::move(id_allocator));
     allocator.SetLogging(false);
 
     fbl::Vector<BlockRegion> regions = allocator.GetAllocatedRegions();
@@ -91,7 +101,11 @@ bool LengthTest() {
     fbl::Vector<uint8_t> bit_vector = {0, 1, 1, 0};
     ASSERT_TRUE(MakeBitmapFrom(bit_vector, &block_map));
 
-    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map));
+    std::unique_ptr<IdAllocator> id_allocator;
+    ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
+
+    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                        std::move(id_allocator));
     allocator.SetLogging(false);
 
     fbl::Vector<BlockRegion> regions = allocator.GetAllocatedRegions();

@@ -7,6 +7,8 @@
 
 #include "utils.h"
 
+using id_allocator::IdAllocator;
+
 namespace blobfs {
 namespace {
 
@@ -16,7 +18,10 @@ bool NullTest() {
     MockSpaceManager space_manager;
     RawBitmap block_map;
     fzl::ResizeableVmoMapper node_map;
-    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map));
+    std::unique_ptr<IdAllocator> nodes_bitmap = {};
+    ASSERT_EQ(ZX_OK, IdAllocator::Create(0, &nodes_bitmap), "nodes bitmap");
+    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                        std::move(nodes_bitmap));
     allocator.SetLogging(false);
 
     fbl::Vector<ReservedExtent> extents;
@@ -397,7 +402,10 @@ bool ResetSizeHelper(uint64_t before_blocks, uint64_t before_nodes,
     ASSERT_EQ(ZX_OK, node_map.CreateAndMap(map_size, "node map"));
     space_manager.MutableInfo().inode_count = before_nodes;
     space_manager.MutableInfo().data_block_count = before_blocks;
-    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map));
+    std::unique_ptr<IdAllocator> nodes_bitmap = {};
+    ASSERT_EQ(ZX_OK, IdAllocator::Create(before_nodes, &nodes_bitmap), "nodes bitmap");
+    Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                        std::move(nodes_bitmap));
     allocator.SetLogging(false);
     ASSERT_TRUE(CheckNodeMapSize(&allocator, before_nodes));
     ASSERT_TRUE(CheckBlockMapSize(&allocator, before_blocks));

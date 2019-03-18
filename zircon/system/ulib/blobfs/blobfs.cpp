@@ -41,6 +41,7 @@
 
 using digest::Digest;
 using digest::MerkleTree;
+using id_allocator::IdAllocator;
 
 namespace blobfs {
 namespace {
@@ -660,8 +661,14 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
     if ((status = node_map.CreateAndMap(nodemap_size, "nodemap")) != ZX_OK) {
         return status;
     }
-    fs->allocator_ =
-        fbl::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map));
+    std::unique_ptr<IdAllocator> nodes_bitmap = {};
+    if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap) != ZX_OK)) {
+        fprintf(stderr, "blobfs: Failed to allocate bitmap for inodes\n");
+        return status;
+    }
+
+    fs->allocator_ = fbl::make_unique<Allocator>(fs.get(), std::move(block_map),
+                                                 std::move(node_map), std::move(nodes_bitmap));
     if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
         return status;
@@ -696,27 +703,36 @@ zx_status_t Blobfs::InitializeVnodes() {
 
     for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
         const Inode* inode = GetNode(node_index);
-        if (inode->header.IsAllocated() && !inode->header.IsExtentContainer()) {
-            Digest digest(inode->merkle_root_hash);
-            fbl::RefPtr<Blob> vnode = fbl::AdoptRef(new Blob(this, digest));
-            vnode->SetState(kBlobStateReadable);
-            vnode->PopulateInode(node_index);
-
-            // This blob is added to the cache, where it will quickly be relocated into the "closed
-            // set" once we drop our reference to |vnode|. Although we delay reading any of the
-            // contents of the blob from disk until requested, this pre-caching scheme allows us to
-            // quickly verify or deny the presence of a blob during blob lookup and creation.
-            zx_status_t status = Cache().Add(vnode);
-            if (status != ZX_OK) {
-                Digest digest(vnode->GetNode().merkle_root_hash);
-                char name[digest::Digest::kLength * 2 + 1];
-                digest.ToString(name, sizeof(name));
-                FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: %s @ index %u\n",
-                               name, node_index - 1);
-                return status;
-            }
-            LocalMetrics().UpdateLookup(vnode->SizeData());
+        // We are not interested in free nodes.
+        if (!inode->header.IsAllocated()) {
+            continue;
         }
+
+        allocator_->MarkNodeAllocated(node_index);
+
+        // Nothing much to do here if this is not an Inode
+        if (inode->header.IsExtentContainer()) {
+            continue;
+        }
+        Digest digest(inode->merkle_root_hash);
+        fbl::RefPtr<Blob> vnode = fbl::AdoptRef(new Blob(this, digest));
+        vnode->SetState(kBlobStateReadable);
+        vnode->PopulateInode(node_index);
+
+        // This blob is added to the cache, where it will quickly be relocated into the "closed
+        // set" once we drop our reference to |vnode|. Although we delay reading any of the
+        // contents of the blob from disk until requested, this pre-caching scheme allows us to
+        // quickly verify or deny the presence of a blob during blob lookup and creation.
+        zx_status_t status = Cache().Add(vnode);
+        if (status != ZX_OK) {
+            Digest digest(vnode->GetNode().merkle_root_hash);
+            char name[digest::Digest::kLength * 2 + 1];
+            digest.ToString(name, sizeof(name));
+            FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: %s @ index %u\n", name,
+                           node_index - 1);
+            return status;
+        }
+        LocalMetrics().UpdateLookup(vnode->SizeData());
     }
 
     return ZX_OK;
