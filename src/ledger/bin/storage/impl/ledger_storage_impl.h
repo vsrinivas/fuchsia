@@ -69,6 +69,11 @@ class LedgerStorageImpl : public LedgerStorage {
   storage::DbFactory* const db_factory_;
   ledger::DetachedPath storage_dir_;
   ledger::DetachedPath staging_dir_;
+  // Keep track of all PageStorage instances currently in initialization. This
+  // ensures that any created PageStorage that has not yet been passed to the
+  // caller will be deleted when this object is deleted.
+  std::map<PageStorage*, std::unique_ptr<PageStorage>>
+      storage_in_initialization_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;

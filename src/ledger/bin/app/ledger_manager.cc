@@ -268,11 +268,7 @@ LedgerManager::PageManagerContainer::PageManagerContainer(
       connection_notifier_(std::move(ledger_name), std::move(page_id),
                            page_usage_listener) {}
 
-LedgerManager::PageManagerContainer::~PageManagerContainer() {
-  for (const auto& [unused_page_impl, callback] : page_impls_) {
-    callback(storage::Status::INTERNAL_ERROR);
-  }
-}
+LedgerManager::PageManagerContainer::~PageManagerContainer() {}
 
 void LedgerManager::PageManagerContainer::set_on_empty(
     fit::closure on_empty_callback) {

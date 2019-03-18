@@ -154,8 +154,13 @@ void LedgerStorageImpl::InitializePageStorage(
   auto storage = std::make_unique<PageStorageImpl>(
       environment_, encryption_service_, std::move(db), std::move(page_id));
   PageStorageImpl* storage_ptr = storage.get();
-  storage_ptr->Init([callback = std::move(callback),
-                     storage = std::move(storage)](Status status) mutable {
+  storage_in_initialization_[storage_ptr] = std::move(storage);
+  storage_ptr->Init([this, callback = std::move(callback),
+                     storage_ptr](Status status) mutable {
+    std::unique_ptr<PageStorage> storage =
+        std::move(storage_in_initialization_[storage_ptr]);
+    storage_in_initialization_.erase(storage_ptr);
+
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
       callback(status, nullptr);
