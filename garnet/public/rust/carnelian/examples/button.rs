@@ -7,7 +7,7 @@ use carnelian::{
     Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
-use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
+use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 
 /// enum that defines all messages sent with `App::queue_message` that
@@ -39,9 +39,12 @@ struct Button {
     bounds: Rect,
     bg_color: Color,
     bg_color_active: Color,
+    bg_color_disabled: Color,
     fg_color: Color,
+    fg_color_disabled: Color,
     tracking: bool,
     active: bool,
+    focused: bool,
 }
 
 impl Button {
@@ -52,10 +55,13 @@ impl Button {
             container: EntityNode::new(session.clone()),
             bounds: Rect::zero(),
             fg_color: Color::white(),
-            bg_color: Color::from_hash_code("#404040")?,
-            bg_color_active: Color::from_hash_code("#808080")?,
+            bg_color: Color::from_hash_code("#B7410E")?,
+            bg_color_active: Color::from_hash_code("#f0703c")?,
+            fg_color_disabled: Color::from_hash_code("#A0A0A0")?,
+            bg_color_disabled: Color::from_hash_code("#C0C0C0")?,
             tracking: false,
             active: false,
+            focused: false,
         };
 
         // set up the button background
@@ -67,13 +73,25 @@ impl Button {
         Ok(button)
     }
 
+    pub fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+        if !focused {
+            self.active = false;
+            self.tracking = false;
+        }
+    }
+
     pub fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         // set up paint with different backgrounds depending on whether the button
         // is active. The active state is true when a pointer has gone down in the
         // button's bounds and the pointer has not moved outside the bounds since.
-        let paint = Paint {
-            fg: self.fg_color,
-            bg: if self.active { self.bg_color_active } else { self.bg_color },
+        let paint = if self.focused {
+            Paint {
+                fg: self.fg_color,
+                bg: if self.active { self.bg_color_active } else { self.bg_color },
+            }
+        } else {
+            Paint { fg: self.fg_color_disabled, bg: self.bg_color_disabled }
         };
 
         // center the button in the Scenic view by translating the
@@ -123,6 +141,9 @@ impl Button {
         context: &mut ViewAssistantContext,
         pointer_event: &PointerEvent,
     ) {
+        if !self.focused {
+            return;
+        }
         // TODO: extend this to support multiple pointers
         match pointer_event.phase {
             PointerEventPhase::Down => {
@@ -172,21 +193,13 @@ impl ButtonViewAssistant {
             red_light: false,
         })
     }
-
-    fn handle_pointer_event(
-        &mut self,
-        context: &mut ViewAssistantContext,
-        pointer_event: &PointerEvent,
-    ) {
-        self.button.handle_pointer_event(context, pointer_event);
-    }
 }
 
 impl ViewAssistant for ButtonViewAssistant {
     // Called once by Carnelian when the view is first created. Good for setup
     // that isn't concerned with the size of the view.
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        set_node_color(context.session, &self.background_node, &Color::from_hash_code("#b7410e")?);
+        set_node_color(context.session, &self.background_node, &Color::from_hash_code("#EBD5B3")?);
         context.root_node.add_child(&self.background_node);
         context.root_node.add_child(&self.indicator);
         context.root_node.add_child(self.button.node());
@@ -240,17 +253,21 @@ impl ViewAssistant for ButtonViewAssistant {
         }
     }
 
-    fn handle_input_event(
+    fn handle_pointer_event(
         &mut self,
         context: &mut ViewAssistantContext,
-        event: &fidl_fuchsia_ui_input::InputEvent,
+        pointer_event: &PointerEvent,
     ) -> Result<(), Error> {
-        match event {
-            Pointer(pointer_event) => {
-                self.handle_pointer_event(context, &pointer_event);
-            }
-            _ => (),
-        }
+        self.button.handle_pointer_event(context, pointer_event);
+        Ok(())
+    }
+
+    fn handle_focus_event(
+        &mut self,
+        _: &mut ViewAssistantContext,
+        focus_event: &FocusEvent,
+    ) -> Result<(), Error> {
+        self.button.set_focused(focus_event.focused);
         Ok(())
     }
 }

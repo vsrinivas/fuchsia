@@ -10,7 +10,9 @@ use crate::{
 };
 use failure::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
-use fidl_fuchsia_ui_input::InputEvent;
+use fidl_fuchsia_ui_input::{
+    FocusEvent, InputEvent, KeyboardEvent, PointerEvent, SetHardKeyboardDeliveryCmd,
+};
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{EntityNode, SessionPtr, View};
@@ -70,8 +72,43 @@ pub trait ViewAssistant {
     /// This method is called when input events come from scenic to this view.
     fn handle_input_event(
         &mut self,
-        _context: &mut ViewAssistantContext,
-        _event: &InputEvent,
+        context: &mut ViewAssistantContext,
+        event: &InputEvent,
+    ) -> Result<(), Error> {
+        match event {
+            InputEvent::Pointer(pointer_event) => {
+                self.handle_pointer_event(context, &pointer_event)
+            }
+            InputEvent::Keyboard(keyboard_event) => {
+                self.handle_keyboard_event(context, &keyboard_event)
+            }
+            InputEvent::Focus(focus_event) => self.handle_focus_event(context, &focus_event),
+        }
+    }
+
+    /// This method is called when input events come from scenic to this view.
+    fn handle_pointer_event(
+        &mut self,
+        _: &mut ViewAssistantContext,
+        _: &PointerEvent,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    /// This method is called when keyboard events come from scenic to this view.
+    fn handle_keyboard_event(
+        &mut self,
+        _: &mut ViewAssistantContext,
+        _: &KeyboardEvent,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    /// This method is called when focus events come from scenic to this view.
+    fn handle_focus_event(
+        &mut self,
+        _: &mut ViewAssistantContext,
+        _: &FocusEvent,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -119,6 +156,12 @@ impl ViewController {
         let root_node = EntityNode::new(session.clone());
         root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         view.add_child(&root_node);
+
+        session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(
+            fidl_fuchsia_ui_input::Command::SetHardKeyboardDelivery(SetHardKeyboardDeliveryCmd {
+                delivery_request: true,
+            }),
+        ));
 
         let context = ViewAssistantContext {
             key,

@@ -11,8 +11,9 @@ use carnelian::{
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
+use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_async as fasync;
-use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{ClockId, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
@@ -32,6 +33,7 @@ impl AppAssistant for SpinningSquareAppAssistant {
         Ok(Box::new(SpinningSquareViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             spinning_square_node: ShapeNode::new(session.clone()),
+            rounded: false,
             start: Time::get(ClockId::Monotonic),
         }))
     }
@@ -80,6 +82,7 @@ impl SpinningSquareAppAssistant {
 struct SpinningSquareViewAssistant {
     background_node: ShapeNode,
     spinning_square_node: ShapeNode,
+    rounded: bool,
     start: Time,
 }
 
@@ -118,11 +121,24 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             * SPEED)
             % 1.0;
         let angle = t * PI * 2.0;
-        self.spinning_square_node.set_shape(&Rectangle::new(
-            context.session.clone(),
-            square_size,
-            square_size,
-        ));
+        if self.rounded {
+            let corner_radius = (square_size / 4.0).ceil();
+            self.spinning_square_node.set_shape(&RoundedRectangle::new(
+                context.session.clone(),
+                square_size,
+                square_size,
+                corner_radius,
+                corner_radius,
+                corner_radius,
+                corner_radius,
+            ));
+        } else {
+            self.spinning_square_node.set_shape(&Rectangle::new(
+                context.session.clone(),
+                square_size,
+                square_size,
+            ));
+        }
         self.spinning_square_node.set_translation(center_x, center_y, -8.0);
         self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
         Ok(())
@@ -130,6 +146,19 @@ impl ViewAssistant for SpinningSquareViewAssistant {
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::EveryFrame;
+    }
+
+    fn handle_keyboard_event(
+        &mut self,
+        _: &mut ViewAssistantContext,
+        keyboard_event: &KeyboardEvent,
+    ) -> Result<(), Error> {
+        if keyboard_event.code_point == ' ' as u32
+            && keyboard_event.phase == KeyboardEventPhase::Pressed
+        {
+            self.rounded = !self.rounded;
+        }
+        Ok(())
     }
 }
 
