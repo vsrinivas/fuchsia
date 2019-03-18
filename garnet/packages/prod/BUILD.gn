@@ -601,7 +601,7 @@ group("banjo") {
 group("mediaplayer") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mediaplayer",
+    "//src/media/playback/mediaplayer",
   ]
 }
 

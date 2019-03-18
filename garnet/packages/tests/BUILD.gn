@@ -670,8 +670,8 @@ group("gfxlatency") {
 group("mediaplayer") {
   testonly = true
   public_deps = [
-    "//garnet/bin/mediaplayer:mediaplayer_test_util",
-    "//garnet/bin/mediaplayer:mediaplayer_tests",
+    "//src/media/playback/mediaplayer:mediaplayer_test_util",
+    "//src/media/playback/mediaplayer:mediaplayer_tests",
   ]
 }
 

@@ -156,7 +156,7 @@ From [//build/config/BUILDCONFIG.gn:618](https://fuchsia.googlesource.com/build/
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
-[//garnet/bin/mediaplayer/ffmpeg/README.md](https://fuchsia.googlesource.com/garnet/+/6dd381288512e11bfda06566bf15d5a6cc69a390/bin/mediaplayer/ffmpeg/README.md) for details.  This is
+[//src/media/playback/mediaplayer/ffmpeg/README.md](https://fuchsia.googlesource.com/garnet/+/6dd381288512e11bfda06566bf15d5a6cc69a390/bin/mediaplayer/ffmpeg/README.md) for details.  This is
 ignored when building media_player in variant builds (e.g. sanitizers);
 in that case, ffmpeg is always built from source so as to be built with
 the selected variant's config.  When this is false (either explicitly
@@ -166,7 +166,7 @@ must be in the source tree, which requires:
 
 **Current value (from the default):** `true`
 
-From [//garnet/bin/mediaplayer/ffmpeg/BUILD.gn:14](https://fuchsia.googlesource.com/garnet/+/6dd381288512e11bfda06566bf15d5a6cc69a390/bin/mediaplayer/ffmpeg/BUILD.gn#14)
+From [//src/media/playback/mediaplayer/ffmpeg/BUILD.gn:14](https://fuchsia.googlesource.com/garnet/+/6dd381288512e11bfda06566bf15d5a6cc69a390/bin/mediaplayer/ffmpeg/BUILD.gn#14)
 
 ### build_vsl_gc
 

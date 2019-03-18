@@ -50,6 +50,9 @@ source_set("cpp") {
     "//peridot/*",
     "//src/connectivity/overnet/*",
     "//src/ledger/*",
+
+    # TODO(SCN-1329): move playback to lib/sys.
+    "//src/media/playback/*",
     "//third_party/dart/runtime/*",
     "//topaz/app/term:*",
     "//topaz/auth_providers/google:*",
@@ -79,6 +82,9 @@ source_set("environment_services") {
   visibility = [
     "//garnet/bin/appmgr:*",
     "//garnet/drivers/wlan/wlan:*",
+
+    # TODO(CF-664): move playback to lib/sys.
+    "//src/media/playback/*",
     "testing",
   ]
 }
