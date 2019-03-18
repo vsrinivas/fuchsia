@@ -20,12 +20,14 @@ use url::Url;
 /// Package identifier:
 /// - fuchsia-pkg://example.com/some-package
 /// - fuchsia-pkg://example.com/some-package/some-variant
-/// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>
+/// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>
+/// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash> (obsolete)
 ///
 /// Resource identifier:
 /// - fuchsia-pkg://example.com/some-package#path/to/resource
 /// - fuchsia-pkg://example.com/some-package/some-variant#path/to/resource
-/// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>#path/to/resource
+/// - fuchsia-pkg://example.com/some-package/some-variant?hash=<some-hash>#path/to/resource
+/// - fuchsia-pkg://example.com/some-package/some-variant/<some-hash>#path/to/resource (obsolete)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FuchsiaPkgUri {
     host: String,
@@ -65,10 +67,18 @@ impl FuchsiaPkgUri {
             return Err(ParseError::CannotContainPassword);
         }
 
-        let (name, variant, hash) = parse_path(uri.path())?;
+        let (name, variant, path_hash) = parse_path(uri.path())?;
 
-        if uri.query().is_some() {
-            return Err(ParseError::CannotContainQueryParameters);
+        let query_hash = parse_query_pairs(uri.query_pairs())?;
+
+        if path_hash.is_some() && query_hash.is_some() {
+            return Err(ParseError::InvalidHash);
+        }
+        let hash = query_hash.or(path_hash);
+        if let Some(s) = &hash {
+            if !HASH_RE.is_match(s) {
+                return Err(ParseError::InvalidHash);
+            }
         }
 
         let resource = if let Some(resource) = uri.fragment() {
@@ -114,7 +124,7 @@ impl FuchsiaPkgUri {
     }
 
     pub fn root_uri(&self) -> FuchsiaPkgUri {
-        FuchsiaPkgUri{
+        FuchsiaPkgUri {
             host: self.host.clone(),
             name: self.name.clone(),
             variant: self.variant.clone(),
@@ -251,6 +261,21 @@ fn parse_path(
     Ok((name, variant, hash))
 }
 
+fn parse_query_pairs(pairs: url::form_urlencoded::Parse) -> Result<Option<String>, ParseError> {
+    let mut query_hash = None;
+    for (key, value) in pairs {
+        if key == "hash" {
+            if query_hash.is_some() {
+                return Err(ParseError::InvalidHash);
+            }
+            query_hash = Some(value.to_string());
+        } else {
+            return Err(ParseError::ExtraQueryParameters);
+        }
+    }
+    Ok(query_hash)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,6 +397,22 @@ mod tests {
             hash = Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()),
             resource = None,
         }
+        test_parse_host_name_variant_hash_query => {
+            uri = "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            host = "fuchsia.com".to_string(),
+            name = Some("fonts".to_string()),
+            variant = Some("stable".to_string()),
+            hash = Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()),
+            resource = None,
+        }
+        test_parse_host_name_hash_query => {
+            uri = "fuchsia-pkg://fuchsia.com/fonts?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            host = "fuchsia.com".to_string(),
+            name = Some("fonts".to_string()),
+            variant = None,
+            hash = Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".to_string()),
+            resource = None,
+        }
         test_parse_ignoring_empty_resource => {
             uri = "fuchsia-pkg://fuchsia.com/fonts#",
             host = "fuchsia.com".to_string(),
@@ -456,6 +497,7 @@ mod tests {
         test_parse_hash_cannot_be_empty => {
             uris = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable/",
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=",
             ],
             err = ParseError::InvalidHash,
         }
@@ -463,6 +505,8 @@ mod tests {
             uris = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable/8$e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
                 "fuchsia-pkg://fuchsia.com/fonts/stable/80E8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=8$e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80E8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
             ],
             err = ParseError::InvalidHash,
         }
@@ -470,6 +514,8 @@ mod tests {
             uris = [
                 "fuchsia-pkg://fuchsia.com/fonts/stable/80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4",
                 "fuchsia-pkg://fuchsia.com/fonts/stable/80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4aa",
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4",
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4aa",
             ],
             err = ParseError::InvalidHash,
         }
@@ -478,6 +524,13 @@ mod tests {
                 "fuchsia-pkg://fuchsia.com/fonts/stable/80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a/foo",
             ],
             err = ParseError::ExtraPathSegments,
+        }
+        test_parse_hash_cannot_appear_twice => {
+            uris = [
+                "fuchsia-pkg://fuchsia.com/fonts/stable/80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+                "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a&hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            ],
+            err = ParseError::InvalidHash,
         }
         test_parse_resource_cannot_be_slash => {
             uris = [
@@ -536,11 +589,11 @@ mod tests {
             ],
             err = ParseError::CannotContainPassword,
         }
-        test_parse_rejects_query_params => {
+        test_parse_rejects_unknown_query_params => {
             uris = [
                 "fuchsia-pkg://fuchsia.com?foo=bar",
             ],
-            err = ParseError::CannotContainQueryParameters,
+            err = ParseError::ExtraQueryParameters,
         }
     }
 
