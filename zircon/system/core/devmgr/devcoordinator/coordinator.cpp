@@ -923,7 +923,13 @@ zx_status_t Coordinator::AddCompositeDevice(
         if (new_device->TryMatchComponents(dev_ref, &index)) {
             log(SPEW, "devcoordinator: dev='%s' matched component %zu of composite='%s'\n",
                 dev.name.data(), index, new_device->name().data());
-            return new_device->BindComponent(index, dev_ref);
+            status = new_device->BindComponent(index, dev_ref);
+            if (status != ZX_OK) {
+                log(ERROR,
+                    "devcoordinator: dev='%s' failed to bind component %zu of composite='%s': %s\n",
+                    dev.name.data(), index, new_device->name().data(),
+                    zx_status_get_string(status));
+            }
         }
     }
 
