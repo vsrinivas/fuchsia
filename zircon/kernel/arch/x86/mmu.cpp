@@ -508,9 +508,9 @@ void x86_mmu_early_init() {
 
     // Unmap the lower identity mapping.
     pml4[0] = 0;
-    PendingTlbInvalidation tlb;
-    tlb.enqueue(0, PML4_L, /* global */ false, /* terminal */ false);
-    x86_tlb_invalidate_page(nullptr, &tlb);
+    // As we are still in early init code we cannot use the general page invalidation mechanisms,
+    // specifically ones that might use mp_sync_exec or kcounters, so just drop the entire tlb.
+    x86_tlb_global_invalidate();
 
     /* get the address width from the CPU */
     uint8_t vaddr_width = x86_linear_address_width();

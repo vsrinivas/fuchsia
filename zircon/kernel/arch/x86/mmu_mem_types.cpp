@@ -126,7 +126,16 @@ void x86_pat_sync(cpu_mask_t targets) {
         .barrier2 = (int)targets,
     };
     /* Step 1: Broadcast to all processors to execute the sequence */
-    mp_sync_exec(MP_IPI_TARGET_MASK, targets, x86_pat_sync_task, &context);
+    if (targets == cpu_num_to_mask(arch_curr_cpu_num())) {
+        // Directly call the task without IPIs as its redundant and we might still
+        // be in early init where we cannot call mp_sync_exec
+        spin_lock_saved_state_t irqstate;
+        arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
+        x86_pat_sync_task(&context);
+        arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
+    } else {
+        mp_sync_exec(MP_IPI_TARGET_MASK, targets, x86_pat_sync_task, &context);
+    }
 }
 
 static void x86_pat_sync_task(void* raw_context) {
