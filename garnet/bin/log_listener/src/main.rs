@@ -39,14 +39,14 @@ static MAGENTA: &str = "\x1B[35;1m";
 static CYAN: &str = "\x1B[36;1m";
 
 struct Decorator {
-    lines: HashMap<String, Color>,
     is_active: bool,
-    regex_str: String,
-    decorator_regex_group: Vec<DecoratorRegexGroup>,
-    re: Option<Regex>,
+    lines: HashMap<String, Color>,
+    regex_str_color: String,
+    re_color: Option<Regex>,
+    regex_grp_color: Vec<RegexGroup>,
 }
 
-struct DecoratorRegexGroup {
+struct RegexGroup {
     pub grp: String,
     pub color: Color,
 }
@@ -54,11 +54,11 @@ struct DecoratorRegexGroup {
 impl Decorator {
     pub fn new() -> Self {
         Decorator {
-            lines: HashMap::new(),
             is_active: false,
-            regex_str: String::default(),
-            decorator_regex_group: Vec::new(),
-            re: None,
+            lines: HashMap::new(),
+            regex_str_color: String::default(),
+            re_color: None,
+            regex_grp_color: Vec::new(),
         }
     }
 
@@ -75,23 +75,27 @@ impl Decorator {
 
     pub fn add_word(&mut self, keyword_regex: String, color: Color) {
         self.fail_if_active();
-        let grp_no = self.decorator_regex_group.len();
+        let grp_no = self.regex_grp_color.len();
         let grp = format!("g{}", grp_no);
-        if self.regex_str.len() == 0 {
-            self.regex_str.push_str(&format!(r#"(?i)(?P<{}>(?:{}))"#, grp, keyword_regex));
+        if self.regex_str_color.len() == 0 {
+            self.regex_str_color.push_str(&format!(r#"(?i)(?P<{}>(?:{}))"#, grp, keyword_regex));
         } else {
-            self.regex_str.push_str(&format!(r#"|(?P<{}>(?:{}))"#, grp, keyword_regex));
+            self.regex_str_color.push_str(&format!(r#"|(?P<{}>(?:{}))"#, grp, keyword_regex));
         }
-        let decorator_regex_group = DecoratorRegexGroup { grp, color };
-        self.decorator_regex_group.push(decorator_regex_group);
+        let regex_grp_color = RegexGroup { grp, color };
+        self.regex_grp_color.push(regex_grp_color);
+    }
+
+    pub fn init_regex(&mut self) {
+        self.re_color = Some(
+            Regex::new(self.regex_str_color.as_str())
+                .expect(&format!("should create regex for {}", self.regex_str_color)),
+        );
     }
 
     pub fn activate(&mut self) {
-        self.re = Some(
-            Regex::new(self.regex_str.as_str())
-                .expect(&format!("should create regex for {}", self.regex_str)),
-        );
         self.is_active = true;
+        self.init_regex();
     }
 
     /// If line contains a keyword, color the entire line
@@ -104,11 +108,11 @@ impl Decorator {
     }
 
     fn colorize_words(&self, line: String, encompassing_color: Color) -> String {
-        match &self.re {
+        match &self.re_color {
             None => line,
             Some(regex) => regex
                 .replace_all(line.as_str(), |caps: &Captures| {
-                    for g in &self.decorator_regex_group {
+                    for g in &self.regex_grp_color {
                         let grp_match = caps.name(&g.grp);
                         match grp_match {
                             None => continue,
@@ -175,8 +179,10 @@ struct LocalOptions {
     clock: Clock,
     time_format: String,
     is_pretty: bool,
-    suppress: Vec<String>,
+    begin: Vec<String>,
+    end: Vec<String>,
     only: Vec<String>,
+    suppress: Vec<String>,
 }
 
 impl Default for LocalOptions {
@@ -188,8 +194,10 @@ impl Default for LocalOptions {
             clock: Clock::Monotonic,
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
             is_pretty: false,
-            suppress: vec![],
+            begin: vec![],
+            end: vec![],
             only: vec![],
+            suppress: vec![],
         }
     }
 }
@@ -288,6 +296,23 @@ fn help(name: &str) -> String {
     format!(
         r#"Usage: {name} [flags]
         Flags:
+        --only <comma-separated-words>
+            Filter-in lines containing at least one of the specified words.
+            Ineffectve if not set.
+
+        --suppress <comma-separated-words>
+            Filter-out lines containing any of the specified words
+
+        --begin <comma-separated-words>
+            Filter-in blocks starting with at least one of the specified words.
+            The block ends with --end option if specified.
+            Default is not to suppress.
+
+        --end <comma-separated-words>
+            Filter-out blocks starting with at least one of the specified words.
+            The block end with --begin option if specified.
+            Default is not to suppress.
+
         --tag <string>:
             Tag to filter on. Multiple tags can be specified by using multiple --tag flags.
             All the logs containing at least one of the passed tags would be printed.
@@ -296,22 +321,15 @@ fn help(name: &str) -> String {
             Tag to ignore. Any logs containing at least one of the passed tags will not be
             printed.
 
-        --only <comma-separated-words>
-            Show log lines containing at least one of the specified words.
-            Ineffectve if not set.
-
         --pid <integer>:
             pid for the program to filter on.
 
         --pretty yes:
-            Activate colorization and suppression.
+            Activate colorization. Note, suppression features does not need this option.
             TODO(porce): Use structopt and convert this to boolean.
 
         --tid <integer>:
             tid for the program to filter on.
-
-        --suppress <comma-separated-words>
-            Do not show log lines containing any of the specified words
 
         --severity <INFO|WARN|ERROR|FATAL>:
             Minimum severity to filter on.
@@ -364,6 +382,12 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             return Err(format!("Invalid args. Pass argument after flag '{}'", argument));
         }
         match argument.as_ref() {
+            "--begin" => {
+                options.local.begin.extend(args[i + 1].split(",").map(String::from));
+            }
+            "--end" => {
+                options.local.end.extend(args[i + 1].split(",").map(String::from));
+            }
             "--tag" => {
                 let tag = &args[i + 1];
                 if tag.len() > MAX_TAG_LEN_BYTES as usize {
@@ -388,10 +412,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 options.local.ignore_tags.insert(String::from(tag.as_ref()));
             }
             "--only" => {
-                options
-                    .local
-                    .only
-                    .append(&mut args[i + 1].split(",").map(|s| s.to_string()).collect());
+                options.local.only.extend(args[i + 1].split(",").map(String::from));
             }
             "--pretty" => {
                 let ans = &args[i + 1];
@@ -400,10 +421,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 }
             }
             "--suppress" => {
-                options
-                    .local
-                    .suppress
-                    .append(&mut args[i + 1].split(",").map(|s| s.to_string()).collect());
+                options.local.suppress.extend(args[i + 1].split(",").map(String::from));
             }
             "--severity" => {
                 if options.filter.verbosity > 0 {
@@ -507,6 +525,72 @@ struct Listener<W: Write + Send> {
     local_options: LocalOptions,
     writer: W,
     decorator: Decorator,
+
+    // Line suppression
+    re_only: Option<Regex>,
+    re_suppress: Option<Regex>,
+
+    // Block suppression
+    re_begin: Option<Regex>,
+    re_end: Option<Regex>,
+
+    is_block_suppressed: bool,
+}
+
+impl<W> Listener<W>
+where
+    W: Write + Send,
+{
+    pub fn new(writer: W, local_options: LocalOptions, decorator: Decorator) -> Self {
+        let mut l = Listener {
+            dropped_logs: HashMap::new(),
+            local_options,
+            writer,
+            decorator,
+
+            re_only: None,
+            re_suppress: None,
+            re_begin: None,
+            re_end: None,
+            is_block_suppressed: false,
+        };
+
+        l.init_regex();
+        l
+    }
+
+    pub fn proc_regex(&self, keywords: &[String]) -> Option<Regex> {
+        if keywords.len() == 0 {
+            return None;
+        }
+        let s = fmt_regex_icase("k", keywords.join("|").as_str());
+        match Regex::new(s.as_str()) {
+            Err(e) => {
+                println!("regex err: {} for keywords: {:?}", e, keywords);
+                None
+            }
+            Ok(r) => Some(r),
+        }
+    }
+
+    pub fn init_regex(&mut self) {
+        if self.local_options.only.len() > 0 {
+            self.re_only = self.proc_regex(&self.local_options.only);
+        }
+
+        if self.local_options.suppress.len() > 0 {
+            self.re_suppress = self.proc_regex(&self.local_options.suppress);
+        }
+
+        if self.local_options.begin.len() > 0 {
+            self.re_begin = self.proc_regex(&self.local_options.begin);
+            self.is_block_suppressed = true;
+        }
+
+        if self.local_options.end.len() > 0 {
+            self.re_end = self.proc_regex(&self.local_options.end);
+        }
+    }
 }
 
 impl<W> LogProcessor for Listener<W>
@@ -528,26 +612,31 @@ where
             message.msg
         );
 
-        if self.local_options.only.len() > 0 || self.local_options.suppress.len() > 0 {
-            let line_lowercase = line.clone().to_lowercase();
+        if self.re_only.is_some() && !self.re_only.as_ref().unwrap().is_match(line.as_str()) {
+            return;
+        }
 
-            if self.local_options.only.len() > 0 {
-                let mut has = false;
-                for k in &self.local_options.only {
-                    if line_lowercase.contains(k.to_lowercase().as_str()) {
-                        has = true;
-                        break;
-                    }
-                }
-                if !has {
-                    return;
-                }
+        if self.re_suppress.is_some() && self.re_suppress.as_ref().unwrap().is_match(line.as_str())
+        {
+            return;
+        }
+
+        if self.is_block_suppressed {
+            if self.re_begin.is_none() {
+                return;
             }
+            if !self.re_begin.as_ref().unwrap().is_match(line.as_str()) {
+                return;
+            }
+            // begin condition is met. Activate.
+            self.is_block_suppressed = false;
+        }
 
-            for k in &self.local_options.suppress {
-                if line_lowercase.contains(k.to_lowercase().as_str()) {
-                    return;
-                }
+        if !self.is_block_suppressed {
+            if self.re_end.is_some() && self.re_end.as_ref().unwrap().is_match(line.as_str()) {
+                // end condition is met. Deactivate.
+                self.is_block_suppressed = true;
+                return;
             }
         }
 
@@ -611,15 +700,11 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
         d.add_word("info".to_string(), YELLOW);
         d.add_word("unknown".to_string(), GREEN);
         d.add_word("warning|warn".to_string(), BLUE);
+
         d.activate();
     }
 
-    Ok(Listener {
-        dropped_logs: HashMap::new(),
-        writer: writer,
-        local_options: local_options,
-        decorator: d,
-    })
+    Ok(Listener::new(writer, local_options.clone(), d))
 }
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
@@ -632,6 +717,10 @@ fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Erro
     let l = new_listener(local_options)?;
     let listener_fut = syslog_listener::run_log_listener(l, filter_options, false)?;
     executor.run_singlethreaded(listener_fut).map_err(Into::into)
+}
+
+fn fmt_regex_icase(capture_name: &str, search_key: &str) -> String {
+    format!(r#"(?i)(?P<{}>(?:{}))"#, capture_name, search_key)
 }
 
 fn main() {
@@ -680,12 +769,7 @@ mod tests {
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
 
-        let mut l = Listener {
-            dropped_logs: HashMap::new(),
-            writer: tmp_file,
-            local_options: LocalOptions::default(),
-            decorator: Decorator::new(),
-        };
+        let mut l = Listener::new(tmp_file, LocalOptions::default(), Decorator::new());
 
         // test log levels
         let mut message = LogMessage {
@@ -751,6 +835,28 @@ mod tests {
         expected.push_str(s);
         expected.push_str("[636253.000631][123][321][tag1, tag2] WARNING: Dropped logs count: 2\n");
 
+        // Compare the log output with the expectation.
+        let mut tmp_file = File::open(&file_path).expect("should have opened the file");
+        let mut content = String::new();
+        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
+
+        assert_eq!(content, expected);
+    }
+
+    #[test]
+    fn test_only_and_suppress() {
+        let _executor = fasync::Executor::new().expect("unable to create executor");
+        let tmp_dir = TempDir::new().expect("should have created tempdir");
+        let file_path = tmp_dir.path().join("tmp_file");
+        let tmp_file = File::create(&file_path).expect("should have created file");
+        let mut expected = "".to_string();
+
+        let mut filter_options = LocalOptions::default();
+        filter_options.suppress.push("noisy".to_string());
+        filter_options.only.push("interesting".to_string());
+
+        let mut l = Listener::new(tmp_file, filter_options, Decorator::new());
+
         // Log message filter test
         let mut message2 = LogMessage {
             pid: 123,
@@ -761,11 +867,6 @@ mod tests {
             dropped_logs: 0,
             tags: vec![],
         };
-
-        let mut filter_options = LocalOptions::default();
-        filter_options.suppress.push("noisy".to_string());
-        filter_options.only.push("interesting".to_string());
-        l.local_options = filter_options;
 
         l.log(copy_log_message(&message2));
         expected.push_str("[00076.352234][123][321][] INFO: this is an interesting log\n");
@@ -778,6 +879,60 @@ mod tests {
         l.log(copy_log_message(&message2));
         // Above message is not expected to be logged.
 
+        // Compare the log output with the expectation.
+        let mut tmp_file = File::open(&file_path).expect("should have opened the file");
+        let mut content = String::new();
+        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
+
+        assert_eq!(content, expected);
+    }
+
+    #[test]
+    fn test_begin_end() {
+        let _executor = fasync::Executor::new().expect("unable to create executor");
+        let tmp_dir = TempDir::new().expect("should have created tempdir");
+        let file_path = tmp_dir.path().join("tmp_file");
+        let tmp_file = File::create(&file_path).expect("should have created file");
+        let mut expected = "".to_string();
+
+        // Begin-End message filter test
+        let mut filter_options = LocalOptions::default();
+        filter_options.begin.push("second".to_string());
+        filter_options.begin.push("fifth".to_string());
+        filter_options.end.push("fourth".to_string());
+        filter_options.end.push("sixth".to_string());
+
+        let mut l = Listener::new(tmp_file, filter_options, Decorator::new());
+        let mut message3 = LogMessage {
+            pid: 0,
+            tid: 0,
+            severity: 0,
+            time: 0,
+            msg: String::default(),
+            dropped_logs: 0,
+            tags: vec![],
+        };
+
+        message3.msg = "first".to_string();
+        l.log(copy_log_message(&message3));
+        message3.msg = "second".to_string();
+        l.log(copy_log_message(&message3));
+        message3.msg = "third".to_string();
+        l.log(copy_log_message(&message3));
+        message3.msg = "fourth".to_string();
+        l.log(copy_log_message(&message3));
+        message3.msg = "fifth".to_string();
+        l.log(copy_log_message(&message3));
+        message3.msg = "sixth".to_string();
+        l.log(copy_log_message(&message3));
+        message3.msg = "seventh".to_string();
+        l.log(copy_log_message(&message3));
+
+        expected.push_str("[00000.000000][0][0][] INFO: second\n");
+        expected.push_str("[00000.000000][0][0][] INFO: third\n");
+        expected.push_str("[00000.000000][0][0][] INFO: fifth\n");
+
+        // Compare the log output with the expectation.
         let mut tmp_file = File::open(&file_path).expect("should have opened the file");
         let mut content = String::new();
         tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
