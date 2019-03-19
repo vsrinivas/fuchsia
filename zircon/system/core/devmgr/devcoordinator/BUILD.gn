@@ -85,6 +85,7 @@ source_set("common") {
 }
 
 test("devcoordinator-test") {
+  output_name = "devcoordinator-test"
   test_group = "ddk"
   sources = [
     "binding-test.cpp",
