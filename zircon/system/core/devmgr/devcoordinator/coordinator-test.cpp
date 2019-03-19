@@ -310,7 +310,7 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
 void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bus,
                                   const uint32_t* protocol_ids, size_t component_count,
                                   const zx_device_prop_t* props, size_t props_count,
-                                  const char* name) {
+                                  const char* name, zx_status_t expected_status = ZX_OK) {
     auto components = std::make_unique<fuchsia_device_manager_DeviceComponent[]>(component_count);
     for (size_t i = 0; i < component_count; ++i) {
         // Define a union type to avoid violating the strict aliasing rule.
@@ -332,7 +332,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
     ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, props, props_count,
                                               components.get(), component_count,
                                               0 /* coresident index */),
-              ZX_OK);
+              expected_status);
 }
 
 struct DeviceState {
@@ -455,6 +455,8 @@ public:
     enum class AddLocation {
         // Add the composite before any components
         BEFORE,
+        // Add the composite after some components
+        MIDDLE,
         // Add the composite after all components
         AFTER,
     };
@@ -462,10 +464,11 @@ public:
 };
 
 void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
-    size_t device_indexes[2];
+    size_t device_indexes[3];
     uint32_t protocol_id[] = {
         ZX_PROTOCOL_GPIO,
         ZX_PROTOCOL_I2C,
+        ZX_PROTOCOL_ETHERNET,
     };
     static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
 
@@ -486,6 +489,9 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
         snprintf(name, sizeof(name), "device-%zu", i);
         ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
                                            &device_indexes[i]));
+        if (i == 0 && add == AddLocation::MIDDLE) {
+            ASSERT_NO_FATAL_FAILURES(do_add());
+        }
     }
 
     if (add == AddLocation::AFTER) {
@@ -515,8 +521,23 @@ TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
     ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::BEFORE));
 }
 
+TEST_F(CompositeAddOrderTestCase, DefineInbetweenDevices) {
+    ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::MIDDLE));
+}
+
 TEST_F(CompositeAddOrderTestCase, DefineAfterDevices) {
     ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::AFTER));
+}
+
+TEST_F(CompositeTestCase, CantAddFromNonPlatformBus) {
+    size_t index;
+    ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "test-device", 0, "", &index));
+    auto device_state = device(index);
+
+    uint32_t protocol_id[] = { ZX_PROTOCOL_I2C, ZX_PROTOCOL_GPIO };
+    ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
+            device_state->device, protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
+            0, "composite-dev", ZX_ERR_ACCESS_DENIED));
 }
 
 } // namespace
