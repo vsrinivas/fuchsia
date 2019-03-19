@@ -282,6 +282,30 @@ void dwc3_reset_configuration(dwc3_t* dwc) {
     }
 }
 
+static zx_status_t dwc3_cancel_all(void* ctx, uint8_t ep) {
+    auto* dwc = static_cast<dwc3_t*>(ctx);
+    unsigned ep_num = dwc3_ep_num(ep);
+    if (ep_num >= 32) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    fbl::AutoLock l(&dwc->eps[ep_num].lock);
+    if(dwc->eps[ep_num].current_req) {
+        dwc3_cmd_ep_end_transfer(dwc, ep);
+    }
+    if (list_is_empty(&dwc->eps[ep_num].queued_reqs)) {
+        return ZX_OK;
+    }
+    list_node_t list;
+    list_move(&dwc->eps[ep_num].queued_reqs, &list);
+    dwc_usb_req_internal_t* entry;
+    l.release();
+    list_for_every_entry (&list, entry, dwc_usb_req_internal_t, node) {
+        usb_request_complete(INTERNAL_TO_USB_REQ(entry), ZX_ERR_IO_NOT_PRESENT, 0,
+                             &entry->complete_cb);
+    };
+    return ZX_OK;
+}
+
 static void dwc3_request_queue(void* ctx, usb_request_t* req, const usb_request_complete_t* cb) {
     auto* dwc = static_cast<dwc3_t*>(ctx);
     auto* req_int = USB_REQ_TO_INTERNAL(req);
@@ -339,6 +363,7 @@ usb_dci_protocol_ops_t dwc_dci_ops = {
     .ep_set_stall = dwc3_set_stall,
     .ep_clear_stall = dwc3_clear_stall,
     .get_request_size = dwc3_get_request_size,
+    .cancel_all = dwc3_cancel_all
 };
 
 static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
@@ -462,6 +487,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     if (!dwc) {
         return ZX_ERR_NO_MEMORY;
     }
+    list_initialize(&dwc->pending_completions);
 
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &dwc->pdev);
     if (status != ZX_OK) {

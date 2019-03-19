@@ -15,6 +15,8 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
+#include <lib/zx/channel.h>
+#include <usb/request-cpp.h>
 
 /*
     THEORY OF OPERATION
@@ -81,8 +83,7 @@ class UsbPeripheral : public UsbPeripheralType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
                       public ddk::UsbDciInterface<UsbPeripheral> {
 public:
-    UsbPeripheral(zx_device_t* parent)
-        : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
+    UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -119,6 +120,9 @@ public:
 
     inline const ddk::UsbDciProtocolClient& dci() const { return dci_; }
     inline size_t ParentRequestSize() const { return parent_request_size_; }
+    zx_status_t MsgSetStateChangeListener(zx_handle_t handle);
+    void UsbPeripheralRequestQueue(usb_request_t* usb_request,
+                                   const usb_request_complete_t* complete_cb);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbPeripheral);
@@ -152,6 +156,8 @@ private:
     zx_status_t SetConfiguration(uint8_t configuration);
     zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
     zx_status_t SetDefaultConfig(FunctionDescriptor* descriptors, size_t length);
+    int ListenerCleanupThread();
+    void RequestComplete(usb_request_t* req);
 
     // Our parent's DCI protocol.
     const ddk::UsbDciProtocolClient dci_;
@@ -184,6 +190,8 @@ private:
     bool function_devs_added_ __TA_GUARDED(lock_) = false;
     // True if we are connected to a host,
     bool connected_ __TA_GUARDED(lock_) = false;
+    // True if we are shutting down/clearing functions
+    bool shutting_down_ __TA_GUARDED(lock_) = false;
     // Current configuration number selected via USB_REQ_SET_CONFIGURATION
     // (will be 0 or 1 since we currently do not support multiple configurations).
     uint8_t configuration_;
@@ -191,6 +199,16 @@ private:
     usb_speed_t speed_;
     // Size of our parent's usb_request_t.
     size_t parent_request_size_;
+    // Registered listener
+    zx::channel listener_;
+
+    thrd_t thread_ = 0;
+
+    bool cache_enabled_ = true;
+    bool cache_report_enabled_ = true;
+
+    fbl::Mutex pending_requests_lock_;
+    usb::UnownedRequestList<void> pending_requests_ __TA_GUARDED(pending_requests_lock_);
 };
 
 } // namespace usb_peripheral

@@ -116,6 +116,8 @@ typedef struct {
     // if acquiring both locks.
     fbl::Mutex lock;
     bool configured = false;
+    fbl::Mutex pending_completions_lock;
+    list_node_t pending_completions __TA_GUARDED(pending_completions_lock);
 } dwc3_t;
 
 // Internal context for USB requests
@@ -124,10 +126,11 @@ typedef struct {
      usb_request_complete_t complete_cb;
      // for queueing requests internally
      list_node_t node;
+     list_node_t pending_node;
 } dwc_usb_req_internal_t;
 
-#define USB_REQ_TO_INTERNAL(req) \
-    ((dwc_usb_req_internal_t *)((uintptr_t)(req) + sizeof(usb_request_t)))
+#define USB_REQ_TO_INTERNAL(req)                                                                   \
+    ((dwc_usb_req_internal_t*)((uintptr_t)(req) + sizeof(usb_request_t)))
 #define INTERNAL_TO_USB_REQ(ctx) ((usb_request_t *)((uintptr_t)(ctx) - sizeof(usb_request_t)))
 
 static inline ddk::MmioBuffer* dwc3_mmio(dwc3_t* dwc) {

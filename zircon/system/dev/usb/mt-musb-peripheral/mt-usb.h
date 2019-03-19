@@ -43,6 +43,7 @@ public:
      zx_status_t UsbDciEpSetStall(uint8_t ep_address);
      zx_status_t UsbDciEpClearStall(uint8_t ep_address);
      size_t UsbDciGetRequestSize();
+     zx_status_t UsbDciCancelAll(uint8_t ep_address);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MtUsb);

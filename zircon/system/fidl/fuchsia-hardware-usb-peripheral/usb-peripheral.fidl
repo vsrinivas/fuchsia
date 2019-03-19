@@ -30,6 +30,16 @@ struct DeviceDescriptor {
 
 const uint32 MAX_STRING_LENGTH = 127;
 
+// Events protocol that is used as a callback to inform the client
+// of the completion of various server-side events.
+// This callback interface can be registered using the SetStateChangeListener
+// method on the Device protocol.
+[Layout = "Simple"]
+protocol Events {
+    // Invoked when a function registers
+    FunctionRegistered() -> ();
+};
+
 [Layout = "Simple"]
 protocol Device {
     // Sets the device's USB device descriptor.
@@ -48,4 +58,6 @@ protocol Device {
     GetMode() -> (zx.status s, uint32 mode);
     // Sets the current USB mode.
     SetMode(uint32 mode) -> (zx.status s);
+    // Adds a state change listener that is invoked when a state change completes.
+    SetStateChangeListener(request<Events> listener);
 };

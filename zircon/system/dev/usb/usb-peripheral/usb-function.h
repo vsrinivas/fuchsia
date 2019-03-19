@@ -65,6 +65,8 @@ private:
 
     UsbPeripheral* peripheral_;
     ddk::UsbFunctionInterfaceClient function_intf_;
+    thrd_t thread_;
+    int CompletionThread();
     const FunctionDescriptor function_descriptor_;
 
     uint8_t num_interfaces_ = 0;

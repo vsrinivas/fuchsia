@@ -715,7 +715,26 @@ void MtUsb::DdkUnbind() {
 void MtUsb::DdkRelease() {
     delete this;
 }
-
+zx_status_t MtUsb::UsbDciCancelAll(uint8_t ep) {
+    Endpoint* endpoint = EndpointFromAddress(ep);
+    if (!endpoint) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    RequestQueue queue;
+    {
+        fbl::AutoLock l(&endpoint->lock);
+        queue = std::move(endpoint->queued_reqs);
+        if (endpoint->current_req) {
+            Request pending_request(endpoint->current_req, sizeof(usb_request_t));
+            queue.push(std::move(pending_request));
+            endpoint->current_req = nullptr;
+        }
+    }
+    for (auto req = queue.pop(); req; req = queue.pop()) {
+        req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+    }
+    return ZX_OK;
+}
 void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
     auto* ep = EndpointFromAddress(req->header.ep_address);
     if (ep == nullptr) {
@@ -726,6 +745,7 @@ void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t*
     fbl::AutoLock lock(&ep->lock);
 
     if (!ep->enabled) {
+        lock.release();
         usb_request_complete(req, ZX_ERR_BAD_STATE, 0, cb);
         return;
     }

@@ -45,6 +45,10 @@ zx_status_t UsbVirtualDevice::UsbDciDisableEp(uint8_t ep_address) {
     return bus_->UsbDciDisableEp(ep_address);
 }
 
+zx_status_t UsbVirtualDevice::UsbDciCancelAll(uint8_t ep) {
+    return bus_->UsbDciCancelAll(ep);
+}
+
 zx_status_t UsbVirtualDevice::UsbDciEpSetStall(uint8_t ep_address) {
     return bus_->UsbDciEpSetStall(ep_address);
 }

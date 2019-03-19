@@ -32,6 +32,7 @@ public:
     zx_status_t UsbDciDisableEp(uint8_t ep_address);
     zx_status_t UsbDciEpSetStall(uint8_t ep_address);
     zx_status_t UsbDciEpClearStall(uint8_t ep_address);
+    zx_status_t UsbDciCancelAll(uint8_t endpoint);
     size_t UsbDciGetRequestSize();
 
 private:

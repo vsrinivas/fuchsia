@@ -50,6 +50,29 @@ zx_status_t UsbPeripheral::Create(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
+void UsbPeripheral::RequestComplete(usb_request_t* req) {
+    fbl::AutoLock l(&pending_requests_lock_);
+    usb::UnownedRequest<void> request(req, dci_.GetRequestSize());
+
+    pending_requests_.erase(&request);
+    l.release();
+    request.Complete(request.request()->response.status, request.request()->response.actual);
+}
+
+void UsbPeripheral::UsbPeripheralRequestQueue(usb_request_t* usb_request,
+                                              const usb_request_complete_t* complete_cb) {
+    fbl::AutoLock l(&pending_requests_lock_);
+    usb::UnownedRequest<void> request(usb_request, *complete_cb, dci_.GetRequestSize());
+    __UNUSED usb_request_complete_t completion;
+    completion.ctx = this;
+    completion.callback = [](void* ctx, usb_request_t* req) {
+        reinterpret_cast<UsbPeripheral*>(ctx)->RequestComplete(req);
+    };
+    pending_requests_.push_back(&request);
+    l.release();
+    dci_.RequestQueue(request.take(), &completion);
+}
+
 zx_status_t UsbPeripheral::Init() {
     // Parent must support DCI protocol. USB Mode Switch is optional.
     if (!dci_.is_valid()) {
@@ -73,7 +96,7 @@ zx_status_t UsbPeripheral::Init() {
     if (ums_.is_valid()) {
         ums_.SetMode(USB_MODE_NONE);
     }
-    parent_request_size_ = dci_.GetRequestSize();
+    parent_request_size_ = usb::UnownedRequest<void>::RequestSize(dci_.GetRequestSize());
 
     status = DdkAdd("usb-peripheral", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {
@@ -246,7 +269,9 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
 
     zxlogf(TRACE, "usb_device_function_registered functions_registered = true\n");
     functions_registered_ = true;
-
+    if (listener_) {
+        fuchsia_hardware_usb_peripheral_EventsFunctionRegistered(listener_.get());
+    }
     return DeviceStateChanged();
 }
 
@@ -415,7 +440,6 @@ zx_status_t UsbPeripheral::AddFunction(const FunctionDescriptor* desc) {
 
 zx_status_t UsbPeripheral::BindFunctions() {
     fbl::AutoLock lock(&lock_);
-
     if (functions_bound_) {
         zxlogf(ERROR, "%s: already bound!\n", __func__);
         return ZX_ERR_BAD_STATE;
@@ -437,13 +461,16 @@ zx_status_t UsbPeripheral::BindFunctions() {
 
 zx_status_t UsbPeripheral::ClearFunctions() {
     fbl::AutoLock lock(&lock_);
-
+    for (size_t i = 0; i < 256; i++) {
+        dci_.CancelAll(static_cast<uint8_t>(i));
+    }
     for (size_t i = 0; i < functions_.size(); i++) {
         auto* function = functions_[i].get();
         if (function->zxdev()) {
             function->DdkRemove();
         }
     }
+    this->shutting_down_ = false;
     functions_.reset();
     config_desc_.reset();
     functions_bound_ = false;
@@ -718,6 +745,57 @@ zx_status_t UsbPeripheral::MsgGetMode(fidl_txn_t* txn) {
     return fuchsia_hardware_usb_peripheral_DeviceGetMode_reply(txn, ZX_OK, mode);
 }
 
+int UsbPeripheral::ListenerCleanupThread() {
+    zx_signals_t observed = 0;
+    listener_.wait_one(ZX_CHANNEL_PEER_CLOSED | __ZX_OBJECT_HANDLE_CLOSED, zx::time::infinite(),
+                       &observed);
+    fbl::AutoLock l(&lock_);
+    listener_.reset();
+    return 0;
+}
+
+zx_status_t UsbPeripheral::MsgSetStateChangeListener(zx_handle_t handle) {
+    // This code is wrapped in a loop
+    // to prevent a race condition in the event that multiple
+    // clients try to set the handle at once.
+    while (1) {
+        fbl::AutoLock lock(&lock_);
+        if (listener_.is_valid() && thread_) {
+            thrd_t thread = thread_;
+            thread_ = 0;
+            lock.release();
+            int output;
+            thrd_join(thread, &output);
+            continue;
+        }
+        if (listener_.is_valid()) {
+            return ZX_ERR_BAD_STATE;
+        }
+        if (thread_) {
+            int output;
+            thrd_t thread = thread_;
+            thread_ = 0;
+            lock.release();
+            // We now own the thread, but not the listener.
+            thrd_join(thread, &output);
+            // Go back and try to re-set the listener_.
+            // another caller may have tried to do this while we were blocked on thrd_join.
+            continue;
+        }
+        listener_ = zx::channel(handle);
+        if (thrd_create(
+                &thread_,
+                [](void* arg) -> int {
+                    return reinterpret_cast<UsbPeripheral*>(arg)->ListenerCleanupThread();
+                },
+                reinterpret_cast<void*>(this)) != thrd_success) {
+            listener_.reset();
+            return ZX_ERR_INTERNAL;
+        }
+        return ZX_OK;
+    }
+}
+
 zx_status_t UsbPeripheral::MsgSetMode(uint32_t mode, fidl_txn_t* txn) {
     fbl::AutoLock lock(&lock_);
     usb_mode_ = mode;
@@ -755,6 +833,10 @@ static fuchsia_hardware_usb_peripheral_Device_ops_t fidl_ops = {
         [](void* ctx, uint32_t mode, fidl_txn_t* txn) {
             return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetMode(mode, txn);
         },
+    .SetStateChangeListener =
+        [](void* ctx, zx_handle_t handle) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetStateChangeListener(handle);
+        },
 };
 
 zx_status_t UsbPeripheral::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -769,6 +851,17 @@ void UsbPeripheral::DdkUnbind() {
 
 void UsbPeripheral::DdkRelease() {
     zxlogf(TRACE, "%s\n", __func__);
+    {
+        fbl::AutoLock l(&lock_);
+        if (listener_) {
+            listener_.reset();
+        }
+    }
+    if (thread_) {
+        int output;
+        thrd_join(thread_, &output);
+        thread_ = 0;
+    }
     delete this;
 }
 

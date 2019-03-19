@@ -8,6 +8,7 @@
 #include "dwc3.h"
 #include "dwc3-regs.h"
 
+#include <fbl/auto_lock.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -183,8 +184,21 @@ static int dwc3_irq_thread(void* arg) {
     auto* ring_start = static_cast<uint32_t*>(io_buffer_virt(&dwc->event_buffer));
     auto* ring_end = ring_start + EVENT_BUFFER_SIZE / sizeof(*ring_start);
     auto* ring_cur = ring_start;
-
     while (1) {
+        {
+            fbl::AutoLock l(&dwc->pending_completions_lock);
+            if (!list_is_empty(&dwc->pending_completions)) {
+                dwc_usb_req_internal_t* req_int;
+                list_node_t list;
+                list_move(&dwc->pending_completions, &list);
+                l.release();
+                while ((req_int = list_remove_head_type(&list, dwc_usb_req_internal_t,
+                                                        pending_node)) != nullptr) {
+                    req_int->complete_cb.callback(req_int->complete_cb.ctx,
+                                                  INTERNAL_TO_USB_REQ(req_int));
+                }
+            }
+        }
         zx_status_t status = dwc->irq_handle.wait(nullptr);
         if (status != ZX_OK) {
             zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d\n", status);

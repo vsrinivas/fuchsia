@@ -76,7 +76,7 @@ zx_status_t UsbFunction::UsbFunctionAllocStringDesc(const char* str, uint8_t* ou
 
 void UsbFunction::UsbFunctionRequestQueue(usb_request_t* usb_request,
                                           const usb_request_complete_t* complete_cb) {
-    return peripheral_->dci().RequestQueue(usb_request, complete_cb);
+    peripheral_->UsbPeripheralRequestQueue(usb_request, complete_cb);
 }
 
 zx_status_t UsbFunction::UsbFunctionEpSetStall(uint8_t ep_address) {

@@ -87,12 +87,10 @@ zx_status_t UsbVirtualBus::Init() {
         return status;
     }
 
-    int rc = thrd_create_with_name(&thread_,
-                                   [](void* arg) -> int {
-                                       return reinterpret_cast<UsbVirtualBus*>(arg)->Thread();
-                                   },
-                                   reinterpret_cast<void*>(this),
-                                   "usb-virtual-bus-thread");
+    int rc = thrd_create_with_name(
+        &device_thread_,
+        [](void* arg) -> int { return reinterpret_cast<UsbVirtualBus*>(arg)->DeviceThread(); },
+        reinterpret_cast<void*>(this), "usb-virtual-bus-device-thread");
     if (rc != thrd_success) {
         DdkRemove();
         return ZX_ERR_INTERNAL;
@@ -100,82 +98,83 @@ zx_status_t UsbVirtualBus::Init() {
     return ZX_OK;
 }
 
-int UsbVirtualBus::Thread() {
+int UsbVirtualBus::DeviceThread() {
+    usb::UnownedRequestQueue<void> complete_reqs_pending;
     while (1) {
-        sync_completion_wait(&thread_signal_, ZX_TIME_INFINITE);
-        sync_completion_reset(&thread_signal_);
-
-        bool unbinding;
-        {
-            fbl::AutoLock al(&lock_);
-            unbinding = unbinding_;
+        for (auto req = complete_reqs_pending.pop(); req; req = complete_reqs_pending.pop()) {
+            req->Complete(req->request()->response.status, req->request()->response.actual);
         }
-        if (unbinding) {
-            for (unsigned i = 0; i < USB_MAX_EPS; i++) {
+        fbl::AutoLock al(&device_lock_);
+        bool has_work = true;
+        while (has_work) {
+            has_work = false;
+            if (unbinding_) {
+                for (unsigned i = 0; i < USB_MAX_EPS; i++) {
+                    usb_virtual_ep_t* ep = &eps_[i];
+                    for (auto req = ep->device_reqs.pop(); req; req = ep->device_reqs.pop()) {
+                        req->request()->response.status = ZX_ERR_IO_NOT_PRESENT;
+                        req->request()->response.actual = 0;
+                        complete_reqs_pending.push(std::move(req.value()));
+                    }
+                }
+                return 0;
+            }
+            usb::UnownedRequestQueue<void> aborted_requests;
+            // Data transfer between device/host (everything except ep 0)
+            for (unsigned i = 1; i < USB_MAX_EPS; i++) {
                 usb_virtual_ep_t* ep = &eps_[i];
+                bool out = i < IN_EP_START;
+                while (!ep->host_reqs.is_empty() && !ep->device_reqs.is_empty()) {
+                    has_work = true;
+                    auto device_req = ep->device_reqs.pop();
+                    auto req = ep->host_reqs.pop();
+                    zx_off_t offset = ep->req_offset;
+                    size_t length = req->request()->header.length - offset;
+                    if (length > device_req->request()->header.length) {
+                        length = device_req->request()->header.length;
+                    }
 
-                for (auto req = ep->host_reqs.pop(); req; req = ep->host_reqs.pop()) {
-                    req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
-                }
-                for (auto req = ep->device_reqs.pop(); req; req = ep->device_reqs.pop()) {
-                    req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+                    void* device_buffer;
+                    auto status = device_req->Mmap(&device_buffer);
+                    if (status != ZX_OK) {
+                        zxlogf(ERROR, "%s: usb_request_mmap failed: %d\n", __func__, status);
+                        req->request()->response.status = status;
+                        req->request()->response.actual = 0;
+                        device_req->request()->response.status = status;
+                        device_req->request()->response.actual = 0;
+                        complete_reqs_pending.push(std::move(req.value()));
+                        complete_reqs_pending.push(std::move(device_req.value()));
+                        continue;
+                    }
+
+                    if (out) {
+                        req->CopyFrom(device_buffer, length, offset);
+                    } else {
+                        req->CopyTo(device_buffer, length, offset);
+                    }
+
+                    offset += length;
+                    if (offset == req->request()->header.length ||
+                        // Short packet in the IN direction signals end of transfer.
+                        (!out && device_req->request()->header.length < ep->max_packet_size)) {
+                        req->request()->response.status = ZX_OK;
+                        req->request()->response.actual = length;
+                        complete_reqs_pending.push(std::move(req.value()));
+                        ep->req_offset = 0;
+                    } else {
+                        ep->req_offset = offset;
+                        ep->host_reqs.push_next(*std::move(req));
+                    }
+                    device_req->request()->response.actual = length;
+                    device_req->request()->response.status = ZX_OK;
+                    complete_reqs_pending.push(std::move(device_req.value()));
                 }
             }
-
-            return 0;
         }
-
-        // special case endpoint zero
-        for (auto request = eps_[0].host_reqs.pop(); request; request = eps_[0].host_reqs.pop()) {
-            // Handle control requests outside of the lock to avoid deadlock.
-            HandleControl(*std::move(request));
-        }
-
-        for (unsigned i = 1; i < USB_MAX_EPS; i++) {
-            usb_virtual_ep_t* ep = &eps_[i];
-            bool out = (i < IN_EP_START);
-
-            while (!ep->host_reqs.is_empty() && !ep->device_reqs.is_empty()) {
-                auto device_req = ep->device_reqs.pop();
-                auto req = ep->host_reqs.pop();
-
-                zx_off_t offset = ep->req_offset;
-                size_t length = req->request()->header.length - offset;
-                if (length > device_req->request()->header.length) {
-                    length = device_req->request()->header.length;
-                }
-
-                void* device_buffer;
-                auto status = device_req->Mmap(&device_buffer);
-                if (status != ZX_OK) {
-                    zxlogf(ERROR, "%s: usb_request_mmap failed: %d\n", __func__, status);
-                    req->Complete(status, 0);
-                    device_req->Complete(status, 0);
-                    continue;
-                }
-
-                if (out) {
-                    req->CopyFrom(device_buffer, length, offset);
-                } else {
-                    req->CopyTo(device_buffer, length, offset);
-                }
-
-                offset += length;
-                if (offset == req->request()->header.length ||
-                    // Short packet in the IN direction signals end of transfer.
-                    (!out && device_req->request()->header.length < ep->max_packet_size)) {
-                    req->Complete(ZX_OK, length);
-                    ep->req_offset = 0;
-                } else {
-                    ep->req_offset = offset;
-                    ep->host_reqs.push_next(*std::move(req));
-                }
-
-                device_req->Complete(ZX_OK, length);
-            }
+        if (complete_reqs_pending.is_empty()) {
+            device_signal_.Wait(&device_lock_);
         }
     }
-    return 0;
 }
 
 void UsbVirtualBus::HandleControl(Request request) {
@@ -215,10 +214,9 @@ void UsbVirtualBus::HandleControl(Request request) {
 void UsbVirtualBus::SetConnected(bool connected) {
     bool was_connected = connected;
     {
-      fbl::AutoLock lock(&lock_);
-      std::swap(connected_, was_connected);
+        fbl::AutoLock lock(&connection_lock_);
+        std::swap(connected_, was_connected);
     }
-
     if (connected && !was_connected) {
         if (bus_intf_.is_valid()) {
             bus_intf_.AddDevice(DEVICE_SLOT_ID, DEVICE_HUB_ID, DEVICE_SPEED);
@@ -227,23 +225,28 @@ void UsbVirtualBus::SetConnected(bool connected) {
             dci_intf_.SetConnected(true);
         }
     } else if (!connected && was_connected) {
-        if (bus_intf_.is_valid()) {
-            bus_intf_.RemoveDevice(DEVICE_SLOT_ID);
-        }
-        if (dci_intf_.is_valid()) {
-            dci_intf_.SetConnected(false);
-        }
-
-
-        for (unsigned i = 0; i < USB_MAX_EPS; i++) {
-            usb_virtual_ep_t* ep = &eps_[i];
-
-            for (auto req = ep->host_reqs.pop(); req; req = ep->host_reqs.pop()) {
-                req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+        RequestQueue queue;
+        {
+            fbl::AutoLock l(&lock_);
+            fbl::AutoLock l2(&device_lock_);
+            for (unsigned i = 0; i < USB_MAX_EPS; i++) {
+                usb_virtual_ep_t* ep = &eps_[i];
+                for (auto req = ep->host_reqs.pop(); req; req = ep->host_reqs.pop()) {
+                    queue.push(std::move(*req));
+                }
+                for (auto req = ep->device_reqs.pop(); req; req = ep->device_reqs.pop()) {
+                    queue.push(std::move(*req));
+                }
             }
-            for (auto req = ep->device_reqs.pop(); req; req = ep->device_reqs.pop()) {
-                req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+            if (bus_intf_.is_valid()) {
+                bus_intf_.RemoveDevice(DEVICE_SLOT_ID);
             }
+            if (dci_intf_.is_valid()) {
+                dci_intf_.SetConnected(false);
+            }
+        }
+        for (auto req = queue.pop(); req; req = queue.pop()) {
+            req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
         }
     }
 }
@@ -274,14 +277,20 @@ zx_status_t UsbVirtualBus::SetStall(uint8_t ep_address, bool stall) {
 }
 
 static fuchsia_usb_virtualbus_Bus_ops_t fidl_ops = {
-    .Enable = [](void* ctx, fidl_txn_t* txn) {
-                            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgEnable(txn); },
-    .Disable = [](void* ctx, fidl_txn_t* txn) {
-                            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgDisable(txn); },
-    .Connect = [](void* ctx, fidl_txn_t* txn) {
-                            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgConnect(txn); },
-    .Disconnect = [](void* ctx, fidl_txn_t* txn) {
-                            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgDisconnect(txn); },
+    .Enable = [](void* ctx,
+                 fidl_txn_t* txn) { return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgEnable(txn); },
+    .Disable =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgDisable(txn);
+        },
+    .Connect =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgConnect(txn);
+        },
+    .Disconnect =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbVirtualBus*>(ctx)->MsgDisconnect(txn);
+        },
 };
 
 zx_status_t UsbVirtualBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -291,10 +300,11 @@ zx_status_t UsbVirtualBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 void UsbVirtualBus::DdkUnbind() {
     {
         fbl::AutoLock lock(&lock_);
+        fbl::AutoLock lock2(&device_lock_);
         unbinding_ = true;
+        thread_signal_.Signal();
     }
-    sync_completion_signal(&thread_signal_);
-    thrd_join(thread_, nullptr);
+    thrd_join(device_thread_, nullptr);
 
     auto* host = host_.release();
     if (host) {
@@ -310,8 +320,25 @@ void UsbVirtualBus::DdkRelease() {
     delete this;
 }
 
+zx_status_t UsbVirtualBus::UsbDciCancelAll(uint8_t endpoint) {
+    uint8_t index = EpAddressToIndex(endpoint);
+    if (index == 0 || index >= USB_MAX_EPS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    RequestQueue q;
+    {
+        fbl::AutoLock l(&device_lock_);
+        q = std::move(eps_[index].device_reqs);
+    }
+    for (auto req = q.pop(); req; req = q.pop()) {
+        req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+    }
+    return ZX_OK;
+}
+
 void UsbVirtualBus::UsbDciRequestQueue(usb_request_t* req,
                                        const usb_request_complete_t* complete_cb) {
+
     Request request(req, *complete_cb, sizeof(usb_request_t));
 
     uint8_t index = EpAddressToIndex(request.request()->header.ep_address);
@@ -320,19 +347,18 @@ void UsbVirtualBus::UsbDciRequestQueue(usb_request_t* req,
         request.Complete(ZX_ERR_INVALID_ARGS, 0);
         return;
     }
-    bool connected;
-    {
-        fbl::AutoLock al(&lock_);
-        connected = connected_;
-    }
-    if (!connected) {
-        request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
-        return;
-    }
+    // NOTE: Don't check if we're connected here, because the DCI interface
+    // may come up before the virtual cable is connected.
+    // The functions have no way of knowing if the cable is connected
+    // so we need to allow them to queue up requeste here in case
+    // we're in the bringup phase, and the request is queued before the cable is connected.
+    // (otherwise requests will never be completed).
+    // The same is not true for the host side, which is why these are different.
 
+    fbl::AutoLock lock(&device_lock_);
     eps_[index].device_reqs.push(std::move(request));
 
-    sync_completion_signal(&thread_signal_);
+    device_signal_.Signal();
 }
 
 zx_status_t UsbVirtualBus::UsbDciSetInterface(const usb_dci_interface_t* dci_intf) {
@@ -369,7 +395,7 @@ zx_status_t UsbVirtualBus::UsbDciEpClearStall(uint8_t ep_address) {
 }
 
 size_t UsbVirtualBus::UsbDciGetRequestSize() {
-    return Request::RequestSize(sizeof(usb_request_t));
+    return Request::RequestSize(Request::RequestSize(sizeof(usb_request_t)));
 }
 
 void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
@@ -383,12 +409,9 @@ void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
         request.Complete(ZX_ERR_INVALID_ARGS, 0);
         return;
     }
-
     bool connected;
-    {
-        fbl::AutoLock al(&lock_);
-        connected = connected_;
-    }
+    fbl::AutoLock l(&connection_lock_);
+    connected = connected_;
     if (!connected) {
         request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
         return;
@@ -400,9 +423,18 @@ void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
         request.Complete(ZX_ERR_IO_REFUSED, 0);
         return;
     }
-    ep->host_reqs.push(std::move(request));
-
-    sync_completion_signal(&thread_signal_);
+    if (index) {
+        fbl::AutoLock l(&device_lock_);
+        ep->host_reqs.push(std::move(request));
+        device_signal_.Signal();
+    } else {
+        // Control messages are a VERY special case.
+        // They are synchronous; so we shouldn't dispatch them
+        // to an I/O thread.
+        // We can't hold a lock when responding to a control request
+        l.release();
+        HandleControl(std::move(request));
+    }
 }
 
 void UsbVirtualBus::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
@@ -411,7 +443,7 @@ void UsbVirtualBus::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
 
         bool connected;
         {
-            fbl::AutoLock al(&lock_);
+            fbl::AutoLock al(&connection_lock_);
             connected = connected_;
         }
 
@@ -469,7 +501,12 @@ size_t UsbVirtualBus::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_ad
 }
 
 zx_status_t UsbVirtualBus::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
-    return ZX_ERR_NOT_SUPPORTED;
+    fbl::AutoLock lock(&device_lock_);
+    uint8_t index = EpAddressToIndex(ep_address);
+    for (auto req = eps_[index].host_reqs.pop(); req; req = eps_[index].host_reqs.pop()) {
+        req->Complete(ZX_ERR_IO, 0);
+    }
+    return ZX_OK;
 }
 
 size_t UsbVirtualBus::UsbHciGetRequestSize() {

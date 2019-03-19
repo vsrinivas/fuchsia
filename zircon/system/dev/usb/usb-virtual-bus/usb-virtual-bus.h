@@ -9,6 +9,7 @@
 #include <ddktl/protocol/usb/bus.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <ddktl/protocol/usb/hci.h>
+#include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
@@ -47,6 +48,7 @@ public:
     zx_status_t UsbDciDisableEp(uint8_t ep_address);
     zx_status_t UsbDciEpSetStall(uint8_t ep_address);
     zx_status_t UsbDciEpClearStall(uint8_t ep_address);
+    zx_status_t UsbDciCancelAll(uint8_t endpoint);
     size_t UsbDciGetRequestSize();
 
     // USB host controller protocol implementation.
@@ -94,7 +96,7 @@ private:
     zx_status_t CreateDevice();
     zx_status_t CreateHost();
     void SetConnected(bool connected);
-    int Thread();
+    int DeviceThread();
     void HandleControl(Request req);
     zx_status_t SetStall(uint8_t ep_address, bool stall);
 
@@ -110,14 +112,19 @@ private:
 
     usb_virtual_ep_t eps_[USB_MAX_EPS];
 
-    thrd_t thread_;
+    thrd_t device_thread_;
+    // Host-side lock
     fbl::Mutex lock_;
-    sync_completion_t thread_signal_;
+    fbl::ConditionVariable thread_signal_ __TA_GUARDED(lock_);
 
+    // Device-side lock
+    fbl::Mutex device_lock_ __TA_ACQUIRED_AFTER(lock_);
+    fbl::ConditionVariable device_signal_ __TA_GUARDED(device_lock_);
+    fbl::Mutex connection_lock_ __TA_ACQUIRED_BEFORE(device_lock_);
     // True when the virtual bus is connected.
-    bool connected_ __TA_GUARDED(lock_) = false;
+    bool connected_ __TA_GUARDED(connection_lock_) = false;
     // Used to shut down our thread when this driver is unbinding.
-    bool unbinding_ __TA_GUARDED(lock_) = false;
+    bool unbinding_ __TA_GUARDED(device_lock_) = false;
 };
 
 } // namespace usb_virtual_bus
