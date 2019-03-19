@@ -217,7 +217,8 @@ zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
     }
     // Otherwise attempt to connect through the root namespace
     if (fdio_root_ns != NULL) {
-        return fdio_ns_connect(fdio_root_ns, path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
+        return fdio_ns_connect(fdio_root_ns, path,
+                               ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
     }
     // Otherwise we fail
     zx_handle_close(h);
@@ -237,6 +238,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
         zx_handle_close(request);
         return ZX_ERR_UNAVAILABLE;
     }
+
     uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
     return fuchsia_io_DirectoryOpen(dir, flags, FDIO_CONNECT_MODE, path, length, request);
 }
@@ -284,9 +286,7 @@ zx_handle_t fdio_service_clone(zx_handle_t handle) {
     if (status != ZX_OK) {
         return ZX_HANDLE_INVALID;
     }
-    // TODO(yifeit): Switch to ZX_FS_FLAG_CLONE_SAME_RIGHTS
-    // once all vfs implementations speak the hierarchical concepts.
-    uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+    uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
     status = fuchsia_io_NodeClone(handle, flags, request);
     if (status != ZX_OK) {
         zx_handle_close(clone);
@@ -301,9 +301,7 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request) {
         zx_handle_close(request);
         return ZX_ERR_INVALID_ARGS;
     }
-    // TODO(yifeit): Switch to ZX_FS_FLAG_CLONE_SAME_RIGHTS
-    // once all vfs implementations speak the hierarchical concepts.
-    uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+    uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
     return fuchsia_io_NodeClone(handle, flags, request);
 }
 

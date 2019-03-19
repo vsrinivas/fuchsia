@@ -11,7 +11,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <fbl/string_buffer.h>
 #include <fs/handler.h>
 #include <fs/trace.h>
 #include <fs/vnode.h>
@@ -23,29 +22,11 @@
 #include <zircon/assert.h>
 
 #include <utility>
-#include <memory>
 
-#include "debug.h"
-
-#ifdef __Fuchsia__
-static_assert(fuchsia_io_OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE == (
-                  fuchsia_io_OPEN_FLAG_DIRECTORY |
-                  fuchsia_io_OPEN_FLAG_NOT_DIRECTORY |
-                  fuchsia_io_OPEN_FLAG_DESCRIBE |
-                  fuchsia_io_OPEN_FLAG_NODE_REFERENCE),
-              "OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE value mismatch");
-#endif
+#define ZXDEBUG 0
 
 namespace fs {
-
 namespace {
-
-// Returns true if the rights flags in |flags_a| does not exceed those in |flags_b|.
-bool StricterOrSameRights(uint32_t flags_a, uint32_t flags_b) {
-    uint32_t rights_a = flags_a & ZX_FS_RIGHTS;
-    uint32_t rights_b = flags_b & ZX_FS_RIGHTS;
-    return (rights_a & ~rights_b) == 0;
-}
 
 void WriteDescribeError(zx::channel channel, zx_status_t status) {
     fuchsia_io_NodeOnOpenEvent msg;
@@ -57,7 +38,7 @@ void WriteDescribeError(zx::channel channel, zx_status_t status) {
 
 zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
                         fuchsia_io_NodeInfo* info) {
-    if (IsVnodeRefOnly(flags)) {
+    if (IsPathOnly(flags)) {
         return vn->Vnode::GetNodeInfo(flags, info);
     } else {
         return vn->GetNodeInfo(flags, info);
@@ -109,52 +90,18 @@ void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
                                                                     FIDL_ALLOC_ABSENT);
 }
 
-// Perform basic flags sanitization and extract |ZX_FS_FLAG_DESCRIBE| bit into bool |out_describe|.
-// Returns false if the flags combination is invalid.
-bool PrevalidateFlags(uint32_t flags, uint32_t* out_flags, bool* out_describe) {
+void FilterFlags(uint32_t flags, uint32_t* out_flags, bool* out_describe) {
+    // Filter out flags that are invalid when combined with REF_ONLY.
+    if (IsPathOnly(flags)) {
+        flags &= ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_DESCRIBE;
+    }
+
     *out_describe = flags & ZX_FS_FLAG_DESCRIBE;
-
-    // If the caller specified an unknown right, reject the request.
-    if ((flags & ZX_FS_RIGHTS_SPACE) & ~ZX_FS_RIGHTS) {
-        return false;
-    }
-
-    if (IsVnodeRefOnly(flags)) {
-        constexpr uint32_t kValidFlagsForNodeRef =
-            ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOT_DIRECTORY |
-            ZX_FS_FLAG_DESCRIBE;
-        // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
-        if (flags & ~kValidFlagsForNodeRef) {
-            return false;
-        }
-    }
-
     *out_flags = flags & (~ZX_FS_FLAG_DESCRIBE);
-    return true;
 }
 
-zx_status_t EnforceHierarchicalRights(uint32_t parent_flags, uint32_t child_flags,
-                                      uint32_t* out_flags) {
-    if (child_flags & ZX_FS_FLAG_POSIX) {
-        if (!IsWritable(parent_flags) && !IsWritable(child_flags)) {
-            // Posix compatibility flag allows the child dir connection to inherit every right from
-            // its immediate parent. Here we know there exists a read-only directory somewhere along
-            // the Open() chain, so remove this flag to rid the child connection the ability to
-            // inherit read-write right from e.g. crossing a read-write mount point down the line.
-            child_flags &= ~ZX_FS_FLAG_POSIX;
-        }
-    }
-    if (!StricterOrSameRights(child_flags, parent_flags)) {
-        // Client asked for some right but we do not have it
-        return ZX_ERR_ACCESS_DENIED;
-    }
-    *out_flags = child_flags;
-    return ZX_OK;
-}
-
-void VnodeServe(Vfs* vfs, const fbl::RefPtr<Vnode>& vnode, zx::channel channel,
-                uint32_t open_flags) {
-    if (IsVnodeRefOnly(open_flags)) {
+void VnodeServe(Vfs* vfs, fbl::RefPtr<Vnode> vnode, zx::channel channel, uint32_t open_flags) {
+    if (IsPathOnly(open_flags)) {
         vnode->Vnode::Serve(vfs, std::move(channel), open_flags);
     } else {
         vnode->Serve(vfs, std::move(channel), open_flags);
@@ -163,15 +110,10 @@ void VnodeServe(Vfs* vfs, const fbl::RefPtr<Vnode>& vnode, zx::channel channel,
 
 // Performs a path walk and opens a connection to another node.
 void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
-            fbl::StringPiece path, uint32_t flags, uint32_t parent_rights, uint32_t mode) {
+            fbl::StringPiece path, uint32_t flags, uint32_t mode) {
     bool describe;
     uint32_t open_flags;
-    if (!PrevalidateFlags(flags, &open_flags, &describe)) {
-        if (describe) {
-            WriteDescribeError(std::move(channel), ZX_ERR_INVALID_ARGS);
-        }
-        return;
-    }
+    FilterFlags(flags, &open_flags, &describe);
 
     fbl::RefPtr<Vnode> vnode;
     zx_status_t r = vfs->Open(std::move(parent), &vnode, path, &path, open_flags, mode);
@@ -179,9 +121,9 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
     if (r != ZX_OK) {
         FS_TRACE_DEBUG("vfs: open failure: %d\n", r);
     } else if (!(open_flags & ZX_FS_FLAG_NOREMOTE) && vnode->IsRemote()) {
-        FS_TRACE_DEBUG("vfs: handoff to remote\n");
         // Remote handoff to a remote filesystem node.
-        vfs->ForwardOpenRemote(std::move(vnode), std::move(channel), path, flags, mode);
+        vfs->ForwardOpenRemote(std::move(vnode), std::move(channel), std::move(path),
+                               flags, mode);
         return;
     }
 
@@ -203,19 +145,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
         return;
     }
 
-    if (vnode->IsDirectory() && (open_flags & ZX_FS_FLAG_POSIX)) {
-        // This is such that POSIX open() can open a directory with O_RDONLY, and still get a
-        // RW directory if the parent directory is RW.
-        // ADMIN right is not inherited. It must be explicitly specified.
-        bool admin = open_flags & ZX_FS_RIGHT_ADMIN;
-        open_flags |= parent_rights;
-        open_flags &= ~ZX_FS_RIGHT_ADMIN;
-        if (admin) {
-            open_flags |= ZX_FS_RIGHT_ADMIN;
-        }
-    }
-
-    VnodeServe(vfs, vnode, std::move(channel), open_flags);
+    VnodeServe(vfs, std::move(vnode), std::move(channel), open_flags);
 }
 
 // This template defines a mechanism to transform a member of Connection
@@ -353,24 +283,10 @@ const fuchsia_io_DirectoryAdmin_ops kDirectoryAdminOps {
 constexpr zx_signals_t kWakeSignals = ZX_CHANNEL_READABLE |
                                       ZX_CHANNEL_PEER_CLOSED | kLocalTeardownSignal;
 
-// Flags which can be modified by SetFlags.
-constexpr uint32_t kSettableStatusFlags = ZX_FS_FLAG_APPEND;
-
-// All flags which indicate state of the connection (excluding rights).
-constexpr uint32_t kStatusFlags = kSettableStatusFlags | ZX_FS_FLAG_VNODE_REF_ONLY;
-
-// Flags which should be stored on the connection object.
-// Some flags (e.g. ZX_FS_FLAG_POSIX) only affect the interpretation of rights at the time of Open,
-// and should have no effects thereafter. Hence we filter them here.
-// TODO(ZX-3543): Some of these flag groups should be defined in io.fidl and use that as the source
-// of truth.
-constexpr uint32_t kPersistentFlags = ZX_FS_RIGHTS | kStatusFlags;
-
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode,
                        zx::channel channel, uint32_t flags)
     : vfs_(vfs), vnode_(std::move(vnode)), channel_(std::move(channel)),
-      wait_(this, ZX_HANDLE_INVALID, kWakeSignals),
-      flags_(flags & kPersistentFlags) {
+      wait_(this, ZX_HANDLE_INVALID, kWakeSignals), flags_(flags) {
     ZX_DEBUG_ASSERT(vfs);
     ZX_DEBUG_ASSERT(vnode_);
     ZX_DEBUG_ASSERT(channel_);
@@ -412,8 +328,8 @@ zx_status_t Connection::Serve() {
     return wait_.Begin(vfs_->dispatcher());
 }
 
-void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                               zx_status_t status, const zx_packet_signal_t* signal) {
+void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                               const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(is_open());
 
     if (status == ZX_OK) {
@@ -469,45 +385,29 @@ void Connection::CallClose() {
     set_closed();
 }
 
+// Flags which can be modified by SetFlags.
+constexpr uint32_t kSettableStatusFlags = ZX_FS_FLAG_APPEND;
+
+// All flags which indicate state of the
+// connection (excluding rights).
+constexpr uint32_t kStatusFlags = kSettableStatusFlags | ZX_FS_FLAG_VNODE_REF_ONLY;
+
 zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
-    FS_PRETTY_TRACE_DEBUG("[NodeClone] our flags: ", ZxFlags(flags_),
-                          ", incoming flags: ", ZxFlags(flags));
     zx::channel channel(object);
-    auto write_error = [describe = flags & ZX_FS_FLAG_DESCRIBE] (zx::channel channel,
-                                                                 zx_status_t error) {
-        if (describe) {
-            WriteDescribeError(std::move(channel), error);
-        }
-        return ZX_OK;
-    };
 
     bool describe;
-    uint32_t clone_flags;
-    if (!PrevalidateFlags(flags, &clone_flags, &describe)) {
-        return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
-    }
-    // TODO(yifeit): Start enforcing this check after soft transition
-    // If CLONE_SAME_RIGHTS is specified, the client cannot request any specific rights.
-    // if ((clone_flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) && (clone_flags & ZX_FS_RIGHTS)) {
-    //     return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
-    // }
-    clone_flags |= (flags_ & kStatusFlags);
-    // If CLONE_SAME_RIGHTS is requested, cloned connection will inherit the same rights
-    // as those from the originating connection.
-    if (clone_flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
-        clone_flags &= (~ZX_FS_RIGHTS);
-        clone_flags |= (flags_ & ZX_FS_RIGHTS);
-    }
-    // TODO(yifeit): Start enforcing hierarchical rights during clone after soft transition
-    // if (!StricterOrSameRights(clone_flags, flags_)) {
-    //     FS_PRETTY_TRACE_DEBUG("Rights violation during NodeClone");
-    //     return write_error(std::move(channel), ZX_ERR_ACCESS_DENIED);
-    // }
+    uint32_t open_flags;
+    FilterFlags(flags, &open_flags, &describe);
+    // TODO(smklein): Avoid automatically inheriting rights
+    // from the cloned file descriptor; allow de-scoping.
+    // Currently, this is difficult, since the remote IO interface
+    // to clone does not specify a reduced set of rights.
+    open_flags |= (flags_ & (ZX_FS_RIGHTS | kStatusFlags));
 
     fbl::RefPtr<Vnode> vn(vnode_);
     zx_status_t status = ZX_OK;
-    if (!IsVnodeRefOnly(clone_flags)) {
-        status = OpenVnode(clone_flags, &vn);
+    if (!IsPathOnly(open_flags)) {
+        status = OpenVnode(open_flags, &vn);
     }
     if (describe) {
         OnOpenMsg response;
@@ -515,21 +415,21 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
         response.primary.s = status;
         zx_handle_t extra = ZX_HANDLE_INVALID;
         if (status == ZX_OK) {
-            Describe(vnode_, clone_flags, &response, &extra);
+            Describe(vnode_, open_flags, &response, &extra);
         }
         uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
         channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
     }
 
     if (status == ZX_OK) {
-        VnodeServe(vfs_, vn, std::move(channel), clone_flags);
+        VnodeServe(vfs_, std::move(vn), std::move(channel), open_flags);
     }
     return ZX_OK;
 }
 
 zx_status_t Connection::NodeClose(fidl_txn_t* txn) {
     zx_status_t status;
-    if (IsVnodeRefOnly(flags_)) {
+    if (IsPathOnly(flags_)) {
         status = ZX_OK;
     } else {
         status = vnode_->Close();
@@ -550,9 +450,7 @@ zx_status_t Connection::NodeDescribe(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::NodeSync(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[NodeSync] flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
+    if (IsPathOnly(flags_)) {
         return fuchsia_io_NodeSync_reply(txn, ZX_ERR_BAD_HANDLE);
     }
     Vnode::SyncCallback closure([this, ctxn = FidlConnection::CopyTxn(txn)]
@@ -569,8 +467,6 @@ zx_status_t Connection::NodeSync(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::NodeGetAttr(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[NodeGetAttr] flags: ", ZxFlags(flags_));
-
     fuchsia_io_NodeAttributes attributes;
     memset(&attributes, 0, sizeof(attributes));
 
@@ -597,13 +493,10 @@ zx_status_t Connection::NodeGetAttr(fidl_txn_t* txn) {
 zx_status_t Connection::NodeSetAttr(uint32_t flags,
                                     const fuchsia_io_NodeAttributes* attributes,
                                     fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our flags: ", ZxFlags(flags_),
-                          ", incoming flags: ", ZxFlags(flags));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
-    if (!IsWritable(flags_)) {
+    // TODO(smklein): Prevent read-only files from setting attributes,
+    // but allow attribute-setting on mutable directories.
+    // For context: ZX-1262, ZX-1065
+    if (IsPathOnly(flags_)) {
         return fuchsia_io_NodeSetAttr_reply(txn, ZX_ERR_BAD_HANDLE);
     }
 
@@ -623,11 +516,7 @@ zx_status_t Connection::NodeIoctl(uint32_t opcode, uint64_t max_out,
 }
 
 zx_status_t Connection::FileRead(uint64_t count, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileRead] flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_FileRead_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
-    } else if (!IsReadable(flags_)) {
+    if (!IsReadable(flags_)) {
         return fuchsia_io_FileRead_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
         return fuchsia_io_FileRead_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
@@ -643,11 +532,7 @@ zx_status_t Connection::FileRead(uint64_t count, fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::FileReadAt(uint64_t count, uint64_t offset, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileReadAt] flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
-    } else if (!IsReadable(flags_)) {
+    if (!IsReadable(flags_)) {
         return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
     } else if (count > ZXFIDL_MAX_MSG_BYTES) {
         return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
@@ -662,11 +547,6 @@ zx_status_t Connection::FileReadAt(uint64_t count, uint64_t offset, fidl_txn_t* 
 }
 
 zx_status_t Connection::FileWrite(const uint8_t* data_data, size_t data_count, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileWrite] flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_FileWrite_reply(txn, ZX_ERR_BAD_HANDLE, 0);
-    }
     if (!IsWritable(flags_)) {
         return fuchsia_io_FileWrite_reply(txn, ZX_ERR_BAD_HANDLE, 0);
     }
@@ -691,11 +571,6 @@ zx_status_t Connection::FileWrite(const uint8_t* data_data, size_t data_count, f
 
 zx_status_t Connection::FileWriteAt(const uint8_t* data_data, size_t data_count,
                                     uint64_t offset, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileWriteAt] flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_BAD_HANDLE, 0);
-    }
     if (!IsWritable(flags_)) {
         return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_BAD_HANDLE, 0);
     }
@@ -706,13 +581,11 @@ zx_status_t Connection::FileWriteAt(const uint8_t* data_data, size_t data_count,
 }
 
 zx_status_t Connection::FileSeek(int64_t offset, fuchsia_io_SeekOrigin start, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileSeek] flags: ", ZxFlags(flags_));
-
     static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
     static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
     static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
 
-    if (IsVnodeRefOnly(flags_)) {
+    if (IsPathOnly(flags_)) {
         return fuchsia_io_FileSeek_reply(txn, ZX_ERR_BAD_HANDLE, offset_);
     }
     vnattr_t attr;
@@ -768,11 +641,6 @@ zx_status_t Connection::FileSeek(int64_t offset, fuchsia_io_SeekOrigin start, fi
 }
 
 zx_status_t Connection::FileTruncate(uint64_t length, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileTruncate] flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_FileTruncate_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
     if (!IsWritable(flags_)) {
         return fuchsia_io_FileTruncate_reply(txn, ZX_ERR_BAD_HANDLE);
     }
@@ -792,10 +660,7 @@ zx_status_t Connection::FileSetFlags(uint32_t flags, fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::FileGetBuffer(uint32_t flags, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our flags: ", ZxFlags(flags_),
-                          ", incoming flags: ", ZxFlags(flags));
-
-    if (IsVnodeRefOnly(flags_)) {
+    if (IsPathOnly(flags_)) {
         return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_BAD_HANDLE, nullptr);
     }
 
@@ -815,66 +680,36 @@ zx_status_t Connection::FileGetBuffer(uint32_t flags, fidl_txn_t* txn) {
     return fuchsia_io_FileGetBuffer_reply(txn, status, status == ZX_OK ? &buffer : nullptr);
 }
 
-zx_status_t Connection::DirectoryOpen(uint32_t open_flags, uint32_t mode, const char* path_data,
+zx_status_t Connection::DirectoryOpen(uint32_t flags, uint32_t mode, const char* path_data,
                                       size_t path_size, zx_handle_t object) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our flags: ", ZxFlags(flags_),
-                          ", incoming flags: ", ZxFlags(open_flags),
-                          ", path: ", Path(path_data, path_size));
-
     zx::channel channel(object);
-    auto write_error = [describe = open_flags & ZX_FS_FLAG_DESCRIBE] (zx::channel channel,
-                                                                      zx_status_t error) {
-        if (describe) {
-            WriteDescribeError(std::move(channel), error);
-        }
-        return ZX_OK;
-    };
-    if (IsVnodeRefOnly(flags_)) {
-        return write_error(std::move(channel), ZX_ERR_BAD_HANDLE);
-    }
-    if (open_flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
-        return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
-    }
-    if (!IsVnodeRefOnly(open_flags) && !(open_flags & ZX_FS_RIGHTS)) {
-        return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
-    }
+    bool describe = flags & ZX_FS_FLAG_DESCRIBE;
     if ((path_size < 1) || (path_size > PATH_MAX)) {
-        return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
+        if (describe) {
+            WriteDescribeError(std::move(channel), ZX_ERR_INVALID_ARGS);
+        }
+    } else if ((flags & ZX_FS_RIGHT_ADMIN) && !(flags_ & ZX_FS_RIGHT_ADMIN)) {
+        if (describe) {
+            WriteDescribeError(std::move(channel), ZX_ERR_ACCESS_DENIED);
+        }
+    } else {
+        OpenAt(vfs_, vnode_, std::move(channel),
+               fbl::StringPiece(path_data, path_size), flags, mode);
     }
-
-    // Check for directory rights inheritance
-    zx_status_t status = EnforceHierarchicalRights(flags_, open_flags, &open_flags);
-    if (status != ZX_OK) {
-        FS_PRETTY_TRACE_DEBUG("Rights violation during DirectoryOpen");
-        return write_error(std::move(channel), status);
-    }
-    OpenAt(vfs_, vnode_, std::move(channel), fbl::StringPiece(path_data, path_size),
-           open_flags, flags_ & ZX_FS_RIGHTS, mode);
     return ZX_OK;
 }
 
 zx_status_t Connection::DirectoryUnlink(const char* path_data, size_t path_size, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our flags: ", ZxFlags(flags_),
-                          ", path: ", Path(path_data, path_size));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_DirectoryUnlink_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
-    if (!IsWritable(flags_)) {
-        return fuchsia_io_DirectoryUnlink_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
     zx_status_t status = vfs_->Unlink(vnode_, fbl::StringPiece(path_data, path_size));
     return fuchsia_io_DirectoryUnlink_reply(txn, status);
 }
 
 zx_status_t Connection::DirectoryReadDirents(uint64_t max_out, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryReadDirents] our flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
+    if (IsPathOnly(flags_)) {
         return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
     }
     if (max_out > ZXFIDL_MAX_MSG_BYTES) {
-        return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
+        return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
     }
     uint8_t data[max_out];
     size_t actual = 0;
@@ -883,12 +718,7 @@ zx_status_t Connection::DirectoryReadDirents(uint64_t max_out, fidl_txn_t* txn) 
 }
 
 zx_status_t Connection::DirectoryRewind(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryRewind] our flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_DirectoryRewind_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
-    if (!IsReadable(flags_)) {
+    if (IsPathOnly(flags_)) {
         return fuchsia_io_DirectoryRewind_reply(txn, ZX_ERR_BAD_HANDLE);
     }
     dircookie_.Reset();
@@ -896,11 +726,6 @@ zx_status_t Connection::DirectoryRewind(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::DirectoryGetToken(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryGetToken] our flags: ", ZxFlags(flags_));
-
-    if (!IsWritable(flags_)) {
-        return fuchsia_io_DirectoryGetToken_reply(txn, ZX_ERR_BAD_HANDLE, ZX_HANDLE_INVALID);
-    }
     zx::event returned_token;
     zx_status_t status = vfs_->VnodeToToken(vnode_, &token_, &returned_token);
     return fuchsia_io_DirectoryGetToken_reply(txn, status, returned_token.release());
@@ -909,22 +734,12 @@ zx_status_t Connection::DirectoryGetToken(fidl_txn_t* txn) {
 zx_status_t Connection::DirectoryRename(const char* src_data, size_t src_size,
                                         zx_handle_t dst_parent_token, const char* dst_data,
                                         size_t dst_size, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our flags: ", ZxFlags(flags_),
-                          ", src: ", Path(src_data, src_size),
-                          ", dst: ", Path(dst_data, dst_size));
-
     zx::event token(dst_parent_token);
     fbl::StringPiece oldStr(src_data, src_size);
     fbl::StringPiece newStr(dst_data, dst_size);
 
     if (src_size < 1 || dst_size < 1) {
         return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_INVALID_ARGS);
-    }
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
-    if (!IsWritable(flags_)) {
-        return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_BAD_HANDLE);
     }
     zx_status_t status = vfs_->Rename(std::move(token), vnode_,
                                       std::move(oldStr), std::move(newStr));
@@ -934,22 +749,12 @@ zx_status_t Connection::DirectoryRename(const char* src_data, size_t src_size,
 zx_status_t Connection::DirectoryLink(const char* src_data, size_t src_size,
                                       zx_handle_t dst_parent_token, const char* dst_data,
                                       size_t dst_size, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our flags: ", ZxFlags(flags_),
-                          ", src: ", Path(src_data, src_size),
-                          ", dst: ", Path(dst_data, dst_size));
-
     zx::event token(dst_parent_token);
     fbl::StringPiece oldStr(src_data, src_size);
     fbl::StringPiece newStr(dst_data, dst_size);
 
     if (src_size < 1 || dst_size < 1) {
         return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_INVALID_ARGS);
-    }
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
-    if (!IsWritable(flags_)) {
-        return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_BAD_HANDLE);
     }
     zx_status_t status = vfs_->Link(std::move(token), vnode_, std::move(oldStr),
                                     std::move(newStr));
@@ -958,23 +763,13 @@ zx_status_t Connection::DirectoryLink(const char* src_data, size_t src_size,
 
 zx_status_t Connection::DirectoryWatch(uint32_t mask, uint32_t options, zx_handle_t handle,
                                        fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryWatch] our flags: ", ZxFlags(flags_));
-
-    if (IsVnodeRefOnly(flags_)) {
-        return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
-    if (!IsReadable(flags_)) {
-        return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_BAD_HANDLE);
-    }
     zx::channel watcher(handle);
     zx_status_t status = vnode_->WatchDir(vfs_, mask, options, std::move(watcher));
     return fuchsia_io_DirectoryWatch_reply(txn, status);
 }
 
 zx_status_t Connection::DirectoryAdminMount(zx_handle_t remote, fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our flags: ", ZxFlags(flags_));
-
-    if (!HasAdminRight(flags_)) {
+    if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
         vfs_unmount_handle(remote, 0);
         return fuchsia_io_DirectoryAdminMount_reply(txn, ZX_ERR_ACCESS_DENIED);
     }
@@ -986,9 +781,7 @@ zx_status_t Connection::DirectoryAdminMount(zx_handle_t remote, fidl_txn_t* txn)
 zx_status_t Connection::DirectoryAdminMountAndCreate(zx_handle_t remote, const char* name,
                                                      size_t name_size, uint32_t flags,
                                                      fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our flags: ", ZxFlags(flags_));
-
-    if (!HasAdminRight(flags_)) {
+    if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
         vfs_unmount_handle(remote, 0);
         return fuchsia_io_DirectoryAdminMount_reply(txn, ZX_ERR_ACCESS_DENIED);
     }
@@ -998,9 +791,7 @@ zx_status_t Connection::DirectoryAdminMountAndCreate(zx_handle_t remote, const c
 }
 
 zx_status_t Connection::DirectoryAdminUnmount(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmount] our flags: ", ZxFlags(flags_));
-
-    if (!HasAdminRight(flags_)) {
+    if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
         return fuchsia_io_DirectoryAdminUnmount_reply(txn, ZX_ERR_ACCESS_DENIED);
     }
     vfs_->UninstallAll(ZX_TIME_INFINITE);
@@ -1018,12 +809,8 @@ zx_status_t Connection::DirectoryAdminUnmount(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::DirectoryAdminUnmountNode(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmountNode] our flags: ", ZxFlags(flags_));
-
-    if (!HasAdminRight(flags_)) {
-        return fuchsia_io_DirectoryAdminUnmountNode_reply(txn,
-                                                          ZX_ERR_ACCESS_DENIED,
-                                                          ZX_HANDLE_INVALID);
+    if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
+        return fuchsia_io_DirectoryAdminUnmountNode_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
     }
     zx::channel c;
     zx_status_t status = vfs_->UninstallRemote(vnode_, &c);
@@ -1031,8 +818,6 @@ zx_status_t Connection::DirectoryAdminUnmountNode(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::DirectoryAdminQueryFilesystem(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryAdminQueryFilesystem] our flags: ", ZxFlags(flags_));
-
     fuchsia_io_FilesystemInfo info;
     zx_status_t status = vnode_->QueryFilesystem(&info);
     return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, status,
@@ -1040,9 +825,7 @@ zx_status_t Connection::DirectoryAdminQueryFilesystem(fidl_txn_t* txn) {
 }
 
 zx_status_t Connection::DirectoryAdminGetDevicePath(fidl_txn_t* txn) {
-    FS_PRETTY_TRACE_DEBUG("[DirectoryAdminGetDevicePath] our flags: ", ZxFlags(flags_));
-
-    if (!HasAdminRight(flags_)) {
+    if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
         return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
     }
 

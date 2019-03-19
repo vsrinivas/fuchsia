@@ -16,8 +16,7 @@ namespace vfs {
 namespace {
 
 constexpr uint32_t kCommonAllowedFlags =
-    fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
-    fuchsia::io::OPEN_FLAG_POSIX | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
+    fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE;
 
 constexpr uint32_t FS_RIGHTS = 0x0000FFFF;
 

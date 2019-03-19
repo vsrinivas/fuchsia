@@ -48,19 +48,6 @@
 
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 
-// Helper functions
-
-// Open |path| from the |dirfd| directory, enforcing the POSIX EISDIR error condition. Specifically,
-// ZX_ERR_NOT_FILE will be returned when opening a directory with write access/O_CREAT.
-static zx_status_t __fdio_open_at(fdio_t** io, int dirfd, const char* path,
-                                  int flags, uint32_t mode);
-// Open |path| from the |dirfd| directory, but allow creating directories/opening them with
-// write access. Note that this differs from POSIX behavior.
-static zx_status_t __fdio_open_at_ignore_eisdir(fdio_t** io, int dirfd, const char* path,
-                                                int flags, uint32_t mode);
-// Open |path| from the current working directory, respecting EISDIR.
-static zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_t mode);
-
 // non-thread-safe emulation of unistd io functions
 // using the fdio transports
 
@@ -251,29 +238,22 @@ static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
 #define ZXIO_FS_MASK (O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | \
                       O_DIRECTORY | O_APPEND | O_NOREMOTE)
 
-#define ZXIO_FS_FLAGS (ZXIO_FS_MASK | ZX_FS_FLAG_POSIX | ZX_FS_FLAG_NOT_DIRECTORY | \
-                       ZX_FS_FLAG_CLONE_SAME_RIGHTS)
-
-// Verify that the remaining O_* flags don't overlap with the ZXIO_FS flags.
-static_assert(!(O_RDONLY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_WRONLY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_RDWR & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NONBLOCK & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_DSYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_SYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_RSYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NOFOLLOW & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_CLOEXEC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NOCTTY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_ASYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_DIRECT & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_LARGEFILE & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NOATIME & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_TMPFILE & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-
-#define ZX_FS_FLAGS_ALLOWED_WITH_O_PATH (ZX_FS_FLAG_VNODE_REF_ONLY | \
-                                         ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOT_DIRECTORY | \
-                                         ZX_FS_FLAG_DESCRIBE)
+// Verify that the remaining O_* flags don't overlap with the ZXIO mask.
+static_assert(!(O_RDONLY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_WRONLY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_RDWR & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NONBLOCK & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_DSYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_SYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_RSYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NOFOLLOW & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_CLOEXEC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NOCTTY & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_ASYNC & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_DIRECT & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_LARGEFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_NOATIME & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
+static_assert(!(O_TMPFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 
 static uint32_t fdio_flags_to_zxio(uint32_t flags) {
     uint32_t rights = 0;
@@ -289,12 +269,7 @@ static uint32_t fdio_flags_to_zxio(uint32_t flags) {
         break;
     }
 
-    uint32_t result = rights | ZX_FS_FLAG_DESCRIBE | (flags & ZXIO_FS_MASK);
-
-    if (!(result & ZX_FS_FLAG_VNODE_REF_ONLY)) {
-        result |= ZX_FS_FLAG_POSIX;
-    }
-    return result;
+    return rights | ZX_FS_FLAG_DESCRIBE | (flags & ZXIO_FS_MASK);
 }
 
 static uint32_t zxio_flags_to_fdio(uint32_t flags) {
@@ -440,12 +415,11 @@ zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
     return ZX_OK;
 }
 
-static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path, int flags,
-                                       uint32_t mode, bool enforce_eisdir) {
+zx_status_t __fdio_open_at(fdio_t** io, int dirfd, const char* path, int flags, uint32_t mode) {
     if (path == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
-    if (path[0] == '\0') {
+    if (path[0] == 0) {
         return ZX_ERR_NOT_FOUND;
     }
     fdio_t* iodir = fdio_iodir(&path, dirfd);
@@ -455,52 +429,19 @@ static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path,
 
     char clean[PATH_MAX];
     size_t outlen;
-    bool has_ending_slash;
-    zx_status_t status = __fdio_cleanpath(path, clean, &outlen, &has_ending_slash);
+    bool is_dir;
+    zx_status_t status = __fdio_cleanpath(path, clean, &outlen, &is_dir);
     if (status != ZX_OK) {
-        fdio_release(iodir);
         return status;
     }
-    // Emulate EISDIR behavior from
-    // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html
-    bool flags_incompatible_with_directory =
-        ((flags & ~O_PATH & O_ACCMODE) != O_RDONLY) || (flags & O_CREAT);
-    if (enforce_eisdir && has_ending_slash && flags_incompatible_with_directory) {
-        fdio_release(iodir);
-        return ZX_ERR_NOT_FILE;
-    }
-    flags |= (has_ending_slash ? O_DIRECTORY : 0);
+    flags |= (is_dir ? O_DIRECTORY : 0);
 
-    uint32_t zx_flags = fdio_flags_to_zxio((uint32_t) flags);
-
-    if (!(zx_flags & ZX_FS_FLAG_DIRECTORY)) {
-        // At this point we're not sure if the path refers to a directory.
-        // To emulate EISDIR behavior, if the flags are not compatible with directory,
-        // use this flag to instruct open to error if the path turns out to be a directory.
-        // Otherwise, opening a directory with O_RDWR will incorrectly succeed.
-        if (enforce_eisdir && flags_incompatible_with_directory) {
-            zx_flags |= ZX_FS_FLAG_NOT_DIRECTORY;
-        }
-    }
-    if (zx_flags & ZX_FS_FLAG_VNODE_REF_ONLY) {
-        zx_flags &= ZX_FS_FLAGS_ALLOWED_WITH_O_PATH;
-    }
-    status = fdio_get_ops(iodir)->open(iodir, clean, zx_flags, mode, io);
+    status = fdio_get_ops(iodir)->open(iodir, clean, fdio_flags_to_zxio(flags), mode, io);
     fdio_release(iodir);
     return status;
 }
 
-static zx_status_t __fdio_open_at(fdio_t** io, int dirfd, const char* path,
-                                  int flags, uint32_t mode) {
-    return __fdio_open_at_impl(io, dirfd, path, flags, mode, true);
-}
-
-static zx_status_t __fdio_open_at_ignore_eisdir(fdio_t** io, int dirfd, const char* path,
-                                                int flags, uint32_t mode) {
-    return __fdio_open_at_impl(io, dirfd, path, flags, mode, false);
-}
-
-static zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_t mode) {
+zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_t mode) {
     return __fdio_open_at(io, AT_FDCWD, path, flags, mode);
 }
 
@@ -565,6 +506,7 @@ static void update_cwd_path(const char* path) {
 
 wat:
     strcpy(fdio_cwd_path, "(unknown)");
+    return;
 }
 
 // Opens the directory containing path
@@ -1548,8 +1490,7 @@ int mkdirat(int dirfd, const char* path, mode_t mode) {
 
     mode = (mode & 0777) | S_IFDIR;
 
-    if ((r = __fdio_open_at_ignore_eisdir(&io, dirfd, path,
-                                          O_RDONLY | O_CREAT | O_EXCL, mode)) < 0) {
+    if ((r = __fdio_open_at(&io, dirfd, path, O_RDONLY | O_CREAT | O_EXCL, mode)) < 0) {
         return ERROR(r);
     }
     fdio_get_ops(io)->close(io);
@@ -1689,7 +1630,7 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
 }
 
 __EXPORT
-int utimensat(int dirfd, const char *path,
+int utimensat(int dirfd, const char *fn,
               const struct timespec times[2], int flags) {
     fdio_t* io;
     zx_status_t r;
@@ -1700,10 +1641,12 @@ int utimensat(int dirfd, const char *path,
         // symlinks, so don't break utilities (like tar) that use this flag.
     }
 
-    if ((r = __fdio_open_at_ignore_eisdir(&io, dirfd, path, O_WRONLY, 0)) < 0) {
+    if ((r = __fdio_open_at(&io, dirfd, fn, 0, 0)) < 0) {
         return ERROR(r);
     }
+
     r = zx_utimens(io, times, 0);
+
     fdio_close(io);
     fdio_release(io);
     return STATUS(r);
@@ -1773,7 +1716,9 @@ int socketpair(int domain, int type, int protocol, int fd[2]) {
 
 __EXPORT
 int faccessat(int dirfd, const char* filename, int amode, int flag) {
-    // First, check that the flags and amode are valid.
+    // For now, we just check to see if the file exists, until we
+    // model permissions. But first, check that the flags and amode
+    // are valid.
     const int allowed_flags = AT_EACCESS;
     if (flag & (~allowed_flags)) {
         return ERRNO(EINVAL);
@@ -1785,35 +1730,15 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
         return ERRNO(EINVAL);
     }
 
+    // Since we are not tracking permissions yet, just check that the
+    // file exists a la fstatat.
     fdio_t* io;
     zx_status_t status;
-    if (amode == F_OK) {
-        // Check that the file exists a la fstatat.
-        if ((status = __fdio_open_at(&io, dirfd, filename, O_PATH, 0)) < 0) {
-            return ERROR(status);
-        }
-        struct stat s;
-        status = fdio_stat(io, &s);
-    } else {
-        // Check that the file has each of the permissions in mode.
-        // Ignore X_OK, since it does not apply to our permission model
-        amode &= ~X_OK;
-        uint32_t rights_flags = 0;
-        switch (amode & (R_OK | W_OK)) {
-        case R_OK:
-            rights_flags = O_RDONLY;
-            break;
-        case W_OK:
-            rights_flags = O_WRONLY;
-            break;
-        case R_OK | W_OK:
-            rights_flags = O_RDWR;
-            break;
-        }
-        if ((status = __fdio_open_at_ignore_eisdir(&io, dirfd, filename, rights_flags, 0)) < 0) {
-            return ERROR(status);
-        }
+    if ((status = __fdio_open_at(&io, dirfd, filename, 0, 0)) < 0) {
+        return ERROR(status);
     }
+    struct stat s;
+    status = fdio_stat(io, &s);
     fdio_close(io);
     fdio_release(io);
     return STATUS(status);

@@ -135,7 +135,7 @@ zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
 // that the fdtab itself is holding is released, at which
 // point they will be free()'d unless somebody is holding
 // a ref due to an ongoing io transaction, which will
-// certainly fail due to underlying handles being closed
+// certainly fail doe to underlying handles being closed
 // at which point a downref will happen and destruction
 // will follow.
 //

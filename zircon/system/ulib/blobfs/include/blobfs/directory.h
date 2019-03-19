@@ -57,7 +57,6 @@ private:
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     void Sync(SyncCallback closure) final;
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
-    bool IsDirectory() const final { return true; }
 
     ////////////////
     // Other methods.
