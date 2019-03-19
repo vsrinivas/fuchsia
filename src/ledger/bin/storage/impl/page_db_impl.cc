@@ -8,6 +8,7 @@
 #include <iterator>
 #include <string>
 
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"
@@ -16,6 +17,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \
@@ -136,6 +138,30 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
   return Status::OK;
 }
 
+Status PageDbImpl::GetObjectReferences(
+    coroutine::CoroutineHandler* handler,
+    const ObjectIdentifier& object_identifier,
+    ObjectReferencesAndPriority* references) {
+  FXL_DCHECK(references);
+  references->clear();
+  std::vector<std::string> keys;
+  RETURN_ON_ERROR(db_->GetByPrefix(
+      handler,
+      ReferenceRow::GetEagerKeyPrefixFor(object_identifier.object_digest()),
+      &keys));
+  for (const auto& key : keys) {
+    references->emplace(ObjectDigest(std::move(key)), KeyPriority::EAGER);
+  }
+  RETURN_ON_ERROR(db_->GetByPrefix(
+      handler,
+      ReferenceRow::GetLazyKeyPrefixFor(object_identifier.object_digest()),
+      &keys));
+  for (const auto& key : keys) {
+    references->emplace(ObjectDigest(std::move(key)), KeyPriority::LAZY);
+  }
+  return Status::OK;
+}
+
 Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
                                         std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
@@ -246,11 +272,13 @@ Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
 Status PageDbImpl::WriteObject(CoroutineHandler* handler,
                                const ObjectIdentifier& object_identifier,
                                std::unique_ptr<DataSource::DataChunk> content,
-                               PageDbObjectStatus object_status) {
+                               PageDbObjectStatus object_status,
+                               const ObjectReferencesAndPriority& references) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->WriteObject(handler, object_identifier,
-                                     std::move(content), object_status));
+                                     std::move(content), object_status,
+                                     references));
   return batch->Execute(handler);
 }
 

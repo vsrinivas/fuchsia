@@ -6,10 +6,13 @@
 
 #include <memory>
 
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
+#include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \
@@ -62,7 +65,8 @@ Status PageDbBatchImpl::RemoveCommit(CoroutineHandler* handler,
 Status PageDbBatchImpl::WriteObject(
     CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
     std::unique_ptr<DataSource::DataChunk> content,
-    PageDbObjectStatus object_status) {
+    PageDbObjectStatus object_status,
+    const ObjectReferencesAndPriority& references) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
   Status status = db_->HasObject(handler, object_identifier);
@@ -80,6 +84,14 @@ Status PageDbBatchImpl::WriteObject(
   RETURN_ON_ERROR(batch_->Put(
       handler, ObjectRow::GetKeyFor(object_identifier.object_digest()),
       content->Get()));
+  for (const auto& [child, priority] : references) {
+    FXL_DCHECK(!GetObjectDigestInfo(child).is_inlined());
+    RETURN_ON_ERROR(
+        batch_->Put(handler,
+                    ReferenceRow::GetKeyForObject(
+                        object_identifier.object_digest(), child, priority),
+                    ""));
+  }
   return batch_->Put(
       handler, ObjectStatusRow::GetKeyFor(object_status, object_identifier),
       "");

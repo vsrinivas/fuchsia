@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_
 
 #include <ostream>
+#include <set>
 #include <string>
 
 #include <lib/fxl/strings/string_view.h>
@@ -108,8 +109,12 @@ bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e);
 
-// Object-object references from a given object, for garbage collection.
-using ObjectReferences = std::set<ObjectIdentifier>;
+// Object-object references, for garbage collection.
+// For a given object |A|, contains a pair (|B|, |priority|) for every reference
+// from |A| to |B| with the associated |priority|. Object digests must never
+// represent inline pieces.
+using ObjectReferencesAndPriority =
+    std::set<std::pair<ObjectDigest, KeyPriority>>;
 
 // An entry in a commit.
 struct Entry {

@@ -421,7 +421,7 @@ void PageStorageImpl::AddObjectFromLocal(
       [this, waiter, managed_data_source = std::move(managed_data_source),
        callback = std::move(traced_callback)](
           IterationStatus status, ObjectIdentifier identifier,
-          const ObjectReferences& children,
+          const ObjectReferencesAndPriority& references,
           std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, ObjectIdentifier());
@@ -1489,8 +1489,9 @@ Status PageStorageImpl::SynchronousAddPiece(
         object_status = PageDbObjectStatus::SYNCED;
         break;
     }
+    // TODO(kerneis): pass children to WriteObject.
     return db_->WriteObject(handler, object_identifier, std::move(data),
-                            object_status);
+                            object_status, {});
   }
   return status;
 }

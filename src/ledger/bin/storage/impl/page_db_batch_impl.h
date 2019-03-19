@@ -37,7 +37,8 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      const ObjectIdentifier& object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,
-                     PageDbObjectStatus object_status) override;
+                     PageDbObjectStatus object_status,
+                     const ObjectReferencesAndPriority& references) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus object_status) override;

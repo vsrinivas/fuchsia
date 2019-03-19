@@ -71,12 +71,14 @@ class PageDbMutator {
       coroutine::CoroutineHandler* handler, const CommitId& commit_id) = 0;
 
   // Object data.
-  // Writes the content of the given object.
+  // Writes the content of the given object, and reference information from this
+  // object to its |children|.
   FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
       std::unique_ptr<DataSource::DataChunk> content,
-      PageDbObjectStatus object_status) = 0;
+      PageDbObjectStatus object_status,
+      const ObjectReferencesAndPriority& references) = 0;
 
   // Object sync metadata.
   // Sets the status of the object with the given id.
@@ -182,6 +184,12 @@ class PageDb : public PageDbMutator {
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
       PageDbObjectStatus* object_status) = 0;
+
+  // Returns the references of the object with the given id.
+  FXL_WARN_UNUSED_RESULT virtual Status GetObjectReferences(
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
+      ObjectReferencesAndPriority* references) = 0;
 
   // Commit sync metadata.
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|

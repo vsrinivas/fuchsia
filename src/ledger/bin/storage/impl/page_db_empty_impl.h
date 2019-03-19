@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_EMPTY_IMPL_H_
 
 #include "src/ledger/bin/storage/impl/page_db.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
 
@@ -43,6 +44,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus* object_status) override;
+  Status GetObjectReferences(coroutine::CoroutineHandler* handler,
+                             const ObjectIdentifier& object_identifier,
+                             ObjectReferencesAndPriority* references) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, std::string* value) override;
 
@@ -64,7 +68,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      const ObjectIdentifier& object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,
-                     PageDbObjectStatus object_status) override;
+                     PageDbObjectStatus object_status,
+                     const ObjectReferencesAndPriority& references) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,

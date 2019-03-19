@@ -18,14 +18,17 @@
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/data_source.h"
+#include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
 namespace {
 
 using ::testing::Contains;
+using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Key;
 using ::testing::Not;
+using ::testing::Pair;
 using ::testing::UnorderedElementsAreArray;
 
 constexpr size_t kMinChunkSize = 4 * 1024;
@@ -83,7 +86,7 @@ struct Call {
 
 struct SplitResult {
   std::vector<Call> calls;
-  std::map<ObjectDigest, ObjectReferences> children;
+  std::map<ObjectDigest, ObjectReferencesAndPriority> references;
   std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>> data;
 };
 
@@ -97,19 +100,26 @@ void DoSplit(DataSource* source, ObjectType object_type,
       },
       [result = std::move(result), callback = std::move(callback)](
           IterationStatus status, ObjectIdentifier identifier,
-          const ObjectReferences& children,
+          const ObjectReferencesAndPriority& references,
           std::unique_ptr<DataSource::DataChunk> data) mutable {
         EXPECT_TRUE(result);
         const auto& digest = identifier.object_digest();
         if (status != IterationStatus::ERROR) {
           EXPECT_LE(data->Get().size(), kMaxChunkSize);
-          // Accumulate returned children and data in result, checking that they
-          // match if we have already seen this digest.
-          if (result->children.count(digest) != 0) {
-            EXPECT_THAT(result->children[digest],
-                        UnorderedElementsAreArray(children));
+          // Accumulate returned references and data in result, checking that
+          // they match if we have already seen this digest.
+          if (result->references.count(digest) != 0) {
+            EXPECT_THAT(result->references[digest],
+                        UnorderedElementsAreArray(references));
           } else {
-            result->children[digest] = std::move(children);
+            // Check that references do not point to inline pieces.
+            for (const auto& [reference, priority] : references) {
+              EXPECT_FALSE(GetObjectDigestInfo(reference).is_inlined())
+                  << "SplitDataSource returned a reference to an inline "
+                     "object: "
+                  << reference;
+            }
+            result->references[digest] = std::move(references);
           }
           if (result->data.count(digest) != 0) {
             EXPECT_EQ(result->data[digest]->Get(), data->Get());
@@ -208,15 +218,17 @@ TEST_P(SplitBigValueTest, BigValues) {
 
   fxl::StringView current = content;
   for (const auto& call : split_result.calls) {
-    // Check that chunks have no children and indexes have at least one, with
+    // Check that chunks have no references and indexes have at least one, with
     // associated data.
     if (call.status != IterationStatus::ERROR) {
       if (GetObjectDigestInfo(call.digest).is_chunk()) {
-        EXPECT_THAT(split_result.children[call.digest], IsEmpty());
+        EXPECT_THAT(split_result.references[call.digest], IsEmpty());
       } else {
-        EXPECT_THAT(split_result.children[call.digest], Not(IsEmpty()));
-        for (const auto& child : split_result.children[call.digest]) {
-          EXPECT_THAT(split_result.data, Contains(Key(child.object_digest())));
+        EXPECT_THAT(split_result.references[call.digest], Not(IsEmpty()));
+        for (const auto& [child, priority] :
+             split_result.references[call.digest]) {
+          EXPECT_THAT(split_result.data, Contains(Key(child)));
+          EXPECT_EQ(priority, KeyPriority::EAGER);
         }
       }
     }
@@ -279,6 +291,40 @@ TEST(SplitTest, PathologicalCase) {
     }
   }
   EXPECT_EQ(kDataSize, total_size);
+}
+
+// A stream of 0s of the maximal size + 1 is yielding an INDEX piece pointing
+// to an inline CHUNK.
+TEST(SplitTest, IndexToInlinePiece) {
+  constexpr size_t kDataSize = kMaxChunkSize + 1;
+  auto source = std::make_unique<PathologicalDataSource>(kDataSize);
+  SplitResult split_result;
+  DoSplit(source.get(), ObjectType::TREE_NODE,
+          [&split_result](SplitResult c) { split_result = std::move(c); });
+
+  ASSERT_EQ(IterationStatus::DONE, split_result.calls.back().status);
+
+  // Two CHUNK pieces, one of kMaxChunkSize, another of size 1 (hence inline),
+  // and one INDEX piece to bind them.
+  ASSERT_EQ(split_result.calls.size(), 3u);
+  // First chunk.
+  EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[0].digest).is_chunk());
+  EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[0].digest).is_inlined());
+  EXPECT_EQ(split_result.data[split_result.calls[0].digest]->Get().size(),
+            kMaxChunkSize);
+  // Second chunk.
+  EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[1].digest).is_chunk());
+  EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[1].digest).is_inlined());
+  EXPECT_EQ(split_result.data[split_result.calls[1].digest]->Get().size(), 1u);
+  // Index.
+  EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[2].digest).is_chunk());
+  EXPECT_EQ(GetObjectDigestInfo(split_result.calls[2].digest).object_type,
+            ObjectType::TREE_NODE);
+  // The reference from the root piece to the inline one should be skipped, so
+  // we expect only one reference here.
+  EXPECT_THAT(
+      split_result.references[split_result.calls[2].digest],
+      ElementsAre(Pair(split_result.calls[0].digest, KeyPriority::EAGER)));
 }
 
 TEST(SplitTest, Error) {

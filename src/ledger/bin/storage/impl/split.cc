@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/third_party/bup/bupsplit.h"
 
 namespace storage {
@@ -63,7 +64,7 @@ class SplitContext {
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
       fit::function<void(IterationStatus, ObjectIdentifier,
-                         const ObjectReferences& children,
+                         const ObjectReferencesAndPriority& references,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback,
       ObjectType object_type)
@@ -132,7 +133,7 @@ class SplitContext {
   // Information about a piece of data (chunk or index) to be sent.
   struct PendingPiece {
     ObjectIdentifier identifier;
-    ObjectReferences children;
+    ObjectReferencesAndPriority references;
     std::unique_ptr<DataSource::DataChunk> data;
 
     bool ready() { return data != nullptr; }
@@ -143,11 +144,12 @@ class SplitContext {
   // until the next call of this method, because the last object needs to be
   // treated differently in |SendDone|. |children| must contain the identifiers
   // of the children pieces if |type| is INDEX, and be empty otherwise.
-  ObjectIdentifier SendInProgress(PieceType type, ObjectReferences children,
+  ObjectIdentifier SendInProgress(PieceType type,
+                                  ObjectReferencesAndPriority references,
                                   std::unique_ptr<DataSource::DataChunk> data) {
     if (latest_piece_.ready()) {
       callback_(IterationStatus::IN_PROGRESS,
-                std::move(latest_piece_.identifier), latest_piece_.children,
+                std::move(latest_piece_.identifier), latest_piece_.references,
                 std::move(latest_piece_.data));
     }
     auto data_view = data->Get();
@@ -161,7 +163,7 @@ class SplitContext {
         ComputeObjectDigest(type, ObjectType::BLOB, data_view);
     latest_piece_.identifier =
         make_object_identifier_(std::move(object_digest));
-    latest_piece_.children = std::move(children);
+    latest_piece_.references = std::move(references);
     latest_piece_.data = std::move(data);
     return latest_piece_.identifier;
   }
@@ -179,7 +181,7 @@ class SplitContext {
     latest_piece_.identifier =
         make_object_identifier_(std::move(object_digest));
     callback_(IterationStatus::DONE, std::move(latest_piece_.identifier),
-              latest_piece_.children, std::move(latest_piece_.data));
+              latest_piece_.references, std::move(latest_piece_.data));
   }
 
   std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(
@@ -269,13 +271,18 @@ class SplitContext {
         << "Expected maximum of: " << kMaxChunkSize
         << ", but got: " << chunk->Get().size();
 
-    ObjectReferences children;
-    for (auto& child : identifiers_and_sizes) {
-      children.insert(std::move(child.identifier));
+    ObjectReferencesAndPriority references;
+    for (const auto& [identifier, size] : identifiers_and_sizes) {
+      const auto& digest = identifier.object_digest();
+      // Skip inline pieces from references.
+      if (GetObjectDigestInfo(digest).is_inlined())
+        continue;
+      // Links between pieces are eager, only node-value links can be lazy.
+      references.emplace(digest, KeyPriority::EAGER);
     }
 
-    auto identifier =
-        SendInProgress(PieceType::INDEX, std::move(children), std::move(chunk));
+    auto identifier = SendInProgress(PieceType::INDEX, std::move(references),
+                                     std::move(chunk));
     return {std::move(identifier), total_size};
   }
 
@@ -330,7 +337,7 @@ class SplitContext {
 
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
   fit::function<void(IterationStatus, ObjectIdentifier,
-                     const ObjectReferences& children,
+                     const ObjectReferencesAndPriority& references,
                      std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   // The object encoded by DataSource.
@@ -412,7 +419,7 @@ void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
     fit::function<void(IterationStatus, ObjectIdentifier,
-                       const ObjectReferences&,
+                       const ObjectReferencesAndPriority&,
                        std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(make_object_identifier), std::move(callback),

@@ -514,7 +514,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
       CoroutineHandler* handler, ObjectData* data,
       PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
-        handler, data->object_identifier, data->ToChunk(), object_status);
+        handler, data->object_identifier, data->ToChunk(), object_status, {});
   }
 
   Status ReadObject(CoroutineHandler* handler,

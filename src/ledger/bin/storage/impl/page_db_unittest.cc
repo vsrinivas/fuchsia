@@ -26,15 +26,17 @@
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-
-using testing::IsEmpty;
-using testing::UnorderedElementsAre;
 
 namespace storage {
 namespace {
 
-using coroutine::CoroutineHandler;
+using ::coroutine::CoroutineHandler;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 
 std::unique_ptr<LevelDb> GetLevelDb(async_dispatcher_t* dispatcher,
                                     ledger::DetachedPath db_path) {
@@ -194,18 +196,22 @@ TEST_F(PageDbTest, Commits) {
 
 TEST_F(PageDbTest, ObjectStorage) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    ObjectIdentifier object_identifier =
+    const ObjectIdentifier object_identifier =
         RandomObjectIdentifier(environment_.random());
-    std::string content = RandomString(environment_.random(), 32 * 1024);
+    const ObjectIdentifier child_identifier =
+        RandomObjectIdentifier(environment_.random());
+    const std::string content = RandomString(environment_.random(), 32 * 1024);
     std::unique_ptr<const Object> object;
     PageDbObjectStatus object_status;
 
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
               page_db_.ReadObject(handler, object_identifier, &object));
-    ASSERT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_identifier,
-                                   DataSource::DataChunk::Create(content),
-                                   PageDbObjectStatus::TRANSIENT));
+    ASSERT_EQ(
+        Status::OK,
+        page_db_.WriteObject(
+            handler, object_identifier, DataSource::DataChunk::Create(content),
+            PageDbObjectStatus::TRANSIENT,
+            {{child_identifier.object_digest(), KeyPriority::LAZY}}));
     page_db_.GetObjectStatus(handler, object_identifier, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK,
@@ -213,17 +219,55 @@ TEST_F(PageDbTest, ObjectStorage) {
     fxl::StringView object_content;
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
-    // Update the object to LOCAL. The new content should be ignored.
-    std::string new_content = RandomString(environment_.random(), 32 * 1024);
+    ObjectReferencesAndPriority references;
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+                              handler, child_identifier, &references));
+    EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
+                                             KeyPriority::LAZY)));
+    // Update the object to LOCAL. The new content and references should be
+    // ignored.
+    const std::string new_content =
+        RandomString(environment_.random(), 32 * 1024);
     ASSERT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_identifier,
-                                   DataSource::DataChunk::Create(new_content),
-                                   PageDbObjectStatus::LOCAL));
+              page_db_.WriteObject(
+                  handler, object_identifier,
+                  DataSource::DataChunk::Create(new_content),
+                  PageDbObjectStatus::LOCAL,
+                  {{child_identifier.object_digest(), KeyPriority::EAGER}}));
     page_db_.GetObjectStatus(handler, object_identifier, &object_status);
     EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
     EXPECT_NE(new_content, object_content);
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+                              handler, child_identifier, &references));
+    EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
+                                             KeyPriority::LAZY)));
+  });
+}
+
+TEST_F(PageDbTest, LazyAndEagerReferences) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    const auto object_identifier =
+        RandomObjectIdentifier(environment_.random());
+    const ObjectIdentifier child_identifier =
+        RandomObjectIdentifier(environment_.random());
+
+    ASSERT_EQ(Status::OK,
+              page_db_.WriteObject(
+                  handler, object_identifier, DataSource::DataChunk::Create(""),
+                  PageDbObjectStatus::LOCAL,
+                  {{child_identifier.object_digest(), KeyPriority::LAZY},
+                   {child_identifier.object_digest(), KeyPriority::EAGER}}));
+
+    ObjectReferencesAndPriority references;
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+                              handler, child_identifier, &references));
+    EXPECT_THAT(
+        references,
+        UnorderedElementsAre(
+            Pair(object_identifier.object_digest(), KeyPriority::LAZY),
+            Pair(object_identifier.object_digest(), KeyPriority::EAGER)));
   });
 }
 
@@ -286,7 +330,7 @@ TEST_F(PageDbTest, UnsyncedPieces) {
     EXPECT_EQ(Status::OK,
               page_db_.WriteObject(handler, object_identifier,
                                    DataSource::DataChunk::Create(""),
-                                   PageDbObjectStatus::LOCAL));
+                                   PageDbObjectStatus::LOCAL, {}));
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_identifier,
                                                    PageDbObjectStatus::LOCAL));
     EXPECT_EQ(Status::OK,
@@ -316,21 +360,46 @@ TEST_F(PageDbTest, Batch) {
     ASSERT_TRUE(batch);
 
     auto object_identifier = RandomObjectIdentifier(environment_.random());
-    EXPECT_EQ(Status::OK, batch->WriteObject(handler, object_identifier,
-                                             DataSource::DataChunk::Create(""),
-                                             PageDbObjectStatus::LOCAL));
+    auto eager_identifier = RandomObjectIdentifier(environment_.random());
+    auto lazy_identifier = RandomObjectIdentifier(environment_.random());
+    EXPECT_EQ(Status::OK,
+              batch->WriteObject(
+                  handler, object_identifier, DataSource::DataChunk::Create(""),
+                  PageDbObjectStatus::LOCAL,
+                  {{eager_identifier.object_digest(), KeyPriority::EAGER},
+                   {lazy_identifier.object_digest(), KeyPriority::LAZY}}));
 
+    // Check that we don't have any unsynced piece nor reference prior to
+    // executing the batch.
     std::vector<ObjectIdentifier> object_identifiers;
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
-    EXPECT_TRUE(object_identifiers.empty());
+    EXPECT_THAT(object_identifiers, IsEmpty());
+    ObjectReferencesAndPriority references;
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+                              handler, eager_identifier, &references));
+    EXPECT_THAT(references, IsEmpty());
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(handler, lazy_identifier,
+                                                       &references));
+    EXPECT_THAT(references, IsEmpty());
 
+    // Execute the batch write.
     EXPECT_EQ(Status::OK, batch->Execute(handler));
 
+    // Check unsynced status of written pieces.
     EXPECT_EQ(Status::OK,
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
-    EXPECT_EQ(1u, object_identifiers.size());
-    EXPECT_EQ(object_identifier, object_identifiers[0]);
+    EXPECT_THAT(object_identifiers, ElementsAre(object_identifier));
+    // Check the eager reference.
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+                              handler, eager_identifier, &references));
+    EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
+                                             KeyPriority::EAGER)));
+    // Check the lazy reference.
+    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(handler, lazy_identifier,
+                                                       &references));
+    EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
+                                             KeyPriority::LAZY)));
   });
 }
 
@@ -351,7 +420,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
         ASSERT_EQ(Status::OK,
                   page_db_.WriteObject(handler, object_identifier,
                                        DataSource::DataChunk::Create(""),
-                                       initial_status));
+                                       initial_status, {}));
         ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(
                                   handler, object_identifier, &object_status));
         EXPECT_EQ(initial_status, object_status);
@@ -409,7 +478,7 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     EXPECT_EQ(Status::OK, page_db_.WriteObject(
                               handler, id, DataSource::DataChunk::Create(""),
-                              PageDbObjectStatus::LOCAL));
+                              PageDbObjectStatus::LOCAL, {}));
   });
   CoroutineHandler* handler1 = nullptr;
   CoroutineHandler* handler2 = nullptr;

@@ -13,6 +13,7 @@
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/db.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 
 namespace storage {
@@ -52,6 +53,9 @@ class PageDbImpl : public PageDb {
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus* object_status) override;
+  Status GetObjectReferences(coroutine::CoroutineHandler* handler,
+                             const ObjectIdentifier& object_identifier,
+                             ObjectReferencesAndPriority* references) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, std::string* value) override;
   Status IsPageOnline(coroutine::CoroutineHandler* handler,
@@ -72,7 +76,8 @@ class PageDbImpl : public PageDb {
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      const ObjectIdentifier& object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,
-                     PageDbObjectStatus object_status) override;
+                     PageDbObjectStatus object_status,
+                     const ObjectReferencesAndPriority& references) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,

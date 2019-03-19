@@ -45,6 +45,12 @@ Status PageDbEmptyImpl::GetObjectStatus(
     PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
+Status PageDbEmptyImpl::GetObjectReferences(
+    coroutine::CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/,
+    ObjectReferencesAndPriority* /*references*/) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(
     CoroutineHandler* /*handler*/, std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;
@@ -96,7 +102,8 @@ Status PageDbEmptyImpl::WriteObject(
     CoroutineHandler* /*handler*/,
     const ObjectIdentifier& /*object_identifier*/,
     std::unique_ptr<DataSource::DataChunk> /*content*/,
-    PageDbObjectStatus /*object_status*/) {
+    PageDbObjectStatus /*object_status*/,
+    const ObjectReferencesAndPriority& /*children*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::SetObjectStatus(
