@@ -169,7 +169,8 @@ zx_status_t PlatformProxy::Proxy(
                resp_handle_count, out_resp_actual);
 }
 
-zx_status_t PlatformProxy::Create(zx_device_t* parent, zx_handle_t rpc_channel) {
+zx_status_t PlatformProxy::Create(void* ctx, zx_device_t* parent, const char* name,
+                                  const char* args, zx_handle_t rpc_channel) {
     fbl::AllocChecker ac;
 
     auto proxy = fbl::MakeRefCountedChecked<PlatformProxy>(&ac, parent, rpc_channel);
@@ -222,9 +223,16 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
     return ZX_OK;
 }
 
+static zx_driver_ops_t proxy_driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.create = PlatformProxy::Create;
+    return ops;
+}();
+
 } // namespace platform_bus
 
-zx_status_t platform_proxy_create(void* ctx, zx_device_t* parent, const char* name,
-                                  const char* args, zx_handle_t rpc_channel) {
-    return platform_bus::PlatformProxy::Create(parent, rpc_channel);
-}
+ZIRCON_DRIVER_BEGIN(platform_bus_proxy, platform_bus::proxy_driver_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PLATFORM_PROTO, 0),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_PROXY),
+ZIRCON_DRIVER_END(platform_bus_proxy)

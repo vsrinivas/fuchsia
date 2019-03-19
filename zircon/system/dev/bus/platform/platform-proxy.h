@@ -30,7 +30,8 @@ using PlatformProxyType = ddk::Device<PlatformProxy>;
 // before starting the platform device driver.
 class PlatformProxy : public PlatformProxyType, public fbl::RefCounted<PlatformProxy> {
 public:
-    static zx_status_t Create(zx_device_t* parent, zx_handle_t rpc_channel);
+    static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
+                              const char* args, zx_handle_t rpc_channel);
 
     // Device protocol implementation.
     void DdkRelease();
@@ -86,8 +87,3 @@ private:
 };
 
 } // namespace platform_bus
-
-__BEGIN_CDECLS
-zx_status_t platform_proxy_create(void* ctx, zx_device_t* parent, const char* name,
-                                  const char* args, zx_handle_t rpc_channel);
-__END_CDECLS
