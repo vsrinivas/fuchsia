@@ -7,8 +7,8 @@
 // correspond to the identically-named protobuf messages found in
 // observation.proto.
 
-#ifndef LIB_COBALT_CPP_OBSERVATION_H_
-#define LIB_COBALT_CPP_OBSERVATION_H_
+#ifndef SRC_LIB_COBALT_CPP_OBSERVATION_H_
+#define SRC_LIB_COBALT_CPP_OBSERVATION_H_
 
 #include <functional>
 #include <map>
@@ -141,4 +141,4 @@ struct Observation {
 
 }  // namespace cobalt
 
-#endif  // LIB_COBALT_CPP_OBSERVATION_H_
+#endif  // SRC_LIB_COBALT_CPP_OBSERVATION_H_

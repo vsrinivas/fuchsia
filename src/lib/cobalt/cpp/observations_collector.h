@@ -47,8 +47,8 @@
 //   ...
 // }
 
-#ifndef LIB_COBALT_CPP_OBSERVATIONS_COLLECTOR_H_
-#define LIB_COBALT_CPP_OBSERVATIONS_COLLECTOR_H_
+#ifndef SRC_LIB_COBALT_CPP_OBSERVATIONS_COLLECTOR_H_
+#define SRC_LIB_COBALT_CPP_OBSERVATIONS_COLLECTOR_H_
 
 #include <atomic>
 #include <chrono>
@@ -64,7 +64,7 @@
 #include <utility>
 #include <vector>
 
-#include "garnet/public/lib/cobalt/cpp/observation.h"
+#include "src/lib/cobalt/cpp/observation.h"
 
 namespace cobalt {
 
@@ -415,4 +415,4 @@ class ObservationsCollector {
 
 }  // namespace cobalt
 
-#endif  // LIB_COBALT_CPP_OBSERVATIONS_COLLECTOR_H_
+#endif  // SRC_LIB_COBALT_CPP_OBSERVATIONS_COLLECTOR_H_

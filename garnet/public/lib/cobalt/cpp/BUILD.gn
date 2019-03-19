@@ -4,75 +4,35 @@
 
 import("//third_party/cobalt_config/metrics_registry.gni")
 
-metrics_registry("test_metrics_registry") {
-  project_name = "test_app2"
-  generate_cc = true
-  namespace = "cobalt_test_metrics"
-}
-
-source_set("cpp") {
+source_set("deprecated_cobalt_logger") {
   sources = [
-    "observation.h",
-    "observations_collector.cc",
-    "observations_collector.h",
-  ]
-
-  public_configs = [ "//garnet/public:config" ]
-}
-
-source_set("cobalt_logger") {
-  sources = [
-    "cobalt_logger.cc",
-    "cobalt_logger.h",
-    "cobalt_logger_impl.cc",
-    "cobalt_logger_impl.h",
+    "deprecated_cobalt_logger.cc",
+    "deprecated_cobalt_logger.h",
+    "deprecated_cobalt_logger_impl.cc",
+    "deprecated_cobalt_logger_impl.h",
   ]
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
+    "//src/lib/cobalt/cpp:cobalt_logger",
     "//zircon/public/lib/fit",
+  ]
+
+  # This library is deprecated.
+  #
+  # Use //src/lib/cobalt/cpp instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    "//src/ledger/bin/cobalt",
+    "//src/ledger/lib/firebase_auth",
+    "//peridot/bin/basemgr/cobalt",
   ]
 
   deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//zircon/public/fidl/fuchsia-cobalt",
-  ]
-}
-
-source_set("unittests") {
-  testonly = true
-
-  sources = [
-    "cobalt_logger_unittest.cc",
-    "observations_collector_test.cc",
-    "project_profile_unittest.cc",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/svc/cpp",
-  ]
-
-  deps = [
-    ":cobalt_logger",
-    ":cpp",
-    ":project_profile",
-    ":test_metrics_registry_cc",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testutils",
-  ]
-}
-
-source_set("project_profile") {
-  sources = [
-    "project_profile.cc",
-    "project_profile.h",
-  ]
-  configs += [ "//third_party/cobalt:cobalt_config" ]
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//third_party/cobalt/util/crypto_util",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

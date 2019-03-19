@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger.h"
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger_impl.h"
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 
 #include <lib/async/default.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
-#include <lib/zx/time.h>
+#include <lib/sys/cpp/testing/service_directory_for_test.h>
+#include <zx/time.h>
 
 namespace cobalt {
 namespace {
@@ -300,29 +300,30 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
   CobaltLoggerTest() : context_(InitStartupContext()) {}
   ~CobaltLoggerTest() override {}
 
-  component::StartupContext* context() { return context_.get(); }
+  sys::StartupContext* context() { return context_.get(); }
 
   FakeLoggerImpl* logger() { return factory_impl_->logger(); }
 
   CobaltLogger* cobalt_logger() { return cobalt_logger_.get(); }
 
  private:
-  std::unique_ptr<component::StartupContext> InitStartupContext() {
+  std::unique_ptr<sys::StartupContext> InitStartupContext() {
+    service_directory = sys::testing::ServiceDirectoryForTest::Create();
     factory_impl_.reset(new FakeLoggerFactoryImpl());
-    service_provider.AddService<fuchsia::cobalt::LoggerFactory>(
+    service_directory->AddService<fuchsia::cobalt::LoggerFactory>(
         [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
-    service_provider.AddService<fuchsia::sys::Environment>(
+    service_directory->AddService<fuchsia::sys::Environment>(
         [this](fidl::InterfaceRequest<fuchsia::sys::Environment> request) {
           app_environment_request_ = std::move(request);
         });
-    service_provider.AddService<fuchsia::sys::Launcher>(
+    service_directory->AddService<fuchsia::sys::Launcher>(
         [this](fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
           launcher_request_ = std::move(request);
         });
-    return std::make_unique<component::StartupContext>(
-        service_provider.OpenAsDirectory(), zx::channel());
+    return std::make_unique<sys::StartupContext>(service_directory,
+                                                 zx::channel());
   }
 
   virtual void SetUp() override {
@@ -335,10 +336,10 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  component::ServiceProviderBridge service_provider;
+  std::shared_ptr<sys::testing::ServiceDirectoryForTest> service_directory;
   std::unique_ptr<FakeLoggerFactoryImpl> factory_impl_;
   std::unique_ptr<FakeLoggerImpl> logger_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
   std::unique_ptr<CobaltLogger> cobalt_logger_;
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
   fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;

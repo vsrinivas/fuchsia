@@ -12,7 +12,6 @@ executable("unittests") {
   deps = [
     "//garnet/public/lib/backoff:unittests",
     "//garnet/public/lib/callback:unittests",
-    "//garnet/public/lib/cobalt/cpp:unittests",
     "//garnet/public/lib/gtest:unittests",
     "//garnet/public/lib/netconnector/cpp:unittests",
     "//garnet/public/lib/network_wrapper:unittests",
@@ -26,23 +25,12 @@ package("garnet_lib_tests") {
 
   deps = [
     ":unittests",
-    "//garnet/public/lib/cobalt/cpp:test_metrics_registry",
   ]
 
   tests = [
     {
       name = "garnet_lib_unittests"
       environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info(
-                  "//garnet/public/lib/cobalt/cpp:test_metrics_registry",
-                  "target_gen_dir") + "/test_metrics_registry.pb")
-      dest = "test_metrics_registry.pb"
     },
   ]
 }

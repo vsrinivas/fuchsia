@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger.h"
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger_impl.h"
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fsl/vmo/file.h>
@@ -14,7 +14,7 @@ using fuchsia::cobalt::ProjectProfile;
 namespace cobalt {
 
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::StartupContext* context,
     const std::string& config_path,
     fuchsia::cobalt::ReleaseStage release_stage) {
   fsl::SizedVmo config_vmo;
@@ -30,9 +30,9 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
                                             std::move(profile));
 }
 
-std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
-    ProjectProfile profile) {
+std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
+                                              sys::StartupContext* context,
+                                              ProjectProfile profile) {
   return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
                                             std::move(profile));
 }

@@ -8,6 +8,7 @@
 
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/cancellable_helper.h>
+#include <lib/cobalt/cpp/deprecated_cobalt_logger.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
 
@@ -54,8 +55,8 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config,
       cobalt_client_name_(config_.cobalt_client_name),
       task_runner_(dispatcher) {
   if (startup_context) {
-    cobalt_logger_ = cobalt::NewCobaltLogger(dispatcher, startup_context,
-                                             kConfigBinProtoPath);
+    cobalt_logger_ = cobalt::DeprecatedNewCobaltLogger(
+        dispatcher, startup_context, kConfigBinProtoPath);
   } else {
     cobalt_logger_ = nullptr;
   }

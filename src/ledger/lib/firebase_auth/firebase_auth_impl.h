@@ -14,12 +14,12 @@
 #include <lib/backoff/backoff.h>
 #include <lib/callback/cancellable.h>
 #include <lib/callback/scoped_task_runner.h>
-#include <lib/cobalt/cpp/cobalt_logger.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/firebase_auth/firebase_auth.h"
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 namespace firebase_auth {
 

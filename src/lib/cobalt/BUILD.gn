@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("unittests") {
+  testonly = true
+  output_name = "cobalt_lib_unittests"
+
+  deps = [
+    "//src/lib/cobalt/cpp:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("cobalt_lib_tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+    "//src/lib/cobalt/cpp:test_metrics_registry",
+  ]
+
+  tests = [
+    {
+      name = "cobalt_lib_unittests"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info("//src/lib/cobalt/cpp:test_metrics_registry",
+                             "target_gen_dir") + "/test_metrics_registry.pb")
+      dest = "test_metrics_registry.pb"
+    },
+  ]
+}

@@ -1,8 +1,8 @@
 
-#include "garnet/public/lib/cobalt/cpp/project_profile.h"
+#include "src/lib/cobalt/cpp/project_profile.h"
 
-#include "garnet/public/lib/cobalt/cpp/test_metrics_registry.cb.h"
 #include "gtest/gtest.h"
+#include "src/lib/cobalt/cpp/test_metrics_registry.cb.h"
 
 namespace cobalt {
 

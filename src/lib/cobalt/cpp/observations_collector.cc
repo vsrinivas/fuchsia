@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/cobalt/cpp/observations_collector.h"
+#include "src/lib/cobalt/cpp/observations_collector.h"
 
 namespace cobalt {
 

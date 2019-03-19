@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
-#define LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
+#ifndef SRC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
+#define SRC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
 
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger.h"
+#include <set>
+
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/backoff/exponential_backoff.h>
@@ -285,12 +287,11 @@ class CustomEvent : public Event {
   const std::vector<fuchsia::cobalt::CustomEventValue> event_values_;
 };
 
-class CobaltLoggerImpl : public CobaltLogger {
+class BaseCobaltLoggerImpl : public CobaltLogger {
  public:
-  CobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                   component::StartupContext* context,
-                   fuchsia::cobalt::ProjectProfile profile);
-  ~CobaltLoggerImpl() override;
+  BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                       fuchsia::cobalt::ProjectProfile profile);
+  ~BaseCobaltLoggerImpl() override;
   void LogEvent(uint32_t metric_id, uint32_t event_code) override;
   void LogEventCount(uint32_t metric_id, uint32_t event_code,
                      const std::string& component, zx::duration period_duration,
@@ -315,8 +316,12 @@ class CobaltLoggerImpl : public CobaltLogger {
       uint32_t metric_id,
       std::vector<fuchsia::cobalt::CustomEventValue> event_values) override;
 
- private:
+ protected:
   void ConnectToCobaltApplication();
+  virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory>
+  ConnectToLoggerFactory() = 0;
+
+ private:
   fuchsia::cobalt::ProjectProfile CloneProjectProfile();
   void OnConnectionError();
   void LogEventOnMainThread(std::unique_ptr<Event> event);
@@ -327,15 +332,30 @@ class CobaltLoggerImpl : public CobaltLogger {
 
   backoff::ExponentialBackoff backoff_;
   async_dispatcher_t* const dispatcher_;
-  component::StartupContext* context_;
   fuchsia::cobalt::LoggerPtr logger_;
   const fuchsia::cobalt::ProjectProfile profile_;
   std::set<std::unique_ptr<Event>> events_to_send_;
   std::set<std::unique_ptr<Event>> events_in_transit_;
 
+  FXL_DISALLOW_COPY_AND_ASSIGN(BaseCobaltLoggerImpl);
+};
+
+class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
+ public:
+  CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::StartupContext* context,
+                   fuchsia::cobalt::ProjectProfile profile);
+
+  ~CobaltLoggerImpl() override{};
+
+ protected:
+  virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory>
+  ConnectToLoggerFactory() override;
+
+ private:
+  sys::StartupContext* context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltLoggerImpl);
 };
 
 }  // namespace cobalt
 
-#endif  // LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_
+#endif  // SRC_LIB_COBALT_CPP_COBALT_LOGGER_IMPL_H_

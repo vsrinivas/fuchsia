@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger_impl.h"
-#include "garnet/public/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 
 #include <set>
 
@@ -24,72 +24,74 @@ using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
-CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                                   component::StartupContext* context,
-                                   ProjectProfile profile)
-    : dispatcher_(dispatcher), context_(context), profile_(std::move(profile)) {
-  ConnectToCobaltApplication();
-}
+BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                           ProjectProfile profile)
+    : dispatcher_(dispatcher), profile_(std::move(profile)) {}
 
-CobaltLoggerImpl::~CobaltLoggerImpl() {
+BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
   if (!events_in_transit_.empty() || !events_to_send_.empty()) {
     FXL_LOG(WARNING) << "Disconnecting connection to cobalt with events "
                         "still pending... Events will be lost.";
   }
 }
 
-void CobaltLoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_code) {
+void BaseCobaltLoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_code) {
   LogEvent(std::make_unique<OccurrenceEvent>(metric_id, event_code));
 }
 
-void CobaltLoggerImpl::LogEventCount(uint32_t metric_id, uint32_t event_code,
-                                     const std::string& component,
-                                     zx::duration period_duration,
-                                     int64_t count) {
+void BaseCobaltLoggerImpl::LogEventCount(uint32_t metric_id,
+                                         uint32_t event_code,
+                                         const std::string& component,
+                                         zx::duration period_duration,
+                                         int64_t count) {
   LogEvent(std::make_unique<CountEvent>(metric_id, event_code, component,
                                         period_duration.to_usecs(), count));
 }
 
-void CobaltLoggerImpl::LogElapsedTime(uint32_t metric_id, uint32_t event_code,
-                                      const std::string& component,
-                                      zx::duration elapsed_time) {
+void BaseCobaltLoggerImpl::LogElapsedTime(uint32_t metric_id,
+                                          uint32_t event_code,
+                                          const std::string& component,
+                                          zx::duration elapsed_time) {
   LogEvent(std::make_unique<ElapsedTimeEvent>(metric_id, event_code, component,
                                               elapsed_time.to_usecs()));
 }
 
-void CobaltLoggerImpl::LogFrameRate(uint32_t metric_id, uint32_t event_code,
-                                    const std::string& component, float fps) {
+void BaseCobaltLoggerImpl::LogFrameRate(uint32_t metric_id, uint32_t event_code,
+                                        const std::string& component,
+                                        float fps) {
   LogEvent(
       std::make_unique<FrameRateEvent>(metric_id, event_code, component, fps));
 }
 
-void CobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
-                                      const std::string& component,
-                                      int64_t bytes) {
+void BaseCobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id,
+                                          uint32_t event_code,
+                                          const std::string& component,
+                                          int64_t bytes) {
   LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_code, component,
                                               bytes));
 }
 
-void CobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
+void BaseCobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
   LogEvent(std::make_unique<StringUsedEvent>(metric_id, s));
 }
 
-void CobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code,
-                                  const std::string& component,
-                                  const std::string& timer_id,
-                                  zx::time timestamp, zx::duration timeout) {
+void BaseCobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code,
+                                      const std::string& component,
+                                      const std::string& timer_id,
+                                      zx::time timestamp,
+                                      zx::duration timeout) {
   LogEvent(std::make_unique<StartTimerEvent>(
       metric_id, event_code, component, timer_id, timestamp.get() / ZX_USEC(1),
       timeout.to_secs()));
 }
 
-void CobaltLoggerImpl::EndTimer(const std::string& timer_id, zx::time timestamp,
-                                zx::duration timeout) {
+void BaseCobaltLoggerImpl::EndTimer(const std::string& timer_id,
+                                    zx::time timestamp, zx::duration timeout) {
   LogEvent(std::make_unique<EndTimerEvent>(
       timer_id, timestamp.get() / ZX_USEC(1), timeout.to_secs()));
 }
 
-void CobaltLoggerImpl::LogIntHistogram(
+void BaseCobaltLoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_code, const std::string& component,
     std::vector<fuchsia::cobalt::HistogramBucket> histogram) {
   LogEvent(std::make_unique<IntHistogramEvent>(
@@ -97,15 +99,15 @@ void CobaltLoggerImpl::LogIntHistogram(
       fidl::VectorPtr<fuchsia::cobalt::HistogramBucket>(std::move(histogram))));
 }
 
-void CobaltLoggerImpl::LogCustomEvent(
+void BaseCobaltLoggerImpl::LogCustomEvent(
     uint32_t metric_id,
     std::vector<fuchsia::cobalt::CustomEventValue> event_values) {
   LogEvent(std::make_unique<CustomEvent>(
-      metric_id, std::vector<fuchsia::cobalt::CustomEventValue>(
-                     std::move(event_values))));
+      metric_id,
+      std::vector<fuchsia::cobalt::CustomEventValue>(std::move(event_values))));
 }
 
-void CobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
+void BaseCobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
   if (dispatcher_ == async_get_default_dispatcher()) {
     LogEventOnMainThread(std::move(event));
     return;
@@ -117,7 +119,7 @@ void CobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
   });
 }
 
-ProjectProfile CobaltLoggerImpl::CloneProjectProfile() {
+ProjectProfile BaseCobaltLoggerImpl::CloneProjectProfile() {
   ProjectProfile cloned_profile;
   FXL_CHECK(profile_.config.vmo.duplicate(
                 ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
@@ -128,8 +130,12 @@ ProjectProfile CobaltLoggerImpl::CloneProjectProfile() {
   return cloned_profile;
 }
 
-void CobaltLoggerImpl::ConnectToCobaltApplication() {
-  auto logger_factory = context_->ConnectToEnvironmentService<LoggerFactory>();
+void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
+  auto logger_factory = ConnectToLoggerFactory();
+
+  if (!logger_factory) {
+    return;
+  }
 
   logger_factory->CreateLogger(
       CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
@@ -147,7 +153,7 @@ void CobaltLoggerImpl::ConnectToCobaltApplication() {
       });
 }
 
-void CobaltLoggerImpl::OnTransitFail() {
+void BaseCobaltLoggerImpl::OnTransitFail() {
   // Ugly way to move unique_ptrs between sets
   for (const auto& event : events_in_transit_) {
     events_to_send_.insert(
@@ -157,7 +163,7 @@ void CobaltLoggerImpl::OnTransitFail() {
   events_in_transit_.clear();
 }
 
-void CobaltLoggerImpl::OnConnectionError() {
+void BaseCobaltLoggerImpl::OnConnectionError() {
   FXL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
   OnTransitFail();
@@ -167,7 +173,7 @@ void CobaltLoggerImpl::OnConnectionError() {
       backoff_.GetNext());
 }
 
-void CobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
+void BaseCobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
   events_to_send_.insert(std::move(event));
   if (!logger_ || !events_in_transit_.empty()) {
     return;
@@ -176,7 +182,7 @@ void CobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
   SendEvents();
 }
 
-void CobaltLoggerImpl::SendEvents() {
+void BaseCobaltLoggerImpl::SendEvents() {
   FXL_DCHECK(events_in_transit_.empty());
 
   if (events_to_send_.empty()) {
@@ -217,7 +223,7 @@ void CobaltLoggerImpl::SendEvents() {
   });
 }
 
-void CobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
+void BaseCobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
   switch (status) {
     case Status::INVALID_ARGUMENTS:
     case Status::EVENT_TOO_BIG:  // fall through
@@ -238,6 +244,17 @@ void CobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
       // Keep the event for re-queueing.
       break;
   }
+}
+
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                   sys::StartupContext* context,
+                                   ProjectProfile profile)
+    : BaseCobaltLoggerImpl(dispatcher, std::move(profile)), context_(context) {
+  ConnectToCobaltApplication();
+}
+
+fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
+  return context_->svc()->Connect<LoggerFactory>();
 }
 
 }  // namespace cobalt

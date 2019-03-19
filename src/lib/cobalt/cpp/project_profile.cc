@@ -1,4 +1,4 @@
-#include "garnet/public/lib/cobalt/cpp/project_profile.h"
+#include "src/lib/cobalt/cpp/project_profile.h"
 
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/strings.h"

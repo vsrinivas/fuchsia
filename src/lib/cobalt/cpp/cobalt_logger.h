@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COBALT_CPP_COBALT_LOGGER_H_
-#define LIB_COBALT_CPP_COBALT_LOGGER_H_
+#ifndef SRC_LIB_COBALT_CPP_COBALT_LOGGER_H_
+#define SRC_LIB_COBALT_CPP_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/startup_context.h>
 #include <lib/zx/time.h>
 
 namespace cobalt {
@@ -317,7 +317,7 @@ class CobaltLogger {
 // metrics are permitted to be collected. The default value of GA (Generally
 // Available) permits only metrics tagged as GA.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::StartupContext* context,
     const std::string& config_path,
     fuchsia::cobalt::ReleaseStage release_stage =
         fuchsia::cobalt::ReleaseStage::GA);
@@ -333,9 +333,9 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // |profile| The ProjectProfile struct that contains the configuration for this
 // CobaltLogger.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, component::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::StartupContext* context,
     fuchsia::cobalt::ProjectProfile profile);
 
 }  // namespace cobalt
 
-#endif  // LIB_COBALT_CPP_COBALT_LOGGER_H_
+#endif  // SRC_LIB_COBALT_CPP_COBALT_LOGGER_H_
