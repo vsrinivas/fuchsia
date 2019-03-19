@@ -1,21 +1,13 @@
 # Contributing
 
-## Cloning
-
-Mundane depends on BoringSSL, which is in a Git submodule. When cloning this
-repository, make sure to pass the `--recursive` flag to Git to also download
-this submodule.
-
-## Code Guidelines
-
-### Unsafe
+## Unsafe
 
 `unsafe` is not allowed, except for in the `boringssl` module. We
 `#[forbid(unsafe)]` in all other modules, so code that uses `unsafe` outside of
 that module should fail to compile. For details on how to use `unsafe` in the
 `boringssl` module, see the doc comment on that module.
 
-### `#[must_use]`
+## `#[must_use]`
 
 The `#[must_use]` directive causes the compiler to emit a warning if code calls
 a function but does not use its return value. It is a very useful lint against
@@ -30,8 +22,8 @@ failing to properly act on the result of cryptographic operations. A
 
 `#[must_use]` may also be used on types, but should be evaluated on a
 case-by-case basis. A few things to keep in mind:
-- All functions defined in Mundane which return values have `#[must_use]` on
-  them, so the case of a type returned by a function defined in Mundane is
+- All functions defined in `mundane` which return values have `#[must_use]` on
+  them, so the case of a type returned by a function defined in `mundane` is
   already covered.
 - Unlike on functions, `#[must_use]` on types affects code other than the
   immediate caller since code outside of this crate may return types which are
@@ -48,7 +40,7 @@ used to make security decisions. For example, digests and signatures should have
 *TODO(joshlf): Re-evaluate this policy? Maybe we want to put `#[must_use]` on
 more types?*
 
-### Insecure
+## Insecure
 
 Some clients require access to insecure operations in order to interoperate with
 legacy applications. While we provide these operations, we do so with a few
@@ -58,22 +50,20 @@ caveats:
 - We attempt to make it as difficult as possible for somebody to use an insecure
   operation unintentionally, as detailed in the next section.
 
-#### Adding Insecure Operations
+### Adding Insecure Operations
 
-We use a number of mechanisms to make it less likely for somebody to use an
-insecure operation unintentionally or without understanding the implications.
-They are:
+There are four primary mechanisms by which we can make it less likely for
+somebody to use an insecure operation unintentionally. We make use of all four
+mechanisms. They are:
 - Use of Rust's `#[deprecated]` attribute so that code which uses insecure
   operations will produce a compiler warning
 - Naming of insecure types, functions, and methods with an "insecure" prefix so
   that their use will stand out in code, and their insecurity will stand out
   when reading their documentation
 - Documentation comments that stress the operation's insecurity
-- Placing all insecure operations in their own `insecure` module so that users
-  are unlikely to accidentally come across an insecure operation while browsing
-  other documentation
-- Placing the `insecure` module behind a feature flag which is disabled by
-  default
+- Placing all insecure operations in their own module so that users are unlikely
+  to accidentally come across an insecure operation while browsing other
+  documentation
 
 The whole is also more than the sum of the parts. Taken together, these
 mechanisms serve to give an appropriate air of gravitas to insecure operations.
@@ -82,7 +72,7 @@ territory (because they are!). They should be made to feel the gravity of the
 situation, and to appreciate the importance of carefully considering whether
 using an insecure operation is appropriate.
 
-##### Deprecation
+**Deprecation**
 
 Rust provides the `#[deprecated]`
 [attribute](https://doc.rust-lang.org/reference/attributes.html) which can be
@@ -90,7 +80,7 @@ placed on items including modules, types, functions, methods, and traits. If a
 deprecated item is imported or used, it will cause a compiler warning (two,
 actually - one for the import, and one for the use in code).
 
-In Mundane, all insecure operations must be marked with a `#[deprecated]`
+In `mundane`, all insecure operations must be marked with a `#[deprecated]`
 attribute with an appropriate message. This includes all items that a user could
 ever interact with - types, functions, methods, etc. If it has a `pub` in front
 of it, it needs a deprecation attribute. For example:
@@ -108,7 +98,7 @@ impl InsecureFooResult {
 pub fn insecure_foo() -> InsecureFooResult { ... }
 ```
 
-##### Naming
+**Naming**
 
 Every user-facing Rust item associated with an insecure operation carries an
 "insecure" prefix on its name. For types and traits, this is of the form
@@ -122,7 +112,7 @@ reading about is a special case that should be carefully considered. Second, it
 makes it very obvious when reading or reviewing code that makes use of insecure
 operations.
 
-##### Documentation
+**Documentation**
 
 Every documentation comment on an insecure operation should have the following
 structure:
@@ -141,7 +131,7 @@ structure:
 As with naming, this serves to lessen the likelihood that a user will use an
 insecure operation without realizing what they're doing.
 
-##### Module Isolation
+**Module Isolation**
 
 All insecure operations are exposed through a top-level `insecure` module, which
 is itself marked with a deprecation attribute, and carries appropriate
@@ -157,72 +147,8 @@ Unfortunately, Rust forbids this.
 
 Instead, we take the somewhat circuitous approach of putting an insecure
 operation inside of its own `pub(crate)` module (e.g.,
-`hmac::insecure_hmac_sha1`). Inside of this module, the insecure operation can be
+`hmac::insecure_hmac_sha`). Inside of this module, the insecure operation can be
 `pub` rather than `pub(crate)`. This, in turn, allows the `insecure` module to
 re-export the item without running afoul of the compiler. It's an awkward dance,
 but it makes it so that insecure operations can only be accessed through the
 `insecure` module, which is a big win.
-
-##### Feature Gating
-
-By default, the `insecure` module is not present. The user must explicitly
-enable the `insecure` feature in order to enable the module.
-
-## Contributor License Agreement
-
-Contributions to this project must be accompanied by a Contributor License
-Agreement. You (or your employer) retain the copyright to your contribution;
-this simply gives us permission to use and redistribute your contributions as
-part of the project. Head over to <https://cla.developers.google.com/> to see
-your current agreements on file or to sign a new one.
-
-You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.
-
-## Code reviews
-
-All submissions, including submissions by project members, require review. We
-use [Gerrit](https://fuchsia-review.googlesource.com/admin/repos/mundane) for
-this purpose.
-
-### Setup
-If you have not done so on this machine, you will need to set up a password for
-Gerrit. Sign in with a Google account, visit [this
-link](https://fuchsia.googlesource.com/), and click the "Generate Password" link
-in the top right. You will also need to prepare your checkout to [add
-Change-Ids](https://gerrit-review.googlesource.com/Documentation/cmd-hook-commit-msg.html)
-on commit. Run:
-
-```
-curl -Lo .git/hooks/commit-msg https://fuchsia-review.googlesource.com/tools/hooks/commit-msg
-chmod u+x .git/hooks/commit-msg
-```
-
-### Uploading changes
-To upload a change, push it to the special `refs/for/master` target:
-
-```
-git push origin HEAD:refs/for/master
-```
-
-Alternatively, to configure the repository so that all pushes go to this target
-(`git push` on its becomes equivalent to the above):
-
-```
-git config remote.origin.push HEAD:refs/for/master
-```
-
-The output of `git push` will then give you a link to the change. Add
-`joshlf@google.com` as a reviewer.
-
-Pushing a commit with the same Change-Id as an existing change will upload a new
-version of it. (Use the `git rebase` or `git commit --amend` commands.)
-
-For more detailed instructions, see the [Gerrit User
-Guide](https://gerrit-review.googlesource.com/Documentation/intro-user.html).
-
-## Community Guidelines
-
-This project follows [Google's Open Source Community
-Guidelines](https://opensource.google.com/conduct/).

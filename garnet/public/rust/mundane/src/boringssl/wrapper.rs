@@ -50,7 +50,7 @@ pub unsafe trait CNew: Sealed {
     /// Returns a new, constructed, heap-allocated object, or NULL on failure.
     ///
     /// This should not be called directly; instead, use `new`.
-    #[deprecated(note = "do not call new_raw directly; instead, call new")]
+    #[deprecated = "do not call new_raw directly; instead, call new"]
     unsafe fn new_raw() -> *mut Self;
 
     /// Returns a new, constructed, heap-allocated object, or `None` on failure.
@@ -276,7 +276,10 @@ impl<'a, C> CRef<'a, C> {
     /// ever be sent to other threads so long as this `CRef` exists.
     #[must_use]
     pub unsafe fn new(obj: NonNull<C>) -> CRef<'a, C> {
-        CRef { obj, _lifetime: PhantomData }
+        CRef {
+            obj,
+            _lifetime: PhantomData,
+        }
     }
 
     #[must_use]
@@ -307,12 +310,10 @@ impl<C: CDestruct> CStackWrapper<C> {
     /// called on `obj` when this `CStackWrapper` is dropped.
     #[must_use]
     pub unsafe fn new(obj: C) -> CStackWrapper<C> {
-        CStackWrapper { obj, _no_sync: PhantomData }
-    }
-
-    #[must_use]
-    pub fn as_c_ref(&mut self) -> CRef<C> {
-        unsafe { CRef::new(NonNull::new_unchecked(&mut self.obj as *mut C)) }
+        CStackWrapper {
+            obj,
+            _no_sync: PhantomData,
+        }
     }
 
     #[must_use]
@@ -335,7 +336,10 @@ impl<C: CInit + CDestruct> Default for CStackWrapper<C> {
         unsafe {
             let mut obj: C = mem::uninitialized();
             C::init(&mut obj);
-            CStackWrapper { obj, _no_sync: PhantomData }
+            CStackWrapper {
+                obj,
+                _no_sync: PhantomData,
+            }
         }
     }
 }

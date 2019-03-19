@@ -1,6 +1,6 @@
-# Design of Mundane
+# Design of the `mundane` crate
 
-Mundane has the following design goals, in this order:
+`mundane` has the following design goals, in this order:
 - To be difficult to misuse
 - To be ergonomic
 - To be performant
@@ -24,21 +24,21 @@ correctness of a program under normal conditions. But unlike error handling,
 most programmers aren't familiar with the requirements of using cryptography
 securely, and getting it wrong can be absolutely fatal.
 
-Given this realization, Mundane takes the approach of giving the programmer the
-fewest degrees of freedom possible. Doing the right thing should be easy and
-feel natural. Doing the wrong thing should feel difficult and ideally be
-entirely impossible. This philosophy motivates the design patterns which are
-explored in the next section.
+Given this realization, `mundane` takes the approach of giving the programmer
+the fewest degrees of freedom possible. Doing the correct thing should be easy
+and feel natural. Doing the incorrect thing should feel difficult and ideally be
+entirely impossible to express. This philosophy motivates the design patterns
+which are explored in the next section.
 
 # Design Patterns
 
 ## Do work for the user
 
 Some cryptographic operations have setup phases, require generating random
-values, computing key schedules, etc. While many cryptographic APIs split these
-into multiple steps that must be performed by the user in the right order,
-prefer APIs which perform all setup steps on behalf of the user. This reduces
-the opportunities for the user to make a mistake.
+values, etc. While many cryptographic APIs split these into multiple steps that
+must be performed by the user in the right order, prefer APIs which perform all
+setup steps on behalf of the user. This reduces the opportunities for the user
+to make a mistake.
 
 For example, the scrypt password-based key derivation function takes a salt.
 When generating a key from a new password, the salt should always be randomly
@@ -59,9 +59,9 @@ function, which is a subtle detail that is often overlooked by users.
 
 ## Types
 
-All cryptographic operations have data associated with them. A hash function
-takes a byte sequence and outputs a digest. A signature functions takes a
-private key and a digest, and outputs a signature.
+Most cryptographic operations have data associated with them. Hash functions
+take byte sequences and output digests. Signature functions take a private key
+and a digest, and output a signature.
 
 These types of data usually have strict definitions of what operations are valid
 or secure to perform on them. The Rust type system provides a powerful mechanism
@@ -78,12 +78,11 @@ struct, `Sha256Digest`, which has a private `[u8; 32]` field.
 
 Given such an opaque type, we can be judicious about methods or trait
 implementations to provide. For example, a SHA-256 digest should be comparable
-for equality with other SHA-256 digests, and so `Sha256Digest` implements `Eq`
-for itself. However, comparing with digests from other hash functions is not a
-cryptographically meaningful operation, so it doesn't implement `Eq` for other
-types of digests. Similarly, the `EcdsaSignature` type provides only a
-constructor and a getter, as no other operations (including comparison between
-signatures) are meaningful.
+for equality with other SHA-256 digests, and so `Sha256Digest` implements `Eq`.
+However, ordering between hashes is not a cryptographically meaningful
+operation, so it doesn't implement `Ord`. Similarly, the `EcdsaSignature` type
+provides only a constructor and a getter, as no other operations (including
+comparison between signatures) are meaningful.
 
 It will usually be necessary to allow the user to access a non-opaque
 representation (such as a byte array for hash digests). However, it is
@@ -98,8 +97,8 @@ Sometimes, distinct cryptographic objects will have the same representations and
 operations allowed on them. For example, both RIPEMD-160 and SHA-1 produce
 20-byte digests. Even if this happens, distinct Rust types should still be used.
 Since it is never valid to compare a RIPEMD-160 digest to a SHA-1 digest,
-representing them with the same Rust type would allow operations that are not
-valid. Representing them with distinct Rust types ensures that they are not
+representing them with the same Rust type will allow operations that are not
+valid. Representing them with distinct Rust types will ensure that they are not
 spuriously used together in an invalid or insecure way.
 
 ### Use the most restrictive type
@@ -113,11 +112,9 @@ For example, hash digests have a fixed length. Thus, their constructors accept
 (and their getters produce) fixed-length byte arrays. If, instead,
 variable-length byte slices were used, it would be necessary a) to document the
 length requirement, b) to validate the length during construction, and panic if
-it failed, and c) to promise to the user to always produce slices of a
-particular length. By using fixed-length arrays, we allow the type system to
-guarantee that input will always be valid - so we don't need to perform any
-validation - and to guarantee that the output will always conform to what is
-documented - so the user doesn't need to simply trust our documentation.
+it failed, c) to promise to the user to always produce slices of a particular
+length. By using fixed-length arrays, we allow the type system to guarantee that
+input will always be valid, and so we don't need to perform any validation.
 
 ### Put as much as possible in the type system
 
@@ -128,9 +125,9 @@ ergonomics and other considerations are important too).
 For example, most cryptography libraries provide a single elliptic curve private
 key type. However, elliptic curve keys have a curve parameter, and two keys over
 different curves are not interchangable - they might as well be completely
-different cryptosystems. Thus, we provide a `PCurve` trait which is implemented
+different cryptosystems. Thus, we provide a `Curve` trait which is implemented
 by various curve types, and our private key type, `EcKey` is parametrized on
-such a type - `EcKey<C: PCurve>`.
+such a type - `EcKey<C: Curve>`.
 
 ## Errors
 
@@ -144,10 +141,10 @@ In order to avoid an opportunity for error values to be misused, we follow
 the following design guidelines:
 - Always use the Rust `Result` type to report errors. This may be a no-brainer,
   but it means that, if the user wants to extract the return value from a
-  function, they *must* handle errors (at the very least, by calling `unwrap` or
-  `expect`, and thus panicking on failure). This contrasts with a language like
-  C, in which failing to check status return codes is easy and a common source
-  of bugs.
+  function, they *must* handle errors (if, at the very least, by calling
+  `unwrap` or `expect`, and thus panicking on failure). This contrasts with a
+  language like C, in which failing to check status return codes is easy and a
+  common source of bugs.
 - Collapse the distinction between "verification failed" and "verification
   encountered an error." When verifying cryptographic objects like comparing
   digests, verifying signatures, etc, there can sometimes be errors that are not
@@ -171,8 +168,8 @@ the following design guidelines:
 
 ## Attributes
 
-Rust has two attributes which will cause compiler warnings in user code if
-elements of the Mundane API are misused.
+Rust has two attributes which will cause compiler warnings in user code
+if elements of the `mundane` API are misused.
 - The `#[must_use]` attribute on a function causes a compiler warning if a user
   calls the function and discards the result. We put this attribute on all
   functions which return values, as it is always suspicious to call a

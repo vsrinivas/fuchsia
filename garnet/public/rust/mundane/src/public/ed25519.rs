@@ -35,8 +35,6 @@ impl Ed25519PubKey {
     }
 }
 
-impl_debug!(Ed25519PubKey, "Ed25519PubKey");
-
 impl Sealed for Ed25519PubKey {}
 impl PublicKey for Ed25519PubKey {
     type Private = Ed25519PrivKey;
@@ -51,13 +49,13 @@ pub struct Ed25519PrivKey {
     key: [u8; ED25519_PRIVATE_KEY_LEN],
 }
 
-impl_debug!(Ed25519PrivKey, "Ed25519PrivKey");
-
 impl Ed25519PrivKey {
     /// Generates a new private key.
     #[must_use]
     pub fn generate() -> Ed25519PrivKey {
-        Ed25519PrivKey { key: ed25519_keypair() }
+        Ed25519PrivKey {
+            key: ed25519_keypair(),
+        }
     }
 
     /// Constructs a new private key from a key pair.
@@ -79,8 +77,6 @@ impl Ed25519PrivKey {
     /// Unlike [`from_key_pair_bytes`], `from_private_key_bytes` reconstructs
     /// the key (which includes both the private key and the public key
     /// internally) from only the private key.
-    ///
-    /// [`from_key_pair_bytes`]: ::public::ed25519::Ed25519PrivKey::from_key_pair_bytes
     #[must_use]
     pub fn from_private_key_bytes(private: [u8; 32]) -> Ed25519PrivKey {
         let (_, key) = ed25519_keypair_from_seed(&private);
@@ -111,8 +107,6 @@ pub struct Ed25519Signature {
     sig: [u8; ED25519_SIGNATURE_LEN],
 }
 
-impl_debug!(Ed25519Signature, "Ed25519Signature");
-
 impl Ed25519Signature {
     /// Constructs an `Ed25519Signature` signature from raw bytes.
     #[must_use]
@@ -128,13 +122,10 @@ impl Ed25519Signature {
 
     /// Sign a message.
     ///
-    /// `Ed25519Signature` implements [`Signature`], but `Signature`'s [`sign`]
+    /// `Ed25519Signature` implements `Signature`, but `Signature`'s `sign`
     /// function conservatively returns a `Result`. Ed25519 signatures never
     /// fail, so this function is provided to allow the user to compute an
     /// Ed25519 signature without having to perform error checking.
-    ///
-    /// [`Signature`]: ::public::Signature
-    /// [`sign`]: ::public::Signature::sign
     #[must_use]
     pub fn sign_ed25519(key: &Ed25519PrivKey, message: &[u8]) -> Ed25519Signature {
         Ed25519Signature {
@@ -150,19 +141,15 @@ impl Signature for Ed25519Signature {
 
     /// Sign a message.
     ///
-    /// Though the [`Signature`] trait requires that [`sign`] return a `Result`,
+    /// Though the `Signature` trait requires that `sign` return a `Result`,
     /// `Ed25519Signature`'s implementation is guaranteed to always return `Ok`.
-    /// Callers may prefer the [`sign_ed25519`] function, which returns an
+    /// Callers may prefer the `sign_ed25519` function, which returns a
     /// `Ed25519Signature` rather than a `Result`.
-    ///
-    /// [`Signature`]: ::public::Signature
-    /// [`sign`]: ::public::Signature::sign
-    /// [`sign_ed25519`]: ::public::ed25519::Ed25519Signature::sign_ed25519
     fn sign(key: &Ed25519PrivKey, message: &[u8]) -> Result<Ed25519Signature, Error> {
         Ok(Ed25519Signature::sign_ed25519(key, message))
     }
 
-    fn is_valid(&self, key: &Ed25519PubKey, message: &[u8]) -> bool {
+    fn verify(&self, key: &Ed25519PubKey, message: &[u8]) -> bool {
         ed25519_verify(message, &self.sig, &key.key)
     }
 }

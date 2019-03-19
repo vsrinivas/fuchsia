@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("mundane") {
   name = "mundane"
-  version = "0.3.0"
+  version = "0.1.0"
   with_unit_tests = true
   edition = "2015"
 
