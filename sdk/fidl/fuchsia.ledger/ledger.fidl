@@ -62,14 +62,12 @@ protocol Ledger {
     /// Parameters:
     /// |id| the identifier of the page, or |null| to create a new page with a random identifier.
     GetPage(PageId? id, request<Page> page_request);
-    GetPageNew(PageId? id, request<Page> page_request);
 
     /// Gets the page with identifier
     /// [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
     /// This is a convenience method equivalent to:
     /// GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
     GetRootPage(request<Page> page_request);
-    GetRootPageNew(request<Page> page_request);
 
     /// Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
     /// If this method has never been called, a last-one-wins policy will be used
@@ -81,7 +79,6 @@ protocol Ledger {
     /// which no conflict resolution is set up will not get their conflicts
     /// resolved until this method is called again.
     SetConflictResolverFactory(ConflictResolverFactory factory);
-    SetConflictResolverFactoryNew(ConflictResolverFactory factory);
 };
 
 /// A reference to a value.
