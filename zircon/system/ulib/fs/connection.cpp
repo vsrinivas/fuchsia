@@ -79,6 +79,9 @@ void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
     case fuchsia_io_NodeInfoTag_device:
         encode_handle(&response->extra.device.event, handle);
         break;
+    case fuchsia_io_NodeInfoTag_tty:
+        encode_handle(&response->extra.tty.event, handle);
+        break;
     default:
         ZX_DEBUG_ASSERT_MSG(false, "Unsupported NodeInfoTag: %d\n", response->extra.tag);
     }
