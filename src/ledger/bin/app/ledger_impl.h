@@ -58,16 +58,16 @@ class LedgerImpl : public fuchsia::ledger::LedgerErrorNotifierDelegate {
  private:
   // Ledger:
   void GetRootPage(fidl::InterfaceRequest<Page> page_request,
-                   fit::function<void(Status, Status)> callback) override;
+                      fit::function<void(Status)> callback) override;
   void GetRootPageNew(fidl::InterfaceRequest<Page> page_request,
                       fit::function<void(Status)> callback) override;
   void GetPage(PageIdPtr id, fidl::InterfaceRequest<Page> page_request,
-               fit::function<void(Status, Status)> callback) override;
+                  fit::function<void(Status)> callback) override;
   void GetPageNew(PageIdPtr id, fidl::InterfaceRequest<Page> page_request,
                   fit::function<void(Status)> callback) override;
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory,
-      fit::function<void(Status, Status)> callback) override;
+      fit::function<void(Status)> callback) override;
   void SetConflictResolverFactoryNew(
       fidl::InterfaceHandle<ConflictResolverFactory> factory,
       fit::function<void(Status)> callback) override;
