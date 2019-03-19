@@ -69,9 +69,22 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
         .block_size = info_.page_size * info_.pages_per_block,
         .page_size = info_.page_size,
         .eb_size = info_.oob_size,
-        .flags = 0  // Same as FSF_DRVR_PAGES (current default).
+        .flags = ftl::kReadOnlyInit
     };
-    return CreateNdmVolume(ftl_volume, options);
+
+    if (!IsNdmDataPresent(options)) {
+        // TODO(rvargas): Look somewhere else.
+        options.flags = 0;
+    }
+
+    const char* error = CreateNdmVolume(ftl_volume, options);
+    if (error) {
+        // Retry allowing the volume to be fixed as needed.
+        zxlogf(INFO, "FTL: About to retry volume creation");
+        options.flags = 0;
+        error = CreateNdmVolume(ftl_volume, options);
+    }
+    return error;
 }
 
 bool NandDriverImpl::Detach() {

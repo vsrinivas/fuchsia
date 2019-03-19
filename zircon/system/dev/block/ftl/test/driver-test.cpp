@@ -110,8 +110,21 @@ TEST(DriverTest, CreateVolume) {
 
     NdmRamDriver driver(kDefaultOptions);
     ASSERT_EQ(nullptr, driver.Init());
+    EXPECT_TRUE(driver.IsNdmDataPresent(kDefaultOptions));
     ASSERT_EQ(nullptr, driver.Attach(nullptr));
     ASSERT_TRUE(driver.Detach());
+}
+
+TEST(DriverTest, CreateVolumeReadOnly) {
+    ASSERT_TRUE(ftl::InitModules());
+
+    ftl::VolumeOptions options = kDefaultOptions;
+    options.flags = ftl::kReadOnlyInit;
+
+    NdmRamDriver driver(options);
+    ASSERT_EQ(nullptr, driver.Init());
+    EXPECT_FALSE(driver.IsNdmDataPresent(options));
+    ASSERT_NE(nullptr, driver.Attach(nullptr));
 }
 
 TEST(DriverTest, ReAttach) {

@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include "kprivate/fsdriver.h"
+#include "kprivate/fsprivate.h"
 #include "kprivate/ndm.h"
 #include "posix.h"
 
@@ -100,7 +101,7 @@ NdmBaseDriver::~NdmBaseDriver() {
     RemoveNdmVolume();
 }
 
-const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options) {
+bool NdmBaseDriver::IsNdmDataPresent(const VolumeOptions& options) {
     NDMDrvr driver = {};
     driver.num_blocks = options.num_blocks;
     driver.max_bad_blocks = options.max_bad_blocks;
@@ -121,21 +122,30 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
     driver.erase_block = EraseBlock;
     driver.is_block_bad = IsBadBlockImpl;
 
+    SetFsErrCode(0);
     ndm_ = ndmAddDev(&driver);
+    return ndm_ || (options.flags & kReadOnlyInit && GetFsErrCode() != NDM_NO_META_BLK);
+}
+
+const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options) {
     if (!ndm_) {
-        return "FTL: ndmAddDev failed";
+        IsNdmDataPresent(options);
     }
 
-    if (ndmSetNumPartitions(ndm_, 1)) {
-        return "FTL: ndmSetNumPartitions failed";
+    if (!ndm_) {
+        return "ndmAddDev failed";
+    }
+
+    if (ndmSetNumPartitions(ndm_, 1) != 0) {
+        return "ndmSetNumPartitions failed";
     }
 
     NDMPartition partition = {};
     partition.num_blocks = ndmGetNumVBlocks(ndm_) - partition.first_block;
     partition.type = XFS_VOL;
 
-    if (ndmWritePartition(ndm_, &partition, 0, "ftl")) {
-        return "FTL: ndmWritePartition failed";
+    if (ndmWritePartition(ndm_, &partition, 0, "ftl") != 0) {
+        return "ndmWritePartition failed";
     }
 
     FtlNdmVol ftl = {};
@@ -146,8 +156,8 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
     ftl.extra_free = 6;  // Over-provision 6% of the device.
     xfs.ftl_volume = const_cast<Volume*>(ftl_volume);
 
-    if (ndmAddVolXfsFTL(ndm_, 0, &ftl, &xfs)) {
-        return "FTL: ndmAddVolXfsFTL failed";
+    if (ndmAddVolXfsFTL(ndm_, 0, &ftl, &xfs) != 0) {
+        return "ndmAddVolXfsFTL failed";
     }
 
     return nullptr;

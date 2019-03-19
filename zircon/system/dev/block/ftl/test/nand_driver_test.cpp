@@ -141,7 +141,6 @@ TEST_F(NandDriverTest, Init) {
 }
 
 TEST_F(NandDriverTest, InitFailure) {
-
     bad_block()->set_result(ZX_ERR_BAD_STATE);
     auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
     ASSERT_NE(nullptr, driver->Init());
