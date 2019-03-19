@@ -33,6 +33,7 @@ class FuchsiaPkgUrl {
   const std::string& host_name() const { return host_name_; }
   const std::string& package_name() const { return package_name_; }
   const std::string& variant() const { return variant_; }
+  const std::string& hash() const { return hash_; }
   const std::string& resource_path() const { return resource_path_; }
   std::string package_path() const;
   std::string pkgfs_dir_path() const;
@@ -44,6 +45,7 @@ class FuchsiaPkgUrl {
   std::string host_name_;
   std::string package_name_;
   std::string variant_;
+  std::string hash_;
   std::string resource_path_;
 };
 

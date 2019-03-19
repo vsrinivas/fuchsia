@@ -17,9 +17,10 @@ static const std::string kFuchsiaPkgPrefix = "fuchsia-pkg://";
 // 1: user/domain/port/etc (everything after scheme, before path)
 // 2: package name
 // 3: package variant
-// 4: resource path
+// 4: package merkle-root hash
+// 5: resource path
 static const std::regex* const kFuchsiaPkgRexp =
-    new std::regex("^fuchsia-pkg://([^/]+)/([^/#]+)(?:/([^/#]+))?(?:#(.+))?$");
+    new std::regex("^fuchsia-pkg://([^/]+)/([^/#?]+)(?:/([^/#?]+))?(?:\\?hash=([^&#]+))?(?:#(.+))?$");
 
 // static
 bool FuchsiaPkgUrl::IsFuchsiaPkgScheme(const std::string& url) {
@@ -54,7 +55,8 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
     // will eventually be required in fuchsia-pkg URLs.
     variant_ = "0";
   }
-  resource_path_ = match_data[4].str();
+  hash_ = match_data[4].str();
+  resource_path_ = match_data[5].str();
 
   return true;
 }
