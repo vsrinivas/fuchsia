@@ -6,6 +6,9 @@
 
 #include <algorithm>
 #include <ddk/protocol/composite.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include "devhost.h"
 #include "device-internal.h"
 
 namespace devmgr {
@@ -48,6 +51,23 @@ private:
     const CompositeComponents components_;
 };
 
+// Get the placeholder driver structure for the composite driver
+fbl::RefPtr<zx_driver> GetCompositeDriver() {
+    static fbl::Mutex lock;
+    static fbl::RefPtr<zx_driver> composite TA_GUARDED(lock);
+
+    fbl::AutoLock guard(&lock);
+    if (composite == nullptr) {
+        zx_status_t status = zx_driver::Create(&composite);
+        if (status != ZX_OK) {
+            return nullptr;
+        }
+        composite->set_name("internal:composite");
+        composite->set_libname("<internal:composite>");
+    }
+    return composite;
+}
+
 } // namespace
 
 zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
@@ -70,6 +90,11 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
         return ops;
     }();
 
+    auto driver = GetCompositeDriver();
+    if (driver == nullptr) {
+        return ZX_ERR_INTERNAL;
+    }
+
     std::unique_ptr<CompositeDevice> new_device;
     zx_status_t status = CompositeDevice::Create(dev.get(), std::move(components), &new_device);
     if (status != ZX_OK) {
@@ -78,6 +103,7 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
 
     dev->protocol_id = ZX_PROTOCOL_COMPOSITE;
     dev->protocol_ops = &composite_ops;
+    dev->driver = driver.get();
     dev->ops = &composite_device_ops;
     dev->ctx = new_device.release();
     // Flag that when this is cleaned up, we should run its release hook.
