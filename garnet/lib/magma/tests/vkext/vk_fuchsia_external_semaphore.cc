@@ -1,14 +1,15 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
 
-#if defined(MAGMA_USE_SHIM)
+#if MAGMA_USE_SHIM
 #include "vulkan_shim.h"
 #else
 #include <vulkan/vulkan.h>
 #endif
+#include <array>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +36,8 @@ private:
     bool is_initialized_ = false;
     PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR
         vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_;
-    PFN_vkImportSemaphoreFuchsiaHandleKHR vkImportSemaphoreFuchsiaHandleKHR_;
-    PFN_vkGetSemaphoreFuchsiaHandleKHR vkGetSemaphoreFuchsiaHandleKHR_;
+    PFN_vkImportSemaphoreZirconHandleFUCHSIA vkImportSemaphoreZirconHandleFUCHSIA_;
+    PFN_vkGetSemaphoreZirconHandleFUCHSIA vkGetSemaphoreZirconHandleFUCHSIA_;
 
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_device_;
@@ -74,11 +75,11 @@ bool VulkanTest::InitVulkan()
     if (result != VK_SUCCESS)
         return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
 
-    std::vector<const char*> instance_extensions{
+    std::array<const char*, 2> instance_extensions{
         VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
-    std::vector<const char*> device_extensions{VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-                                               VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME};
+    std::array<const char*, 2> device_extensions{VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+                                                 VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME};
 
     uint32_t found_count = 0;
     for (auto& prop : extension_properties) {
@@ -93,7 +94,7 @@ bool VulkanTest::InitVulkan()
         return DRETF(false, "failed to find instance extensions");
 
     std::vector<const char*> layers;
-#if !defined(MAGMA_USE_SHIM)
+#if !MAGMA_USE_SHIM
     // Vulkan loader is needed for loading layers.
     layers.push_back("VK_LAYER_LUNARG_standard_validation");
 #endif
@@ -115,7 +116,7 @@ bool VulkanTest::InitVulkan()
 
     DLOG("vkCreateInstance succeeded");
 
-    uint32_t physical_device_count;
+    uint32_t physical_device_count = 0;
     if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
         VK_SUCCESS)
         return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
@@ -141,7 +142,7 @@ bool VulkanTest::InitVulkan()
         DLOG("deviceType 0x%x", properties.deviceType);
     }
 
-    uint32_t queue_family_count;
+    uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
     if (queue_family_count < 1)
@@ -174,7 +175,7 @@ bool VulkanTest::InitVulkan()
         return DRETF(false, "vkEnumerateDeviceExtensionProperties returned %d\n", result);
 
     found_count = 0;
-    for (auto& prop : extension_properties) {
+    for (const auto& prop : extension_properties) {
         DLOG("device extension name %s version %u", prop.extensionName, prop.specVersion);
         for (uint32_t i = 0; i < device_extensions.size(); i++) {
             if ((strcmp(prop.extensionName, device_extensions[i]) == 0))
@@ -224,39 +225,40 @@ bool VulkanTest::InitVulkan()
     if (!vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_)
         return DRETF(false, "couldn't find vkGetPhysicalDeviceExternalSemaphorePropertiesKHR");
 
-    vkImportSemaphoreFuchsiaHandleKHR_ = reinterpret_cast<PFN_vkImportSemaphoreFuchsiaHandleKHR>(
-        vkGetDeviceProcAddr(vk_device_, "vkImportSemaphoreFuchsiaHandleKHR"));
-    if (!vkImportSemaphoreFuchsiaHandleKHR_)
-        return DRETF(false, "couldn't find vkImportSemaphoreFuchsiaHandleKHR");
+    vkImportSemaphoreZirconHandleFUCHSIA_ =
+        reinterpret_cast<PFN_vkImportSemaphoreZirconHandleFUCHSIA>(
+            vkGetDeviceProcAddr(vk_device_, "vkImportSemaphoreZirconHandleFUCHSIA"));
+    if (!vkImportSemaphoreZirconHandleFUCHSIA_)
+        return DRETF(false, "couldn't find vkImportSemaphoreZirconHandleFUCHSIA");
 
-    vkGetSemaphoreFuchsiaHandleKHR_ = reinterpret_cast<PFN_vkGetSemaphoreFuchsiaHandleKHR>(
-        vkGetDeviceProcAddr(vk_device_, "vkGetSemaphoreFuchsiaHandleKHR"));
-    if (!vkGetSemaphoreFuchsiaHandleKHR_)
-        return DRETF(false, "couldn't find vkGetSemaphoreFuchsiaHandleKHR_");
+    vkGetSemaphoreZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetSemaphoreZirconHandleFUCHSIA>(
+        vkGetDeviceProcAddr(vk_device_, "vkGetSemaphoreZirconHandleFUCHSIA"));
+    if (!vkGetSemaphoreZirconHandleFUCHSIA_)
+        return DRETF(false, "couldn't find vkGetSemaphoreZirconHandleFUCHSIA");
 
     VkExternalSemaphorePropertiesKHR external_semaphore_properties = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHR,
     };
-    VkPhysicalDeviceExternalSemaphoreInfoKHR external_semaphore_info = {
+    VkPhysicalDeviceExternalSemaphoreInfo external_semaphore_info = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHR,
         .pNext = nullptr,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
     };
     vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_(
         vk_physical_device_, &external_semaphore_info, &external_semaphore_properties);
 
     EXPECT_EQ(external_semaphore_properties.compatibleHandleTypes,
-              VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR);
+              VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA);
     EXPECT_EQ(external_semaphore_properties.externalSemaphoreFeatures,
               0u | VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR |
                   VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR);
 
     // Create semaphores for export
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        VkExportSemaphoreCreateInfoKHR export_create_info = {
+        VkExportSemaphoreCreateInfo export_create_info = {
             .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,
             .pNext = nullptr,
-            .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         };
 
         VkSemaphoreCreateInfo create_info = {
@@ -284,36 +286,36 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary)
 
     // Export semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        VkSemaphoreGetFuchsiaHandleInfoKHR info{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+        VkSemaphoreGetZirconHandleInfoFUCHSIA info{
+            .sType = VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
             .semaphore = t1->vk_semaphore_[i],
-            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         };
-        result = t1->vkGetSemaphoreFuchsiaHandleKHR_(t1->vk_device_, &info, &handle[i]);
+        result = t1->vkGetSemaphoreZirconHandleFUCHSIA_(t1->vk_device_, &info, &handle[i]);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetSemaphoreFdKHR returned %d", result);
+            return DRETF(false, "vkGetSemaphoreZirconHandleFUCHSIA returned %d", result);
     }
 
-    std::vector<std::unique_ptr<magma::PlatformSemaphore>> exported(kSemaphoreCount);
+    std::vector<std::unique_ptr<magma::PlatformSemaphore>> exported;
 
     // Import semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
         uint32_t flags = temporary ? VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR : 0;
-        exported[i] = magma::PlatformSemaphore::Import(handle[i]);
+        exported.emplace_back(magma::PlatformSemaphore::Import(handle[i]));
         uint32_t import_handle;
-        EXPECT_TRUE(exported[i]->duplicate_handle(&import_handle));
-        VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
-            .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
+        EXPECT_TRUE(exported.back()->duplicate_handle(&import_handle));
+        VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
+            .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
             .flags = flags,
             .semaphore = t2->vk_semaphore_[i],
-            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
             .handle = import_handle};
 
-        result = t1->vkImportSemaphoreFuchsiaHandleKHR_(t2->vk_device_, &import_info);
+        result = t1->vkImportSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &import_info);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkImportSemaphoreFdKHR failed: %d", result);
+            return DRETF(false, "vkImportSemaphoreZirconHandleFUCHSIA failed: %d", result);
     }
 
     // Test semaphores
@@ -321,15 +323,15 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary)
         auto& platform_semaphore_export = exported[i];
 
         // Export the imported semaphores
-        VkSemaphoreGetFuchsiaHandleInfoKHR info{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+        VkSemaphoreGetZirconHandleInfoFUCHSIA info{
+            .sType = VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
             .semaphore = t2->vk_semaphore_[i],
-            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         };
-        result = t1->vkGetSemaphoreFuchsiaHandleKHR_(t2->vk_device_, &info, &handle[i]);
+        result = t1->vkGetSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &info, &handle[i]);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetSemaphoreFdKHR returned %d", result);
+            return DRETF(false, "vkGetSemaphoreZirconHandleFUCHSIA_ returned %d", result);
 
         std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_import =
             magma::PlatformSemaphore::Import(handle[i]);
@@ -363,31 +365,31 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary)
 
     // Export semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        VkSemaphoreGetFuchsiaHandleInfoKHR info{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+        VkSemaphoreGetZirconHandleInfoFUCHSIA info{
+            .sType = VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
             .semaphore = t1->vk_semaphore_[i],
-            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         };
-        result = t1->vkGetSemaphoreFuchsiaHandleKHR_(t1->vk_device_, &info, &handle[i]);
+        result = t1->vkGetSemaphoreZirconHandleFUCHSIA_(t1->vk_device_, &info, &handle[i]);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetSemaphoreFdKHR returned %d", result);
+            return DRETF(false, "vkGetSemaphoreZirconHandleFUCHSIA_ returned %d", result);
     }
 
     // Import semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
         uint32_t flags = temporary ? VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR : 0;
-        VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
-            .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
+        VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
+            .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
             .pNext = nullptr,
             .flags = flags,
             .semaphore = t2->vk_semaphore_[i],
-            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
             .handle = handle[i]};
 
-        result = t1->vkImportSemaphoreFuchsiaHandleKHR_(t2->vk_device_, &import_info);
+        result = t1->vkImportSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &import_info);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkImportSemaphoreFdKHR failed: %d", result);
+            return DRETF(false, "vkImportSemaphoreZirconHandleFUCHSIA_ failed: %d", result);
     }
 
     VkSubmitInfo submit_info1 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -432,36 +434,36 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary)
     return true;
 }
 
-TEST(VulkanExtension, ExternalSemaphoreFuchsiaKHR)
+TEST(VulkanExtension, ExternalSemaphoreFuchsia)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
     ASSERT_TRUE(t2.Initialize());
-    ASSERT_TRUE(VulkanTest::Exec(&t1, &t2, false));
+    EXPECT_TRUE(VulkanTest::Exec(&t1, &t2, false));
 }
 
-TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsiaKHR)
+TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsia)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
     ASSERT_TRUE(t2.Initialize());
-    ASSERT_TRUE(VulkanTest::Exec(&t1, &t2, true));
+    EXPECT_TRUE(VulkanTest::Exec(&t1, &t2, true));
 }
 
-TEST(VulkanExtension, QueueExternalSemaphoreFuchsiaKHR)
+TEST(VulkanExtension, QueueExternalSemaphoreFuchsia)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
     ASSERT_TRUE(t2.Initialize());
-    ASSERT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, false));
+    EXPECT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, false));
 }
 
-TEST(VulkanExtension, QueueTemporaryExternalSemaphoreFuchsiaKHR)
+TEST(VulkanExtension, QueueTemporaryExternalSemaphoreFuchsia)
 {
     VulkanTest t1, t2;
     ASSERT_TRUE(t1.Initialize());
     ASSERT_TRUE(t2.Initialize());
-    ASSERT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, true));
+    EXPECT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, true));
 }
 
 } // namespace
