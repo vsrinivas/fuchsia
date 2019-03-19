@@ -14,8 +14,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -26,10 +24,8 @@ import (
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/netutil"
-	"fuchsia.googlesource.com/tools/retry"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/tftp"
 
 	"github.com/google/subcommands"
 	"golang.org/x/crypto/ssh"
@@ -99,16 +95,6 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.hostCmd, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
-// Creates and returns archive file handle.
-func (cmd *ZedbootCommand) createTarFile() (*os.File, error) {
-	file, err := os.OpenFile(cmd.outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file %s: %v", cmd.outputArchive, err)
-	}
-
-	return file, nil
-}
-
 // Creates and returns Summary file object for Host Cmds.
 func (cmd *ZedbootCommand) hostSummaryJSON(ctx context.Context, err error) (*bytes.Buffer, error) {
 	var cmdResult runtests.TestResult
@@ -143,9 +129,9 @@ func (cmd *ZedbootCommand) hostSummaryJSON(ctx context.Context, err error) (*byt
 
 // Creates tar archive from host command artifacts.
 func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte, outputDir string) error {
-	outFile, err := cmd.createTarFile()
+	outFile, err := os.OpenFile(cmd.outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create file %s: %v", cmd.outputArchive, err)
 	}
 
 	tw := tar.NewWriter(outFile)
@@ -270,93 +256,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	}
 
 	addr := addrs[0]
-	// Poll for summary.json; this relies on runtest being executed using
-	// autorun and it eventually producing the summary.json file.
-	t := tftp.NewClient()
-	tftpAddr := &net.UDPAddr{
-		IP:   addr.IP,
-		Port: tftp.ClientPort,
-		Zone: addr.Zone,
-	}
-	var buffer bytes.Buffer
-	var writer io.WriterTo
-	err = retry.Retry(ctx, retry.NewConstantBackoff(cmd.filePollInterval), func() error {
-		writer, err = t.Receive(tftpAddr, path.Join(cmd.testResultsDir, cmd.summaryFilename))
-		return err
-	}, nil)
-	if err != nil {
-		return fmt.Errorf("timed out waiting for tests to complete: %v", err)
-	}
-
-	logger.Debugf(ctx, "reading %q\n", cmd.summaryFilename)
-
-	if _, err := writer.WriteTo(&buffer); err != nil {
-		return fmt.Errorf("failed to receive summary file: %v", err)
-	}
-
-	// Parse and save the summary.json file.
-	var result runtests.TestSummary
-	if err := json.Unmarshal(buffer.Bytes(), &result); err != nil {
-		return fmt.Errorf("cannot unmarshall test results: %v", err)
-	}
-
-	outFile, err := cmd.createTarFile()
-	if err != nil {
-		return err
-	}
-
-	tw := tar.NewWriter(outFile)
-	defer tw.Close()
-
-	if err = botanist.ArchiveBuffer(tw, buffer.Bytes(), cmd.summaryFilename); err != nil {
-		return err
-	}
-
-	logger.Debugf(ctx, "copying test output\n")
-
-	// Tar in a subroutine while busy-printing so that we do not hit an i/o timeout when
-	// dealing with large files.
-	c := make(chan error)
-	go func() {
-		// Copy test output from the node.
-		for _, output := range result.Outputs {
-			remote := filepath.Join(cmd.testResultsDir, output)
-			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, output); err != nil {
-				c <- err
-				return
-			}
-		}
-		for _, test := range result.Tests {
-			remote := filepath.Join(cmd.testResultsDir, test.OutputFile)
-			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, test.OutputFile); err != nil {
-				c <- err
-				return
-			}
-			// Copy data sinks if any are present.
-			for _, sinks := range test.DataSinks {
-				for _, sink := range sinks {
-					remote := filepath.Join(cmd.testResultsDir, sink.File)
-					if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, sink.File); err != nil {
-						c <- err
-						return
-					}
-				}
-			}
-		}
-		c <- nil
-	}()
-
-	logger.Debugf(ctx, "tarring test output...\n")
-	ticker := time.NewTicker(5 * time.Second)
-	for {
-		select {
-		case err := <-c:
-			ticker.Stop()
-			return err
-		case <-ticker.C:
-			logger.Debugf(ctx, "tarring test output...\n")
-		}
-	}
+	return runtests.PollForSummary(ctx, addr, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
 }
 
 func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) error {
