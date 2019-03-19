@@ -12,16 +12,16 @@ import (
 )
 
 type FakeGCSClient struct {
-	contensts map[string]string
+	uploaded map[string]string
+	gcsFiles map[string]bool
 }
 
-func (client *FakeGCSClient) uploadSingleFile(ctx context.Context, url string, filePath string) error {
-	client.contensts[url] = filePath
+func (client *FakeGCSClient) uploadSingleFile(ctx context.Context, name, localPath string) error {
+	client.uploaded[name] = localPath
 	return nil
 }
-
-func (client *FakeGCSClient) getObjects(ctx context.Context) (map[string]bool, error) {
-	return map[string]bool{"alreadyExistFile.debug": true}, nil
+func (client *FakeGCSClient) exists(object string) bool {
+	return client.gcsFiles[object]
 }
 
 func TestRunCommand(t *testing.T) {
@@ -30,10 +30,8 @@ func TestRunCommand(t *testing.T) {
 		name string
 		// The lines of the input ids.txt file
 		input string
-		// The lines of the input ids.txt file
-		hashes []string
-		// The set of files referenced in input.
-		files []string
+		// The set of files that already exist in GCS
+		gcsFiles map[string]bool
 		// The expected objects that should be written
 		output map[string]string
 	}{
@@ -59,6 +57,7 @@ func TestRunCommand(t *testing.T) {
 				"02298167.debug": "/path/to/binaryB",
 				"025abbbc.debug": "/path/to/binaryC.so",
 			},
+			gcsFiles: map[string]bool{"alreadyExistFile.debug": true},
 		},
 		{
 			name:   "should upload nothing if nothing in ids.txt",
@@ -78,12 +77,16 @@ func TestRunCommand(t *testing.T) {
 			idsFile.Write([]byte(tt.input))
 
 			ctx := context.Background()
-			client := FakeGCSClient{make(map[string]string)}
+			client := FakeGCSClient{
+				uploaded: make(map[string]string),
+				gcsFiles: tt.gcsFiles,
+			}
 			uploadSymbolFiles(ctx, &client, idsFile.Name())
 
-			eq := reflect.DeepEqual(client.contensts, tt.output)
-			if !eq {
-				t.Fatal("The results are not the same", client.contensts, tt.output)
+			want := tt.output
+			got := client.uploaded
+			if !reflect.DeepEqual(want, got) {
+				t.Fatalf("wanted:\n%v\nbut got:\n%v\n", want, got)
 			}
 		})
 	}

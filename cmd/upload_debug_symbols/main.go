@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"cloud.google.com/go/storage"
 	"fuchsia.googlesource.com/tools/elflib"
@@ -27,6 +28,13 @@ const usage = `upload_debug_symbols [flags] bucket idsFilePath
 
 Upload debug symbol files listed in ids.txt to Cloud storage
 `
+
+const (
+	// The maximum number of files to upload at once. The storage API returns 4xx errors
+	// when we spawn too many go routines at once, and we can't predict the number of
+	// symbol files we'll have to upload.
+	maxConcurrentUploads = 100
+)
 
 // Command line flag values
 var (
@@ -67,13 +75,17 @@ func execute(ctx context.Context) error {
 	}
 
 	bkt := client.Bucket(gcsBucket)
-
-	// Check if the bucket exists
 	if _, err = bkt.Attrs(ctx); err != nil {
-		return err
+		return fmt.Errorf("failed to fetch bucket attributes: %v", err)
 	}
 
-	myClient := gcsClient{bkt}
+	objMap, err := getObjects(context.Background(), bkt)
+	if err != nil {
+		return fmt.Errorf("failed to fetch object list from GCS: %v", err)
+	}
+
+	myClient := gcsClient{bkt: bkt, objMap: objMap}
+
 	if err = uploadSymbolFiles(ctx, &myClient, idsFilePath); err != nil {
 		return err
 	}
@@ -92,31 +104,50 @@ func uploadSymbolFiles(ctx context.Context, client GCSClient, idsFilePath string
 		return fmt.Errorf("failed to read %s with elflib: %v", idsFilePath, err)
 	}
 
-	objMap, err := client.getObjects(ctx)
-
-	if err != nil {
-		return err
+	var wg sync.WaitGroup
+	jobsc := make(chan elflib.BinaryFileRef, len(binaries))
+	const workerCount = maxConcurrentUploads
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go worker(ctx, client, &wg, jobsc)
 	}
 
-	for _, binaryFileRef := range binaries {
-		fileURL := binaryFileRef.BuildID + ".debug"
-		if _, exist := objMap[fileURL]; !exist {
-			if err := client.uploadSingleFile(ctx, fileURL, binaryFileRef.Filepath); err != nil {
-				return err
-			}
-		}
+	// Emit jobs
+	for i := range binaries {
+		jobsc <- binaries[i]
 	}
+	close(jobsc)
 
+	wg.Wait() // Wait for workers to finish.
 	return nil
 }
 
-func (client *gcsClient) uploadSingleFile(ctx context.Context, url string, filePath string) error {
-	content, err := ioutil.ReadFile(filePath)
+func worker(ctx context.Context, client GCSClient, wg *sync.WaitGroup, jobs <-chan elflib.BinaryFileRef) {
+	defer wg.Done()
+	for binaryFileRef := range jobs {
+		log.Printf("uploading %s", binaryFileRef.Filepath)
+		objectName := binaryFileRef.BuildID + ".debug"
+		if client.exists(objectName) {
+			log.Printf("skipping %q which already exists", objectName)
+			continue
+		}
+		if err := client.uploadSingleFile(context.Background(), objectName, binaryFileRef.Filepath); err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func (client *gcsClient) exists(name string) bool {
+	return client.objMap[name]
+}
+
+func (client *gcsClient) uploadSingleFile(ctx context.Context, name, localPath string) error {
+	content, err := ioutil.ReadFile(localPath)
 	if err != nil {
 		return fmt.Errorf("unable to read file in uploadSingleFile: %v", err)
 	}
 	// This writer only perform write when the precondition of DoesNotExist is true.
-	wc := client.bkt.Object(url).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
+	wc := client.bkt.Object(name).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	if _, err := wc.Write(content); err != nil {
 		return fmt.Errorf("failed to write to buffer of GCS onject writer: %v", err)
 	}
@@ -133,9 +164,9 @@ func (client *gcsClient) uploadSingleFile(ctx context.Context, url string, fileP
 
 // getObjects returns a set of all binaries that currently exist in Cloud Storage.
 // TODO(IN-1050)
-func (client *gcsClient) getObjects(ctx context.Context) (map[string]bool, error) {
+func getObjects(ctx context.Context, bkt *storage.BucketHandle) (map[string]bool, error) {
 	existingObjects := make(map[string]bool)
-	it := client.bkt.Objects(ctx, nil)
+	it := bkt.Objects(ctx, nil)
 	for {
 		objAttrs, err := it.Next()
 		if err == iterator.Done {
@@ -151,11 +182,12 @@ func (client *gcsClient) getObjects(ctx context.Context) (map[string]bool, error
 
 // GCSClient provide method to upload single file to gcs
 type GCSClient interface {
-	uploadSingleFile(ctx context.Context, url string, filePath string) error
-	getObjects(ctx context.Context) (map[string]bool, error)
+	uploadSingleFile(ctx context.Context, name, localPath string) error
+	exists(object string) bool
 }
 
 // gcsClient is the object that implement GCSClient
 type gcsClient struct {
-	bkt *storage.BucketHandle
+	objMap map[string]bool
+	bkt    *storage.BucketHandle
 }
