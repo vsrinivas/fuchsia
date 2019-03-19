@@ -5,9 +5,9 @@
 use std::any::Any;
 
 /// Message type
-pub type Message = Box<&'static Any>;
+pub type Message = Box<Any>;
 
 /// Make a message
-pub fn make_message(message_contents: &'static Any) -> Message {
+pub fn make_message<A: Any>(message_contents: A) -> Message {
     Box::new(message_contents)
 }
