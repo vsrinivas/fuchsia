@@ -47,25 +47,42 @@ struct SimpleUnion {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  SimpleUnion();
+  ~SimpleUnion();
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_field_a() const { return tag_ == Tag::kFieldA; }
 
   int32_t& mutable_field_a() {
+    if (which() != Tag::kFieldA) {
+      Destroy();
+    }
     tag_ = Tag::kFieldA;
     return field_a_;
   }
 
-  const int32_t& field_a() const { return field_a_; }
+  void set_field_a(int32_t const & v) {
+    mutable_field_a() = v;
+  }
+
+  int32_t const & field_a() const { return field_a_; }
 
   bool is_field_b() const { return tag_ == Tag::kFieldB; }
 
   int32_t& mutable_field_b() {
+    if (which() != Tag::kFieldB) {
+      Destroy();
+    }
     tag_ = Tag::kFieldB;
     return field_b_;
   }
 
-  const int32_t& field_b() const { return field_b_; }
+  void set_field_b(int32_t const & v) {
+    mutable_field_b() = v;
+  }
+
+  int32_t const & field_b() const { return field_b_; }
 
   Tag which() const { return tag_; }
 
@@ -76,7 +93,8 @@ struct SimpleUnion {
   static constexpr uint32_t MaxOutOfLine = 0;
 
  private:
-  void SizeAndOffsetAssertionHelper();
+  void Destroy();
+  static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
     int32_t field_a_;

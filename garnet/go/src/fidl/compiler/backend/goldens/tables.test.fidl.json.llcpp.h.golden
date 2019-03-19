@@ -14,6 +14,10 @@
 namespace test {
 namespace name {
 
+using OlderSimpleTable = ::fidl::VectorView<fidl_envelope_t>;
+using NewerSimpleTable = ::fidl::VectorView<fidl_envelope_t>;
+using SimpleTable = ::fidl::VectorView<fidl_envelope_t>;
+using EmptyTable = ::fidl::VectorView<fidl_envelope_t>;
 
 }  // namespace name
 }  // namespace test

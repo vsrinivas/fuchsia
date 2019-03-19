@@ -8,6 +8,22 @@ namespace test {
 namespace llcpp {
 namespace basictypes {
 
+::fidl::test::llcpp::basictypes::SimpleUnion::SimpleUnion() {
+  memset(this, 0, sizeof(SimpleUnion));
+  tag_ = Tag::Invalid;
+}
+
+::fidl::test::llcpp::basictypes::SimpleUnion::~SimpleUnion() {
+  Destroy();
+}
+
+void ::fidl::test::llcpp::basictypes::SimpleUnion::Destroy() {
+  switch (which()) {
+  default:
+    break;
+  }
+}
+
 void ::fidl::test::llcpp::basictypes::SimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleUnion, field_a_) == 4);
   static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleUnion, field_b_) == 4);

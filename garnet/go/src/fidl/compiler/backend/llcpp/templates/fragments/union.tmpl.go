@@ -18,10 +18,13 @@ extern "C" const fidl_type_t {{ .TableType }};
 struct {{ .Name }} {
   enum class Tag : fidl_union_tag_t {
   {{- range $index, $member := .Members }}
-    {{ .TagName }} = {{ $index }},
+    {{ $member.TagName }} = {{ $index }},
   {{- end }}
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+
+  {{ .Name }}();
+  ~{{ .Name }}();
 
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
@@ -33,6 +36,9 @@ struct {{ .Name }} {
   //{{ . }}
   {{- end }}
   {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
+    if (which() != Tag::{{ .TagName }}) {
+      Destroy();
+    }
     tag_ = Tag::{{ .TagName }};
     return {{ .StorageName }};
   }
@@ -40,7 +46,14 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  const {{ .Type.LLDecl }}& {{ .Name }}() const { return {{ .StorageName }}; }
+  void set_{{ .Name }}({{ .Type.LLDecl }} const & v) {
+    mutable_{{ .Name }}() = v;
+  }
+{{ "" }}
+  {{- range .DocComments }}
+  //{{ . }}
+  {{- end }}
+  {{ .Type.LLDecl }} const & {{ .Name }}() const { return {{ .StorageName }}; }
   {{- end }}
 
   Tag which() const { return tag_; }
@@ -52,7 +65,8 @@ struct {{ .Name }} {
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
 
  private:
-  void SizeAndOffsetAssertionHelper();
+  void Destroy();
+  static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
   Tag tag_;
@@ -65,6 +79,28 @@ struct {{ .Name }} {
 {{- end }}
 
 {{- define "UnionDefinition" }}
+
+{{ .Namespace }}::{{ .Name }}::{{ .Name }}() {
+  memset(this, 0, sizeof({{ .Name }}));
+  tag_ = Tag::Invalid;
+}
+
+{{ .Namespace }}::{{ .Name }}::~{{ .Name }}() {
+  Destroy();
+}
+
+void {{ .Namespace }}::{{ .Name }}::Destroy() {
+  switch (which()) {
+  {{- range $index, $member := .Members }}
+  {{- if $member.Type.LLDtor }}
+  case Tag::{{ $member.TagName }}:
+    {{ $member.StorageName }}.{{ $member.Type.LLDtor }}();
+  {{- end }}
+  {{- end }}
+  default:
+    break;
+  }
+}
 
 void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   {{- $union := . -}}

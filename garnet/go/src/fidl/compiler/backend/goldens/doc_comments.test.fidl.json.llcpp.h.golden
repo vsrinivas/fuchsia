@@ -18,6 +18,7 @@ namespace name {
 class Interface;
 struct Struct;
 struct Union;
+using Table = ::fidl::VectorView<fidl_envelope_t>;
 
 // interface comment #1
 //
@@ -106,6 +107,9 @@ struct Union {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  Union();
+  ~Union();
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_Field() const { return tag_ == Tag::kField; }
@@ -114,6 +118,9 @@ struct Union {
   //
   // union member comment #3
   int32_t& mutable_Field() {
+    if (which() != Tag::kField) {
+      Destroy();
+    }
     tag_ = Tag::kField;
     return Field_;
   }
@@ -121,7 +128,14 @@ struct Union {
   // union member comment #1
   //
   // union member comment #3
-  const int32_t& Field() const { return Field_; }
+  void set_Field(int32_t const & v) {
+    mutable_Field() = v;
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  int32_t const & Field() const { return Field_; }
 
   Tag which() const { return tag_; }
 
@@ -132,7 +146,8 @@ struct Union {
   static constexpr uint32_t MaxOutOfLine = 0;
 
  private:
-  void SizeAndOffsetAssertionHelper();
+  void Destroy();
+  static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
     int32_t Field_;

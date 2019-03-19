@@ -62,6 +62,22 @@ bool Interface::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 }
 
 
+::test::name::Union::Union() {
+  memset(this, 0, sizeof(Union));
+  tag_ = Tag::Invalid;
+}
+
+::test::name::Union::~Union() {
+  Destroy();
+}
+
+void ::test::name::Union::Destroy() {
+  switch (which()) {
+  default:
+    break;
+  }
+}
+
 void ::test::name::Union::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::test::name::Union, Field_) == 4);
   static_assert(sizeof(::test::name::Union) == ::test::name::Union::PrimarySize);

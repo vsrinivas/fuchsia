@@ -6,5 +6,40 @@
 namespace test {
 namespace name {
 
+auto ::test::name::OlderSimpleUnion::which() const -> Tag {
+  switch (ordinal_) {
+  case Tag::kI:
+  case Tag::kF:
+    return ordinal_;
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::test::name::OlderSimpleUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(OlderSimpleUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(OlderSimpleUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(OlderSimpleUnion, padding_) == offsetof(fidl_xunion_t, padding));
+  static_assert(offsetof(OlderSimpleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
+auto ::test::name::NewerSimpleUnion::which() const -> Tag {
+  switch (ordinal_) {
+  case Tag::kI:
+  case Tag::kS:
+  case Tag::kV:
+    return ordinal_;
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(NewerSimpleUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(NewerSimpleUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(NewerSimpleUnion, padding_) == offsetof(fidl_xunion_t, padding));
+  static_assert(offsetof(NewerSimpleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
 }  // namespace name
 }  // namespace test

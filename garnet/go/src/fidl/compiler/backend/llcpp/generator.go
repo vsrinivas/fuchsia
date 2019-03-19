@@ -41,7 +41,9 @@ func NewFidlGenerator() *FidlGenerator {
 		fragments.SyncRequestCallerAllocate,
 		fragments.SyncRequestInPlace,
 		fragments.SyncServer,
+		fragments.Table,
 		fragments.Union,
+		fragments.XUnion,
 		files.Header,
 		files.Source,
 	}

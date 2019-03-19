@@ -243,6 +243,7 @@ func TestCompileTable(t *testing.T) {
 							Decl:     "int64_t",
 							LLDecl:   "int64_t",
 							Dtor:     "",
+							LLDtor:   "",
 							DeclType: "",
 						},
 						Name:              "second",
@@ -270,6 +271,184 @@ func TestCompileTable(t *testing.T) {
 
 			if !ok || actual == nil {
 				t.Fatalf("decls[0] not an table, was instead %T", result.Decls[0])
+			}
+			if !reflect.DeepEqual(ex.expected, *actual) {
+				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
+			}
+		})
+	}
+}
+
+func addrOf(x int) *int {
+	return &x
+}
+
+func TestCompileXUnion(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    types.XUnion
+		expected XUnion
+	}{
+		{
+			name: "SingleInt64",
+			input: types.XUnion{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name: types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("Test"),
+				Members: []types.XUnionMember{
+					{
+						Attributes: types.Attributes{},
+						Ordinal: 0xdeadbeef,
+						Type: types.Type{
+							Kind:             types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+						Name: types.Identifier("i"),
+						Offset: 0,
+						MaxOutOfLine: 0,
+					},
+				},
+				Size: 24,
+				MaxHandles: 0,
+				MaxOutOfLine: 4294967295,
+			},
+			expected: XUnion{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name: types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Namespace: "::",
+				Name: "Test",
+				TableType: "_TestTable",
+				Members: []XUnionMember{
+					{
+						Attributes: types.Attributes{},
+						Ordinal: 0xdeadbeef,
+						Type: Type{
+							Decl:     "int64_t",
+							LLDecl:   "int64_t",
+							Dtor:     "",
+							LLDtor:   "",
+							DeclType: "",
+						},
+						Name: "i",
+						StorageName: "i_",
+						TagName: "kI",
+						Offset: 0,
+					},
+				},
+				Size: 24,
+				MaxHandles: 0,
+				MaxOutOfLine: 4294967295,
+			},
+		},
+		{
+			name: "TwoArrays",
+			input: types.XUnion{
+				Attributes: types.Attributes{},
+				Name: types.EncodedCompoundIdentifier("Test"),
+				Members: []types.XUnionMember{
+					{
+						Attributes: types.Attributes{},
+						Ordinal: 0x11111111,
+						Type: types.Type{
+							Kind:         types.ArrayType,
+							ElementType:  &types.Type{
+								Kind:             types.PrimitiveType,
+								PrimitiveSubtype: types.Int64,
+							},
+							ElementCount: addrOf(10),
+						},
+						Name: types.Identifier("i"),
+						Offset: 0,
+						MaxOutOfLine: 0,
+					},
+					{
+						Attributes: types.Attributes{},
+						Ordinal: 0x22222222,
+						Type: types.Type{
+							Kind:        types.ArrayType,
+							ElementType: &types.Type{
+								Kind:             types.PrimitiveType,
+								PrimitiveSubtype: types.Int64,
+							},
+							ElementCount: addrOf(20),
+						},
+						Name: types.Identifier("j"),
+						Offset: 0,
+						MaxOutOfLine: 0,
+					},
+				},
+				Size: 24,
+				MaxHandles: 0,
+				MaxOutOfLine: 4294967295,
+			},
+			expected: XUnion{
+				Attributes: types.Attributes{},
+				Namespace: "::",
+				Name: "Test",
+				TableType: "_TestTable",
+				Members: []XUnionMember{
+					{
+						Attributes: types.Attributes{},
+						Ordinal: 0x11111111,
+						Type: Type{
+							Decl:     "::fidl::Array<int64_t, 10>",
+							LLDecl:   "::fidl::ArrayWrapper<int64_t, 10>",
+							Dtor:     "~Array",
+							LLDtor:   "~ArrayWrapper",
+							DeclType: "",
+						},
+						Name: "i",
+						StorageName: "i_",
+						TagName: "kI",
+						Offset: 0,
+					},
+					{
+						Attributes: types.Attributes{},
+						Ordinal: 0x22222222,
+						Type: Type{
+							Decl:     "::fidl::Array<int64_t, 20>",
+							LLDecl:   "::fidl::ArrayWrapper<int64_t, 20>",
+							Dtor:     "~Array",
+							LLDtor:   "~ArrayWrapper",
+							DeclType: "",
+						},
+						Name: "j",
+						StorageName: "j_",
+						TagName: "kJ",
+						Offset: 0,
+					},
+				},
+				Size: 24,
+				MaxHandles: 0,
+				MaxOutOfLine: 4294967295,
+			},
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.name, func(t *testing.T) {
+			root := types.Root{
+				XUnions: []types.XUnion{ex.input},
+				DeclOrder: []types.EncodedCompoundIdentifier{
+					ex.input.Name,
+				},
+			}
+			result := Compile(root)
+			actual, ok := result.Decls[0].(*XUnion)
+
+			if !ok || actual == nil {
+				t.Fatalf("decls[0] not a xunion, was instead %T", result.Decls[0])
 			}
 			if !reflect.DeepEqual(ex.expected, *actual) {
 				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)

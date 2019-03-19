@@ -44,6 +44,7 @@ type Type struct {
 	Decl     string
 	LLDecl   string
 	Dtor     string
+	LLDtor   string
 	DeclType types.DeclType
 }
 
@@ -356,6 +357,8 @@ var reservedWords = map[string]bool{
 	"Which":           true,
 	"has_invalid_tag": true,
 	"which":           true,
+	"Unknown":         true,
+	"unknown":         true,
 	// TODO(ianloic) add: "Clone"
 	// There are Clone methods on a couple of interfaces that are used
 	// across layers so this will be a breaking change.
@@ -504,6 +507,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Decl = fmt.Sprintf("::fidl::Array<%s, %v>", t.Decl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::ArrayWrapper<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.Dtor = fmt.Sprintf("~Array")
+		r.LLDtor = fmt.Sprintf("~ArrayWrapper")
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
@@ -528,11 +532,13 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.LLDecl = r.Decl
 		r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
+		r.LLDtor = r.Dtor
 	case types.RequestType:
 		t := c.compileCompoundIdentifier(val.RequestSubtype, "")
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
 		r.LLDecl = r.Decl
 		r.Dtor = "~InterfaceRequest"
+		r.LLDtor = r.Dtor
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.LLDecl = r.Decl
@@ -558,17 +564,23 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.XUnionDeclType:
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
-				r.LLDecl = fmt.Sprintf("%s*", t)
 				r.Dtor = fmt.Sprintf("~unique_ptr")
+				if declType == types.XUnionDeclType {
+					r.LLDecl = fmt.Sprintf("%s", t)
+				} else {
+					r.LLDecl = fmt.Sprintf("%s*", t)
+				}
 			} else {
 				r.Decl = t
 				r.LLDecl = r.Decl
 				r.Dtor = formatDestructor(val.Identifier)
+				r.LLDtor = r.Dtor
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
 			r.LLDecl = r.Decl
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
+			r.LLDtor = r.Dtor
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
 		}

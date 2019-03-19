@@ -1,6 +1,6 @@
 # FIDL compatibility test
 
-An integration test for compatability of different FIDL bindings.
+An integration test for compatibility of different FIDL bindings.
 
 The test runner is at `//garnet/bin/fidl_compatibility_test` and
 `//topaz/bin/fidl_compatibility_test` and can be invoked on device with:
@@ -39,5 +39,5 @@ def EchoStruct(
 ```
 
 The logic for `EchoStructNoRetVal()` is similar. Instead of waiting for a
-response directly, the test waits to recieve an `EchoEvent()`. And instead of
+response directly, the test waits to receive an `EchoEvent()`. And instead of
 calling the client back directly, the server sends the `EchoEvent()`.

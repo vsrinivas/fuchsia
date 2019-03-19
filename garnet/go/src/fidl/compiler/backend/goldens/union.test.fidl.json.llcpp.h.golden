@@ -26,34 +26,58 @@ struct Union {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  Union();
+  ~Union();
+
   bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
 
   bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
 
   int32_t& mutable_Primitive() {
+    if (which() != Tag::kPrimitive) {
+      Destroy();
+    }
     tag_ = Tag::kPrimitive;
     return Primitive_;
   }
 
-  const int32_t& Primitive() const { return Primitive_; }
+  void set_Primitive(int32_t const & v) {
+    mutable_Primitive() = v;
+  }
+
+  int32_t const & Primitive() const { return Primitive_; }
 
   bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
+    if (which() != Tag::kStringNeedsConstructor) {
+      Destroy();
+    }
     tag_ = Tag::kStringNeedsConstructor;
     return StringNeedsConstructor_;
   }
 
-  const ::fidl::StringView& StringNeedsConstructor() const { return StringNeedsConstructor_; }
+  void set_StringNeedsConstructor(::fidl::StringView const & v) {
+    mutable_StringNeedsConstructor() = v;
+  }
+
+  ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
 
   bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == Tag::kVectorStringAlsoNeedsConstructor; }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
+    if (which() != Tag::kVectorStringAlsoNeedsConstructor) {
+      Destroy();
+    }
     tag_ = Tag::kVectorStringAlsoNeedsConstructor;
     return VectorStringAlsoNeedsConstructor_;
   }
 
-  const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const { return VectorStringAlsoNeedsConstructor_; }
+  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView> const & v) {
+    mutable_VectorStringAlsoNeedsConstructor() = v;
+  }
+
+  ::fidl::VectorView<::fidl::StringView> const & VectorStringAlsoNeedsConstructor() const { return VectorStringAlsoNeedsConstructor_; }
 
   Tag which() const { return tag_; }
 
@@ -64,7 +88,8 @@ struct Union {
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
  private:
-  void SizeAndOffsetAssertionHelper();
+  void Destroy();
+  static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
     int32_t Primitive_;

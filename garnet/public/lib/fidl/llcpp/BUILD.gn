@@ -1,0 +1,39 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+executable("fidl_llcpp_conformance_test_bin") {
+  testonly = true
+
+  output_name = "fidl_llcpp_conformance_test"
+
+  sources = [
+    "conformance_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/lib/fidl/cpp:fidl_test_llcpp",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+package("fidl_llcpp_conformance_test") {
+  testonly = true
+
+  deps = [
+    ":fidl_llcpp_conformance_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "fidl_llcpp_conformance_test"
+      environments = basic_envs
+    },
+  ]
+}

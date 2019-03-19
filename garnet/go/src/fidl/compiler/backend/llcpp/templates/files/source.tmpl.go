@@ -21,6 +21,7 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDefinition" . }}{{- end }}
+{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionDefinition" . }}{{- end }}
 {{- end }}
 {{ "" }}
 

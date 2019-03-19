@@ -6,6 +6,22 @@
 namespace test {
 namespace name {
 
+::test::name::Union::Union() {
+  memset(this, 0, sizeof(Union));
+  tag_ = Tag::Invalid;
+}
+
+::test::name::Union::~Union() {
+  Destroy();
+}
+
+void ::test::name::Union::Destroy() {
+  switch (which()) {
+  default:
+    break;
+  }
+}
+
 void ::test::name::Union::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::test::name::Union, Primitive_) == 8);
   static_assert(offsetof(::test::name::Union, StringNeedsConstructor_) == 8);
