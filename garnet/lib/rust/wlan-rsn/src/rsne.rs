@@ -9,7 +9,7 @@ use crate::suite_selector;
 use bitfield::bitfield;
 use bytes::{BufMut, Bytes};
 
-use nom::{call, cond, count, do_parse, eof, error_position, expr_res, named, take, try_parse};
+use nom::{call, cond, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse};
 use nom::{le_u16, le_u8, IResult};
 
 macro_rules! if_remaining (
@@ -167,10 +167,12 @@ fn read_pmkid<'a>(input: &'a [u8]) -> IResult<&'a [u8], pmkid::Pmkid> {
 named!(akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
 named!(cipher<&[u8], cipher::Cipher>, call!(read_suite_selector::<cipher::Cipher>));
 
-/// convert bytes of an RSNE information element into an RSNE representation. This method
-/// does not depend on the information element length field (second byte) and thus does not
-/// validate that it's correct
-named!(pub from_bytes<&[u8], Rsne>,
+named_attr!(
+    /// convert bytes of an RSNE information element into an RSNE representation. This method
+    /// does not depend on the information element length field (second byte) and thus does not
+    /// validate that it's correct
+    , // comma ends the attribute list to named_attr
+    pub from_bytes<&[u8], Rsne>,
        do_parse!(
            _element_id: le_u8 >>
            _length: le_u8 >>

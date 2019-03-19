@@ -1987,6 +1987,7 @@ macro_rules! fidl_union {
 #[macro_export]
 macro_rules! fidl_xunion {
     (
+        $(#[$attrs:meta])*
         name: $name:ident,
         members: [$(
             $(#[$member_docs:meta])*
@@ -1996,6 +1997,7 @@ macro_rules! fidl_xunion {
             },
         )*],
     ) => {
+        $( #[$attrs] )*
         #[derive(Debug, PartialEq)]
         pub enum $name {
             $(

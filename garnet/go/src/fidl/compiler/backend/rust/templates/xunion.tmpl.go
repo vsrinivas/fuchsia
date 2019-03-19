@@ -6,10 +6,10 @@ package templates
 
 const XUnion = `
 {{- define "XUnionDeclaration" }}
-{{- range .DocComments}}
-///{{ . }}
-{{- end}}
 fidl_xunion! {
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
 	name: {{ .Name }},
 	members: [
 	{{- range .Members }}

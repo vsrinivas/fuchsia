@@ -381,7 +381,8 @@ macro_rules! duration_end {
 }
 
 macro_rules! duration_event {
-    ($name:ident, $sys_method:path) => {
+    ($( #[$docs:meta] )* $name:ident, $sys_method:path $(,)*) => {
+        $( #[$docs] )*
         pub fn $name(category: &'static CStr, name: &'static CStr, args: &[Arg]) {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
@@ -406,29 +407,34 @@ macro_rules! duration_event {
         }
     };
 }
+duration_event!(
+    /// Writes a duration begin event only.
+    /// This event must be matched by a duration end event with the same category and name.
+    ///
+    /// Durations describe work which is happening synchronously on one thread.
+    /// They can be nested to represent a control flow stack.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used
+    /// to annotate the duration with additional information.  The arguments provided
+    /// to matching duration begin and duration end events are combined together in
+    /// the trace; it is not necessary to repeat them.
+    duration_begin,
+    sys::trace_context_write_duration_begin_event_record,
+);
 
-/// Writes a duration begin event only.
-/// This event must be matched by a duration end event with the same category and name.
-///
-/// Durations describe work which is happening synchronously on one thread.
-/// They can be nested to represent a control flow stack.
-///
-/// 0 to 15 arguments can be associated with the event, each of which is used
-/// to annotate the duration with additional information.  The arguments provided
-/// to matching duration begin and duration end events are combined together in
-/// the trace; it is not necessary to repeat them.
-duration_event!(duration_begin, sys::trace_context_write_duration_begin_event_record);
-
-/// Writes a duration end event only.
-///
-/// Durations describe work which is happening synchronously on one thread.
-/// They can be nested to represent a control flow stack.
-///
-/// 0 to 15 arguments can be associated with the event, each of which is used
-/// to annotate the duration with additional information.  The arguments provided
-/// to matching duration begin and duration end events are combined together in
-/// the trace; it is not necessary to repeat them.
-duration_event!(duration_end, sys::trace_context_write_duration_end_event_record);
+duration_event!(
+    /// Writes a duration end event only.
+    ///
+    /// Durations describe work which is happening synchronously on one thread.
+    /// They can be nested to represent a control flow stack.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used
+    /// to annotate the duration with additional information.  The arguments provided
+    /// to matching duration begin and duration end events are combined together in
+    /// the trace; it is not necessary to repeat them.
+    duration_end,
+    sys::trace_context_write_duration_end_event_record,
+);
 
 /// Convenience macro for the `flow_begin` function.
 ///
@@ -500,7 +506,8 @@ macro_rules! flow_end {
 }
 
 macro_rules! flow_event {
-    ($name:ident, $sys_method:path) => {
+    ($( #[$docs:meta] )* $name:ident, $sys_method:path$(,)*) => {
+        $( #[$docs] )*
         pub fn $name(category: &'static CStr, name: &'static CStr, flow_id: u64, args: &[Arg]) {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
@@ -527,61 +534,70 @@ macro_rules! flow_event {
     };
 }
 
-/// Writes a flow begin event with the specified id.
-/// This event may be followed by flow steps events and must be matched by
-/// a flow end event with the same category, name, and id.
-///
-/// Flow events describe control flow handoffs between threads or across processes.
-/// They are typically represented as arrows in a visualizer.  Flow arrows are
-/// from the end of the duration event which encloses the beginning of the flow
-/// to the beginning of the duration event which encloses the next step or the
-/// end of the flow.  The id serves to correlate flows which share the same
-/// category and name across processes.
-///
-/// This event must be enclosed in a duration event which represents where
-/// the flow handoff occurs.
-///
-/// 0 to 15 arguments can be associated with the event, each of which is used
-/// to annotate the flow with additional information.  The arguments provided
-/// to matching flow begin, flow step, and flow end events are combined together
-/// in the trace; it is not necessary to repeat them.
-flow_event!(flow_begin, sys::trace_context_write_flow_begin_event_record);
+flow_event!(
+    /// Writes a flow begin event with the specified id.
+    /// This event may be followed by flow steps events and must be matched by
+    /// a flow end event with the same category, name, and id.
+    ///
+    /// Flow events describe control flow handoffs between threads or across processes.
+    /// They are typically represented as arrows in a visualizer.  Flow arrows are
+    /// from the end of the duration event which encloses the beginning of the flow
+    /// to the beginning of the duration event which encloses the next step or the
+    /// end of the flow.  The id serves to correlate flows which share the same
+    /// category and name across processes.
+    ///
+    /// This event must be enclosed in a duration event which represents where
+    /// the flow handoff occurs.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used
+    /// to annotate the flow with additional information.  The arguments provided
+    /// to matching flow begin, flow step, and flow end events are combined together
+    /// in the trace; it is not necessary to repeat them.
+    flow_begin,
+    sys::trace_context_write_flow_begin_event_record,
+);
 
-/// Writes a flow step event with the specified id.
-///
-/// Flow events describe control flow handoffs between threads or across processes.
-/// They are typically represented as arrows in a visualizer.  Flow arrows are
-/// from the end of the duration event which encloses the beginning of the flow
-/// to the beginning of the duration event which encloses the next step or the
-/// end of the flow.  The id serves to correlate flows which share the same
-/// category and name across processes.
-///
-/// This event must be enclosed in a duration event which represents where
-/// the flow handoff occurs.
-///
-/// 0 to 15 arguments can be associated with the event, each of which is used
-/// to annotate the flow with additional information.  The arguments provided
-/// to matching flow begin, flow step, and flow end events are combined together
-/// in the trace; it is not necessary to repeat them.
-flow_event!(flow_step, sys::trace_context_write_flow_step_event_record);
+flow_event!(
+    /// Writes a flow step event with the specified id.
+    ///
+    /// Flow events describe control flow handoffs between threads or across processes.
+    /// They are typically represented as arrows in a visualizer.  Flow arrows are
+    /// from the end of the duration event which encloses the beginning of the flow
+    /// to the beginning of the duration event which encloses the next step or the
+    /// end of the flow.  The id serves to correlate flows which share the same
+    /// category and name across processes.
+    ///
+    /// This event must be enclosed in a duration event which represents where
+    /// the flow handoff occurs.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used
+    /// to annotate the flow with additional information.  The arguments provided
+    /// to matching flow begin, flow step, and flow end events are combined together
+    /// in the trace; it is not necessary to repeat them.
+    flow_step,
+    sys::trace_context_write_flow_step_event_record,
+);
 
-/// Writes a flow end event with the specified id.
-///
-/// Flow events describe control flow handoffs between threads or across processes.
-/// They are typically represented as arrows in a visualizer.  Flow arrows are
-/// from the end of the duration event which encloses the beginning of the flow
-/// to the beginning of the duration event which encloses the next step or the
-/// end of the flow.  The id serves to correlate flows which share the same
-/// category and name across processes.
-///
-/// This event must be enclosed in a duration event which represents where
-/// the flow handoff occurs.
-///
-/// 0 to 15 arguments can be associated with the event, each of which is used
-/// to annotate the flow with additional information.  The arguments provided
-/// to matching flow begin, flow step, and flow end events are combined together
-/// in the trace; it is not necessary to repeat them.
-flow_event!(flow_end, sys::trace_context_write_flow_end_event_record);
+flow_event!(
+    /// Writes a flow end event with the specified id.
+    ///
+    /// Flow events describe control flow handoffs between threads or across processes.
+    /// They are typically represented as arrows in a visualizer.  Flow arrows are
+    /// from the end of the duration event which encloses the beginning of the flow
+    /// to the beginning of the duration event which encloses the next step or the
+    /// end of the flow.  The id serves to correlate flows which share the same
+    /// category and name across processes.
+    ///
+    /// This event must be enclosed in a duration event which represents where
+    /// the flow handoff occurs.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used
+    /// to annotate the flow with additional information.  The arguments provided
+    /// to matching flow begin, flow step, and flow end events are combined together
+    /// in the trace; it is not necessary to repeat them.
+    flow_end,
+    sys::trace_context_write_flow_end_event_record,
+);
 
 struct EventHelper {
     ticks: sys::trace_ticks_t,
