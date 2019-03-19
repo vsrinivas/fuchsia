@@ -11,7 +11,7 @@
 #include <lib/backtrace-request/backtrace-request.h>
 
 SEM FileSysSem; // Global File System Semaphore
-int FsErrCode;  // file system error code (enum)
+static int g_fs_error;  // File system error code (FsError enum).
 
 // Called when a file system error has occurred.
 int FsError(int err_code) {
@@ -22,8 +22,16 @@ int FsError(int err_code) {
 
 // Called when a file system error has occurred.
 int FsError2(int fs_err_code, int errno_code) {
-    FsErrCode = fs_err_code;
+    SetFsErrCode(fs_err_code);
     return -1;
+}
+
+int GetFsErrCode() {
+    return g_fs_error;
+}
+
+void SetFsErrCode(int error) {
+    g_fs_error = error;
 }
 
 int FtlInit(void) {
@@ -32,4 +40,3 @@ int FtlInit(void) {
         return -1;
     return 0;
 }
-

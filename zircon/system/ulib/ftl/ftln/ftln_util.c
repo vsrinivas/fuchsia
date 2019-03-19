@@ -102,7 +102,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
     // Handle event passed down from file system layer.
     switch (msg) {
@@ -644,7 +644,7 @@ void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn) {
 //
 int FtlnFatErr(FTLN ftl) {
     ftl->flags |= FTLN_FATAL_ERR;
-    return FsError2(FsErrCode, EIO);
+    return FsError2(NDM_EIO, EIO);
 }
 
 #if FTLN_DEBUG

@@ -898,7 +898,7 @@ static int init_ndm(NDM ndm) {
     if (format_status(ndm) != 0) {
         // If no metadata was found and initialization is not being done
         // in read-only mode, format the device. Else return -1.
-        if ((FsErrCode == NDM_NO_META_BLK) && FLAG_IS_CLR(ndm->flags, FSF_READ_ONLY_INIT))
+        if ((GetFsErrCode() == NDM_NO_META_BLK) && FLAG_IS_CLR(ndm->flags, FSF_READ_ONLY_INIT))
             return ndm_format(ndm);
         else
             return -1;

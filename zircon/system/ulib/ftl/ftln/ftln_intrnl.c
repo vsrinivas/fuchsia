@@ -726,7 +726,7 @@ static int write_sectors(FTLN ftl, ui32 vsn, ui32 count, const ui8* buf) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
     // Initialize structures for staging sector and page writes.
     sect_wr.buf = buf;
@@ -968,7 +968,7 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
     // Keep looping until enough pages are free.
     while (FtlnRecNeeded(ftl, wr_cnt)) {
@@ -1117,7 +1117,7 @@ int FtlnVclean(FTLN ftl) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
     // Check if the dirty pages garbage level is > 9.
     if (FtlnGarbLvl(ftl) >= 10) {
@@ -1190,7 +1190,7 @@ int FtlnMapWr(void* vol, ui32 mpn, void* buf) {
 
     // Return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
 #if INC_ELIST
     // If list of erased blocks/wear counts exists, erase it now.

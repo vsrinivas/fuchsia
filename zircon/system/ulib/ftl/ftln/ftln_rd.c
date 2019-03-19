@@ -77,7 +77,7 @@ static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
     // Get offset in page to first sector and its virtual page number.
     vpn = vsn / ftl->sects_per_page;
@@ -201,7 +201,7 @@ int FtlnRdPage(FTLN ftl, ui32 ppn, void* rd_buf) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError2(FsErrCode, EIO);
+        return FsError2(NDM_EIO, EIO);
 
     // Read page from flash. If error, set errno/fatal flag/return -1.
     ++ftl->stats.read_page;
