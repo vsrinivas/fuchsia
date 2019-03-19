@@ -324,6 +324,7 @@ group("all") {
     "//garnet/packages/tests:netstack",
     "//garnet/packages/tests:network",
     "//garnet/packages/tests:network_time",
+    "//garnet/packages/tests:omaha_client",
     "//garnet/packages/tests:overnet",
     "//garnet/packages/tests:pkg_cache",
     "//garnet/packages/tests:pkg_ctl",
@@ -1141,5 +1142,13 @@ group("sysmem_connector") {
   testonly = true
   public_deps = [
     "//garnet/bin/sysmem_connector:sysmem_connector_test",
+  ]
+}
+
+group("omaha_client") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/omaha_client:omaha_client_lib_tests",
+    "//garnet/packages/prod:omaha_client",
   ]
 }
