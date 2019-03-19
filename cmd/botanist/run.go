@@ -89,7 +89,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKey []byte, signers []ssh.Signer, syslog io.Writer) error {
+func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKeyFile string, signers []ssh.Signer, syslog io.Writer) error {
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(nodename)
 	if err != nil {
@@ -130,6 +130,10 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 
 	// If having paved, SSH in and stream syslogs back to a file sink.
 	if !r.netboot && syslog != nil {
+		privKey, err := ioutil.ReadFile(privKeyFile)
+		if err != nil {
+			return err
+		}
 		config, err := botanist.DefaultSSHConfig(privKey)
 		if err != nil {
 			return err
@@ -159,7 +163,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		os.Environ(),
 		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
 		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%v", ip),
-		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKey),
+		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKeyFile),
 	)
 
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
@@ -223,6 +227,15 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return err
 		}
 		privKeys = append(privKeys, p)
+		keyFile, err := ioutil.TempFile("", "botanist")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(keyFile.Name())
+		if err := ioutil.WriteFile(keyFile.Name(), p, 0600); err != nil {
+			return err
+		}
+		privKeyPaths = []string{keyFile.Name()}
 	} else {
 		for _, keyPath := range privKeyPaths {
 			p, err := ioutil.ReadFile(keyPath)
@@ -284,7 +297,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKeys[0], signers, syslog)
+		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKeyPaths[0], signers, syslog)
 	}()
 
 	select {
