@@ -56,35 +56,35 @@ unused.
 This is the mapping from FIDL types to C types which the code generator
 produces.
 
-| FIDL                                     | C Type                     |
-|------------------------------------------|----------------------------|
-| `bits`                                   | typedef to underlying type |
-| `bool`                                   | `bool`                     |
-| `int8`                                   | `int8_t`                   |
-| `uint8`                                  | `uint8_t`                  |
-| `int16`                                  | `int16_t`                  |
-| `uint16`                                 | `uint16_t`                 |
-| `int32`                                  | `int32_t`                  |
-| `uint32`                                 | `uint32_t`                 |
-| `int64`                                  | `int64_t`                  |
-| `uint64`                                 | `uint64_t`                 |
-| `float32`                                | `float`                    |
-| `float64`                                | `double`                   |
-| `handle`, `handle?`, `handle`, `handle?` | `zx_handle_t`              |
-| `string`, `string?`                      | `fidl_string_t`            |
-| `vector`, `vector?`                      | `fidl_vector_t`            |
-| `array<T>:N`                             | `T[N]`                     |
-| `protocol`, `protocol?`                  | typedef to `zx_handle_t`   |
-| `request<I>`, `request<I>?`              | typedef to `zx_handle_t`   |
-| `struct`                                 | `struct Struct`            |
-| `struct?`                                | `struct Struct*`           |
-| `union`                                  | `struct Union`             |
-| `union?`                                 | `struct Union*`            |
-| `xunion`                                 | `struct Xunion`            |
-| `xunion?`                                | `struct Xunion*`           |
-| `table`                                  | `struct Table`             |
-| `table?`                                 | `struct Table*`            |
-| `enum`                                   | typedef to underlying type |
+| FIDL                                           | C Type                     |
+|------------------------------------------------|----------------------------|
+| `bits`                                         | typedef to underlying type |
+| `bool`                                         | `bool`                     |
+| `int8`                                         | `int8_t`                   |
+| `uint8`                                        | `uint8_t`                  |
+| `int16`                                        | `int16_t`                  |
+| `uint16`                                       | `uint16_t`                 |
+| `int32`                                        | `int32_t`                  |
+| `uint32`                                       | `uint32_t`                 |
+| `int64`                                        | `int64_t`                  |
+| `uint64`                                       | `uint64_t`                 |
+| `float32`                                      | `float`                    |
+| `float64`                                      | `double`                   |
+| `handle`, `handle?`, `handle<T>`, `handle<T>?` | `zx_handle_t`              |
+| `string`, `string?`                            | `fidl_string_t`            |
+| `vector`, `vector?`                            | `fidl_vector_t`            |
+| `array<T>:N`                                   | `T[N]`                     |
+| `protocol`, `protocol?`                        | typedef to `zx_handle_t`   |
+| `request<I>`, `request<I>?`                    | typedef to `zx_handle_t`   |
+| `struct`                                       | `struct Struct`            |
+| `struct?`                                      | `struct Struct*`           |
+| `union`                                        | `struct Union`             |
+| `union?`                                       | `struct Union*`            |
+| `xunion`                                       | `struct Xunion`            |
+| `xunion?`                                      | `struct Xunion*`           |
+| `table`                                        | `struct Table`             |
+| `table?`                                       | `struct Table*`            |
+| `enum`                                         | typedef to underlying type |
 
 ## zircon/fidl.h
 
