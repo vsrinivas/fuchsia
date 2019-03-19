@@ -87,7 +87,6 @@ std::string FormatLs(const Options& options,
   std::stringstream ss;
   for (const auto& entry_point : results) {
     const auto& hierarchy = entry_point.GetRootHierarchy();
-
     for (const auto& child : hierarchy.children()) {
       ss << FormatPath(options.path_format,
                        entry_point.FormatRelativePath({child.object().name}),

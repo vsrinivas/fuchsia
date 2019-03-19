@@ -44,6 +44,9 @@ class Options {
   // If true, execute mode recursively.
   bool recursive = false;
 
+  // If true, sort all children, metrics, and properties within each object.
+  bool sort = false;
+
   // List of paths specified on the command line.
   std::vector<std::string> paths;
 

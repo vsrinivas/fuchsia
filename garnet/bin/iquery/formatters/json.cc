@@ -118,9 +118,10 @@ std::string FormatCat(const Options& options,
   for (const auto& entry_point : results) {
     writer->StartObject();
     writer->String("path");
+    // The "path" field always ignored the object's name in JSON output.
     writer->String(FormatPath(options.path_format,
                               entry_point.FormatRelativePath(),
-                              entry_point.GetRootHierarchy().object().name));
+                              entry_point.FormatRelativePath()));
     writer->String("contents");
     writer->StartObject();
     writer->String(entry_point.GetRootHierarchy().object().name);

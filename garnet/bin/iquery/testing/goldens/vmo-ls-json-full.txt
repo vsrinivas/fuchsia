@@ -1,0 +1,8 @@
+iquery --ls --format=json --full_paths --sort objects/root.inspect#table0x0
+[
+    "objects/root.inspect#table0x0/row0x1",
+    "objects/root.inspect#table0x0/row0x11",
+    "objects/root.inspect#table0x0/row0x5",
+    "objects/root.inspect#table0x0/row0x9",
+    "objects/root.inspect#table0x0/row0xd"
+]

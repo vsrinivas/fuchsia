@@ -41,6 +41,9 @@ class ObjectHierarchy {
   // Returns NULL if the requested child could not be found.
   const ObjectHierarchy* GetByPath(std::vector<std::string> path) const;
 
+  // Sort metrics, properties, and children of this object by name.
+  void Sort();
+
  private:
   fuchsia::inspect::Object object_;
   std::vector<ObjectHierarchy> children_;

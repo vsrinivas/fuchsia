@@ -1,7 +1,7 @@
-iquery --recursive --format=json --full_paths objects
+iquery --recursive --format=json --sort objects/root.inspect
 [
     {
-        "path": "objects",
+        "path": "objects/root.inspect",
         "contents": {
             "root": {
                 "table0x0": {

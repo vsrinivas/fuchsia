@@ -3,27 +3,29 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
+#include <iostream>
+#include <regex>
 #include <stack>
+#include <thread>
 
-#include <fuchsia/io/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/strings/split_string.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/substitute.h>
 #include <lib/inspect/reader.h>
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 #include "garnet/bin/iquery/modes.h"
-
-#include <iostream>
-#include <thread>
 
 using namespace std::chrono_literals;
 
@@ -84,6 +86,10 @@ class FilePinger {
   std::thread thread_;
 };
 
+// Creates a regex object for matching file names with the Inspect VMO format
+// extension.
+std::regex inspect_vmo_file_regex() { return std::regex("\\.inspect$"); }
+
 // Consult the file system to find out how to open an inspect endpoint at the
 // given path.
 //
@@ -105,23 +111,30 @@ fit::result<ObjectLocation> ParseToLocation(const std::string& path) {
                                          fxl::kSplitWantAll);
   }
 
-  FilePinger fp(parts[0]);
-
-  if (files::IsFile(parts[0])) {
-    // Entry point is a file, split out the directory and base name.
+  if (std::regex_search(parts[0], inspect_vmo_file_regex())) {
+    // The file seems to be an inspect VMO.
+    FXL_VLOG(1) << "File " << parts[0] << " seems to be an inspect VMO";
+    return fit::ok(
+        ObjectLocation{.type = ObjectLocation::Type::INSPECT_VMO,
+                       .directory_path = files::GetDirectoryName(parts[0]),
+                       .file_name = files::GetBaseName(parts[0]),
+                       .inspect_path_components = std::move(inspect_parts)});
+  } else if (files::GetBaseName(parts[0]) == fuchsia::inspect::Inspect::Name_) {
+    // The file seems to be an inspect FIDL interface.
+    FXL_VLOG(1) << "File " << parts[0]
+                << " seems to be an inspect FIDL endpoint";
     return fit::ok(
         ObjectLocation{.directory_path = files::GetDirectoryName(parts[0]),
                        .file_name = files::GetBaseName(parts[0]),
                        .inspect_path_components = std::move(inspect_parts)});
-  } else if (files::IsFile(
-                 files::JoinPath(parts[0], fuchsia::inspect::Inspect::Name_))) {
+  } else {
+    // Default to treating the path as a directory, and look for the FIDL
+    // interface inside.
+    FXL_VLOG(1) << "Treating " << parts[0] << " as an objects directory";
     return fit::ok(
-        ObjectLocation{.directory_path = std::move(parts[0]),
+        ObjectLocation{.directory_path = parts[0],
                        .file_name = fuchsia::inspect::Inspect::Name_,
                        .inspect_path_components = std::move(inspect_parts)});
-  } else {
-    FXL_LOG(WARNING) << "No inspect entry point found at " << parts[0];
-    return fit::error();
   }
 }
 
@@ -165,14 +178,25 @@ std::vector<ObjectLocation> SyncFindPaths(const std::string& path) {
         continue;
       }
       if (de->d_type == DT_DIR) {
-        FXL_VLOG(1) << " Adding child " << de->d_name;
+        FXL_VLOG(1) << "  Adding child " << de->d_name;
         search_paths.push_back(fxl::Concatenate({path, "/", de->d_name}));
       } else {
         if (strcmp(de->d_name, fuchsia::inspect::Inspect::Name_) == 0) {
-          FXL_VLOG(1) << " Found fuchsia.inspect.Inspect";
-          ret.push_back(ObjectLocation{.directory_path = path,
-                                       .file_name = de->d_name,
-                                       .inspect_path_components = {}});
+          FXL_VLOG(1) << "  Found fuchsia.inspect.Inspect at "
+                      << files::JoinPath(path, de->d_name);
+          ret.push_back(
+              ObjectLocation{.type = ObjectLocation::Type::INSPECT_FIDL,
+                             .directory_path = path,
+                             .file_name = de->d_name,
+                             .inspect_path_components = {}});
+        } else if (std::regex_search(de->d_name, inspect_vmo_file_regex())) {
+          FXL_VLOG(1) << "  Found Inspect VMO at "
+                      << files::JoinPath(path, de->d_name);
+          ret.push_back(
+              ObjectLocation{.type = ObjectLocation::Type::INSPECT_VMO,
+                             .directory_path = path,
+                             .file_name = de->d_name,
+                             .inspect_path_components = {}});
         }
       }
     }
@@ -215,7 +239,73 @@ fit::result<fidl::InterfaceHandle<fuchsia::inspect::Inspect>> OpenInspectAtPath(
   return fit::ok(inspect.Unbind());
 }
 
+// Convert an ObjectLocation into a promise for an ObjectSource loading
+// Inspect data from that location.
+fit::promise<ObjectSource> MakeObjectPromiseFromLocation(
+    ObjectLocation location, int depth) {
+  if (location.type == ObjectLocation::Type::INSPECT_FIDL) {
+    auto handle = OpenInspectAtPath(location.AbsoluteFilePath());
+
+    if (handle.is_ok()) {
+      return ObjectSource::Make(std::move(location),
+                                inspect::ObjectReader(handle.take_value()),
+                                depth);
+    }
+  } else if (location.type == ObjectLocation::Type::INSPECT_VMO) {
+    fuchsia::io::FilePtr file_ptr;
+    zx_status_t status = fdio_open(
+        location.AbsoluteFilePath().c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+        file_ptr.NewRequest().TakeChannel().release());
+    if (status != ZX_OK || !file_ptr.is_bound()) {
+      FXL_LOG(WARNING) << "Failed to fdio_open and bind "
+                       << location.AbsoluteFilePath() << " " << status;
+      return fit::make_promise(
+          []() -> fit::result<ObjectSource> { return fit::error(); });
+    }
+    return ObjectSource::Make(std::move(location), std::move(file_ptr), depth);
+  } else {
+    FXL_LOG(ERROR) << "Unknown location type "
+                   << static_cast<int>(location.type);
+  }
+
+  FXL_LOG(ERROR) << "Failed to open " << location.AbsoluteFilePath();
+  return fit::make_promise(
+      []() -> fit::result<ObjectSource> { return fit::error(); });
+}
+
 }  // namespace
+
+std::string ObjectLocation::RelativeFilePath() const {
+  return files::JoinPath(directory_path, file_name);
+}
+
+std::string ObjectLocation::AbsoluteFilePath() const {
+  return files::AbsolutePath(RelativeFilePath());
+}
+
+std::string ObjectLocation::SimplifiedFilePath() const {
+  if (type == Type::INSPECT_FIDL) {
+    return directory_path;
+  }
+  return RelativeFilePath();
+}
+
+std::string ObjectLocation::ObjectPath(
+    const std::vector<std::string>& suffix) const {
+  auto ret = SimplifiedFilePath();
+  if (inspect_path_components.size() == 0 && suffix.size() == 0) {
+    return ret;
+  }
+
+  ret.push_back('#');
+
+  ret.append(fxl::JoinStrings(inspect_path_components, "/"));
+  if (inspect_path_components.size() > 0 && suffix.size() > 0) {
+    ret.push_back('/');
+  }
+  ret.append(fxl::JoinStrings(suffix, "/"));
+  return ret;
+}
 
 fit::promise<ObjectSource> ObjectSource::Make(ObjectLocation location,
                                               inspect::ObjectReader root_reader,
@@ -235,46 +325,114 @@ fit::promise<ObjectSource> ObjectSource::Make(ObjectLocation location,
                 fit::result<inspect::ObjectHierarchy>& result)
                 -> fit::result<ObjectSource> {
         if (!result.is_ok()) {
-          FXL_LOG(ERROR) << fxl::Substitute(
-              "Failed to read $0$1$2",
-              files::JoinPath(location.directory_path, location.file_name),
-              std::string(location.inspect_path_components.empty() ? "" : "#"),
-              fxl::JoinStrings(location.inspect_path_components, "/"));
+          FXL_LOG(ERROR) << fxl::Substitute("Failed to read $0",
+                                            location.ObjectPath());
           return fit::error();
         }
 
         ObjectSource ret;
         ret.location_ = std::move(location);
-        ret.type_ = ObjectSource::Type::INSPECT_FIDL;
         ret.hierarchy_ = result.take_value();
         return fit::ok(std::move(ret));
       });
 }
 
-std::string ObjectSource::FormatRelativePath() const {
-  return FormatRelativePath({});
+fit::promise<ObjectSource> ObjectSource::Make(ObjectLocation root_location,
+                                              fuchsia::io::FilePtr file_ptr,
+                                              int depth) {
+  fit::bridge<fuchsia::io::NodeInfo> vmo_read_bridge;
+  file_ptr->Describe(vmo_read_bridge.completer.bind());
+
+  return vmo_read_bridge.consumer.promise_or(fit::error())
+      .or_else([failed_path = root_location.RelativeFilePath()]()
+                   -> fit::result<fuchsia::io::NodeInfo> {
+        FXL_LOG(ERROR) << "Failed to describe file at " << failed_path;
+        return fit::error();
+      })
+      .and_then([depth, file_ptr = std::move(file_ptr),
+                 root_location = std::move(root_location)](
+                    fuchsia::io::NodeInfo& info) -> fit::result<ObjectSource> {
+        if (!info.is_vmofile()) {
+          FXL_LOG(WARNING) << "File is not actually a vmofile";
+          return fit::error();
+        }
+
+        auto read_result = inspect::ReadFromVmo(std::move(info.vmofile().vmo));
+        if (!read_result.is_ok()) {
+          FXL_LOG(ERROR) << "Failure reading the VMO";
+          return fit::error();
+        }
+
+        auto hierarchy_root = read_result.take_value();
+
+        auto* hierarchy = &hierarchy_root;
+
+        // Navigate within the hierarchy to the correct location.
+        for (const auto& path_component :
+             root_location.inspect_path_components) {
+          auto child = std::find_if(
+              hierarchy->children().begin(), hierarchy->children().end(),
+              [&path_component](inspect::ObjectHierarchy& obj) {
+                return obj.object().name == path_component;
+              });
+          if (child == hierarchy->children().end()) {
+            FXL_LOG(ERROR) << "Could not find child named " << path_component;
+            return fit::error();
+          }
+          hierarchy = &(*child);
+        }
+
+        if (depth >= 0) {
+          // If we have a specific depth requirement, prune the hierarchy tree
+          // to the requested depth. Reading the VMO is all or nothing, so we
+          // require post-processing to implement specific depth cutoffs.
+
+          // Stack of ObjectHierarchies along with an associated depth.
+          // Hierarchies at the max depth will have their children pruned, while
+          // hierarchies at a lower depth simply push their children onto the
+          // stack.
+          std::stack<std::pair<inspect::ObjectHierarchy*, int>>
+              object_depth_stack;
+
+          object_depth_stack.push(std::make_pair(hierarchy, 0));
+          while (object_depth_stack.size() > 0) {
+            auto pair = object_depth_stack.top();
+            object_depth_stack.pop();
+
+            if (pair.second == depth) {
+              pair.first->children().clear();
+            } else {
+              for (auto& child : pair.first->children()) {
+                object_depth_stack.push(
+                    std::make_pair(&child, pair.second + 1));
+              }
+            }
+          }
+        }
+
+        ObjectSource ret;
+        ret.location_ = std::move(root_location);
+        ret.hierarchy_ = std::move(*hierarchy);
+        return fit::ok(std::move(ret));
+      });
 }
 
 std::string ObjectSource::FormatRelativePath(
     const std::vector<std::string>& suffix) const {
-  std::string ret = location_.directory_path;
-  // TODO(CF-218): Handle file name for the VMO case here.
-  if (location_.inspect_path_components.empty() && suffix.empty()) {
-    return ret;
-  }
-  ret.append("#");
-  bool has_inspect_path = !location_.inspect_path_components.empty();
-  if (has_inspect_path) {
-    ret += fxl::JoinStrings(location_.inspect_path_components, "/");
-  }
-  if (!suffix.empty()) {
-    if (has_inspect_path) {
-      ret += "/";
-    }
-    ret += fxl::JoinStrings(suffix, "/");
-  }
+  return location_.ObjectPath(suffix);
+}
 
-  return ret;
+void ObjectSource::SortHierarchy() {
+  std::stack<inspect::ObjectHierarchy*> hierarchies_to_sort;
+  hierarchies_to_sort.push(&hierarchy_);
+  while (hierarchies_to_sort.size() > 0) {
+    auto* hierarchy = hierarchies_to_sort.top();
+    hierarchies_to_sort.pop();
+    hierarchy->Sort();
+    for (auto& child : hierarchy->children()) {
+      hierarchies_to_sort.push(&child);
+    }
+  }
 }
 
 void ObjectSource::VisitObjectsInHierarchyRecursively(
@@ -307,18 +465,8 @@ fit::promise<std::vector<ObjectSource>> RunCat(const Options* options) {
       continue;
     }
 
-    auto location = location_result.take_value();
-    auto handle = OpenInspectAtPath(
-        files::JoinPath(location.directory_path, location.file_name));
-
-    if (!handle.is_ok()) {
-      FXL_LOG(ERROR) << "Failed to open " << path;
-      continue;
-    }
-
-    promises.emplace_back(ObjectSource::Make(
-        std::move(location), inspect::ObjectReader(handle.take_value()),
-        options->recursive ? -1 : 0));
+    promises.emplace_back(MakeObjectPromiseFromLocation(
+        location_result.take_value(), options->recursive ? -1 : 0));
   }
 
   return fit::join_promise_vector(std::move(promises))
@@ -343,16 +491,8 @@ fit::promise<std::vector<ObjectSource>> RunFind(const Options* options) {
            std::vector<fit::promise<ObjectSource>> promises;
            for (const auto& path : options->paths) {
              for (auto& location : SyncFindPaths(path)) {
-               auto handle = OpenInspectAtPath(files::JoinPath(
-                   location.directory_path, location.file_name));
-
-               if (!handle.is_ok()) {
-                 continue;
-               }
-
-               promises.emplace_back(ObjectSource::Make(
+               promises.emplace_back(MakeObjectPromiseFromLocation(
                    std::move(location),
-                   inspect::ObjectReader(handle.take_value()),
                    options->recursive ? -1 : 0 /* depth */));
              }
            }
@@ -384,18 +524,8 @@ fit::promise<std::vector<ObjectSource>> RunLs(const Options* options) {
       FXL_LOG(ERROR) << path << " not found";
     }
 
-    auto location = location_result.take_value();
-    auto handle = OpenInspectAtPath(
-        files::JoinPath(location.directory_path, location.file_name));
-
-    if (!handle.is_ok()) {
-      FXL_LOG(ERROR) << "Failed to open " << path;
-      continue;
-    }
-
-    promises.emplace_back(ObjectSource::Make(
-        std::move(location), inspect::ObjectReader(handle.take_value()),
-        1 /* depth */));
+    promises.emplace_back(MakeObjectPromiseFromLocation(
+        location_result.take_value(), 1 /* depth */));
   }
 
   return fit::join_promise_vector(std::move(promises))

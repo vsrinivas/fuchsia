@@ -6,9 +6,9 @@
 #include <set>
 #include <string>
 
-#include "src/lib/files/path.h"
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/substitute.h>
+#include "src/lib/files/path.h"
 
 #include "garnet/bin/iquery/formatters/json.h"
 #include "garnet/bin/iquery/formatters/text.h"
@@ -19,8 +19,9 @@ namespace iquery {
 namespace {
 
 std::set<std::string> kKnownOptions = {
-    "cat", "absolute_paths", "find",    "format", "full_paths", "help",
-    "ls",  "recursive",      "verbose", "quiet",  "log-file",   "dir"
+    "cat",  "absolute_paths", "find",    "format", "full_paths", "help",
+    "ls",   "recursive",      "verbose", "quiet",  "log-file",   "dir",
+    "sort",
 };
 
 // Validate whether the option is within the defined ones.
@@ -94,6 +95,7 @@ Options::Options(const fxl::CommandLine& command_line) {
     path_format = PathFormatting::FULL;
 
   recursive = command_line.HasOption("recursive");
+  sort = command_line.HasOption("sort");
 
   std::copy(command_line.positional_args().begin(),
             command_line.positional_args().end(), std::back_inserter(paths));
@@ -104,7 +106,7 @@ Options::Options(const fxl::CommandLine& command_line) {
 
 void Options::Usage(const std::string& argv0) {
   std::cout << fxl::Substitute(
-      R"txt(Usage: $0 (--cat|--find|--ls) [--recursive]
+      R"txt(Usage: $0 (--cat|--find|--ls) [--recursive] [--sort]
       [--format=<FORMAT>] [(--full_paths|--absolute_paths)] [--dir=<PATH>]
       PATH [...PATH]
 
@@ -128,6 +130,8 @@ void Options::Usage(const std::string& argv0) {
   --format: What formatter to use for output. Available options are:
     - text: [DEFAULT] Simple text output meant for manual inspection.
     - json: JSON format meant for machine consumption.
+
+  --sort: Whether iquery should sort children by name before printing.
 
   --full_paths:     Include the full path in object names.
   --absolute_paths: Include full absolute path in object names.

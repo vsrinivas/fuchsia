@@ -1,3 +1,4 @@
 # Find from the base objects directory retrieves only the top level.
 iquery --find .
 ./objects
+./objects/root.inspect

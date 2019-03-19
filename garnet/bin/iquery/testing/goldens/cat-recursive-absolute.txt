@@ -4,6 +4,8 @@ iquery --recursive --absolute_paths objects
     Binary: 
 0000  05 01 02                                          ...              = Binary: 
 0000  01 02                                             ..              
+    Binary: 
+0000  05 01 03                                          ...              = The key of this value is a binary value.
     binary_data = Binary: 
 0000  20 00 11 12 05                                     ....           
     object_name = Example Table

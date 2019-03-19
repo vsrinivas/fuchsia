@@ -3,9 +3,10 @@ iquery --recursive --format=json --absolute_paths objects
     {
         "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects",
         "contents": {
-            "objects": {
+            "root": {
                 "table0x0": {
                     "b64:BQEC": "b64:AQI=",
+                    "b64:BQED": "The key of this value is a binary value.",
                     "binary_data": "b64:IAAREgU=",
                     "object_name": "Example Table",
                     "row0x1": {

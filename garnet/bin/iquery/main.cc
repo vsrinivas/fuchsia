@@ -54,13 +54,19 @@ int main(int argc, const char** argv) {
 
   executor.schedule_task(
       results
-          .and_then([&options,
-                     &loop](const std::vector<iquery::ObjectSource>& results) {
-            // Formatter will handle the correct case according to the
-            // options values.
-            std::cout << options.formatter->Format(options, results);
-            loop.Quit();
-          })
+          .and_then(
+              [&options, &loop](std::vector<iquery::ObjectSource>& results) {
+                // Sort the hierarchies if requested.
+                if (options.sort) {
+                  for (auto& source : results) {
+                    source.SortHierarchy();
+                  }
+                }
+                // Formatter will handle the correct case according to the
+                // options values.
+                std::cout << options.formatter->Format(options, results);
+                loop.Quit();
+              })
           .or_else([&loop] {
             FXL_LOG(ERROR) << "An error occurred";
             loop.Quit();

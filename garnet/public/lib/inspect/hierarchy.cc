@@ -25,4 +25,20 @@ const ObjectHierarchy* ObjectHierarchy::GetByPath(
   return current;
 }
 
+void ObjectHierarchy::Sort() {
+  std::sort(object_.metrics->begin(), object_.metrics->end(),
+            [](const fuchsia::inspect::Metric& a,
+               const fuchsia::inspect::Metric& b) { return a.key < b.key; });
+
+  std::sort(object_.properties->begin(), object_.properties->end(),
+            [](const fuchsia::inspect::Property& a,
+               const fuchsia::inspect::Property& b) { return a.key < b.key; });
+
+  std::sort(
+      children_.begin(), children_.end(),
+      [](const inspect::ObjectHierarchy& a, const inspect::ObjectHierarchy& b) {
+        return a.object().name < b.object().name;
+      });
+}
+
 }  // namespace inspect
