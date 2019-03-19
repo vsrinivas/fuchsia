@@ -14,6 +14,7 @@ use fuchsia_zircon as zx;
 use fidl::{
 	fidl_bits,
 	fidl_enum,
+	fidl_empty_struct,
 	fidl_struct,
 	fidl_table,
 	fidl_union,
@@ -21,30 +22,7 @@ use fidl::{
 };
 
 
-#[derive(Debug, PartialEq)]
-pub struct Empty;
 
-impl fidl::encoding::Encodable for Empty {
-  fn inline_align(&self) -> usize { 1 }
-  fn inline_size(&self) -> usize { 1 }
-  fn encode(&mut self, encoder: &mut fidl::encoding::Encoder) -> fidl::Result<()> {
-	  ::fidl::fidl_encode!(&mut 0u8, encoder)
-  }
-}
-
-impl fidl::encoding::Decodable for Empty {
-  fn inline_align() -> usize { 1 }
-  fn inline_size() -> usize { 1 }
-  fn new_empty() -> Self { Empty }
-  fn decode(&mut self, decoder: &mut fidl::encoding::Decoder) -> fidl::Result<()> {
-    let mut x = 0u8;
-	 ::fidl::fidl_decode!(&mut x, decoder)?;
-    if x == 0 {
-		 Ok(())
-    } else {
-		 Err(::fidl::Error::Invalid)
-    }
-  }
-}
-
-impl fidl::encoding::Autonull for Empty {}
+fidl_empty_struct!(
+	Empty
+);

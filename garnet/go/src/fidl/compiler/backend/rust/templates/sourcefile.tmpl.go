@@ -22,6 +22,7 @@ use fuchsia_zircon as zx;
 use fidl::{
 	fidl_bits,
 	fidl_enum,
+	fidl_empty_struct,
 	fidl_struct,
 	fidl_table,
 	fidl_union,

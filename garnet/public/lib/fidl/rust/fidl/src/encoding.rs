@@ -1549,6 +1549,42 @@ macro_rules! fidl_struct {
     }
 }
 
+/// A macro which creates an empty struct and implements the FIDL `Encodable` and `Decodable`
+/// traits for it.
+#[macro_export]
+macro_rules! fidl_empty_struct {
+    ($(#[$attrs:meta])* $name:ident) => {
+        $(#[$attrs])*
+        #[derive(Debug, Copy, Clone, PartialEq)]
+        pub struct $name;
+
+        impl $crate::encoding::Encodable for $name {
+          fn inline_align(&self) -> usize { 1 }
+          fn inline_size(&self) -> usize { 1 }
+          fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+              $crate::fidl_encode!(&mut 0u8, encoder)
+          }
+        }
+
+        impl $crate::encoding::Decodable for $name {
+          fn inline_align() -> usize { 1 }
+          fn inline_size() -> usize { 1 }
+          fn new_empty() -> Self { $name }
+          fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            let mut x = 0u8;
+             $crate::fidl_decode!(&mut x, decoder)?;
+            if x == 0 {
+                 Ok(())
+            } else {
+                 Err($crate::Error::Invalid)
+            }
+          }
+        }
+
+        impl $crate::encoding::Autonull for $name {}
+    }
+}
+
 /// Encode the provided value behind a FIDL "envelope".
 pub fn encode_in_envelope<T>(val: &mut Option<&mut T>, encoder: &mut Encoder) -> Result<()>
 where
@@ -2422,16 +2458,15 @@ mod test {
         assert_eq!(&**buf, encoded_bytes);
     }
 
-    fn assert_identity<T>(mut x: T)
+    fn assert_identity<T>(mut x: T, cloned: T)
     where
-        T: Encodable + Decodable + Clone + PartialEq + fmt::Debug,
+        T: Encodable + Decodable + PartialEq + fmt::Debug,
     {
-        let cloned = x.clone();
         assert_eq!(cloned, encode_decode(&mut x));
     }
 
     macro_rules! identities { ($($x:expr,)*) => { $(
-        assert_identity($x);
+        assert_identity($x, $x);
     )* } }
 
     #[test]
