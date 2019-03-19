@@ -9,9 +9,10 @@
 #include <vector>
 
 #include <lib/zx/process.h>
+#include <lib/zx/socket.h>
+
 #include "garnet/lib/process/process_builder.h"
 #include "lib/sys/cpp/service_directory.h"
-
 #include "lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -33,6 +34,12 @@ class Launcher {
   // Setup will create the process object but not launch the process yet.
   zx_status_t Setup(const std::vector<std::string>& argv);
 
+  // It is possibly that Setup fails to obtain valid sockets from the process
+  // being launched. If that is the case, both sockets will be in the initial
+  // state (ie. is_valid() == false).
+  zx::socket ReleaseStdout();
+  zx::socket ReleaseStderr();
+
   // Accessor for a copy of the process handle, valid between Setup() and
   // Start().
   zx::process GetProcess() const;
@@ -41,7 +48,19 @@ class Launcher {
   zx_status_t Start();
 
  private:
+  // Creates a socket and passes it on to the builder as a FD handle.
+  // |fd| should be a valid fd for the process to be created. Normally it will
+  // be STDOUT_FILENO or STDERR_FILENO.
+  //
+  // Returns an empty socket if there was an error.
+  zx::socket AddStdioEndpoint(int fd);
+
   process::ProcessBuilder builder_;
+
+  // The stdout/stderr local socket endpoints.
+  // Will be valid if Setup successfully transfered them to the process.
+  zx::socket out_;
+  zx::socket err_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Launcher);
 };

@@ -64,13 +64,6 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
   auto* watch_info = loop->FindWatchInfo(watch_info_id);
   FXL_DCHECK(watch_info);
 
-  // BufferedFD will constantly create/destroy FD handles, making this statement
-  // flood the log.
-  if (watch_info->type != WatchType::kFdio) {
-    DEBUG_LOG() << "Signal for " << WatchTypeToString(watch_info->type) << " "
-                << watch_info->resource_name;
-  }
-
   // async-loop will remove the handler for this event, so we need to re-add it.
   signal_handler.WaitForSignals();
   switch (watch_info->type) {

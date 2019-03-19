@@ -162,10 +162,11 @@ package("debug_agent_tests") {
   # TODO(donosoc): Move this to it's own package, this is getting pretty
   #                annoyingly big.
   deps = [
-    "//garnet/bin/debug_agent/test_data:debug_test_false",
-    "//garnet/bin/debug_agent/test_data:debug_test_true",
     "//garnet/bin/debug_agent/test_data:breakpoint_test_exe",
     "//garnet/bin/debug_agent/test_data:debug_agent_test_loadable_module",
+    "//garnet/bin/debug_agent/test_data:debug_test_false",
+    "//garnet/bin/debug_agent/test_data:debug_test_true",
+    "//garnet/bin/debug_agent/test_data:printer",
     "//garnet/bin/debug_agent/test_data:process_loop",
     "//garnet/bin/debug_agent/test_data:process_spawner",
   ]
@@ -204,6 +205,9 @@ package("debug_agent_tests") {
     },
     {
       name = "process_spawner"
+    },
+    {
+      name = "printer"
     },
   ]
 

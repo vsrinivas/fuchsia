@@ -25,17 +25,59 @@
 
 namespace debug_agent {
 
-DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
-                                 zx::process proc, bool resume_initial_thread)
+namespace {
+
+std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
+  FXL_DCHECK(socket->valid());
+
+  constexpr size_t kReadSize = 1024;  // Read in 1K chunks.
+
+  std::vector<char> data;
+  auto& stream = socket->stream();
+  while (true) {
+    char buf[kReadSize];
+
+    // Add a zero at the end just in case.
+    size_t read_amount = stream.Read(buf, kReadSize);
+    data.insert(data.end(), buf, buf + read_amount);
+
+    if (read_amount < kReadSize)
+      break;
+  }
+
+  // Add a trailing zero just in case.
+  data.push_back(0);
+  return data;
+}
+
+}  // namespace
+
+DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
+DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid,
+                                                     zx::process handle,
+                                                     bool resume_initial_thread)
+    : koid(process_koid),
+      handle(std::move(handle)),
+      resume_initial_thread(resume_initial_thread) {}
+
+DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent,
+                                 DebuggedProcessCreateInfo&& create_info)
     : debug_agent_(debug_agent),
-      koid_(koid),
-      process_(std::move(proc)),
-      resume_initial_thread_(resume_initial_thread),
+      koid_(create_info.koid),
+      process_(std::move(create_info.handle)),
+      name_(std::move(create_info.name)),
+      resume_initial_thread_(create_info.resume_initial_thread),
       waiting_for_initial_thread_(true) {
   // set this property so we can know about module loads.
   const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
   zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR,
                          &kMagicValue, sizeof(kMagicValue));
+
+  // If create_info out or err are not valid, calling Init on the
+  // BufferedZxSocket will fail and leave it in an invalid state. This is
+  // expected if the io sockets could be obtained from the inferior.
+  stdout_.Init(std::move(create_info.out));
+  stderr_.Init(std::move(create_info.err));
 }
 
 DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
@@ -72,8 +114,38 @@ zx_status_t DebuggedProcess::Init() {
   config.process_handle = process_.get();
   config.process_koid = koid_;
   config.watcher = this;
-  return loop->WatchProcessExceptions(std::move(config),
-                                      &process_watch_handle_);
+  zx_status_t status =
+      loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
+  if (status != ZX_OK)
+    return status;
+
+  // Binding stdout/stderr.
+  // We bind |this| into the callbacks. This is OK because the DebuggedProcess
+  // owns both sockets, meaning that it's assured to outlive the sockets.
+
+  if (stdout_.valid()) {
+    stdout_.set_data_available_callback([this]() { OnStdout(false); });
+    stdout_.set_error_callback([this]() { OnStdout(true); });
+    status = stdout_.Start();
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Could not listen on stdout for process " << name_
+                       << ": " << debug_ipc::ZxStatusToString(status);
+      stdout_.Reset();
+    }
+  }
+
+  if (stderr_.valid()) {
+    stderr_.set_data_available_callback([this]() { OnStderr(false); });
+    stderr_.set_error_callback([this]() { OnStderr(true); });
+    status = stderr_.Start();
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Could not listen on stderr for process " << name_
+                       << ": " << debug_ipc::ZxStatusToString(status);
+      stderr_.Reset();
+    }
+  }
+
+  return ZX_OK;
 }
 
 void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
@@ -388,6 +460,36 @@ zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address,
                                                 const void* buffer, size_t len,
                                                 size_t* actual) {
   return process_.write_memory(address, buffer, len, actual);
+}
+
+void DebuggedProcess::OnStdout(bool close) {
+  FXL_DCHECK(stdout_.valid());
+  if (close) {
+    DEBUG_LOG() << "Process " << name_ << ": stdout closed.";
+    stdout_.Reset();
+    return;
+  }
+
+  auto data = ReadSocketInput(&stdout_);
+  FXL_DCHECK(!data.empty());
+  // TODO(donosoc): For now log. This should be a message to the client.
+  DEBUG_LOG() << "Process " << name_ << " [STDOUT (" << data.size()
+              << "bytes)]: " << data.data();
+}
+
+void DebuggedProcess::OnStderr(bool close) {
+  FXL_DCHECK(stderr_.valid());
+  if (close) {
+    DEBUG_LOG() << "Process " << name_ << ": stderr closed.";
+    stderr_.Reset();
+    return;
+  }
+
+  auto data = ReadSocketInput(&stderr_);
+  FXL_DCHECK(!data.empty());
+  // TODO(donosoc): For now log. This should be a message to the client.
+  DEBUG_LOG() << "Process " << name_ << " [STDERR (" << data.size()
+              << "bytes)]: " << data.data();
 }
 
 }  // namespace debug_agent

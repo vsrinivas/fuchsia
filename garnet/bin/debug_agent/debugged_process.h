@@ -5,17 +5,21 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 #define GARNET_BIN_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 
-#include <lib/zx/process.h>
-#include <lib/zx/thread.h>
 #include <map>
 #include <memory>
 #include <vector>
 
+#include <lib/zx/process.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/thread.h>
+
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
+#include "garnet/lib/debug_ipc/helper/buffered_zx_socket.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/records_utils.h"
+#include "src/lib/files/unique_fd.h"
 
 #include "lib/fxl/macros.h"
 
@@ -28,19 +32,39 @@ class ProcessBreakpoint;
 class ProcessWatchpoint;
 class Watchpoint;
 
+struct DebuggedProcessCreateInfo {
+  DebuggedProcessCreateInfo();
+  // Constructor with only the required fields.
+  DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process,
+                            bool resume_initial_thread);
+
+  // Required.
+  zx_koid_t koid = 0;
+  zx::process handle;
+  bool resume_initial_thread = false;
+
+  // Optional.
+  std::string name;
+  zx::socket out;  // stdout.
+  zx::socket err;  // stderr.
+};
+
+// Creates a CreateInfo struct from only the required fields.
+
 class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
                         public ProcessMemoryAccessor {
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
-  DebuggedProcess(DebugAgent* debug_agent, zx_koid_t process_koid,
-                  zx::process proc, bool resume_initial_thread);
+  DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&);
   virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return koid_; }
   DebugAgent* debug_agent() const { return debug_agent_; }
   zx::process& process() { return process_; }
   uint64_t dl_debug_addr() const { return dl_debug_addr_; }
+
+  const std::string& name() const { return name_; }
 
   // Returns true on success. On failure, the object may not be used further.
   zx_status_t Init();
@@ -101,6 +125,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   void OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
                    uint32_t type) override;
 
+  void OnStdout(bool close);
+  void OnStderr(bool close);
+
   // This function will gracefully detach from the underlying zircon process.
   // Detaching correctly requires several steps:
   //
@@ -121,8 +148,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
                                  size_t len, size_t* actual) override;
 
   DebugAgent* debug_agent_;  // Non-owning.
+
   zx_koid_t koid_;
   zx::process process_;
+  std::string name_;
 
   // Address in the debugged program of the dl_debug_state in ld.so.
   uint64_t dl_debug_addr_ = 0;
@@ -145,6 +174,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // TODO(donosoc): Allow options to stop none, initial or all threads.
   bool resume_initial_thread_;
   bool waiting_for_initial_thread_;
+
+  debug_ipc::BufferedZxSocket stdout_;
+  debug_ipc::BufferedZxSocket stderr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedProcess);
 };

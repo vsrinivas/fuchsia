@@ -53,7 +53,12 @@ void DebugAgent::OnProcessStart(zx::process process) {
   debug_ipc::WriteNotifyProcessStarting(notify, &writer);
   stream()->Write(writer.MessageComplete());
 
-  AddDebuggedProcess(koid, std::move(process), false);
+  DebuggedProcessCreateInfo create_info;
+  create_info.name = name;
+  create_info.koid = koid;
+  create_info.handle = std::move(process);
+  create_info.resume_initial_thread = false;
+  AddDebuggedProcess(std::move(create_info));
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
@@ -138,9 +143,15 @@ void DebugAgent::OnAttach(uint32_t transaction_id,
     if (process.is_valid()) {
       reply.name = NameForObject(process);
       reply.koid = request.koid;
+
       // TODO(donosoc): change resume thread setting once we have global
       // settings.
-      reply.status = AddDebuggedProcess(request.koid, std::move(process), true);
+      DebuggedProcessCreateInfo create_info;
+      create_info.name = reply.name;
+      create_info.koid = request.koid;
+      create_info.handle = std::move(process);
+      create_info.resume_initial_thread = true;
+      reply.status = AddDebuggedProcess(std::move(create_info));
     }
 
     // Send the reply.
@@ -485,11 +496,10 @@ zx_status_t DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
   return ZX_OK;
 }
 
-zx_status_t DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
-                                           zx::process zx_proc,
-                                           bool resume_initial_thread) {
-  auto proc = std::make_unique<DebuggedProcess>(
-      this, process_koid, std::move(zx_proc), resume_initial_thread);
+zx_status_t DebugAgent::AddDebuggedProcess(
+    DebuggedProcessCreateInfo&& create_info) {
+  zx_koid_t process_koid = create_info.koid;
+  auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
   zx_status_t status = proc->Init();
   if (status != ZX_OK)
     return status;
@@ -502,6 +512,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
   Launcher launcher(services_);
   reply->inferior_type = debug_ipc::InferiorType::kBinary;
+
   reply->status = launcher.Setup(request.argv);
   if (reply->status != ZX_OK)
     return;
@@ -510,8 +521,13 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   zx_koid_t process_koid = KoidForObject(process);
 
   // TODO(donosoc): change resume thread setting once we have global settings.
-  zx_status_t status =
-      AddDebuggedProcess(process_koid, std::move(process), true);
+  DebuggedProcessCreateInfo create_info;
+  create_info.koid = process_koid;
+  create_info.handle = std::move(process);
+  create_info.resume_initial_thread = true;
+  create_info.out = launcher.ReleaseStdout();
+  create_info.err = launcher.ReleaseStderr();
+  zx_status_t status = AddDebuggedProcess(std::move(create_info));
   if (status != ZX_OK) {
     reply->status = status;
     return;

@@ -120,4 +120,8 @@ executable("debug_test_false") {
   ]
 }
 
-
+executable("printer") {
+  sources = [
+    "printer.cc",
+  ]
+}

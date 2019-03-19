@@ -5,6 +5,9 @@
 #include "garnet/bin/debug_agent/launcher.h"
 
 #include <inttypes.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/io.h>
+#include <zircon/processargs.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
 
@@ -19,18 +22,12 @@ zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
     return status;
 
   builder_.AddArgs(argv);
-
-  /*
-  Transferring STDIO handles is currently disabled. When doing local debugging
-  sharing stdio currently leaves the debugger UI in an inconsistent state and
-  stdout doesn't work. Instead we need to redirect stdio in a way the debugger
-  can control.
-
-  builder_.CloneStdio();
-  */
   builder_.CloneJob();
   builder_.CloneNamespace();
   builder_.CloneEnvironment();
+
+  out_ = AddStdioEndpoint(STDOUT_FILENO);
+  err_ = AddStdioEndpoint(STDERR_FILENO);
 
   return builder_.Prepare(nullptr);
 }
@@ -42,5 +39,19 @@ zx::process Launcher::GetProcess() const {
 }
 
 zx_status_t Launcher::Start() { return builder_.Start(nullptr); }
+
+zx::socket Launcher::AddStdioEndpoint(int fd) {
+  zx::socket local;
+  zx::socket target;
+  zx_status_t status = zx::socket::create(0, &local, &target);
+  if (status != ZX_OK)
+    return zx::socket();
+
+  builder_.AddHandle(PA_HND(PA_FD, fd), std::move(target));
+  return local;
+}
+
+zx::socket Launcher::ReleaseStdout() { return std::move(out_); }
+zx::socket Launcher::ReleaseStderr() { return std::move(err_); }
 
 }  // namespace debug_agent

@@ -140,6 +140,7 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchFD(WatchMode mode, int fd,
 
     watches_[watch_id] = info;
   }
+
   return WatchHandle(this, watch_id);
 }
 
@@ -391,8 +392,8 @@ void MessageLoopZircon::StopWatching(int id) {
     FXL_NOTREACHED();
     return;
   }
-  WatchInfo& info = found->second;
 
+  WatchInfo& info = found->second;
   switch (info.type) {
     case WatchType::kFdio:
       port_.cancel(*zx::unowned_handle(info.fd_handle),
@@ -520,21 +521,31 @@ void MessageLoopZircon::OnSocketSignal(int watch_id, const WatchInfo& info,
   if (!ZX_PKT_IS_SIGNAL_REP(packet.type))
     return;
 
+  auto observed = packet.signal.observed;
+
+  // See if the socket was closed.
+  if ((observed & ZX_SOCKET_PEER_CLOSED) ||
+      (observed & ZX_SIGNAL_HANDLE_CLOSED)) {
+    info.socket_watcher->OnSocketError(info.socket_handle);
+    // |info| is can be deleted at this point, so don't use it anymore.
+    return;
+  }
+
   // Dispatch readable signal.
-  if (packet.signal.observed & ZX_SOCKET_READABLE)
+  if (observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);
 
   // When signaling both readable and writable, make sure the readable handler
   // didn't remove the watch.
-  if ((packet.signal.observed & ZX_SOCKET_READABLE) &&
-      (packet.signal.observed & ZX_SOCKET_WRITABLE)) {
+  if ((observed & ZX_SOCKET_READABLE) &&
+      (observed & ZX_SOCKET_WRITABLE)) {
     std::lock_guard<std::mutex> guard(mutex_);
     if (watches_.find(packet.key) == watches_.end())
       return;
   }
 
   // Dispatch writable signal.
-  if (packet.signal.observed & ZX_SOCKET_WRITABLE)
+  if (observed & ZX_SOCKET_WRITABLE)
     info.socket_watcher->OnSocketWritable(info.socket_handle);
 }
 
