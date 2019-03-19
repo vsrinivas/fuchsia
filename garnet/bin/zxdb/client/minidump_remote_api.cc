@@ -11,6 +11,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
+#include "third_party/crashpad/snapshot/memory_snapshot.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
@@ -260,6 +261,53 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
 
 }  // namespace
 
+class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
+ public:
+  // Construct a delegate object for reading minidump memory regions.
+  //
+  // Minidump will always give us a pointer to the whole region and its size.
+  // We give an offset and size of a portion of that region to read. Then when
+  // the MemorySnapshotDelegateRead function is called, just that section will
+  // be copied out into the ptr we give here.
+  explicit MinidumpReadDelegate(uint64_t offset, size_t size, uint8_t* ptr)
+      : offset_(offset), size_(size), ptr_(ptr) {}
+
+  bool MemorySnapshotDelegateRead(void* data, size_t size) override {
+    if (offset_ + size_ > size) {
+      return false;
+    }
+
+    auto data_u8 = reinterpret_cast<uint8_t*>(data);
+    data_u8 += offset_;
+
+    std::copy(data_u8, data_u8 + size_, ptr_);
+    return true;
+  }
+
+ private:
+  uint64_t offset_;
+  size_t size_;
+  uint8_t* ptr_;
+};
+
+MinidumpRemoteAPI::MemoryRegion::MemoryRegion(
+    const crashpad::MemorySnapshot* snapshot)
+    : start(snapshot->Address()), size(snapshot->Size()), snapshot_(snapshot) {}
+
+std::optional<std::vector<uint8_t>> MinidumpRemoteAPI::MemoryRegion::Read(
+    uint64_t offset, size_t size) const {
+  std::vector<uint8_t> data;
+  data.resize(size);
+
+  MinidumpReadDelegate d(offset, size, data.data());
+
+  if (!snapshot_->Read(&d)) {
+    return std::nullopt;
+  }
+
+  return std::move(data);
+}
+
 MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {}
 
 MinidumpRemoteAPI::~MinidumpRemoteAPI() = default;
@@ -276,6 +324,24 @@ std::string MinidumpRemoteAPI::ProcessName() {
   }
 
   return mods[0]->Name();
+}
+
+void MinidumpRemoteAPI::CollectMemory() {
+  for (const auto& thread : minidump_->Threads()) {
+    const auto& stack = thread->Stack();
+
+    if (!stack) {
+      continue;
+    }
+
+    memory_.push_back(std::make_unique<MinidumpRemoteAPI::MemoryRegion>(stack));
+  }
+
+  std::sort(memory_.begin(), memory_.end(),
+            [](const std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>& a,
+               const std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>& b) {
+              return a->start < b->start;
+            });
 }
 
 Err MinidumpRemoteAPI::Open(const std::string& path) {
@@ -297,6 +363,8 @@ Err MinidumpRemoteAPI::Open(const std::string& path) {
     minidump_.release();
     return Err(fxl::StringPrintf("Minidump %s not valid", path.c_str()));
   }
+
+  CollectMemory();
 
   return Err();
 }
@@ -483,8 +551,56 @@ void MinidumpRemoteAPI::Threads(
 void MinidumpRemoteAPI::ReadMemory(
     const debug_ipc::ReadMemoryRequest& request,
     std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::ReadMemoryReply reply;
+  uint64_t loc = request.address;
+  uint64_t end = request.address + request.size;
+
+  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
+    Succeed(cb, reply);
+    return;
+  }
+
+  for (const auto& reg : memory_) {
+    if (loc == end) {
+      break;
+    }
+
+    if (reg->start + reg->size <= loc) {
+      continue;
+    }
+
+    if (reg->start > loc) {
+      uint64_t stop = std::min(reg->start, end);
+      reply.blocks.emplace_back();
+
+      reply.blocks.back().address = loc;
+      reply.blocks.back().valid = false;
+      reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
+
+      loc = stop;
+
+      if (loc == end) {
+        break;
+      }
+    }
+
+    uint64_t stop = std::min(reg->start + reg->size, end);
+    auto data = reg->Read(loc - reg->start, stop - loc);
+    reply.blocks.emplace_back();
+    reply.blocks.back().address = loc;
+    reply.blocks.back().valid = !!data;
+    reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
+    reply.blocks.back().data = std::move(*data);
+
+    loc += reply.blocks.back().size;
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::ReadRegisters(

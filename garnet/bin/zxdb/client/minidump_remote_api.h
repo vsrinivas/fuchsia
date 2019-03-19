@@ -6,13 +6,17 @@
 
 #include "garnet/bin/zxdb/client/remote_api.h"
 
+#include <map>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "garnet/bin/zxdb/client/session.h"
 
 namespace crashpad {
 
 class ProcessSnapshotMinidump;
+class MemorySnapshot;
 
 }  // namespace crashpad
 
@@ -90,11 +94,34 @@ class MinidumpRemoteAPI : public RemoteAPI {
       std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
 
  private:
+  class MemoryRegion {
+   public:
+    // Construct a memory region from a crashpad MemorySnapshot. The pointer
+    // should always be derived from the minidump_ object, and will thus always
+    // share its lifetime.
+    explicit MemoryRegion(const crashpad::MemorySnapshot* snapshot);
+    ~MemoryRegion() = default;
+
+    std::optional<std::vector<uint8_t>> Read(uint64_t offset,
+                                             size_t size) const;
+
+    const uint64_t start;
+    const size_t size;
+
+   private:
+    const crashpad::MemorySnapshot* snapshot_;
+  };
+
+  // Initialization routine. Iterates minidump structures and finds all the
+  // readable memory.
+  void CollectMemory();
+
   std::string ProcessName();
 
   bool attached_ = false;
   Session* session_;
 
+  std::vector<std::unique_ptr<MemoryRegion>> memory_;
   std::unique_ptr<crashpad::ProcessSnapshotMinidump> minidump_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MinidumpRemoteAPI);
 };

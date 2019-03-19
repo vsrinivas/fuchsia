@@ -43,8 +43,7 @@ MinidumpTest::~MinidumpTest() { loop_.Cleanup(); }
 
 Err MinidumpTest::TryOpen(const std::string& filename) {
   static auto data_dir =
-      std::filesystem::path(GetSelfPath()).parent_path() /
-      "test_data" / "zxdb";
+      std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb";
 
   Err err;
   auto path = (data_dir / filename).string();
@@ -96,6 +95,8 @@ std::vector<uint8_t> AsData(Data d) {
 
 constexpr uint32_t kTestExampleMinidumpKOID = 656254UL;
 constexpr uint32_t kTestExampleMinidumpThreadKOID = 671806UL;
+constexpr uint64_t kTestExampleMinidumpStackAddr = 0x37f880947000;
+constexpr uint32_t kTestExampleMinidumpStackSize = 0x40000;
 
 constexpr uint32_t kTestExampleMinidumpWithAspaceKOID = 9462UL;
 
@@ -469,6 +470,46 @@ TEST_F(MinidumpTest, AddressSpace) {
   EXPECT_EQ(0x7c1d710c8000UL, reply.map[17].base);
   EXPECT_EQ(4096UL, reply.map[17].size);
   EXPECT_EQ(0UL, reply.map[17].depth);
+}
+
+TEST_F(MinidumpTest, ReadMemory) {
+  ASSERT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
+
+  Err err;
+  debug_ipc::ReadMemoryRequest request;
+  debug_ipc::ReadMemoryReply reply;
+
+  request.process_koid = kTestExampleMinidumpKOID;
+  request.address = kTestExampleMinidumpStackAddr;
+  request.size = kTestExampleMinidumpStackSize;
+
+  DoRequest(request, reply, err, &RemoteAPI::ReadMemory);
+  ASSERT_ZXDB_SUCCESS(err);
+
+  ASSERT_EQ(1u, reply.blocks.size());
+  const auto& block = reply.blocks.back();
+
+  EXPECT_EQ(kTestExampleMinidumpStackAddr, block.address);
+  EXPECT_EQ(kTestExampleMinidumpStackSize, block.size);
+  ASSERT_TRUE(block.valid);
+  ASSERT_EQ(block.size, block.data.size());
+
+  EXPECT_EQ(0u, block.data[0]);
+  EXPECT_EQ(0u, block.data[10]);
+  EXPECT_EQ(0u, block.data[100]);
+  EXPECT_EQ(0u, block.data[1000]);
+  EXPECT_EQ(0u, block.data[10000]);
+  EXPECT_EQ(0u, block.data[100000]);
+
+  EXPECT_EQ(2u, block.data[260400]);
+  EXPECT_EQ(0u, block.data[260401]);
+  EXPECT_EQ(0u, block.data[260402]);
+  EXPECT_EQ(0u, block.data[260403]);
+  EXPECT_EQ(0u, block.data[260404]);
+  EXPECT_EQ(240u, block.data[260410]);
+  EXPECT_EQ(251u, block.data[260420]);
+  EXPECT_EQ(0u, block.data[260430]);
+  EXPECT_EQ(1u, block.data[260440]);
 }
 
 }  // namespace zxdb
