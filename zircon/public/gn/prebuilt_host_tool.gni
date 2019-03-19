@@ -1,0 +1,91 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+# Subroutine of prebuilt_host_tool() and prebuilt_host_tool_foreach().
+template("_prebuilt_host_tool_target") {
+  action_target = target_name
+  assert(defined(invoker.tool), "tool must be defined for $target_name")
+  assert(defined(invoker.outputs), "outputs must be defined for $target_name")
+
+  target(invoker._target_type, action_target) {
+    forward_variables_from(invoker,
+                           [
+                             "assert_no_deps",
+                             "data_deps",
+                             "deps",
+                             "inputs",
+                             "outputs",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    if (!defined(inputs)) {
+      inputs = []
+    }
+    script = invoker.tool
+
+    args = []
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
+
+    metadata = {
+      # Never follow the deps to find link outputs from invoker.tool.
+      # TODO: Maybe should still follow invoker.deps?
+      link_barrier = []
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+    }
+  }
+}
+
+# Run an action() using a host_tool() compiled for the build host.
+#
+# This takes all the same parameters as action() except that $script is
+# replaced by $tool.  See also prebuilt_host_tool_foreach().
+#
+# Parameters
+#
+#   tool
+#     Required: Label (without toolchain) of a host_tool() target.
+#     The tool will be built for the build host if necessary, and
+#     then run with the $args list just like $script runs in action().
+#     Type: label_no_toolchain
+#
+# Other parameters are as for action().
+template("prebuilt_host_tool") {
+  _prebuilt_host_tool_target(target_name) {
+    _target_type = "action"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+# Run an action_foreach() using a host_tool() compiled for the build host.
+#
+# This takes all the same parameters as action_foreach() except that
+# $script is replaced by $tool.  prebuilt_host_tool_foreach() is to as
+# action_foreach() as prebuilt_host_tool() is to action().
+#
+# Parameters
+#
+#   tool
+#     Required: Label (without toolchain) of a host_tool() target.
+#     The tool will be built for the build host if necessary, and
+#     then run with the $args list just like $script runs in action().
+#     Type: label_no_toolchain
+#
+# Other parameters are as for action_foreach().
+template("prebuilt_host_tool_foreach") {
+  _prebuilt_host_tool_target(target_name) {
+    _target_type = "action_foreach"
+    forward_variables_from(invoker, "*")
+  }
+}
