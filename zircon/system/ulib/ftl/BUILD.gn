@@ -24,20 +24,22 @@ library("ftl") {
     "utils/sys.c",
   ]
 
-  if (is_fuchsia) {
-    sources += [ "utils/semaphore.cpp" ]
-  } else {
-    sources += [ "utils/semaphore_posix.cpp" ]
-  }
-
-  configs += [ ":config" ]
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxcpp",
   ]
+
+  if (is_fuchsia) {
+    sources += [ "utils/semaphore.cpp" ]
+    deps += [ "$zx/system/ulib/zircon" ]
+  } else {
+    sources += [ "utils/semaphore_posix.cpp" ]
+    deps += [ "$zx/system/ulib/zircon:headers" ]
+  }
+
+  configs += [ ":config" ]
 }
 
 config("config") {
