@@ -48,7 +48,11 @@ impl FromStr for BackendName {
     }
 }
 
-/// A tool for generating Fuchsia driver protocol interfaces
+/// A tool for generating Fuchsia driver protocol interfaces.
+///
+/// All the following arguments can also be placed in a file that has
+/// a path prefixed with @. That file will be read in and used instead
+/// of command line arguments.
 #[derive(StructOpt, Debug)]
 #[structopt(name = "banjo")]
 struct Opt {
@@ -79,17 +83,27 @@ struct Opt {
 
 fn main() -> Result<(), Error> {
     let mut args: Vec<String> = std::env::args().collect();
-    // @ gn integration
-    if let Some(c) = args[1].chars().nth(0) {
-        if c == String::from("@").chars().nth(0).unwrap() {
-            // TODO better way
-            let (_, f_name) = args[1].split_at(1);
-            let mut f = File::open(f_name).expect("file not found");
-            let mut contents = String::new();
-            f.read_to_string(&mut contents).expect("something went wrong reading the file");
-            // program name
-            args = vec![args[0].clone()];
-            args.extend(contents.split(" ").map(|s| s.trim().to_string()))
+
+    if args.len() > 1 {
+        // @ gn integration
+        if let Some(c) = args[1].chars().nth(0) {
+            if c == String::from("@").chars().nth(0).unwrap() {
+                let (_, f_name) = args[1].split_at(1);
+                let mut f = File::open(f_name).expect("file not found");
+                let mut contents = String::new();
+                f.read_to_string(&mut contents).expect("something went wrong reading the file");
+                // program name
+                args = vec![args[0].clone()];
+                // program arguments
+                args.extend(contents.split(|c| c == ' ' || c == '\n').filter_map(|s| {
+                    let resp = s.trim().to_string();
+                    if resp != "" {
+                        Some(resp)
+                    } else {
+                        None
+                    }
+                }));
+            }
         }
     }
 
