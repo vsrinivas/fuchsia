@@ -13,6 +13,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/lib/rust/fuchsia_uri",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -21,6 +22,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-pseudo-fs",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
@@ -33,6 +35,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:url",
+    "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/public/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
     "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",

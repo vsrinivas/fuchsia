@@ -9,13 +9,18 @@ mod runner;
 pub use self::{moniker::*, resolver::*, runner::*};
 use {
     crate::ns_util::PKG_PATH,
-    crate::{data, io_util},
-    failure::{Error, Fail},
-    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    crate::{data, directory_broker, io_util},
+    failure::{format_err, Error, Fail},
+    fidl::endpoints::{create_endpoints, ClientEnd, Proxy, ServerEnd},
+    fidl_fuchsia_io::{
+        DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
+    },
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
+    fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
+    fuchsia_zircon as zx,
+    futures::future::{AbortHandle, Abortable},
     futures::lock::Mutex,
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, iter, path::PathBuf, sync::Arc},
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -109,6 +114,15 @@ struct Execution {
     decl: fsys::ComponentDecl,
     package_dir: Option<DirectoryProxy>,
     outgoing_dir: DirectoryProxy,
+    dir_abort_handles: Vec<AbortHandle>,
+}
+
+impl Drop for Execution {
+    fn drop(&mut self) {
+        for abort_handle in &self.dir_abort_handles {
+            abort_handle.abort();
+        }
+    }
 }
 
 impl Execution {
@@ -138,57 +152,166 @@ impl Execution {
             decl: component.decl.unwrap(),
             package_dir,
             outgoing_dir,
+            dir_abort_handles: vec![],
         })
     }
 }
 
-type UseDeclsOpt = std::option::Option<std::vec::Vec<fidl_fuchsia_sys2::UseDecl>>;
-
 impl Execution {
-    async fn make_namespace<'a>(
-        &'a self,
-        uses: &'a UseDeclsOpt,
-    ) -> Result<fsys::ComponentNamespace, ModelError> {
-        // TODO: Populate namespace from the component declaration.
+    fn extract_dirname_and_basename(path: &str) -> Result<(String, String), ModelError> {
+        let err = || {
+            ModelError::namespace_creation_failed(format_err!("invalid path in use decl: {}", path))
+        };
+
+        let path = PathBuf::from(path);
+        // TODO check that this path validation happens in the fidl validation, and then remove
+        // this check
+        let dirname = path.parent().ok_or(err())?.to_str().unwrap().to_string();
+        let basename = path.file_name().ok_or(err())?.to_str().unwrap().to_string();
+        Ok((dirname, basename))
+    }
+
+    /// add_directory_use will open the source_path in componentmgr's namespace and add it under
+    /// target_path into the namespace.
+    fn add_directory_use(
+        ns: &mut fsys::ComponentNamespace,
+        use_: &fsys::UseDecl,
+    ) -> Result<(), ModelError> {
+        // TODO: directly mapping the directory like this won't work in the future. We should do
+        // something like what add_service_use does where the ServerEnd of the item in the
+        // namespace is held by componentmgr. For directories, it can pass along the ServerEnd on
+        // first open.
+        let source_path = use_.source_path.as_ref().unwrap();
+        let dir_proxy = io_util::open_directory_in_namespace(&source_path)
+            .map_err(|e| ModelError::namespace_creation_failed(e))?;
+        let dir = ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel());
+        ns.paths.push(use_.target_path.as_ref().unwrap().to_string());
+        ns.directories.push(dir);
+        Ok(())
+    }
+
+    /// add_service_use will open the parent directory of source_path in componentmgr's namespace,
+    /// create a DirectoryBroker to proxy requests from target_path, and add the broker under a
+    /// pseudo directory in mediated_dirs, creating a new pseudo directory if necessary.
+    fn add_service_use(
+        mediated_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
+        use_: &fsys::UseDecl,
+    ) -> Result<(), ModelError> {
+        // TODO: Asking for "/svc/1" and "/svc/in/2" will result in two pseudo dirs, "/svc" and
+        // "/svc/in" being installed in the namespace, and the comments in component_namespace.fidl
+        // specifically call this out as being invalid
+        let (service_dir_path, service_name) =
+            Execution::extract_dirname_and_basename(use_.source_path.as_ref().unwrap())?;
+
+        let realm_service_dir = io_util::open_directory_in_namespace(&service_dir_path)
+            .map_err(|e| ModelError::namespace_creation_failed(e))?;
+
+        let (target_dir_path, target_name) =
+            Execution::extract_dirname_and_basename(use_.target_path.as_ref().unwrap())?;
+
+        let route_service_fn = Box::new(move |server_end: ServerEnd<NodeMarker>| {
+            let flags = OPEN_RIGHT_READABLE;
+            let mode = MODE_TYPE_SERVICE;
+            let server_end = ServerEnd::new(server_end.into_channel());
+
+            realm_service_dir.open(flags, mode, &service_name, server_end).unwrap();
+        });
+
+        let service_dir =
+            mediated_dirs.entry(target_dir_path).or_insert(fvfs::directory::simple::empty());
+        service_dir
+            .add_entry(
+                &target_name,
+                directory_broker::DirectoryBroker::new_service_broker(route_service_fn),
+            )
+            .map_err(|(status, _)| status)
+            .expect("could not add service to directory");
+        Ok(())
+    }
+
+    /// serve_and_install_mediated_dirs will take all of the pseudo directories collected in
+    /// mediated_dirs (as populated by add_service_use calls), start them as abortable futures, and
+    /// install them in the namespace. The abortable handles are saved in the Execution, to be
+    /// called when the Execution is dropped.
+    fn serve_and_install_mediated_dirs(
+        &mut self,
+        ns: &mut fsys::ComponentNamespace,
+        mediated_dirs: HashMap<String, fvfs::directory::simple::Simple<'static>>,
+    ) -> Result<(), ModelError> {
+        for (target_dir_path, mut pseudo_dir) in mediated_dirs {
+            let (client_end, server_end) =
+                create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
+            pseudo_dir
+                .open(OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, &mut iter::empty(), server_end)
+                .expect("failed to open services dir");
+            let (abort_handle, abort_registration) = AbortHandle::new_pair();
+            self.dir_abort_handles.push(abort_handle);
+            let future = Abortable::new(pseudo_dir, abort_registration);
+
+            // The future for a pseudo directory will never terminate, so we must start up a new
+            // task here to run the future instead of calling await on it directly. This is
+            // wrapped in an async move {await!();}` block like to drop the unused return value.
+            fasync::spawn(
+                async move {
+                    let _ = await!(future);
+                },
+            );
+
+            ns.paths.push(target_dir_path.as_str().to_string());
+            let client_end = ClientEnd::new(client_end.into_channel()); // coerce to ClientEnd<Dir>
+            ns.directories.push(client_end);
+        }
+        Ok(())
+    }
+
+    /// add_pkg_directory will add a handle to the component's package under /pkg in the namespace.
+    fn add_pkg_directory(
+        ns: &mut fsys::ComponentNamespace,
+        package_dir: &DirectoryProxy,
+    ) -> Result<(), ModelError> {
+        let clone_dir_proxy = io_util::clone_directory(package_dir)
+            .map_err(|e| ModelError::namespace_creation_failed(e))?;
+        let cloned_dir = ClientEnd::new(
+            clone_dir_proxy
+                .into_channel()
+                .expect("could not convert directory to channel")
+                .into_zx_channel(),
+        );
+        ns.paths.push(PKG_PATH.to_str().unwrap().to_string());
+        ns.directories.push(cloned_dir);
+        Ok(())
+    }
+
+    /// make_namespace will convert self.decl.uses into an inflated fsys::ComponentNamespace,
+    /// serving and installing handles to pseudo directories.
+    async fn make_namespace<'a>(&'a mut self) -> Result<fsys::ComponentNamespace, ModelError> {
         let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
 
         // Populate the namespace from uses, using the component manager's namespace.
-        if let Some(uses) = uses {
+        if let Some(uses) = &self.decl.uses {
+            // mediated_dirs will hold (path,directory) pairs. Each pair holds a path in the
+            // component's namespace and a directory that ComponentMgr will host for the component.
+            let mut mediated_dirs = HashMap::new();
+
             for use_ in uses {
                 match use_.type_ {
                     Some(fsys::CapabilityType::Directory) => {
-                        let source_path = &use_.source_path.as_ref().unwrap();
-                        let dir_proxy = io_util::open_directory_in_namespace(&source_path)
-                            .map_err(|e| ModelError::namespace_creation_failed(e))?;
-                        let dir =
-                            ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel());
-                        ns.paths.push(use_.target_path.as_ref().unwrap().to_string());
-                        ns.directories.push(dir);
+                        Execution::add_directory_use(&mut ns, &use_)?;
                     }
                     Some(fsys::CapabilityType::Service) => {
-                        // TODO(CF-583): support services
+                        Execution::add_service_use(&mut mediated_dirs, &use_)?;
                     }
-                    None => {
-                        return Err(ModelError::namespace_parsing_failed(
-                            "UseDecl missing CapabilityType".to_string(),
-                        ));
-                    }
+                    None => panic!("a use block is missing the capability type"),
                 }
             }
+
+            // Start hosting the services directories and add them to the namespace
+            self.serve_and_install_mediated_dirs(&mut ns, mediated_dirs)?;
         }
 
         // Populate the /pkg namespace.
         if let Some(package_dir) = self.package_dir.as_ref() {
-            let clone_dir_proxy = io_util::clone_directory(package_dir)
-                .map_err(|e| ModelError::namespace_creation_failed(e))?;
-            let cloned_dir = ClientEnd::new(
-                clone_dir_proxy
-                    .into_channel()
-                    .expect("could not convert directory to channel")
-                    .into_zx_channel(),
-            );
-            ns.paths.push(PKG_PATH.to_str().unwrap().to_string());
-            ns.directories.push(cloned_dir);
+            Execution::add_pkg_directory(&mut ns, package_dir)?;
         }
         Ok(ns)
     }
@@ -251,17 +374,17 @@ impl Model {
                         default_runner.clone(),
                     )?);
                 }
-                // TODO(CF-647): Serve in the Instance' PseudoDir instead.
+                // TODO(CF-647): Serve in the Instance's PseudoDir instead.
                 let (outgoing_dir_client, outgoing_dir_server) =
                     zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-                let execution = Execution::start_from(
+                let mut execution = Execution::start_from(
                     component,
                     DirectoryProxy::from_channel(
                         fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
                     ),
                 )?;
 
-                let ns = await!(execution.make_namespace(&execution.decl.uses))?;
+                let ns = await!(execution.make_namespace())?;
 
                 let start_info = fsys::ComponentStartInfo {
                     resolved_uri: Some(execution.resolved_uri.clone()),
@@ -331,8 +454,6 @@ pub enum ModelError {
         #[fail(cause)]
         err: Error,
     },
-    #[fail(display = "namespace parsing failed: {}", s)]
-    NamespaceParsingFailed { s: String },
     #[fail(display = "resolver error")]
     ResolverError {
         #[fail(cause)]
@@ -353,10 +474,6 @@ impl ModelError {
     fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {
         ModelError::NamespaceCreationFailed { err: err.into() }
     }
-
-    fn namespace_parsing_failed(s: String) -> ModelError {
-        ModelError::NamespaceParsingFailed { s: s }
-    }
 }
 
 impl From<ResolverError> for ModelError {
@@ -374,13 +491,14 @@ impl From<RunnerError> for ModelError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fidl_examples_echo as echo;
     use fidl_fuchsia_io::DirectoryMarker;
+    use fidl_fuchsia_io::MODE_TYPE_SERVICE;
     use fidl_fuchsia_sys2::{CapabilityType, ComponentNamespace, UseDecl};
     use futures::future::FutureObj;
     use lazy_static::lazy_static;
     use regex::Regex;
     use std::collections::HashSet;
-    use std::path::PathBuf;
 
     struct ChildInfo {
         name: String,
@@ -836,7 +954,8 @@ mod tests {
         );
         let uses = Arc::new(Mutex::new(HashMap::new()));
 
-        // The system component will request namespaces of "/pkg" to its "/root_pkg" and "/foo/bar"
+        // The system component will request namespaces of "/pkg" to its "/root_pkg" and
+        // "/foo/bar", and it will also request the "/svc/fidl.examples.echo.Echo" service
         await!(uses.lock()).insert(
             "system".to_string(),
             Some(vec![
@@ -849,6 +968,11 @@ mod tests {
                     type_: Some(CapabilityType::Directory),
                     source_path: Some("/pkg".to_string()),
                     target_path: Some("/foo/bar".to_string()),
+                },
+                UseDecl {
+                    type_: Some(CapabilityType::Service),
+                    source_path: Some("/svc/fidl.examples.echo.Echo".to_string()),
+                    target_path: Some("/svc/fidl.examples.echo.Echo".to_string()),
                 },
             ]),
         );
@@ -871,16 +995,32 @@ mod tests {
         assert!(actual_namespaces.contains_key("test:///system_resolved"));
         let ns = actual_namespaces.get_mut("test:///system_resolved").unwrap();
         // "/pkg" is missing because we don't supply package in MockResolver.
-        assert_eq!(ns.paths, ["/root_pkg", "/foo/bar"]);
-        assert_eq!(ns.directories.len(), 2);
+        assert_eq!(ns.paths, ["/root_pkg", "/foo/bar", "/svc"]);
+        assert_eq!(ns.directories.len(), 3);
+
         // /root_pkg and /foo/bar are both pointed to the test component's /pkg.
-        // Verify that we can read the dummy component manifest
-        for _i in 0..ns.directories.len() {
-            let dir = ns.directories.pop().unwrap();
-            let dir_proxy = dir.into_proxy().unwrap();
-            let path = PathBuf::from("meta/component_manager_tests_hello_world.cm");
-            let file_proxy = io_util::open_file(&dir_proxy, &path).expect("could not open cm");
-            await!(io_util::read_file(&file_proxy)).expect("could not read cm");
+        // Verify that we can read the dummy component manifest and that the echo service is usable
+        while let Some(dir) = ns.directories.pop() {
+            match ns.paths.pop().as_ref().map(|s| s.as_str()) {
+                Some("/root_pkg") | Some("/foo/bar") => {
+                    let dir_proxy = dir.into_proxy().unwrap();
+                    let path = PathBuf::from("meta/component_manager_tests_hello_world.cm");
+                    let file_proxy =
+                        io_util::open_file(&dir_proxy, &path).expect("could not open cm");
+                    await!(io_util::read_file(&file_proxy)).expect("could not read cm");
+                }
+                Some("/svc") => {
+                    let dir_proxy = dir.into_proxy().unwrap();
+                    let path = PathBuf::from("fidl.examples.echo.Echo");
+                    let node_proxy = io_util::open_node(&dir_proxy, &path, MODE_TYPE_SERVICE)
+                        .expect("failed to open echo service");
+                    let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+                    let res = await!(echo_proxy.echo_string(Some("hippos")))
+                        .expect("failed to use echo service");
+                    assert_eq!(res, Some("hippos".to_string()));
+                }
+                Some(_) | None => panic!("unknown directory in namespace"),
+            }
         }
     }
     fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {

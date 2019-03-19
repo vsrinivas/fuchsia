@@ -9,6 +9,7 @@
 #![allow(dead_code)]
 
 mod data;
+mod directory_broker;
 mod elf_runner;
 mod fuchsia_boot_resolver;
 mod fuchsia_pkg_resolver;
@@ -87,7 +88,7 @@ async fn run_root(model: Arc<Model>) {
             await!(future::empty::<()>())
         }
         Err(error) => {
-            fx_log_err!("Failed to bind to root component, exiting.  Error: {}", error);
+            fx_log_err!("Failed to bind to root component: {:?}", error);
             process::exit(1)
         }
     }
