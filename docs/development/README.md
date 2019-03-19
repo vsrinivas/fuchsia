@@ -72,7 +72,6 @@ This section covers Fuchsia-wide conventions and best practices.
 ## Miscellaneous
 
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
- - [Persistent disks in QEMU](workflows/qemu_persistent_disk.md)
  - [Tracing tutorial](tracing/tracing-tutorial.md)
 
 
