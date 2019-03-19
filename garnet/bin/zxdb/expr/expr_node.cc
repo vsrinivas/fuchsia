@@ -367,6 +367,20 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent + 1) << member_.GetFullName() << "\n";
 }
 
+void TypeExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+                        EvalCallback cb) const {
+  // Doesn't make sense to evaluate a type, callers like casts that expect a
+  // type name will look into the node themselves.
+  cb(Err("Can not evaluate a type name."), ExprValue());
+}
+
+void TypeExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "TYPE(";
+  if (type_)
+    out << type_->GetFullName();
+  out << ")\n";
+}
+
 void UnaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
   expr_->EvalFollowReferences(

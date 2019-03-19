@@ -16,16 +16,20 @@
 
 namespace zxdb {
 
+class Err;
+class ExprEvalContext;
+class Type;
+
+// Node subclasses.
 class AddressOfExprNode;
 class ArrayAccessExprNode;
 class BinaryOpExprNode;
 class DereferenceExprNode;
-class Err;
-class ExprEvalContext;
 class FunctionCallExprNode;
 class IdentifierExprNode;
 class LiteralExprNode;
 class MemberAccessExprNode;
+class TypeExprNode;
 class UnaryOpExprNode;
 
 // Represents one node in the abstract syntax tree.
@@ -44,6 +48,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const LiteralExprNode* AsLiteral() const { return nullptr; }
   virtual const MemberAccessExprNode* AsMemberAccess() const { return nullptr; }
+  virtual const TypeExprNode* AsType() const { return nullptr; }
   virtual const UnaryOpExprNode* AsUnaryOp() const { return nullptr; }
 
   // Evaluates the expression and calls the callback with the result. The
@@ -291,6 +296,28 @@ class MemberAccessExprNode : public ExprNode {
   fxl::RefPtr<ExprNode> left_;
   ExprToken accessor_;
   Identifier member_;
+};
+
+// Implements references to type names. This mostly appears in casts.
+class TypeExprNode : public ExprNode {
+ public:
+  const TypeExprNode* AsType() const override { return this; }
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+  fxl::RefPtr<Type>& type() { return type_; }
+  const fxl::RefPtr<Type>& type() const { return type_; }
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(TypeExprNode);
+  FRIEND_MAKE_REF_COUNTED(TypeExprNode);
+
+  TypeExprNode();
+  TypeExprNode(fxl::RefPtr<Type> type) : type_(std::move(type)) {}
+  ~TypeExprNode() override = default;
+
+  fxl::RefPtr<Type> type_;
 };
 
 // Implements unary mathematical operators (the operation depends on the
