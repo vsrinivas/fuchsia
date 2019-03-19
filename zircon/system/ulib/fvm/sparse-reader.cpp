@@ -4,9 +4,56 @@
 
 #include "fvm/sparse-reader.h"
 
+#include <cinttypes>
 #include <utility>
 
 namespace fvm {
+
+using Buffer = internal::Buffer;
+
+Buffer::Buffer() = default;
+Buffer::Buffer(uint64_t offset, size_t size, uint64_t capacity)
+    : capacity_(capacity) {
+    info_.size = size;
+    info_.offset = offset;
+    data_.reset(new uint8_t[capacity]);
+}
+Buffer::Buffer(Buffer&&) = default;
+Buffer& Buffer::operator=(Buffer&&) = default;
+Buffer::~Buffer() = default;
+
+bool Buffer::IsEmpty() const {
+    return info_.offset == 0 && info_.size == 0;
+}
+
+void Buffer::Write(uint8_t* data, size_t length) {
+    ZX_ASSERT(length <= capacity_);
+    // We should have read all previous data from buffer before writing more.
+    ZX_ASSERT(IsEmpty());
+
+    if (length > 0) {
+        memcpy(data_.get(), data, length);
+        info_.size = length;
+    }
+}
+
+void Buffer::Read(uint8_t* target, size_t length, size_t* actual) {
+    size_t cp_sz = fbl::min(length, info_.size);
+
+    if (cp_sz > 0) {
+        memcpy(target, data_.get() + info_.offset, cp_sz);
+        info_.offset += cp_sz;
+    }
+
+    info_.size -= cp_sz;
+
+    if (info_.size == 0) {
+        info_.offset = 0;
+    }
+
+    *actual = cp_sz;
+}
+
 zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
     return SparseReader::CreateHelper(std::move(fd), true /* verbose */, out);
 }
@@ -16,11 +63,7 @@ zx_status_t SparseReader::CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<Sparse
 
 zx_status_t SparseReader::CreateHelper(fbl::unique_fd fd, bool verbose,
                                        fbl::unique_ptr<SparseReader>* out) {
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<SparseReader> reader(new (&ac) SparseReader(std::move(fd), verbose));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::unique_ptr<SparseReader> reader(new SparseReader(std::move(fd), verbose));
 
     zx_status_t status;
     if ((status = reader->ReadMetadata()) != ZX_OK) {
@@ -31,8 +74,8 @@ zx_status_t SparseReader::CreateHelper(fbl::unique_fd fd, bool verbose,
     return ZX_OK;
 }
 
-SparseReader::SparseReader(fbl::unique_fd fd, bool verbose) : compressed_(false), verbose_(verbose),
-                                                              fd_(std::move(fd)) {}
+SparseReader::SparseReader(fbl::unique_fd fd, bool verbose)
+    : compressed_(false), verbose_(verbose), fd_(std::move(fd)) {}
 
 zx_status_t SparseReader::ReadMetadata() {
     // Read sparse image header.
@@ -51,12 +94,7 @@ zx_status_t SparseReader::ReadMetadata() {
         return ZX_ERR_BAD_STATE;
     }
 
-    fbl::AllocChecker ac;
-    metadata_.reset(new (&ac) uint8_t[image.header_length]);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    metadata_.reset(new uint8_t[image.header_length]);
     memcpy(metadata_.get(), &image, sizeof(image));
 
     // Read remainder of metadata.
@@ -87,10 +125,7 @@ zx_status_t SparseReader::ReadMetadata() {
 
         size_t src_sz = 4;
         size_t dst_sz = 0;
-        fbl::unique_ptr<uint8_t[]> inbufptr(new (&ac) uint8_t[src_sz]);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        fbl::unique_ptr<uint8_t[]> inbufptr(new uint8_t[src_sz]);
 
         uint8_t* inbuf = inbufptr.get();
 
@@ -116,9 +151,9 @@ zx_status_t SparseReader::ReadMetadata() {
 
         // Initialize data buffers
         zx_status_t status;
-        if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &out_buf_)) != ZX_OK) {
+        if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &out_)) != ZX_OK) {
             return status;
-        } else if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &in_buf_)) != ZX_OK) {
+        } else if ((status = InitializeBuffer(LZ4_MAX_BLOCK_SIZE, &in_)) != ZX_OK) {
             return status;
         }
     }
@@ -126,22 +161,12 @@ zx_status_t SparseReader::ReadMetadata() {
     return ZX_OK;
 }
 
-zx_status_t SparseReader::InitializeBuffer(size_t size, buffer_t* out_buf) {
+zx_status_t SparseReader::InitializeBuffer(size_t size, Buffer* out_buffer) {
     if (size < LZ4_MAX_BLOCK_SIZE) {
         fprintf(stderr, "Buffer size must be >= %d\n", LZ4_MAX_BLOCK_SIZE);
         return ZX_ERR_INVALID_ARGS;
     }
-
-    out_buf->max_size = size;
-    out_buf->size = 0;
-    out_buf->offset = 0;
-    fbl::AllocChecker ac;
-    out_buf->data.reset(new (&ac) uint8_t[size]);
-
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    *out_buffer = Buffer(0, 0, size);
     return ZX_OK;
 }
 
@@ -159,8 +184,7 @@ fvm::sparse_image_t* SparseReader::Image() {
 
 fvm::partition_descriptor_t* SparseReader::Partitions() {
     return reinterpret_cast<fvm::partition_descriptor_t*>(
-                reinterpret_cast<uintptr_t>(metadata_.get()) +
-                sizeof(fvm::sparse_image_t));
+        reinterpret_cast<uintptr_t>(metadata_.get()) + sizeof(fvm::sparse_image_t));
 }
 
 zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual) {
@@ -169,56 +193,56 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
 #endif
     size_t total_size = 0;
     if (compressed_) {
-        if (out_buf_.is_empty() && to_read_ == 0) {
+        if (out_.IsEmpty() && to_read_ == 0) {
             // There is no more to read
             return ZX_ERR_OUT_OF_RANGE;
         }
 
         // Read previously decompressed data from buffer if possible
-        out_buf_.read(data, length, &total_size);
+        out_.Read(data, length, &total_size);
 
         // If we still have data to read, start decompression (reading more from fd as needed)
         while (total_size < length && to_read_ > 0) {
             // Make sure data to read does not exceed max, and both buffers are empty
-            ZX_ASSERT(out_buf_.is_empty());
-            ZX_ASSERT(in_buf_.is_empty());
-            ZX_ASSERT(to_read_ <= in_buf_.max_size);
+            ZX_ASSERT(out_.IsEmpty());
+            ZX_ASSERT(in_.IsEmpty());
+            ZX_ASSERT(to_read_ <= in_.capacity());
 
             // Read specified amount from fd
             zx_status_t status;
-            if ((status = ReadRaw(in_buf_.data.get(), to_read_, &in_buf_.size)) != ZX_OK) {
+            if ((status = ReadRaw(in_.get(), to_read_, &(in_.info()->size))) != ZX_OK) {
                 return status;
             }
 
-            size_t src_sz = in_buf_.size;
+            size_t src_sz = in_.size();
             size_t next = 0;
 
             // Decompress all compressed data
-            while (in_buf_.offset < to_read_) {
-                size_t dst_sz = out_buf_.max_size - out_buf_.size;
-                next = LZ4F_decompress(dctx_, out_buf_.data.get() + out_buf_.size, &dst_sz,
-                                       in_buf_.data.get() + in_buf_.offset, &src_sz, NULL);
+            while (in_.offset() < to_read_) {
+                size_t dst_sz = out_.capacity() - out_.size();
+                next = LZ4F_decompress(dctx_, out_.get() + out_.size(), &dst_sz,
+                                       in_.get() + in_.offset(), &src_sz, NULL);
                 if (LZ4F_isError(next)) {
                     fprintf(stderr, "could not decompress input: %s\n", LZ4F_getErrorName(next));
                     return -1;
                 }
 
-                out_buf_.size += dst_sz;
-                in_buf_.offset += src_sz;
-                in_buf_.size -= src_sz;
-                src_sz = to_read_ - in_buf_.offset;
+                out_.info()->size += dst_sz;
+                in_.info()->offset += src_sz;
+                in_.info()->size -= src_sz;
+                src_sz = to_read_ - in_.offset();
             }
 
             // Make sure we have read all data from in_buf_
-            if (in_buf_.size > 0) {
+            if (in_.size() > 0) {
                 return ZX_ERR_IO;
             }
 
-            in_buf_.offset = 0;
+            in_.info()->offset = 0;
 
             // Copy newly decompressed data from outbuf
-            size_t cp = fbl::min(length - total_size, static_cast<size_t>(out_buf_.size));
-            out_buf_.read(data + total_size, cp, &cp);
+            size_t cp = fbl::min(length - total_size, static_cast<size_t>(out_.size()));
+            out_.Read(data + total_size, cp, &cp);
             total_size += cp;
             to_read_ = next;
 
@@ -278,8 +302,8 @@ zx_status_t SparseReader::WriteDecompressed(fbl::unique_fd outfd) {
     fvm::sparse_image_t* image = Image();
     image->flags &= ~fvm::kSparseFlagLz4;
 
-    if (write(outfd.get(), metadata_.get(), image->header_length)
-        != static_cast<ssize_t>(image->header_length)) {
+    if (write(outfd.get(), metadata_.get(), image->header_length) !=
+        static_cast<ssize_t>(image->header_length)) {
         fprintf(stderr, "BlockReader: could not write header to out file\n");
         return -1;
     }
@@ -307,13 +331,13 @@ zx_status_t SparseReader::WriteDecompressed(fbl::unique_fd outfd) {
 void SparseReader::PrintStats() const {
     if (verbose_) {
         printf("Reading FVM from compressed file: %s\n", compressed_ ? "true" : "false");
-        printf("Remaining bytes read into compression buffer:    %lu\n", in_buf_.size);
-        printf("Remaining bytes written to decompression buffer: %lu\n", out_buf_.size);
+        printf("Remaining bytes read into compression buffer:    \%" PRIuMAX "\n", in_.size());
+        printf("Remaining bytes written to decompression buffer:\%" PRIuMAX "\n", out_.size());
 #ifdef __Fuchsia__
         printf("Time reading bytes from sparse FVM file:   %lu (%lu s)\n", read_time_,
-            read_time_ / zx_ticks_per_second());
+               read_time_ / zx_ticks_per_second());
         printf("Time reading bytes AND decompressing them: %lu (%lu s)\n", total_time_,
-            total_time_ / zx_ticks_per_second());
+               total_time_ / zx_ticks_per_second());
 #endif
     }
 }
