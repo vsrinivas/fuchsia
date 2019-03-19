@@ -88,11 +88,23 @@ bool ValidForBase(IntegerPrefix::Base base, char c) {
 
 Err StringToNumber(std::string_view str, ExprValue* output) {
   IntegerPrefix prefix = ExtractIntegerPrefix(&str);
+  if (prefix.base == IntegerPrefix::kOct &&
+      prefix.octal_type == IntegerPrefix::OctalType::kC) {
+    // Require "0o" prefixes for octal numbers instead of allowing C-style
+    // "0" prefixes. Octal numbers are very unusual to be typed interactively
+    // in a debugger, and it's easier to accidentally copy-and-paste a decimal
+    // number with a "0" at the beginning and get surprising results. The
+    // "0o" format is used by Rust so we require it for clarity.
+    return Err("Octal numbers must be prefixed with '0o'.");
+  }
 
   IntegerSuffix suffix;
   Err err = ExtractIntegerSuffix(&str, &suffix);
   if (err.has_error())
     return err;
+
+  if (str.empty())
+    return Err("Expected a number.");
 
   // Validate the characters in the number. This prevents strtoull from
   // being too smart and trying to handle prefixes itself.
@@ -192,11 +204,17 @@ IntegerPrefix ExtractIntegerPrefix(std::string_view* s) {
       // Binary.
       *s = s->substr(2u);
       prefix.base = IntegerPrefix::kBin;
+    } else if (second == 'o' || second == 'O') {
+      // Rust-style octal "0o".
+      *s = s->substr(2u);
+      prefix.base = IntegerPrefix::kOct;
+      prefix.octal_type = IntegerPrefix::OctalType::kRust;
     } else {
-      // Everything else beginning with a '0' is octal. Note this requires >= 2
-      // digits so that "0" by itself is decimal.
+      // Everything else beginning with a '0' is C-style octal. Note this
+      // requires >= 2 digits so that "0" by itself is decimal.
       *s = s->substr(1u);
       prefix.base = IntegerPrefix::kOct;
+      prefix.octal_type = IntegerPrefix::OctalType::kC;
     }
   }
   // Else case is decimal, doesn't need trimming, default is already correct.

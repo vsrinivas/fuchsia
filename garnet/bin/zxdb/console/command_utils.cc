@@ -20,7 +20,10 @@
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
+#include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
+#include "garnet/bin/zxdb/expr/number_parser.h"
+#include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
@@ -79,36 +82,53 @@ size_t CheckHexPrefix(const std::string& s) {
 }
 
 Err StringToInt(const std::string& s, int* out) {
-  if (s.empty())
-    return Err(ErrType::kInput, "The empty string is not a number.");
+  int64_t value64;
+  Err err = StringToInt64(s, &value64);
+  if (err.has_error())
+    return err;
 
-  std::string trimmed = fxl::TrimString(s, " ").ToString();
+  // Range check it can be stored in an int.
+  if (value64 < static_cast<int64_t>(std::numeric_limits<int>::min()) ||
+      value64 > static_cast<int64_t>(std::numeric_limits<int>::max()))
+    return Err("This value is too large for an integer.");
 
-  // Re-uses StringToUint64's error handling and just adds support for '-' at
-  // the beginning and size-checks the output.
-  uint64_t absolute_val;
-  if (trimmed[0] == '-') {
-    Err err = StringToUint64(trimmed.substr(1), &absolute_val);
-    if (err.has_error())
-      return err;
-    if (absolute_val >
-        -static_cast<int64_t>(std::numeric_limits<int>::lowest()))
-      return Err("This value is too small for an integer.");
-    *out = -static_cast<int>(absolute_val);
-  } else {
-    Err err = StringToUint64(trimmed, &absolute_val);
-    if (err.has_error())
-      return err;
-    if (absolute_val > std::numeric_limits<int>::max())
-      return Err("This value is too large for an integer.");
-    *out = static_cast<int>(absolute_val);
-  }
-
+  *out = static_cast<int>(value64);
   return Err();
 }
 
+Err StringToInt64(const std::string& s, int64_t* out) {
+  *out = 0;
+
+  // StringToNumber expects pre-trimmed input.
+  std::string trimmed = fxl::TrimString(s, " ").ToString();
+
+  ExprValue number_value;
+  Err err = StringToNumber(trimmed, &number_value);
+  if (err.has_error())
+    return err;
+
+  // Be careful to read the number out in its original sign-edness.
+  if (number_value.GetBaseType() == BaseType::kBaseTypeUnsigned) {
+    uint64_t u64;
+    err = number_value.PromoteTo64(&u64);
+    if (err.has_error())
+      return err;
+
+    // Range-check that the unsigned value can be put in a signed.
+    if (u64 > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
+      return Err("This value is too large.");
+    *out = static_cast<int64_t>(u64);
+    return Err();
+  }
+
+  // Expect everything else to be a signed number.
+  if (number_value.GetBaseType() != BaseType::kBaseTypeSigned)
+    return Err("This value is not the correct type.");
+  return number_value.PromoteTo64(out);
+}
+
 Err StringToUint32(const std::string& s, uint32_t* out) {
-  // Re-uses StringToUint64's error handling and just size-checks the output.
+  // Re-uses StringToUint64's and just size-checks the output.
   uint64_t value64;
   Err err = StringToUint64(s, &value64);
   if (err.has_error())
@@ -123,30 +143,34 @@ Err StringToUint32(const std::string& s, uint32_t* out) {
 }
 
 Err StringToUint64(const std::string& s, uint64_t* out) {
+  *out = 0;
+
+  // StringToNumber expects pre-trimmed input.
   std::string trimmed = fxl::TrimString(s, " ").ToString();
 
-  *out = 0;
-  if (trimmed.empty())
-    return Err(ErrType::kInput, "The empty string is not a number.");
+  ExprValue number_value;
+  Err err = StringToNumber(trimmed, &number_value);
+  if (err.has_error())
+    return err;
 
-  if (size_t hex_after_prefix = CheckHexPrefix(trimmed)) {
-    if (hex_after_prefix == trimmed.size())
-      return Err(ErrType::kInput, "Expecting number after \"0x\".");
-    for (size_t i = hex_after_prefix; i < trimmed.size(); i++) {
-      if (!isxdigit(trimmed[i]))
-        return Err(ErrType::kInput,
-                   "Invalid hex number: + \"" + trimmed + "\".");
-    }
-    *out = strtoull(trimmed.c_str(), nullptr, 16);
-  } else {
-    for (size_t i = 0; i < trimmed.size(); i++) {
-      if (!isdigit(trimmed[i]))
-        return Err(ErrType::kInput, "Invalid number: \"" + trimmed + "\".");
-    }
-    *out = strtoull(trimmed.c_str(), nullptr, 10);
+  // Be careful to read the number out in its original sign-edness.
+  if (number_value.GetBaseType() == BaseType::kBaseTypeSigned) {
+    int64_t s64;
+    err = number_value.PromoteTo64(&s64);
+    if (err.has_error())
+      return err;
+
+    // Range-check that the signed value can be put in an unsigned.
+    if (s64 < 0)
+      return Err("This value can not be negative.");
+    *out = static_cast<uint64_t>(s64);
+    return Err();
   }
 
-  return Err();
+  // Expect everything else to be an unsigned number.
+  if (number_value.GetBaseType() != BaseType::kBaseTypeUnsigned)
+    return Err("This value is not the correct type.");
+  return number_value.PromoteTo64(out);
 }
 
 Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc,

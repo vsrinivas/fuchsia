@@ -245,6 +245,9 @@ class LiteralExprNode : public ExprNode {
             EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
+  // The token's value won't have been checked that it's valid, only
+  // that it starts like the type of literal it is. This checking will be done
+  // at evaluation time.
   const ExprToken& token() const { return token_; }
 
  private:

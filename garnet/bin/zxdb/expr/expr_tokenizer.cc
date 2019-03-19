@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/expr/expr_tokenizer.h"
 
+#include <ctype.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -19,14 +21,12 @@ bool IsNameContinuingChar(char c) {
   return IsNameFirstChar(c) || (c >= '0' && c <= '9');
 }
 
-bool IsIntegerFirstChar(char c) { return c >= '0' && c <= '9'; }
+bool IsIntegerFirstChar(char c) { return isdigit(c); }
 
-bool IsIntegerContinuingChar(char c) {
-  // The 'a'-'f' and 'x' allows hexadecimal numbers. The number will be
-  // validated and interpreted later.
-  return IsIntegerFirstChar(c) || c == 'x' || (c >= 'A' && c <= 'F') ||
-         (c >= 'a' && c <= 'f');
-}
+// This allows all alphanumeric characters for simplicity. Integer literals
+// aren't validated at the tokenizer level and will be checked later. Our job
+// is to find the extent of the literal.
+bool IsIntegerContinuingChar(char c) { return isalnum(c); }
 
 }  // namespace
 
@@ -181,7 +181,7 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
   char cur = cur_char();
 
   // Numbers.
-  if (cur >= '0' && cur <= '9')
+  if (IsIntegerFirstChar(cur))
     return ExprToken::kInteger;
 
   // Words.

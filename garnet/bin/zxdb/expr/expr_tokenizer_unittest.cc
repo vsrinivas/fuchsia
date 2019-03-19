@@ -96,15 +96,19 @@ TEST(ExprTokenizer, Punctuation) {
   EXPECT_EQ(28u, tokens[13].byte_offset());
 }
 
-TEST(ExprTokenizer, ValidIntegers) {
-  // Char offsets: 012345678901
-  // Token #'s:    0    12 34 5
-  ExprTokenizer t("1234 -56-1 0x5a4bcdef");
+TEST(ExprTokenizer, Integers) {
+  // Note that the tokenizer doesn't validate numbers, so "7hello" is extracted
+  // as a number token. The complex rules for number validation and conversion
+  // will be done at a higher layer.
+
+  // Char offsets: 01234567890123456789012345678901
+  // Token #'s:    0    12 34 5          6        7
+  ExprTokenizer t("1234 -56-1 0x5a4bcdef 0o123llu 7hello ");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
   const auto& tokens = t.tokens();
-  ASSERT_EQ(6u, tokens.size());
+  ASSERT_EQ(8u, tokens.size());
 
   EXPECT_EQ(ExprToken::kInteger, tokens[0].type());
   EXPECT_EQ("1234", tokens[0].value());
@@ -129,6 +133,14 @@ TEST(ExprTokenizer, ValidIntegers) {
   EXPECT_EQ(ExprToken::kInteger, tokens[5].type());
   EXPECT_EQ("0x5a4bcdef", tokens[5].value());
   EXPECT_EQ(11u, tokens[5].byte_offset());
+
+  EXPECT_EQ(ExprToken::kInteger, tokens[6].type());
+  EXPECT_EQ("0o123llu", tokens[6].value());
+  EXPECT_EQ(22u, tokens[6].byte_offset());
+
+  EXPECT_EQ(ExprToken::kInteger, tokens[7].type());
+  EXPECT_EQ("7hello", tokens[7].value());
+  EXPECT_EQ(31u, tokens[7].byte_offset());
 }
 
 TEST(ExprTokenizer, OtherLiterals) {

@@ -258,6 +258,17 @@ TEST_F(ExprParserTest, Parens) {
       GetParseString("(&(*(&foo)->bar)[1])"));
 }
 
+// This test covers that the extent of number tokens are identified properly.
+// Actually converting the strings to integers should be covered by the number
+// parser tests.
+TEST_F(ExprParserTest, IntegerLiterals) {
+  EXPECT_EQ("LITERAL(5)\n", GetParseString("5"));
+  EXPECT_EQ("LITERAL(5ull)\n", GetParseString(" 5ull"));
+  EXPECT_EQ("LITERAL(0xAbC)\n", GetParseString("0xAbC"));
+  EXPECT_EQ("LITERAL(0o551)\n", GetParseString("  0o551 "));
+  EXPECT_EQ("LITERAL(0123)\n", GetParseString("0123"));
+}
+
 TEST_F(ExprParserTest, UnaryMath) {
   EXPECT_EQ(
       "UNARY(-)\n"

@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/expr/eval_operators.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
+#include "garnet/bin/zxdb/expr/number_parser.h"
 #include "garnet/bin/zxdb/expr/resolve_array.h"
 #include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
@@ -312,16 +313,20 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
 void LiteralExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
   switch (token_.type()) {
-    case ExprToken::kInteger:
-      // The tokenizer will have already validated the integer format.
-      cb(Err(), ExprValue(static_cast<int64_t>(atoll(token_.value().c_str()))));
+    case ExprToken::kInteger: {
+      ExprValue value;
+      Err err = StringToNumber(token_.value(), &value);
+      cb(err, std::move(value));
       break;
-    case ExprToken::kTrue:
+    }
+    case ExprToken::kTrue: {
       cb(Err(), ExprValue(true));
       break;
-    case ExprToken::kFalse:
+    }
+    case ExprToken::kFalse: {
       cb(Err(), ExprValue(false));
       break;
+    }
     default:
       FXL_NOTREACHED();
   }

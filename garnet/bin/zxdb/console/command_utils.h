@@ -52,6 +52,7 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
 size_t CheckHexPrefix(const std::string& s);
 
 [[nodiscard]] Err StringToInt(const std::string& s, int* out);
+[[nodiscard]] Err StringToInt64(const std::string& s, int64_t* out);
 [[nodiscard]] Err StringToUint32(const std::string& s, uint32_t* out);
 [[nodiscard]] Err StringToUint64(const std::string& s, uint64_t* out);
 

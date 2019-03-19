@@ -23,10 +23,9 @@
 namespace zxdb {
 
 TEST(CommandUtils, StringToInt) {
-  // Leading 0's not octal.
+  // Leading 0's not allowed.
   int result = 0;
-  EXPECT_FALSE(StringToInt("010", &result).has_error());
-  EXPECT_EQ(10, result);
+  EXPECT_TRUE(StringToInt("010", &result).has_error());
 
   // Negative hexadecimal.
   EXPECT_FALSE(StringToInt("-0x1a", &result).has_error());
@@ -57,7 +56,9 @@ TEST(CommandUtils, StringToInt) {
 
 TEST(CommandUtils, StringToUint32) {
   uint32_t result = 0;
-  EXPECT_FALSE(StringToUint32("032", &result).has_error());
+  EXPECT_TRUE(StringToUint32("032", &result).has_error());
+
+  EXPECT_FALSE(StringToUint32("32", &result).has_error());
   EXPECT_EQ(32u, result);
 
   // Test at and just beyond the limits.
@@ -90,9 +91,8 @@ TEST(CommandUtils, StringToUint64) {
   EXPECT_FALSE(StringToUint64("   1234   ", &result).has_error());
   EXPECT_EQ(1234u, result);
 
-  // Leading 0's should still be decimal, don't trigger octal.
-  EXPECT_FALSE(StringToUint64("01234", &result).has_error());
-  EXPECT_EQ(1234u, result);
+  // Leading 0's should trigger an error about dangerous octal usage.
+  EXPECT_TRUE(StringToUint64("01234", &result).has_error());
 
   // Hex digits invalid without proper prefix.
   EXPECT_TRUE(StringToUint64("12a34", &result).has_error());

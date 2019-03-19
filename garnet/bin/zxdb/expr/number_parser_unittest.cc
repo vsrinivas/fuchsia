@@ -18,19 +18,21 @@ TEST(NumberParser, ExtractIntegerPrefix) {
     const char* num;    // Number without prefix.
     IntegerPrefix::Sign sign;
     IntegerPrefix::Base base;
+    IntegerPrefix::OctalType oct;
   } kCases[] = {
       // clang-format off
-      // input   num      sign                      base
-      {"",       "",      IntegerPrefix::kPositive, IntegerPrefix::kDec},
-      {"-",      "",      IntegerPrefix::kNegative, IntegerPrefix::kDec},
-      {"76",     "76",    IntegerPrefix::kPositive, IntegerPrefix::kDec},
-      {"- 76",   "76",    IntegerPrefix::kNegative, IntegerPrefix::kDec},
-      {"0b101",  "101",   IntegerPrefix::kPositive, IntegerPrefix::kBin},
-      {"-0b101", "101",   IntegerPrefix::kNegative, IntegerPrefix::kBin},
-      {"0xabc",  "abc",   IntegerPrefix::kPositive, IntegerPrefix::kHex},
-      {"0",      "0",     IntegerPrefix::kPositive, IntegerPrefix::kDec},
-      {"-\t0",   "0",     IntegerPrefix::kNegative, IntegerPrefix::kDec},
-      {"hello",  "hello", IntegerPrefix::kPositive, IntegerPrefix::kDec},
+      // input   num      sign                      base                 oct
+      {"",       "",      IntegerPrefix::kPositive, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
+      {"-",      "",      IntegerPrefix::kNegative, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
+      {"76",     "76",    IntegerPrefix::kPositive, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
+      {"- 76",   "76",    IntegerPrefix::kNegative, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
+      {"0b101",  "101",   IntegerPrefix::kPositive, IntegerPrefix::kBin, IntegerPrefix::OctalType::kC},
+      {"-0b101", "101",   IntegerPrefix::kNegative, IntegerPrefix::kBin, IntegerPrefix::OctalType::kC},
+      {"0xabc",  "abc",   IntegerPrefix::kPositive, IntegerPrefix::kHex, IntegerPrefix::OctalType::kC},
+      {"0o123",  "123",   IntegerPrefix::kPositive, IntegerPrefix::kOct, IntegerPrefix::OctalType::kRust},
+      {"0",      "0",     IntegerPrefix::kPositive, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
+      {"-\t0",   "0",     IntegerPrefix::kNegative, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
+      {"hello",  "hello", IntegerPrefix::kPositive, IntegerPrefix::kDec, IntegerPrefix::OctalType::kC},
       // clang-format on
   };
 
@@ -38,9 +40,11 @@ TEST(NumberParser, ExtractIntegerPrefix) {
     std::string_view view(cur.input);
     IntegerPrefix prefix = ExtractIntegerPrefix(&view);
 
-    EXPECT_EQ(0, view.compare(cur.num));
-    EXPECT_EQ(cur.sign, prefix.sign);
-    EXPECT_EQ(cur.base, prefix.base);
+    EXPECT_EQ(0, view.compare(cur.num)) << "Input " << cur.input;
+    EXPECT_EQ(cur.sign, prefix.sign) << "Input " << cur.input;
+    EXPECT_EQ(cur.base, prefix.base) << "Input " << cur.input;
+    if (cur.base == IntegerPrefix::kOct)
+      EXPECT_EQ(cur.oct, prefix.octal_type) << "Input " << cur.input;
   }
 }
 
@@ -131,10 +135,12 @@ TEST(NumberParser, StringToNumber) {
       {"-0xffffFFFFffffFFFF", nullptr, uint64_t(-0xffffFFFFffffFFFF),
        "unsigned long long"},
 
-      // Octal input.
-      {"0567", nullptr, int32_t(0567), "int"},
-      {"-0567", nullptr, int32_t(-0567), "int"},
-      {"-0567llu", nullptr, uint64_t(-0567), "unsigned long long"},
+      // Octal input ("0" prefix disallowed).
+      {"0o567", nullptr, int32_t(0567), "int"},
+      {"-0o567", nullptr, int32_t(-0567), "int"},
+      {"-0o0567llu", nullptr, uint64_t(-0567), "unsigned long long"},
+      {"0567", "Octal numbers must be prefixed with '0o'.", int32_t(0567), "int"},
+      {"-0567llu", "Octal numbers must be prefixed with '0o'.", uint64_t(-0567), "unsigned long long"},
 
       // Binary input.
       {"0b0", nullptr, int32_t(0), "int"},
@@ -155,6 +161,7 @@ TEST(NumberParser, StringToNumber) {
       {"-2147483648u", nullptr, uint32_t(-2147483648u), "unsigned"},
 
       // Some error cases.
+      {"", "Expected a number.", 0, nullptr},
       {"0x56g", "Invalid character in number.", 0, nullptr},
       {"0x56 56", "Invalid character in number.", 0, nullptr},
       {"0b5", "Invalid character in number.", 0, nullptr},

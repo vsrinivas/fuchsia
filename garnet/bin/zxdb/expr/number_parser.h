@@ -26,8 +26,17 @@ struct IntegerPrefix {
   enum Sign { kPositive, kNegative };
   enum Base : int { kBin = 2, kOct = 8, kDec = 10, kHex = 16 };
 
+  // Differentiates the two ways an octal prefix can be expressed.
+  enum class OctalType {
+    kC,    // "0123"
+    kRust  // "0o123"
+  };
+
   Sign sign = kPositive;
   Base base = kDec;
+
+  // Valid when base == kOct;
+  OctalType octal_type = OctalType::kC;
 };
 
 // Checks for a sign and base prefix for a number in the given string view. It
