@@ -526,6 +526,7 @@ private:
         kRead,
         kWrite,
         kDelete,
+        kSwap,
     };
 
     struct BlockOpArgs {
@@ -545,8 +546,9 @@ private:
 
     class DirectArgs {
     public:
-        DirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t* bnos)
-            : op_(op), array_(array), count_(count), bnos_(bnos), dirty_(false) {}
+        DirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t rel_bno, blk_t* bnos)
+            : array_(array), bnos_(bnos), count_(count), rel_bno_(rel_bno), op_(op),
+              dirty_(false) {}
 
         BlockOp GetOp() const { return op_; }
         blk_t GetBno(blk_t index) const { return array_[index]; }
@@ -564,21 +566,24 @@ private:
         }
 
         blk_t GetCount() const { return count_; }
+        blk_t GetRelativeBlock() const { return rel_bno_; }
 
         bool IsDirty() const { return dirty_; }
     protected:
-        const BlockOp op_; // determines what operation to perform on blocks
         blk_t* const array_; // array containing blocks to be operated on
-        const blk_t count_; // number of direct blocks to operate on
         blk_t* const bnos_; // array of |count| bnos returned to the user
+        const blk_t count_; // number of direct blocks to operate on
+        const blk_t rel_bno_; // The relative bno of the first direct block we are op'ing.
+        const BlockOp op_; // determines what operation to perform on blocks
         bool dirty_; // true if blocks have successfully been op'd
     };
 
     class IndirectArgs : public DirectArgs {
     public:
-        IndirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
-                     blk_t ib_vmo_offset)
-            : DirectArgs(op, array, count, bnos), bindex_(bindex), ib_vmo_offset_(ib_vmo_offset) {}
+        IndirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t rel_bno,
+                     blk_t* bnos, blk_t bindex, blk_t ib_vmo_offset)
+            : DirectArgs(op, array, count, rel_bno, bnos), bindex_(bindex),
+              ib_vmo_offset_(ib_vmo_offset) {}
 
         void SetDirty() { dirty_ = true; }
 
@@ -601,15 +606,15 @@ private:
 
     protected:
         const blk_t bindex_; // relative index of the first direct block within the first indirect
-                            // block
+                             // block
         const blk_t ib_vmo_offset_; // index of the first indirect block
     };
 
     class DindirectArgs : public IndirectArgs {
     public:
-        DindirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t* bnos, blk_t bindex,
-                      blk_t ib_vmo_offset, blk_t ibindex, blk_t dib_vmo_offset)
-            : IndirectArgs(op, array, count, bnos, bindex, ib_vmo_offset),
+        DindirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t rel_bno, blk_t* bnos,
+                      blk_t bindex, blk_t ib_vmo_offset, blk_t ibindex, blk_t dib_vmo_offset)
+            : IndirectArgs(op, array, count, rel_bno, bnos, bindex, ib_vmo_offset),
               ibindex_(ibindex), dib_vmo_offset_(dib_vmo_offset) {}
 
         // Number of doubly indirect blocks we need to iterate through to touch all |count| direct
@@ -626,7 +631,7 @@ private:
 
     protected:
         const blk_t ibindex_; // relative index of the first indirect block within the first
-                             // doubly indirect block
+                              // doubly indirect block
         const blk_t dib_vmo_offset_; // index of the first doubly indirect block
     };
 
@@ -665,6 +670,12 @@ private:
 
 #ifdef __Fuchsia__
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+
+    // For all direct blocks in the range |start| to |start + count|, reserve specific blocks in
+    // the allocator to be swapped in at the time the old blocks are swapped out. Indirect blocks
+    // are expected to have been allocated previously.
+    zx_status_t BlocksSwap(Transaction* state, blk_t start, blk_t count, blk_t* bno);
+
     void Sync(SyncCallback closure) final;
     zx_status_t AttachRemote(fs::MountChannel h) final;
     zx_status_t InitVmo(Transaction* transaction);
