@@ -13,37 +13,51 @@ group("pci") {
   }
 }
 
-driver("bus-pci") {
-  deps = [
+# The userspace PCI bus driver uses this set, as well as the
+# automated tests.
+source_set("user_pci") {
+  sources = [
+    "allocation.cpp",
+    "bridge.cpp",
+    "bus.cpp",
+    "config.cpp",
+    "device.cpp",
+    "protocol.cpp",
+    "upstream_node.cpp",
+  ]
+  public_deps = [
     "$zx/system/banjo/ddk-protocol-pci",
     "$zx/system/banjo/ddk-protocol-pciroot",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
   ]
+}
+
+driver("bus-pci") {
   if (enable_user_pci) {
     sources = [
-      "allocation.cpp",
-      "bridge.cpp",
-      "bus.cpp",
-      "config.cpp",
-      "device.cpp",
-      "protocol.cpp",
-      "upstream_node.cpp",
+      # The driver needs bind glue
+      "bind.cpp",
     ]
-    deps += [
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/pretty",
-      "$zx/system/ulib/region-alloc",
-      "$zx/system/ulib/zxcpp",
+    deps = [
+      ":user_pci",
     ]
   } else {
     sources = [
       "kpci/kpci.c",
     ]
-    deps += [
+    deps = [
+      "$zx/system/banjo/ddk-protocol-pci",
+      "$zx/system/banjo/ddk-protocol-pciroot",
       "$zx/system/banjo/ddk-protocol-platform-device",
       "$zx/system/banjo/ddk-protocol-sysmem",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/zircon",
     ]
   }
 }
@@ -59,5 +73,16 @@ driver("bus-pci.proxy") {
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
+  ]
+}
+
+test("pci_tests") {
+  sources = [
+    "test/allocation_tests.cpp",
+  ]
+  deps = [
+    ":user_pci",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/unittest",
   ]
 }

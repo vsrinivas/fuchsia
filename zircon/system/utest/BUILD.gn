@@ -21,6 +21,7 @@ if (current_cpu != "") {
       "$zx/system/dev/block/mtk-sdmmc:mtk-sdmmc-test",
       "$zx/system/dev/block/usb-mass-storage:tests",
       "$zx/system/dev/bluetooth/bt-hci-mediatek:bt-hci-mediatek-test",
+      "$zx/system/dev/bus/pci:pci_tests",
       "$zx/system/dev/bus/virtio:virtio-test",
       "$zx/system/dev/gpio/mt-8167:mtk-gpio",
       "$zx/system/dev/gpio/qcom-gpio:qcom-gpio-test",
