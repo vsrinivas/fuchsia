@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  malloc = "jemalloc"
+}
+
 config("headers") {
   visibility = [
     "./*",
@@ -13,7 +17,7 @@ config("headers") {
 group("musl_internal") {
   visibility = [
     "./*",
-    "$zx/third_party/ulib/jemalloc:*",
+    "$zx/third_party/ulib/$malloc:*",
   ]
   public_deps = [
     "$zx/system/ulib/runtime",
@@ -55,7 +59,7 @@ if (toolchain.environment == "user") {
   group("musl") {
     visibility = [ "$zx/system/ulib/c:*" ]
     deps = [
-      "$zx/third_party/ulib/jemalloc",
+      "$zx/third_party/ulib/$malloc",
       "ldso",
       "pthread",
       "sanitizers",

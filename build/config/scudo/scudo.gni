@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # TODO(davemoore): Remove this entire mechanism once standalone scudo is the
+  # default (DNO-442)
   # Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
   # memory allocator.
   use_scudo = true
