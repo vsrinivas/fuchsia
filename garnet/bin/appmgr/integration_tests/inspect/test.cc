@@ -5,18 +5,18 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 
 #include "gmock/gmock.h"
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/component/cpp/expose.h"
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "src/lib/files/glob.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/files/glob.h"
 
 namespace component {
 namespace {
@@ -28,7 +28,8 @@ using ::testing::UnorderedElementsAre;
 using ByteVector = ::component::Property::ByteVector;
 
 const char kTestComponent[] =
-    "fuchsia-pkg://fuchsia.com/inspect_test_app#meta/inspect_test_app.cmx";
+    "fuchsia-pkg://fuchsia.com/inspect_integration_tests#meta/"
+    "inspect_test_app.cmx";
 const char kTestProcessName[] = "inspect_test_app.cmx";
 
 class InspectTest : public component::testing::TestWithEnvironment {

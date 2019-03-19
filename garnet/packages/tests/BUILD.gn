@@ -965,7 +965,7 @@ group("runtime") {
     "//garnet/bin/appmgr:appmgr_unittests",
     "//garnet/bin/appmgr/integration_tests:appmgr_integration_tests",
     "//garnet/bin/appmgr/integration_tests/inspect:inspect_integration_tests",
-    "//garnet/bin/appmgr/integration_tests/inspect:inspect_test_app",
+    "//garnet/bin/appmgr/integration_tests/inspect:inspect_vmo_integration_tests",
     "//garnet/bin/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
     "//garnet/bin/appmgr/integration_tests/mock_runner:fake_component_for_runner",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/build-info:build_info_tests",
