@@ -98,6 +98,13 @@ pub trait CryptoProvider: Debug + Send + Sync {
         &self,
         key_data: &[u8],
     ) -> Result<Box<dyn SealingProviderKey>, CryptoProviderError>;
+
+    /// Calculate the size of the sealed data based on the original data size.
+    ///
+    /// # Arguments:
+    ///
+    /// * 'original_data_size' - The size of the original data.
+    fn calculate_sealed_data_size(&self, original_data_size: u64) -> u64;
 }
 
 impl Clone for Box<dyn CryptoProvider> {
@@ -139,12 +146,12 @@ pub trait SealingProviderKey: ProviderKey {
     /// # Arguments:
     ///
     /// * `data` - The data to be encrypted.
-    fn encrypt(&self, _data: &[u8]) -> Result<Vec<u8>, CryptoProviderError>;
+    fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, CryptoProviderError>;
 
     /// Decrypt data using symmetric key. Return the original data.
     ///
     /// # Arguments:
     ///
     /// * `data` - The data to be decrypted.
-    fn decrypt(&self, _data: &[u8]) -> Result<Vec<u8>, CryptoProviderError>;
+    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, CryptoProviderError>;
 }

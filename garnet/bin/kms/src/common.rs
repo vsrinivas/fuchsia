@@ -7,13 +7,24 @@ use std::str;
 use crate::crypto_provider::CryptoProvider;
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Status};
 use fidl_fuchsia_mem::Buffer;
-#[cfg(test)]
 use fuchsia_zircon as zx;
 use log::error;
 use serde_derive::{Deserialize, Serialize};
 
-pub enum KeyRequestType {
+/// Different type of key request.
+pub enum KeyRequestType<'a> {
+    /// Request on an asymmetric private key.
     AsymmetricPrivateKeyRequest(AsymmetricPrivateKeyRequest),
+    /// Request on a sealing key to seal data.
+    SealingKeyRequest(DataRequest<'a>),
+    /// Request on a sealing key to unseal data.
+    UnsealingKeyRequest(DataRequest<'a>),
+}
+
+/// A structure to contain a data buffer as input and a mutable result reference as output.
+pub struct DataRequest<'a> {
+    pub data: Buffer,
+    pub result: &'a mut Result<Buffer, Status>,
 }
 
 /// The key types.
@@ -40,11 +51,17 @@ pub trait KmsKey: Send {
     fn is_deleted(&self) -> bool;
     /// Delete the key. This would include telling the crypto provider to delete key (If provider
     /// keeps some resource for the key) and set the deleted to true.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key should never be deleted, for example, the sealing key should never be
+    /// deleted.
     fn delete(&mut self) -> Result<(), Status>;
     /// Get the name for the current key.
     fn get_key_name(&self) -> &str;
     /// Handle a request from user. Note that a key should only handle the request for that key
-    /// and this is enforced by key_manager.
+    /// and this is enforced by key_manager. KmsSealingKey is never expected to return a FIDL error
+    /// when handling request, for detail, please see KmsSealingKey documentation.
     ///
     /// # Panics
     ///
@@ -151,7 +168,6 @@ pub fn buffer_to_data(buffer: Buffer) -> Result<Vec<u8>, Status> {
 }
 
 /// Write data into a VMO buffer.
-#[cfg(test)]
 pub fn data_to_buffer(data: &[u8]) -> Result<Buffer, Status> {
     let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::NON_RESIZABLE, data.len() as u64)
         .map_err(debug_err_fn!(Status::InternalError, "Failed to create vmo: {:?}"))?;

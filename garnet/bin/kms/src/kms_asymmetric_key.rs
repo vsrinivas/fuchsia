@@ -28,8 +28,11 @@ impl KmsKey for KmsAsymmetricKey {
     }
 
     fn handle_request(&self, req: KeyRequestType) -> Result<(), fidl::Error> {
-        let KeyRequestType::AsymmetricPrivateKeyRequest(req) = req;
-        self.handle_asym_request(req)?;
+        if let KeyRequestType::AsymmetricPrivateKeyRequest(req) = req {
+            self.handle_asym_request(req)?;
+        } else {
+            panic!("Invalid request!");
+        }
         Ok(())
     }
 

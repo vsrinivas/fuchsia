@@ -120,6 +120,10 @@ impl CryptoProvider for MockProvider {
             })),
         }
     }
+
+    fn calculate_sealed_data_size(&self, original_data_size: u64) -> u64 {
+        original_data_size
+    }
 }
 
 /// A mock crypto provider class for unit tests.

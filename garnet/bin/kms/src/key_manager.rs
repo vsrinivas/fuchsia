@@ -1,17 +1,22 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::common::{KeyAttributes, KeyRequestType, KeyType, KmsKey};
+
+use crate::common::{DataRequest, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::CryptoProvider;
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
+use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
 use base64;
+use fidl::encoding::OutOfLine;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_kms::{
     AsymmetricKeyAlgorithm, AsymmetricPrivateKeyMarker, KeyManagerRequest, KeyOrigin, Status,
+    MAX_DATA_SIZE,
 };
+use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
 use futures::prelude::*;
-use log::error;
+use log::{error, warn};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -45,8 +50,12 @@ struct KeyAttributesJson {
 ///
 /// KeyManager also manages the storage for key data and key attributes.
 pub struct KeyManager {
-    /// A map of key_name -> key_object.
+    /// A map of key_name -> key_object to store all the user keys.
     user_key_map: Arc<Mutex<HashMap<String, Arc<Mutex<dyn KmsKey>>>>>,
+    /// A map of key_name -> key_object to store all the KMS internally managed keys. These keys are
+    /// stored under a different folder than the user keys, thus we need a separate map to manage
+    /// them in memory to be consistent.
+    internal_key_map: Arc<Mutex<HashMap<String, Arc<Mutex<dyn KmsKey>>>>>,
     /// All the available crypto providers.
     crypto_provider_map: RwLock<HashMap<&'static str, Box<dyn CryptoProvider>>>,
     /// The path to the key folder to store key data and attributes.
@@ -57,6 +66,7 @@ impl KeyManager {
     pub fn new() -> Self {
         KeyManager {
             user_key_map: Arc::new(Mutex::new(HashMap::new())),
+            internal_key_map: Arc::new(Mutex::new(HashMap::new())),
             crypto_provider_map: RwLock::new(HashMap::new()),
             key_folder: KEY_FOLDER.to_string(),
         }
@@ -124,11 +134,25 @@ impl KeyManager {
                     Err(status) => responder.send(status),
                 }
             }),
-            KeyManagerRequest::SealData { plain_text: _, responder } => {
-                responder.send(Status::Ok, None)
+            KeyManagerRequest::SealData { plain_text, responder } => {
+                self.with_provider(PROVIDER_NAME, |provider| {
+                    match self.seal_data(plain_text, provider.unwrap()) {
+                        Ok(mut cipher_text) => {
+                            responder.send(Status::Ok, Some(OutOfLine(&mut cipher_text)))
+                        }
+                        Err(status) => responder.send(status, None),
+                    }
+                })
             }
-            KeyManagerRequest::UnsealData { cipher_text: _, responder } => {
-                responder.send(Status::Ok, None)
+            KeyManagerRequest::UnsealData { cipher_text, responder } => {
+                self.with_provider(PROVIDER_NAME, |provider| {
+                    match self.unseal_data(cipher_text, provider.unwrap()) {
+                        Ok(mut plain_text) => {
+                            responder.send(Status::Ok, Some(OutOfLine(&mut plain_text)))
+                        }
+                        Err(status) => responder.send(status, None),
+                    }
+                })
             }
             KeyManagerRequest::DeleteKey { key_name, responder } => {
                 match self.delete_key(&key_name) {
@@ -417,6 +441,108 @@ impl KeyManager {
         Ok(())
     }
 
+    /// Seal a piece of data. Return the sealed data in provider-specific format.
+    ///
+    /// Seal a piece of data using a sealing key. If the key does not exist, create the sealing key
+    /// first.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The buffer containing the data to be sealed.
+    /// * `provider` - The crypto provider to do the encryption operation.
+    fn seal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Status> {
+        if data.size > MAX_DATA_SIZE.into() {
+            return Err(Status::InputTooLarge);
+        }
+        let sealing_key = self.get_sealing_key(provider)?;
+        let mut result = Err(Status::InternalError);
+        // The error, if any, would be return through the result variable, handle_request is
+        // guaranteed to not return any FIDL error.
+        sealing_key
+            .lock()
+            .unwrap()
+            .handle_request(KeyRequestType::SealingKeyRequest(DataRequest {
+                data,
+                result: &mut result,
+            }))
+            .expect("Sealing key should not throw fidl error!");
+        result
+    }
+
+    /// Unseal a piece of data. Return the original data.
+    ///
+    /// Unseal a piece of data originally sealed.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The buffer containing the data to be unsealed.
+    /// * `provider` - The crypto provider to do the decryption operation.
+    fn unseal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Status> {
+        if data.size > provider.calculate_sealed_data_size(MAX_DATA_SIZE.into()) {
+            return Err(Status::InputTooLarge);
+        }
+        if !self.key_file_exists(SEALING_KEY_NAME, false) {
+            // If no sealing key exists, something is wrong.
+            return Err(Status::KeyNotFound);
+        }
+        let sealing_key = self.get_sealing_key(provider)?;
+        let mut result = Err(Status::InternalError);
+        sealing_key
+            .lock()
+            .unwrap()
+            .handle_request(KeyRequestType::UnsealingKeyRequest(DataRequest {
+                data,
+                result: &mut result,
+            }))
+            .expect("Unsealing key should not throw fidl error!");
+        result
+    }
+
+    /// Get the sealing key object. If the sealing key does not exist, create a new one.
+    fn get_sealing_key(
+        &self,
+        provider: &dyn CryptoProvider,
+    ) -> Result<Arc<Mutex<dyn KmsKey>>, Status> {
+        // Sealing key is managed internally, so we store them in internal_key_map.
+        // Begin a critical section.
+        let mut key_map = self.internal_key_map.lock().unwrap();
+        let key_name = SEALING_KEY_NAME;
+        let sealing_key = if !key_map.contains_key(key_name) {
+            // If sealing key is not in the key map, load it in.
+            let provider_map = self.crypto_provider_map.read().unwrap();
+            // Sealing key is not a user key.
+            let sealing_key =
+                match self.read_key_attributes_from_file(&key_name, &provider_map, false) {
+                    Ok(key_attributes) => KmsSealingKey::parse_key(key_name, key_attributes),
+                    Err(Status::KeyNotFound) => {
+                        warn!("No sealing key found, create new key.");
+                        let new_key = KmsSealingKey::new(provider)?;
+                        self.write_key_attributes_to_file(
+                            new_key.get_key_name(),
+                            None,
+                            new_key.get_key_type(),
+                            KeyOrigin::Generated,
+                            new_key.get_provider_name(),
+                            &new_key.get_key_data(),
+                            false,
+                        )?;
+                        Ok(new_key)
+                    }
+                    Err(err) => Err(err),
+                }?;
+            let key_to_use = Arc::new(Mutex::new(sealing_key));
+            let key_to_insert = Arc::clone(&key_to_use);
+            key_map.insert(key_name.to_string(), key_to_insert);
+            key_to_use
+        } else {
+            Arc::clone(&key_map[key_name])
+        };
+        // End critical section.
+        drop(key_map);
+
+        Ok(sealing_key)
+    }
+
     /// Check whether a key algorithm is a valid asymmetric key algorithm and supported by provider.
     fn check_asymmmetric_supported_algorithms(
         key_algorithm: AsymmetricKeyAlgorithm,
@@ -535,14 +661,19 @@ impl KeyManager {
             "Failed to find provider! The stored key data is corrupted!"
         ))?;
         let key_type = key_attributes_json.key_type;
-        let asymmetric_key_algorithm = Some(
-            AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm).ok_or_else(
-                debug_err_fn_no_argument!(
-                    Status::InternalError,
-                    "Failed to convert key_algortihm! The stored key data is corrupted!"
-                ),
-            )?,
-        );
+        let asymmetric_key_algorithm = {
+            if key_type == KeyType::AsymmetricPrivateKey {
+                Some(
+                    AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm)
+                        .ok_or_else(debug_err_fn_no_argument!(
+                            Status::InternalError,
+                            "Failed to convert key_algortihm! The stored key data is corrupted!"
+                        ))?,
+                )
+            } else {
+                None
+            }
+        };
         let key_origin = KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or_else(
             debug_err_fn_no_argument!(
                 Status::InternalError,
@@ -585,7 +716,7 @@ impl KeyManager {
 mod tests {
     use super::*;
     use crate::common::{self as common, ASYMMETRIC_KEY_ALGORITHMS};
-    use crate::crypto_provider::mock_provider::MockProvider;
+    use crate::crypto_provider::{mock_provider::MockProvider, CryptoProviderError};
     use fidl_fuchsia_kms::KeyOrigin;
     use tempfile::tempdir;
     static TEST_KEY_NAME: &str = "TestKey";
@@ -873,5 +1004,110 @@ mod tests {
         } else {
             assert!(false);
         }
+    }
+
+    #[test]
+    fn test_seal_data_mock_provider() {
+        let test_case = TestCase::new();
+        let mock_provider = test_case.get_mock_provider();
+        let key_manager = test_case.get_key_manager();
+        let test_input_data = common::generate_random_data(256);
+        let test_output_data = common::generate_random_data(256);
+        let test_key_data = common::generate_random_data(32);
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let output = key_manager
+            .seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider)
+            .unwrap();
+        assert_eq!(test_output_data, common::buffer_to_data(output).unwrap());
+    }
+
+    #[test]
+    fn test_seal_data_input_too_large() {
+        let test_case = TestCase::new();
+        let mock_provider = test_case.get_mock_provider();
+        let key_manager = test_case.get_key_manager();
+        let test_input_data = common::generate_random_data(MAX_DATA_SIZE + 1);
+        let test_output_data = common::generate_random_data(256);
+        let test_key_data = common::generate_random_data(32);
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let result =
+            key_manager.seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider);
+        if let Err(Status::InputTooLarge) = result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn test_unseal_data_mock_provider() {
+        let test_case = TestCase::new();
+        let mock_provider = test_case.get_mock_provider();
+        let key_manager = test_case.get_key_manager();
+        let test_input_data = common::generate_random_data(256);
+        let test_output_data = common::generate_random_data(256);
+        let test_key_data = common::generate_random_data(32);
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let encrypted_buffer = key_manager
+            .seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider)
+            .unwrap();
+        let output = key_manager.unseal_data(encrypted_buffer, mock_provider).unwrap();
+        assert_eq!(test_output_data, common::buffer_to_data(output).unwrap());
+    }
+
+    #[test]
+    fn test_unseal_data_input_too_large() {
+        let test_case = TestCase::new();
+        let mock_provider = test_case.get_mock_provider();
+        let key_manager = test_case.get_key_manager();
+        // For mock provider, the sealed data size is the same as the original data size.
+        let test_input_data = common::generate_random_data(MAX_DATA_SIZE + 1);
+        let test_output_data = common::generate_random_data(256);
+        let test_key_data = common::generate_random_data(32);
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let result = key_manager
+            .unseal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider);
+        if let Err(Status::InputTooLarge) = result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn test_seal_unseal_data_mock_provider_error() {
+        let test_case = TestCase::new();
+        let mock_provider = test_case.get_mock_provider();
+        let key_manager = test_case.get_key_manager();
+        let test_input_data = common::generate_random_data(256);
+        let test_key_data = common::generate_random_data(256);
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Err(CryptoProviderError::new("")));
+        let result =
+            key_manager.seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider);
+        assert_eq!(Status::InternalError, result.unwrap_err());
+    }
+
+    #[test]
+    fn test_delete_sealing_key_mock_provider() {
+        let test_case = TestCase::new();
+        let mock_provider = test_case.get_mock_provider();
+        let key_manager = test_case.get_key_manager();
+        let test_input_data = common::generate_random_data(256);
+        let test_output_data = common::generate_random_data(256);
+        mock_provider.set_result(&test_output_data);
+        // This make sure that key.delete would succeed.
+        mock_provider.set_key_result(Ok(Vec::new()));
+        let _output = key_manager
+            .seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider)
+            .unwrap();
+
+        // The sealing key should be in a separate name space than user keys.
+        let result = key_manager.delete_key(SEALING_KEY_NAME);
+        assert_eq!(Status::KeyNotFound, result.unwrap_err());
     }
 }

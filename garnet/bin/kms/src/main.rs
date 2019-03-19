@@ -8,6 +8,7 @@ mod common;
 mod crypto_provider;
 mod key_manager;
 mod kms_asymmetric_key;
+mod kms_sealing_key;
 
 use crate::key_manager::KeyManager;
 
