@@ -55,36 +55,37 @@ class PageDelegate {
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    std::vector<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
-                   Page::GetSnapshotCallback callback);
+                   fit::function<void(Status)> callback);
 
   void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
-           Page::PutCallback callback);
+           fit::function<void(Status)> callback);
 
   void PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t> value,
-                       Priority priority,
-                       Page::PutWithPriorityCallback callback);
+                       Priority priority, fit::function<void(Status)> callback);
 
   void PutReference(std::vector<uint8_t> key, Reference reference,
-                    Priority priority, Page::PutReferenceCallback callback);
+                    Priority priority, fit::function<void(Status)> callback);
 
-  void Delete(std::vector<uint8_t> key, Page::DeleteCallback callback);
+  void Delete(std::vector<uint8_t> key, fit::function<void(Status)> callback);
 
-  void Clear(Page::ClearCallback callback);
+  void Clear(fit::function<void(Status)> callback);
 
-  void CreateReference(std::unique_ptr<storage::DataSource> data,
-                       fit::function<void(Status, ReferencePtr)> callback);
+  void CreateReference(
+      std::unique_ptr<storage::DataSource> data,
+      fit::function<void(Status, CreateReferenceStatus, ReferencePtr)>
+          callback);
 
-  void StartTransaction(Page::StartTransactionCallback callback);
+  void StartTransaction(fit::function<void(Status)> callback);
 
-  void Commit(Page::CommitCallback callback);
+  void Commit(fit::function<void(Status)> callback);
 
-  void Rollback(Page::RollbackCallback callback);
+  void Rollback(fit::function<void(Status)> callback);
 
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
-                           Page::SetSyncStateWatcherCallback callback);
+                           fit::function<void(Status)> callback);
 
   void WaitForConflictResolution(
-      Page::WaitForConflictResolutionCallback callback);
+      fit::function<void(Status, ConflictResolutionWaitStatus)> callback);
 
  private:
   using StatusCallback = fit::function<void(storage::Status)>;

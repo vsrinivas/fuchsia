@@ -21,6 +21,7 @@
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/fidl/include/types.h"
 
 namespace ledger {
 
@@ -63,7 +64,7 @@ void PageDelegate::Init(fit::function<void(storage::Status)> on_done) {
 void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     std::vector<uint8_t> key_prefix, fidl::InterfaceHandle<PageWatcher> watcher,
-    Page::GetSnapshotCallback callback) {
+    fit::function<void(Status)> callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
   operation_serializer_.Serialize<storage::Status>(
@@ -86,7 +87,7 @@ void PageDelegate::GetSnapshot(
 }
 
 void PageDelegate::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
-                       Page::PutCallback callback) {
+                       fit::function<void(Status)> callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
                   std::move(callback));
 }
@@ -94,7 +95,7 @@ void PageDelegate::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
 void PageDelegate::PutWithPriority(std::vector<uint8_t> key,
                                    std::vector<uint8_t> value,
                                    Priority priority,
-                                   Page::PutWithPriorityCallback callback) {
+                                   fit::function<void(Status)> callback) {
   FXL_DCHECK(key.size() <= kMaxKeySize);
   auto promise = fxl::MakeRefCounted<
       callback::Promise<storage::Status, storage::ObjectIdentifier>>(
@@ -129,7 +130,7 @@ void PageDelegate::PutWithPriority(std::vector<uint8_t> key,
 
 void PageDelegate::PutReference(std::vector<uint8_t> key, Reference reference,
                                 Priority priority,
-                                Page::PutReferenceCallback callback) {
+                                fit::function<void(Status)> callback) {
   FXL_DCHECK(key.size() <= kMaxKeySize);
   // |ResolveReference| also makes sure that the reference was created for this
   // page.
@@ -154,7 +155,7 @@ void PageDelegate::PutReference(std::vector<uint8_t> key, Reference reference,
 }
 
 void PageDelegate::Delete(std::vector<uint8_t> key,
-                          Page::DeleteCallback callback) {
+                          fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<storage::Status>(
       PageUtils::AdaptStatusCallback(std::move(callback)),
       [this, key = std::move(key)](
@@ -167,7 +168,7 @@ void PageDelegate::Delete(std::vector<uint8_t> key,
       });
 }
 
-void PageDelegate::Clear(Page::ClearCallback callback) {
+void PageDelegate::Clear(fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<storage::Status>(
       PageUtils::AdaptStatusCallback(std::move(callback)),
       [this](fit::function<void(storage::Status)> callback) mutable {
@@ -178,7 +179,7 @@ void PageDelegate::Clear(Page::ClearCallback callback) {
 
 void PageDelegate::CreateReference(
     std::unique_ptr<storage::DataSource> data,
-    fit::function<void(Status, ReferencePtr)> callback) {
+    fit::function<void(Status, CreateReferenceStatus, ReferencePtr)> callback) {
   storage_->AddObjectFromLocal(
       storage::ObjectType::BLOB, std::move(data),
       callback::MakeScoped(
@@ -186,17 +187,32 @@ void PageDelegate::CreateReference(
           [this, callback = std::move(callback)](
               storage::Status status,
               storage::ObjectIdentifier object_identifier) {
-            if (status != storage::Status::OK) {
-              callback(PageUtils::ConvertStatus(status), nullptr);
+            if (status != storage::Status::OK &&
+                status != storage::Status::IO_ERROR) {
+              callback(PageUtils::ConvertStatus(status),
+                       CreateReferenceStatus::OK, nullptr);
               return;
             }
 
-            callback(Status::OK, fidl::MakeOptional(manager_->CreateReference(
-                                     std::move(object_identifier))));
+            // Convert IO_ERROR into INVALID_ARGUMENT.
+            // TODO(qsr): Refactor status handling so that io error due to
+            // storage and io error due to invalid argument can be
+            // distinguished.
+            // An INVALID_ARGUMENT should not cause the page to get
+            // disconnected, so use OK as status.
+            if (status == storage::Status::IO_ERROR) {
+              callback(Status::OK, CreateReferenceStatus::INVALID_ARGUMENT,
+                       nullptr);
+              return;
+            }
+
+            callback(Status::OK, CreateReferenceStatus::OK,
+                     fidl::MakeOptional(manager_->CreateReference(
+                         std::move(object_identifier))));
           }));
 }
 
-void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
+void PageDelegate::StartTransaction(fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback),
       [this](fit::function<void(ledger::Status)> callback) {
@@ -213,7 +229,7 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
       });
 }
 
-void PageDelegate::Commit(Page::CommitCallback callback) {
+void PageDelegate::Commit(fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback),
       [this](fit::function<void(ledger::Status)> callback) {
@@ -233,7 +249,7 @@ void PageDelegate::Commit(Page::CommitCallback callback) {
       });
 }
 
-void PageDelegate::Rollback(Page::RollbackCallback callback) {
+void PageDelegate::Rollback(fit::function<void(Status)> callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback),
       [this](fit::function<void(ledger::Status)> callback) {
@@ -249,19 +265,22 @@ void PageDelegate::Rollback(Page::RollbackCallback callback) {
 
 void PageDelegate::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
-    Page::SetSyncStateWatcherCallback callback) {
+    fit::function<void(Status)> callback) {
   SyncWatcherPtr watcher_ptr = watcher.Bind();
   watcher_set_->AddSyncWatcher(std::move(watcher_ptr));
   callback(Status::OK);
 }
 
 void PageDelegate::WaitForConflictResolution(
-    Page::WaitForConflictResolutionCallback callback) {
+    fit::function<void(Status, ConflictResolutionWaitStatus)> callback) {
   if (!merge_resolver_->HasUnfinishedMerges()) {
-    callback(ConflictResolutionWaitStatus::NO_CONFLICTS);
+    callback(Status::OK, ConflictResolutionWaitStatus::NO_CONFLICTS);
     return;
   }
-  merge_resolver_->RegisterNoConflictCallback(std::move(callback));
+  merge_resolver_->RegisterNoConflictCallback(
+      [callback = std::move(callback)](ConflictResolutionWaitStatus status) {
+        callback(Status::OK, status);
+      });
 }
 
 void PageDelegate::PutInCommit(std::vector<uint8_t> key,

@@ -284,13 +284,14 @@ TEST_F(PageImplTest, PutUnknownReference) {
   reference->opaque_id = convert::ToArray("12345678");
 
   bool called;
-  Status status;
-  page_ptr_->PutReference(
-      convert::ToArray(key), std::move(*reference), Priority::LAZY,
+  zx_status_t status;
+  page_ptr_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
+  page_ptr_->PutReferenceNew(convert::ToArray(key), std::move(*reference),
+                             Priority::LAZY);
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
+  EXPECT_EQ(Status::REFERENCE_NOT_FOUND, static_cast<Status>(status));
   auto objects = fake_storage_->GetObjects();
   // No object should have been added.
   EXPECT_EQ(0u, objects.size());
@@ -696,6 +697,10 @@ TEST_F(PageImplTest, NoTwoTransactions) {
   Status status1;
   bool called2;
   Status status2;
+  bool error_called;
+  zx_status_t error_status;
+  page_ptr_.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&error_called), &error_status));
 
   page_ptr_->StartTransaction(
       callback::Capture(callback::SetWhenCalled(&called1), &status1));
@@ -705,8 +710,10 @@ TEST_F(PageImplTest, NoTwoTransactions) {
   DrainLoop();
   EXPECT_TRUE(called1);
   EXPECT_EQ(Status::OK, status1);
-  EXPECT_TRUE(called2);
-  EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status2);
+  EXPECT_FALSE(called2);
+  EXPECT_TRUE(error_called);
+  EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS,
+            static_cast<Status>(error_status));
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
@@ -714,11 +721,18 @@ TEST_F(PageImplTest, NoTransactionCommit) {
   //  - Commit
   bool called;
   Status status;
+  bool error_called;
+  zx_status_t error_status;
+  page_ptr_.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&error_called), &error_status));
+
   page_ptr_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
+  EXPECT_FALSE(called);
+  EXPECT_TRUE(error_called);
+  EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS,
+            static_cast<Status>(error_status));
 }
 
 TEST_F(PageImplTest, NoTransactionRollback) {
@@ -726,11 +740,18 @@ TEST_F(PageImplTest, NoTransactionRollback) {
   //  - Rollback
   bool called;
   Status status;
+  bool error_called;
+  zx_status_t error_status;
+  page_ptr_.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&error_called), &error_status));
+
   page_ptr_->Rollback(
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
-  EXPECT_TRUE(called);
-  EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
+  EXPECT_FALSE(called);
+  EXPECT_TRUE(error_called);
+  EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS,
+            static_cast<Status>(error_status));
 }
 
 TEST_F(PageImplTest, CreateReferenceFromSocket) {

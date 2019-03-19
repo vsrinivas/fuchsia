@@ -11,6 +11,7 @@
 #include <lib/fxl/macros.h>
 
 #include "src/ledger/bin/app/delaying_facade.h"
+#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
 
@@ -18,7 +19,7 @@ namespace ledger {
 class PageDelegate;
 
 // An implementation of the |Page| FIDL interface.
-class PageImpl : public Page {
+class PageImpl : public fuchsia::ledger::PageErrorNotifierDelegate {
  public:
   explicit PageImpl(storage::PageIdView page_id,
                     fidl::InterfaceRequest<Page> request);
@@ -32,53 +33,76 @@ class PageImpl : public Page {
 
  private:
   // Page:
-  void GetId(GetIdCallback callback) override;
-
+  void GetId(fit::function<void(Status, PageId)> callback) override;
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    std::vector<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
-                   GetSnapshotCallback callback) override;
-
+                   fit::function<void(Status, Status)> callback) override;
+  void GetSnapshotNew(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                      std::vector<uint8_t> key_prefix,
+                      fidl::InterfaceHandle<PageWatcher> watcher,
+                      fit::function<void(Status)> callback) override;
   void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
-           PutCallback callback) override;
-
+           fit::function<void(Status, Status)> callback) override;
+  void PutNew(std::vector<uint8_t> key, std::vector<uint8_t> value,
+              fit::function<void(Status)> callback) override;
   void PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t> value,
                        Priority priority,
-                       PutWithPriorityCallback callback) override;
-
+                       fit::function<void(Status, Status)> callback) override;
+  void PutWithPriorityNew(std::vector<uint8_t> key, std::vector<uint8_t> value,
+                          Priority priority,
+                          fit::function<void(Status)> callback) override;
   void PutReference(std::vector<uint8_t> key, Reference reference,
-                    Priority priority, PutReferenceCallback callback) override;
-
-  void Delete(std::vector<uint8_t> key, DeleteCallback callback) override;
-
-  void Clear(ClearCallback callback) override;
-
+                    Priority priority,
+                    fit::function<void(Status, Status)> callback) override;
+  void PutReferenceNew(std::vector<uint8_t> key, Reference reference,
+                       Priority priority,
+                       fit::function<void(Status)> callback) override;
+  void Delete(std::vector<uint8_t> key,
+              fit::function<void(Status, Status)> callback) override;
+  void DeleteNew(std::vector<uint8_t> key,
+                 fit::function<void(Status)> callback) override;
+  void Clear(fit::function<void(Status, Status)> callback) override;
+  void ClearNew(fit::function<void(Status)> callback) override;
   void CreateReferenceFromSocket(
       uint64_t size, zx::socket data,
-      CreateReferenceFromSocketCallback callback) override;
-
+      fit::function<void(Status, Status, std::unique_ptr<Reference>)> callback)
+      override;
+  void CreateReferenceFromSocketNew(
+      uint64_t size, zx::socket data,
+      fit::function<void(Status, CreateReferenceStatus,
+                         std::unique_ptr<Reference>)>
+          callback) override;
   void CreateReferenceFromBuffer(
       fuchsia::mem::Buffer data,
-      CreateReferenceFromBufferCallback callback) override;
-
-  void StartTransaction(StartTransactionCallback callback) override;
-
-  void Commit(CommitCallback callback) override;
-
-  void Rollback(RollbackCallback callback) override;
-
-  void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
-                           SetSyncStateWatcherCallback callback) override;
-
+      fit::function<void(Status, Status, std::unique_ptr<Reference>)> callback)
+      override;
+  void CreateReferenceFromBufferNew(
+      fuchsia::mem::Buffer data,
+      fit::function<void(Status, CreateReferenceStatus,
+                         std::unique_ptr<Reference>)>
+          callback) override;
+  void StartTransaction(fit::function<void(Status, Status)> callback) override;
+  void StartTransactionNew(fit::function<void(Status)> callback) override;
+  void Commit(fit::function<void(Status, Status)> callback) override;
+  void CommitNew(fit::function<void(Status)> callback) override;
+  void Rollback(fit::function<void(Status, Status)> callback) override;
+  void RollbackNew(fit::function<void(Status)> callback) override;
+  void SetSyncStateWatcher(
+      fidl::InterfaceHandle<SyncWatcher> watcher,
+      fit::function<void(Status, Status)> callback) override;
+  void SetSyncStateWatcherNew(fidl::InterfaceHandle<SyncWatcher> watcher,
+                              fit::function<void(Status)> callback) override;
   void WaitForConflictResolution(
-      WaitForConflictResolutionCallback callback) override;
+      fit::function<void(Status, ConflictResolutionWaitStatus)> callback)
+      override;
 
   PageId page_id_;
   DelayingFacade<PageDelegate> delaying_facade_;
 
   fit::closure on_binding_unbound_callback_;
 
-  fidl::Binding<Page> binding_;
+  ErrorNotifierBinding<fuchsia::ledger::PageErrorNotifierDelegate> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };

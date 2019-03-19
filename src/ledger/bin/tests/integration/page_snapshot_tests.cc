@@ -600,7 +600,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
       123, StreamDataToSocket(big_data),
       callback::Capture(waiter->GetCallback(), &status, &reference));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::IO_ERROR, status);
+  EXPECT_EQ(Status::INVALID_ARGUMENT, status);
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {

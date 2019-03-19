@@ -60,6 +60,10 @@ class ErrorNotifierBinding {
       async_dispatcher_t* dispatcher = nullptr) {
     return binding_.NewBinding(dispatcher);
   }
+  void Bind(fidl::InterfaceRequest<typename D::FidlInterface> request,
+            async_dispatcher_t* dispatcher = nullptr) {
+    binding_.Bind(std::move(request), dispatcher);
+  }
 
   void Close(zx_status_t status) { binding_.Close(status); }
 

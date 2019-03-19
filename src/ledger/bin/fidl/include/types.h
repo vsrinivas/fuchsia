@@ -36,6 +36,7 @@ using ConflictResolver = fuchsia::ledger::ConflictResolver;
 using ConflictResolverFactory = fuchsia::ledger::ConflictResolverFactory;
 using ConflictResolverFactoryPtr = fuchsia::ledger::ConflictResolverFactoryPtr;
 using ConflictResolverPtr = fuchsia::ledger::ConflictResolverPtr;
+using CreateReferenceStatus = fuchsia::ledger::CreateReferenceStatus;
 using DiffEntry = fuchsia::ledger::DiffEntry;
 using IterationStatus = fuchsia::ledger::IterationStatus;
 using Entry = fuchsia::ledger::Entry;
