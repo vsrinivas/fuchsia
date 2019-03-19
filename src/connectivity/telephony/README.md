@@ -27,6 +27,14 @@ Acronyms:
   * VFS - Virtual File System
 
 ## Getting Started
+### Setup
+Telephony is not included in the core fuchsia bringup currently. You can include the bundle like in the
+example below:
+```
+$ fx set2 core.x64 --with //src/connectivity/telephony/
+```
+
+
 ### API Examples
 TODO(bwb): write an example app
 
