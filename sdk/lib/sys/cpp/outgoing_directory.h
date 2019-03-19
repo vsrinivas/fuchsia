@@ -103,11 +103,24 @@ class OutgoingDirectory final {
   // outgoing.AddPublicService(bindings.GetHandler(this));
   // ```
   template <typename Interface>
-  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
-                               std::string name = Interface::Name_) const {
-    return public_->AddEntry(
-        std::move(name), std::make_unique<vfs::Service>(std::move(handler)));
+  zx_status_t AddPublicService(
+      fidl::InterfaceRequestHandler<Interface> handler,
+      std::string service_name = Interface::Name_) const {
+    return AddPublicService(std::make_unique<vfs::Service>(std::move(handler)),
+                            std::move(service_name));
   }
+
+  // Adds the specified service to the set of public services.
+  //
+  // Adds a supported service with the given |service_name|, using the given
+  // |service|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: The public directory already contains an entry for
+  // this service.
+  zx_status_t AddPublicService(std::unique_ptr<vfs::Service> service,
+                               std::string service_name) const;
 
   // Removes the specified interface from the set of public interfaces.
   //

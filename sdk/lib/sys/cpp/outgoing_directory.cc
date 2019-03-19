@@ -48,4 +48,9 @@ vfs::PseudoDir* OutgoingDirectory::AddNewEmptyDirectory(std::string name) {
   return ptr;
 }
 
+zx_status_t OutgoingDirectory::AddPublicService(
+    std::unique_ptr<vfs::Service> service, std::string service_name) const {
+  return public_->AddEntry(std::move(service_name), std::move(service));
+}
+
 }  // namespace sys
