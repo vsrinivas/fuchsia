@@ -142,34 +142,28 @@ void InitializeCoordinator(devmgr::Coordinator* coordinator) {
     coordinator->set_running(true);
 }
 
-// Waits for a BindDriver request to come in on remote, checks that it is for
-// the expected driver, and then sends a ZX_OK response.
+// Reads a BindDriver request from remote, checks that it is for the expected
+// driver, and then sends a ZX_OK response.
 void CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver) {
-    // Wait for the BindDriver request.
-    zx_signals_t pending;
-    zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
-
     // Read the BindDriver request.
     FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles, fbl::count_of(handles),
-                         &actual_handles);
-    ASSERT_EQ(ZX_OK, status);
+    zx_status_t status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles,
+                                     fbl::count_of(handles), &actual_handles);
+    ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(1, actual_handles);
     status = zx_handle_close(handles[0]);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Validate the BindDriver request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
     ASSERT_EQ(fuchsia_device_manager_ControllerBindDriverOrdinal, hdr->ordinal);
     status = fidl_decode(&fuchsia_device_manager_ControllerBindDriverRequestTable, bytes,
                          actual_bytes, handles, actual_handles, nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     auto req = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverRequest*>(bytes);
     ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
@@ -183,10 +177,10 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
     resp->status = ZX_OK;
     status = fidl_encode(&fuchsia_device_manager_ControllerBindDriverResponseTable, bytes,
                          sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     ASSERT_EQ(0, actual_handles);
     status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 }
 
 TEST(CoordinatorTestCase, BindDevices) {
@@ -222,7 +216,7 @@ TEST(CoordinatorTestCase, BindDevices) {
     status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
     ASSERT_EQ(ZX_OK, status);
 
-    // Wait for the BindDriver request.
+    // Check the BindDriver request.
     ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(remote, kDriverPath));
     loop.RunUntilIdle();
 
@@ -232,36 +226,30 @@ TEST(CoordinatorTestCase, BindDevices) {
     loop.RunUntilIdle();
 }
 
-// Waits for a CreateDevice request to come in on remote, checks
-// expectations, and sends a ZX_OK response.
+// Reads a CreateDevice from remote, checks expectations, and sends a ZX_OK
+// response.
 void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_driver,
                                zx::channel* device_remote) {
-    // Wait for the CreateDevice request.
-    zx_signals_t pending;
-    zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
-
     // Read the CreateDevice request.
     FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles, fbl::count_of(handles),
-                         &actual_handles);
-    ASSERT_EQ(ZX_OK, status);
+    zx_status_t status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles,
+                                     fbl::count_of(handles), &actual_handles);
+    ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(3, actual_handles);
     *device_remote = zx::channel(handles[0]);
     status = zx_handle_close(handles[1]);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Validate the CreateDevice request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
     ASSERT_EQ(fuchsia_device_manager_ControllerCreateDeviceOrdinal, hdr->ordinal);
     status = fidl_decode(&fuchsia_device_manager_ControllerCreateDeviceRequestTable, bytes,
                          actual_bytes, handles, actual_handles, nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     auto req = reinterpret_cast<fuchsia_device_manager_ControllerCreateDeviceRequest*>(
             bytes);
     ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
@@ -270,36 +258,30 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
                     "");
 }
 
-// Waits for a CreateCompositeDevice request to come in on remote, checks
-// expectations, and sends a ZX_OK response.
+// Reads a CreateCompositeDevice from remote, checks expectations, and sends
+// a ZX_OK response.
 void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
                                         size_t expected_components_count) {
-    // Wait for the CreateCompositeDevice request.
-    zx_signals_t pending;
-    zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
-
     // Read the CreateCompositeDevice request.
     FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
-    status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles, fbl::count_of(handles),
-                         &actual_handles);
-    ASSERT_EQ(ZX_OK, status);
+    zx_status_t status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles,
+                                     fbl::count_of(handles), &actual_handles);
+    ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(1, actual_handles);
     // Close the RPC channel to the device, since we don't actually need it
     status = zx_handle_close(handles[0]);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Validate the CreateCompositeDevice request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
     ASSERT_EQ(fuchsia_device_manager_ControllerCreateCompositeDeviceOrdinal, hdr->ordinal);
     status = fidl_decode(&fuchsia_device_manager_ControllerCreateCompositeDeviceRequestTable, bytes,
                          actual_bytes, handles, actual_handles, nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     auto req = reinterpret_cast<fuchsia_device_manager_ControllerCreateCompositeDeviceRequest*>(
             bytes);
     ASSERT_EQ(req->name.size, strlen(expected_name));
@@ -316,10 +298,10 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
     status = fidl_encode(&fuchsia_device_manager_ControllerCreateCompositeDeviceResponseTable,
                          bytes, sizeof(*resp), handles, fbl::count_of(handles), &actual_handles,
                          nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     ASSERT_EQ(0, actual_handles);
     status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 }
 
 // Helper for BindComposite for issuing an AddComposite for a composite with the
@@ -513,7 +495,7 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
     size_t component_device_indexes[fbl::count_of(device_indexes)];
     for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
         auto device_state = device(device_indexes[i]);
-        // Wait for the components to get bound
+        // Check that the components got bound
         fbl::String driver = coordinator()->component_driver()->libname;
         ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
         loop()->RunUntilIdle();
