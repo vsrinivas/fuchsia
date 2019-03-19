@@ -79,8 +79,9 @@ static LOGGER_ONCE: Once = Once::new();
 
 /// Install a logger for tests.
 ///
-/// Call this method at the beginning of the test for which logging is desired.  This function sets
-/// global program state, so all tests that run after this function is called will use the logger.
+/// Call this method at the beginning of the test for which logging is desired.
+/// This function sets global program state, so all tests that run after this
+/// function is called will use the logger.
 pub(crate) fn set_logger_for_test() {
     // log::set_logger will panic if called multiple times; using a Once makes
     // set_logger_for_test idempotent
@@ -92,8 +93,8 @@ pub(crate) fn set_logger_for_test() {
 
 /// Skip current (fake) time forward to trigger the next timer event.
 ///
-/// Returns true if a timer was triggered, false if there were no timers waiting to be
-/// triggered.
+/// Returns true if a timer was triggered, false if there were no timers waiting
+/// to be triggered.
 pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
     match ctx
         .dispatcher
@@ -109,6 +110,39 @@ pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> boo
             true
         }
         None => false,
+    }
+}
+
+/// Trigger timer events until`f` callback returns true or passes the max
+/// number of iterations.
+///
+/// `trigger_timers_until` always calls `f` on the first timer event, as the
+/// timer_events is dynamically updated. As soon as `f` returns true or
+/// 1,000,000 timer events have been triggered, `trigger_timers_until` will
+/// exit.
+///
+/// Please note, the caller is expected to pass in an `f` which could return
+/// true to exit `trigger_timer_until`. 1,000,000 limit is set to avoid an
+/// endless loop.
+pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
+    ctx: &mut Context<DummyEventDispatcher>,
+    f: F,
+) {
+    for _ in 0..1_000_000 {
+        let t = if let Some(t) = ctx.dispatcher.timer_events.keys().next().cloned() {
+            t
+        } else {
+            return;
+        };
+
+        // Safe to unwrap(), because the key was found first.
+        let id = ctx.dispatcher.timer_events.remove(&t).unwrap();
+
+        ctx.dispatcher.current_time = t;
+        handle_timeout(ctx, id);
+        if (f(&id)) {
+            break;
+        }
     }
 }
 
@@ -435,8 +469,9 @@ impl EventDispatcher for DummyEventDispatcher {
     }
 
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
-        // There is the invariant that there can only be one timer event per TimerId, so we only
-        // need to remove at most one element from timer_events.
+        // There is the invariant that there can only be one timer event per
+        // TimerId, so we only need to remove at most one element from
+        // timer_events.
 
         match self.timer_events.iter().find_map(|(instant, event_timer_id)| {
             if *event_timer_id == id {

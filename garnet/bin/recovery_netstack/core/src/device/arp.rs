@@ -75,6 +75,15 @@ pub(crate) struct ArpTimerId<P: PType> {
     ip_addr: P,
 }
 
+impl ArpTimerId<Ipv4Addr> {
+    fn new_ipv4_timer_id(device_id: u64, ip_addr: Ipv4Addr) -> TimerId {
+        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(ArpTimerId {
+            device_id,
+            ip_addr,
+        })))
+    }
+}
+
 /// A device layer protocol which can support ARP.
 ///
 /// An `ArpDevice<P>` is a device layer protocol which can support ARP with the
@@ -215,12 +224,10 @@ pub(crate) fn receive_arp_packet<
         table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
         // Since we just got the protocol -> hardware address mapping, we can
         // cancel a timeout to resend a request.
-        ctx.dispatcher.cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
-            DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-                device_id,
-                ip_addr: packet.sender_protocol_address().addr(),
-            }),
-        )));
+        ctx.dispatcher.cancel_timeout(ArpTimerId::new_ipv4_timer_id(
+            device_id,
+            packet.sender_protocol_address().addr(),
+        ));
     }
     if addressed_to_me && packet.operation() == ArpOp::Request {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
@@ -303,10 +310,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
         // TODO(wesleyac): maxretries
         ctx.dispatcher.schedule_timeout(
             Duration::from_secs(20),
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-                device_id,
-                ip_addr: lookup_addr.addr(),
-            }))),
+            ArpTimerId::new_ipv4_timer_id(device_id, lookup_addr.addr()),
         );
 
         AD::get_arp_state(ctx, device_id).table.set_waiting(lookup_addr);
@@ -393,27 +397,52 @@ mod tests {
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
+    fn receive_arp_response(
+        ctx: &mut Context<DummyEventDispatcher>,
+        device_id: u64,
+        local_ipv4: Ipv4Addr,
+        remote_ipv4: Ipv4Addr,
+        local_mac: Mac,
+        remote_mac: Mac,
+    ) {
+        let mut buf =
+            ArpPacketBuilder::new(ArpOp::Request, remote_mac, remote_ipv4, local_mac, local_ipv4)
+                .serialize_outer()
+                .unwrap();
+        let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
+        assert_eq!(hw, ArpHardwareType::Ethernet);
+        assert_eq!(proto, EtherType::Ipv4);
+
+        receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
+            ctx, device_id, remote_mac, local_mac, buf,
+        );
+    }
+
     #[test]
     fn test_send_arp_request_on_cache_miss() {
+        const NUM_ARP_REQUESTS: usize = 4;
         let mut state = StackState::default();
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
         set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+        let device_id = dev_id.id();
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
-            1,
+            device_id,
             TEST_LOCAL_MAC,
             TEST_REMOTE_IPV4,
         );
 
+        let arp_timer_id = ArpTimerId::new_ipv4_timer_id(device_id, TEST_REMOTE_IPV4);
+
         // Check that we send the original packet, then resend a few times if
         // we don't receive a response.
-        for packet_num in 0..3 {
-            assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num + 1);
+        for packet_num in 1..NUM_ARP_REQUESTS {
+            assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num);
 
-            let mut buf = &ctx.dispatcher.frames_sent()[packet_num].1[..];
+            let mut buf = &ctx.dispatcher.frames_sent()[packet_num - 1].1[..];
 
             let frame = buf.parse::<EthernetFrame<_>>().unwrap();
             assert_eq!(frame.ethertype(), Some(EtherType::Arp));
@@ -431,10 +460,20 @@ mod tests {
             assert_eq!(arp.sender_protocol_address(), TEST_LOCAL_IPV4);
             assert_eq!(arp.target_protocol_address(), TEST_REMOTE_IPV4);
 
-            testutil::trigger_next_timer(&mut ctx);
+            testutil::trigger_timers_until(&mut ctx, |id| id == &arp_timer_id);
         }
 
-        // TODO(wesleyac): Check that once we receive a response, we no longer resend packets
+        receive_arp_response(
+            &mut ctx,
+            device_id,
+            TEST_LOCAL_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_MAC,
+        );
+
+        // Once an arp response is received, the arp timer event will be cancelled.
+        assert!(!ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id))
     }
 
     #[test]
@@ -443,33 +482,22 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+        let device_id = dev_id.id();
+        set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
-        let mut buf = ArpPacketBuilder::new(
-            ArpOp::Request,
-            TEST_REMOTE_MAC,
+        receive_arp_response(
+            &mut ctx,
+            device_id,
+            TEST_LOCAL_IPV4,
             TEST_REMOTE_IPV4,
             TEST_LOCAL_MAC,
-            TEST_LOCAL_IPV4,
-        )
-        .serialize_outer()
-        .unwrap();
-        let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
-        assert_eq!(hw, ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
-
-        receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
-            &mut ctx,
-            1,
             TEST_REMOTE_MAC,
-            TEST_LOCAL_MAC,
-            buf,
         );
 
         assert_eq!(
             lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
                 &mut ctx,
-                1,
+                device_id,
                 TEST_LOCAL_MAC,
                 TEST_REMOTE_IPV4
             )
