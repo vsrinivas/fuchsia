@@ -15,6 +15,8 @@ protocol Presenter {
     // Request that the View's contents be displayed on the screen as a
     // |Presentation|.
     PresentView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
+    // DEPRECATED:  Use PresentView() instead.
+    Present2(handle<eventpair> view_owner_token, request<Presentation>? presentation_request);
 
     // Sets new default renderer params and forces them on for the duration of the
     // presenter's lifetime. Only applies to any subsequent calls to Present().

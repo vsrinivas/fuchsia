@@ -33,6 +33,9 @@ class ExamplePresenter : private fuchsia::ui::policy::Presenter {
   void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                        presentation_request) override;
+  void Present2(zx::eventpair view_holder_token,
+                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                    presentation_request) override;
   void HACK_SetRendererParams(
       bool enable_clipping,
       ::std::vector<::fuchsia::ui::gfx::RendererParam> params) override{};

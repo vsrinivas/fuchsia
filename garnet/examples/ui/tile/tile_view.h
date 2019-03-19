@@ -69,6 +69,9 @@ class TileView : public scenic::BaseView,
   void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                        presentation) final;
+  void Present2(zx::eventpair view_holder_token,
+                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                    presentation) final;
 
   void HACK_SetRendererParams(
       bool enable_clipping,

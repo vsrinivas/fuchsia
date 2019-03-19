@@ -35,6 +35,14 @@ void TileView::PresentView(
                nullptr);
 }
 
+void TileView::Present2(
+    zx::eventpair view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request) {
+  PresentView(scenic::ToViewHolderToken(std::move(view_holder_token)),
+              std::move(presentation_request));
+}
+
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
     component::Services services;
