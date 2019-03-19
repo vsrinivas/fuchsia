@@ -217,35 +217,21 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	config := configs[0]
 
-	// Merge config file and command-line keys.
-	privKeyPaths := config.SSHKeys
+	// If an SSH key is specified in the options, prepend it the configs list so that it
+	// corresponds to the authorized key that would be paved.
 	if r.sshKey != "" {
-		privKeyPaths = append(privKeyPaths, r.sshKey)
+		config.SSHKeys = append([]string{r.sshKey}, config.SSHKeys...)
+	}
+	if len(config.SSHKeys) == 0 {
+		return fmt.Errorf("SSH keys must be supplied in the config entry in %q or via -ssh", r.deviceFile)
 	}
 	var privKeys [][]byte
-	if len(privKeyPaths) == 0 {
-		p, err := sshutil.GeneratePrivateKey()
+	for _, keyPath := range config.SSHKeys {
+		p, err := ioutil.ReadFile(keyPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read SSH key file %q: %v", keyPath, err)
 		}
 		privKeys = append(privKeys, p)
-		keyFile, err := ioutil.TempFile("", "botanist")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(keyFile.Name())
-		if err := ioutil.WriteFile(keyFile.Name(), p, 0600); err != nil {
-			return err
-		}
-		privKeyPaths = []string{keyFile.Name()}
-	} else {
-		for _, keyPath := range privKeyPaths {
-			p, err := ioutil.ReadFile(keyPath)
-			if err != nil {
-				return fmt.Errorf("could not read SSH key file %q: %v", keyPath, err)
-			}
-			privKeys = append(privKeys, p)
-		}
 	}
 
 	var signers []ssh.Signer
@@ -299,7 +285,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, config.Nodename, args, privKeyPaths[0], signers, syslog)
+		errs <- r.runCmd(ctx, imgs, config.Nodename, args, config.SSHKeys[0], signers, syslog)
 	}()
 
 	select {
