@@ -1062,6 +1062,7 @@ group("rust_crates") {
     "//garnet/lib/rust/cm_fidl_translator:cm_fidl_translator_tests",
     "//garnet/lib/rust/cm_fidl_validator:cm_fidl_validator_tests",
     "//garnet/lib/rust/cm_json:cm_json_tests",
+    "//garnet/lib/rust/cm_rust:cm_rust_tests",
     "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
     "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
     "//garnet/lib/rust/ethernet:ethernet-tests",
