@@ -3250,7 +3250,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         pci_hard_reset = ath10k_pci_qca988x_chip_reset;
         targ_cpu_to_ce_addr = ath10k_pci_qca988x_targ_cpu_to_ce_addr;
         chip_name = "QCA9887";
-        version = 1,0;
+        version = 1.0;
         break;
     case QCA6164_2_1_DEVICE_ID:
     case QCA6174_2_1_DEVICE_ID:
