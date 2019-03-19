@@ -8,7 +8,6 @@
 #include <zircon/assert.h>
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
-#include <fbl/macros.h>
 
 #include <utility>
 
@@ -175,12 +174,15 @@ struct SinglyLinkedListNodeState {
     bool InContainer() const { return (next_ != nullptr); }
 
 private:
-    template <typename, typename> friend class SinglyLinkedList;
+    template <typename, typename, typename> friend class SinglyLinkedList;
     template <typename> friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
     friend class tests::intrusive_containers::SinglyLinkedListChecker;
 
     typename PtrTraits::RawPtrType next_ = nullptr;
 };
+
+template <typename T, typename TagType>
+struct SinglyLinkedListable;
 
 // DefaultSinglyLinkedListNodeState<T>
 //
@@ -192,12 +194,25 @@ private:
 // 1) Be friends with DefaultSinglyLinkedListTraits<T> and have a private
 //    sll_node_state_ member.
 // 2) Have a public sll_node_state_ member (not recommended)
-// 3) Derive from SinglyLinkedListable<T> (easiest)
+// 3) Derive from SinglyLinkedListable<T> or
+//    ContainableBaseClasses<SinglyLinkedListable<T, <your tag type>> [...]>
+//    (easiest)
 template <typename T>
 struct DefaultSinglyLinkedListTraits {
+private:
+    using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
+
+    template <typename TagType>
+    using NodeType = std::conditional_t<internal::has_tag_types_v<ValueType>,
+                                        SinglyLinkedListable<T, TagType>,
+                                        ValueType>;
+
+public:
     using PtrTraits = internal::ContainerPtrTraits<T>;
+    template <typename TagType = DefaultObjectTag>
     static SinglyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
-        return obj.sll_node_state_;
+        using Node [[maybe_unused]] = NodeType<TagType>;
+        return obj.Node::sll_node_state_;
     }
 };
 
@@ -205,17 +220,31 @@ struct DefaultSinglyLinkedListTraits {
 //
 // A helper class which makes it simple to exist on a singly linked list.
 // Simply derive your object from SinglyLinkedListable and you are done.
-template <typename T>
+template <typename T, typename TagType_  = DefaultObjectTag>
 struct SinglyLinkedListable {
 public:
-    bool InContainer() const { return sll_node_state_.InContainer(); }
+    using TagType = TagType_;
+    template <typename TagType = TagType_>
+    bool InContainer() const {
+        using Node = NodeType<TagType>;
+        return Node::sll_node_state_.InContainer();
+    }
 
 private:
     friend struct DefaultSinglyLinkedListTraits<T>;
     SinglyLinkedListNodeState<T> sll_node_state_;
+
+    using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
+
+    template <typename TagType>
+    using NodeType = std::conditional_t<std::is_same_v<TagType, DefaultObjectTag>,
+                                        SinglyLinkedListable<T, TagType>,
+                                        ValueType>;
 };
 
-template <typename T, typename _NodeTraits = DefaultSinglyLinkedListTraits<T>>
+template <typename T,
+          typename NodeTraits_ = DefaultSinglyLinkedListTraits<T>,
+          typename TagType_    = DefaultObjectTag>
 class SinglyLinkedList {
 private:
     // Private fwd decls of the iterator implementation.
@@ -223,15 +252,19 @@ private:
     struct iterator_traits;
     struct const_iterator_traits;
 
+    template <typename NodeTraits, typename = void>
+    struct AddGenericNodeState;
+
 public:
     // Aliases used to reduce verbosity and expose types/traits to tests
     using PtrTraits     = internal::ContainerPtrTraits<T>;
-    using NodeTraits    = _NodeTraits;
+    using NodeTraits    = AddGenericNodeState<NodeTraits_>;
     using PtrType       = typename PtrTraits::PtrType;
     using RawPtrType    = typename PtrTraits::RawPtrType;
     using ValueType     = typename PtrTraits::ValueType;
+    using TagType       = TagType_;
     using CheckerType   = ::fbl::tests::intrusive_containers::SinglyLinkedListChecker;
-    using ContainerType = SinglyLinkedList<T, NodeTraits>;
+    using ContainerType = SinglyLinkedList<T, NodeTraits_, TagType>;
 
     // Declarations of the standard iterator types.
     using iterator       = iterator_impl<iterator_traits>;
@@ -250,7 +283,7 @@ public:
     // Rvalue construction is permitted, but will result in the move of the list
     // contents from one instance of the list to the other (even for unmanaged
     // pointers)
-    SinglyLinkedList(SinglyLinkedList<T, NodeTraits>&& other_list) {
+    SinglyLinkedList(SinglyLinkedList<T, NodeTraits_, TagType>&& other_list) {
         swap(other_list);
     }
 
@@ -413,7 +446,7 @@ public:
     // swap
     //
     // swaps the contest of two lists.
-    void swap(SinglyLinkedList<T, NodeTraits>& other) {
+    void swap(SinglyLinkedList<T, NodeTraits_, TagType>& other) {
         auto tmp = head_;
         head_ = other.head_;
         other.head_ = tmp;
@@ -615,12 +648,28 @@ private:
         }
 
     private:
-        friend class SinglyLinkedList<T, NodeTraits>;
+        friend class SinglyLinkedList<T, NodeTraits_, TagType>;
 
         explicit iterator_impl(typename IterTraits::RawPtrType node)
             : node_(const_cast<typename PtrTraits::RawPtrType>(node)) { }
 
         typename PtrTraits::RawPtrType node_ = nullptr;
+    };
+
+    template <typename BaseNodeTraits>
+    struct AddGenericNodeState<
+               BaseNodeTraits,
+               std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
+        : public BaseNodeTraits {};
+
+    template <typename BaseNodeTraits>
+    struct AddGenericNodeState<
+               BaseNodeTraits,
+               std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
+        : public BaseNodeTraits {
+        static SinglyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
+            return DefaultSinglyLinkedListTraits<T>::template node_state<TagType>(obj);
+        }
     };
 
     // The test framework's 'checker' class is our friend.
@@ -651,15 +700,29 @@ private:
     RawPtrType head_ = sentinel();
 };
 
+// TaggedSinglyLinkedList<> is intended for use with ContainableBaseClasses<>.
+//
+// For an easy way to allow instances of your class to live in multiple
+// intrusive containers at once, simply derive from
+// ContainableBaseClasses<YourContainables<PtrType, TagType>...> and then use
+// this template instead of SinglyLinkedList<> as the container, passing the same tag
+// type you used earlier as the third parameter.
+//
+// See comments on ContainableBaseClasses<> in fbl/intrusive_container_utils.h
+// for more details.
+//
+template <typename T, typename TagType, typename NodeTraits = DefaultSinglyLinkedListTraits<T>>
+using TaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType>;
+
 // Explicit declaration of constexpr storage.
-template <typename T, typename NodeTraits>
-constexpr bool SinglyLinkedList<T, NodeTraits>::SupportsConstantOrderErase;
-template <typename T, typename NodeTraits>
-constexpr bool SinglyLinkedList<T, NodeTraits>::SupportsConstantOrderSize;
-template <typename T, typename NodeTraits>
-constexpr bool SinglyLinkedList<T, NodeTraits>::IsAssociative;
-template <typename T, typename NodeTraits>
-constexpr bool SinglyLinkedList<T, NodeTraits>::IsSequenced;
+template <typename T, typename NodeTraits, typename TagType>
+constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::SupportsConstantOrderErase;
+template <typename T, typename NodeTraits, typename TagType>
+constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::SupportsConstantOrderSize;
+template <typename T, typename NodeTraits, typename TagType>
+constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::IsAssociative;
+template <typename T, typename NodeTraits, typename TagType>
+constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::IsSequenced;
 
 }  // namespace fbl
 

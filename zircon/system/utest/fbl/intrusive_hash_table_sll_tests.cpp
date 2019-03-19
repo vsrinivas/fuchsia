@@ -86,11 +86,18 @@ public:
                                                typename ContainerType::HashType,
                                                ContainerType::kNumBuckets>;
 
-    /* TODO(schottm): this is a temporary hack so
-     * this will compile; to be changed in the next CL
-     * in this series which adds support for SLLs and
-     * DLLs. */
-    using TaggedContainableBaseClasses = fbl::DefaultObjectTag;
+    struct Tag1 {};
+    struct Tag2 {};
+    struct Tag3 {};
+
+    using TaggedContainableBaseClasses =
+        fbl::ContainableBaseClasses<SinglyLinkedListable<PtrType, Tag1>,
+                                    SinglyLinkedListable<PtrType, Tag2>,
+                                    SinglyLinkedListable<PtrType, Tag3>>;
+
+    using TaggedType1 = TaggedHashTable<size_t, PtrType, Tag1>;
+    using TaggedType2 = TaggedHashTable<size_t, PtrType, Tag2>;
+    using TaggedType3 = TaggedHashTable<size_t, PtrType, Tag3>;
 };
 
 DEFINE_TEST_OBJECTS(HTSLL);
@@ -174,50 +181,58 @@ RUN_NAMED_TEST("ReverseIterate (RefPtr)",                  RPTE::ReverseIterateT
 // construction) as doing so would be an O(n) operation (With 'n' == to the
 // number of buckets in the hashtable)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("Swap (unmanaged)",             UMTE::SwapTest)
-RUN_NAMED_TEST("Swap (unique)",                UPTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr)",             SUPDDTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr<Del>)",        SUPCDTE::SwapTest)
-RUN_NAMED_TEST("Swap (RefPtr)",                RPTE::SwapTest)
+RUN_NAMED_TEST("Swap (unmanaged)",                         UMTE::SwapTest)
+RUN_NAMED_TEST("Swap (unique)",                            UPTE::SwapTest)
+RUN_NAMED_TEST("Swap (std::uptr)",                         SUPDDTE::SwapTest)
+RUN_NAMED_TEST("Swap (std::uptr<Del>)",                    SUPCDTE::SwapTest)
+RUN_NAMED_TEST("Swap (RefPtr)",                            RPTE::SwapTest)
 
-RUN_NAMED_TEST("Rvalue Ops (unmanaged)",       UMTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (unique)",          UPTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr)",       SUPDDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr<Del>)",  SUPCDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (RefPtr)",          RPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unmanaged)",                   UMTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (unique)",                      UPTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (std::uptr)",                   SUPDDTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (std::uptr<Del>)",              SUPCDTE::RvalueOpsTest)
+RUN_NAMED_TEST("Rvalue Ops (RefPtr)",                      RPTE::RvalueOpsTest)
 #endif
 
-RUN_NAMED_TEST("Scope (unique)",               UPTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr)",            SUPDDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr<Del>)",       SUPCDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (RefPtr)",               RPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (unique)",                           UPTE::ScopeTest)
+RUN_NAMED_TEST("Scope (std::uptr)",                        SUPDDTE::ScopeTest)
+RUN_NAMED_TEST("Scope (std::uptr<Del>)",                   SUPCDTE::ScopeTest)
+RUN_NAMED_TEST("Scope (RefPtr)",                           RPTE::ScopeTest)
 
-RUN_NAMED_TEST("TwoContainer (unmanaged)",     UMTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unmanaged)",                 UMTE::TwoContainerTest)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("TwoContainer (unique)",        UPTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr)",     SUPDDTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",SUPCDTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (unique)",                    UPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (std::uptr)",                 SUPDDTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",            SUPCDTE::TwoContainerTest)
 #endif
-RUN_NAMED_TEST("TwoContainer (RefPtr)",        RPTE::TwoContainerTest)
+RUN_NAMED_TEST("TwoContainer (RefPtr)",                    RPTE::TwoContainerTest)
 
-RUN_NAMED_TEST("IterCopyPointer (unmanaged)",  UMTE::IterCopyPointerTest)
+RUN_NAMED_TEST("ThreeContainerHelper (unmanaged)",         UMTE::ThreeContainerHelperTest)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("IterCopyPointer (unique)",     UPTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr)",  SUPDDTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr<Del>)",DDTE::IterCopyPointerTest)
+RUN_NAMED_TEST("ThreeContainerHelper (unique)",            UPTE::ThreeContainerHelperTest)
+RUN_NAMED_TEST("ThreeContainerHelper (std::uptr)",         SUPDDTE::ThreeContainerHelperTest)
+RUN_NAMED_TEST("ThreeContainerHelper (std::uptr<Del>)",    SUPCDTE::ThreeContainerHelperTest)
 #endif
-RUN_NAMED_TEST("IterCopyPointer (RefPtr)",     RPTE::IterCopyPointerTest)
+RUN_NAMED_TEST("ThreeContainerHelper (RefPtr)",            RPTE::ThreeContainerHelperTest)
 
-RUN_NAMED_TEST("EraseIf (unmanaged)",          UMTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (unique)",             UPTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (std::uptr)",          SUPCDTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (RefPtr)",             RPTE::EraseIfTest)
+RUN_NAMED_TEST("IterCopyPointer (unmanaged)",              UMTE::IterCopyPointerTest)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("IterCopyPointer (unique)",                 UPTE::IterCopyPointerTest)
+RUN_NAMED_TEST("IterCopyPointer (std::uptr)",              SUPDDTE::IterCopyPointerTest)
+RUN_NAMED_TEST("IterCopyPointer (std::uptr<Del>)",         DDTE::IterCopyPointerTest)
+#endif
+RUN_NAMED_TEST("IterCopyPointer (RefPtr)",                 RPTE::IterCopyPointerTest)
 
-RUN_NAMED_TEST("FindIf (unmanaged)",           UMTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (unique)",              UPTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr)",           SUPDDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr<Del>)",      SUPCDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (RefPtr)",              RPTE::FindIfTest)
+RUN_NAMED_TEST("EraseIf (unmanaged)",                      UMTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (unique)",                         UPTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (std::uptr)",                      SUPCDTE::EraseIfTest)
+RUN_NAMED_TEST("EraseIf (RefPtr)",                         RPTE::EraseIfTest)
+
+RUN_NAMED_TEST("FindIf (unmanaged)",                       UMTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (unique)",                          UPTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (std::uptr)",                       SUPDDTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (std::uptr<Del>)",                  SUPCDTE::FindIfTest)
+RUN_NAMED_TEST("FindIf (RefPtr)",                          RPTE::FindIfTest)
 
 //////////////////////////////////////////
 // Associative container specific tests.

@@ -33,12 +33,26 @@ public:
     using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
     using OtherContainerType      = SinglyLinkedList<PtrType, OtherContainerTraits>;
 
-    /* TODO(schottm): this is a temporary hack so
-     * this will compile; to be changed in the next CL
-     * in this series which adds support for SLLs and
-     * DLLs. */
-    using TaggedContainableBaseClasses = fbl::DefaultObjectTag;
+    struct Tag1 {};
+    struct Tag2 {};
+    struct Tag3 {};
+
+    using TaggedContainableBaseClasses =
+        fbl::ContainableBaseClasses<SinglyLinkedListable<PtrType, Tag1>,
+                                    SinglyLinkedListable<PtrType, Tag2>,
+                                    SinglyLinkedListable<PtrType, Tag3>>;
+
+    using TaggedType1 = TaggedSinglyLinkedList<PtrType, Tag1>;
+    using TaggedType2 = TaggedSinglyLinkedList<PtrType, Tag2>;
+    using TaggedType3 = TaggedSinglyLinkedList<PtrType, Tag3>;
 };
+
+// Just a sanity check so we know our metaprogramming nonsense is
+// doing what we expect:
+static_assert(std::is_same_v<typename SLLTraits<int*>::TaggedContainableBaseClasses::TagTypes,
+                             std::tuple<typename SLLTraits<int*>::Tag1,
+                                        typename SLLTraits<int*>::Tag2,
+                                        typename SLLTraits<int*>::Tag3>>);
 
 DEFINE_TEST_OBJECTS(SLL);
 using UMTE    = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
@@ -140,6 +154,14 @@ RUN_NAMED_TEST("TwoContainer (std::uptr)",                  SUPDDTE::TwoContaine
 RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",             SUPCDTE::TwoContainerTest)
 #endif
 RUN_NAMED_TEST("TwoContainer (RefPtr)",                     RPTE::TwoContainerTest)
+
+RUN_NAMED_TEST("ThreeContainerHelper (unmanaged)",          UMTE::ThreeContainerHelperTest)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("ThreeContainerHelper (unique)",             UPTE::ThreeContainerHelperTest)
+RUN_NAMED_TEST("ThreeContainerHelper (std::uptr)",          SUPDDTE::ThreeContainerHelperTest)
+RUN_NAMED_TEST("ThreeContainerHelper (std::uptr<Del>)",     SUPCDTE::ThreeContainerHelperTest)
+#endif
+RUN_NAMED_TEST("ThreeContainerHelper (RefPtr)",             RPTE::ThreeContainerHelperTest)
 
 RUN_NAMED_TEST("IterCopyPointer (unmanaged)",               UMTE::IterCopyPointerTest)
 #if TEST_WILL_NOT_COMPILE || 0

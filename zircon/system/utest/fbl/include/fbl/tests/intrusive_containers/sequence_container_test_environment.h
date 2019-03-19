@@ -884,8 +884,8 @@ public:
 
             EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
             ASSERT_NONNULL(replaced, "");
-            EXPECT_TRUE(new_obj->InContainer());
-            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_TRUE(new_obj->ContainerTraits::ContainableBaseClass::InContainer());
+            EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
             EXPECT_EQ(i, replaced->value());
             EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
 
@@ -911,7 +911,7 @@ public:
             EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
 
             ASSERT_NULL(replaced, "");
-            EXPECT_FALSE(new_obj->InContainer());
+            EXPECT_FALSE(new_obj->ContainerTraits::ContainableBaseClass::InContainer());
             EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
 
             TestEnvTraits::ReleaseObject(new_obj);
@@ -994,7 +994,7 @@ public:
 
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");
-            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
             EXPECT_EQ(i, replaced->value());
             EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
 
@@ -1022,7 +1022,7 @@ public:
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");
             EXPECT_EQ(PtrTraits::GetRaw(replaced), orig_raw, "");
-            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
             EXPECT_EQ(OBJ_COUNT + (2 * i), replaced->value());
             EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
 
@@ -1086,8 +1086,8 @@ public:
 
             EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
             ASSERT_NONNULL(replaced, "");
-            EXPECT_TRUE(new_obj->InContainer());
-            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_TRUE(new_obj->ContainerTraits::ContainableBaseClass::InContainer());
+            EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
             EXPECT_EQ(i, replaced->value());
             EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
 
@@ -1146,7 +1146,7 @@ public:
 
             EXPECT_NULL(new_obj, "");
             ASSERT_NONNULL(replaced, "");
-            EXPECT_FALSE(replaced->InContainer());
+            EXPECT_FALSE(replaced->ContainerTraits::ContainableBaseClass::InContainer());
             EXPECT_EQ(i, replaced->value());
             EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
 

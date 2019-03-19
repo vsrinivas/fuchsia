@@ -22,6 +22,10 @@ class HashTableChecker;
 }  // namespace tests
 }  // namespace intrusive_containers
 
+namespace internal {
+inline constexpr size_t kDefaultNumBuckets = 37;
+}  // namespace internal
+
 // DefaultHashTraits defines a default implementation of traits used to
 // define the hash function for a hash table.
 //
@@ -57,7 +61,7 @@ template <typename  _KeyType,
           typename  _PtrType,
           typename  _BucketType = SinglyLinkedList<_PtrType>,
           typename  _HashType   = size_t,
-          _HashType _NumBuckets = 37,
+          _HashType _NumBuckets = internal::kDefaultNumBuckets,
           typename  _KeyTraits  = DefaultKeyedObjectTraits<
                                     _KeyType,
                                     typename internal::ContainerPtrTraits<_PtrType>::ValueType>,
@@ -537,6 +541,34 @@ private:
     size_t count_ = 0UL;
     BucketType buckets_[kNumBuckets];
 };
+
+// TaggedHashTable<> is intended for use with ContainableBaseClasses<>.
+//
+// For an easy way to allow instances of your class to live in multiple
+// intrusive containers at once, simply derive from
+// ContainableBaseClasses<YourContainables<PtrType, TagType>...> and then use
+// this template instead of HashTable<> as the container, passing the same tag
+// type you used earlier as the third parameter.
+//
+// See comments on ContainableBaseClasses<> in fbl/intrusive_container_utils.h
+// for more details.
+//
+template <typename KeyType,
+          typename PtrType,
+          typename TagType,
+          typename BucketType = TaggedSinglyLinkedList<PtrType, TagType>,
+          typename HashType   = size_t,
+          HashType NumBuckets = internal::kDefaultNumBuckets,
+          typename KeyTraits  = DefaultKeyedObjectTraits<
+                                    KeyType,
+                                    typename internal::ContainerPtrTraits<PtrType>::ValueType>,
+          typename HashTraits = DefaultHashTraits<
+                                    KeyType,
+                                    typename internal::ContainerPtrTraits<PtrType>::ValueType,
+                                    HashType,
+                                    NumBuckets>>
+using TaggedHashTable = HashTable<KeyType, PtrType, BucketType, HashType,
+                                  NumBuckets, KeyTraits, HashTraits>;
 
 // Explicit declaration of constexpr storage.
 #define HASH_TABLE_PROP(_type, _name) \
