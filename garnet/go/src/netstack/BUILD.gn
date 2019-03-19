@@ -71,27 +71,27 @@ test_package("netstack_gotests") {
   tests = [
     {
       name = "netstack_connectivity_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_fidlconv_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_filter_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_link_eth_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_util_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
   ]
 }
@@ -107,11 +107,11 @@ package("netstack_non_component_gotests") {
   tests = [
     {
       name = "netstack_ifconfig_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_netstat_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
   ]
 }
