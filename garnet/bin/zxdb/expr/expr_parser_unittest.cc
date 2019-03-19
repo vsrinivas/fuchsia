@@ -29,13 +29,15 @@ NameLookupResult TestLookupName(const Identifier& ident) {
     // NOTE: This won't convert to a string matching the input because we don't
     // set the name. To get that right we would have to generate a full symbol
     // hierarchy for nested namespaces and classes.
-    return NameLookupResult(NameLookupResult::kType,
+    return NameLookupResult(
+        NameLookupResult::kType,
         fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
   }
   if (StringBeginsWith(name, "Template")) {
     if (comp.has_template()) {
       // Assume templates with arguments are types.
-      return NameLookupResult(NameLookupResult::kType,
+      return NameLookupResult(
+          NameLookupResult::kType,
           fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
     }
     return NameLookupResult(NameLookupResult::kTemplate);
@@ -69,9 +71,8 @@ class ExprParserTest : public testing::Test {
   }
 
   // Does the parse and returns the string dump of the structure.
-  std::string GetParseString(
-      const char* input,
-      NameLookupCallback name_lookup = NameLookupCallback()) {
+  std::string GetParseString(const char* input, NameLookupCallback name_lookup =
+                                                    NameLookupCallback()) {
     auto root = Parse(input, name_lookup);
     if (!root) {
       // Expect calls to this to parse successfully.
@@ -280,6 +281,38 @@ TEST_F(ExprParserTest, UnaryMath) {
   EXPECT_EQ(0u, parser().error_token().byte_offset());
 }
 
+TEST_F(ExprParserTest, AndOr) {
+  EXPECT_EQ(
+      "BINARY_OP(&&)\n"
+      " BINARY_OP(&)\n"
+      "  ADDRESS_OF\n"
+      "   IDENTIFIER(\"a\")\n"
+      "  ADDRESS_OF\n"
+      "   IDENTIFIER(\"b\")\n"
+      " BINARY_OP(&)\n"
+      "  IDENTIFIER(\"c\")\n"
+      "  IDENTIFIER(\"d\")\n",
+      GetParseString("& a & & b && c & d"));
+  EXPECT_EQ(
+      "BINARY_OP(||)\n"
+      " BINARY_OP(|)\n"
+      "  IDENTIFIER(\"a\")\n"
+      "  IDENTIFIER(\"b\")\n"
+      " BINARY_OP(|)\n"
+      "  IDENTIFIER(\"c\")\n"
+      "  IDENTIFIER(\"d\")\n",
+      GetParseString("a | b || c | d"));
+  EXPECT_EQ(
+      "BINARY_OP(||)\n"
+      " BINARY_OP(&&)\n"
+      "  IDENTIFIER(\"a\")\n"
+      "  IDENTIFIER(\"b\")\n"
+      " BINARY_OP(&&)\n"
+      "  IDENTIFIER(\"c\")\n"
+      "  IDENTIFIER(\"d\")\n",
+      GetParseString("a && b || c && d"));
+}
+
 TEST_F(ExprParserTest, Identifiers) {
   EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo"));
   EXPECT_EQ("IDENTIFIER(::,\"foo\")\n", GetParseString("::foo"));
@@ -314,8 +347,7 @@ TEST_F(ExprParserTest, Identifiers) {
 
 TEST_F(ExprParserTest, FunctionCall) {
   // Simple call with no args.
-  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n",
-            GetParseString("Call()"));
+  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n", GetParseString("Call()"));
 
   // Scoped call with namespaces and templates.
   EXPECT_EQ(R"(FUNCTIONCALL("ns"; ::,"Foo",<"int">; ::,"GetCurrent"))"
@@ -323,18 +355,20 @@ TEST_F(ExprParserTest, FunctionCall) {
             GetParseString("ns::Foo<int>::GetCurrent()"));
 
   // One arg.
-  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n"
-            " LITERAL(42)\n",
-            GetParseString("Call(42)"));
+  EXPECT_EQ(
+      "FUNCTIONCALL(\"Call\")\n"
+      " LITERAL(42)\n",
+      GetParseString("Call(42)"));
 
   // Several complex args and a nested call.
-  EXPECT_EQ("FUNCTIONCALL(\"Call\")\n"
-            " IDENTIFIER(\"a\")\n"
-            " BINARY_OP(=)\n"
-            "  IDENTIFIER(\"b\")\n"
-            "  LITERAL(5)\n"
-            " FUNCTIONCALL(\"OtherCall\")\n",
-            GetParseString("Call(a, b = 5, OtherCall())"));
+  EXPECT_EQ(
+      "FUNCTIONCALL(\"Call\")\n"
+      " IDENTIFIER(\"a\")\n"
+      " BINARY_OP(=)\n"
+      "  IDENTIFIER(\"b\")\n"
+      "  LITERAL(5)\n"
+      " FUNCTIONCALL(\"OtherCall\")\n",
+      GetParseString("Call(a, b = 5, OtherCall())"));
 
   // Unmatched "(" error.
   auto result = Parse("Call(a, ");

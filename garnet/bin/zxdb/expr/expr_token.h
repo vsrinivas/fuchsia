@@ -25,6 +25,9 @@ class ExprToken {
     kComma,        // ,
     kStar,         // *
     kAmpersand,    // &
+    kDoubleAnd,    // && (logical "and" or rvalue reference)
+    kBitwiseOr,    // |
+    kLogicalOr,    // ||
     kArrow,        // ->
     kLeftSquare,   // [
     kRightSquare,  // ]
@@ -35,8 +38,13 @@ class ExprToken {
     kMinus,        // - (by itself, not part of "->")
     kPlus,         // +
     kColonColon,   // ::
+
+    // Special keywords.
     kTrue,         // true
     kFalse,        // false
+    kConst,        // const
+    kVolatile,     // volatile
+    kRestrict,     // restrict
 
     // Keep last. Not a token, but the count of tokens.
     kNumTypes

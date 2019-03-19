@@ -63,6 +63,10 @@ void DoBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
       break;
 
     case ExprToken::kEquality:
+    case ExprToken::kAmpersand:
+    case ExprToken::kDoubleAnd:
+    case ExprToken::kBitwiseOr:
+    case ExprToken::kLogicalOr:
     default:
       cb(Err("Unsupported binary operator '%s', sorry!", op.value().c_str()),
          ExprValue());

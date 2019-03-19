@@ -13,7 +13,7 @@
 // The parser is a Pratt parser. The basic idea there is to have the
 // precedences (and associativities) encoded relative to each other and only
 // parse up until you hit something of that precedence. There's a dispatch
-// table in expressions_ that describes how each token dispatches if it's seen
+// table in kDispatchInfo that describes how each token dispatches if it's seen
 // as either a prefix or infix operator, and if it's infix, what its precedence
 // is.
 //
@@ -58,11 +58,11 @@ using InfixFunc = fxl::RefPtr<ExprNode> (ExprParser::*)(
 // clang-format off
 constexpr int kPrecedenceComma = 10;                  // ,  (lowest precedence)
 constexpr int kPrecedenceAssignment = 20;             // = += -= *= -= /= %= <<= >>= &= ^= |=
-//constexpr int kPrecedenceLogicalOr = 30;            // ||
-//constexpr int kPrecedenceLogicalAnd = 40;           // &&
-//constexpr int kPrecedenceBitwiseOr = 50;            // |
+constexpr int kPrecedenceLogicalOr = 30;              // ||
+constexpr int kPrecedenceLogicalAnd = 40;             // &&
+constexpr int kPrecedenceBitwiseOr = 50;              // |
 //constexpr int kPrecedenceBitwiseXor = 60;           // ^
-//constexpr int kPrecedenceBitwiseAnd = 70;           // &
+constexpr int kPrecedenceBitwiseAnd = 70;             // &
 constexpr int kPrecedenceEquality = 80;               // == !=
 //constexpr int kPrecedenceComparison = 90;           // < <= > >=
 //constexpr int kPrecedenceThreeWayComparison = 100;  // <=>
@@ -94,7 +94,10 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
     {nullptr,                      nullptr,                      -1},                     // kComma
     {&ExprParser::StarPrefix,      nullptr,                      kPrecedenceUnary},       // kStar
-    {&ExprParser::AmpersandPrefix, nullptr,                      kPrecedenceUnary},       // kAmpersand
+    {&ExprParser::AmpersandPrefix, &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseAnd},  // kAmpersand
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalAnd},  // kDoubleAnd
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseOr},   // kBitwiseOr
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalOr},   // kLogicalOr
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
     {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},  // kLeftSquare
     {nullptr,                      nullptr,                      -1},                     // kRightSquare
@@ -107,6 +110,9 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kColonColon
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kTrue
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kFalse
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kConst
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kVolatile
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kRestrict
 };
 // clang-format on
 
@@ -161,8 +167,8 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
     const ExprToken& next_token = Consume();
     InfixFunc infix = kDispatchInfo[next_token.type()].infix;
     if (!infix) {
-      SetError(token, fxl::StringPrintf("Unexpected token '%s'.",
-                                        next_token.value().c_str()));
+      SetError(next_token, fxl::StringPrintf("Unexpected token '%s'.",
+                                             next_token.value().c_str()));
       return nullptr;
     }
     left = (this->*infix)(std::move(left), next_token);
@@ -452,7 +458,8 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
                                                 const ExprToken& token) {
-  fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceUnary);
+  const DispatchInfo& dispatch = kDispatchInfo[token.type()];
+  fxl::RefPtr<ExprNode> right = ParseExpression(dispatch.precedence);
   if (!has_error() && !right) {
     SetError(token, fxl::StringPrintf("Expected expression after '%s'.",
                                       token.value().c_str()));

@@ -100,6 +100,8 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
     case ExprToken::kArrow:
     case ExprToken::kColonColon:
     case ExprToken::kEquality:
+    case ExprToken::kDoubleAnd:
+    case ExprToken::kLogicalOr:
       // The classification code should already have validated there were two
       // characters available.
       AdvanceOneChar();
@@ -111,6 +113,7 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
     case ExprToken::kComma:
     case ExprToken::kStar:
     case ExprToken::kAmpersand:
+    case ExprToken::kBitwiseOr:
     case ExprToken::kLeftSquare:
     case ExprToken::kRightSquare:
     case ExprToken::kLeftParen:
@@ -122,11 +125,22 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
       AdvanceOneChar();  // All are one char.
       break;
 
+    // If we add too many more keywords we should have a more flexible system
+    // rather than hardcoding all lengths here.
     case ExprToken::kTrue:
       AdvanceChars(4);
       break;
     case ExprToken::kFalse:
       AdvanceChars(5);
+      break;
+    case ExprToken::kConst:
+      AdvanceChars(5);
+      break;
+    case ExprToken::kVolatile:
+      AdvanceChars(8);
+      break;
+    case ExprToken::kRestrict:
+      AdvanceChars(8);
       break;
 
     case ExprToken::kInvalid:
@@ -172,10 +186,19 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
 
   // Words.
   if (IsNameFirstChar(cur)) {
+    // Check for special keywords.
     if (IsCurrentName("true"))
       return ExprToken::kTrue;
     else if (IsCurrentName("false"))
       return ExprToken::kFalse;
+    else if (IsCurrentName("const"))
+      return ExprToken::kConst;
+    else if (IsCurrentName("volatile"))
+      return ExprToken::kVolatile;
+    else if (IsCurrentName("restrict"))
+      return ExprToken::kRestrict;
+
+    // Everything else is a general name.
     return ExprToken::kName;
   }
 
@@ -203,7 +226,19 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
     case '*':
       return ExprToken::kStar;
     case '&':
+      // Check for "&&".
+      if (can_advance()) {
+        if (input_[cur_ + 1] == '&')
+          return ExprToken::kDoubleAnd;
+      }
       return ExprToken::kAmpersand;
+    case '|':
+      // Check for "||".
+      if (can_advance()) {
+        if (input_[cur_ + 1] == '|')
+          return ExprToken::kLogicalOr;
+      }
+      return ExprToken::kBitwiseOr;
     case '[':
       return ExprToken::kLeftSquare;
     case ']':

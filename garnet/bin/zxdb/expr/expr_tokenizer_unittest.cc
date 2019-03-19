@@ -132,14 +132,14 @@ TEST(ExprTokenizer, ValidIntegers) {
 }
 
 TEST(ExprTokenizer, OtherLiterals) {
-  // Char offsets: 012345678901234567890123456
-  // Token #'s:    0    1    2   34     5
-  ExprTokenizer t("true True true)false falsey");
+  // Char offsets: 01234567890123456789012345678901234567890123
+  // Token #'s:    0    1    2   34     5      6     7        8
+  ExprTokenizer t("true True true)false falsey const volatile restrict");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
   const auto& tokens = t.tokens();
-  ASSERT_EQ(6u, tokens.size());
+  ASSERT_EQ(9u, tokens.size());
 
   EXPECT_EQ(ExprToken::kTrue, tokens[0].type());
   EXPECT_EQ("true", tokens[0].value());
@@ -164,6 +164,18 @@ TEST(ExprTokenizer, OtherLiterals) {
   EXPECT_EQ(ExprToken::kName, tokens[5].type());
   EXPECT_EQ("falsey", tokens[5].value());
   EXPECT_EQ(21u, tokens[5].byte_offset());
+
+  EXPECT_EQ(ExprToken::kConst, tokens[6].type());
+  EXPECT_EQ("const", tokens[6].value());
+  EXPECT_EQ(28u, tokens[6].byte_offset());
+
+  EXPECT_EQ(ExprToken::kVolatile, tokens[7].type());
+  EXPECT_EQ("volatile", tokens[7].value());
+  EXPECT_EQ(34u, tokens[7].byte_offset());
+
+  EXPECT_EQ(ExprToken::kRestrict, tokens[8].type());
+  EXPECT_EQ("restrict", tokens[8].value());
+  EXPECT_EQ(43u, tokens[8].byte_offset());
 }
 
 TEST(ExprTokenizer, Names) {

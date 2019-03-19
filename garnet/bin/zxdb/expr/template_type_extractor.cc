@@ -39,6 +39,14 @@ const OperatorRecord kOperators[] = {
     {ExprToken::kComma, ExprToken::kInvalid},    // ,
 };
 
+bool IsNamelikeToken(const ExprToken& token) {
+  return token.type() == ExprToken::kName ||
+         token.type() == ExprToken::kTrue ||
+         token.type() == ExprToken::kFalse ||
+         token.type() == ExprToken::kConst ||
+         token.type() == ExprToken::kVolatile;
+}
+
 // Returns true if the token at the given index needs a space before it to
 // separate it from the previous token. The first_index is the index of the
 // first token being considered for type extraction (so we don't consider the
@@ -51,8 +59,7 @@ bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index,
 
   // Names always need a space between then. A name here is any word, so
   // "const Foo" would be an example.
-  if (tokens[index - 1].type() == ExprToken::kName &&
-      tokens[index].type() == ExprToken::kName)
+  if (IsNamelikeToken(tokens[index - 1]) && IsNamelikeToken(tokens[index]))
     return true;
 
   // Put a space after a comma. This is undesirable in the case of "operator,"
