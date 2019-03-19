@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -91,13 +92,13 @@ func main() {
 
 	// Execute.
 	nodename := os.Getenv(nodenameEnvVar)
-	sshKey := os.Getenv(sshKeyEnvVar)
-	if err := execute(tests, output, nodename, sshKey); err != nil {
+	sshKeyFile := os.Getenv(sshKeyEnvVar)
+	if err := execute(tests, output, nodename, sshKeyFile); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(tests []testsharder.Test, output *Output, nodename, sshKey string) error {
+func execute(tests []testsharder.Test, output *Output, nodename, sshKeyFile string) error {
 	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
@@ -129,18 +130,22 @@ func execute(tests []testsharder.Test, output *Output, nodename, sshKey string) 
 		return err
 	}
 
-	return runFuchsiaTests(fuchsia, output, nodename, sshKey)
+	return runFuchsiaTests(fuchsia, output, nodename, sshKeyFile)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKey string) error {
+func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKeyFile string) error {
 	if len(tests) == 0 {
 		return nil
 	} else if nodename == "" {
 		return fmt.Errorf("%s must be set", nodenameEnvVar)
-	} else if sshKey == "" {
+	} else if sshKeyFile == "" {
 		return fmt.Errorf("%s must be set", sshKeyEnvVar)
 	}
 
+	sshKey, err := ioutil.ReadFile(sshKeyFile)
+	if err != nil {
+		return err
+	}
 	tester, err := NewFuchsiaTester(nodename, sshKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)

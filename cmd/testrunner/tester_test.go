@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -72,9 +73,13 @@ func TestSSHTester(t *testing.T) {
 	if nodename == "" {
 		t.Fatal("FUCHSIA_NODENAME not set")
 	}
-	sshKey := os.Getenv("FUCHSIA_SSH_KEY")
-	if sshKey == "" {
+	sshKeyFile := os.Getenv("FUCHSIA_SSH_KEY")
+	if sshKeyFile == "" {
 		t.Fatal("FUCHSIA_SSH_KEY not set")
+	}
+	sshKey, err := ioutil.ReadFile(sshKeyFile)
+	if err != nil {
+		t.Fatalf("could not read file %q", sshKeyFile)
 	}
 
 	cases := []struct {

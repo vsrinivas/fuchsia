@@ -54,8 +54,8 @@ type SSHTester struct {
 	client *ssh.Client
 }
 
-func NewSSHTester(nodename, sshKey string) (*SSHTester, error) {
-	config, err := botanist.DefaultSSHConfig([]byte(sshKey))
+func NewSSHTester(nodename string, sshKey []byte) (*SSHTester, error) {
+	config, err := botanist.DefaultSSHConfig(sshKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
 	}
@@ -97,7 +97,7 @@ type FuchsiaTester struct {
 
 // NewFuchsiaTester creates a FuchsiaTester object and starts a log_listener process on
 // the remote device. The log_listener output can be read from SysLogOutput().
-func NewFuchsiaTester(nodename, sshKey string) (*FuchsiaTester, error) {
+func NewFuchsiaTester(nodename string, sshKey []byte) (*FuchsiaTester, error) {
 	delegate, err := NewSSHTester(nodename, sshKey)
 	if err != nil {
 		return nil, err
