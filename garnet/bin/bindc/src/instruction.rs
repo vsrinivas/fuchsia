@@ -6,12 +6,11 @@
 
 #![allow(dead_code)]
 
-/// Each instruction is a pair of 32 bit unsigned integers divided as
-/// follows.
-/// lsb           msb
-/// COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
-
 bitfield! {
+    /// Each instruction is a pair of 32 bit unsigned integers divided as
+    /// follows.
+    /// lsb           msb
+    /// COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
     struct RawInstruction([u32]);
     u32;
     condition, set_condition: 3, 0;
