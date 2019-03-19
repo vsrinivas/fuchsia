@@ -6,8 +6,6 @@
   navigation within the Fuchsia tree.
 * Set path so that `:find` and `gf` know how to find files.
 * Fidl syntax highlighting (using /lib/fidl/tools/vim/).
-* Basic build system integration so that `:make` builds and populates the
-  QuickFix window.
 
 ## Installation
 
@@ -54,18 +52,6 @@
    reliable and efficient than the default `ycm_extra_config.py` configuration.
    Use `fx compdb` to build a compilation database.
 
-1. Make `:make` work
-
-   Optionally add:
-   ```
-   source $FUCHSIA_DIR/scripts/vim/make.vim
-   ```
-   after you source `fuchsia.vim` to make the `:make` command call
-   `fx full-build` when you're editing files in the Fuchsia source tree.
-
-   It also cleans up the way that build errors in unit tests are handled a
-   little.
-
 ## See also
 
 [Zircon editor integration](
@@ -77,4 +63,5 @@ In the future it would be nice to support:
 * Fidl indentation
 * GN indentation
 * Dart, Go and Rust support
+* Build system integration
 * Navigate between generated files and fidl source

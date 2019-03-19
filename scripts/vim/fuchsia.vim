@@ -76,9 +76,6 @@ if jiri_manifest != ""
     if &filetype == "cpp"
       call FuchsiaCppBuffer()
     endif
-
-    " Send a custom autocmd to indicate that a Fuchsia buffer was opened
-    doautocmd User FuchsiaBuffer
   endfunction
 
   " This may be called twice because autocmds arrive in different orders on
