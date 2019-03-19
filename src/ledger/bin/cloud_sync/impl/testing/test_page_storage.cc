@@ -110,17 +110,13 @@ void TestPageStorage::GetUnsyncedPieces(
   });
 }
 
-storage::Status TestPageStorage::AddCommitWatcher(
-    storage::CommitWatcher* watcher) {
+void TestPageStorage::AddCommitWatcher(storage::CommitWatcher* watcher) {
   watcher_ = watcher;
   watcher_set = true;
-  return storage::Status::OK;
 }
 
-storage::Status TestPageStorage::RemoveCommitWatcher(
-    storage::CommitWatcher* /*watcher*/) {
+void TestPageStorage::RemoveCommitWatcher(storage::CommitWatcher* /*watcher*/) {
   watcher_removed = true;
-  return storage::Status::OK;
 }
 
 void TestPageStorage::GetUnsyncedCommits(

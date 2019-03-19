@@ -62,13 +62,12 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
     storage_->GetCommit(commit_id, std::move(callback));
   }
 
-  storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
-    return storage_->AddCommitWatcher(watcher);
+  void AddCommitWatcher(storage::CommitWatcher* watcher) override {
+    storage_->AddCommitWatcher(watcher);
   }
 
-  storage::Status RemoveCommitWatcher(
-      storage::CommitWatcher* watcher) override {
-    return storage_->RemoveCommitWatcher(watcher);
+  void RemoveCommitWatcher(storage::CommitWatcher* watcher) override {
+    storage_->RemoveCommitWatcher(watcher);
   }
 
   void GetObject(storage::ObjectIdentifier object_identifier, Location location,

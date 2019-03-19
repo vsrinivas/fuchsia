@@ -193,17 +193,15 @@ void FakePageStorage::CommitJournal(
       });
 }
 
-Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
+void FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
   watchers_.emplace(watcher);
-  return Status::OK;
 }
 
-Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
+void FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
   auto it = watchers_.find(watcher);
   if (it != watchers_.end()) {
     watchers_.erase(it);
   }
-  return Status::OK;
 }
 
 void FakePageStorage::IsSynced(fit::function<void(Status, bool)> callback) {

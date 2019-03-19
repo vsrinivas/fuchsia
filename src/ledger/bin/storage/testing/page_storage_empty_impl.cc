@@ -65,14 +65,12 @@ void PageStorageEmptyImpl::CommitJournal(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) {
+void PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) {
   FXL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
+void PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
   FXL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
 }
 
 void PageStorageEmptyImpl::IsSynced(

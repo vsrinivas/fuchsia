@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/observer_list.h>
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/convert/convert.h"
@@ -76,8 +77,8 @@ class PageStorageImpl : public PageStorage {
   void CommitJournal(std::unique_ptr<Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const Commit>)>
                          callback) override;
-  Status AddCommitWatcher(CommitWatcher* watcher) override;
-  Status RemoveCommitWatcher(CommitWatcher* watcher) override;
+  void AddCommitWatcher(CommitWatcher* watcher) override;
+  void RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;
   bool IsOnline() override;
   void IsEmpty(fit::function<void(Status, bool)> callback) override;
@@ -251,7 +252,7 @@ class PageStorageImpl : public PageStorage {
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
   std::unique_ptr<PageDb> db_;
-  std::vector<CommitWatcher*> watchers_;
+  fxl::ObserverList<CommitWatcher> watchers_;
   callback::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
   bool page_is_online_ = false;

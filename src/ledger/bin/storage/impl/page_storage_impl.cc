@@ -230,20 +230,12 @@ void PageStorageImpl::CommitJournal(
       });
 }
 
-Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
-  watchers_.push_back(watcher);
-  return Status::OK;
+void PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
+  watchers_.AddObserver(watcher);
 }
 
-Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
-  auto watcher_it =
-      std::find_if(watchers_.begin(), watchers_.end(),
-                   [watcher](CommitWatcher* w) { return w == watcher; });
-  if (watcher_it == watchers_.end()) {
-    return Status::INTERNAL_NOT_FOUND;
-  }
-  watchers_.erase(watcher_it);
-  return Status::OK;
+void PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
+  watchers_.RemoveObserver(watcher);
 }
 
 void PageStorageImpl::IsSynced(fit::function<void(Status, bool)> callback) {
@@ -676,8 +668,8 @@ void PageStorageImpl::GetThreeWayContentsDiff(
 void PageStorageImpl::NotifyWatchersOfNewCommits(
     const std::vector<std::unique_ptr<const Commit>>& new_commits,
     ChangeSource source) {
-  for (CommitWatcher* watcher : watchers_) {
-    watcher->OnNewCommits(new_commits, source);
+  for (auto& watcher : watchers_) {
+    watcher.OnNewCommits(new_commits, source);
   }
 }
 

@@ -152,10 +152,9 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
         std::forward_as_tuple(std::move(callback)));
   }
 
-  storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
+  void AddCommitWatcher(storage::CommitWatcher* watcher) override {
     FXL_DCHECK(!watcher_);
     watcher_ = watcher;
-    return storage::Status::OK;
   }
 
   void MarkSyncedToPeer(

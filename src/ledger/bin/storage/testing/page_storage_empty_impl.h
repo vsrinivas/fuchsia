@@ -52,9 +52,9 @@ class PageStorageEmptyImpl : public PageStorage {
                      fit::function<void(Status, std::unique_ptr<const Commit>)>
                          callback) override;
 
-  Status AddCommitWatcher(CommitWatcher* watcher) override;
+  void AddCommitWatcher(CommitWatcher* watcher) override;
 
-  Status RemoveCommitWatcher(CommitWatcher* watcher) override;
+  void RemoveCommitWatcher(CommitWatcher* watcher) override;
 
   void IsSynced(fit::function<void(Status, bool)> callback) override;
 

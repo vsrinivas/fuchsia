@@ -55,9 +55,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
                          std::vector<storage::ObjectIdentifier>)>
           callback) override;
 
-  storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override;
+  void AddCommitWatcher(storage::CommitWatcher* watcher) override;
 
-  storage::Status RemoveCommitWatcher(storage::CommitWatcher* watcher) override;
+  void RemoveCommitWatcher(storage::CommitWatcher* watcher) override;
 
   void GetUnsyncedCommits(
       fit::function<void(storage::Status,

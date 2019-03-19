@@ -94,9 +94,10 @@ class PageStorage : public PageSyncClient {
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
 
   // Registers the given |CommitWatcher| which will be notified on new commits.
-  virtual Status AddCommitWatcher(CommitWatcher* watcher) = 0;
-  // Unregisters the given CommitWatcher.
-  virtual Status RemoveCommitWatcher(CommitWatcher* watcher) = 0;
+  // A given |CommitWatcher| must not be added more than once.
+  virtual void AddCommitWatcher(CommitWatcher* watcher) = 0;
+  // Unregisters the given |CommitWatcher|, if present.
+  virtual void RemoveCommitWatcher(CommitWatcher* watcher) = 0;
 
   // Checks whether there are any unsynced commits or pieces in this page. Note
   // that since the result is computed asynchronously, the caller must have
