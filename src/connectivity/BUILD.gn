@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    "//src/connectivity/bluetooth/core/bt-gap:tests",
+    "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
+    "//src/connectivity/bluetooth/tests",
+    "//src/connectivity/overnet/examples:overnet_examples_tests",
+    "//src/connectivity/overnet/lib:overnet_tests",
+    "//src/connectivity/overnet/overnetstack:overnetstack_tests",
+    "//src/connectivity/telephony/lib/qmi-protocol:tests",
+  ]
+}

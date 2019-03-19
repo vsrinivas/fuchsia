@@ -6,6 +6,16 @@ import("//build/package.gni")
 import("//build/testing/environments.gni")
 import("//src/ledger/bin/testing/sync_params.gni")
 
+# Public targets
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    ":ledger_tests",
+  ]
+}
+
+# Private targets
 visibility = [ "//src/ledger/*" ]
 
 config("ledger_config") {

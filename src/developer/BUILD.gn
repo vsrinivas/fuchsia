@@ -1,0 +1,12 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
+    "//src/developer/feedback_agent/tests:feedback_agent_tests",
+  ]
+}

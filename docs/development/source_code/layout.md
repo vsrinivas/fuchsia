@@ -48,6 +48,10 @@ pattern:
 
  * `OWNERS`
     * Each area or subarea must have a [list of owners](owners.md)
+ * `BUILD.gn`
+    * Build file defining the [canonical targets](#canonical-targets) for the
+      area. The area owners may add additional targets to this in addition to
+      the canonical targets.
  * `docs/`
     * This directory should contain docs for people working in this area
     * Docs for end-developers (or people working in other areas of Fuchsia)
@@ -88,6 +92,13 @@ In addition to depending on itself, an area can depend only on the top-level
  * `//sdk`
  * `//third_party`
  * `(../)+lib`
+
+### Canonical targets
+
+Each area and subarea must define the following canonical targets in their top-level BUILD.gn file:
+
+* `tests`
+  * All of the tests within this area
 
 ## Repository layout
 

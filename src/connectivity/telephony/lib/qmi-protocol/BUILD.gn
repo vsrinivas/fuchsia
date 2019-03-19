@@ -37,6 +37,16 @@ rustc_library("qmi-protocol") {
   source_root = "$target_gen_dir/qmi-protocol.rs"
 }
 
+group("tests") {
+  testonly = true
+
+  if (host_toolchain == current_toolchain) {
+    data_deps = [
+      ":qmi_host_tests",
+    ]
+  }
+}
+
 if (host_toolchain == current_toolchain) {
   rustc_binary("qmigen") {
     edition = "2018"
