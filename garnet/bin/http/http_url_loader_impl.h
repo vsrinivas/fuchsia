@@ -9,7 +9,7 @@
 
 #include <lib/fit/function.h>
 #include "lib/fidl/cpp/binding.h"
-#include "lib/url/gurl.h"
+#include "src/lib/url/gurl.h"
 
 namespace http {
 

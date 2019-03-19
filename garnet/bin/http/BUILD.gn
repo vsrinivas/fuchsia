@@ -37,9 +37,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/url",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.netstack",
+    "//src/lib/url",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
     "//zircon/public/lib/zx",

@@ -19,7 +19,7 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
-#include "lib/url/gurl.h"
+#include "src/lib/url/gurl.h"
 
 namespace examples {
 
@@ -131,8 +131,8 @@ void AudioPlayer::GetKeystroke() {
 }
 
 void AudioPlayer::MaybeLogMetadataProperty(
-    const fuchsia::media::Metadata& metadata,
-    const std::string& property_label, const std::string& prefix) {
+    const fuchsia::media::Metadata& metadata, const std::string& property_label,
+    const std::string& prefix) {
   for (auto& property : metadata.properties) {
     if (property.label == property_label) {
       FXL_LOG(INFO) << prefix << property.value;

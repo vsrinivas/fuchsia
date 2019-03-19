@@ -619,7 +619,7 @@ group("sysmgr_tests") {
 group("url") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/url:url_tests",
+    "//src/lib/url:url_tests",
   ]
 }
 

@@ -14,7 +14,7 @@
 #include "garnet/bin/http/http_client.h"
 #include "garnet/bin/http/http_errors.h"
 #include "lib/fxl/logging.h"
-#include "lib/url/gurl.h"
+#include "src/lib/url/gurl.h"
 
 namespace http {
 
