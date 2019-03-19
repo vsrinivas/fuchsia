@@ -35,6 +35,6 @@ topaz/examples/eddystone_agent/                 # [Eddystone](https://github.com
 zircon/system/dev/bluetooth/                    # bt-transport drivers
 ```
 
-See the [HCI section of the Bluetooth System document](/docs/bluetooth_architecture.md#hci) for an explanation of how the drivers, such as `bt-transport`, `bt-hci`, and `bt-host`, relate to each other.
+See the [HCI section of the Bluetooth System document](/docs/the-book/bluetooth_architecture.md#hci) for an explanation of how the drivers, such as `bt-transport`, `bt-hci`, and `bt-host`, relate to each other.
 
-See the [Host Bus section of the Bluetooth System document](/docs/bluetooth_architecture.md#host-bus) for more detail on bt-host.
+See the [Host Bus section of the Bluetooth System document](/docs/the-book/bluetooth_architecture.md#host-bus) for more detail on bt-host.
