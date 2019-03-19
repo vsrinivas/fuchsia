@@ -77,7 +77,7 @@ class CreateStoryCall
  private:
   void Run() override {
     FlowToken flow{this, &story_name_, &story_page_id_};
-    ledger()->GetPageNew(nullptr, story_page_.NewRequest());
+    ledger()->GetPage(nullptr, story_page_.NewRequest());
     story_page_->GetId([this, flow](fuchsia::ledger::PageId id) {
       story_page_id_ = std::move(id);
       Cont(flow);
@@ -165,9 +165,9 @@ class DeleteStoryCall : public Operation<> {
 
   void Cont1(FlowToken flow) {
     // Get the story page so we can remove its contents.
-    ledger_->GetPageNew(std::make_unique<fuchsia::ledger::PageId>(
-                            *std::move(story_data_.mutable_story_page_id())),
-                        story_page_.NewRequest());
+    ledger_->GetPage(std::make_unique<fuchsia::ledger::PageId>(
+                         *std::move(story_data_.mutable_story_page_id())),
+                     story_page_.NewRequest());
     story_page_->Clear([this, flow, story_name = story_data_.story_info()->id](
                            fuchsia::ledger::Status status) {
       if (status != fuchsia::ledger::Status::OK) {

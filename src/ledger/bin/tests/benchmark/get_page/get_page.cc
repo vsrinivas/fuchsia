@@ -142,8 +142,8 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   TRACE_ASYNC_BEGIN("benchmark", "get_page", request_number);
-  ledger_->GetPageNew(reuse_ ? fidl::Clone(page_id_) : nullptr,
-                      pages_[request_number].NewRequest());
+  ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr,
+                   pages_[request_number].NewRequest());
   ledger_->Sync(
       [this, callback = waiter->NewCallback(), request_number]() mutable {
         TRACE_ASYNC_END("benchmark", "get_page", request_number);

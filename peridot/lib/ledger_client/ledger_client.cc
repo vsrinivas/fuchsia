@@ -240,7 +240,7 @@ LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger,
       FXL_LOG(INFO) << "Ledger disconnected: " << LedgerEpitaphToString(status);
     }
   });
-  ledger_->SetConflictResolverFactoryNew(bindings_.AddBinding(this));
+  ledger_->SetConflictResolverFactory(bindings_.AddBinding(this));
 }
 
 LedgerClient::LedgerClient(
@@ -259,7 +259,7 @@ LedgerClient::LedgerClient(
 
   // This must be the first call after GetLedger, otherwise the Ledger
   // starts with one reconciliation strategy, then switches to another.
-  ledger_->SetConflictResolverFactoryNew(bindings_.AddBinding(this));
+  ledger_->SetConflictResolverFactory(bindings_.AddBinding(this));
 }
 
 LedgerClient::~LedgerClient() = default;
@@ -280,7 +280,7 @@ fuchsia::ledger::Page* LedgerClient::GetPage(
   fuchsia::ledger::PageIdPtr page_id_copy = fuchsia::ledger::PageId::New();
 
   page_id_copy->id = page_id.id;
-  ledger_->GetPageNew(std::move(page_id_copy), page.NewRequest());
+  ledger_->GetPage(std::move(page_id_copy), page.NewRequest());
 
   auto entry = std::make_unique<PageEntry>();
   entry->page_id = CloneStruct(page_id);

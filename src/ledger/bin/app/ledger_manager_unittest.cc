@@ -287,7 +287,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   PagePtr page;
   storage_ptr->should_get_page_fail = true;
-  ledger_->GetPageNew(nullptr, page.NewRequest());
+  ledger_->GetPage(nullptr, page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -297,7 +297,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   ResetLedgerPtr();
   storage_ptr->should_get_page_fail = true;
-  ledger_->GetRootPageNew(page.NewRequest());
+  ledger_->GetRootPage(page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -307,7 +307,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   ResetLedgerPtr();
   PageId id = RandomId();
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -396,7 +396,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
   PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
 
   storage::Status storage_status;
@@ -435,7 +435,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
   PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
 
   // Mark the page as unsynced and close it.
@@ -464,7 +464,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   // Mark the page as synced and close it.
   storage_ptr->set_page_storage_synced(storage_page_id, true);
@@ -484,7 +484,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   EXPECT_FALSE(page_is_closed_and_synced_called);
 
   // Open and close the page.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   page.Unbind();
   RunLoopUntilIdle();
@@ -507,7 +507,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   // Mark the page as synced and close it.
   storage_ptr->set_page_storage_synced(storage_page_id, true);
@@ -540,7 +540,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   EXPECT_EQ(PagePredicateResult::YES, is_closed_and_synced2);
 
   // Open and close the page.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   page.Unbind();
   RunLoopUntilIdle();
@@ -581,7 +581,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   PageId id = RandomId();
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
 
   storage_ptr->set_page_storage_offline_empty(storage_page_id, true);
@@ -650,9 +650,9 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   PageId id = RandomId();
 
   PagePtr page1;
-  ledger_->GetPageNew(fidl::MakeOptional(id), page1.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest());
   PagePtr page2;
-  ledger_->GetPageNew(fidl::MakeOptional(id), page2.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page2.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -671,7 +671,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Get the root page.
   ledger_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
-  ledger_->GetRootPageNew(page.NewRequest());
+  ledger_->GetRootPage(page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
   EXPECT_TRUE(called);
@@ -687,7 +687,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Get a new page with a random id.
   ledger_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
   EXPECT_TRUE(called);
@@ -703,7 +703,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   // Create a new page.
   ledger_.set_error_handler(
       callback::Capture(callback::SetWhenCalled(&called), &status));
-  ledger_->GetPageNew(nullptr, page.NewRequest());
+  ledger_->GetPage(nullptr, page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
   EXPECT_TRUE(called);
@@ -723,14 +723,14 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
 
   // Open a page and check that OnPageOpened was called once.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page1.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
 
   // Open the page again and check that there is no new call to OnPageOpened.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page2.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page2.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
@@ -779,7 +779,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
 
   // Open the same page with an external request and check that OnPageOpened
   // was called once.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
@@ -796,7 +796,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedUnused) {
   EXPECT_EQ(0, disk_cleanup_manager_->page_unused_count);
 
   // Open and close the page through an external request.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   // Mark the page as synced and close it.
   storage_ptr->set_page_storage_synced(storage_page_id, true);
@@ -824,7 +824,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedUnused) {
 
   // Open the same page with an external request and check that OnPageOpened
   // was called once.
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(2, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(1, disk_cleanup_manager_->page_closed_count);
@@ -853,7 +853,7 @@ TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
   PageId id = RandomId();
   bool called;
 
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
 
   // Try to delete the page while it is open. Expect to get an error.
@@ -881,7 +881,7 @@ TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
 
   // Try to open the same page.
   bool get_page_done;
-  ledger_->GetPageNew(fidl::MakeOptional(id), page.NewRequest());
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   ledger_->Sync(callback::SetWhenCalled(&get_page_done));
   RunLoopUntilIdle();
   EXPECT_FALSE(get_page_done);
@@ -903,10 +903,10 @@ TEST_F(LedgerManagerTest, ChangeConflictResolver) {
   StubConflictResolverFactory factory1(handle1.NewRequest());
   StubConflictResolverFactory factory2(handle2.NewRequest());
 
-  ledger_->SetConflictResolverFactoryNew(std::move(handle1));
+  ledger_->SetConflictResolverFactory(std::move(handle1));
   RunLoopUntilIdle();
 
-  ledger_->SetConflictResolverFactoryNew(std::move(handle2));
+  ledger_->SetConflictResolverFactory(std::move(handle2));
   RunLoopUntilIdle();
   EXPECT_FALSE(factory1.disconnected);
   EXPECT_FALSE(factory2.disconnected);
@@ -921,10 +921,10 @@ TEST_F(LedgerManagerTest, MultipleConflictResolvers) {
   LedgerPtr ledger2;
   ledger_manager_->BindLedger(ledger2.NewRequest());
 
-  ledger_->SetConflictResolverFactoryNew(std::move(handle1));
+  ledger_->SetConflictResolverFactory(std::move(handle1));
   RunLoopUntilIdle();
 
-  ledger2->SetConflictResolverFactoryNew(std::move(handle2));
+  ledger2->SetConflictResolverFactory(std::move(handle2));
   RunLoopUntilIdle();
   EXPECT_FALSE(factory1.disconnected);
   EXPECT_FALSE(factory2.disconnected);

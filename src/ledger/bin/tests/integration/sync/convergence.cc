@@ -333,7 +333,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
           std::make_unique<TestConflictResolverFactory>(
               resolver_factory_ptr.NewRequest()));
       LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
-      ledger->SetConflictResolverFactoryNew(std::move(resolver_factory_ptr));
+      ledger->SetConflictResolverFactory(std::move(resolver_factory_ptr));
     }
 
     watchers.push_back(WatchPageContents(&pages_[i]));

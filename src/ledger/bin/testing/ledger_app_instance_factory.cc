@@ -69,14 +69,14 @@ LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
 
 PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   PagePtr page;
-  GetTestLedger()->GetPageNew(nullptr, page.NewRequest());
+  GetTestLedger()->GetPage(nullptr, page.NewRequest());
   return page;
 }
 
 PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
     const PageIdPtr& page_id) {
   PagePtr page_ptr;
-  GetTestLedger()->GetPageNew(fidl::Clone(page_id), page_ptr.NewRequest());
+  GetTestLedger()->GetPage(fidl::Clone(page_id), page_ptr.NewRequest());
   return page_ptr;
 }
 

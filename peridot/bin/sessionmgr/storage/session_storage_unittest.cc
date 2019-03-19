@@ -257,8 +257,8 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
   // Add some fake content to the story's page, so that we dan show that
   // it is deleted when we instruct SessionStorage to delete the story.
   fuchsia::ledger::PagePtr story_page;
-  ledger_client()->ledger()->GetPageNew(std::move(story_page_id),
-                                        story_page.NewRequest());
+  ledger_client()->ledger()->GetPage(std::move(story_page_id),
+                                     story_page.NewRequest());
   done = false;
   story_page->Put(to_array("key"), to_array("value"),
                   [&](fuchsia::ledger::Status status) { done = true; });

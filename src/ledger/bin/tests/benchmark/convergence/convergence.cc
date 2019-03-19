@@ -169,7 +169,7 @@ void ConvergenceBenchmark::Run() {
     if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
       return;
     }
-    device_context->ledger->GetPageNew(
+    device_context->ledger->GetPage(
         fidl::MakeOptional(page_id_),
         device_context->page_connection.NewRequest());
     PageSnapshotPtr snapshot;

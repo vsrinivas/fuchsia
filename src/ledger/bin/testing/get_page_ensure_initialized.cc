@@ -21,7 +21,7 @@ void GetPageEnsureInitialized(
     fit::function<void(Status, PagePtr, PageId)> callback) {
   auto page = std::make_unique<PagePtr>();
   auto request = page->NewRequest();
-  (*ledger)->GetPageNew(std::move(requested_id), std::move(request));
+  (*ledger)->GetPage(std::move(requested_id), std::move(request));
   page->set_error_handler(
       [error_handler = std::move(error_handler)](zx_status_t status) {
         FXL_LOG(ERROR) << "The page connection was closed, quitting.";

@@ -116,7 +116,7 @@ TodoApp::TodoApp(async::Loop* loop)
   ledger_.set_error_handler(
       NewErrorHandler([this] { loop_->Quit(); }, "Ledger"));
   component_context_->GetLedger(ledger_.NewRequest());
-  ledger_->GetRootPageNew(page_.NewRequest());
+  ledger_->GetRootPage(page_.NewRequest());
 
   fuchsia::ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),

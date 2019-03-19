@@ -60,7 +60,7 @@ TEST_P(PageIntegrationTest, GetRootPage) {
   auto instance = NewLedgerAppInstance();
   LedgerPtr ledger = instance->GetTestLedger();
   PagePtr page;
-  ledger->GetRootPageNew(page.NewRequest());
+  ledger->GetRootPage(page.NewRequest());
   auto loop_waiter = NewWaiter();
   ledger->Sync(loop_waiter->GetCallback());
   ASSERT_TRUE(loop_waiter->RunUntilCalled());

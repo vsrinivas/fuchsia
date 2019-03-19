@@ -230,7 +230,7 @@ void FetchBenchmark::ConnectReader() {
     return;
   }
 
-  reader_->GetPageNew(fidl::MakeOptional(page_id_), reader_page_.NewRequest());
+  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest());
   WaitForReaderDownload();
 }
 
