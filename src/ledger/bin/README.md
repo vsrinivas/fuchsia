@@ -8,7 +8,7 @@ Implementation of Ledger.
  - [cache](cache)
  - [cloud_sync](cloud_sync) implements Ledger synchronisation via cloud
  - [cobalt](cobalt) contains helper methods for reporting Cobalt events
- - [coroutine](coroutine) coroutine library
+ - [coroutine](../lib/coroutine) coroutine library
  - [encryption](encryption) implements encryption service for Ledger
  - [environment](environment)
  - [fidl](fidl) FIDL protocols internal to Ledger and peridot framework (not exposed to upper layers)
