@@ -47,8 +47,7 @@ uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
   // or not.
   return escher::impl::GetMemoryTypeIndex(
       physical_device, reqs.memoryTypeBits,
-      vk::MemoryPropertyFlagBits::eDeviceLocal |
-          vk::MemoryPropertyFlagBits::eHostVisible);
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
 }
 
 }  // namespace gfx
