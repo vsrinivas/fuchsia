@@ -16,6 +16,7 @@ monolith += [
 preinstall += []
 
 available += [
+  "garnet/packages/prod/media_audio",
   "src/modular/bundles/tools",
   "peridot/packages/prod/cloud_provider_firestore",
 ]
