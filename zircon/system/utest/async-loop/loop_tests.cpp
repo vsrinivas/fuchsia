@@ -947,16 +947,15 @@ bool exception_test() {
 
     EXPECT_EQ(ZX_OK, start_thread_to_crash(crashing_thread));
 
-    // Wait until thread has crashed.
-    uint32_t state;
+    // There will eventually be an exception to read on the thread exception
+    // port. Wait until it has been read and processed.
     do {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-        state = get_thread_state(crashing_thread);
-    } while (state != ZX_THREAD_STATE_BLOCKED_EXCEPTION);
-
-    // There should now be an exception to read on the thread exception port.
-    EXPECT_EQ(ZX_EXCEPTION_PORT_TYPE_THREAD, get_thread_exception_port_type(crashing_thread));
-    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    } while (thread_exception.run_count < 1u);
+    EXPECT_EQ(get_thread_state(crashing_thread), ZX_THREAD_STATE_BLOCKED_EXCEPTION);
+    EXPECT_EQ(get_thread_exception_port_type(crashing_thread),
+              ZX_EXCEPTION_PORT_TYPE_THREAD);
     EXPECT_EQ(1u, thread_exception.run_count);
     EXPECT_EQ(0u, process_exception.run_count);
     EXPECT_EQ(ZX_OK, thread_exception.last_status);
@@ -969,14 +968,14 @@ bool exception_test() {
     // on to the next handler).
     EXPECT_EQ(ZX_OK, thread_exception.ResumeFromException(crashing_thread, ZX_RESUME_TRY_NEXT));
 
-    // Wait until thread has moved on to try the next exception handler.
+    // There will eventually be an exception to read on the process exception
+    // port. Wait until it has been read and processed.
     do {
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-        state = get_thread_exception_port_type(crashing_thread);
-    } while (state != ZX_EXCEPTION_PORT_TYPE_PROCESS);
-
-    // There should now be an exception to read on the process exception port.
-    EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+    } while (process_exception.run_count < 1u);
+    EXPECT_EQ(get_thread_exception_port_type(crashing_thread),
+              ZX_EXCEPTION_PORT_TYPE_PROCESS);
     EXPECT_EQ(1u, thread_exception.run_count);
     EXPECT_EQ(1u, process_exception.run_count);
     EXPECT_EQ(ZX_OK, process_exception.last_status);
