@@ -168,8 +168,8 @@ void AudioCoreImpl::DoPacketCleanup() {
   // lock) in order to keep the cleanup tasks properly ordered while
   // guaranteeing minimal contention of the cleanup lock (which is being
   // acquired by the high priority mixing threads).
-  fbl::DoublyLinkedList<fbl::unique_ptr<AudioPacketRef>> tmp_packet_queue;
-  fbl::DoublyLinkedList<fbl::unique_ptr<PendingFlushToken>> tmp_token_queue;
+  fbl::DoublyLinkedList<std::unique_ptr<AudioPacketRef>> tmp_packet_queue;
+  fbl::DoublyLinkedList<std::unique_ptr<PendingFlushToken>> tmp_token_queue;
 
   {
     std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
@@ -190,7 +190,7 @@ void AudioCoreImpl::DoPacketCleanup() {
 }
 
 void AudioCoreImpl::SchedulePacketCleanup(
-    fbl::unique_ptr<AudioPacketRef> packet) {
+    std::unique_ptr<AudioPacketRef> packet) {
   std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   packet_cleanup_queue_.push_back(std::move(packet));
@@ -203,7 +203,7 @@ void AudioCoreImpl::SchedulePacketCleanup(
 }
 
 void AudioCoreImpl::ScheduleFlushCleanup(
-    fbl::unique_ptr<PendingFlushToken> token) {
+    std::unique_ptr<PendingFlushToken> token) {
   std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   flush_cleanup_queue_.push_back(std::move(token));

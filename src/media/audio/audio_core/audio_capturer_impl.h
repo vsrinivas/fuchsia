@@ -46,7 +46,7 @@ class AudioCapturerImpl
  protected:
   friend class fbl::RefPtr<AudioCapturerImpl>;
   ~AudioCapturerImpl() override;
-  zx_status_t InitializeSourceLink(const AudioLinkPtr& link) override;
+  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) override;
 
  private:
   // Notes about the AudioCapturerImpl state machine.
@@ -111,13 +111,13 @@ class AudioCapturerImpl
   struct PendingCaptureBuffer;
 
   using PcbAllocatorTraits =
-      fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<PendingCaptureBuffer>>;
+      fbl::StaticSlabAllocatorTraits<std::unique_ptr<PendingCaptureBuffer>>;
   using PcbAllocator = fbl::SlabAllocator<PcbAllocatorTraits>;
-  using PcbList = fbl::DoublyLinkedList<fbl::unique_ptr<PendingCaptureBuffer>>;
+  using PcbList = fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
   struct PendingCaptureBuffer : public fbl::SlabAllocated<PcbAllocatorTraits>,
                                 public fbl::DoublyLinkedListable<
-                                    fbl::unique_ptr<PendingCaptureBuffer>> {
+                                    std::unique_ptr<PendingCaptureBuffer>> {
     PendingCaptureBuffer(uint32_t of, uint32_t nf, CaptureAtCallback c)
         : offset_frames(of), num_frames(nf), cbk(std::move(c)) {}
 
@@ -194,7 +194,7 @@ class AudioCapturerImpl
 
   // Select a mixer for the link supplied and return true, or return false if
   // one cannot be found.
-  zx_status_t ChooseMixer(const std::shared_ptr<AudioLink>& link);
+  zx_status_t ChooseMixer(const fbl::RefPtr<AudioLink>& link);
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
@@ -234,7 +234,7 @@ class AudioCapturerImpl
   // Vector used to hold references to our source links while we are mixing
   // (instead of holding the lock which prevents source_links_ mutation for the
   // entire mix job)
-  std::vector<std::shared_ptr<AudioLink>> source_link_refs_
+  std::vector<fbl::RefPtr<AudioLink>> source_link_refs_
       FXL_GUARDED_BY(mix_domain_->token());
 
   // Capture bookkeeping
@@ -246,11 +246,6 @@ class AudioCapturerImpl
   uint32_t async_frames_per_packet_;
   uint32_t async_next_frame_offset_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
   StopAsyncCaptureCallback pending_async_stop_cbk_;
-
-  fbl::Mutex sources_lock_;
-  std::set<std::shared_ptr<AudioLink>,
-           std::owner_less<std::shared_ptr<AudioLink>>>
-      sources_ FXL_GUARDED_BY(sources_lock_);
 };
 
 }  // namespace media::audio

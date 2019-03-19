@@ -121,9 +121,10 @@ zx_status_t AudioDeviceManager::AddDevice(
   zx_status_t res = device->Startup();
   if (res != ZX_OK) {
     device->Shutdown();
+  } else {
+    devices_pending_init_.insert(std::move(device));
   }
 
-  devices_pending_init_.insert(device);
   return res;
 }
 
@@ -162,10 +163,11 @@ void AudioDeviceManager::ActivateDevice(
   } else {
     const uint8_t* id = settings->uid().data;
     char id_buf[33];
-    snprintf(id_buf, sizeof(id_buf),
-             "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-             id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8],
-             id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+    std::snprintf(
+        id_buf, sizeof(id_buf),
+        "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+        id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9],
+        id[10], id[11], id[12], id[13], id[14], id[15]);
     FXL_LOG(WARNING)
         << "Warning: Device ID (" << device->token()
         << ") shares a persistent unique ID (" << id_buf
@@ -234,8 +236,7 @@ void AudioDeviceManager::ActivateDevice(
 
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
-  FXL_DCHECK(device->is_output() || (static_cast<AudioDevice*>(device.get()) !=
-                                     throttle_output_.get()));
+  FXL_DCHECK(device->is_output() || (device != throttle_output_));
 
   device->PreventNewLinks();
   device->Unlink();
@@ -416,13 +417,13 @@ void AudioDeviceManager::LinkOutputToAudioRenderer(
   if (!audio_renderer->format_info_valid())
     return;
 
-  std::shared_ptr<AudioLink> link = AudioObject::LinkObjects(
+  fbl::RefPtr<AudioLink> link = AudioObject::LinkObjects(
       fbl::WrapRefPtr(audio_renderer), fbl::WrapRefPtr(output));
   // TODO(johngro): get rid of the throttle output.  See MTWN-52
   if ((link != nullptr) && (output == throttle_output_.get())) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
     audio_renderer->SetThrottleOutput(
-        std::static_pointer_cast<AudioLinkPacketSource>(link));
+        fbl::RefPtr<AudioLinkPacketSource>::Downcast(std::move(link)));
   }
 }
 
@@ -448,7 +449,7 @@ void AudioDeviceManager::AddAudioCapturer(
     }
 
     if (source->plugged()) {
-      AudioObject::LinkObjects(source, audio_capturer);
+      AudioObject::LinkObjects(std::move(source), std::move(audio_capturer));
     }
   }
 }
@@ -597,7 +598,7 @@ void AudioDeviceManager::OnDeviceUnplugged(
           }
         }
 
-        LinkToAudioCapturers(replacement);
+        LinkToAudioCapturers(std::move(replacement));
       }
     } else {
       // Removed device was the most-recently-plugged input device. Determine
@@ -608,7 +609,7 @@ void AudioDeviceManager::OnDeviceUnplugged(
 
       fbl::RefPtr<AudioInput> replacement = FindLastPluggedInput();
       if (replacement) {
-        LinkToAudioCapturers(replacement);
+        LinkToAudioCapturers(std::move(replacement));
       }
     }
   }
@@ -634,25 +635,25 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
     // Then, apply last-plugged policy to all capturers with loopback sources.
     // The policy mentioned above currently only pertains to Output Routing.
     fbl::RefPtr<AudioOutput> last_plugged = FindLastPluggedOutput();
-    auto output = static_cast<AudioOutput*>(device.get());
+    auto output = fbl::RefPtr<AudioOutput>::Downcast(std::move(device));
 
     FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
     bool lp_policy =
         (routing_policy_ ==
          fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
-    bool is_lp = (output == last_plugged.get());
+    bool is_lp = (output == last_plugged);
 
     if (is_lp && lp_policy) {
       for (auto& unlink_tgt : devices_) {
-        if (unlink_tgt.is_output() && (&unlink_tgt != device.get())) {
+        if (unlink_tgt.is_output() && (&unlink_tgt != output.get())) {
           unlink_tgt.UnlinkSources();
         }
       }
     }
     if (is_lp || !lp_policy) {
       for (auto& audio_renderer : audio_renderers_) {
-        LinkOutputToAudioRenderer(output, &audio_renderer);
+        LinkOutputToAudioRenderer(output.get(), &audio_renderer);
 
         // If we are adding a new link (regardless of whether we may or may
         // not have removed old links based on the specific active policy)
@@ -675,7 +676,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
 
     // 'loopback' AudioCapturers should listen to this output now
     if (is_lp) {
-      LinkToAudioCapturers(device);
+      LinkToAudioCapturers(std::move(output));
     }
   } else {
     FXL_DCHECK(device->is_input());
@@ -685,7 +686,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
 
     // non-'loopback' AudioCapturers should listen to this input now
     if (input == last_plugged.get()) {
-      LinkToAudioCapturers(device);
+      LinkToAudioCapturers(std::move(device));
     }
   }
 }
@@ -702,7 +703,8 @@ void AudioDeviceManager::LinkToAudioCapturers(
   for (auto& audio_capturer : audio_capturers_) {
     if (audio_capturer.loopback() == link_to_loopbacks) {
       audio_capturer.UnlinkSources();
-      AudioObject::LinkObjects(device, fbl::WrapRefPtr(&audio_capturer));
+      AudioObject::LinkObjects(std::move(device),
+                               fbl::WrapRefPtr(&audio_capturer));
     }
   }
 }

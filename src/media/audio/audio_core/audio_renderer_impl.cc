@@ -82,7 +82,7 @@ void AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time,
 }
 
 void AudioRendererImpl::SetThrottleOutput(
-    std::shared_ptr<AudioLinkPacketSource> throttle_output_link) {
+    fbl::RefPtr<AudioLinkPacketSource> throttle_output_link) {
   FXL_DCHECK(throttle_output_link != nullptr);
   FXL_DCHECK(throttle_output_link_ == nullptr);
   throttle_output_link_ = std::move(throttle_output_link);
@@ -91,15 +91,15 @@ void AudioRendererImpl::SetThrottleOutput(
 void AudioRendererImpl::RecomputeMinClockLeadTime() {
   int64_t cur_lead_time = 0;
 
-  ForEachDestLink(
-      [throttle_ptr = throttle_output_link_.get(), &cur_lead_time](auto& link) {
-        if (link->GetDest()->is_output() && link.get() != throttle_ptr) {
-          const auto output = static_cast<AudioOutput*>(link->GetDest().get());
+  ForEachDestLink([throttle_ptr = throttle_output_link_.get(),
+                   &cur_lead_time](auto& link) {
+    if (link.GetDest()->is_output() && &link != throttle_ptr) {
+      const auto output = fbl::RefPtr<AudioOutput>::Downcast(link.GetDest());
 
-          cur_lead_time =
-              std::max(cur_lead_time, output->min_clock_lead_time_nsec());
-        }
-      });
+      cur_lead_time =
+          std::max(cur_lead_time, output->min_clock_lead_time_nsec());
+    }
+  });
 
   if (min_clock_lead_nsec_ != cur_lead_time) {
     min_clock_lead_nsec_ = cur_lead_time;
@@ -117,7 +117,7 @@ bool AudioRendererImpl::IsOperating() {
   return ForAnyDestLink([](auto& link) {
     // If pending queue empty: this link is NOT operating; ask other links.
     // Else: Link IS operating; final answer is YES; no need to ask others.
-    return !(AsPacketSource(link)->pending_queue_empty());
+    return !AsPacketSource(link).pending_queue_empty();
   });
 }
 
@@ -170,8 +170,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 
 void AudioRendererImpl::UnlinkThrottle() {
   if (throttle_output_link_ != nullptr) {
-    RemoveLink(throttle_output_link_);
-    throttle_output_link_ = nullptr;
+    RemoveLink(std::move(throttle_output_link_));
   }
 }
 
@@ -287,7 +286,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   // Map this into a sub-vmar instead of defaulting to the root
   // once teisenbe@ provides guidance on the best-practice for doing this.
   zx_status_t res;
-  payload_buffer_ = fbl::AdoptRef(new RefCountedVmoMapper());
+  payload_buffer_ = fbl::MakeRefCounted<RefCountedVmoMapper>();
   res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";
@@ -450,17 +449,17 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   start_pts &= mask;
 
   // Create the packet.
-  auto packet_ref = fbl::AdoptRef(
-      new AudioPacketRef(payload_buffer_, std::move(callback), packet, owner_,
-                         frame_count << kPtsFractionalBits, start_pts));
+  auto packet_ref = fbl::MakeRefCounted<AudioPacketRef>(
+      payload_buffer_, std::move(callback), packet, owner_,
+      frame_count << kPtsFractionalBits, start_pts);
 
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.
   next_frac_frame_pts_ = packet_ref->end_pts();
 
   // Distribute our packet to all our dest links
-  ForEachDestLink([packet_ref](auto& link) {
-    AsPacketSource(link)->PushToPendingQueue(packet_ref);
+  ForEachDestLink([moved_packet = std::move(packet_ref)](auto& link) {
+    AsPacketSource(link).PushToPendingQueue(std::move(moved_packet));
   });
 
   // Things went well, cancel the cleanup hook.
@@ -486,8 +485,8 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // Tell each link to flush. If link is currently processing pending data, it
   // will take a reference to the flush token and ensure a callback is queued at
   // the proper time (after all pending packet-complete callbacks are queued).
-  ForEachDestLink([flush_token](auto& link) {
-    AsPacketSource(link)->FlushPendingQueue(flush_token);
+  ForEachDestLink([moved_token = std::move(flush_token)](auto& link) {
+    AsPacketSource(link).FlushPendingQueue(std::move(moved_token));
   });
 
   // Invalidate any internal state which gets reset after a flush.
@@ -660,8 +659,8 @@ void AudioRendererImpl::SetGain(float gain_db) {
   // Set this gain with every link (except the link to throttle output)
   ForEachDestLink(
       [throttle_ptr = throttle_output_link_.get(), gain_db](auto& link) {
-        if (link.get() != throttle_ptr) {
-          link->bookkeeping()->gain.SetSourceGain(gain_db);
+        if (&link != throttle_ptr) {
+          link.bookkeeping()->gain.SetSourceGain(gain_db);
         }
       });
 
@@ -682,8 +681,8 @@ void AudioRendererImpl::SetGainWithRamp(
 
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), gain_db,
                    duration_ns, ramp_type](auto& link) {
-    if (link.get() != throttle_ptr) {
-      link->bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
+    if (&link != throttle_ptr) {
+      link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
                                                       ramp_type);
     }
   });
@@ -705,8 +704,8 @@ void AudioRendererImpl::SetMute(bool mute) {
 
   ForEachDestLink(
       [throttle_ptr = throttle_output_link_.get(), mute](auto& link) {
-        if (link.get() != throttle_ptr) {
-          link->bookkeeping()->gain.SetSourceMute(mute);
+        if (&link != throttle_ptr) {
+          link.bookkeeping()->gain.SetSourceMute(mute);
         }
       });
 

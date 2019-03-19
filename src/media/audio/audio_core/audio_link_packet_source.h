@@ -23,7 +23,7 @@ namespace media::audio {
 //
 class AudioLinkPacketSource : public AudioLink {
  public:
-  static std::shared_ptr<AudioLinkPacketSource> Create(
+  static fbl::RefPtr<AudioLinkPacketSource> Create(
       fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
   ~AudioLinkPacketSource() override;
 
@@ -46,10 +46,10 @@ class AudioLinkPacketSource : public AudioLink {
 
   // PendingQueue operations used by the packet source. Never call these from
   // the destination.
-  void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& pkt);
+  void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet);
   void FlushPendingQueue(
       const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
-  void CopyPendingQueue(const std::shared_ptr<AudioLinkPacketSource>& other);
+  void CopyPendingQueue(const fbl::RefPtr<AudioLinkPacketSource>& other);
 
   // PendingQueue operations used by the destination. Never call these from the
   // source.
@@ -89,10 +89,9 @@ class AudioLinkPacketSource : public AudioLink {
 
 //
 // Utility function used by packet-oriented AudioObjects (e.g. AudioRenderer)
-inline AudioLinkPacketSource* AsPacketSource(
-    const std::shared_ptr<AudioLink>& link) {
-  FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-  return static_cast<AudioLinkPacketSource*>(link.get());
+inline AudioLinkPacketSource& AsPacketSource(AudioLink& link) {
+  FXL_DCHECK(link.source_type() == AudioLink::SourceType::Packet);
+  return static_cast<AudioLinkPacketSource&>(link);
 }
 
 }  // namespace media::audio

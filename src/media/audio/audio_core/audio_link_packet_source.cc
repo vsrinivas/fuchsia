@@ -24,7 +24,7 @@ AudioLinkPacketSource::~AudioLinkPacketSource() {
 }
 
 // static
-std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
+fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
     fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest) {
   FXL_DCHECK(source);
   FXL_DCHECK(dest);
@@ -36,17 +36,17 @@ std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
     return nullptr;
   }
 
-  auto& audio_renderer = *(static_cast<AudioRendererImpl*>(source.get()));
+  auto& audio_renderer = *fbl::RefPtr<AudioRendererImpl>::Downcast(source);
 
   FXL_DCHECK(audio_renderer.format_info_valid());
-  return std::shared_ptr<AudioLinkPacketSource>(new AudioLinkPacketSource(
+  return fbl::AdoptRef(new AudioLinkPacketSource(
       std::move(source), std::move(dest), audio_renderer.format_info()));
 }
 
 void AudioLinkPacketSource::PushToPendingQueue(
-    const fbl::RefPtr<AudioPacketRef>& pkt) {
+    const fbl::RefPtr<AudioPacketRef>& packet) {
   std::lock_guard<std::mutex> locker(pending_mutex_);
-  pending_packet_queue_.emplace_back(pkt);
+  pending_packet_queue_.emplace_back(std::move(packet));
 }
 
 void AudioLinkPacketSource::FlushPendingQueue(
@@ -71,7 +71,7 @@ void AudioLinkPacketSource::FlushPendingQueue(
       pending_packet_queue_.clear();
 
       if (flush_token != nullptr) {
-        pending_flush_token_queue_.emplace_back(flush_token);
+        pending_flush_token_queue_.emplace_back(std::move(flush_token));
       }
 
       return;
@@ -92,7 +92,7 @@ void AudioLinkPacketSource::FlushPendingQueue(
 }
 
 void AudioLinkPacketSource::CopyPendingQueue(
-    const std::shared_ptr<AudioLinkPacketSource>& other) {
+    const fbl::RefPtr<AudioLinkPacketSource>& other) {
   FXL_DCHECK(other != nullptr);
   FXL_DCHECK(this != other.get());
 

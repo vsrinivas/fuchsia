@@ -57,8 +57,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   // threads other than the thread which executed the method itself, we will
   // want to switch to creating the callback message directly, instead of
   // indirecting through the service.
-  void SchedulePacketCleanup(fbl::unique_ptr<AudioPacketRef> packet);
-  void ScheduleFlushCleanup(fbl::unique_ptr<PendingFlushToken> token);
+  void SchedulePacketCleanup(std::unique_ptr<AudioPacketRef> packet);
+  void ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken> token);
 
   // Schedule a closure to run on the service's main message loop.
   void ScheduleMainThreadTask(fit::closure task) {
@@ -99,9 +99,9 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
 
   // State for dealing with cleanup tasks.
   std::mutex cleanup_queue_mutex_;
-  fbl::DoublyLinkedList<fbl::unique_ptr<AudioPacketRef>> packet_cleanup_queue_
+  fbl::DoublyLinkedList<std::unique_ptr<AudioPacketRef>> packet_cleanup_queue_
       FXL_GUARDED_BY(cleanup_queue_mutex_);
-  fbl::DoublyLinkedList<fbl::unique_ptr<PendingFlushToken>> flush_cleanup_queue_
+  fbl::DoublyLinkedList<std::unique_ptr<PendingFlushToken>> flush_cleanup_queue_
       FXL_GUARDED_BY(cleanup_queue_mutex_);
   bool cleanup_scheduled_ FXL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;

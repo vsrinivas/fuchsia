@@ -118,7 +118,8 @@ void AudioCapturerImpl::Shutdown() {
   state_.store(State::Shutdown);
 }
 
-zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
+zx_status_t AudioCapturerImpl::InitializeSourceLink(
+    const fbl::RefPtr<AudioLink>& link) {
   zx_status_t res;
 
   // Allocate our bookkeeping for our link.
@@ -324,7 +325,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // prefer to capture. If an AudioInput is going to be reconfigured because of
   // our needs, it will happen at the policy level before we get linked up.
   ForEachSourceLink([this](auto& link) {
-    const auto& source = link->GetSource();
+    const auto& source = link.GetSource();
     switch (source->type()) {
       case AudioObject::Type::Output:
       case AudioObject::Type::Input: {
@@ -351,14 +352,15 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // of format would require breaking and reforming links in this case, which
   // would make it difficult to ever do a seamless format change (something
   // which already would be rather difficult to do).
-  std::vector<std::shared_ptr<AudioLink>> cleanup_list;
+  std::vector<fbl::RefPtr<AudioLink>> cleanup_list;
   ForEachSourceLink([this, &cleanup_list](auto& link) {
-    if (ChooseMixer(link) != ZX_OK) {
-      cleanup_list.push_back(link);
+    auto copy = fbl::WrapRefPtr(&link);
+    if (ChooseMixer(copy) != ZX_OK) {
+      cleanup_list.emplace_back(std::move(copy));
     }
   });
 
-  for (const auto& link : cleanup_list) {
+  for (auto& link : cleanup_list) {
     AudioObject::RemoveLink(link);
   }
 
@@ -803,8 +805,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   FXL_DCHECK(source_link_refs_.size() == 0);
 
   ForEachSourceLink([src_link_refs = &source_link_refs_](auto& link) {
-    if (link->source_type() != AudioLink::SourceType::Packet) {
-      src_link_refs->push_back(link);
+    if (link.source_type() != AudioLink::SourceType::Packet) {
+      src_link_refs->emplace_back(fbl::WrapRefPtr(&link));
     }
   });
 
@@ -1326,8 +1328,7 @@ void AudioCapturerImpl::UpdateFormat(
   FXL_DCHECK(max_frames_per_capture_ > 0);
 }
 
-zx_status_t AudioCapturerImpl::ChooseMixer(
-    const std::shared_ptr<AudioLink>& link) {
+zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   FXL_DCHECK(link != nullptr);
 
   const auto& source = link->GetSource();
@@ -1422,7 +1423,7 @@ void AudioCapturerImpl::SetGain(float gain_db) {
   ForEachSourceLink([gain_db](auto& link) {
     // Gain objects contain multiple stages. In capture, device/master gain is
     // the "source" stage and stream gain is the "dest" stage.
-    link->bookkeeping()->gain.SetDestGain(gain_db);
+    link.bookkeeping()->gain.SetDestGain(gain_db);
   });
 
   NotifyGainMuteChanged();
@@ -1437,7 +1438,7 @@ void AudioCapturerImpl::SetMute(bool mute) {
   mute_ = mute;
 
   ForEachSourceLink(
-      [mute](auto& link) { link->bookkeeping()->gain.SetDestMute(mute); });
+      [mute](auto& link) { link.bookkeeping()->gain.SetDestMute(mute); });
 
   NotifyGainMuteChanged();
 }

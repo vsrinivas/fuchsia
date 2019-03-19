@@ -100,7 +100,7 @@ void StandardOutputBase::Process() {
 
         // Mix each renderer into the intermediate accumulator buffer, then
         // reformat (and clip) into the final output buffer.
-        ForeachLink(TaskType::Mix);
+        ForEachLink(TaskType::Mix);
         output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
                                         cur_mix_job_.buf_frames);
         mixed = true;
@@ -123,7 +123,7 @@ void StandardOutputBase::Process() {
   // queues. No matter what is going on with the output hardware, we are not
   // allowed to hold onto the queued data past its presentation time.
   if (!mixed) {
-    ForeachLink(TaskType::Trim);
+    ForEachLink(TaskType::Trim);
   }
 
   // Figure out when we should wake up to do more work again.  No matter how
@@ -141,7 +141,8 @@ void StandardOutputBase::Process() {
   }
 }
 
-zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
+zx_status_t StandardOutputBase::InitializeSourceLink(
+    const fbl::RefPtr<AudioLink>& link) {
   auto mix_bookkeeping = std::make_unique<Bookkeeping>();
 
   // For now, refuse to link to anything but a packet source.  This code does
@@ -152,7 +153,7 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
 
   // If we have an output, pick a mixer based on the input and output formats.
   // Otherwise, we only need a NoOp mixer (for the time being).
-  auto& packet_link = *(static_cast<AudioLinkPacketSource*>(link.get()));
+  auto& packet_link = *fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
   if (output_producer_) {
     mix_bookkeeping->mixer = Mixer::Select(packet_link.format_info().format(),
                                            *(output_producer_->format()));
@@ -183,7 +184,7 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
   // Settings should exist but if they don't, we use default DestGain (Unity).
 
   // Things went well. Stash a reference to our bookkeeping and get out.
-  link->set_bookkeeping(std::move(mix_bookkeeping));
+  packet_link.set_bookkeeping(std::move(mix_bookkeeping));
   return ZX_OK;
 }
 
@@ -198,19 +199,19 @@ void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
   mix_buf_.reset(new float[mix_buf_frames_ * output_producer_->channels()]);
 }
 
-void StandardOutputBase::ForeachLink(TaskType task_type) {
+void StandardOutputBase::ForEachLink(TaskType task_type) {
   // Make a copy of our currently active set of links so that we don't have to
   // hold onto mutex_ for the entire mix operation.
   {
     fbl::AutoLock links_lock(&links_lock_);
     ZX_DEBUG_ASSERT(source_link_refs_.empty());
-    for (const auto& link_ptr : source_links_) {
+    for (auto& link : source_links_) {
       // For now, skip ring-buffer source links. This code cannot mix them yet.
-      if (link_ptr->source_type() != AudioLink::SourceType::Packet) {
+      if (link.source_type() != AudioLink::SourceType::Packet) {
         continue;
       }
 
-      source_link_refs_.push_back(link_ptr);
+      source_link_refs_.emplace_back(fbl::WrapRefPtr(&link));
     }
   }
 
@@ -231,13 +232,13 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
     FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioRenderer);
-    auto packet_link = static_cast<AudioLinkPacketSource*>(link.get());
+    auto packet_link = fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
     auto audio_renderer =
         fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
-    auto* info = static_cast<Bookkeeping*>(packet_link->bookkeeping().get());
+    auto* info = packet_link->bookkeeping().get();
     FXL_DCHECK(info);
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
@@ -303,7 +304,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     packet_link->UnlockPendingQueueFront(release_audio_renderer_packet);
 
     // Note: there is no point in doing this for Trim tasks, but it doesn't hurt
-    // anything, and its easier than adding another function to ForeachLink to
+    // anything, and it's easier than adding another function to ForEachLink to
     // run after each renderer is processed, just to set this flag.
     cur_mix_job_.accumulate = true;
   }
@@ -339,7 +340,7 @@ bool StandardOutputBase::ProcessMix(
 
   // If the renderer is currently paused, subject_delta (not just step_size) is
   // zero. This packet may be relevant eventually, but currently it contributes
-  // nothing. Tell ForeachLink we are done, but hold the packet for now.
+  // nothing. Tell ForEachLink we are done, but hold the packet for now.
   if (!info->dest_frames_to_frac_source_frames.subject_delta()) {
     return false;
   }
@@ -484,7 +485,7 @@ bool StandardOutputBase::ProcessMix(
 
 bool StandardOutputBase::SetupTrim(
     const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info) {
-  // Compute the cutoff time used to decide whether to trim packets. ForeachLink
+  // Compute the cutoff time used to decide whether to trim packets. ForEachLink
   // has already updated our transformation, no need for us to do so here.
   FXL_DCHECK(info);
 

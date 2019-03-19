@@ -133,7 +133,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
                      << (is_input ? "input" : "output") << " for \"" << name
                      << "\"";
   } else {
-    manager_->AddDevice(new_device);
+    manager_->AddDevice(std::move(new_device));
   }
 }
 

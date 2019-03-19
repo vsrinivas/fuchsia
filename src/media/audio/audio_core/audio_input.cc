@@ -119,7 +119,7 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   manager_->ScheduleMainThreadTask([manager = manager_,
                                     output = fbl::WrapRefPtr(this), plugged,
                                     plug_time]() {
-    manager->HandlePlugStateChange(output, plugged, plug_time);
+    manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
   });
 }
 

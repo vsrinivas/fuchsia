@@ -5,7 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 
@@ -41,7 +40,7 @@ class AudioRendererImpl
                                        uint32_t* generation);
 
   void SetThrottleOutput(
-      std::shared_ptr<AudioLinkPacketSource> throttle_output_link);
+      fbl::RefPtr<AudioLinkPacketSource> throttle_output_link);
 
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -99,7 +98,7 @@ class AudioRendererImpl
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
   float stream_gain_db_ = 0.0;
   bool mute_ = false;
-  std::shared_ptr<AudioLinkPacketSource> throttle_output_link_;
+  fbl::RefPtr<AudioLinkPacketSource> throttle_output_link_;
 
   // Minimum Clock Lead Time state
   int64_t min_clock_lead_nsec_ = 0;
@@ -107,9 +106,9 @@ class AudioRendererImpl
  private:
   class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:
-    static fbl::unique_ptr<GainControlBinding> Create(
+    static std::unique_ptr<GainControlBinding> Create(
         AudioRendererImpl* owner) {
-      return fbl::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
+      return std::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
     }
 
     // GainControl interface.
@@ -144,7 +143,7 @@ class AudioRendererImpl
   AudioCoreImpl* owner_ = nullptr;
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl,
-                   fbl::unique_ptr<GainControlBinding>>
+                   std::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;
   fbl::RefPtr<RefCountedVmoMapper> payload_buffer_;

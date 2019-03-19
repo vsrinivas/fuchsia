@@ -12,6 +12,7 @@
 #include <lib/fit/function.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 
 namespace media::audio {
@@ -30,10 +31,10 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
     AudioCapturer,
   };
 
-  static std::shared_ptr<AudioLink> LinkObjects(
+  static fbl::RefPtr<AudioLink> LinkObjects(
       const fbl::RefPtr<AudioObject>& source,
       const fbl::RefPtr<AudioObject>& dest);
-  static void RemoveLink(const AudioLinkPtr& link);
+  static void RemoveLink(const fbl::RefPtr<AudioLink>& link);
 
   void UnlinkSources();
   void UnlinkDestinations();
@@ -82,15 +83,16 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   //
   // @return MediaResult::OK if initialization succeeded, or an appropriate
   // error code otherwise.
-  virtual zx_status_t InitializeSourceLink(const AudioLinkPtr& link);
-  virtual zx_status_t InitializeDestLink(const AudioLinkPtr& link);
+  virtual zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link);
+  virtual zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link);
 
   fbl::Mutex links_lock_;
 
   // The set of links which this audio device is acting as a source for (eg; the
   // destinations that this object is sending to).  The target of each of these
   // links must be a either an Output or a AudioCapturer.
-  AudioLinkSet dest_links_ FXL_GUARDED_BY(links_lock_);
+  typename AudioLink::Set<AudioLink::Dest> dest_links_
+    FXL_GUARDED_BY(links_lock_);
 
   // The set of links which this audio device is acting as a destination for
   // (eg; the sources that that the object is receiving from).  The target of
@@ -102,7 +104,8 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   //
   // Right now, we have no priorities, so this is just a set of
   // AudioRenderer/output links.
-  AudioLinkSet source_links_ FXL_GUARDED_BY(links_lock_);
+  typename AudioLink::Set<AudioLink::Source> source_links_
+    FXL_GUARDED_BY(links_lock_);
 
   // The following iterator functions accept a function (see below) and call it
   // sequentially with each destination link as a parameter. As described below,
@@ -126,14 +129,12 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   //
   // LinkFunction has no return value and is used with ForEach[Source|Dest]Link.
   using LinkFunction =
-      fit::inline_function<void(const std::shared_ptr<AudioLink>& link),
-                           sizeof(void*) * 4>;
+      fit::inline_function<void(AudioLink& link), sizeof(void*) * 4>;
   // Same as LinkFunction, but returns bool for early termination. This
   // return val is used by ForAnyDestLink (or a future ForAllDestLinks).
   // Currently stack space for one ptr is provided (the one caller needs 0).
   using LinkBoolFunction =
-      fit::inline_function<bool(const std::shared_ptr<AudioLink>& link),
-                           sizeof(void*) * 1>;
+      fit::inline_function<bool(AudioLink& link), sizeof(void*) * 1>;
 
   // Link Iterators - these functions iterate upon LinkPacketSource types only.
   //
@@ -166,7 +167,8 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   //
 
  private:
-  void UnlinkCleanup(AudioLinkSet* links);
+  template <typename TagType>
+  void UnlinkCleanup(typename AudioLink::Set<TagType>* links);
 
   const Type type_;
   bool new_links_allowed_ FXL_GUARDED_BY(links_lock_) = true;

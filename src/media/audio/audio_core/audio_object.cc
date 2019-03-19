@@ -14,7 +14,7 @@
 namespace media::audio {
 
 // static
-std::shared_ptr<AudioLink> AudioObject::LinkObjects(
+fbl::RefPtr<AudioLink> AudioObject::LinkObjects(
     const fbl::RefPtr<AudioObject>& source,
     const fbl::RefPtr<AudioObject>& dest) {
   // Assert this source is valid (AudioCapturers are disallowed).
@@ -33,7 +33,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
              (dest->type() != AudioObject::Type::Output));
 
   // Create a link of the appropriate type based on our source.
-  std::shared_ptr<AudioLink> link;
+  fbl::RefPtr<AudioLink> link;
   if (source->type() == AudioObject::Type::AudioRenderer) {
     link = AudioLinkPacketSource::Create(
         fbl::RefPtr<AudioRendererImpl>::Downcast(source), dest);
@@ -59,10 +59,8 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
     fbl::AutoLock slock(&source->links_lock_);
     fbl::AutoLock dlock(&dest->links_lock_);
     if (source->new_links_allowed_ && dest->new_links_allowed_) {
-      __UNUSED auto sres = source->dest_links_.emplace(link);
-      __UNUSED auto dres = dest->source_links_.emplace(link);
-      FXL_DCHECK(sres.second);
-      FXL_DCHECK(dres.second);
+      source->dest_links_.insert(link);
+      dest->source_links_.insert(link);
     } else {
       link.reset();
     }
@@ -74,8 +72,7 @@ std::shared_ptr<AudioLink> AudioObject::LinkObjects(
   return link;
 }
 
-// static
-void AudioObject::RemoveLink(const AudioLinkPtr& link) {
+void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
   FXL_DCHECK(link != nullptr);
 
   link->Invalidate();
@@ -84,7 +81,7 @@ void AudioObject::RemoveLink(const AudioLinkPtr& link) {
   FXL_DCHECK(source != nullptr);
   {
     fbl::AutoLock slock(&source->links_lock_);
-    auto iter = source->dest_links_.find(link);
+    auto iter = source->dest_links_.find(link.get());
     if (iter != source->dest_links_.end()) {
       source->dest_links_.erase(iter);
     }
@@ -94,7 +91,7 @@ void AudioObject::RemoveLink(const AudioLinkPtr& link) {
   FXL_DCHECK(dest != nullptr);
   {
     fbl::AutoLock dlock(&dest->links_lock_);
-    auto iter = dest->source_links_.find(link);
+    auto iter = dest->source_links_.find(link.get());
     if (iter != dest->source_links_.end()) {
       dest->source_links_.erase(iter);
     }
@@ -107,9 +104,9 @@ void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
   fbl::AutoLock links_lock(&links_lock_);
 
   // Callers (generally AudioCapturers) should never be linked to destinations.
-  FXL_DCHECK(dest_links_.empty());
+  FXL_DCHECK(dest_links_.is_empty());
 
-  for (const auto& link : source_links_) {
+  for (auto& link : source_links_) {
     source_task(link);
   }
 }
@@ -120,9 +117,9 @@ void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
   fbl::AutoLock links_lock(&links_lock_);
 
   // Callers (generally AudioRenderers) should never be linked to sources.
-  FXL_DCHECK(source_links_.empty());
+  FXL_DCHECK(source_links_.is_empty());
 
-  for (const auto& link : dest_links_) {
+  for (auto& link : dest_links_) {
     dest_task(link);
   }
 }
@@ -131,9 +128,9 @@ void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
 bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
   fbl::AutoLock links_lock(&links_lock_);
 
-  FXL_DCHECK(source_links_.empty());
+  FXL_DCHECK(source_links_.is_empty());
 
-  for (const auto& link : dest_links_) {
+  for (auto& link : dest_links_) {
     if (dest_task(link)) {
       return true;  // This link satisfied the need; we are done.
     }
@@ -143,42 +140,43 @@ bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
 }
 
 void AudioObject::UnlinkSources() {
-  AudioLinkSet old_links;
+  typename AudioLink::Set<AudioLink::Source> old_links;
   {
     fbl::AutoLock lock(&links_lock_);
     old_links = std::move(source_links_);
   }
-  UnlinkCleanup(&old_links);
+  UnlinkCleanup<AudioLink::Source>(&old_links);
 }
 
 void AudioObject::UnlinkDestinations() {
-  AudioLinkSet old_links;
+  typename AudioLink::Set<AudioLink::Dest> old_links;
   {
     fbl::AutoLock lock(&links_lock_);
     old_links = std::move(dest_links_);
   }
-  UnlinkCleanup(&old_links);
+  UnlinkCleanup<AudioLink::Dest>(&old_links);
 }
 
-zx_status_t AudioObject::InitializeSourceLink(const AudioLinkPtr& link) {
+zx_status_t AudioObject::InitializeSourceLink(const fbl::RefPtr<AudioLink>&) {
   return ZX_OK;
 }
 
-zx_status_t AudioObject::InitializeDestLink(const AudioLinkPtr& link) {
+zx_status_t AudioObject::InitializeDestLink(const fbl::RefPtr<AudioLink>&) {
   return ZX_OK;
 }
 
-void AudioObject::UnlinkCleanup(AudioLinkSet* links) {
+template <typename TagType>
+void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {
   FXL_DCHECK(links != nullptr);
 
   // Note: we could just range-based for-loop over this set and call RemoveLink
   // on each member. Instead, we remove each element from our local set before
   // calling RemoveLinks. This will make a future transition to using intrusive
   // containers a bit easier. Explanations available on request.
-  while (!links->empty()) {
-    auto link = *links->begin();
-    links->erase(links->begin());
+  while (!links->is_empty()) {
+    auto link = links->pop_front();
     RemoveLink(link);
+    link.reset();
   }
 }
 

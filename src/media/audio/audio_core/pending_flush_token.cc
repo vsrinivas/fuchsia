@@ -15,7 +15,7 @@ void PendingFlushToken::fbl_recycle() {
   if (!was_recycled_) {
     was_recycled_ = true;
     FXL_DCHECK(service_);
-    service_->ScheduleFlushCleanup(fbl::unique_ptr<PendingFlushToken>(this));
+    service_->ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken>(this));
   } else {
     delete this;
   }

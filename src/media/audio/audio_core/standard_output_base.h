@@ -55,7 +55,7 @@ class StandardOutputBase : public AudioOutput {
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  zx_status_t InitializeSourceLink(const AudioLinkPtr& link) final;
+  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final;
 
   void SetNextSchedTime(fxl::TimePoint next_sched_time) {
     next_sched_time_ = next_sched_time;
@@ -82,7 +82,7 @@ class StandardOutputBase : public AudioOutput {
  private:
   enum class TaskType { Mix, Trim };
 
-  void ForeachLink(TaskType task_type)
+  void ForEachLink(TaskType task_type)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
@@ -105,7 +105,7 @@ class StandardOutputBase : public AudioOutput {
 
   // Vector used to hold references to source links while mixing (instead of
   // holding a lock, preventing source_links_ mutation for the entire mix job).
-  std::vector<std::shared_ptr<AudioLink>> source_link_refs_
+  std::vector<fbl::RefPtr<AudioLink>> source_link_refs_
       FXL_GUARDED_BY(mix_domain_->token());
 
   // State for the internal buffer which holds intermediate mix results.

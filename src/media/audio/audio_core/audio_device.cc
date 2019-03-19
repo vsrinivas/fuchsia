@@ -59,10 +59,10 @@ void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
   if (is_output()) {
     fbl::AutoLock links_lock(&links_lock_);
     for (auto& link : source_links_) {
-      if (link->GetSource()->type() == AudioObject::Type::AudioRenderer) {
-        link->bookkeeping()->gain.SetDestMute(
+      if (link.GetSource()->type() == AudioObject::Type::AudioRenderer) {
+        link.bookkeeping()->gain.SetDestMute(
             limited.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-        link->bookkeeping()->gain.SetDestGain(limited.gain_db);
+        link.bookkeeping()->gain.SetDestGain(limited.gain_db);
       }
     }
   } else {
@@ -70,10 +70,10 @@ void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
     FXL_DCHECK(is_input());
     fbl::AutoLock links_lock(&links_lock_);
     for (auto& link : dest_links_) {
-      if (link->GetDest()->type() == AudioObject::Type::AudioCapturer) {
-        link->bookkeeping()->gain.SetSourceMute(
+      if (link.GetDest()->type() == AudioObject::Type::AudioCapturer) {
+        link.bookkeeping()->gain.SetSourceMute(
             limited.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-        link->bookkeeping()->gain.SetSourceGain(limited.gain_db);
+        link.bookkeeping()->gain.SetSourceGain(limited.gain_db);
       }
     }
   }
@@ -140,7 +140,7 @@ void AudioDevice::ActivateSelf() {
     FXL_DCHECK(manager_);
     manager_->ScheduleMainThreadTask(
         [manager = manager_, self = fbl::WrapRefPtr(this)]() {
-          manager->ActivateDevice(self);
+          manager->ActivateDevice(std::move(self));
         });
   }
 }

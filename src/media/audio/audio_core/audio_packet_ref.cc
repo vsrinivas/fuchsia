@@ -33,7 +33,7 @@ void AudioPacketRef::fbl_recycle() {
     was_recycled_ = true;
     if (NeedsCleanup()) {
       FXL_DCHECK(service_);
-      service_->SchedulePacketCleanup(fbl::unique_ptr<AudioPacketRef>(this));
+      service_->SchedulePacketCleanup(std::unique_ptr<AudioPacketRef>(this));
       return;
     }
   }

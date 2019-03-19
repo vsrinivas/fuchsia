@@ -9,9 +9,9 @@
 namespace media::audio {
 
 // static
-std::shared_ptr<AudioLinkRingBufferSource> AudioLinkRingBufferSource::Create(
+fbl::RefPtr<AudioLinkRingBufferSource> AudioLinkRingBufferSource::Create(
     fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest) {
-  return std::shared_ptr<AudioLinkRingBufferSource>(
+  return fbl::AdoptRef(
       new AudioLinkRingBufferSource(std::move(source), std::move(dest)));
 }
 

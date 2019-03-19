@@ -28,7 +28,7 @@ class AudioCoreImpl;
 class AudioPacketRef
     : public fbl::RefCounted<AudioPacketRef>,
       public fbl::Recyclable<AudioPacketRef>,
-      public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPacketRef>> {
+      public fbl::DoublyLinkedListable<std::unique_ptr<AudioPacketRef>> {
  public:
   AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
                  fuchsia::media::AudioRenderer::SendPacketCallback callback,

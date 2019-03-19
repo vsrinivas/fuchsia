@@ -5,10 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_FWD_DECLS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_FWD_DECLS_H_
 
-#include <fbl/ref_ptr.h>
-
-#include <memory>
-#include <set>
+#include <fbl/intrusive_wavl_tree.h>
 
 namespace media::audio {
 
@@ -17,11 +14,6 @@ class AudioCoreImpl;
 class AudioRendererFormatInfo;
 class AudioRendererImpl;
 class AudioLink;
-
-// TODO(johngro) : Remove these definitions when we move to intrusive containers
-// for managing links.
-using AudioLinkPtr = std::shared_ptr<AudioLink>;
-using AudioLinkSet = std::set<AudioLinkPtr, std::owner_less<AudioLinkPtr>>;
 
 }  // namespace media::audio
 

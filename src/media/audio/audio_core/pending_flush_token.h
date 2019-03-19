@@ -20,7 +20,7 @@ class AudioCoreImpl;
 class PendingFlushToken
     : public fbl::RefCounted<PendingFlushToken>,
       public fbl::Recyclable<PendingFlushToken>,
-      public fbl::DoublyLinkedListable<fbl::unique_ptr<PendingFlushToken>> {
+      public fbl::DoublyLinkedListable<std::unique_ptr<PendingFlushToken>> {
  public:
   static fbl::RefPtr<PendingFlushToken> Create(
       AudioCoreImpl* const service,
