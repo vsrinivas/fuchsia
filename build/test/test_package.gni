@@ -123,6 +123,7 @@ template("test_package") {
     forward_variables_from(invoker,
                            [
                              "binaries",
+                             "components",
                              "data_deps",
                              "deprecated_global_persistent_storage",
                              "deps",

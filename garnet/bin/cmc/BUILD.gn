@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("cmc") {
   name = "cmc"
@@ -87,10 +88,33 @@ fuchsia_component("example_component") {
   testonly = true
 }
 
-fuchsia_component("cmc_integration_test_component") {
-  manifest = rebase_path("meta/cmc_integration_test.cmx")
+# TODO(IN-933): Reenable once fuchsia_test_component is supported.
+#fuchsia_test_component("cmc_integration_test_component") {
+#  manifest = rebase_path("meta/cmc_integration_test.cmx")
+#  deps = [
+#    ":cmc_integration_test_bin",
+#  ]
+#
+#  resources = [
+#    {
+#      if (is_debug) {
+#        path = rebase_path("tests/golden_debug.cm")
+#      } else {
+#        path = rebase_path("tests/golden_release.cm")
+#      }
+#      dest = "golden.cm"
+#    },
+#  ]
+#
+#  binary = "cmc_integration_test"
+#}
+
+test_package("cmc_integration_test") {
   deps = [
     ":cmc_integration_test_bin",
+  ]
+  components = [
+    ":example_component",
   ]
 
   resources = [
@@ -104,18 +128,11 @@ fuchsia_component("cmc_integration_test_component") {
     },
   ]
 
-  binary = "cmc_integration_test"
-
-  # TODO(IN-933): Reenable once fuchsia_test_component is supported.
-  # test = true
-}
-
-package("cmc_integration_test") {
-  components = [
-    ":example_component",
-    ":cmc_integration_test_component",
+  tests = [
+    {
+      name = "cmc_integration_test"
+    },
   ]
-  testonly = true
 }
 
 install_host_tools("install") {
