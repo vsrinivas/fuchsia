@@ -80,13 +80,14 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
   }
 
   std::unique_ptr<storage::Journal> StartCommit(
-      const storage::CommitId& commit_id) override {
-    return storage_->StartCommit(commit_id);
+      std::unique_ptr<const storage::Commit> commit) override {
+    return storage_->StartCommit(std::move(commit));
   }
 
   std::unique_ptr<storage::Journal> StartMergeCommit(
-      const storage::CommitId& left, const storage::CommitId& right) override {
-    return storage_->StartMergeCommit(left, right);
+      std::unique_ptr<const storage::Commit> left,
+      std::unique_ptr<const storage::Commit> right) override {
+    return storage_->StartMergeCommit(std::move(left), std::move(right));
   }
 
   void CommitJournal(std::unique_ptr<storage::Journal> journal,
@@ -214,12 +215,20 @@ class MergeResolverTest : public TestWithPageStorage {
   storage::CommitId CreateCommit(
       storage::PageStorage* storage, storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
+    storage::Status status;
+    bool called;
+    std::unique_ptr<const storage::Commit> base;
+    storage->GetCommit(
+        parent_id,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
+
     std::unique_ptr<storage::Journal> journal =
-        storage->StartCommit(parent_id.ToString());
+        storage->StartCommit(std::move(base));
 
     contents(journal.get());
-    bool called;
-    storage::Status status;
     std::unique_ptr<const storage::Commit> commit;
     storage->CommitJournal(
         std::move(journal),
@@ -241,11 +250,28 @@ class MergeResolverTest : public TestWithPageStorage {
       storage::PageStorage* storage, storage::CommitIdView parent_id1,
       storage::CommitIdView parent_id2,
       fit::function<void(storage::Journal*)> contents) {
+    storage::Status status;
+    bool called;
+    std::unique_ptr<const storage::Commit> base1;
+    storage->GetCommit(
+        parent_id1,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &base1));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
+
+    std::unique_ptr<const storage::Commit> base2;
+    storage->GetCommit(
+        parent_id2,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &base2));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
+
     std::unique_ptr<storage::Journal> journal =
-        storage->StartMergeCommit(parent_id1.ToString(), parent_id2.ToString());
+        storage->StartMergeCommit(std::move(base1), std::move(base2));
     contents(journal.get());
 
-    bool called;
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
     storage->CommitJournal(std::move(journal),

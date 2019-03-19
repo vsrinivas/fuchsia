@@ -19,7 +19,10 @@ namespace fake {
 class FakeCommit : public Commit {
  public:
   explicit FakeCommit(FakeJournalDelegate* journal);
+
   ~FakeCommit() override;
+
+  static std::unique_ptr<const Commit> MakeRootCommit();
 
   // Commit:
   std::unique_ptr<const Commit> Clone() const override;

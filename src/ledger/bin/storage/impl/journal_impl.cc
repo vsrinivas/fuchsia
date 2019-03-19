@@ -52,7 +52,8 @@ class JournalEntriesIterator : public Iterator<const storage::EntryChange> {
 }  // namespace
 
 JournalImpl::JournalImpl(Token /* token */, ledger::Environment* environment,
-                         PageStorageImpl* page_storage, CommitId base)
+                         PageStorageImpl* page_storage,
+                         std::unique_ptr<const storage::Commit> base)
     : environment_(environment),
       page_storage_(page_storage),
       base_(std::move(base)),
@@ -60,20 +61,24 @@ JournalImpl::JournalImpl(Token /* token */, ledger::Environment* environment,
 
 JournalImpl::~JournalImpl() {}
 
-std::unique_ptr<Journal> JournalImpl::Simple(ledger::Environment* environment,
-                                             PageStorageImpl* page_storage,
-                                             const CommitId& base) {
+std::unique_ptr<Journal> JournalImpl::Simple(
+    ledger::Environment* environment, PageStorageImpl* page_storage,
+    std::unique_ptr<const storage::Commit> base) {
+  FXL_DCHECK(base);
+
   return std::make_unique<JournalImpl>(Token(), environment, page_storage,
-                                       base);
+                                       std::move(base));
 }
 
-std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
-                                            PageStorageImpl* page_storage,
-                                            const CommitId& base,
-                                            const CommitId& other) {
-  auto journal =
-      std::make_unique<JournalImpl>(Token(), environment, page_storage, base);
-  journal->other_ = std::make_unique<CommitId>(other);
+std::unique_ptr<Journal> JournalImpl::Merge(
+    ledger::Environment* environment, PageStorageImpl* page_storage,
+    std::unique_ptr<const storage::Commit> base,
+    std::unique_ptr<const storage::Commit> other) {
+  FXL_DCHECK(base);
+  FXL_DCHECK(other);
+  auto journal = std::make_unique<JournalImpl>(Token(), environment,
+                                               page_storage, std::move(base));
+  journal->other_ = std::move(other);
   return journal;
 }
 
@@ -83,43 +88,41 @@ void JournalImpl::Commit(
   FXL_DCHECK(!committed_);
   committed_ = true;
 
-  GetParents(
-      [this, callback = std::move(callback)](
-          Status status,
-          std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
+  std::vector<std::unique_ptr<const storage::Commit>> parents;
+  if (other_) {
+    parents.reserve(2);
+    parents.push_back(std::move(base_));
+    parents.push_back(std::move(other_));
+  } else {
+    parents.reserve(1);
+    parents.push_back(std::move(base_));
+  }
+
+  auto changes = std::make_unique<JournalEntriesIterator>(journal_entries_);
+
+  if (cleared_ == JournalContainsClearOperation::NO) {
+    // The journal doesn't contain the clear operation. The changes
+    // recorded on the journal need to be executed over the content of
+    // the first parent.
+    ObjectIdentifier root_identifier = parents[0]->GetRootIdentifier();
+    CreateCommitFromChanges(std::move(parents), std::move(root_identifier),
+                            std::move(changes), std::move(callback));
+    return;
+  }
+
+  // The journal contains the clear operation. The changes recorded on the
+  // journal need to be executed over an empty page.
+  btree::TreeNode::Empty(
+      page_storage_,
+      [this, parents = std::move(parents), changes = std::move(changes),
+       callback = std::move(callback)](
+          Status status, ObjectIdentifier root_identifier) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
         }
-        auto changes =
-            std::make_unique<JournalEntriesIterator>(journal_entries_);
-
-        if (cleared_ == JournalContainsClearOperation::NO) {
-          // The journal doesn't contain the clear operation. The changes
-          // recorded on the journal need to be executed over the content of
-          // the first parent.
-          ObjectIdentifier root_identifier = parents[0]->GetRootIdentifier();
-          CreateCommitFromChanges(std::move(parents),
-                                  std::move(root_identifier),
-                                  std::move(changes), std::move(callback));
-          return;
-        }
-
-        // The journal contains the clear operation. The changes recorded on the
-        // journal need to be executed over an empty page.
-        btree::TreeNode::Empty(
-            page_storage_,
-            [this, parents = std::move(parents), changes = std::move(changes),
-             callback = std::move(callback)](
-                Status status, ObjectIdentifier root_identifier) mutable {
-              if (status != Status::OK) {
-                callback(status, nullptr);
-                return;
-              }
-              CreateCommitFromChanges(std::move(parents),
-                                      std::move(root_identifier),
-                                      std::move(changes), std::move(callback));
-            });
+        CreateCommitFromChanges(std::move(parents), std::move(root_identifier),
+                                std::move(changes), std::move(callback));
       });
 }
 
@@ -145,20 +148,6 @@ void JournalImpl::Clear() {
   FXL_DCHECK(!committed_);
   cleared_ = JournalContainsClearOperation::YES;
   journal_entries_.clear();
-}
-
-void JournalImpl::GetParents(
-    fit::function<void(Status,
-                       std::vector<std::unique_ptr<const storage::Commit>>)>
-        callback) {
-  auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<Status, std::unique_ptr<const storage::Commit>>>(
-      Status::OK);
-  page_storage_->GetCommit(base_, waiter->NewCallback());
-  if (other_) {
-    page_storage_->GetCommit(*other_, waiter->NewCallback());
-  }
-  waiter->Finalize(std::move(callback));
 }
 
 void JournalImpl::CreateCommitFromChanges(

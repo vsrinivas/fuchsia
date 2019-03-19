@@ -48,7 +48,7 @@ ConflictResolverClient::~ConflictResolverClient() {}
 
 void ConflictResolverClient::Start() {
   // Prepare the journal for the merge commit.
-  journal_ = storage_->StartMergeCommit(left_->GetId(), right_->GetId());
+  journal_ = storage_->StartMergeCommit(left_->Clone(), right_->Clone());
 
   PageSnapshotPtr page_snapshot_ancestor;
   manager_->BindPageSnapshot(ancestor_->Clone(),

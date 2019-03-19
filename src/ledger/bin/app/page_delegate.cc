@@ -73,30 +73,17 @@ void PageDelegate::GetSnapshot(
       [this, snapshot_request = std::move(snapshot_request),
        key_prefix = std::move(key_prefix), watcher = std::move(watcher)](
           fit::function<void(storage::Status)> callback) mutable {
-        storage_->GetCommit(
-            GetCurrentCommitId(),
-            callback::MakeScoped(
-                weak_factory_.GetWeakPtr(),
-                [this, snapshot_request = std::move(snapshot_request),
-                 key_prefix = std::move(key_prefix),
-                 watcher = std::move(watcher), callback = std::move(callback)](
-                    storage::Status status,
-                    std::unique_ptr<const storage::Commit> commit) mutable {
-                  if (status != storage::Status::OK) {
-                    callback(status);
-                    return;
-                  }
-                  std::string prefix = convert::ToString(key_prefix);
-                  if (watcher) {
-                    PageWatcherPtr watcher_ptr = watcher.Bind();
-                    branch_tracker_.RegisterPageWatcher(
-                        std::move(watcher_ptr), commit->Clone(), prefix);
-                  }
-                  manager_->BindPageSnapshot(std::move(commit),
-                                             std::move(snapshot_request),
-                                             std::move(prefix));
-                  callback(storage::Status::OK);
-                }));
+        std::unique_ptr<const storage::Commit> commit =
+            branch_tracker_.GetBranchHead();
+        std::string prefix = convert::ToString(key_prefix);
+        if (watcher) {
+          PageWatcherPtr watcher_ptr = watcher.Bind();
+          branch_tracker_.RegisterPageWatcher(std::move(watcher_ptr),
+                                              commit->Clone(), prefix);
+        }
+        manager_->BindPageSnapshot(
+            std::move(commit), std::move(snapshot_request), std::move(prefix));
+        callback(storage::Status::OK);
       });
 }
 
@@ -219,9 +206,9 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
           callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
           return;
         }
-        storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-        journal_ = storage_->StartCommit(commit_id);
-        journal_parent_commit_ = commit_id;
+        std::unique_ptr<const storage::Commit> commit =
+            branch_tracker_.GetBranchHead();
+        journal_ = storage_->StartCommit(std::move(commit));
 
         branch_tracker_.StartTransaction(
             [callback = std::move(callback)]() { callback(Status::OK); });
@@ -236,7 +223,6 @@ void PageDelegate::Commit(Page::CommitCallback callback) {
           callback(Status::NO_TRANSACTION_IN_PROGRESS);
           return;
         }
-        journal_parent_commit_.clear();
         CommitJournal(std::move(journal_),
                       callback::MakeScoped(
                           weak_factory_.GetWeakPtr(),
@@ -258,7 +244,6 @@ void PageDelegate::Rollback(Page::RollbackCallback callback) {
           return;
         }
         journal_.reset();
-        journal_parent_commit_.clear();
         callback(Status::OK);
         branch_tracker_.StopTransaction(nullptr);
       });
@@ -279,13 +264,6 @@ void PageDelegate::WaitForConflictResolution(
     return;
   }
   merge_resolver_->RegisterNoConflictCallback(std::move(callback));
-}
-
-const storage::CommitId& PageDelegate::GetCurrentCommitId() {
-  if (!journal_) {
-    return branch_tracker_.GetBranchHeadId();
-  }
-  return journal_parent_commit_;
 }
 
 void PageDelegate::PutInCommit(std::vector<uint8_t> key,
@@ -313,8 +291,10 @@ void PageDelegate::RunInTransaction(
   // TODO(LE-690): Batch together operations outside transactions that have been
   // accumulated while waiting for the previous one to be committed.
   branch_tracker_.StartTransaction([] {});
-  storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-  std::unique_ptr<storage::Journal> journal = storage_->StartCommit(commit_id);
+  std::unique_ptr<const storage::Commit> commit =
+      branch_tracker_.GetBranchHead();
+  std::unique_ptr<storage::Journal> journal =
+      storage_->StartCommit(std::move(commit));
   runnable(journal.get());
 
   CommitJournal(

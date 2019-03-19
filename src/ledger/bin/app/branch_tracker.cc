@@ -286,17 +286,36 @@ void BranchTracker::Init(fit::function<void(storage::Status)> on_done) {
   }
 
   FXL_DCHECK(!commit_ids.empty());
-  InitCommitAndSetWatcher(std::move(commit_ids[0]));
+  // current_commit_ will be updated to have a correct value after the first
+  // Commit received in OnNewCommits or StopTransaction.
+  FXL_DCHECK(!current_commit_);
+  current_commit_id_ = std::move(commit_ids[0]);
+  storage_->GetCommit(
+      current_commit_id_,
+      callback::MakeScoped(weak_factory_.GetWeakPtr(),
+                           [this, on_done = std::move(on_done)](
+                               storage::Status status,
+                               std::unique_ptr<const storage::Commit> commit) {
+                             if (status != storage::Status::OK) {
+                               on_done(status);
+                               return;
+                             }
 
-  on_done(storage::Status::OK);
+                             current_commit_ = std::move(commit);
+
+                             storage_->AddCommitWatcher(this);
+
+                             on_done(storage::Status::OK);
+                           }));
 }
 
 void BranchTracker::set_on_empty(fit::closure on_empty_callback) {
   on_empty_callback_ = std::move(on_empty_callback);
 }
 
-const storage::CommitId& BranchTracker::GetBranchHeadId() {
-  return current_commit_id_;
+std::unique_ptr<const storage::Commit> BranchTracker::GetBranchHead() {
+  FXL_DCHECK(current_commit_->GetId() == current_commit_id_);
+  return current_commit_->Clone();
 }
 
 void BranchTracker::OnNewCommits(
@@ -378,14 +397,6 @@ void BranchTracker::RegisterPageWatcher(
 }
 
 bool BranchTracker::IsEmpty() { return watchers_.empty(); }
-
-void BranchTracker::InitCommitAndSetWatcher(storage::CommitId commit_id) {
-  // current_commit_ will be updated to have a correct value after the first
-  // Commit received in OnNewCommits or StopTransaction.
-  FXL_DCHECK(!current_commit_);
-  current_commit_id_ = std::move(commit_id);
-  storage_->AddCommitWatcher(this);
-}
 
 void BranchTracker::CheckEmpty() {
   if (on_empty_callback_ && IsEmpty())

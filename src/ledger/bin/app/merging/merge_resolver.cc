@@ -361,7 +361,7 @@ storage::Status MergeResolver::MergeCommitsToContentOfLeftSync(
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right) {
   std::unique_ptr<storage::Journal> journal =
-      storage_->StartMergeCommit(left->GetId(), right->GetId());
+      storage_->StartMergeCommit(std::move(left), std::move(right));
   has_merged_ = true;
 
   storage::Status status;

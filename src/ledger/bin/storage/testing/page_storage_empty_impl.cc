@@ -46,13 +46,14 @@ void PageStorageEmptyImpl::AddCommitsFromSync(
 }
 
 std::unique_ptr<Journal> PageStorageEmptyImpl::StartCommit(
-    const CommitId& /*commit_id*/) {
+    std::unique_ptr<const Commit> /*commit_id*/) {
   FXL_NOTIMPLEMENTED();
   return nullptr;
 }
 
 std::unique_ptr<Journal> PageStorageEmptyImpl::StartMergeCommit(
-    const CommitId& /*left*/, const CommitId& /*right*/) {
+    std::unique_ptr<const Commit> /*left*/,
+    std::unique_ptr<const Commit> /*right*/) {
   FXL_NOTIMPLEMENTED();
   return nullptr;
 }

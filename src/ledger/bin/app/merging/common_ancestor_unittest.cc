@@ -43,12 +43,20 @@ class CommonAncestorTest : public TestWithPageStorage {
   std::unique_ptr<const storage::Commit> CreateCommit(
       storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
+    storage::Status status;
+    bool called;
+    std::unique_ptr<const storage::Commit> base;
+    storage_->GetCommit(
+        parent_id,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
+
     std::unique_ptr<storage::Journal> journal =
-        storage_->StartCommit(parent_id.ToString());
+        storage_->StartCommit(std::move(base));
 
     contents(journal.get());
-    bool called;
-    storage::Status status;
     std::unique_ptr<const storage::Commit> commit;
     storage_->CommitJournal(
         std::move(journal),
@@ -56,18 +64,20 @@ class CommonAncestorTest : public TestWithPageStorage {
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(storage::Status::OK, status);
+
     return commit;
   }
 
   std::unique_ptr<const storage::Commit> CreateMergeCommit(
-      storage::CommitIdView left, storage::CommitIdView right,
+      std::unique_ptr<const storage::Commit> base_left,
+      std::unique_ptr<const storage::Commit> base_right,
       fit::function<void(storage::Journal*)> contents) {
     std::unique_ptr<storage::Journal> journal =
-        storage_->StartMergeCommit(left.ToString(), right.ToString());
+        storage_->StartMergeCommit(std::move(base_left), std::move(base_right));
 
     contents(journal.get());
-    bool called;
     storage::Status actual_status;
+    bool called;
     std::unique_ptr<const storage::Commit> actual_commit;
     storage_->CommitJournal(std::move(journal),
                             callback::Capture(callback::SetWhenCalled(&called),
@@ -176,7 +186,7 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
       storage::kFirstPageCommitId, AddKeyValueToJournal("key", "b"));
 
   std::unique_ptr<const storage::Commit> commit_merge = CreateMergeCommit(
-      commit_a->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "c"));
+      commit_a->Clone(), commit_b->Clone(), AddKeyValueToJournal("key", "c"));
 
   std::unique_ptr<const storage::Commit> commit_1 =
       CreateCommit(commit_a->GetId(), AddKeyValueToJournal("key", "1"));
@@ -253,9 +263,10 @@ TEST_F(CommonAncestorTest, EquivalentCommits) {
   std::unique_ptr<const storage::Commit> commit_b = CreateCommit(
       storage::kFirstPageCommitId, AddKeyValueToJournal("key", "b"));
   std::unique_ptr<const storage::Commit> commit_m = CreateMergeCommit(
-      commit_a->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "m"));
-  std::unique_ptr<const storage::Commit> commit_n = CreateMergeCommit(
-      commit_a->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "n"));
+      commit_a->Clone(), commit_b->Clone(), AddKeyValueToJournal("key", "m"));
+  std::unique_ptr<const storage::Commit> commit_n =
+      CreateMergeCommit(std::move(commit_a), std::move(commit_b),
+                        AddKeyValueToJournal("key", "n"));
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     storage::Status status;
@@ -290,9 +301,9 @@ TEST_F(CommonAncestorTest, TwoBasesSameGeneration) {
   std::unique_ptr<const storage::Commit> commit_d =
       CreateCommit(commit_b->GetId(), AddKeyValueToJournal("key", "d"));
   std::unique_ptr<const storage::Commit> commit_e = CreateMergeCommit(
-      commit_c->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "e"));
+      commit_c->Clone(), commit_b->Clone(), AddKeyValueToJournal("key", "e"));
   std::unique_ptr<const storage::Commit> commit_f = CreateMergeCommit(
-      commit_a->GetId(), commit_d->GetId(), AddKeyValueToJournal("key", "f"));
+      commit_a->Clone(), std::move(commit_d), AddKeyValueToJournal("key", "f"));
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     // The LCAs of (E) and (F) are (A) and (B)
@@ -333,9 +344,9 @@ TEST_F(CommonAncestorTest, TwoBasesDifferentGenerations) {
   std::unique_ptr<const storage::Commit> commit_d =
       CreateCommit(commit_b->GetId(), AddKeyValueToJournal("key", "d"));
   std::unique_ptr<const storage::Commit> commit_e = CreateMergeCommit(
-      commit_c->GetId(), commit_b->GetId(), AddKeyValueToJournal("key", "e"));
+      std::move(commit_c), commit_b->Clone(), AddKeyValueToJournal("key", "e"));
   std::unique_ptr<const storage::Commit> commit_f = CreateMergeCommit(
-      commit_a->GetId(), commit_d->GetId(), AddKeyValueToJournal("key", "f"));
+      commit_a->Clone(), std::move(commit_d), AddKeyValueToJournal("key", "f"));
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     // The LCAs of (E) and (F) are (A) and (B)

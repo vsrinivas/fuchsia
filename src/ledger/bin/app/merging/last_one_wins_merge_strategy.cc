@@ -66,7 +66,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
 LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {}
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
-  journal_ = storage_->StartMergeCommit(left_->GetId(), right_->GetId());
+  journal_ = storage_->StartMergeCommit(left_->Clone(), right_->Clone());
   BuildAndCommitJournal();
 }
 

@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/fake/fake_journal.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 
 namespace storage {
 namespace fake {
@@ -40,6 +41,28 @@ Status ToBuffer(convert::ExtendedStringView value, int64_t offset,
   bool result = fsl::VmoFromString(value.substr(start, length), buffer);
   return result ? Status::OK : Status::INTERNAL_ERROR;
 }
+
+class FakeRootCommit : public CommitEmptyImpl {
+ public:
+  FakeRootCommit() : id_(storage::kFirstPageCommitId.ToString()) {}
+
+  std::unique_ptr<const Commit> Clone() const override {
+    return std::make_unique<const FakeRootCommit>();
+  }
+
+  const CommitId& GetId() const override { return id_; }
+
+  std::vector<CommitIdView> GetParentIds() const override {
+    return std::vector<CommitIdView>();
+  }
+
+  zx::time_utc GetTimestamp() const override { return zx::time_utc(); }
+
+  uint64_t GetGeneration() const override { return 0; }
+
+ private:
+  const CommitId id_;
+};
 
 }  // namespace
 
@@ -65,7 +88,7 @@ Status FakePageStorage::GetHeadCommitIds(
   std::transform(heads.begin(), heads.end(), std::back_inserter(commit_ids),
                  [](auto p) { return p.first; });
   if (commit_ids.empty()) {
-    commit_ids.emplace_back();
+    commit_ids.emplace_back(storage::kFirstPageCommitId.ToString());
   }
   head_commit_ids->swap(commit_ids);
   return Status::OK;
@@ -84,23 +107,27 @@ void FakePageStorage::GetMergeCommitIds(
 void FakePageStorage::GetCommit(
     CommitIdView commit_id,
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+  if (commit_id == storage::kFirstPageCommitId) {
+    callback(Status::OK, std::make_unique<const FakeRootCommit>());
+    return;
+  }
   auto it = journals_.find(commit_id.ToString());
   if (it == journals_.end()) {
     callback(Status::INTERNAL_NOT_FOUND, nullptr);
     return;
   }
 
-  async::PostDelayedTask(
+  async::PostTask(
       environment_->dispatcher(),
       [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
-      },
-      kFakePageStorageDelay);
+      });
 }
 
 std::unique_ptr<Journal> FakePageStorage::StartCommit(
-    const CommitId& commit_id) {
+    std::unique_ptr<const Commit> commit) {
+  CommitId commit_id = commit->GetId();
   uint64_t next_generation = 0;
   FakeJournalDelegate::Data data;
   if (journals_.find(commit_id) != journals_.end()) {
@@ -116,12 +143,15 @@ std::unique_ptr<Journal> FakePageStorage::StartCommit(
 }
 
 std::unique_ptr<Journal> FakePageStorage::StartMergeCommit(
-    const CommitId& left, const CommitId& right) {
+    std::unique_ptr<const Commit> left, std::unique_ptr<const Commit> right) {
+  const CommitId& left_id = left->GetId();
+  const CommitId& right_id = right->GetId();
+
   auto delegate = std::make_unique<FakeJournalDelegate>(
-      environment_->random(), journals_[left].get()->GetData(), left, right,
-      autocommit_,
-      1 + std::max(journals_[left].get()->GetGeneration(),
-                   journals_[right].get()->GetGeneration()));
+      environment_->random(), journals_[left_id].get()->GetData(), left_id,
+      right_id, autocommit_,
+      1 + std::max(journals_[left_id].get()->GetGeneration(),
+                   journals_[right_id].get()->GetGeneration()));
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   return journal;

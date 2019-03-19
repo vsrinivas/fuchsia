@@ -33,19 +33,20 @@ class JournalImpl : public Journal {
 
  public:
   JournalImpl(Token token, ledger::Environment* environment,
-              PageStorageImpl* page_storage, CommitId base);
+              PageStorageImpl* page_storage,
+              std::unique_ptr<const Commit> base);
   ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
   static std::unique_ptr<Journal> Simple(ledger::Environment* environment,
                                          PageStorageImpl* page_storage,
-                                         const CommitId& base);
+                                         std::unique_ptr<const Commit> base);
 
   // Creates a new Journal for a merge commit.
   static std::unique_ptr<Journal> Merge(ledger::Environment* environment,
                                         PageStorageImpl* page_storage,
-                                        const CommitId& base,
-                                        const CommitId& other);
+                                        std::unique_ptr<const Commit> base,
+                                        std::unique_ptr<const Commit> other);
 
   // Commits the changes of this |Journal|. Trying to update entries or rollback
   // will fail after a successful commit. The callback will be called with the
@@ -68,11 +69,6 @@ class JournalImpl : public Journal {
     friend JournalImpl;
   };
 
-  void GetParents(
-      fit::function<void(Status,
-                         std::vector<std::unique_ptr<const storage::Commit>>)>
-          callback);
-
   // Creates a new commit. The commit parents are |parents|. The content of the
   // commit is built by executing |changes| over the content pointed by
   // |root_identifier|.
@@ -90,8 +86,8 @@ class JournalImpl : public Journal {
 
   ledger::Environment* const environment_;
   PageStorageImpl* const page_storage_;
-  CommitId base_;
-  std::unique_ptr<CommitId> other_;
+  std::unique_ptr<const storage::Commit> base_;
+  std::unique_ptr<const storage::Commit> other_;
 
   JournalContainsClearOperation cleared_ = JournalContainsClearOperation::NO;
   std::map<std::string, EntryChange> journal_entries_;

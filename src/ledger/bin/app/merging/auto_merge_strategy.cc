@@ -218,7 +218,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   // StartMergeCommit uses the left commit (first parameter) as its base, we
   // only have to apply the right diff to it and we are done.
   std::unique_ptr<storage::Journal> journal =
-      storage_->StartMergeCommit(left_->GetId(), right_->GetId());
+      storage_->StartMergeCommit(std::move(left_), std::move(right_));
   ApplyDiffOnJournal(std::move(journal), std::move(right_changes));
 }
 

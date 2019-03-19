@@ -54,12 +54,20 @@ class ConflictResolverClientTest : public TestWithPageStorage {
   storage::CommitId CreateCommit(
       storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
-    std::unique_ptr<storage::Journal> journal =
-        page_storage_->StartCommit(parent_id.ToString());
-
-    contents(journal.get());
     storage::Status status;
     bool called;
+    std::unique_ptr<const storage::Commit> base;
+    page_storage_->GetCommit(
+        parent_id,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
+
+    std::unique_ptr<storage::Journal> journal =
+        page_storage_->StartCommit(std::move(base));
+
+    contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
     page_storage_->CommitJournal(
         std::move(journal),

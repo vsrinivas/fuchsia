@@ -89,8 +89,6 @@ class PageDelegate {
  private:
   using StatusCallback = fit::function<void(storage::Status)>;
 
-  const storage::CommitId& GetCurrentCommitId();
-
   void PutInCommit(std::vector<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
                    storage::KeyPriority priority, StatusCallback callback);
@@ -117,7 +115,6 @@ class PageDelegate {
 
   fit::closure on_empty_callback_;
 
-  storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer operation_serializer_;
   SyncWatcherSet* watcher_set_;

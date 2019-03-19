@@ -35,7 +35,7 @@ class BranchTracker : public storage::CommitWatcher {
   void set_on_empty(fit::closure on_empty_callback);
 
   // Returns the head commit of the currently tracked branch.
-  const storage::CommitId& GetBranchHeadId();
+  std::unique_ptr<const storage::Commit> GetBranchHead();
 
   // Registers a new PageWatcher interface.
   void RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
@@ -66,8 +66,6 @@ class BranchTracker : public storage::CommitWatcher {
   void OnNewCommits(
       const std::vector<std::unique_ptr<const storage::Commit>>& commits,
       storage::ChangeSource source) override;
-
-  void InitCommitAndSetWatcher(storage::CommitId commit_id);
 
   void CheckEmpty();
 

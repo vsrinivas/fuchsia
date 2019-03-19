@@ -76,14 +76,16 @@ class PageStorage : public PageSyncClient {
       fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Starts a new journal based on the commit with the given |commit_id|. The
   // base commit must be one of the head commits.
-  virtual std::unique_ptr<Journal> StartCommit(const CommitId& commit_id) = 0;
+  virtual std::unique_ptr<Journal> StartCommit(
+      std::unique_ptr<const Commit> commit_id) = 0;
   // Starts a new journal for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All
   // modifications to the journal consider the |left| as the base of the new
   // commit. Merge commits are always explicit, that is in case of a crash all
   // changes to the journal will be lost.
-  virtual std::unique_ptr<Journal> StartMergeCommit(const CommitId& left,
-                                                    const CommitId& right) = 0;
+  virtual std::unique_ptr<Journal> StartMergeCommit(
+      std::unique_ptr<const Commit> left,
+      std::unique_ptr<const Commit> right) = 0;
 
   // Commits the given |journal| and when finished, returns the success/failure
   // status and the created Commit object through the given |callback|.

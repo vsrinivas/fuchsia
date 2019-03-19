@@ -202,13 +202,14 @@ void PageStorageImpl::AddCommitsFromSync(
 }
 
 std::unique_ptr<Journal> PageStorageImpl::StartCommit(
-    const CommitId& commit_id) {
-  return JournalImpl::Simple(environment_, this, commit_id);
+    std::unique_ptr<const Commit> commit) {
+  return JournalImpl::Simple(environment_, this, std::move(commit));
 }
 
 std::unique_ptr<Journal> PageStorageImpl::StartMergeCommit(
-    const CommitId& left, const CommitId& right) {
-  return JournalImpl::Merge(environment_, this, left, right);
+    std::unique_ptr<const Commit> left, std::unique_ptr<const Commit> right) {
+  return JournalImpl::Merge(environment_, this, std::move(left),
+                            std::move(right));
 }
 
 void PageStorageImpl::CommitJournal(
@@ -1082,16 +1083,36 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   if (s != Status::OK) {
     return s;
   }
+  // Cache the heads and update the live commit tracker.
+  std::vector<std::unique_ptr<const Commit>> commits;
   if (heads.empty()) {
     s = db_->AddHead(handler, kFirstPageCommitId, zx::time_utc());
     if (s != Status::OK) {
       return s;
     }
-    commit_tracker_.AddHeads({std::make_pair<zx::time_utc, CommitId>(
-        zx::time_utc(), kFirstPageCommitId.ToString())});
+    std::unique_ptr<const Commit> head_commit;
+    s = SynchronousGetCommit(handler, kFirstPageCommitId.ToString(),
+                             &head_commit);
+    if (s != Status::OK) {
+      return s;
+    }
+    commits.push_back(std::move(head_commit));
   } else {
-    commit_tracker_.AddHeads(heads);
+    auto waiter = fxl::MakeRefCounted<
+        callback::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
+
+    for (const auto& head : heads) {
+      GetCommit(head.second, waiter->NewCallback());
+    }
+    if (coroutine::Wait(handler, std::move(waiter), &s, &commits) ==
+        coroutine::ContinuationStatus::INTERRUPTED) {
+      return Status::INTERRUPTED;
+    }
+    if (s != Status::OK) {
+      return s;
+    }
   }
+  commit_tracker_.AddHeads(std::move(commits));
 
   // Cache whether this page is online or not.
   return db_->IsPageOnline(handler, &page_is_online_);
@@ -1293,7 +1314,7 @@ Status PageStorageImpl::SynchronousAddCommits(
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
-  std::map<CommitId, zx::time_utc> heads_to_add;
+  std::map<CommitId, std::unique_ptr<const Commit>> heads_to_add;
   std::vector<CommitId> removed_heads;
 
   int orphaned_commits = 0;
@@ -1388,7 +1409,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     }
 
     // Update heads_to_add.
-    heads_to_add[commit->GetId()] = commit->GetTimestamp();
+    heads_to_add[commit->GetId()] = commit->Clone();
 
     added_commits.insert(&commit->GetId());
     commits_to_send.push_back(std::move(commit));
@@ -1406,9 +1427,9 @@ Status PageStorageImpl::SynchronousAddCommits(
   }
 
   // Update heads in Db.
-  for (const auto& head_timestamp : heads_to_add) {
-    Status s =
-        batch->AddHead(handler, head_timestamp.first, head_timestamp.second);
+  for (const auto& head : heads_to_add) {
+    Status s = batch->AddHead(handler, head.second->GetId(),
+                              head.second->GetTimestamp());
     if (s != Status::OK) {
       return s;
     }
@@ -1428,15 +1449,15 @@ Status PageStorageImpl::SynchronousAddCommits(
 
   // Only update the cache of heads after a successful update of the PageDb.
   commit_tracker_.RemoveHeads(std::move(removed_heads));
-  std::vector<std::pair<zx::time_utc, CommitId>> new_heads;
-  std::transform(std::make_move_iterator(heads_to_add.begin()),
-                 std::make_move_iterator(heads_to_add.end()),
-                 std::back_inserter(new_heads),
-                 [](std::pair<CommitId, zx::time_utc>&& head) {
-                   return std::make_pair(std::get<zx::time_utc>(head),
-                                         std::move(std::get<CommitId>(head)));
-                 });
-  commit_tracker_.AddHeads(new_heads);
+  std::vector<std::unique_ptr<const Commit>> new_heads;
+  std::transform(
+      std::make_move_iterator(heads_to_add.begin()),
+      std::make_move_iterator(heads_to_add.end()),
+      std::back_inserter(new_heads),
+      [](std::pair<CommitId, std::unique_ptr<const Commit>>&& head) {
+        return std::move(std::get<std::unique_ptr<const Commit>>(head));
+      });
+  commit_tracker_.AddHeads(std::move(new_heads));
   NotifyWatchersOfNewCommits(commits_to_send, source);
 
   return s;
