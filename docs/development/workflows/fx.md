@@ -16,10 +16,10 @@ other compatible shells.
 # In your fuchsia checkout:
 $ cd fuchsia
 # Add a configuration to your shell to include fx-env.sh
-$ echo "source \"$PWD/scripts/fx-env.sh\"" >> "~/.$(basename "$SHELL")rc"
+$ echo "source \"$PWD/scripts/fx-env.sh\"" >> "$HOME/.$(basename "$SHELL")rc"
 # If you would like additional convenience tools from the Fuchsia scripts, also
 # optionally run the following:
-$ echo "fx-update-path" >> "~/.$(basename "$SHELL")rc"
+$ echo "fx-update-path" >> "$HOME/.$(basename "$SHELL")rc"
 # Restart your shell
 $ exec "$SHELL"
 ```
