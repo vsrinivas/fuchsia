@@ -18,5 +18,5 @@ tiles_ctl add fuchsia-pkg://fuchsia.com/voila#meta/voila.cmx
 To run tests, run on host:
 
 ```
-fx run-image-test voila_bin_test
+fx run-test voila_tests
 ```

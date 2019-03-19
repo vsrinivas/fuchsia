@@ -24,7 +24,7 @@ group("ledger") {
 group("voila") {
   testonly = true
   public_deps = [
-    "//peridot/bin/voila:tests",
+    "//peridot/bin/voila:voila_tests",
   ]
 }
 

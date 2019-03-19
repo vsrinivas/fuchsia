@@ -63,9 +63,8 @@ package("voila") {
   ]
 }
 
-package("tests") {
+package("voila_tests") {
   testonly = true
-  package_name = "voila-tests"
   deps = [
     ":bin",
   ]
