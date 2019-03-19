@@ -278,5 +278,5 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 * Working with Zircon - [copying files, network booting, log viewing, and
 more](/zircon/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Information on the system bootstrap component](/garnet/bin/sysmgr/).
-* [Workflow tips](development/workflows/workflow_tips.md) that help increase
+* [Workflow tips and FAQ](development/workflows/workflow_tips_and_faq.md) that help increase
   productivity.

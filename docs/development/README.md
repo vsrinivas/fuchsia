@@ -19,7 +19,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Trace-based Benchmarking][trace_based_benchmarking]
  - [LibFuzzer-based fuzzing](workflows/libfuzzer.md)
  - [Build system](build/README.md)
- - [Workflow FAQ](workflows/workflow_faq.md)
+ - [Workflow tips and FAQ](workflows/workflow_tips_and_faq.md)
  - [Testing FAQ](workflows/testing_faq.md)
 
 ## Languages
