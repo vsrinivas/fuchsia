@@ -150,28 +150,41 @@ fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
 namespace vmo {
 namespace internal {
 
-// A ParsedObject contains parsed information for an object, but may not
-// contain a concrete value for the object itself.
+// A ParsedObject contains parsed information for an object.
 // It is built iteratively as children and values are discovered.
+//
+// A ParsedObject is valid only if it has been initialized with a name and
+// parent index (which happens when its OBJECT_VALUE block is read).
+//
+// A ParsedObject is "complete" when the number of children in the parsed
+// hierarchy matches an expected count. At this point the ObjectHierarchy may be
+// removed and the ParsedObject discarded.
 struct ParsedObject {
-  // The object itself, set when the block containing the OBJECT_VALUE is
-  // parsed.
-  std::optional<fuchsia::inspect::Object> object;
+  // The object hierarchy being parsed out of the buffer.
+  // Metrics and properties are parsed into here as they are read.
+  ObjectHierarchy hierarchy;
 
-  // The vector of metrics, appended to as each metric is parsed.
-  std::vector<fuchsia::inspect::Metric> metrics;
+  // The number of children expected for this object.
+  // The object is considered "complete" once the number of children in the
+  // hierarchy matches this count.
+  size_t children_count = 0;
 
-  // The vector of properties, appended to as each property is parsed.
-  std::vector<fuchsia::inspect::Property> properties;
+  // The index of the parent, only valid if this object is initialized.
+  BlockIndex parent;
 
-  // Vector of block indices for children of this object.
-  std::vector<BlockIndex> children;
-
-  // Initializes the stored object with the given name.
-  void InitializeObject(std::string name) {
-    object = fuchsia::inspect::Object();
-    object->name = std::move(name);
+  // Initializes the stored object with the given name and parent.
+  void InitializeObject(std::string name, BlockIndex parent) {
+    hierarchy.object().name = std::move(name);
+    this->parent = parent;
+    initialized_ = true;
   }
+
+  explicit operator bool() { return initialized_; }
+
+  bool is_complete() { return hierarchy.children().size() == children_count; }
+
+ private:
+  bool initialized_ = false;
 };
 
 // The |Reader| supports reading the contents of a |Snapshot|.
@@ -182,7 +195,7 @@ class Reader {
   Reader(Snapshot snapshot) : snapshot_(std::move(snapshot)) {}
 
   // Read the contents of the snapshot and return the root object.
-  fit::result<ObjectHierarchy> GetRootObject();
+  fit::result<ObjectHierarchy> Read();
 
  private:
   // Gets a pointer to the ParsedObject for the given index. A new ParsedObject
@@ -255,64 +268,75 @@ void Reader::InnerScanBlocks() {
       });
 }
 
-fit::result<ObjectHierarchy> Reader::GetRootObject() {
+fit::result<ObjectHierarchy> Reader::Read() {
   if (!snapshot_) {
     // Snapshot is invalid, return a default object.
     return fit::error();
   }
 
-  // Scan blocks into the parsed_object map.
+  // Scan blocks into the parsed_object map. This creates ParsedObjects with
+  // metrics, properties, and an accurate count of the number of expected
+  // children. ParsedObjects with a valid OBJECT_VALUE block are initialized
+  // with a name and parent index.
   InnerScanBlocks();
 
-  // Stack of objects to process, consisting of a pair of parent object pointer
-  // and the ParsedObject. The parent objects are guaranteed to be owned by the
-  // root object or one of its descendents.
-  std::stack<std::pair<ObjectHierarchy*, BlockIndex>> objects_to_populate;
+  // Stack of completed objects to process. Entries consist of the completed
+  // ObjectHierarchy and the block index of their parent.
+  std::stack<std::pair<ObjectHierarchy, BlockIndex>> complete_objects;
 
-  // Helper function to process an individual parsed object by index. The object
-  // is removed from the parsed_objects and its children are added to the stack.
-  auto process_object =
-      [this, &objects_to_populate](
-          BlockIndex index) -> std::unique_ptr<ObjectHierarchy> {
-    auto it = parsed_objects_.find(index);
-    if (it == parsed_objects_.end() || !it->second.object) {
-      return nullptr;
-    }
-    auto current = std::move(it->second);
-    parsed_objects_.erase(it);
-    if (!current.object) {
-      return nullptr;
+  // Iterate over the map of parsed objects and find those objects that are
+  // already "complete." These objects are moved to the complete_objects map for
+  // bottom-up processing.
+  auto it = parsed_objects_.begin();
+  while (it != parsed_objects_.end()) {
+    if (!it->second) {
+      // The object is not valid, ignore.
+      it = parsed_objects_.erase(it);
+      continue;
     }
 
-    auto ret = std::make_unique<ObjectHierarchy>();
-    ret->object() = std::move(*current.object);
-    ret->object().properties.reset(std::move(current.properties));
-    ret->object().metrics.reset(std::move(current.metrics));
-    for (const auto& index : current.children) {
-      objects_to_populate.push(std::make_pair(ret.get(), index));
+    if (it->second.is_complete()) {
+      // The object is valid and complete, push it onto the stack.
+      complete_objects.push(
+          std::make_pair(std::move(it->second.hierarchy), it->second.parent));
+      it = parsed_objects_.erase(it);
+      continue;
     }
 
-    return ret;
-  };
+    ++it;
+  }
 
-  auto root_object = process_object(1);
+  // Construct a valid hierarchy from the bottom up by attaching completed
+  // objects to their parent object. Once a parent becomes complete, add it to
+  // the stack to recursively bubble the completed children towards the root.
+  while (complete_objects.size() > 0) {
+    auto obj = std::move(complete_objects.top());
+    complete_objects.pop();
 
-  while (!objects_to_populate.empty()) {
-    auto current = std::move(objects_to_populate.top());
-    objects_to_populate.pop();
+    if (obj.second == 0) {
+      // We stop once we find a complete object with parent 0. This is assumed
+      // to be the root, so we return it.
+      // TODO(crjohns): Deal with the case of multiple roots, if we decide to
+      // support it.
+      return fit::ok(std::move(obj.first));
+    }
 
-    ObjectHierarchy* parent = current.first;
-    auto obj = process_object(current.second);
-    if (obj) {
-      parent->children().push_back(std::move(*obj));
+    // Get the parent object, which was created during block scanning.
+    auto it = parsed_objects_.find(obj.second);
+    ZX_ASSERT(it != parsed_objects_.end());
+    auto* parent = &it->second;
+    parent->hierarchy.children().emplace_back(std::move(obj.first));
+    if (parent->is_complete()) {
+      // The parent object is now complete, push it onto the stack.
+      complete_objects.push(
+          std::make_pair(std::move(parent->hierarchy), parent->parent));
+      parsed_objects_.erase(it);
     }
   }
 
-  if (!root_object) {
-    return fit::error();
-  }
-
-  return fit::ok(std::move(*root_object));
+  // We processed all completed objects but could not find a complete root,
+  // return an error.
+  return fit::error();
 }
 
 ParsedObject* Reader::GetOrCreate(BlockIndex index) {
@@ -343,7 +367,7 @@ void Reader::InnerParseMetric(ParsedObject* parent, const Block* block) {
     default:
       return;
   }
-  parent->metrics.emplace_back(std::move(metric));
+  parent->hierarchy.object().metrics->emplace_back(std::move(metric));
 }
 
 void Reader::InnerParseProperty(ParsedObject* parent, const Block* block) {
@@ -383,7 +407,7 @@ void Reader::InnerParseProperty(ParsedObject* parent, const Block* block) {
   } else {
     property.value.str() = std::string(buf, total_length);
   }
-  parent->properties.emplace_back(std::move(property));
+  parent->hierarchy.object().properties->emplace_back(std::move(property));
 }
 
 void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
@@ -393,13 +417,13 @@ void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
     return;
   }
   auto* parsed_object = GetOrCreate(index);
-  parsed_object->InitializeObject(std::move(name));
   auto parent_index =
       ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
-  if (parent_index) {
+  parsed_object->InitializeObject(std::move(name), parent_index);
+  if (parent_index && parent_index != index) {
     // Only link to a parent if the parent can be valid (not index 0).
     auto* parent = GetOrCreate(parent_index);
-    parent->children.push_back(index);
+    parent->children_count += 1;
   }
 }
 }  // namespace internal
@@ -407,7 +431,7 @@ void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
 
 fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot) {
   vmo::internal::Reader reader(std::move(snapshot));
-  return reader.GetRootObject();
+  return reader.Read();
 }
 
 fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo) {

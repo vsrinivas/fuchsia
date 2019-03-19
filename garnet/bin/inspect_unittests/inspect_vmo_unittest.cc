@@ -145,4 +145,45 @@ TEST(InspectVmo, Properties) {
   // Check that the properties are removed when they goes out of scope.
   EXPECT_THAT(GetHierarchy(tree), ObjectMatches(PropertyList(IsEmpty())));
 }
+
+TEST(InspectVmo, NestedValues) {
+  auto tree = inspect::Inspector().CreateTree("root");
+  Object& root = tree.GetRoot();
+  {
+    Object child_a = root.CreateChild("child_a");
+    Object child_b = root.CreateChild("child_b");
+    Object child_a_c = child_a.CreateChild("child_a_c");
+    auto property_string = root.CreateStringProperty("str", "test");
+    property_string.Set("valid");
+    auto property_vector =
+        root.CreateByteVectorProperty("vec", inspect::VectorValue(3, 'a'));
+
+    auto a_value = child_a.CreateIntMetric("value", -10);
+    auto b_prop = child_b.CreateStringProperty("version", "1.0");
+    auto a_c_value = child_a_c.CreateDoubleMetric("volume", 0.25);
+
+    EXPECT_THAT(
+        GetHierarchy(tree),
+        AllOf(ObjectMatches(
+                  AllOf(NameMatches("root"),
+                        PropertyList(UnorderedElementsAre(
+                            StringPropertyIs("str", "valid"),
+                            ByteVectorPropertyIs(
+                                "vec", inspect::VectorValue(3, 'a')))))),
+              ChildrenMatch(UnorderedElementsAre(
+                  AllOf(ObjectMatches(AllOf(NameMatches("child_a"),
+                                            MetricList(UnorderedElementsAre(
+                                                IntMetricIs("value", -10))))),
+                        ChildrenMatch(UnorderedElementsAre(AllOf(ObjectMatches(
+                            AllOf(NameMatches("child_a_c"),
+                                  MetricList(UnorderedElementsAre(
+                                      DoubleMetricIs("volume", 0.25))))))))),
+                  ObjectMatches(
+                      AllOf(NameMatches("child_b"),
+                            PropertyList(UnorderedElementsAre(
+                                StringPropertyIs("version", "1.0")))))))));
+  }
+  // Check that the properties are removed when they goes out of scope.
+  EXPECT_THAT(GetHierarchy(tree), ObjectMatches(PropertyList(IsEmpty())));
+}
 }  // namespace
