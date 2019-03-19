@@ -10,6 +10,8 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist/pdu/amt"
 	"fuchsia.googlesource.com/tools/botanist/pdu/wol"
+	"fuchsia.googlesource.com/tools/sshutil"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -75,7 +77,7 @@ func sendCommand(nodeName, command string, signers []ssh.Signer) error {
 	}
 
 	ctx := context.Background()
-	client, err := SSHIntoNode(ctx, nodeName, config)
+	client, err := sshutil.ConnectToNode(ctx, nodeName, config)
 	if err != nil {
 		return err
 	}

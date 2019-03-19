@@ -24,6 +24,7 @@ import (
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
+	"fuchsia.googlesource.com/tools/netutil"
 	"fuchsia.googlesource.com/tools/retry"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/runtests"
@@ -236,7 +237,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 
 	var addrs []*net.UDPAddr
 	for _, node := range nodes {
-		addr, err := botanist.GetNodeAddress(ctx, node.Nodename, false)
+		addr, err := netutil.GetNodeAddress(ctx, node.Nodename, false)
 		if err != nil {
 			return err
 		}

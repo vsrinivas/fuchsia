@@ -17,7 +17,9 @@ import (
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
+	"fuchsia.googlesource.com/tools/netutil"
 	"fuchsia.googlesource.com/tools/runner"
+	"fuchsia.googlesource.com/tools/sshutil"
 
 	"github.com/google/subcommands"
 	"golang.org/x/crypto/ssh"
@@ -112,7 +114,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		}
 	}()
 
-	addr, err := botanist.GetNodeAddress(ctx, nodename, false)
+	addr, err := netutil.GetNodeAddress(ctx, nodename, false)
 	if err != nil {
 		return err
 	}
@@ -134,11 +136,11 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		if err != nil {
 			return err
 		}
-		config, err := botanist.DefaultSSHConfig(privKey)
+		config, err := sshutil.DefaultSSHConfig(privKey)
 		if err != nil {
 			return err
 		}
-		client, err := botanist.SSHIntoNode(ctx, nodename, config)
+		client, err := sshutil.ConnectToNode(ctx, nodename, config)
 		if err != nil {
 			return err
 		}
@@ -221,7 +223,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	var privKeys [][]byte
 	if len(privKeyPaths) == 0 {
-		p, err := botanist.GeneratePrivateKey()
+		p, err := sshutil.GeneratePrivateKey()
 		if err != nil {
 			return err
 		}

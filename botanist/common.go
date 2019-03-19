@@ -5,33 +5,10 @@
 package botanist
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"time"
-
-	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/retry"
 )
-
-// GetNodeAddress returns the UDP address corresponding to a given node, specifically
-// the netsvc or fuchsia address dependending on the value of `fuchsia`.
-func GetNodeAddress(ctx context.Context, nodename string, fuchsia bool) (*net.UDPAddr, error) {
-	// Retry, as the netstack might not yet be up.
-	var addr *net.UDPAddr
-	var err error
-	n := netboot.NewClient(time.Second)
-	err = retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, time.Minute), func() error {
-		addr, err = n.Discover(nodename, fuchsia)
-		return err
-	}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("cannot find node %q: %v", nodename, err)
-	}
-	return addr, nil
-}
 
 // DeviceProperties contains static properties of a hardware device.
 type DeviceProperties struct {

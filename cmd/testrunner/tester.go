@@ -10,8 +10,8 @@ import (
 	"io"
 	"path"
 
-	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runner"
+	"fuchsia.googlesource.com/tools/sshutil"
 	"fuchsia.googlesource.com/tools/testsharder"
 	"golang.org/x/crypto/ssh"
 )
@@ -55,11 +55,11 @@ type SSHTester struct {
 }
 
 func NewSSHTester(nodename string, sshKey []byte) (*SSHTester, error) {
-	config, err := botanist.DefaultSSHConfig(sshKey)
+	config, err := sshutil.DefaultSSHConfig(sshKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
 	}
-	client, err := botanist.SSHIntoNode(context.Background(), nodename, config)
+	client, err := sshutil.ConnectToNode(context.Background(), nodename, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
 	}
