@@ -5,15 +5,13 @@
 #ifndef GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 #define GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 
-#include <ddk/device.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/virtualaudio/c/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+
+#include <ddk/device.h>
+#include <fbl/unique_ptr.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/zx/channel.h>
-
-#include "garnet/drivers/audio/virtual_audio/virtual_audio_input_impl.h"
-#include "garnet/drivers/audio/virtual_audio/virtual_audio_output_impl.h"
 
 namespace virtual_audio {
 
@@ -55,8 +53,7 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
 
  private:
   friend class VirtualAudioBus;
-  friend class VirtualAudioInputImpl;
-  friend class VirtualAudioOutputImpl;
+  friend class VirtualAudioDeviceImpl;
 
   static fuchsia_virtualaudio_Forwarder_ops_t fidl_ops_;
 
@@ -65,10 +62,10 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
 
   fidl::BindingSet<fuchsia::virtualaudio::Control> bindings_;
   fidl::BindingSet<fuchsia::virtualaudio::Input,
-                   fbl::unique_ptr<VirtualAudioInputImpl>>
+                   fbl::unique_ptr<VirtualAudioDeviceImpl>>
       input_bindings_;
   fidl::BindingSet<fuchsia::virtualaudio::Output,
-                   fbl::unique_ptr<VirtualAudioOutputImpl>>
+                   fbl::unique_ptr<VirtualAudioDeviceImpl>>
       output_bindings_;
 };
 

@@ -5,17 +5,14 @@
 #ifndef GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 #define GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 
-#include <ddk/debug.h>
+#include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
-#include <lib/zx/vmo.h>
 #include <deque>
-
-#include "garnet/drivers/audio/virtual_audio/virtual_audio_device_impl.h"
 
 namespace virtual_audio {
 
@@ -23,7 +20,10 @@ class VirtualAudioDeviceImpl;
 
 class VirtualAudioStream : public ::audio::SimpleAudioStream {
  public:
-  void ChangePlugState(bool plugged) __TA_EXCLUDES(msg_queue_lock_);
+  void EnqueuePlugChange(bool plugged) __TA_EXCLUDES(wakeup_queue_lock_);
+
+  static fbl::RefPtr<VirtualAudioStream> CreateStream(
+      VirtualAudioDeviceImpl* owner, zx_device_t* devnode, bool is_input);
 
   // Only set by DeviceImpl -- on dtor, Disable or Remove
   bool shutdown_by_parent_ = false;
@@ -58,10 +58,11 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
 
   zx_status_t ProcessRingNotification() __TA_REQUIRES(domain_->token());
 
-  enum class Msg { Plug, Unplug };
-  void HandleMessages() __TA_REQUIRES(domain_->token())
-      __TA_EXCLUDES(msg_queue_lock_);
-  void HandleMsg(Msg msg) __TA_REQUIRES(domain_->token());
+  enum class PlugType { Plug, Unplug };
+
+  void HandlePlugChanges() __TA_REQUIRES(domain_->token())
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandlePlugChange(PlugType plug_change) __TA_REQUIRES(domain_->token());
 
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_->token());
@@ -82,9 +83,10 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
 
   VirtualAudioDeviceImpl* parent_ __TA_GUARDED(domain_->token());
 
-  fbl::RefPtr<::dispatcher::WakeupEvent> driver_wakeup_;
-  fbl::Mutex msg_queue_lock_ __TA_ACQUIRED_AFTER(domain_->token());
-  std::deque<Msg> msg_queue_ __TA_GUARDED(msg_queue_lock_);
+  fbl::Mutex wakeup_queue_lock_ __TA_ACQUIRED_AFTER(domain_->token());
+
+  fbl::RefPtr<::dispatcher::WakeupEvent> plug_change_wakeup_;
+  std::deque<PlugType> plug_queue_ __TA_GUARDED(wakeup_queue_lock_);
 };
 
 }  // namespace virtual_audio

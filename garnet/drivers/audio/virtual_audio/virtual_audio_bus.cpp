@@ -4,8 +4,11 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <fbl/unique_ptr.h>
 
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_control_impl.h"
+#include "garnet/drivers/audio/virtual_audio/virtual_audio_device_impl.h"
 
 namespace virtual_audio {
 
@@ -24,7 +27,7 @@ class VirtualAudioBus {
   static zx_status_t DdkBind(void* ctx, zx_device_t* parent_test_bus) {
     auto control = std::make_unique<VirtualAudioControlImpl>();
 
-    // Define entry-point operations for this device.
+    // Define entry-point operations for this control device.
     static zx_protocol_device_t device_ops = {
         .version = DEVICE_OPS_VERSION,
         .unbind = &VirtualAudioControlImpl::DdkUnbind,

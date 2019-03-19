@@ -7,7 +7,8 @@
 #include <ddk/debug.h>
 #include <lib/async/default.h>
 
-#include "garnet/drivers/audio/virtual_audio/virtual_audio.h"
+#include "garnet/drivers/audio/virtual_audio/virtual_audio_device_impl.h"
+#include "garnet/drivers/audio/virtual_audio/virtual_audio_stream.h"
 
 namespace virtual_audio {
 
@@ -112,12 +113,12 @@ zx_status_t VirtualAudioControlImpl::SendInput(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Create an VirtualAudioInputImpl for this binding; save it in our list.
+  // Create an VirtualAudioDeviceImpl for this binding; save it in our list.
   // Note, using the default dispatcher means that we will be running on the
   // same that drives all of our peer devices in the /dev/test device host.
   // We should be mindful of this if doing long VirtualAudioInput operations.
   input_bindings_.AddBinding(
-      VirtualAudioInputImpl::Create(this),
+      VirtualAudioDeviceImpl::Create(this, true),
       fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(
           std::move(input_request_channel)),
       async_get_default_dispatcher());
@@ -132,12 +133,12 @@ zx_status_t VirtualAudioControlImpl::SendOutput(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Create a VirtualAudioOutputImpl for this binding; save it in our list.
+  // Create a VirtualAudioDeviceImpl for this binding; save it in our list.
   // Note, using the default dispatcher means that we will be running on the
   // same that drives all of our peer devices in the /dev/test device host.
   // We should be mindful of this if doing long VirtualAudioOutput operations.
   output_bindings_.AddBinding(
-      VirtualAudioOutputImpl::Create(this),
+      VirtualAudioDeviceImpl::Create(this, false),
       fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(
           std::move(output_request_channel)),
       async_get_default_dispatcher());

@@ -9,9 +9,25 @@
 #include <fbl/auto_lock.h>
 #include <cmath>
 
+#include "garnet/drivers/audio/virtual_audio/virtual_audio_device_impl.h"
+#include "garnet/drivers/audio/virtual_audio/virtual_audio_stream_in.h"
+#include "garnet/drivers/audio/virtual_audio/virtual_audio_stream_out.h"
+
 namespace virtual_audio {
 
 constexpr bool kTestPosition = false;
+
+// static
+fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(
+    VirtualAudioDeviceImpl* owner, zx_device_t* devnode, bool is_input) {
+  if (is_input) {
+    return ::audio::SimpleAudioStream::Create<VirtualAudioStreamIn>(owner,
+                                                                    devnode);
+  } else {
+    return ::audio::SimpleAudioStream::Create<VirtualAudioStreamOut>(owner,
+                                                                     devnode);
+  }
+}
 
 VirtualAudioStream::~VirtualAudioStream() {
   ZX_DEBUG_ASSERT(domain_->deactivated());
@@ -62,22 +78,21 @@ zx_status_t VirtualAudioStream::Init() {
 }
 
 zx_status_t VirtualAudioStream::InitPost() {
-  driver_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (driver_wakeup_ == nullptr) {
+  plug_change_wakeup_ = dispatcher::WakeupEvent::Create();
+  if (plug_change_wakeup_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  dispatcher::WakeupEvent::ProcessHandler wake_handler(
+  dispatcher::WakeupEvent::ProcessHandler plug_wake_handler(
       [this](dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandleMessages();
+        HandlePlugChanges();
         return ZX_OK;
       });
-
   zx_status_t status =
-      driver_wakeup_->Activate(domain_, std::move(wake_handler));
+      plug_change_wakeup_->Activate(domain_, std::move(plug_wake_handler));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "WakeupEvent activate failed (%d)\n", status);
+    zxlogf(ERROR, "Plug WakeupEvent activate failed (%d)\n", status);
     return status;
   }
 
@@ -91,31 +106,36 @@ zx_status_t VirtualAudioStream::InitPost() {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
         return ProcessRingNotification();
       });
+  status = notify_timer_->Activate(domain_, std::move(timer_handler));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "PositionNotify Timer activate failed (%d)\n", status);
+    return status;
+  }
 
-  return notify_timer_->Activate(domain_, std::move(timer_handler));
+  return ZX_OK;
 }
 
-void VirtualAudioStream::HandleMessages() {
+void VirtualAudioStream::HandlePlugChanges() {
   while (true) {
-    Msg msg;
+    PlugType plug_change;
 
-    if (fbl::AutoLock lock(&msg_queue_lock_); !msg_queue_.empty()) {
-      msg = msg_queue_.front();
-      msg_queue_.pop_front();
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !plug_queue_.empty()) {
+      plug_change = plug_queue_.front();
+      plug_queue_.pop_front();
     } else {
       break;
     }
 
-    HandleMsg(msg);
+    HandlePlugChange(plug_change);
   }
 }
 
-void VirtualAudioStream::HandleMsg(Msg msg) {
-  switch (msg) {
-    case Msg::Plug:
+void VirtualAudioStream::HandlePlugChange(PlugType plug_change) {
+  switch (plug_change) {
+    case PlugType::Plug:
       SetPlugState(true);
       break;
-    case Msg::Unplug:
+    case PlugType::Unplug:
       SetPlugState(false);
       break;
     default:
@@ -202,14 +222,14 @@ zx_status_t VirtualAudioStream::ChangeFormat(
   return ZX_OK;
 }
 
-void VirtualAudioStream::ChangePlugState(bool plugged) {
+void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
   {
-    fbl::AutoLock lock(&msg_queue_lock_);
-    Msg msg = (plugged ? Msg::Plug : Msg::Unplug);
-    msg_queue_.push_back(msg);
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    PlugType plug_change = (plugged ? PlugType::Plug : PlugType::Unplug);
+    plug_queue_.push_back(plug_change);
   }
 
-  driver_wakeup_->Signal();
+  plug_change_wakeup_->Signal();
 }
 
 zx_status_t VirtualAudioStream::SetGain(
