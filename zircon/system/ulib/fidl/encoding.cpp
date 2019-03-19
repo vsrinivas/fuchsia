@@ -220,14 +220,6 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
         set_error("Bytes must be aligned to FIDL_ALIGNMENT");
         return ZX_ERR_INVALID_ARGS;
     }
-    if (handles == nullptr && max_handles != 0) {
-        set_error("Cannot provide non-zero handle count and null handle pointer");
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (out_actual_handles == nullptr) {
-        set_error("Cannot encode with null out_actual_handles");
-        return ZX_ERR_INVALID_ARGS;
-    }
 
     uint32_t next_out_of_line;
     zx_status_t status;
@@ -244,7 +236,9 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
                StartingPoint{reinterpret_cast<uint8_t*>(bytes)});
 
     auto drop_all_handles = [&]() {
-        *out_actual_handles = 0;
+        if (out_actual_handles) {
+            *out_actual_handles = 0;
+        }
 #ifdef __Fuchsia__
         if (handles) {
             // Return value intentionally ignored. This is best-effort cleanup.
@@ -259,9 +253,20 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
             drop_all_handles();
             return ZX_ERR_INVALID_ARGS;
         }
+        if (out_actual_handles == nullptr) {
+            set_error("Cannot encode with null out_actual_handles");
+            drop_all_handles();
+            return ZX_ERR_INVALID_ARGS;
+        }
         *out_actual_handles = encoder.handle_idx();
     } else {
         drop_all_handles();
+    }
+
+    if (handles == nullptr && max_handles != 0) {
+        set_error("Cannot provide non-zero handle count and null handle pointer");
+        // When |handles| is nullptr, handles are closed as part of traversal.
+        return ZX_ERR_INVALID_ARGS;
     }
 
     return encoder.status();

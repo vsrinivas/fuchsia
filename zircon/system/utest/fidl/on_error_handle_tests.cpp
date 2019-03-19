@@ -43,7 +43,7 @@ bool IsPeerValid(zx_handle_t handle) {
     return IsPeerValid(zx::unowned_eventpair(handle));
 }
 
-bool EncodeErrorCloseHandleTest() {
+bool EncodeErrorTest() {
     BEGIN_TEST;
 
     // If there is only one handle in the message, fidl_encode should not close beyond one handles.
@@ -77,7 +77,64 @@ bool EncodeErrorCloseHandleTest() {
     END_TEST;
 }
 
-bool DecodeErrorCloseHandleTest() {
+bool EncodeWithNullHandlesTest() {
+    BEGIN_TEST;
+
+    // When the |handles| parameter to fidl_encode is nullptr, it should still close all handles
+    // inside the message.
+    for (uint32_t num_handles : {0u, 1u}) {
+        zx::eventpair eventpair_a;
+        zx::eventpair eventpair_b;
+        ASSERT_EQ(zx::eventpair::create(0, &eventpair_a, &eventpair_b), ZX_OK);
+
+        constexpr uint32_t kMessageSize = sizeof(nonnullable_handle_message_layout);
+        std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(kMessageSize);
+        nonnullable_handle_message_layout& message =
+            *reinterpret_cast<nonnullable_handle_message_layout*>(buffer.get());
+        message.inline_struct.handle = eventpair_a.release();
+
+        const char* error = nullptr;
+        uint32_t actual_handles;
+        auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, nullptr,
+                                  num_handles, &actual_handles, &error);
+
+        ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+        ASSERT_NONNULL(error, error);
+        ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_b)));
+    }
+
+    END_TEST;
+}
+
+bool EncodeWithNullOutActualHandlesTest() {
+    BEGIN_TEST;
+
+    // When the |out_actual_handles| parameter to fidl_encode is nullptr, it should still close
+    // all handles inside the message.
+
+    zx::eventpair eventpair_a;
+    zx::eventpair eventpair_b;
+    ASSERT_EQ(zx::eventpair::create(0, &eventpair_a, &eventpair_b), ZX_OK);
+    zx_handle_t handles[1] = {};
+
+    constexpr uint32_t kMessageSize = sizeof(nonnullable_handle_message_layout);
+    std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(kMessageSize);
+    nonnullable_handle_message_layout& message =
+        *reinterpret_cast<nonnullable_handle_message_layout*>(buffer.get());
+    message.inline_struct.handle = eventpair_a.release();
+
+    const char* error = nullptr;
+    auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, handles,
+                              fbl::count_of(handles), nullptr, &error);
+
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+    ASSERT_NONNULL(error, error);
+    ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_b)));
+
+    END_TEST;
+}
+
+bool DecodeErrorTest() {
     BEGIN_TEST;
 
     // If an unknown envelope causes the handles contained within to be closed, and later on
@@ -136,10 +193,12 @@ bool DecodeErrorCloseHandleTest() {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(on_error_handle)
-RUN_TEST(EncodeErrorCloseHandleTest)
-RUN_TEST(DecodeErrorCloseHandleTest)
-END_TEST_CASE(on_error_handle)
+BEGIN_TEST_CASE(on_error_close_handle)
+RUN_TEST(EncodeErrorTest)
+RUN_TEST(EncodeWithNullHandlesTest)
+RUN_TEST(EncodeWithNullOutActualHandlesTest)
+RUN_TEST(DecodeErrorTest)
+END_TEST_CASE(on_error_close_handle)
 
 } // namespace
 } // namespace fidl
