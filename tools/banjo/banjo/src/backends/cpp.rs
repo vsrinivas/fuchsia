@@ -164,12 +164,16 @@ fn get_in_params(
                         name = to_c_name(name)
                     ))
                 }
-                ast::Ty::Vector { .. } => {
-                    let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
+                ast::Ty::Vector { ty: inner_ty, .. } => {
+                    // TODO(surajmalhotra): Support zx wrappers for vectors.
+                    let ty = ty_to_cpp_str(ast, false, ty).unwrap();
+                    // TODO(surajmalhotra): Support multi-dimensional vectors.
+                    let ptr = if inner_ty.is_reference() { "*" } else { "" };
                     Ok(format!(
-                        "const {ty}* {name}_{buffer}, size_t {name}_{size}",
+                        "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
                         buffer = name_buffer(&ty),
                         size = name_size(&ty),
+                        ptr = ptr,
                         ty = ty,
                         name = to_c_name(name)
                     ))
@@ -224,18 +228,24 @@ fn get_out_params(
                     name = to_c_name(name)
                 )
             }
-            ast::Ty::Vector {..} => {
+            ast::Ty::Vector { ty: inner_ty, .. } => {
+                // TODO(surajmalhotra): Support zx wrappers for vectors.
+                let ty_name = ty_to_cpp_str(ast, false, ty).unwrap();
+                // TODO(surajmalhotra): Support multi-dimensional vectors.
+                let ptr = if inner_ty.is_reference() { "*" } else { "" };
                 if ty.is_reference() {
-                    format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
+                    format!("{ty}{ptr}** out_{name}_{buffer}, size_t* {name}_{size}",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
                             ty = ty_name,
+                            ptr = ptr,
                             name = to_c_name(name))
                 } else {
-                    format!("{ty}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
+                    format!("{ty}{ptr}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
                             ty = ty_name,
+                            ptr = ptr,
                             name = to_c_name(name))
                 }
             },

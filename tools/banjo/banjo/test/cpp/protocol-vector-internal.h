@@ -46,7 +46,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_float64, VectorFloat64,
         void (C::*)(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_handle, VectorHandle,
-        void (C::*)(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual));
+        void (C::*)(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 
 template <typename D>
@@ -97,7 +97,7 @@ constexpr void CheckVectorProtocolSubclass() {
 
     static_assert(internal::has_vector_protocol_handle<D>::value,
         "VectorProtocol subclasses must implement "
-        "void VectorHandle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual);");
+        "void VectorHandle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);");
 
 }
 
@@ -135,7 +135,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_float64, Vector2Float6
         void (C::*)(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_handle, Vector2Handle,
-        void (C::*)(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual));
+        void (C::*)(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 
 template <typename D>
@@ -186,7 +186,7 @@ constexpr void CheckVector2ProtocolSubclass() {
 
     static_assert(internal::has_vector2_protocol_handle<D>::value,
         "Vector2Protocol subclasses must implement "
-        "void Vector2Handle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual);");
+        "void Vector2Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);");
 
 }
 
@@ -224,7 +224,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_float64, Vec
         void (C::*)(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_handle, VectorOfVectorsHandle,
-        void (C::*)(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual));
+        void (C::*)(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 
 template <typename D>
@@ -275,9 +275,10 @@ constexpr void CheckVectorOfVectorsProtocolSubclass() {
 
     static_assert(internal::has_vector_of_vectors_protocol_handle<D>::value,
         "VectorOfVectorsProtocol subclasses must implement "
-        "void VectorOfVectorsHandle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual);");
+        "void VectorOfVectorsHandle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);");
 
 }
+
 
 } // namespace internal
 } // namespace ddk

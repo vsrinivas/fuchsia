@@ -236,13 +236,16 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         name = to_c_name(name)
                     ))
                 }
-                ast::Ty::Vector { .. } => {
+                ast::Ty::Vector { ty: inner_ty, .. } => {
                     let ty = ty_to_c_str(ast, ty).unwrap();
+                    // TODO(surajmalhotra): Support multi-dimensional vectors.
+                    let ptr = if inner_ty.is_reference() { "*" } else { "" };
                     Ok(format!(
-                        "const {ty}* {name}_{buffer}, size_t {name}_{size}",
+                        "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
                         buffer = name_buffer(&ty),
                         size = name_size(&ty),
                         ty = ty,
+                        ptr = ptr,
                         name = to_c_name(name)
                     ))
                 }
@@ -289,24 +292,28 @@ fn get_out_params(
                     name = to_c_name(name)
                 )
             }
-            ast::Ty::Vector {..} => {
+            ast::Ty::Vector { ty: inner_ty, .. } => {
+                // TODO(surajmalhotra): Support multi-dimensional vectors.
+                let ptr = if inner_ty.is_reference() { "*" } else { "" };
                 if ty.is_reference() {
-                    format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
+                    format!("{ty}{ptr}** out_{name}_{buffer}, size_t* {name}_{size}",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
                             ty = ty_name,
+                            ptr = ptr,
                             name = to_c_name(name))
                 } else {
-                    format!("{ty}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
+                    format!("{ty}{ptr}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
                             ty = ty_name,
+                            ptr = ptr,
                             name = to_c_name(name))
                 }
             },
             ast::Ty::Str {..} => {
-                format!("{ty}{null} out_{c_name}, size_t {c_name}_capacity",
-                        ty = ty_name, null = nullable, c_name = to_c_name(name))
+                format!("{ty} out_{c_name}, size_t {c_name}_capacity",
+                        ty = ty_name, c_name = to_c_name(name))
             }
             ast::Ty::Handle {..} => format!("{}* out_{}", ty_name, to_c_name(name)),
             _ => format!("{}{}* out_{}", ty_name, nullable, to_c_name(name))
@@ -499,9 +506,13 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         &self,
         _attributes: &Attrs,
         name: &Ident,
-        _fields: &Vec<StructField>,
+        fields: &Vec<StructField>,
         _ast: &BanjoAst,
     ) -> Result<String, Error> {
+        // TODO(surajmalhotra): Remove this hack once we no longer include C types.
+        if fields.len() == 0 {
+            return Ok("".to_string());
+        }
         Ok(format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name.name())))
     }
 
@@ -512,35 +523,67 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         fields: &Vec<StructField>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
+        // TODO(surajmalhotra): Remove this hack once we no longer include C types.
+        if fields.len() == 0 {
+            return Ok("".to_string());
+        }
         let members = fields
             .iter()
             .map(|f| {
                 let mut accum = String::new();
                 accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
+                let prefix = if f.ty.is_reference() { "" } else { "const " };
                 match f.ty {
-                    ast::Ty::Vector { .. } => {
+                    ast::Ty::Vector { ty: ref inner_ty, .. } => {
                         let ty_name = ty_to_c_str(ast, &f.ty)?;
+                        // TODO(surajmalhotra): Support multi-dimensional vectors.
+                        let ptr = if inner_ty.is_reference() { "*" } else { "" };
                         accum.push_str(
                             format!(
-                                "    {ty}* {c_name}_{buffer};\n    size_t {c_name}_{size};",
+                                "    {prefix}{ty}{ptr}* {c_name}_{buffer};\n    size_t {c_name}_{size};",
                                 buffer = name_buffer(&ty_name),
                                 size = name_size(&ty_name),
                                 c_name = to_c_name(f.ident.name()),
+                                prefix = prefix,
                                 ty = ty_name,
+                                ptr = ptr,
                             )
                             .as_str(),
                         );
                     }
-                    ast::Ty::Array { ref size, .. } => {
+                    ast::Ty::Array { .. } => {
+                        let bounds = array_bounds(ast, &f.ty).unwrap();
                         accum.push_str(
                             format!(
-                                "    {ty} {c_name}[{size}];",
+                                "    {ty} {c_name}{bounds};",
                                 c_name = to_c_name(f.ident.name()),
-                                size = size,
+                                bounds = bounds,
                                 ty = ty_to_c_str(ast, &f.ty)?
                             )
                             .as_str(),
                         );
+                    }
+                    ast::Ty::Str { ref size, .. } => {
+                        if let Some(size) = size {
+                            accum.push_str(
+                                format!(
+                                    "    char {c_name}[{size}];",
+                                    c_name = to_c_name(f.ident.name()),
+                                    size = size,
+                                )
+                                .as_str(),
+                            );
+                        } else {
+                            accum.push_str(
+                                format!(
+                                    "    {prefix}{ty} {c_name};",
+                                    c_name = to_c_name(f.ident.name()),
+                                    prefix = prefix,
+                                    ty = ty_to_c_str(ast, &f.ty)?
+                                )
+                                .as_str(),
+                            );
+                        }
                     }
                     _ => {
                         accum.push_str(

@@ -40,7 +40,7 @@ typedef struct interface_protocol interface_protocol_t;
 
 // Declarations
 struct this_is_astruct {
-    char* s;
+    const char* s;
 };
 
 union this_is_aunion {
@@ -50,9 +50,9 @@ union this_is_aunion {
 typedef struct other_types_reference_protocol_ops {
     void (*struct)(void* ctx, this_is_astruct_t* s, this_is_astruct_t** out_s);
     void (*union)(void* ctx, this_is_aunion_t* u, this_is_aunion_t** out_u);
-    void (*string)(void* ctx, const char* s, char** out_s, size_t s_capacity);
-    void (*string_sized)(void* ctx, const char* s, char** out_s, size_t s_capacity);
-    void (*string_sized2)(void* ctx, const char* s, char** out_s, size_t s_capacity);
+    void (*string)(void* ctx, const char* s, char* out_s, size_t s_capacity);
+    void (*string_sized)(void* ctx, const char* s, char* out_s, size_t s_capacity);
+    void (*string_sized2)(void* ctx, const char* s, char* out_s, size_t s_capacity);
 } other_types_reference_protocol_ops_t;
 
 
@@ -69,15 +69,15 @@ static inline void other_types_reference_union(const other_types_reference_proto
     proto->ops->union(proto->ctx, u, out_u);
 }
 
-static inline void other_types_reference_string(const other_types_reference_protocol_t* proto, const char* s, char** out_s, size_t s_capacity) {
+static inline void other_types_reference_string(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
     proto->ops->string(proto->ctx, s, out_s, s_capacity);
 }
 
-static inline void other_types_reference_string_sized(const other_types_reference_protocol_t* proto, const char* s, char** out_s, size_t s_capacity) {
+static inline void other_types_reference_string_sized(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
     proto->ops->string_sized(proto->ctx, s, out_s, s_capacity);
 }
 
-static inline void other_types_reference_string_sized2(const other_types_reference_protocol_t* proto, const char* s, char** out_s, size_t s_capacity) {
+static inline void other_types_reference_string_sized2(const other_types_reference_protocol_t* proto, const char* s, char* out_s, size_t s_capacity) {
     proto->ops->string_sized2(proto->ctx, s, out_s, s_capacity);
 }
 

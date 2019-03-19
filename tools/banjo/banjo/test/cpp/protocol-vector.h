@@ -62,7 +62,7 @@
 //
 //     void VectorFloat64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
-//     void VectorHandle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual);
+//     void VectorHandle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
 //     ...
 // };
@@ -110,7 +110,7 @@
 //
 //     void Vector2Float64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
-//     void Vector2Handle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual);
+//     void Vector2Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
 //     ...
 // };
@@ -158,7 +158,7 @@
 //
 //     void VectorOfVectorsFloat64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
-//     void VectorOfVectorsHandle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual);
+//     void VectorOfVectorsHandle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
 //     ...
 // };
@@ -308,7 +308,7 @@ public:
         ops_->float64(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
     }
 
-    void Handle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
+    void Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
         ops_->handle(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
     }
 
@@ -460,7 +460,7 @@ public:
         ops_->float64(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
     }
 
-    void Handle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
+    void Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
         ops_->handle(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
     }
 
@@ -612,7 +612,7 @@ public:
         ops_->float64(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
     }
 
-    void Handle(const zx::handle* u64_list, size_t u64_count, zx::handle* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
+    void Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
         ops_->handle(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
     }
 
