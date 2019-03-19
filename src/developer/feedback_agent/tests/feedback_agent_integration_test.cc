@@ -67,7 +67,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckAnnotationKeys) {
   // happened prior to running this test (e.g., logs).
   // But we should expect the keys to be present.
   ASSERT_TRUE(out_result.response().data.has_annotations());
-  EXPECT_THAT(*out_result.response().data.annotations(),
+  EXPECT_THAT(out_result.response().data.annotations(),
               testing::UnorderedElementsAreArray({
                   MatchesAnnotationKey("device.board-name"),
                   MatchesAnnotationKey("build.last-update"),

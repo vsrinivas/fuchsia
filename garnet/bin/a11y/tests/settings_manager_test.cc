@@ -47,15 +47,15 @@ class SettingsManagerUnitTest : public sys::testing::TestWithContext {
 
     ASSERT_EQ(status, SettingsManagerStatus::OK);
 
-    ASSERT_EQ(*settings.magnification_enabled(),
+    ASSERT_EQ(settings.magnification_enabled(),
         expected_settings.magnification_enabled);
-    ASSERT_EQ(*settings.magnification_zoom_factor(),
+    ASSERT_EQ(settings.magnification_zoom_factor(),
         expected_settings.magnification_zoom_factor);
-    ASSERT_EQ(*settings.screen_reader_enabled(),
+    ASSERT_EQ(settings.screen_reader_enabled(),
         expected_settings.screen_reader_enabled);
-    ASSERT_EQ(*settings.color_inversion_enabled(),
+    ASSERT_EQ(settings.color_inversion_enabled(),
         expected_settings.color_inversion_enabled);
-    ASSERT_EQ(*settings.color_correction(),
+    ASSERT_EQ(settings.color_correction(),
         expected_settings.color_correction);
   }
 

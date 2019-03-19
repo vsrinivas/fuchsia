@@ -59,9 +59,13 @@
 // implementation and are not ambiguous.
 #include "lib/fidl/cpp/clone.h"
 
-// This is defined to temporarilly allow external users to know if they're
+// This is defined to temporarily allow external users to know if they're
 // compiled against a version of the FIDL library that uses std::vector and
 // std::string. This will be removed once the transition is complete.
 #define USE_STD_FOR_NON_NULLABLE_FIDL_FIELDS
+
+// This is defined temporarily to allow a soft transition for the change API
+// for table accessors. See FIDL-484.
+#define FIDL_NEW_STYLE_TABLE_MEMBER_ACCESSORS
 
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_

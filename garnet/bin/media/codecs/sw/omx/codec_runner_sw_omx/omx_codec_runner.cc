@@ -132,14 +132,14 @@ uint32_t PacketCountFromPortSettings(
     const fuchsia::media::StreamBufferSettings& settings) {
   ZX_DEBUG_ASSERT(settings.has_packet_count_for_client());
   ZX_DEBUG_ASSERT(settings.has_packet_count_for_server());
-  return *settings.packet_count_for_server() +
-         *settings.packet_count_for_client();
+  return settings.packet_count_for_server() +
+         settings.packet_count_for_client();
 }
 
 uint32_t BufferCountFromPortSettings(
     const fuchsia::media::StreamBufferSettings& settings) {
   ZX_DEBUG_ASSERT(settings.has_single_buffer_mode());
-  if (*settings.single_buffer_mode()) {
+  if (settings.single_buffer_mode()) {
     return 1;
   }
   return PacketCountFromPortSettings(settings);
@@ -334,7 +334,7 @@ bool OmxCodecRunner::Load() {
 void OmxCodecRunner::SetDecoderParams(
     fuchsia::mediacodec::CreateDecoder_Params audio_decoder_params) {
   ZX_ASSERT(audio_decoder_params.has_input_details());
-  ZX_ASSERT(audio_decoder_params.input_details()->has_mime_type());
+  ZX_ASSERT(audio_decoder_params.input_details().has_mime_type());
   struct AudioDecoder {
     std::string_view codec_mime_type;
     std::string_view omx_mime_type;
@@ -349,7 +349,7 @@ void OmxCodecRunner::SetDecoderParams(
   const AudioDecoder* dec = nullptr;
   for (const auto& known_audio_decoder : known_audio_decoders) {
     if (known_audio_decoder.codec_mime_type ==
-        *audio_decoder_params.input_details()->mime_type()) {
+        audio_decoder_params.input_details().mime_type()) {
       dec = &known_audio_decoder;
       break;
     }
@@ -364,7 +364,7 @@ void OmxCodecRunner::SetDecoderParams(
   decoder_params_ = std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
       std::move(audio_decoder_params));
   initial_input_format_details_ = fuchsia::media::FormatDetails::New();
-  zx_status_t clone_result = decoder_params_->input_details()->Clone(
+  zx_status_t clone_result = decoder_params_->input_details().Clone(
       initial_input_format_details_.get());
   if (clone_result != ZX_OK) {
     Exit("FormatDetails::Clone() failed - exiting");
@@ -1073,36 +1073,36 @@ void OmxCodecRunner::SetBufferSettingsCommonLocked(
   assert((!port_settings_[port] && buffer_lifetime_ordinal_[port] == 0) ||
          (port_settings_[port]->has_buffer_lifetime_ordinal() &&
           (buffer_lifetime_ordinal_[port] >=
-               *port_settings_[port]->buffer_lifetime_ordinal() &&
+               port_settings_[port]->buffer_lifetime_ordinal() &&
            buffer_lifetime_ordinal_[port] <=
-               *port_settings_[port]->buffer_lifetime_ordinal() + 1)));
+               port_settings_[port]->buffer_lifetime_ordinal() + 1)));
 
   if (!settings.has_buffer_lifetime_ordinal()) {
     Exit("!settings.has_buffer_lifetime_ordinal()\n", port);
   }
 
-  if (*settings.buffer_lifetime_ordinal() <=
+  if (settings.buffer_lifetime_ordinal() <=
       protocol_buffer_lifetime_ordinal_[port]) {
     Exit(
         "settings.buffer_lifetime_ordinal <= "
         "protocol_buffer_lifetime_ordinal_[port] - exiting - port: %d\n",
         port);
   }
-  protocol_buffer_lifetime_ordinal_[port] = *settings.buffer_lifetime_ordinal();
+  protocol_buffer_lifetime_ordinal_[port] = settings.buffer_lifetime_ordinal();
 
-  if (*settings.buffer_lifetime_ordinal() % 2 == 0) {
+  if (settings.buffer_lifetime_ordinal() % 2 == 0) {
     Exit(
         "only odd values for buffer_lifetime_ordinal are permitted - exiting "
         "- "
         "port: %d value: %lu\n",
-        port, *settings.buffer_lifetime_ordinal());
+        port, settings.buffer_lifetime_ordinal());
   }
 
   if (!settings.has_buffer_constraints_version_ordinal()) {
     Exit("!settings.has_buffer_constraints_version_ordinal()\n", port);
   }
 
-  if (*settings.buffer_constraints_version_ordinal() >
+  if (settings.buffer_constraints_version_ordinal() >
       sent_buffer_constraints_version_ordinal_[port]) {
     Exit(
         "client sent too-new buffer_constraints_version_ordinal - exiting - "
@@ -1110,22 +1110,22 @@ void OmxCodecRunner::SetBufferSettingsCommonLocked(
         port);
   }
 
-  if (*settings.buffer_constraints_version_ordinal() <
+  if (settings.buffer_constraints_version_ordinal() <
       last_required_buffer_constraints_version_ordinal_[port]) {
     // ignore - client will (probably) catch up later
     return;
   }
 
   // We've peeled off too new and too old above.
-  assert(*settings.buffer_constraints_version_ordinal() >=
+  assert(settings.buffer_constraints_version_ordinal() >=
              last_required_buffer_constraints_version_ordinal_[port] &&
-         *settings.buffer_constraints_version_ordinal() <=
+         settings.buffer_constraints_version_ordinal() <=
              sent_buffer_constraints_version_ordinal_[port]);
 
   // We've already checked above that the buffer_lifetime_ordinal is in
   // sequence.
   assert(!port_settings_[port] ||
-         *settings.buffer_lifetime_ordinal() > buffer_lifetime_ordinal_[port]);
+         settings.buffer_lifetime_ordinal() > buffer_lifetime_ordinal_[port]);
 
   ValidateBufferSettingsVsConstraints(port, settings, constraints);
 
@@ -1141,7 +1141,7 @@ void OmxCodecRunner::SetBufferSettingsCommonLocked(
   port_settings_[port] = std::make_unique<fuchsia::media::StreamBufferSettings>(
       std::move(settings));
   buffer_lifetime_ordinal_[port] =
-      *port_settings_[port]->buffer_lifetime_ordinal();
+      port_settings_[port]->buffer_lifetime_ordinal();
 }
 
 void OmxCodecRunner::SetOutputBufferSettings(
@@ -1186,7 +1186,7 @@ void OmxCodecRunner::SetOutputBufferSettings(
     }
 
     SetBufferSettingsCommonLocked(kOutput, std::move(output_settings),
-                                  *output_config_->buffer_constraints());
+                                  output_config_->buffer_constraints());
   }  // ~lock
 }
 
@@ -1209,7 +1209,7 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
       Exit("!buffer.has_buffer_lifetime_ordinal()");
     }
 
-    if (*buffer.buffer_lifetime_ordinal() % 2 == 0) {
+    if (buffer.buffer_lifetime_ordinal() % 2 == 0) {
       Exit(
           "client sent even buffer_lifetime_ordinal, but must be odd - "
           "exiting "
@@ -1217,7 +1217,7 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
           port);
     }
 
-    if (*buffer.buffer_lifetime_ordinal() !=
+    if (buffer.buffer_lifetime_ordinal() !=
         protocol_buffer_lifetime_ordinal_[port]) {
       Exit(
           "incoherent SetOutputBufferSettings()/SetInputBufferSettings() + "
@@ -1229,7 +1229,7 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
     // buffer_lifetime_ordinal, the client's buffer_lifetime_ordinal won't
     // match the server's buffer_lifetime_ordinal_.  The client will probably
     // later catch up.
-    if (*buffer.buffer_lifetime_ordinal() != buffer_lifetime_ordinal_[port]) {
+    if (buffer.buffer_lifetime_ordinal() != buffer_lifetime_ordinal_[port]) {
       // The case that ends up here is when a client's output configuration
       // (whole or last part) is being ignored because it's not yet caught up
       // with last_required_buffer_constraints_version_ordinal_.
@@ -1249,17 +1249,17 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
       Exit("!buffer.has_buffer_index()");
     }
 
-    if (*buffer.buffer_index() != all_buffers_[port].size()) {
+    if (buffer.buffer_index() != all_buffers_[port].size()) {
       Exit(
           "AddOutputBuffer()/AddInputBuffer() had buffer_index out of "
           "sequence "
           "- port: %d buffer_index: %u all_buffers_[port].size(): %lu",
-          port, *buffer.buffer_index(), all_buffers_[port].size());
+          port, buffer.buffer_index(), all_buffers_[port].size());
     }
 
     uint32_t required_buffer_count =
         BufferCountFromPortSettings(*port_settings_[port]);
-    if (*buffer.buffer_index() >= required_buffer_count) {
+    if (buffer.buffer_index() >= required_buffer_count) {
       Exit("AddOutputBuffer()/AddInputBuffer() extra buffer - port: %d", port);
     }
 
@@ -1287,9 +1287,9 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
         uint32_t buffer_index = required_buffer_count == 1 ? 0 : i;
         Buffer* buffer = all_buffers_[port][buffer_index].get();
         assert(buffer_lifetime_ordinal_[port] ==
-               *port_settings_[port]->buffer_lifetime_ordinal());
+               port_settings_[port]->buffer_lifetime_ordinal());
         all_packets_[port].push_back(std::make_unique<Packet>(
-            *port_settings_[port]->buffer_lifetime_ordinal(), i, buffer));
+            port_settings_[port]->buffer_lifetime_ordinal(), i, buffer));
       }
       // On input, free with client.  On output, free with Codec server.
       // Either way, initially free with the producer of data.
@@ -1338,7 +1338,7 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
         }
         fuchsia::media::StreamBuffer oob_buffer;
         oob_buffer.set_buffer_lifetime_ordinal(
-            *port_settings_[port]->buffer_lifetime_ordinal());
+            port_settings_[port]->buffer_lifetime_ordinal());
         // We don't really use this for anything, so just set it to one
         // beyond the last Codec protocol buffer_index, to avoid any
         // ambiguity with any real buffer_index.
@@ -1356,7 +1356,7 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
           Exit("omx_input_buffer_oob_->Init() failed");
         }
         omx_input_packet_oob_ = std::make_unique<Packet>(
-            *port_settings_[port]->buffer_lifetime_ordinal(),
+            port_settings_[port]->buffer_lifetime_ordinal(),
             packet_count + kHiddenInputPacketIndexOffsetOob,
             omx_input_buffer_oob_.get());
 
@@ -1365,9 +1365,9 @@ bool OmxCodecRunner::AddBufferCommon(Port port,
         assert(!omx_input_packet_eos_);
         Buffer* buffer = all_buffers_[port][0].get();
         assert(buffer_lifetime_ordinal_[port] ==
-               *port_settings_[port]->buffer_lifetime_ordinal());
+               port_settings_[port]->buffer_lifetime_ordinal());
         omx_input_packet_eos_ = std::make_unique<Packet>(
-            *port_settings_[port]->buffer_lifetime_ordinal(),
+            port_settings_[port]->buffer_lifetime_ordinal(),
             packet_count + kHiddenInputPacketIndexOffsetEos, buffer);
       }
 
@@ -1508,8 +1508,8 @@ void OmxCodecRunner::RecycleOutputPacket(
   }
 
   CheckOldBufferLifetimeOrdinalLocked(
-      kOutput, *available_output_packet.buffer_lifetime_ordinal());
-  if (*available_output_packet.buffer_lifetime_ordinal() <
+      kOutput, available_output_packet.buffer_lifetime_ordinal());
+  if (available_output_packet.buffer_lifetime_ordinal() <
       buffer_lifetime_ordinal_[kOutput]) {
     // ignore arbitrarily-stale required by protocol
     //
@@ -1522,7 +1522,7 @@ void OmxCodecRunner::RecycleOutputPacket(
     // re-configured output.
     return;
   }
-  assert(*available_output_packet.buffer_lifetime_ordinal() ==
+  assert(available_output_packet.buffer_lifetime_ordinal() ==
          buffer_lifetime_ordinal_[kOutput]);
   if (!IsOutputConfiguredLocked()) {
     Exit(
@@ -1535,10 +1535,10 @@ void OmxCodecRunner::RecycleOutputPacket(
   if (!available_output_packet.has_packet_index()) {
     Exit("!available_output_packet.has_packet_index()");
   }
-  if (*available_output_packet.packet_index() >= all_packets_[kOutput].size()) {
+  if (available_output_packet.packet_index() >= all_packets_[kOutput].size()) {
     Exit("out of range packet_index from client in RecycleOutputPacket()");
   }
-  uint32_t packet_index = *available_output_packet.packet_index();
+  uint32_t packet_index = available_output_packet.packet_index();
   if (packet_free_bits_[kOutput][packet_index]) {
     Exit(
         "packet_index already free at protocol level - invalid client "
@@ -1609,7 +1609,7 @@ void OmxCodecRunner::QueueInputPacket(fuchsia::media::Packet packet) {
     if (!packet.has_stream_lifetime_ordinal()) {
       Exit("!packet.has_stream_lifetime_ordinal()");
     }
-    EnsureFutureStreamSeenLocked(*packet.stream_lifetime_ordinal());
+    EnsureFutureStreamSeenLocked(packet.stream_lifetime_ordinal());
   }  // ~lock
   PostSerial(stream_control_dispatcher_,
              [this, packet = std::move(packet)]() mutable {
@@ -1629,7 +1629,7 @@ void OmxCodecRunner::QueueInputPacket_StreamControl(
   if (!packet.has_header()) {
     Exit("!packet.has_header()");
   }
-  zx_status_t clone_result = packet.header()->Clone(&temp_header_copy);
+  zx_status_t clone_result = packet.header().Clone(&temp_header_copy);
   if (clone_result != ZX_OK) {
     Exit("PacketHeader::Clone() failed");
   }
@@ -1641,16 +1641,16 @@ void OmxCodecRunner::QueueInputPacket_StreamControl(
           SendFreeInputPacketLocked(std::move(header));
         });
 
-    if (!packet.header()->has_buffer_lifetime_ordinal()) {
+    if (!packet.header().has_buffer_lifetime_ordinal()) {
       Exit("!packet.header()->has_buffer_lifetime_ordinal()");
     }
     CheckOldBufferLifetimeOrdinalLocked(
-        kInput, *packet.header()->buffer_lifetime_ordinal());
+        kInput, packet.header().buffer_lifetime_ordinal());
 
     // For input, mid-stream config changes are not a thing and input buffers
     // are never unilaterally de-configured by the Codec server.
     assert(buffer_lifetime_ordinal_[kInput] ==
-           *port_settings_[kInput]->buffer_lifetime_ordinal());
+           port_settings_[kInput]->buffer_lifetime_ordinal());
     // For this message we're extra-strict re. buffer_lifetime_ordinal, at
     // least for now.
     //
@@ -1662,46 +1662,46 @@ void OmxCodecRunner::QueueInputPacket_StreamControl(
     // One could somewhat-convincingly argue that this field in this
     // particular message is a bit pointless, but it might serve to detect
     // client-side bugs faster thanks to this check.
-    if (*packet.header()->buffer_lifetime_ordinal() !=
-        *port_settings_[kInput]->buffer_lifetime_ordinal()) {
+    if (packet.header().buffer_lifetime_ordinal() !=
+        port_settings_[kInput]->buffer_lifetime_ordinal()) {
       Exit("client QueueInputPacket() with invalid buffer_lifetime_ordinal.");
     }
 
     if (!packet.has_stream_lifetime_ordinal()) {
       Exit("!packet.has_stream_lifetime_ordinal()");
     }
-    CheckStreamLifetimeOrdinalLocked(*packet.stream_lifetime_ordinal());
-    assert(*packet.stream_lifetime_ordinal() >= stream_lifetime_ordinal_);
+    CheckStreamLifetimeOrdinalLocked(packet.stream_lifetime_ordinal());
+    assert(packet.stream_lifetime_ordinal() >= stream_lifetime_ordinal_);
 
-    if (*packet.stream_lifetime_ordinal() > stream_lifetime_ordinal_) {
+    if (packet.stream_lifetime_ordinal() > stream_lifetime_ordinal_) {
       // This case implicitly starts a new stream.  If the client wanted to
       // ensure that the old stream would be fully processed, the client would
       // have sent FlushEndOfStreamAndCloseStream() previously, whose
       // processing (previous to reaching here) takes care of the flush.
       //
       // Start a new stream, synchronously.
-      StartNewStream(lock, *packet.stream_lifetime_ordinal());
+      StartNewStream(lock, packet.stream_lifetime_ordinal());
     }
-    assert(*packet.stream_lifetime_ordinal() == stream_lifetime_ordinal_);
+    assert(packet.stream_lifetime_ordinal() == stream_lifetime_ordinal_);
 
-    if (!packet.header()->has_packet_index()) {
+    if (!packet.header().has_packet_index()) {
       Exit("!packet.header()->has_packet_index()");
     }
-    if (*packet.header()->packet_index() >= all_packets_[kInput].size()) {
+    if (packet.header().packet_index() >= all_packets_[kInput].size()) {
       Exit("client QueueInputPacket() with packet_index out of range");
     }
     if (!packet.has_buffer_index()) {
       Exit("!packet.has_buffer_index()");
     }
-    if (*packet.buffer_index() >= all_buffers_[kInput].size()) {
+    if (packet.buffer_index() >= all_buffers_[kInput].size()) {
       Exit("client QueueInputPacket() with buffer_index out of range");
     }
 
     // Protocol check re. free/busy coherency.
-    if (!packet_free_bits_[kInput][*packet.header()->packet_index()]) {
+    if (!packet_free_bits_[kInput][packet.header().packet_index()]) {
       Exit("client QueueInputPacket() with packet_index !free - exiting\n");
     }
-    packet_free_bits_[kInput][*packet.header()->packet_index()] = false;
+    packet_free_bits_[kInput][packet.header().packet_index()] = false;
 
     if (stream_->input_end_of_stream()) {
       Exit("QueueInputPacket() after QueueInputEndOfStream() unexpeted");
@@ -1784,7 +1784,7 @@ void OmxCodecRunner::StartNewStream(std::unique_lock<std::mutex>& lock,
   // new stream yet.  Send that now, if output isn't already configured.
 
   if (!IsOutputConfiguredLocked() ||
-      *port_settings_[kOutput]->buffer_constraints_version_ordinal() <=
+      port_settings_[kOutput]->buffer_constraints_version_ordinal() <=
           omx_meh_output_buffer_constraints_version_ordinal_) {
     StartIgnoringClientOldOutputConfigLocked();
     EnsureBuffersNotConfiguredLocked(kOutput);
@@ -2227,7 +2227,7 @@ void OmxCodecRunner::OmxQueueInputPacket(const fuchsia::media::Packet& packet) {
   // We only modify all_packets_[kInput] on StreamControl, so it's ok to read
   // from it outside lock_.
   if ((!decoder_params_->has_promise_separate_access_units_on_input() ||
-       !*decoder_params_->promise_separate_access_units_on_input()) &&
+       !decoder_params_->promise_separate_access_units_on_input()) &&
       packet.has_timestamp_ish()) {
     Exit(
         "timestamp_ish must be absent unless "
@@ -2240,14 +2240,14 @@ void OmxCodecRunner::OmxQueueInputPacket(const fuchsia::media::Packet& packet) {
   if (!packet.has_valid_length_bytes()) {
     Exit("!packet.has_valid_length_bytes()");
   }
-  if (!packet.header()->has_packet_index()) {
+  if (!packet.header().has_packet_index()) {
     Exit("!packet.header()->has_packet_index()");
   }
   OMX_BUFFERHEADERTYPE* header =
-      all_packets_[kInput][*packet.header()->packet_index()]->omx_header();
-  header->nFilledLen = *packet.valid_length_bytes();
+      all_packets_[kInput][packet.header().packet_index()]->omx_header();
+  header->nFilledLen = packet.valid_length_bytes();
   header->nOffset = 0;
-  header->nTimeStamp = packet.has_timestamp_ish() ? *packet.timestamp_ish() : 0;
+  header->nTimeStamp = packet.has_timestamp_ish() ? packet.timestamp_ish() : 0;
   header->nFlags = 0;
   OMX_ERRORTYPE omx_result =
       omx_component_->EmptyThisBuffer(omx_component_, header);
@@ -2288,10 +2288,10 @@ void OmxCodecRunner::OmxQueueInputOOB() {
   assert(initial_input_format_details_);
   const std::vector<uint8_t>* oob_bytes = nullptr;
   if (stream_->has_input_format_details() &&
-      stream_->input_format_details()->oob_bytes()) {
-    oob_bytes = stream_->input_format_details()->oob_bytes();
-  } else if (initial_input_format_details_->oob_bytes()) {
-    oob_bytes = initial_input_format_details_->oob_bytes();
+      stream_->input_format_details()->has_oob_bytes()) {
+    oob_bytes = &stream_->input_format_details()->oob_bytes();
+  } else if (initial_input_format_details_->has_oob_bytes()) {
+    oob_bytes = &initial_input_format_details_->oob_bytes();
   }
   if (!oob_bytes) {
     // This is potentially fine.  Let the OMX SW codec fail later if it wants
@@ -2719,7 +2719,7 @@ OMX_ERRORTYPE OmxCodecRunner::EventHandler(OMX_IN OMX_EVENTTYPE eEvent,
         // moves on to a new stream such that the speculative part below
         // becomes stale.
         omx_meh_output_buffer_constraints_version_ordinal_ =
-            *port_settings_[kOutput]->buffer_constraints_version_ordinal();
+            port_settings_[kOutput]->buffer_constraints_version_ordinal();
         // Speculative part - this part is speculative, in that we don't know
         // if this post over to StreamControl will beat any client driving to
         // a new stream.  So we snap the stream_lifetime_ordinal so we know
@@ -2896,11 +2896,11 @@ void OmxCodecRunner::StartIgnoringClientOldOutputConfigLocked() {
   if (buffer_lifetime_ordinal_[kOutput] % 2 == 1) {
     assert(buffer_lifetime_ordinal_[kOutput] % 2 == 1);
     assert(buffer_lifetime_ordinal_[kOutput] ==
-           *port_settings_[kOutput]->buffer_lifetime_ordinal());
+           port_settings_[kOutput]->buffer_lifetime_ordinal());
     buffer_lifetime_ordinal_[kOutput]++;
     assert(buffer_lifetime_ordinal_[kOutput] % 2 == 0);
     assert(buffer_lifetime_ordinal_[kOutput] ==
-           *port_settings_[kOutput]->buffer_lifetime_ordinal() + 1);
+           port_settings_[kOutput]->buffer_lifetime_ordinal() + 1);
   }
 
   // When buffer_constraints_action_required true, we can assert in
@@ -3020,9 +3020,9 @@ OMX_ERRORTYPE OmxCodecRunner::EmptyBufferDone(
     // the OMX buffers (our packets) using this method first, this method
     // can't be called for a packet with mis-matched buffer_lifetime_ordinal.
     assert(packet->buffer_lifetime_ordinal() ==
-           *port_settings_[kInput]->buffer_lifetime_ordinal());
+           port_settings_[kInput]->buffer_lifetime_ordinal());
     assert(buffer_lifetime_ordinal_[kInput] ==
-           *port_settings_[kInput]->buffer_lifetime_ordinal());
+           port_settings_[kInput]->buffer_lifetime_ordinal());
 
     // If the free packet is the omx_input_packet_oob_, don't tell the client
     // about that packet/buffer, because it's not actually a packet at the
@@ -3168,7 +3168,7 @@ OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
       recycle_packet.cancel();
       uint64_t timestamp_ish = 0;
       if (decoder_params_->has_promise_separate_access_units_on_input() &&
-          *decoder_params_->promise_separate_access_units_on_input()) {
+          decoder_params_->promise_separate_access_units_on_input()) {
         timestamp_ish = pBuffer->nTimeStamp;
       }
       packet_free_bits_[kOutput][packet->packet_index()] = false;
@@ -3392,13 +3392,13 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
     Exit("!settings.has_packet_count_for_server()");
   }
   ZX_ASSERT(constraints.has_packet_count_for_server_min());
-  if (*settings.packet_count_for_server() <
-      *constraints.packet_count_for_server_min()) {
+  if (settings.packet_count_for_server() <
+      constraints.packet_count_for_server_min()) {
     Exit("packet_count_for_server < packet_count_for_server_min");
   }
   ZX_ASSERT(constraints.has_packet_count_for_server_max());
-  if (*settings.packet_count_for_server() >
-      *constraints.packet_count_for_server_max()) {
+  if (settings.packet_count_for_server() >
+      constraints.packet_count_for_server_max()) {
     Exit("packet_count_for_server > packet_count_for_server_max");
   }
 
@@ -3406,8 +3406,8 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
     Exit("!settings.has_packet_count_for_client()");
   }
   ZX_ASSERT(constraints.has_packet_count_for_client_max());
-  if (*settings.packet_count_for_client() >
-      *constraints.packet_count_for_client_max()) {
+  if (settings.packet_count_for_client() >
+      constraints.packet_count_for_client_max()) {
     Exit("packet_count_for_client > packet_count_for_client_max");
   }
 
@@ -3415,26 +3415,26 @@ void OmxCodecRunner::ValidateBufferSettingsVsConstraints(
     Exit("!settings.has_per_packet_buffer_bytes()");
   }
   ZX_ASSERT(constraints.has_per_packet_buffer_bytes_min());
-  if (*settings.per_packet_buffer_bytes() <
-      *constraints.per_packet_buffer_bytes_min()) {
+  if (settings.per_packet_buffer_bytes() <
+      constraints.per_packet_buffer_bytes_min()) {
     Exit(
         "settings.per_packet_buffer_bytes < "
         "constraints.per_packet_buffer_bytes_min - exiting - port: %u "
         "settings: %u constraint: %u",
-        port, *settings.per_packet_buffer_bytes(),
-        *constraints.per_packet_buffer_bytes_min());
+        port, settings.per_packet_buffer_bytes(),
+        constraints.per_packet_buffer_bytes_min());
   }
   ZX_ASSERT(constraints.has_per_packet_buffer_bytes_max());
-  if (*settings.per_packet_buffer_bytes() >
-      *constraints.per_packet_buffer_bytes_max()) {
+  if (settings.per_packet_buffer_bytes() >
+      constraints.per_packet_buffer_bytes_max()) {
     Exit(
         "settings.per_packet_buffer_bytes > "
         "constraints.per_packet_buffer_bytes_max");
   }
 
   ZX_ASSERT(constraints.has_single_buffer_mode_allowed());
-  if (settings.has_single_buffer_mode() && *settings.single_buffer_mode() &&
-      !*constraints.single_buffer_mode_allowed()) {
+  if (settings.has_single_buffer_mode() && settings.single_buffer_mode() &&
+      !constraints.single_buffer_mode_allowed()) {
     Exit(
         "settings.single_buffer_mode && "
         "!constraints.single_buffer_mode_allowed");
@@ -3481,33 +3481,33 @@ bool OmxCodecRunner::Buffer::Init(bool input_require_write) {
     return false;
   }
 
-  if (!buffer_.data()->is_vmo()) {
+  if (!buffer_.data().is_vmo()) {
     fprintf(stderr, "buffer_.data()->is_vmo()");
     return false;
   }
 
-  if (!buffer_.data()->vmo().has_vmo_usable_start()) {
-    fprintf(stderr, "buffer_.data()->vmo().has_vmo_usable_start()");
+  if (!buffer_.data().vmo().has_vmo_usable_start()) {
+    fprintf(stderr, "buffer_.data().vmo().has_vmo_usable_start()");
     return false;
   }
 
-  if (!buffer_.data()->vmo().has_vmo_usable_size()) {
-    fprintf(stderr, "buffer_.data()->vmo().has_vmo_usable_size()");
+  if (!buffer_.data().vmo().has_vmo_usable_size()) {
+    fprintf(stderr, "buffer_.data().vmo().has_vmo_usable_size()");
     return false;
   }
 
-  if (!buffer_.data()->vmo().has_vmo_handle()) {
-    fprintf(stderr, "buffer_.data()->vmo().has_vmo_handle()");
+  if (!buffer_.data().vmo().has_vmo_handle()) {
+    fprintf(stderr, "buffer_.data().vmo().has_vmo_handle()");
     return false;
   }
 
   zx_status_t res = zx::vmar::root_self()->map(
-      0, *buffer_.data()->vmo().vmo_handle(),
-      *buffer_.data()->vmo().vmo_usable_start(),
-      *buffer_.data()->vmo().vmo_usable_size(), flags, &tmp);
+      0, buffer_.data().vmo().vmo_handle(),
+      buffer_.data().vmo().vmo_usable_start(),
+      buffer_.data().vmo().vmo_usable_size(), flags, &tmp);
   if (res != ZX_OK) {
     printf("Failed to map %zu byte buffer vmo (res %d)\n",
-           *buffer_.data()->vmo().vmo_usable_size(), res);
+           buffer_.data().vmo().vmo_usable_size(), res);
     return false;
   }
   buffer_base_ = reinterpret_cast<uint8_t*>(tmp);
@@ -3516,12 +3516,12 @@ bool OmxCodecRunner::Buffer::Init(bool input_require_write) {
 
 uint64_t OmxCodecRunner::Buffer::buffer_lifetime_ordinal() const {
   assert(buffer_.has_buffer_lifetime_ordinal());
-  return *buffer_.buffer_lifetime_ordinal();
+  return buffer_.buffer_lifetime_ordinal();
 }
 
 uint32_t OmxCodecRunner::Buffer::buffer_index() const {
   assert(buffer_.has_buffer_index());
-  return *buffer_.buffer_index();
+  return buffer_.buffer_index();
 }
 
 uint8_t* OmxCodecRunner::Buffer::buffer_base() const {
@@ -3531,9 +3531,9 @@ uint8_t* OmxCodecRunner::Buffer::buffer_base() const {
 
 size_t OmxCodecRunner::Buffer::buffer_size() const {
   assert(buffer_.has_data());
-  assert(buffer_.data()->is_vmo());
-  assert(buffer_.data()->vmo().has_vmo_usable_size());
-  return *buffer_.data()->vmo().vmo_usable_size();
+  assert(buffer_.data().is_vmo());
+  assert(buffer_.data().vmo().has_vmo_usable_size());
+  return buffer_.data().vmo().vmo_usable_size();
 }
 
 OmxCodecRunner::Packet::Packet(uint64_t buffer_lifetime_ordinal,

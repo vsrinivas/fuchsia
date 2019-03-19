@@ -426,14 +426,14 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
     return nullptr;
   }
 
-  if (*input.mime_type() == kAudioMimeTypeLpcm) {
-    if (!input.domain()->is_audio() ||
-        !input.domain()->audio().is_uncompressed() ||
-        !input.domain()->audio().uncompressed().is_pcm()) {
+  if (input.mime_type() == kAudioMimeTypeLpcm) {
+    if (!input.domain().is_audio() ||
+        !input.domain().audio().is_uncompressed() ||
+        !input.domain().audio().uncompressed().is_pcm()) {
       return nullptr;
     }
 
-    auto& format = input.domain()->audio().uncompressed().pcm();
+    auto& format = input.domain().audio().uncompressed().pcm();
     if (format.pcm_mode != fuchsia::media::AudioPcmMode::LINEAR) {
       return nullptr;
     }
@@ -455,13 +455,13 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
         format.channel_map.size(), format.frames_per_second);
   }
 
-  if (*input.mime_type() == kVideoMimeTypeUncompressed) {
-    if (!input.domain()->is_video() ||
-        !input.domain()->video().is_uncompressed()) {
+  if (input.mime_type() == kVideoMimeTypeUncompressed) {
+    if (!input.domain().is_video() ||
+        !input.domain().video().is_uncompressed()) {
       return nullptr;
     }
 
-    auto& format = input.domain()->video().uncompressed();
+    auto& format = input.domain().video().uncompressed();
 
     media_player::VideoStreamType::PixelFormat pixel_format;
     switch (format.fourcc) {

@@ -44,7 +44,7 @@ void PuppetMasterImpl::GetStories(GetStoriesCallback done) {
           std::vector<fuchsia::modular::internal::StoryData> all_story_data) {
         std::vector<std::string> result;
         for (auto& story : all_story_data) {
-          result.push_back(std::move(story.story_info()->id));
+          result.push_back(std::move(story.story_info().id));
         }
 
         done(std::move(result));

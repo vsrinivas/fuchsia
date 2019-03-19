@@ -56,7 +56,7 @@ TEST_F(SetKindOfProtoStoryOptionCommandRunnerTest, Execute) {
   done = false;
   session_storage_->GetStoryData(story_id_)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -80,7 +80,7 @@ TEST_F(SetKindOfProtoStoryOptionCommandRunnerTest, Execute) {
   done = false;
   session_storage_->GetStoryData(story_id_)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_FALSE(data->story_options()->kind_of_proto_story);
+        EXPECT_FALSE(data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });

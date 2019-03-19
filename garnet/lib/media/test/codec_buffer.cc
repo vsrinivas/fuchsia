@@ -97,12 +97,12 @@ std::unique_ptr<CodecBuffer> CodecBuffer::Allocate(
     const fuchsia::media::StreamBufferConstraints& constraints) {
   ZX_ASSERT(constraints.has_per_packet_buffer_bytes_recommended());
   std::unique_ptr<CodecBuffer> result(new CodecBuffer(
-      buffer_index, *constraints.per_packet_buffer_bytes_recommended()));
+      buffer_index, constraints.per_packet_buffer_bytes_recommended()));
   if (constraints.has_is_physically_contiguous_required() &&
-      *constraints.is_physically_contiguous_required()) {
+      constraints.is_physically_contiguous_required()) {
     ZX_ASSERT(constraints.has_very_temp_kludge_bti_handle());
     result->SetPhysicallyContiguousRequired(
-        *(constraints.very_temp_kludge_bti_handle()));
+        (constraints.very_temp_kludge_bti_handle()));
   }
   if (!result->Init()) {
     return nullptr;

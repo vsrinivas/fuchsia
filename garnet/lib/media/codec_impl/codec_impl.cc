@@ -128,13 +128,13 @@ uint32_t PacketCountFromPortSettings(
     const fuchsia::media::StreamBufferSettings& settings) {
   ZX_DEBUG_ASSERT(settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(settings.has_packet_count_for_client());
-  return *settings.packet_count_for_server() +
-         *settings.packet_count_for_client();
+  return settings.packet_count_for_server() +
+         settings.packet_count_for_client();
 }
 
 uint32_t BufferCountFromPortSettings(
     const fuchsia::media::StreamBufferSettings& settings) {
-  if (settings.has_single_buffer_mode() && *settings.single_buffer_mode()) {
+  if (settings.has_single_buffer_mode() && settings.single_buffer_mode()) {
     return 1;
   }
   return PacketCountFromPortSettings(settings);
@@ -184,8 +184,8 @@ CodecImpl::CodecImpl(
   // is related but separate.
   binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
   initial_input_format_details_ = decoder_params_
-                                      ? decoder_params_->input_details()
-                                      : encoder_params_->input_format();
+                                      ? &decoder_params_->input_details()
+                                      : &encoder_params_->input_format();
 }
 
 CodecImpl::~CodecImpl() {
@@ -423,7 +423,7 @@ void CodecImpl::SetOutputBufferSettings(
     }
 
     SetBufferSettingsCommon(lock, kOutputPort, std::move(output_settings),
-                            *output_config_->buffer_constraints());
+                            output_config_->buffer_constraints());
   }  // ~lock
 }
 
@@ -587,10 +587,10 @@ void CodecImpl::RecycleOutputPacket(
     }
 
     if (!CheckOldBufferLifetimeOrdinalLocked(
-            kOutputPort, *available_output_packet.buffer_lifetime_ordinal())) {
+            kOutputPort, available_output_packet.buffer_lifetime_ordinal())) {
       return;
     }
-    if (*available_output_packet.buffer_lifetime_ordinal() <
+    if (available_output_packet.buffer_lifetime_ordinal() <
         buffer_lifetime_ordinal_[kOutputPort]) {
       // ignore arbitrarily-stale required by protocol
       //
@@ -603,7 +603,7 @@ void CodecImpl::RecycleOutputPacket(
       // re-configured output.
       return;
     }
-    ZX_DEBUG_ASSERT(*available_output_packet.buffer_lifetime_ordinal() ==
+    ZX_DEBUG_ASSERT(available_output_packet.buffer_lifetime_ordinal() ==
                     buffer_lifetime_ordinal_[kOutputPort]);
     if (!IsOutputConfiguredLocked()) {
       FailLocked(
@@ -616,13 +616,13 @@ void CodecImpl::RecycleOutputPacket(
       return;
     }
     ZX_DEBUG_ASSERT(IsOutputConfiguredLocked());
-    if (*available_output_packet.packet_index() >=
+    if (available_output_packet.packet_index() >=
         all_packets_[kOutputPort].size()) {
       FailLocked(
           "out of range packet_index from client in RecycleOutputPacket()");
       return;
     }
-    uint32_t packet_index = *available_output_packet.packet_index();
+    uint32_t packet_index = available_output_packet.packet_index();
     if (all_packets_[kOutputPort][packet_index]->is_free()) {
       FailLocked(
           "packet_index already free at protocol level - invalid client "
@@ -736,7 +736,7 @@ void CodecImpl::QueueInputPacket(fuchsia::media::Packet packet) {
           "ordinal");
       return;
     }
-    if (!EnsureFutureStreamSeenLocked(*packet.stream_lifetime_ordinal())) {
+    if (!EnsureFutureStreamSeenLocked(packet.stream_lifetime_ordinal())) {
       return;
     }
   }  // ~lock
@@ -753,7 +753,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     Fail("client QueueInputPacket() with packet has no header");
     return;
   }
-  fuchsia::media::PacketHeader temp_header_copy = fidl::Clone(*packet.header());
+  fuchsia::media::PacketHeader temp_header_copy = fidl::Clone(packet.header());
 
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -777,21 +777,21 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
           }
         });
 
-    if (!packet.header()->has_buffer_lifetime_ordinal()) {
+    if (!packet.header().has_buffer_lifetime_ordinal()) {
       FailLocked(
           "client QueueInputPacket() with header that has no buffer lifetime "
           "ordinal");
       return;
     }
     if (!CheckOldBufferLifetimeOrdinalLocked(
-            kInputPort, *packet.header()->buffer_lifetime_ordinal())) {
+            kInputPort, packet.header().buffer_lifetime_ordinal())) {
       return;
     }
 
     // For input, mid-stream config changes are not a thing and input buffers
     // are never unilaterally de-configured by the Codec server.
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kInputPort] ==
-                    *port_settings_[kInputPort]->buffer_lifetime_ordinal());
+                    port_settings_[kInputPort]->buffer_lifetime_ordinal());
     // For this message we're extra-strict re. buffer_lifetime_ordinal, at least
     // for now.
     //
@@ -803,8 +803,8 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     // One could somewhat-convincingly argue that this field in this particular
     // message is a bit pointless, but it might serve to detect client-side
     // bugs faster thanks to this check.
-    if (*packet.header()->buffer_lifetime_ordinal() !=
-        *port_settings_[kInputPort]->buffer_lifetime_ordinal()) {
+    if (packet.header().buffer_lifetime_ordinal() !=
+        port_settings_[kInputPort]->buffer_lifetime_ordinal()) {
       FailLocked(
           "client QueueInputPacket() with invalid buffer_lifetime_ordinal.");
       return;
@@ -816,35 +816,35 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       return;
     }
 
-    if (!CheckStreamLifetimeOrdinalLocked(*packet.stream_lifetime_ordinal())) {
+    if (!CheckStreamLifetimeOrdinalLocked(packet.stream_lifetime_ordinal())) {
       return;
     }
-    ZX_DEBUG_ASSERT(*packet.stream_lifetime_ordinal() >=
+    ZX_DEBUG_ASSERT(packet.stream_lifetime_ordinal() >=
                     stream_lifetime_ordinal_);
 
-    if (*packet.stream_lifetime_ordinal() > stream_lifetime_ordinal_) {
+    if (packet.stream_lifetime_ordinal() > stream_lifetime_ordinal_) {
       // This case implicitly starts a new stream.  If the client wanted to
       // ensure that the old stream would be fully processed, the client would
       // have sent FlushEndOfStreamAndCloseStream() previously, whose
       // processing (previous to reaching here) takes care of the flush.
       //
       // Start a new stream, synchronously.
-      if (!StartNewStream(lock, *packet.stream_lifetime_ordinal())) {
+      if (!StartNewStream(lock, packet.stream_lifetime_ordinal())) {
         return;
       }
     }
-    ZX_DEBUG_ASSERT(*packet.stream_lifetime_ordinal() ==
+    ZX_DEBUG_ASSERT(packet.stream_lifetime_ordinal() ==
                     stream_lifetime_ordinal_);
 
     if (!IsInputConfiguredLocked()) {
       FailLocked("client QueueInputPacket() with input buffers not configured");
       return;
     }
-    if (!packet.header()->has_packet_index()) {
+    if (!packet.header().has_packet_index()) {
       FailLocked("client QueueInputPacket() with packet has no packet index");
       return;
     }
-    if (*packet.header()->packet_index() >= all_packets_[kInputPort].size()) {
+    if (packet.header().packet_index() >= all_packets_[kInputPort].size()) {
       FailLocked("client QueueInputPacket() with packet_index out of range");
       return;
     }
@@ -852,19 +852,19 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       FailLocked("client QueueInputPacket() with packet has no buffer index");
       return;
     }
-    if (*packet.buffer_index() >= all_buffers_[kInputPort].size()) {
+    if (packet.buffer_index() >= all_buffers_[kInputPort].size()) {
       FailLocked("client QueueInputPacket() with buffer_index out of range");
       return;
     }
 
     // Protocol check re. free/busy coherency.  This applies to packets only,
     // not buffers.
-    if (!all_packets_[kInputPort][*packet.header()->packet_index()]
+    if (!all_packets_[kInputPort][packet.header().packet_index()]
              ->is_free()) {
       FailLocked("client QueueInputPacket() with packet_index !free");
       return;
     }
-    all_packets_[kInputPort][*packet.header()->packet_index()]->SetFree(false);
+    all_packets_[kInputPort][packet.header().packet_index()]->SetFree(false);
 
     if (stream_->input_end_of_stream()) {
       FailLocked("QueueInputPacket() after QueueInputEndOfStream() unexpeted");
@@ -902,22 +902,22 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
   }
 
   CodecPacket* core_codec_packet =
-      all_packets_[kInputPort][*packet.header()->packet_index()].get();
+      all_packets_[kInputPort][packet.header().packet_index()].get();
   core_codec_packet->SetBuffer(
-      all_buffers_[kInputPort][*packet.buffer_index()].get());
+      all_buffers_[kInputPort][packet.buffer_index()].get());
   if (!packet.has_start_offset()) {
     FailLocked("client QueueInputPacket() with packet has no start offset");
     return;
   }
-  core_codec_packet->SetStartOffset(*packet.start_offset());
+  core_codec_packet->SetStartOffset(packet.start_offset());
   if (!packet.has_valid_length_bytes()) {
     FailLocked(
         "client QueueInputPacket() with packet has no valid length bytes");
     return;
   }
-  core_codec_packet->SetValidLengthBytes(*packet.valid_length_bytes());
+  core_codec_packet->SetValidLengthBytes(packet.valid_length_bytes());
   if (packet.has_timestamp_ish()) {
-    core_codec_packet->SetTimstampIsh(*packet.timestamp_ish());
+    core_codec_packet->SetTimstampIsh(packet.timestamp_ish());
   } else {
     core_codec_packet->ClearTimestampIsh();
   }
@@ -1185,10 +1185,10 @@ void CodecImpl::SetBufferSettingsCommon(
   ZX_DEBUG_ASSERT(
       (!port_settings_[port && buffer_lifetime_ordinal_[port] == 0]) ||
       (buffer_lifetime_ordinal_[port] >=
-           *port_settings_[port]->buffer_lifetime_ordinal() &&
+           port_settings_[port]->buffer_lifetime_ordinal() &&
        buffer_lifetime_ordinal_[port] <=
-           *port_settings_[port]->buffer_lifetime_ordinal() + 1));
-  if (*settings.buffer_lifetime_ordinal() <=
+           port_settings_[port]->buffer_lifetime_ordinal() + 1));
+  if (settings.buffer_lifetime_ordinal() <=
       protocol_buffer_lifetime_ordinal_[port]) {
     FailLocked(
         "settings.buffer_lifetime_ordinal <= "
@@ -1196,13 +1196,13 @@ void CodecImpl::SetBufferSettingsCommon(
         port);
     return;
   }
-  protocol_buffer_lifetime_ordinal_[port] = *settings.buffer_lifetime_ordinal();
+  protocol_buffer_lifetime_ordinal_[port] = settings.buffer_lifetime_ordinal();
 
-  if (*settings.buffer_lifetime_ordinal() % 2 == 0) {
+  if (settings.buffer_lifetime_ordinal() % 2 == 0) {
     FailLocked(
         "Only odd values for buffer_lifetime_ordinal are permitted - port: %d "
         "value %lu",
-        port, *settings.buffer_lifetime_ordinal());
+        port, settings.buffer_lifetime_ordinal());
     return;
   }
 
@@ -1211,7 +1211,7 @@ void CodecImpl::SetBufferSettingsCommon(
     return;
   }
 
-  if (*settings.buffer_constraints_version_ordinal() >
+  if (settings.buffer_constraints_version_ordinal() >
       sent_buffer_constraints_version_ordinal_[port]) {
     FailLocked(
         "Client sent too-new buffer_constraints_version_ordinal - port: %d",
@@ -1219,21 +1219,21 @@ void CodecImpl::SetBufferSettingsCommon(
     return;
   }
 
-  if (*settings.buffer_constraints_version_ordinal() <
+  if (settings.buffer_constraints_version_ordinal() <
       last_required_buffer_constraints_version_ordinal_[port]) {
     // ignore - client will probably catch up later
     return;
   }
 
   // We've peeled off too new and too old above.
-  ZX_DEBUG_ASSERT(*settings.buffer_constraints_version_ordinal() >=
+  ZX_DEBUG_ASSERT(settings.buffer_constraints_version_ordinal() >=
                       last_required_buffer_constraints_version_ordinal_[port] &&
-                  *settings.buffer_constraints_version_ordinal() <=
+                  settings.buffer_constraints_version_ordinal() <=
                       sent_buffer_constraints_version_ordinal_[port]);
 
   // We've already checked above that the buffer_lifetime_ordinal is in
   // sequence.
-  ZX_DEBUG_ASSERT(!port_settings_[port] || *settings.buffer_lifetime_ordinal() >
+  ZX_DEBUG_ASSERT(!port_settings_[port] || settings.buffer_lifetime_ordinal() >
                                                buffer_lifetime_ordinal_[port]);
 
   if (!ValidateBufferSettingsVsConstraintsLocked(port, settings, constraints)) {
@@ -1249,7 +1249,7 @@ void CodecImpl::SetBufferSettingsCommon(
   port_settings_[port] = std::make_unique<fuchsia::media::StreamBufferSettings>(
       std::move(settings));
   buffer_lifetime_ordinal_[port] =
-      *port_settings_[port]->buffer_lifetime_ordinal();
+      port_settings_[port]->buffer_lifetime_ordinal();
 }
 
 void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
@@ -1295,14 +1295,14 @@ bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
     return false;
   }
 
-  if (*settings.packet_count_for_server() <
-      *constraints.packet_count_for_server_min()) {
+  if (settings.packet_count_for_server() <
+      constraints.packet_count_for_server_min()) {
     FailLocked("packet_count_for_server < packet_count_for_server_min");
     return false;
   }
 
-  if (*settings.packet_count_for_server() >
-      *constraints.packet_count_for_server_max()) {
+  if (settings.packet_count_for_server() >
+      constraints.packet_count_for_server_max()) {
     FailLocked("packet_count_for_server > packet_count_for_server_max");
     return false;
   }
@@ -1312,8 +1312,8 @@ bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
     return false;
   }
 
-  if (*settings.packet_count_for_client() >
-      *constraints.packet_count_for_client_max()) {
+  if (settings.packet_count_for_client() >
+      constraints.packet_count_for_client_max()) {
     FailLocked("packet_count_for_client > packet_count_for_client_max");
     return false;
   }
@@ -1323,20 +1323,20 @@ bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
     return false;
   }
 
-  if (*settings.per_packet_buffer_bytes() <
-      *constraints.per_packet_buffer_bytes_min()) {
+  if (settings.per_packet_buffer_bytes() <
+      constraints.per_packet_buffer_bytes_min()) {
     FailLocked("per_packet_buffer_bytes < per_packet_buffer_bytes_min");
     return false;
   }
-  if (*settings.per_packet_buffer_bytes() >
-      *constraints.per_packet_buffer_bytes_max()) {
+  if (settings.per_packet_buffer_bytes() >
+      constraints.per_packet_buffer_bytes_max()) {
     FailLocked("per_packet_buffer_bytes > per_packet_buffer_bytes_max");
     return false;
   }
 
-  if ((settings.has_single_buffer_mode() && *settings.single_buffer_mode()) &&
+  if ((settings.has_single_buffer_mode() && settings.single_buffer_mode()) &&
       (!constraints.has_single_buffer_mode_allowed() ||
-       !*constraints.single_buffer_mode_allowed())) {
+       !constraints.single_buffer_mode_allowed())) {
     FailLocked("single_buffer_mode && !single_buffer_mode_allowed");
     return false;
   }
@@ -1357,7 +1357,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       return false;
     }
 
-    if (*buffer.buffer_lifetime_ordinal() % 2 == 0) {
+    if (buffer.buffer_lifetime_ordinal() % 2 == 0) {
       FailLocked(
           "Client sent even buffer_lifetime_ordinal, but must be odd - exiting "
           "- port: %u\n",
@@ -1365,7 +1365,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       return false;
     }
 
-    if (*buffer.buffer_lifetime_ordinal() !=
+    if (buffer.buffer_lifetime_ordinal() !=
         protocol_buffer_lifetime_ordinal_[port]) {
       FailLocked(
           "Incoherent SetOutputBufferSettings()/SetInputBufferSettings() + "
@@ -1377,7 +1377,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
     // If the server is not interested in the client's buffer_lifetime_ordinal,
     // the client's buffer_lifetime_ordinal won't match the server's
     // buffer_lifetime_ordinal_.  The client will probably later catch up.
-    if (*buffer.buffer_lifetime_ordinal() != buffer_lifetime_ordinal_[port]) {
+    if (buffer.buffer_lifetime_ordinal() != buffer_lifetime_ordinal_[port]) {
       // The case that ends up here is when a client's output configuration
       // (whole or last part) is being ignored because it's not yet caught up
       // with last_required_buffer_constraints_version_ordinal_.
@@ -1396,17 +1396,17 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       FailLocked("client sent buffer without index");
       return false;
     }
-    if (*buffer.buffer_index() != all_buffers_[port].size()) {
+    if (buffer.buffer_index() != all_buffers_[port].size()) {
       FailLocked(
           "AddOutputBuffer()/AddInputBuffer() had buffer_index out of sequence "
           "- port: %d buffer_index: %u all_buffers_[port].size(): %lu",
-          port, *buffer.buffer_index(), all_buffers_[port].size());
+          port, buffer.buffer_index(), all_buffers_[port].size());
       return false;
     }
 
     uint32_t required_buffer_count =
         BufferCountFromPortSettings(*port_settings_[port]);
-    if (*buffer.buffer_index() >= required_buffer_count) {
+    if (buffer.buffer_index() >= required_buffer_count) {
       FailLocked("AddOutputBuffer()/AddInputBuffer() extra buffer - port: %d",
                  port);
       return false;
@@ -1435,10 +1435,10 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
     all_buffers_[port].push_back(std::move(local_buffer));
     if (all_buffers_[port].size() == required_buffer_count) {
       ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] ==
-                      *port_settings_[port]->buffer_lifetime_ordinal());
+                      port_settings_[port]->buffer_lifetime_ordinal());
       // Stash this while we can, before the client de-configures.
       last_provided_buffer_constraints_version_ordinal_[port] =
-          *port_settings_[port]->buffer_constraints_version_ordinal();
+          port_settings_[port]->buffer_constraints_version_ordinal();
       // Now we allocate all_packets_[port].
       ZX_DEBUG_ASSERT(all_packets_[port].empty());
       uint32_t packet_count =
@@ -1449,7 +1449,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
         // not using make_unique<>() here.
         all_packets_[port].push_back(
             std::unique_ptr<CodecPacket>(new CodecPacket(
-                *port_settings_[port]->buffer_lifetime_ordinal(), i)));
+                port_settings_[port]->buffer_lifetime_ordinal(), i)));
       }
 
       {  // scope unlock
@@ -1630,7 +1630,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
     // detection.
     is_new_config_needed = true;
   } else if (IsOutputConfiguredLocked() &&
-             *port_settings_[kOutputPort]
+             port_settings_[kOutputPort]
                      ->buffer_constraints_version_ordinal() <=
                  core_codec_meh_output_buffer_constraints_version_ordinal_) {
     // The core codec previously expressed "meh" regarding the current config's
@@ -1859,11 +1859,11 @@ void CodecImpl::StartIgnoringClientOldOutputConfig(
   if (buffer_lifetime_ordinal_[kOutputPort] % 2 == 1) {
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kOutputPort] % 2 == 1);
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kOutputPort] ==
-                    *port_settings_[kOutputPort]->buffer_lifetime_ordinal());
+                    port_settings_[kOutputPort]->buffer_lifetime_ordinal());
     buffer_lifetime_ordinal_[kOutputPort]++;
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kOutputPort] % 2 == 0);
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kOutputPort] ==
-                    *port_settings_[kOutputPort]->buffer_lifetime_ordinal() +
+                    port_settings_[kOutputPort]->buffer_lifetime_ordinal() +
                         1);
   }
 
@@ -2346,7 +2346,7 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
     // stale.
     core_codec_meh_output_buffer_constraints_version_ordinal_ =
         port_settings_[kOutputPort]
-            ? *port_settings_[kOutputPort]->buffer_constraints_version_ordinal()
+            ? port_settings_[kOutputPort]->buffer_constraints_version_ordinal()
             : 0;
     // Speculative part - this part is speculative, in that we don't know if
     // this post over to StreamControl will beat any client driving to a new
@@ -2408,7 +2408,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
     bool has_timestamp_ish =
         (encoder_params_ ||
          (decoder_params_->has_promise_separate_access_units_on_input() &&
-          *decoder_params_->promise_separate_access_units_on_input())) &&
+          decoder_params_->promise_separate_access_units_on_input())) &&
         packet->has_timestamp_ish();
     uint64_t timestamp_ish = has_timestamp_ish ? packet->timestamp_ish() : 0;
     fuchsia::media::Packet p;

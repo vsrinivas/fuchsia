@@ -1037,7 +1037,7 @@ StoryControllerImpl::StoryControllerImpl(
     std::unique_ptr<StoryObserver> story_observer,
     StoryVisibilitySystem* const story_visibility_system,
     StoryProviderImpl* const story_provider_impl)
-    : story_id_(*story_observer->model().name()),
+    : story_id_(story_observer->model().name()),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
@@ -1072,7 +1072,7 @@ void StoryControllerImpl::Connect(
 }
 
 bool StoryControllerImpl::IsRunning() {
-  switch (*story_observer_->model().runtime_state()) {
+  switch (story_observer_->model().runtime_state()) {
     case fuchsia::modular::StoryState::RUNNING:
       return true;
     case fuchsia::modular::StoryState::STOPPING:
@@ -1127,7 +1127,7 @@ void StoryControllerImpl::ReleaseModule(
 }
 
 fidl::StringPtr StoryControllerImpl::GetStoryId() const {
-  return *story_observer_->model().name();
+  return story_observer_->model().name();
 }
 
 void StoryControllerImpl::RequestStoryFocus() {
@@ -1288,7 +1288,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
         auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
         FXL_CHECK(story_info);
         callback(std::move(*story_info),
-                 *story_observer_->model().runtime_state());
+                 story_observer_->model().runtime_state());
       }));
 }
 
@@ -1407,7 +1407,7 @@ void StoryControllerImpl::NotifyStoryWatchers(
 void StoryControllerImpl::NotifyOneStoryWatcher(
     const fuchsia::modular::storymodel::StoryModel& model,
     fuchsia::modular::StoryWatcher* watcher) {
-  watcher->OnStateChange(*model.runtime_state());
+  watcher->OnStateChange(model.runtime_state());
 }
 
 bool StoryControllerImpl::IsExternalModule(

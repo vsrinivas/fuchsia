@@ -73,7 +73,7 @@ void CodecFactoryImpl::CreateDecoder(
     return;
   }
 
-  if (!params.input_details()->has_mime_type()) {
+  if (!params.input_details().has_mime_type()) {
     FXL_LOG(WARNING) << "input details missing mime type";
     // Without mime_type we cannot search for a decoder.
     return;
@@ -92,7 +92,7 @@ void CodecFactoryImpl::CreateDecoder(
         constexpr fuchsia::mediacodec::CodecType codec_type =
             fuchsia::mediacodec::CodecType::DECODER;
         return (codec_type == hw_codec_description.codec_type) &&
-               (*params.input_details()->mime_type() ==
+               (params.input_details().mime_type() ==
                 hw_codec_description.mime_type);
       });
   if (factory) {
@@ -101,7 +101,7 @@ void CodecFactoryImpl::CreateDecoder(
     return;
   }
 
-  if (params.has_require_hw() && *params.require_hw()) {
+  if (params.has_require_hw() && params.require_hw()) {
     FXL_LOG(WARNING)
         << "require_hw, but no matching HW decoder factory found; closing";
     // TODO(dustingreen): Send epitaph when possible.
@@ -113,7 +113,7 @@ void CodecFactoryImpl::CreateDecoder(
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{};
   std::string url;
-  if (*params.input_details()->mime_type() == kFfmpegMimeType) {
+  if (params.input_details().mime_type() == kFfmpegMimeType) {
     url = kIsolateUrlFfmpeg;
   } else {
     url = kIsolateUrlOmx;

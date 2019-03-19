@@ -50,7 +50,7 @@ void CodecAdapterFfmpeg::CoreCodecInit(
   }
   // Will always be 0 for now.
   input_format_details_version_ordinal_ =
-      *initial_input_format_details.format_details_version_ordinal();
+      initial_input_format_details.format_details_version_ordinal();
   zx_status_t result = input_processing_loop_.StartThread(
       "input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -85,7 +85,7 @@ void CodecAdapterFfmpeg::CoreCodecQueueInputFormatDetails(
   // For now these should always be 0, so assert to notice if anything changes.
   ZX_ASSERT(
       per_stream_override_format_details.has_format_details_version_ordinal() &&
-      *per_stream_override_format_details.format_details_version_ordinal() ==
+      per_stream_override_format_details.format_details_version_ordinal() ==
           input_format_details_version_ordinal_);
   input_queue_.Push(
       CodecInputItem::FormatDetails(per_stream_override_format_details));

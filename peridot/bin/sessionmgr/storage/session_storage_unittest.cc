@@ -80,17 +80,17 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_TRUE(data);
 
-    EXPECT_EQ("story_name", *data->story_name());
-    EXPECT_TRUE(data->story_options()->kind_of_proto_story);
-    EXPECT_EQ(story_name, data->story_info()->id);
-    ASSERT_TRUE(data->story_page_id());
-    EXPECT_EQ(page_id, *data->story_page_id());
-    EXPECT_TRUE(data->story_info()->extra);
-    EXPECT_EQ(2u, data->story_info()->extra->size());
-    EXPECT_EQ("key1", data->story_info()->extra->at(0).key);
-    EXPECT_EQ("value1", data->story_info()->extra->at(0).value);
-    EXPECT_EQ("key2", data->story_info()->extra->at(1).key);
-    EXPECT_EQ("value2", data->story_info()->extra->at(1).value);
+    EXPECT_EQ("story_name", data->story_name());
+    EXPECT_TRUE(data->story_options().kind_of_proto_story);
+    EXPECT_EQ(story_name, data->story_info().id);
+    ASSERT_TRUE(data->has_story_page_id());
+    EXPECT_EQ(page_id, data->story_page_id());
+    EXPECT_TRUE(data->story_info().extra);
+    EXPECT_EQ(2u, data->story_info().extra->size());
+    EXPECT_EQ("key1", data->story_info().extra->at(0).key);
+    EXPECT_EQ("value1", data->story_info().extra->at(0).value);
+    EXPECT_EQ("key2", data->story_info().extra->at(1).key);
+    EXPECT_EQ("value2", data->story_info().extra->at(1).value);
 
     done = true;
 
@@ -297,7 +297,7 @@ TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
   auto future_data = storage->GetStoryData(story_name);
   bool done{};
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_EQ(10, data->story_info()->last_focus_time);
+    EXPECT_EQ(10, data->story_info().last_focus_time);
     done = true;
   });
   RunLoopUntil([&] { return done; });
@@ -327,14 +327,14 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   auto created_story_name = CreateStory(storage.get());
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info()->id);
+  EXPECT_EQ(created_story_name, updated_story_data.story_info().id);
 
   // Update something and see a new notification.
   updated = false;
   storage->UpdateLastFocusedTimestamp(created_story_name, 42);
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(42, updated_story_data.story_info()->last_focus_time);
+  EXPECT_EQ(42, updated_story_data.story_info().last_focus_time);
 
   // Update options and see a new notification.
   updated = false;
@@ -343,8 +343,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
   storage->UpdateStoryOptions(created_story_name, std::move(story_options));
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info()->id);
-  EXPECT_TRUE(updated_story_data.story_options()->kind_of_proto_story);
+  EXPECT_EQ(created_story_name, updated_story_data.story_info().id);
+  EXPECT_TRUE(updated_story_data.story_options().kind_of_proto_story);
 
   // Delete the story and expect to see a notification.
   storage->DeleteStory(created_story_name);
@@ -380,14 +380,14 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
   auto created_story_name = CreateStory(remote_storage.get());
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info()->id);
+  EXPECT_EQ(created_story_name, updated_story_data.story_info().id);
 
   // Update something and see a new notification.
   updated = false;
   remote_storage->UpdateLastFocusedTimestamp(created_story_name, 42);
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(42, updated_story_data.story_info()->last_focus_time);
+  EXPECT_EQ(42, updated_story_data.story_info().last_focus_time);
 
   // Update options and see a new notification.
   updated = false;
@@ -397,8 +397,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
                                      std::move(story_options));
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(created_story_name, updated_story_data.story_info()->id);
-  EXPECT_TRUE(updated_story_data.story_options()->kind_of_proto_story);
+  EXPECT_EQ(created_story_name, updated_story_data.story_info().id);
+  EXPECT_TRUE(updated_story_data.story_options().kind_of_proto_story);
 
   // Delete the story and expect to see a notification.
   remote_storage->DeleteStory(created_story_name);
@@ -424,7 +424,7 @@ TEST_F(SessionStorageTest, UpdateStoryOptions) {
   done = false;
   storage->GetStoryData(story_name)
       ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_TRUE(data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -441,7 +441,7 @@ TEST_F(SessionStorageTest, UpdateStoryOptions) {
   done = false;
   storage->GetStoryData(story_name)
       ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_FALSE(data->story_options()->kind_of_proto_story);
+        EXPECT_FALSE(data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });

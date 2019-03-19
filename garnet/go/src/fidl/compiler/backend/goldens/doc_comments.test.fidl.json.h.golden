@@ -204,8 +204,9 @@ class Table  {
   // table field comment #1
   //
   // table field comment #3
-  const int32_t* Field() const {
-    return has_Field_ ? &Field_value_.value : nullptr;
+  const int32_t& Field() const {
+    ZX_ASSERT(has_Field_);
+    return Field_value_.value;
   }
   bool has_Field() const {
     return has_Field_;

@@ -55,7 +55,7 @@ int main(int argc, const char** argv) {
       component::StartupContext::CreateFromStartupInfo();
 
   auto cobalt_cleanup = SetupCobalt(
-      *(config->enable_cobalt()), std::move(loop.dispatcher()), context.get());
+      (config->enable_cobalt()), std::move(loop.dispatcher()), context.get());
 
   auto startup_agents = fxl::SplitStringCopy(
       command_line.GetOptionValueWithDefault("startup_agents", ""), ",",

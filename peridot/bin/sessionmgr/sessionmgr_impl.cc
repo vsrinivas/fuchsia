@@ -256,7 +256,7 @@ void SessionmgrImpl::InitializeUser(
 }
 
 zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
-  if (*(config_->use_memfs_for_ledger())) {
+  if ((config_->use_memfs_for_ledger())) {
     FXL_DCHECK(!memfs_for_ledger_)
         << "An existing memfs for the Ledger has already been initialized.";
     FXL_LOG(INFO) << "Using memfs-backed storage for the ledger.";
@@ -298,16 +298,16 @@ void SessionmgrImpl::InitializeLedger(
 
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   std::string ledger_user_id;
-  if (account_ && *(config_->cloud_provider()) !=
+  if (account_ && (config_->cloud_provider()) !=
                       fuchsia::modular::internal::CloudProvider::NONE) {
     // If not running in Guest mode, configure the cloud provider for Ledger to
     // use for syncing.
 
-    if (*(config_->cloud_provider()) ==
+    if ((config_->cloud_provider()) ==
         fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT) {
       startup_context_->ConnectToEnvironmentService(
           cloud_provider.NewRequest());
-    } else if (*config_->cloud_provider() ==
+    } else if (config_->cloud_provider() ==
                fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE) {
       cloud_provider = LaunchCloudProvider(account_->profile_id,
                                            std::move(ledger_token_manager));
@@ -522,8 +522,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
                                                  kMaxwellUrl, kMaxwellUrl));
 
   user_intelligence_provider_impl_->StartAgents(
-      std::move(maxwell_app_component_context), *(config_->session_agents()),
-      *(config_->startup_agents()));
+      std::move(maxwell_app_component_context), (config_->session_agents()),
+      (config_->startup_agents()));
 
   // Setup for kModuleResolverUrl
   {
@@ -623,7 +623,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       presentation_provider_impl_.get(),
       startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>(),
-      *(config_->enable_story_shell_preload())));
+      (config_->enable_story_shell_preload())));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(

@@ -104,9 +104,9 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
   // The existing model hasn't changed, because the StoryModelStorage
   // has not heard back from its storage that the mutation occurred.
   auto observer = owner->NewObserver();
-  EXPECT_EQ("test_name", *observer->model().name());
+  EXPECT_EQ("test_name", observer->model().name());
   EXPECT_EQ(StoryVisibilityState::DEFAULT,
-            *observer->model().visibility_state());
+            observer->model().visibility_state());
 
   // Now dispatch mutations from the persistence system, and we should observe
   // that ApplyMutations() is invoked.
@@ -115,7 +115,7 @@ TEST_F(StoryModelOwnerTest, SuccessfulMutate) {
   // And the new model value that ApplyMutations returned should be reflected in
   // the owner.
   EXPECT_EQ(StoryVisibilityState::IMMERSIVE,
-            *observer->model().visibility_state());
+            observer->model().visibility_state());
 }
 
 TEST_F(StoryModelOwnerTest, FailedMutate) {
@@ -186,7 +186,7 @@ TEST_F(StoryModelOwnerTest, ObserversAreNotified) {
   bool got_update1{false};
   observer->RegisterListener([&](const StoryModel& model) {
     got_update1 = true;
-    EXPECT_EQ(StoryVisibilityState::IMMERSIVE, *model.visibility_state());
+    EXPECT_EQ(StoryVisibilityState::IMMERSIVE, model.visibility_state());
   });
 
   // Another listener should also get the update!

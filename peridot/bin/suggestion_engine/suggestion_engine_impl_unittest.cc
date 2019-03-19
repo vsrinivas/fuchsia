@@ -342,7 +342,7 @@ TEST_F(SuggestionEngineTest, AddNextProposalRich) {
   session_storage_->GetStoryData(story_name)
       ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
         ASSERT_NE(nullptr, story_data);
-        EXPECT_TRUE(story_data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(story_data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -401,7 +401,7 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichReusesStory) {
   session_storage_->GetStoryData(story_name)
       ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
         ASSERT_NE(nullptr, story_data);
-        EXPECT_TRUE(story_data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(story_data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -433,7 +433,7 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichRespectsStoryName) {
   session_storage_->GetStoryData("foo_story")
       ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
         ASSERT_NE(nullptr, story_data);
-        EXPECT_TRUE(story_data->story_options()->kind_of_proto_story);
+        EXPECT_TRUE(story_data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -544,7 +544,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   session_storage_->GetStoryData(story_id)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr story_data) {
         EXPECT_NE(nullptr, story_data);
-        EXPECT_FALSE(story_data->story_options()->kind_of_proto_story);
+        EXPECT_FALSE(story_data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -595,7 +595,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
   session_storage_->GetStoryData("foo_story")
       ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
         EXPECT_NE(nullptr, story_data);
-        EXPECT_FALSE(story_data->story_options()->kind_of_proto_story);
+        EXPECT_FALSE(story_data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -851,7 +851,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
   session_storage_->GetStoryData(story_id)->Then(
       [&](fuchsia::modular::internal::StoryDataPtr story_data) {
         EXPECT_NE(nullptr, story_data);
-        EXPECT_FALSE(story_data->story_options()->kind_of_proto_story);
+        EXPECT_FALSE(story_data->story_options().kind_of_proto_story);
         done = true;
       });
   RunLoopUntil([&] { return done; });

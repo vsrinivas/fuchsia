@@ -95,7 +95,7 @@ TEST_F(SessionCtlAppTest, AddMod) {
   // Assert the story and the mod were added with default story and mod names
   auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ(
       "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
       test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
@@ -116,7 +116,7 @@ TEST_F(SessionCtlAppTest, AddModWithoutURL) {
       "fuchsia-pkg://fuchsia.com/mod_name#meta/mod_name.cmx"));
   auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_name#meta/mod_name.cmx",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -134,7 +134,7 @@ TEST_F(SessionCtlAppTest, AddModWithColon) {
       std::to_string(std::hash<std::string>{}("mod_name:0000"));
   auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("mod_name:0000",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -153,7 +153,7 @@ TEST_F(SessionCtlAppTest, AddModBadChars) {
 
   auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("a:bad/mod/name",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -173,7 +173,7 @@ TEST_F(SessionCtlAppTest, AddModWeb) {
       std::to_string(std::hash<std::string>{}("https://www.google.com"));
   auto story_data = GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(default_name_hash, *story_data->story_name());
+  EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ(
       "https://www.google.com",
       test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
@@ -196,7 +196,7 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   auto story_name = "s";
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(story_name, *story_data->story_name());
+  EXPECT_EQ(story_name, story_data->story_name());
   EXPECT_EQ(
       "m",
       test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
@@ -250,7 +250,7 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   // Assert session_storage still contains the story
   auto story_data = GetStoryData(mod);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(mod, *story_data->story_name());
+  EXPECT_EQ(mod, story_data->story_name());
   EXPECT_EQ(
       mod,
       test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
@@ -279,7 +279,7 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   auto story_name = "s";
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(story_name, *story_data->story_name());
+  EXPECT_EQ(story_name, story_data->story_name());
   EXPECT_EQ(
       mod_name,
       test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);

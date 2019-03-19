@@ -51,14 +51,14 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   uint64_t lifetime_ordinal() const {
     std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(settings_.has_buffer_lifetime_ordinal());
-    return *settings_.buffer_lifetime_ordinal();
+    return settings_.buffer_lifetime_ordinal();
   }
 
   // Returns the size in bytes of the buffers in this set.
   uint32_t buffer_size() const {
     std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(settings_.has_per_packet_buffer_bytes());
-    return *settings_.per_packet_buffer_bytes();
+    return settings_.per_packet_buffer_bytes();
   }
 
   // Returns the number of buffers in the set.

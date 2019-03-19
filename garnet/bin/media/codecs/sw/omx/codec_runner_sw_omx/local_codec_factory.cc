@@ -66,7 +66,7 @@ void LocalCodecFactory::CreateDecoder(
     return;
   }
 
-  if (!decoder_params.input_details()->has_mime_type()) {
+  if (!decoder_params.input_details().has_mime_type()) {
     FXL_LOG(WARNING) << "input details missing mime type";
     // Without mime_type we cannot search for a decoder.
     return;
@@ -74,7 +74,7 @@ void LocalCodecFactory::CreateDecoder(
 
   CreateCommon(std::move(decoder_request),
                fuchsia::mediacodec::CodecType::DECODER,
-               *decoder_params.input_details()->mime_type(),
+               decoder_params.input_details().mime_type(),
                [this, decoder_params = std::move(decoder_params)](
                    codec_runner::CodecRunner* codec_runner) mutable {
                  codec_runner->SetDecoderParams(std::move(decoder_params));

@@ -117,11 +117,11 @@ void CodecClient::Start() {
   FXL_CHECK(input_constraints_->has_packet_count_for_server_max());
   uint32_t packet_count_for_client = kMinExtraInputPacketsForClient;
   uint32_t packet_count_for_server =
-      *input_constraints_->packet_count_for_server_recommended();
+      input_constraints_->packet_count_for_server_recommended();
   uint32_t input_packet_count =
       packet_count_for_client + packet_count_for_server;
   if (input_packet_count < packet_count_for_server ||
-      input_packet_count > *input_constraints_->packet_count_for_server_max()) {
+      input_packet_count > input_constraints_->packet_count_for_server_max()) {
     FXL_LOG(FATAL) << "server can't easily accomodate "
                       "kMinExtraInputPacketsForClient - not "
                       "using server - exiting";
@@ -130,11 +130,11 @@ void CodecClient::Start() {
     fuchsia::media::StreamBufferSettings input_settings;
     input_settings.set_buffer_lifetime_ordinal(kInputBufferLifetimeOrdinal);
     input_settings.set_buffer_constraints_version_ordinal(
-        *input_constraints_->buffer_constraints_version_ordinal());
+        input_constraints_->buffer_constraints_version_ordinal());
     input_settings.set_packet_count_for_server(packet_count_for_server);
     input_settings.set_packet_count_for_client(packet_count_for_client);
     input_settings.set_per_packet_buffer_bytes(
-        *input_constraints_->per_packet_buffer_bytes_recommended());
+        input_constraints_->per_packet_buffer_bytes_recommended());
     input_settings.set_single_buffer_mode(false);
     async::PostTask(
         dispatcher_,
@@ -166,7 +166,7 @@ void CodecClient::Start() {
       codec_buffer.mutable_data()->vmo().set_vmo_handle(std::move(dup_vmo));
       codec_buffer.mutable_data()->vmo().set_vmo_usable_start(0);
       codec_buffer.mutable_data()->vmo().set_vmo_usable_size(
-          *input_constraints_->per_packet_buffer_bytes_recommended());
+          input_constraints_->per_packet_buffer_bytes_recommended());
       async::PostTask(dispatcher_,
                       [this, codec_buffer = std::move(codec_buffer)]() mutable {
                         codec_->AddInputBuffer(std::move(codec_buffer));
@@ -246,18 +246,18 @@ void CodecClient::OnFreeInputPacket(
     if (!free_input_packet.has_packet_index()) {
       FXL_LOG(FATAL) << "OnFreeInputPacket(): Packet has no index.";
     }
-    if (input_free_bits_[*free_input_packet.packet_index()]) {
+    if (input_free_bits_[free_input_packet.packet_index()]) {
       // already free - a normal client wouldn't want to just exit here since
       // this is the server's fault - in this example we just care that we
       // detect it
       FXL_LOG(FATAL)
           << "OnFreeInputPacket() when already free - server's fault? - "
              "packet_index: "
-          << *free_input_packet.packet_index();
+          << free_input_packet.packet_index();
     }
     was_empty = input_free_list_.empty();
-    input_free_list_.push_back(*free_input_packet.packet_index());
-    input_free_bits_[*free_input_packet.packet_index()] = true;
+    input_free_list_.push_back(free_input_packet.packet_index());
+    input_free_bits_[free_input_packet.packet_index()] = true;
   }  // ~lock
   if (was_empty) {
     input_free_list_not_empty_.notify_all();
@@ -312,14 +312,14 @@ void CodecClient::QueueInputFormatDetails(
 void CodecClient::QueueInputPacket(
     std::unique_ptr<fuchsia::media::Packet> packet) {
   ZX_ASSERT(packet->has_header());
-  ZX_ASSERT(packet->header()->has_packet_index());
+  ZX_ASSERT(packet->header().has_packet_index());
   fuchsia::media::Packet local_packet = fidl::Clone(*packet);
   {  // scope lock
     // This packet is already not on the free list, but is still considered free
     // from a protocol point of view, so update that part.
     std::unique_lock<std::mutex> lock(lock_);
-    ZX_ASSERT(input_free_bits_[*local_packet.header()->packet_index()]);
-    input_free_bits_[*local_packet.header()->packet_index()] = false;
+    ZX_ASSERT(input_free_bits_[local_packet.header().packet_index()]);
+    input_free_bits_[local_packet.header().packet_index()] = false;
     // From here it's as if this packet is already in flight with the server.
   }  // ~lock
   async::PostTask(dispatcher_,
@@ -467,10 +467,10 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 
     ZX_ASSERT(snapped_config->has_buffer_constraints());
     const fuchsia::media::StreamBufferConstraints& constraints =
-        *snapped_config->buffer_constraints();
+        snapped_config->buffer_constraints();
     ZX_ASSERT(constraints.has_packet_count_for_server_recommended());
     uint32_t packet_count_for_server =
-        *constraints.packet_count_for_server_recommended();
+        constraints.packet_count_for_server_recommended();
     uint32_t packet_count_for_client = kMinExtraOutputPacketsForClient;
     uint32_t packet_count = packet_count_for_server + packet_count_for_client;
     // printf("Sending SetOutputBufferSettings - buffer_lifetime_ordinal: %lu
@@ -480,11 +480,11 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     fuchsia::media::StreamBufferSettings settings;
     settings.set_buffer_lifetime_ordinal(new_output_buffer_lifetime_ordinal);
     settings.set_buffer_constraints_version_ordinal(
-        *constraints.buffer_constraints_version_ordinal());
+        constraints.buffer_constraints_version_ordinal());
     settings.set_packet_count_for_server(packet_count_for_server);
     settings.set_packet_count_for_client(packet_count_for_client);
     settings.set_per_packet_buffer_bytes(
-        *constraints.per_packet_buffer_bytes_recommended());
+        constraints.per_packet_buffer_bytes_recommended());
     settings.set_single_buffer_mode(false);
     async::PostTask(dispatcher_,
                     [this, settings = std::move(settings)]() mutable {
@@ -532,7 +532,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         codec_buffer.mutable_data()->vmo().set_vmo_handle(std::move(dup_vmo));
         codec_buffer.mutable_data()->vmo().set_vmo_usable_start(0);
         codec_buffer.mutable_data()->vmo().set_vmo_usable_size(
-            *constraints.per_packet_buffer_bytes_recommended());
+            constraints.per_packet_buffer_bytes_recommended());
         // printf("Sending AddOutputBuffer - buffer_lifetime_ordinal: %lu\n",
         // new_output_buffer_lifetime_ordinal);
         async::PostTask(
@@ -549,10 +549,10 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 
     {  // scope lock
       std::unique_lock<std::mutex> lock(lock_);
-      if (*snapped_config->buffer_constraints()
-               ->buffer_constraints_version_ordinal() >=
-          *last_required_output_config_->buffer_constraints()
-               ->buffer_constraints_version_ordinal()) {
+      if (snapped_config->buffer_constraints()
+               .buffer_constraints_version_ordinal() >=
+          last_required_output_config_->buffer_constraints()
+               .buffer_constraints_version_ordinal()) {
         // Good.  The client is caught up.  The output_config_action_pending_
         // can become false here, but may very shortly become true again if
         // another OnOutputConfig() is received after we release the lock
@@ -596,7 +596,7 @@ void CodecClient::RecycleOutputPacket(
   ZX_ASSERT(free_packet.has_packet_index());
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-    output_free_bits_[*free_packet.packet_index()] = true;
+    output_free_bits_[free_packet.packet_index()] = true;
   }  // ~lock
   async::PostTask(dispatcher_,
                   [this, free_packet = std::move(free_packet)]() mutable {
@@ -616,24 +616,24 @@ void CodecClient::OnOutputConfig(
     ZX_ASSERT(!last_output_config_ ||
               (last_output_config_->has_buffer_constraints() &&
                last_output_config_->buffer_constraints()
-                   ->has_buffer_constraints_version_ordinal()));
+                   .has_buffer_constraints_version_ordinal()));
     uint64_t previous_buffer_constraints_version_ordinal =
-        last_output_config_ ? *last_output_config_->buffer_constraints()
-                                   ->buffer_constraints_version_ordinal()
+        last_output_config_ ? last_output_config_->buffer_constraints()
+                                   .buffer_constraints_version_ordinal()
                             : 0;
     ZX_ASSERT(shared_config->has_buffer_constraints() &&
               shared_config->buffer_constraints()
-                  ->has_buffer_constraints_version_ordinal());
-    if (*shared_config->buffer_constraints()
-             ->buffer_constraints_version_ordinal() <
+                  .has_buffer_constraints_version_ordinal());
+    if (shared_config->buffer_constraints()
+             .buffer_constraints_version_ordinal() <
         previous_buffer_constraints_version_ordinal) {
       FXL_LOG(FATAL)
           << "broken server sent badly ordered buffer constraints ordinals";
     }
     if ((shared_config->has_buffer_constraints_action_required() &&
-         *shared_config->buffer_constraints_action_required()) &&
-        *shared_config->buffer_constraints()
-                ->buffer_constraints_version_ordinal() <=
+         shared_config->buffer_constraints_action_required()) &&
+        shared_config->buffer_constraints()
+                .buffer_constraints_version_ordinal() <=
             previous_buffer_constraints_version_ordinal) {
       FXL_LOG(FATAL)
           << "broken server sent buffer_constraints_action_required without "
@@ -642,7 +642,7 @@ void CodecClient::OnOutputConfig(
     last_output_config_ = shared_config;
     FXL_VLOG(3) << "OnOutputConfig buffer_constraints_version_ordinal: "
                 << shared_config->buffer_constraints()
-                       ->buffer_constraints_version_ordinal()
+                       .buffer_constraints_version_ordinal()
                 << "buffer_constraints_action_required: "
                 << shared_config->buffer_constraints_action_required();
     if (shared_config->buffer_constraints_action_required()) {
@@ -666,15 +666,15 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet,
                                  bool error_detected_during) {
   FXL_CHECK(output_packet.has_header());
   FXL_CHECK(output_packet.has_stream_lifetime_ordinal());
-  FXL_CHECK(output_packet.header()->has_packet_index());
+  FXL_CHECK(output_packet.header().has_packet_index());
   bool output_pending_notify_needed = false;
   std::unique_ptr<const fuchsia::media::Packet> local_packet =
       std::make_unique<fuchsia::media::Packet>(std::move(output_packet));
-  uint32_t packet_index = *local_packet->header()->packet_index();
+  uint32_t packet_index = local_packet->header().packet_index();
   // This is safe outside the lock, because last_output_config_ is only updated
   // by OnOutputConfig(), which can't happen simultaneously with
   // OnOutputPacket().
-  uint64_t stream_lifetime_ordinal = *local_packet->stream_lifetime_ordinal();
+  uint64_t stream_lifetime_ordinal = local_packet->stream_lifetime_ordinal();
   std::unique_ptr<CodecOutput> output = std::make_unique<CodecOutput>(
       stream_lifetime_ordinal, last_output_config_, std::move(local_packet),
       false);

@@ -556,7 +556,7 @@ void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->buffer_index() == i);
-      ZX_DEBUG_ASSERT(*all_output_buffers_[i]->codec_buffer().buffer_index() ==
+      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index() ==
                       i);
       frames.emplace_back(CodecFrame{
           .codec_buffer_spec =
@@ -711,15 +711,15 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
   // Our latest oob_bytes may contain SPS/PPS info.  If we have any
   // such info, the core codec needs it (possibly converted first).
 
-  const std::vector<uint8_t>* oob = latest_input_format_details_.oob_bytes();
-
   // If there's no OOB info, then there's nothing to do, as all such info will
   // be in-band in normal packet-based AnnexB NALs (including start codes and
   // start code emulation prevention bytes).
-  if (!oob || oob->empty()) {
+  if (!latest_input_format_details_.has_oob_bytes() || latest_input_format_details_.oob_bytes().empty()) {
     // success
     return true;
   }
+
+  const std::vector<uint8_t>* oob = &latest_input_format_details_.oob_bytes();
 
   // We need to deliver Annex B style SPS/PPS to this core codec, regardless of
   // what format the oob_bytes is in.

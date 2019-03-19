@@ -69,12 +69,12 @@ void FrameSink::PutFrame(
       std::make_shared<decltype(done_runner)>(std::move(done_runner));
 
   FXL_DCHECK(output_config->has_format_details());
-  FXL_DCHECK(output_config->format_details()->has_domain());
-  FXL_DCHECK(output_config->format_details()->domain()->is_video());
+  FXL_DCHECK(output_config->format_details().has_domain());
+  FXL_DCHECK(output_config->format_details().domain().is_video());
   FXL_DCHECK(
-      output_config->format_details()->domain()->video().is_compressed());
+      output_config->format_details().domain().video().is_compressed());
   const fuchsia::media::VideoUncompressedFormat& video_format =
-      output_config->format_details()->domain()->video().uncompressed();
+      output_config->format_details().domain().video().uncompressed();
 
   zx_time_t present_time;
   if (last_requested_present_time_ == ZX_TIME_INFINITE_PAST) {

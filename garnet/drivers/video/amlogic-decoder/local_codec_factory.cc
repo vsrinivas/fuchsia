@@ -185,7 +185,7 @@ void LocalCodecFactory::CreateDecoder(
     return;
   }
 
-  if (!video_decoder_params.input_details()->has_mime_type()) {
+  if (!video_decoder_params.input_details().has_mime_type()) {
     // Without mime_type we cannot search for a decoder.
     return;
   }
@@ -196,7 +196,7 @@ void LocalCodecFactory::CreateDecoder(
       continue;
     }
     if (candidate_factory.description.mime_type ==
-        *video_decoder_params.input_details()->mime_type()) {
+        video_decoder_params.input_details().mime_type()) {
       factory = &candidate_factory;
       break;
     }

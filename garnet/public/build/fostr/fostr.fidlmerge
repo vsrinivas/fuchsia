@@ -190,9 +190,9 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- range .Members }}
   if (value.has_{{ .Name }}()) {
           {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-    os << fostr::NewLine << "{{ .Name }}: " << fostr::PrintVector(*value.{{ .Name }}());
+    os << fostr::NewLine << "{{ .Name }}: " << fostr::PrintVector(value.{{ .Name }}());
           {{- else }}
-    os << fostr::NewLine << "{{ .Name }}: " << *value.{{ .Name }}();
+    os << fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }}();
           {{- end }}
   }
         {{- end }}

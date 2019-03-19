@@ -38,14 +38,14 @@ const fuchsia::accessibility::semantics::NodePtr SemanticTreeImpl::HitTest(
     return nullptr;
   }
   escher::mat4 transform =
-      scenic_impl::gfx::Unwrap(*it->second.data()->transform());
+      scenic_impl::gfx::Unwrap(it->second.data().transform());
   escher::vec4 local_coordinates = transform * coordinates;
   escher::vec2 point(local_coordinates[0], local_coordinates[1]);
 
-  if (!BoxContainsPoint(*it->second.data()->location(), point)) {
+  if (!BoxContainsPoint(it->second.data().location(), point)) {
     return nullptr;
   }
-  for (auto child : *it->second.children_hit_test_order()) {
+  for (auto child : it->second.children_hit_test_order()) {
     auto node = HitTest(nodes, child, local_coordinates);
     if (node != nullptr) {
       return node;
@@ -79,7 +79,7 @@ void SemanticTreeImpl::Commit() {
 
   // Commit uncommitted nodes.
   for (auto& node_it : uncommitted_nodes_) {
-    nodes_[*node_it.node_id()] = std::move(node_it);
+    nodes_[node_it.node_id()] = std::move(node_it);
   }
   uncommitted_nodes_.clear();
 
@@ -121,12 +121,12 @@ void SemanticTreeImpl::LogSemanticTreeHelper(
 
   // Add logs for the current node.
   absl::StrAppend(tree_log,
-                  "Node_id: ", std::to_string(*root_node.get()->node_id()),
-                  ", Label:", *root_node.get()->data()->label(), kNewLine);
+                  "Node_id: ", std::to_string(root_node.get()->node_id()),
+                  ", Label:", root_node.get()->data().label(), kNewLine);
 
   // Iterate through all the children of the current node.
-  for (auto it = root_node.get()->children_traversal_order()->begin();
-       it != root_node.get()->children_traversal_order()->end(); ++it) {
+  for (auto it = root_node.get()->children_traversal_order().begin();
+       it != root_node.get()->children_traversal_order().end(); ++it) {
     fuchsia::accessibility::semantics::NodePtr node_ptr =
         GetAccessibilityNode(*it);
     LogSemanticTreeHelper(std::move(node_ptr), current_level + 1, tree_log);

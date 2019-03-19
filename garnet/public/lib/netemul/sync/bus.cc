@@ -43,16 +43,16 @@ class WaitForEventWatch : public CallbackWatch<Bus::WaitForEventCallback> {
 
   bool EventMatches(const Bus::FEvent& cmp) const {
     if (event_.has_code() &&
-        (!cmp.has_code() || *cmp.code() != *event_.code())) {
+        (!cmp.has_code() || cmp.code() != event_.code())) {
       return false;
     } else if (event_.has_message() &&
-               (!cmp.has_message() || *cmp.message() != *event_.message())) {
+               (!cmp.has_message() || cmp.message() != event_.message())) {
       return false;
     } else if (event_.has_arguments() &&
                (!cmp.has_arguments() ||
-                cmp.arguments()->size() != event_.arguments()->size() ||
-                memcmp(cmp.arguments()->data(), event_.arguments()->data(),
-                       event_.arguments()->size()) != 0)) {
+                cmp.arguments().size() != event_.arguments().size() ||
+                memcmp(cmp.arguments().data(), event_.arguments().data(),
+                       event_.arguments().size()) != 0)) {
       return false;
     } else {
       return true;

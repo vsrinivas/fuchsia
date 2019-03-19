@@ -454,11 +454,11 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames,
 
     assert(video_frame->height % 2 == 0);
     assert(frames[i].codec_buffer_spec.has_data());
-    assert(frames[i].codec_buffer_spec.data()->is_vmo());
-    assert(frames[i].codec_buffer_spec.data()->vmo().has_vmo_handle());
+    assert(frames[i].codec_buffer_spec.data().is_vmo());
+    assert(frames[i].codec_buffer_spec.data().vmo().has_vmo_handle());
     zx_status_t status = io_buffer_init_vmo(
         &video_frame->buffer, owner_->bti(),
-        frames[i].codec_buffer_spec.data()->vmo().vmo_handle()->get(), 0,
+        frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0,
         IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n",

@@ -44,7 +44,7 @@ void SettingsManagerImpl::SetMagnificationEnabled(
   // Attempting to enable magnification when it's already enabled OR disable
   // magnification when it's already disabled has no effect.
   if (settings_.has_magnification_enabled() &&
-      *settings_.magnification_enabled() == magnification_enabled) {
+      settings_.magnification_enabled() == magnification_enabled) {
     callback(fuchsia::accessibility::SettingsManagerStatus::OK);
     return;
   }
@@ -63,7 +63,7 @@ void SettingsManagerImpl::SetMagnificationEnabled(
   NotifyWatchers(settings_);
 
   FX_LOGS(INFO) << "magnification_enabled = "
-                << BoolToString(*settings_.magnification_enabled());
+                << BoolToString(settings_.magnification_enabled());
 
   // TODO: Write settings to file (or other output location).
 
@@ -74,7 +74,7 @@ void SettingsManagerImpl::SetMagnificationZoomFactor(
     float_t magnification_zoom_factor,
     SetMagnificationZoomFactorCallback callback) {
   if (!settings_.has_magnification_enabled() ||
-      !(*settings_.magnification_enabled())) {
+      !(settings_.magnification_enabled())) {
     FX_LOGS(ERROR) << "Magnification must be enabled to set zoom factor.";
 
     callback(fuchsia::accessibility::SettingsManagerStatus::ERROR);
@@ -93,7 +93,7 @@ void SettingsManagerImpl::SetMagnificationZoomFactor(
   NotifyWatchers(settings_);
 
   FX_LOGS(INFO) << "magnification_zoom_factor = "
-                << *settings_.magnification_zoom_factor();
+                << settings_.magnification_zoom_factor();
 
   // TODO: Write settings to file (or other output location).
 
@@ -107,7 +107,7 @@ void SettingsManagerImpl::SetScreenReaderEnabled(
   NotifyWatchers(settings_);
 
   FX_LOGS(INFO) << "screen_reader_enabled = "
-                << BoolToString(*settings_.screen_reader_enabled());
+                << BoolToString(settings_.screen_reader_enabled());
 
   // TODO: Write settings to file (or other output location).
 
@@ -121,7 +121,7 @@ void SettingsManagerImpl::SetColorInversionEnabled(
   NotifyWatchers(settings_);
 
   FX_LOGS(INFO) << "color_inversion_enabled = "
-                << BoolToString(*settings_.color_inversion_enabled());
+                << BoolToString(settings_.color_inversion_enabled());
 
   // TODO: Write settings to file (or other output location).
 

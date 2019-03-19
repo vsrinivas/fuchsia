@@ -128,13 +128,13 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
         Exit("broken server sent packet without header");
       }
 
-      if (!packet->header()->has_packet_index()) {
+      if (!packet->header().has_packet_index()) {
         Exit("broken server sent packet without packet index");
       }
 
       // For input we do buffer_index == packet_index.
       const CodecBuffer& buffer = codec_client->GetInputBufferByIndex(
-          *packet->header()->packet_index());
+          packet->header().packet_index());
       size_t bytes_to_copy =
           std::min(byte_count - bytes_so_far, buffer.size_bytes());
       packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
@@ -211,10 +211,10 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
     std::unique_ptr<fuchsia::media::Packet> packet =
         codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());
-    ZX_ASSERT(packet->header()->has_packet_index());
+    ZX_ASSERT(packet->header().has_packet_index());
     // For input we do buffer_index == packet_index.
     const CodecBuffer& buffer =
-        codec_client->GetInputBufferByIndex(*packet->header()->packet_index());
+        codec_client->GetInputBufferByIndex(packet->header().packet_index());
     // VP9 decoder doesn't yet support splitting access units into multiple
     // packets.
     FXL_DCHECK(byte_count <= buffer.size_bytes());
@@ -408,7 +408,7 @@ static void use_video_decoder(
       // actually freeing up all previously-queued frames.
       auto cleanup =
           fit::defer([&codec_client,
-                      packet_header = fidl::Clone(*packet.header())]() mutable {
+                      packet_header = fidl::Clone(packet.header())]() mutable {
             // Using an auto call for this helps avoid losing track of the
             // output_buffer.
             //
@@ -429,25 +429,25 @@ static void use_video_decoder(
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
       const CodecBuffer& buffer =
-          codec_client.GetOutputBufferByIndex(*packet.buffer_index());
+          codec_client.GetOutputBufferByIndex(packet.buffer_index());
 
       ZX_ASSERT(
           !stream_config ||
           (stream_config->has_format_details() &&
-           stream_config->format_details()->format_details_version_ordinal()));
+           stream_config->format_details().format_details_version_ordinal()));
       if (stream_config &&
           (!config->has_format_details() ||
-           !config->format_details()->has_format_details_version_ordinal() ||
-           *config->format_details()->format_details_version_ordinal() !=
-               *stream_config->format_details()
-                    ->format_details_version_ordinal())) {
+           !config->format_details().has_format_details_version_ordinal() ||
+           config->format_details().format_details_version_ordinal() !=
+               stream_config->format_details()
+                    .format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
             "unexpected for this stream");
       }
 
       if (!packet.has_valid_length_bytes() ||
-          *packet.valid_length_bytes() == 0) {
+          packet.valid_length_bytes() == 0) {
         // The server should not generate any empty packets.
         Exit("broken server sent empty packet");
       }
@@ -463,23 +463,23 @@ static void use_video_decoder(
         // Every output has a config.  This happens exactly once.
         stream_config = config;
 
-        ZX_ASSERT(config->format_details()->has_domain());
+        ZX_ASSERT(config->format_details().has_domain());
 
         if (!stream_config->has_format_details()) {
           Exit("!format_details");
         }
 
         const fuchsia::media::FormatDetails& format =
-            *stream_config->format_details();
+            stream_config->format_details();
         if (!format.has_domain()) {
           Exit("!format.domain");
         }
 
-        if (!format.domain()->is_video()) {
+        if (!format.domain().is_video()) {
           Exit("!format.domain.is_video()");
         }
         const fuchsia::media::VideoFormat& video_format =
-            format.domain()->video();
+            format.domain().video();
         if (!video_format.is_uncompressed()) {
           Exit("!video.is_uncompressed()");
         }
@@ -499,7 +499,7 @@ static void use_video_decoder(
             size_t total_size =
                 raw->secondary_start_offset +
                 raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
-            if (*packet.valid_length_bytes() < total_size) {
+            if (packet.valid_length_bytes() < total_size) {
               Exit("packet.valid_length_bytes < total_size");
             }
             break;
@@ -512,7 +512,7 @@ static void use_video_decoder(
             size_t u_size = v_size;
             size_t total_size = y_size + u_size + v_size;
 
-            if (*packet.valid_length_bytes() < total_size) {
+            if (packet.valid_length_bytes() < total_size) {
               Exit("packet.valid_length_bytes < total_size");
             }
 
@@ -539,7 +539,7 @@ static void use_video_decoder(
             raw_video_writer.WriteNv12(
                 raw->primary_width_pixels, raw->primary_height_pixels,
                 raw->primary_line_stride_bytes,
-                buffer.base() + *packet.start_offset() +
+                buffer.base() + packet.start_offset() +
                     raw->primary_start_offset,
                 raw->secondary_start_offset - raw->primary_start_offset);
             break;
@@ -555,14 +555,14 @@ static void use_video_decoder(
       if (timestamps_out) {
         timestamps_out->emplace_back(std::make_pair(
             packet.has_timestamp_ish(),
-            packet.has_timestamp_ish() ? *packet.timestamp_ish() : 0));
+            packet.has_timestamp_ish() ? packet.timestamp_ish() : 0));
       }
 
       if (!frame_sink) {
         switch (raw->fourcc) {
           case make_fourcc('N', 'V', '1', '2'): {
             // Y
-            uint8_t* y_src = buffer.base() + *packet.start_offset() +
+            uint8_t* y_src = buffer.base() + packet.start_offset() +
                              raw->primary_start_offset;
             for (uint32_t y_iter = 0; y_iter < raw->primary_height_pixels;
                  y_iter++) {
@@ -570,7 +570,7 @@ static void use_video_decoder(
               y_src += raw->primary_line_stride_bytes;
             }
             // UV
-            uint8_t* uv_src = buffer.base() + *packet.start_offset() +
+            uint8_t* uv_src = buffer.base() + packet.start_offset() +
                               raw->secondary_start_offset;
             for (uint32_t uv_iter = 0; uv_iter < raw->primary_height_pixels / 2;
                  uv_iter++) {
@@ -585,7 +585,7 @@ static void use_video_decoder(
             // Y
             SHA256_Update_VideoPlane(
                 &sha256_ctx,
-                /*start=*/buffer.base() + *packet.start_offset() +
+                /*start=*/buffer.base() + packet.start_offset() +
                     raw->primary_start_offset,
                 raw->primary_width_pixels, raw->primary_line_stride_bytes,
                 raw->primary_height_pixels);
@@ -593,7 +593,7 @@ static void use_video_decoder(
             // V
             SHA256_Update_VideoPlane(
                 &sha256_ctx,
-                /*start=*/buffer.base() + *packet.start_offset() +
+                /*start=*/buffer.base() + packet.start_offset() +
                     raw->secondary_start_offset,
                 raw->secondary_width_pixels, raw->secondary_line_stride_bytes,
                 raw->secondary_height_pixels);
@@ -601,7 +601,7 @@ static void use_video_decoder(
             // U
             SHA256_Update_VideoPlane(
                 &sha256_ctx,
-                /*start=*/buffer.base() + *packet.start_offset() +
+                /*start=*/buffer.base() + packet.start_offset() +
                     raw->tertiary_start_offset,
                 raw->secondary_width_pixels, raw->secondary_line_stride_bytes,
                 raw->secondary_height_pixels);
@@ -617,9 +617,9 @@ static void use_video_decoder(
         async::PostTask(
             main_loop->dispatcher(),
             [frame_sink,
-             image_id = *packet.header()->packet_index() + kFirstValidImageId,
+             image_id = packet.header().packet_index() + kFirstValidImageId,
              &vmo = buffer.vmo(),
-             vmo_offset = buffer.vmo_offset() + *packet.start_offset() +
+             vmo_offset = buffer.vmo_offset() + packet.start_offset() +
                           raw->primary_start_offset,
              config, cleanup = std::move(cleanup)]() mutable {
               frame_sink->PutFrame(image_id, vmo, vmo_offset, config,
