@@ -1,11 +1,12 @@
 {
   "basemgr": {
     "test": true,
-    "base_shell_launch_configs": {
+    "use_session_shell_for_story_shell_factory": true,
+    "base_shell": {
       "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
       "keep_alive_after_login": true
     },
-    "session_shell_launch_configs": {
+    "session_shell": {
       "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
       "display_usage": "near",
       "screen_height": 50,
@@ -14,10 +15,9 @@
   },
   "sessionmgr": {
     "use_memfs_for_ledger": true,
-    "cloud_provider_for_ledger": false,
-    "enable_statistics": false,
+    "cloud_provider": "ENVIRONMENT",
+    "enable_cobalt": false,
     "enable_story_shell_preload": false,
-    "use_session_shell_for_story_shell_factory": true,
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
     ],

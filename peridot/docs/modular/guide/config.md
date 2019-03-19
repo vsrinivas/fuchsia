@@ -25,8 +25,8 @@ modular_config() target in the product's monolith packages.
   },
   "sessionmgr": {
     "use_memfs_for_ledger": true,
-    "cloud_provider_for_ledger": false,
-    "story_shell_factory": false,
+    "cloud_provider": false,
+    "story_shell_factory": NONE,
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
     ],
@@ -57,15 +57,20 @@ modular_config() target in the product's monolith packages.
         * The screen height in millimeters for the session shell's display.
     - `screen_width`: **float** *(optional)*
         * The screen width in millimeters for the session shell's display.
-* `enable_statistics`: **boolean** *(optional)*
+* `enable_cobalt`: **boolean** *(optional)*
     - When set to false, Cobalt statistics are disabled.
     - **default**: `true`
 * `enable_presenter`: **boolean** *(optional)*
     - When set to true, the Presenter service controls management of views.
     - **default**: `false`
-* `minfs`: **boolean** *(optional)*
+* `use_minfs`: **boolean** *(optional)*
     - When set to true, wait for persistent data to initialize.
     - **default**: `true`
+* `use_session_shell_for_story_shell_factory`: **boolean** *(optional)*
+    - Create story shells through StoryShellFactory exposed by the session shell
+      instead of creating separate story shell components. When set,
+      `story_shell_url` and any story shell args are ignored.
+    - **default**: `false`
 * `test`: **boolean** *(optional)*
     - Tells basemgr whether it is running as a part of an integration test.
     - **default**: `false`
@@ -73,34 +78,31 @@ modular_config() target in the product's monolith packages.
 
 ## Sessionmgr fields
 
-* `cloud_provider_for_ledger`: **boolean** *(optional)*
-    - When set to true, a cloud provider is configured for Ledger. This overrides
-      any value of `use_cloud_provider_from_environment`.
+* `cloud_provider`: **string** *(optional)*
+    - Options:
+        * `LET_LEDGER_DECIDE`: Use a cloud provider configured by ledger.
+        * `FROM_ENVIRONMENT`: Use a cloud provider available in the incoming
+          namespace, rather than initializing and instance within sessionmgr.
+          This can be used by Voila to inject a custom cloud provider.
+        * `NONE`: Do not use a cloud provider.
+    - **default**: `LET_LEDGER_DECIDE`
+* `enable_cobalt`: **boolean** *(optional)*
+    - When set to false, Cobalt statistics are disabled. This is used for testing.
     - **default**: `true`
 * `enable_story_shell_preload`: **boolean** *(optional)*
     - When set to false, StoryShell instances are not warmed up as a startup
       latency optimization. This is used for testing.
     - **default**: `true`
-* `enable_statistics`: **boolean** *(optional)*
-    - When set to false, Cobalt statistics are disabled. This is used for testing.
-    - **default**: `true`
-* `use_cloud_provider_from_environment`: **boolean** *(optional)*
-    - When set to true, use the cloud provider available in the incoming namespace,
-      rather than initializing an instance within sessionmgr. This can be used
-      by Voila to inject a custom cloud provider.
-    - **default**: `false`
 * `use_memfs_for_ledger`: **boolean** *(optional)*
     - Tells the sessionmgr whether it should host+pass a memfs-backed directory to
       the ledger for the user's repository, or to use /data/LEDGER.
     - **default**: `false`
-* `use_session_shell_for_story_shell_factory`: **boolean** *(optional)*
-    - **default**: `false`
-* `story_shell_url`: **string** *(optional)*
-    - The fuchsia package url for which story shell to use.
-    - **default**: `fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx`
 * `startup_agents`: **string[]** *(optional)*
     - A list of fuchsia package urls that specify which agents to launch at
       startup.
 * `session_agents`: **string[]** *(optional)*
     - A list of fuchsia package urls that specify which agents to launch at
       startup with PuppetMaster and FocusProvider services.
+* `story_shell_url`: **string** *(optional)*
+    - The fuchsia package url for which story shell to use.
+    - **default**: `fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx`

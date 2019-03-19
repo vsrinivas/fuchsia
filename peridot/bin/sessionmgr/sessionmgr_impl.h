@@ -59,35 +59,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        fuchsia::modular::SessionShellContext,
                        EntityProviderLauncher {
  public:
-  struct Options {
-    // If set to false, StoryShell instances are not warmed up as a startup
-    // latency optimization. Used for testing.
-    bool enable_story_shell_preload;
-
-    // If set to false, disables Cobalt statistics. Used for testing.
-    bool enable_statistics;
-
-    // Tells the sessionmgr whether it should host+pass a memfs-backed
-    // directory to the ledger for the user's repository, or to use
-    // /data/LEDGER.
-    bool use_memfs_for_ledger;
-
-    // If set, no cloud provider is configured for Ledger. This overrides any
-    // value of |use_cloud_provider_from_environment|.
-    bool no_cloud_provider_for_ledger;
-
-    // If set, use the cloud provider available in the incoming namespace,
-    // rather than initializing an instance within sessionmgr. This can be used
-    // by Voila to inject a custom cloud provider.
-    bool use_cloud_provider_from_environment;
-
-    // Sessionmgr passes args startup agents and session agent to maxwell.
-    std::vector<std::string> startup_agents;
-    std::vector<std::string> session_agents;
-  };
-
   SessionmgrImpl(component::StartupContext* startup_context,
-                 const Options& options);
+                 fuchsia::modular::internal::SessionmgrConfigPtr configs);
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
@@ -216,7 +189,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void ConnectSessionShellToStoryProvider();
 
   component::StartupContext* const startup_context_;
-  const Options options_;
+  fuchsia::modular::internal::SessionmgrConfigPtr config_;
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;

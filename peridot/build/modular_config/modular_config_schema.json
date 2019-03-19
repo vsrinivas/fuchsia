@@ -5,17 +5,18 @@
     "basemgr": {
       "type": "object",
       "properties": {
-        "enable_statistics": { "type": "boolean", "default": true },
+        "enable_cobalt": { "type": "boolean", "default": true },
         "enable_presenter": { "type": "boolean", "default": false },
-        "minfs": { "type": "boolean", "default": true },
         "test": { "type": "boolean", "default": false },
-        "base_shell_launch_configs": { "$ref": "#definitions/base_shell_launch_configs" },
-        "session_shell_launch_configs": { "$ref": "#/definitions/session_shell_launch_configs" }
+        "use_minfs": { "type": "boolean", "default": true },
+        "use_session_shell_for_story_shell_factory": { "type": "boolean", "default": false },
+        "base_shell": { "$ref": "#definitions/base_shell" },
+        "session_shell": { "$ref": "#/definitions/session_shell" }
       },
       "additionalProperties": false,
-      "required": [ "base_shell_launch_configs", "session_shell_launch_configs" ]
+      "required": [ "base_shell", "session_shell" ]
     },
-    "base_shell_launch_configs": {
+    "base_shell": {
       "type": "object",
       "properties": {
         "url": {
@@ -28,7 +29,7 @@
       "additionalProperties": false,
       "required": [ "url" ]
     },
-    "session_shell_launch_configs": {
+    "session_shell": {
       "type": "object",
       "properties": {
         "url": {
@@ -46,12 +47,14 @@
     "sessionmgr": {
       "type": "object",
       "properties": {
-        "cloud_provider_for_ledger": { "type": "boolean", "default": true },
+        "cloud_provider": {
+          "type": "string",
+          "enum": [ "LEDGER", "ENVIRONMENT", "NONE" ],
+          "default": "LEDGER"
+        },
+        "enable_cobalt": { "type": "boolean", "default": true },
         "enable_story_shell_preload": { "type": "boolean", "default": true },
-        "enable_statistics": { "type": "boolean", "default": true },
-        "use_cloud_provider_from_environment": { "type": "boolean", "default": false },
         "use_memfs_for_ledger": { "type": "boolean", "default": false },
-        "use_session_shell_for_story_shell_factory": { "type": "boolean", "default": false },
         "startup_agents": {
           "type": "array",
           "items": {

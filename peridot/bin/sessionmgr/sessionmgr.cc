@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
@@ -18,9 +19,9 @@
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
-    const bool enable_statistics, async_dispatcher_t* dispatcher,
+    const bool enable_cobalt, async_dispatcher_t* dispatcher,
     component::StartupContext* const startup_context) {
-  if (!enable_statistics) {
+  if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
   return modular::InitializeCobalt(dispatcher, startup_context);
@@ -29,17 +30,24 @@ fit::deferred_action<fit::closure> SetupCobalt(
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  modular::SessionmgrImpl::Options opts;
-  opts.enable_statistics = command_line.GetOptionValueWithDefault(
-                               "enable_statistics", "true") == "true";
-  opts.enable_story_shell_preload =
+  auto config = fuchsia::modular::internal::SessionmgrConfig::New();
+  config->set_enable_cobalt(command_line.GetOptionValueWithDefault(
+                                "enable_statistics", "true") == "true");
+  config->set_enable_story_shell_preload(
       command_line.GetOptionValueWithDefault("enable_story_shell_preload",
-                                             "true") == "true";
-  opts.use_memfs_for_ledger = command_line.HasOption("use_memfs_for_ledger");
-  opts.no_cloud_provider_for_ledger =
-      command_line.HasOption("no_cloud_provider_for_ledger");
-  opts.use_cloud_provider_from_environment =
-      command_line.HasOption("use_cloud_provider_from_environment");
+                                             "true") == "true");
+  config->set_use_memfs_for_ledger(
+      command_line.HasOption("use_memfs_for_ledger"));
+
+  if (command_line.HasOption("no_cloud_provider_for_ledger")) {
+    config->set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
+  } else if (command_line.HasOption("use_cloud_provider_from_environment")) {
+    config->set_cloud_provider(
+        fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT);
+  } else {
+    config->set_cloud_provider(
+        fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE);
+  }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
@@ -47,25 +55,22 @@ int main(int argc, const char** argv) {
       component::StartupContext::CreateFromStartupInfo();
 
   auto cobalt_cleanup = SetupCobalt(
-      opts.enable_statistics, std::move(loop.dispatcher()), context.get());
+      *(config->enable_cobalt()), std::move(loop.dispatcher()), context.get());
 
   auto startup_agents = fxl::SplitStringCopy(
       command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
       fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  config->set_startup_agents(std::move(startup_agents));
+
   auto session_agents = fxl::SplitStringCopy(
       command_line.GetOptionValueWithDefault("session_agents", ""), ",",
       fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-
-  for (const auto& startup_agent : startup_agents) {
-    opts.startup_agents.push_back(startup_agent);
-  }
-  for (const auto& session_agent : session_agents) {
-    opts.session_agents.push_back(session_agent);
-  }
+  config->set_session_agents(std::move(session_agents));
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       context->outgoing().deprecated_services(),
-      std::make_unique<modular::SessionmgrImpl>(context.get(), opts),
+      std::make_unique<modular::SessionmgrImpl>(context.get(),
+                                                std::move(config)),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();
         loop.Quit();

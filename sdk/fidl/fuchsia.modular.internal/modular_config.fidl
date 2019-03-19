@@ -1,0 +1,107 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular.internal;
+
+using fuchsia.io;
+
+/// Descriptions and defaults for these configurations are echoed in
+/// peridot/docs/modular/guide/config.md.
+table BasemgrConfig {
+    /// When set to false, Cobalt statistics are disabled.
+    /// Default: true
+    1: bool enable_cobalt;
+
+    /// When set to true, the Presenter service controls management of views.
+    /// Default: false
+    2: bool enable_presenter;
+
+    /// When set to true, wait for persistent data to initialize.
+    /// Default: true
+    3: bool use_minfs;
+
+    /// Tells basemgr whether it is running as a part of an integration test.
+    /// Default: false
+    4: bool test;
+
+    /// Create story shells through StoryShellFactory exposed by the session
+    /// shell instead of creating separate story shell components. When set,
+    /// `story_shell_url` and any story shell args are ignored.
+    /// Default: false
+    5: bool use_session_shell_for_story_shell_factory;
+
+    /// Launch configurations specific to base shell.
+    6: BaseShellConfig base_shell;
+
+    /// Launch configurations specific to session shell.
+    7: SessionShellConfig session_shell;
+};
+
+table BaseShellConfig {
+    /// The fuchsia package url for which base shell to use.
+    1: string:fuchsia.io.MAX_PATH url;
+
+    /// When set to true, the base shell is kept alive after a log in. This is
+    /// used for testing because current integration tests expect base shell
+    /// to always be running.
+    /// Default: false
+    2: bool keep_alive_after_login;
+};
+
+table SessionShellConfig {
+    /// The fuchsia package url for which session shell to use.
+    1: string:fuchsia.io.MAX_PATH url;
+
+    /// The display usage policy for this session shell.
+    2: string:200 display_usage;
+
+    /// The screen height in millimeters for the session shell's display.
+    3: float32 screen_height;
+
+    /// The screen width in millimeters for the session shell's display.
+    4: float32 screen_width;
+};
+
+table SessionmgrConfig {
+    1: CloudProvider cloud_provider;
+
+    /// When set to false, Cobalt statistics are disabled. This is used for
+    /// testing.
+    /// Default: true
+    2: bool enable_cobalt;
+
+    /// When set to false, StoryShell instances are not warmed up as a startup
+    /// latency optimization. This is used for testing.
+    /// Default: true
+    3: bool enable_story_shell_preload;
+
+    /// Tells the sessionmgr whether it should host+pass a memfs-backed
+    /// directory to the ledger for the user's repository, or to use
+    /// /data/LEDGER.
+    /// Default: false
+    4: bool use_memfs_for_ledger;
+
+    /// A list of fuchsia package urls that specify which agents to launch at
+    /// startup.
+    5: vector<string:fuchsia.io.MAX_PATH> startup_agents;
+
+    /// A list of fuchsia package urls that specify which agents to launch at
+    /// startup with PuppetMaster and FocusProvider services.
+    6: vector<string:fuchsia.io.MAX_PATH> session_agents;
+
+    /// The fuchsia package url for which story shell to use.
+    7: string:fuchsia.io.MAX_PATH story_shell_url;
+};
+
+enum CloudProvider {
+    /// Use a cloud provider configured by Ledger.
+    LET_LEDGER_DECIDE = 1;
+
+    /// Use a cloud provider available in the incoming namespace, rather than
+    /// initializing and instance within sessionmgr. This can be used by Voila to
+    /// inject a custom cloud provider.
+    FROM_ENVIRONMENT = 2;
+
+    NONE = 3;
+};
