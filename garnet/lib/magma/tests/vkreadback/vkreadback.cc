@@ -103,6 +103,9 @@ bool VkReadbackTest::InitVulkan()
         case VK_KHR_EXTERNAL_MEMORY_FUCHSIA:
             enabled_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
             break;
+        case VK_FUCHSIA_EXTERNAL_MEMORY:
+            enabled_extension_names.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
+            break;
         default:
             break;
     }
@@ -136,6 +139,19 @@ bool VkReadbackTest::InitVulkan()
                     vkGetInstanceProcAddr(instance, "vkGetMemoryFuchsiaHandlePropertiesKHR"));
             if (!vk_get_memory_fuchsia_handle_properties_khr_)
                 return DRETF(false, "Couldn't find vkGetMemoryFuchsiaHandlePropertiesKHR");
+            break;
+
+        case VK_FUCHSIA_EXTERNAL_MEMORY:
+            vkGetMemoryZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetMemoryZirconHandleFUCHSIA>(
+                vkGetInstanceProcAddr(instance, "vkGetMemoryZirconHandleFUCHSIA"));
+            if (!vkGetMemoryZirconHandleFUCHSIA_)
+                return DRETF(false, "Couldn't find vkGetMemoryZirconHandleFUCHSIA");
+
+            vkGetMemoryZirconHandlePropertiesFUCHSIA_ =
+                reinterpret_cast<PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA>(
+                    vkGetInstanceProcAddr(instance, "vkGetMemoryZirconHandlePropertiesFUCHSIA"));
+            if (!vkGetMemoryZirconHandlePropertiesFUCHSIA_)
+                return DRETF(false, "Couldn't find vkGetMemoryZirconHandlePropertiesFUCHSIA");
             break;
 
         default:
@@ -240,6 +256,49 @@ bool VkReadbackTest::InitImage()
         };
         result = vk_get_memory_fuchsia_handle_properties_khr_(
             vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, handle, &properties);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkGetMemoryFuchsiaHandlePropertiesKHR returned %d", result);
+
+        device_memory_handle_ = handle;
+        DLOG("got device_memory_handle_ 0x%x memoryTypeBits 0x%x", device_memory_handle_,
+             properties.memoryTypeBits);
+
+    } else if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && device_memory_handle_) {
+        size_t vmo_size;
+        zx_vmo_get_size(device_memory_handle_, &vmo_size);
+
+        VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
+            .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
+            .pNext = nullptr,
+            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+            .handle = device_memory_handle_};
+
+        VkMemoryAllocateInfo info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                                     .pNext = &handle_info,
+                                     .allocationSize = vmo_size,
+                                     .memoryTypeIndex = 0};
+
+        if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
+            VK_SUCCESS)
+            return DRETF(false, "vkAllocateMemory failed");
+
+    } else if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY) {
+        uint32_t handle;
+        VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
+            .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
+            .pNext = nullptr,
+            .memory = vk_device_memory_,
+            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+        if ((result = vkGetMemoryZirconHandleFUCHSIA_(vk_device_, &get_handle_info, &handle)) !=
+            VK_SUCCESS)
+            return DRETF(false, "vkGetMemoryFuchsiaHandleKHR failed");
+
+        VkMemoryZirconHandlePropertiesFUCHSIA properties{
+            .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
+            .pNext = nullptr,
+        };
+        result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
+            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, handle, &properties);
         if (result != VK_SUCCESS)
             return DRETF(false, "vkGetMemoryFuchsiaHandlePropertiesKHR returned %d", result);
 
