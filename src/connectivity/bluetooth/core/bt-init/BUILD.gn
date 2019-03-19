@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "bt_mgr"
+  name = "bt_init"
   edition = "2018"
 
   deps = [
@@ -41,7 +41,7 @@ package("bt-init") {
     ":bin",
   ]
 
-  binary = "rust_crates/bt_mgr"
+  binary = "rust_crates/bt_init"
 
   meta = [
     {
