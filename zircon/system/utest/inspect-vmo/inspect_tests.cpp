@@ -12,15 +12,6 @@ using inspect::vmo::Object;
 
 namespace {
 
-bool CreateClone() {
-    BEGIN_TEST;
-
-    auto inspector = fbl::make_unique<Inspector>();
-    EXPECT_TRUE(inspector->GetReadOnlyVmoClone());
-
-    END_TEST;
-}
-
 bool CreateDeleteActive() {
     BEGIN_TEST;
 
@@ -45,6 +36,5 @@ bool CreateDeleteActive() {
 } // namespace
 
 BEGIN_TEST_CASE(InspectTests)
-RUN_TEST(CreateClone)
 RUN_TEST(CreateDeleteActive)
 END_TEST_CASE(InspectTests)

@@ -30,7 +30,7 @@ public:
     Heap(fbl::unique_ptr<fzl::ResizeableVmoMapper> vmo, size_t max_size = kDefaultMaxSize);
     ~Heap();
 
-    zx::vmo ReadOnlyClone() const;
+    const zx::vmo& GetVmo() const;
 
     // Allocate a |BlockIndex| out of the heap that can contain at least |min_size| bytes.
     // Allocating a block larger that |kMaxOrderSize| bytes will fail.
@@ -87,4 +87,4 @@ bool Heap::IsFreeBlock(BlockIndex block, size_t expected_order) const {
 } // namespace vmo
 } // namespace inspect
 
-#endif  // LIB_INSPECT_VMO_HEAP_H_
+#endif // LIB_INSPECT_VMO_HEAP_H_

@@ -50,14 +50,14 @@ public:
                                                 .skip_consistency_check = false};
 
     // Create a new snapshot of the given VMO and default options.
-    static zx_status_t Create(zx::vmo vmo, Snapshot* out_snapshot);
+    static zx_status_t Create(const zx::vmo& vmo, Snapshot* out_snapshot);
 
     // Create a new snapshot of the given VMO and given options.
-    static zx_status_t Create(zx::vmo vmo, Options options, Snapshot* out_snapshot);
+    static zx_status_t Create(const zx::vmo& vmo, Options options, Snapshot* out_snapshot);
 
     // Create a new snapshot of the given VMO, given options, and the given read observer
     // for observing snapshot operations.
-    static zx_status_t Create(zx::vmo vmo, Options options, ReadObserver read_observer,
+    static zx_status_t Create(const zx::vmo& vmo, Options options, ReadObserver read_observer,
                               Snapshot* out_snapshot);
 
     Snapshot() = default;
@@ -79,7 +79,7 @@ public:
 
 private:
     // Read from the VMO into a buffer.
-    static zx_status_t Read(zx::vmo& vmo, size_t size, uint8_t* buffer);
+    static zx_status_t Read(const zx::vmo& vmo, size_t size, uint8_t* buffer);
 
     // Parse the header from a buffer and obtain the generation count.
     static zx_status_t ParseHeader(uint8_t* buffer, uint64_t* out_generation_count);
@@ -95,4 +95,4 @@ private:
 } // namespace vmo
 } // namespace inspect
 
-#endif  // LIB_INSPECT_VMO_SNAPSHOT_H_
+#endif // LIB_INSPECT_VMO_SNAPSHOT_H_

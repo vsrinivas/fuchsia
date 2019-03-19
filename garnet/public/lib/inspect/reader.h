@@ -6,8 +6,8 @@
 #define LIB_INSPECT_READER_H_
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/inspect-vmo/snapshot.h>
 #include <lib/fit/promise.h>
+#include <lib/inspect-vmo/snapshot.h>
 #include "lib/inspect/hierarchy.h"
 #include "lib/inspect/inspect.h"
 
@@ -83,7 +83,7 @@ fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth = -1);
 
 // Construct a new object hierarchy by synchronously reading objects out of
 // the given VMO.
-fit::result<ObjectHierarchy> ReadFromVmo(zx::vmo vmo);
+fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo);
 
 // Construct a new object hierarchy by synchronously reading objects out of the
 // given VMO Snapshot.

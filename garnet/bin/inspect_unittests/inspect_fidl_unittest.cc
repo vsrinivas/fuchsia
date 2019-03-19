@@ -17,7 +17,7 @@ using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
-TEST(Inspect, EmptyObject) {
+TEST(InspectFidl, EmptyObject) {
   Object obj;
 
   auto child = obj.CreateChild("child");
@@ -43,7 +43,7 @@ TEST(Inspect, EmptyObject) {
   EXPECT_EQ(0u, obj.children()->size());
 }
 
-TEST(Inspect, Object) {
+TEST(InspectFidl, Object) {
   Object obj("test");
 
   auto output = obj.object();
@@ -65,7 +65,7 @@ class ValueWrapper {
   inspect::IntMetric value_;
 };
 
-TEST(Inspect, Child) {
+TEST(InspectFidl, Child) {
   Object root("root");
   {
     // Create a child and check it exists.
@@ -83,7 +83,7 @@ TEST(Inspect, Child) {
   EXPECT_THAT(*root.children(), IsEmpty());
 }
 
-TEST(Inspect, ChildChaining) {
+TEST(InspectFidl, ChildChaining) {
   Object root("root");
   {
     ValueWrapper v(root.CreateChild("child"), 100);
@@ -96,7 +96,7 @@ TEST(Inspect, ChildChaining) {
   EXPECT_THAT(*root.children(), IsEmpty());
 }
 
-TEST(Inspect, ChildrenCallbacks) {
+TEST(InspectFidl, ChildrenCallbacks) {
   Object root("root");
   {
     inspect::ChildrenCallback callback =
@@ -117,7 +117,7 @@ void DefaultMetricTest() {
   default_metric.Set(1);
 }
 
-TEST(Inspect, Metrics) {
+TEST(InspectFidl, Metrics) {
   DefaultMetricTest<inspect::IntMetric>();
   DefaultMetricTest<inspect::UIntMetric>();
   DefaultMetricTest<inspect::DoubleMetric>();
@@ -171,7 +171,7 @@ TEST(Inspect, Metrics) {
   }
 }
 
-TEST(Inspect, MetricCallbacks) {
+TEST(InspectFidl, MetricCallbacks) {
   Object root("root");
   bool defer_called = false;
   auto defer = fit::defer([&defer_called] { defer_called = true; });
@@ -197,7 +197,7 @@ TEST(Inspect, MetricCallbacks) {
   EXPECT_TRUE(defer_called);
 }
 
-TEST(Inspect, Properties) {
+TEST(InspectFidl, Properties) {
   Object root("root");
   {
     auto property_string = root.CreateStringProperty("str", "test");
@@ -235,7 +235,7 @@ TEST(Inspect, Properties) {
   }
 }
 
-TEST(Inspect, PropertyCallbacks) {
+TEST(InspectFidl, PropertyCallbacks) {
   Object root("root");
   bool defer_called1 = false, defer_called2 = false;
   auto defer1 = fit::defer([&defer_called1] { defer_called1 = true; });

@@ -7,6 +7,7 @@
 
 #include <lib/component/cpp/exposed_object.h>
 #include <lib/fit/variant.h>
+#include <lib/inspect-vmo/inspect.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -54,8 +55,6 @@ void RemoveEntity<component::Property>(::component::Object* object,
 template <typename EntityType>
 class EntityWrapper final {
  public:
-  EntityWrapper() {}
-  explicit EntityWrapper(std::string name) : name_(std::move(name)) {}
   EntityWrapper(std::string name, std::shared_ptr<::component::Object> obj)
       : name_(std::move(name)), parent_obj_(std::move(obj)) {}
 
@@ -88,16 +87,21 @@ class EntityWrapper final {
   ::component::Object* ParentObject() { return parent_obj_.get(); }
 
  private:
+  explicit EntityWrapper(std::string name) : name_(std::move(name)) {}
+
   std::string name_;
   std::shared_ptr<::component::Object> parent_obj_;
 };
+
+// Structure containing internal data for a |Tree|.
+struct TreeState;
 
 }  // namespace internal
 
 // Template for metrics that are concretely stored in memory (as opposed to
 // LazyMetrics, which are dynamically created when needed). StaticMetrics
 // can be set, added to, and subtracted from.
-template <typename T>
+template <typename T, typename VmoType>
 class StaticMetric final {
  public:
   // Create a default numeric metric.
@@ -110,6 +114,8 @@ class StaticMetric final {
       auto& entity = entity_.template get<kEntityWrapperVariant>();
       entity.ParentObject()->SetMetric(entity.name(),
                                        internal::MakeMetric<T>(value));
+    } else if (entity_.index() == kVmoVariant) {
+      entity_.template get<kVmoVariant>().Set(value);
     }
   }
 
@@ -118,6 +124,8 @@ class StaticMetric final {
     if (entity_.index() == kEntityWrapperVariant) {
       auto& entity = entity_.template get<kEntityWrapperVariant>();
       entity.ParentObject()->AddMetric(entity.name(), value);
+    } else if (entity_.index() == kVmoVariant) {
+      entity_.template get<kVmoVariant>().Add(value);
     }
   }
 
@@ -126,6 +134,8 @@ class StaticMetric final {
     if (entity_.index() == kEntityWrapperVariant) {
       auto& entity = entity_.template get<kEntityWrapperVariant>();
       entity.ParentObject()->SubMetric(entity.name(), value);
+    } else if (entity_.index() == kVmoVariant) {
+      entity_.template get<kVmoVariant>().Subtract(value);
     }
   }
 
@@ -134,25 +144,32 @@ class StaticMetric final {
 
   // Index of the entity wrapper variant of the metric.
   static const int kEntityWrapperVariant = 1;
+  // Index of the VMO variant of the metric.
+  static const int kVmoVariant = 2;
 
-  // Internal constructor setting an actual value on an Object.
+  // Internal constructor wrapping an entity in memory.
   explicit StaticMetric(internal::EntityWrapper<component::Metric> entity) {
     entity_.template emplace<kEntityWrapperVariant>(std::move(entity));
   }
 
+  // Internal constructor wrapping a VMO type.
+  explicit StaticMetric(VmoType entity) {
+    entity_.template emplace<kVmoVariant>(std::move(entity));
+  }
+
   fit::internal::variant<fit::internal::monostate,
-                         internal::EntityWrapper<component::Metric>>
+                         internal::EntityWrapper<component::Metric>, VmoType>
       entity_;
 };
 
 // Metric wrapping a signed integer.
-using IntMetric = StaticMetric<int64_t>;
+using IntMetric = StaticMetric<int64_t, vmo::IntMetric>;
 
 // Metric wrapped an unsigned integer.
-using UIntMetric = StaticMetric<uint64_t>;
+using UIntMetric = StaticMetric<uint64_t, vmo::UintMetric>;
 
 // Metric wrapping a double floating point number.
-using DoubleMetric = StaticMetric<double>;
+using DoubleMetric = StaticMetric<double, vmo::DoubleMetric>;
 
 // Metric with value determined by evaluating a callback.
 class LazyMetric final {
@@ -169,7 +186,7 @@ class LazyMetric final {
   // Internal constructor setting an actual value on an Object.
   explicit LazyMetric(internal::EntityWrapper<component::Metric> entity);
 
-  internal::EntityWrapper<component::Metric> entity_;
+  fit::optional<internal::EntityWrapper<component::Metric>> entity_;
 };
 
 // The value of a metric, currently an alias for component::Metric.
@@ -192,12 +209,18 @@ class StringProperty final {
 
   // Index of the entity wrapper variant of the property.
   static const int kEntityWrapperVariant = 1;
+  // Index of the VMO variant of the property.
+  static const int kVmoVariant = 2;
 
-  // Internal constructor setting an actual value on an Object.
+  // Internal constructor wrapping an entity in memory.
   explicit StringProperty(internal::EntityWrapper<component::Property> entity);
 
+  // Internal constructor wrapping a VMO entity.
+  explicit StringProperty(vmo::Property entity);
+
   fit::internal::variant<fit::internal::monostate,
-                         internal::EntityWrapper<component::Property>>
+                         internal::EntityWrapper<component::Property>,
+                         vmo::Property>
       entity_;
 };
 
@@ -216,13 +239,19 @@ class ByteVectorProperty final {
 
   // Index of the entity wrapper variant of the property.
   static const int kEntityWrapperVariant = 1;
+  // Index of the VMO variant of the property.
+  static const int kVmoVariant = 2;
 
-  // Internal constructor setting an actual value on an Object.
+  // Internal constructor wrapping an entity in memory.
   explicit ByteVectorProperty(
       internal::EntityWrapper<component::Property> entity);
 
+  // Internal constructor wrapping a VMO entity.
+  explicit ByteVectorProperty(vmo::Property entity);
+
   fit::internal::variant<fit::internal::monostate,
-                         internal::EntityWrapper<component::Property>>
+                         internal::EntityWrapper<component::Property>,
+                         vmo::Property>
       entity_;
 };
 
@@ -246,7 +275,7 @@ class LazyStringProperty final {
   explicit LazyStringProperty(
       internal::EntityWrapper<component::Property> entity);
 
-  internal::EntityWrapper<component::Property> entity_;
+  fit::optional<internal::EntityWrapper<component::Property>> entity_;
 };
 
 // Callback type for vector values.
@@ -269,7 +298,7 @@ class LazyByteVectorProperty final {
   explicit LazyByteVectorProperty(
       internal::EntityWrapper<component::Property> entity);
 
-  internal::EntityWrapper<component::Property> entity_;
+  fit::optional<internal::EntityWrapper<component::Property>> entity_;
 };
 
 // Value of vector types, currently an alias for
@@ -310,27 +339,35 @@ class Object final {
   // Default construct an empty Object that does nothing until assigned to.
   Object() = default;
 
-  // Construct an Object with the given name.
+  // Construct an object with an explicit name.
+  // DEPRECATED: Use Inspector and CreateTree instead of constructing objects
+  // directly.
   explicit Object(std::string name);
 
   // Construct an Object wrapping the given ObjectDir.
   explicit Object(component::ObjectDir object_dir);
 
+  // Construct an Object wrapping the given VMO Object.
+  explicit Object(vmo::Object object);
+
   ~Object() = default;
 
   // Output the contents of this object as a FIDL struct.
+  // For Objects stored in a VMO, this method returns a default value.
   fuchsia::inspect::Object object() const;
 
   // Get an ObjectDir wrapping this Object's state.
+  // For Objects stored in a VMO, this method returns a default value.
   component::ObjectDir object_dir() const;
 
   // Output the list of this object's children as a FIDL-compatible vector.
+  // For Objects stored in a VMO, this method returns a default value.
   ::component::Object::StringOutputVector children() const;
 
   // Allow moving, disallow copying.
-  Object(Object& other) = delete;
-  Object& operator=(Object& other) = delete;
+  Object(const Object& other) = delete;
   Object(Object&& other) = default;
+  Object& operator=(const Object& other) = delete;
   Object& operator=(Object&& other) = default;
 
   // Create a new |Object| with the given name that is a child of this object.
@@ -355,38 +392,94 @@ class Object final {
 
   // Create a new |ByteVectorProperty| with the given name that is a child of
   // this object.
+  // For Objects stored in a VMO, this method has no effect.
   [[nodiscard]] ByteVectorProperty CreateByteVectorProperty(
       std::string name, component::Property::ByteVector value);
 
   // Create a new |StringCallbackProperty| with the given name that is a child
   // of this object.
+  // For Objects stored in a VMO, this method has no effect.
   [[nodiscard]] LazyStringProperty CreateLazyStringProperty(
       std::string name, component::Property::StringValueCallback callback);
 
   // Create a new |VectorCallbackProperty| with the given name that is a child
   // of this object.
+  // For Objects stored in a VMO, this method has no effect.
   [[nodiscard]] LazyByteVectorProperty CreateLazyByteVectorProperty(
       std::string name, component::Property::VectorValueCallback callback);
 
   // Create a new |LazyMetric| with the given name that is a child of this
   // object.
+  // For Objects stored in a VMO, this method has no effect.
   [[nodiscard]] LazyMetric CreateLazyMetric(std::string name,
                                             component::Metric::ValueCallback);
 
   // Create a new |ChildrenCallback| that dynamically adds children to the
   // object at runtime.
+  // For Objects stored in a VMO, this method has no effect.
   [[nodiscard]] ChildrenCallback CreateChildrenCallback(
       ChildrenCallbackFunction callback);
 
  private:
   static const int kComponentVariant = 1;
+  static const int kVmoVariant = 2;
 
-  // Internal constructor for creating an Object facade in front of an
-  // ExposedObject.
+  // Construct an Object facade in front of an ExposedObject.
   explicit Object(component::ExposedObject object);
 
-  fit::internal::variant<fit::internal::monostate, component::ExposedObject>
+  fit::internal::variant<fit::internal::monostate, component::ExposedObject,
+                         vmo::Object>
       object_;
+};
+
+// Settings to configure a specific Tree.
+struct TreeSettings {
+  // The initial size of the created VMO.
+  size_t initial_size;
+  // The maximum size of the created VMO.
+  size_t maximum_size;
+};
+
+// A |Tree| of inspect objects available in a VMO.
+class Tree final {
+ public:
+  Tree() = default;
+  ~Tree();
+
+  // Allow moving, disallow copying.
+  Tree(Tree&& other) = default;
+  Tree(const Tree& other) = delete;
+  Tree& operator=(Tree&& other) = default;
+  Tree& operator=(const Tree& other) = delete;
+
+  // Get the root object for this Tree.
+  Object& GetRoot() const;
+
+  // Get a reference to the VMO backing this tree.
+  const zx::vmo& GetVmo() const;
+
+ private:
+  friend class Inspector;
+
+  // Construct a new Tree with the given state;
+  Tree(std::unique_ptr<internal::TreeState>);
+
+  // The state for the tree, shared between copies.
+  std::unique_ptr<internal::TreeState> state_;
+};
+
+// The entry point into the Inspection API.
+//
+// An Inspector supports creating trees of objects to expose over VMOs.
+class Inspector {
+ public:
+  Inspector() = default;
+
+  // Construct a new tree with the given name and default settings.
+  Tree CreateTree(std::string name);
+
+  // Construct a new tree with the given name and settings.
+  Tree CreateTree(std::string name, TreeSettings settings);
 };
 
 // Generate a unique name with the given prefix.

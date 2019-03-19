@@ -30,12 +30,8 @@ Heap::~Heap() {
                         num_allocated_blocks_);
 }
 
-zx::vmo Heap::ReadOnlyClone() const {
-    zx::vmo ret;
-    // BASIC rights include the ability to duplicate, transfer, and wait
-    // on the handle
-    vmo_->vmo().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, &ret);
-    return ret;
+const zx::vmo& Heap::GetVmo() const {
+    return vmo_->vmo();
 }
 
 zx_status_t Heap::Allocate(size_t min_size, BlockIndex* out_block) {

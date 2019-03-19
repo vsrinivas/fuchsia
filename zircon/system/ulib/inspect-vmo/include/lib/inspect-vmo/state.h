@@ -33,9 +33,9 @@ public:
     State& operator=(State&) = delete;
     State& operator=(State&&) = delete;
 
-    // Obtain a read-only clone of the VMO.
-    // This may be passed to reader processes.
-    zx::vmo GetReadOnlyVmoClone() const;
+    // Obtain a reference to the wrapped VMO.
+    // This may be duplicated read-only to pass to a reader process.
+    const zx::vmo& GetVmo() const;
 
     // Create a new |IntMetric| in the Inspect VMO. The returned object releases
     // the metric when destroyed.

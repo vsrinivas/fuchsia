@@ -76,9 +76,9 @@ State::~State() {
     heap_->Free(header_);
 }
 
-zx::vmo State::GetReadOnlyVmoClone() const {
+const zx::vmo& State::GetVmo() const {
     fbl::AutoLock lock(&mutex_);
-    return heap_->ReadOnlyClone();
+    return heap_->GetVmo();
 }
 
 IntMetric State::CreateIntMetric(fbl::StringPiece name, BlockIndex parent, int64_t value) {

@@ -27,10 +27,8 @@ bool ValidRead() {
     memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 0;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
-    zx_status_t status = Snapshot::Create(std::move(dup), &snapshot);
+    zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
 
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(4096, snapshot.size());
@@ -55,10 +53,8 @@ bool InvalidWritePending() {
     memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 1;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
-    zx_status_t status = Snapshot::Create(std::move(dup), &snapshot);
+    zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
 
     EXPECT_EQ(ZX_ERR_INTERNAL, status);
     EXPECT_FALSE(snapshot);
@@ -78,11 +74,9 @@ bool ValidPendingSkipCheck() {
     memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 1;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
     zx_status_t status = Snapshot::Create(
-        std::move(dup), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
+        vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(4096, snapshot.size());
 
@@ -101,11 +95,9 @@ bool InvalidGenerationChange() {
     memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 0;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
     zx_status_t status = Snapshot::Create(
-        std::move(dup), Snapshot::kDefaultOptions,
+        vmo.vmo(), Snapshot::kDefaultOptions,
         [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
     EXPECT_EQ(ZX_ERR_INTERNAL, status);
@@ -125,11 +117,9 @@ bool ValidGenerationChangeSkipCheck() {
     memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 0;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
     zx_status_t status = Snapshot::Create(
-        std::move(dup), {.read_attempts = 100, .skip_consistency_check = true},
+        vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true},
         [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
     EXPECT_EQ(ZX_OK, status);
@@ -149,10 +139,8 @@ bool InvalidBadMagicNumber() {
                      HeaderBlockFields::Version::Make(0);
     header->payload.u64 = 0;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
-    zx_status_t status = Snapshot::Create(std::move(dup), &snapshot);
+    zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
 
     EXPECT_EQ(ZX_ERR_INTERNAL, status);
 
@@ -170,11 +158,9 @@ bool InvalidBadMagicNumberSkipCheck() {
                      HeaderBlockFields::Version::Make(0);
     header->payload.u64 = 0;
 
-    zx::vmo dup;
-    ASSERT_EQ(ZX_OK, vmo.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     Snapshot snapshot;
     zx_status_t status = Snapshot::Create(
-        std::move(dup), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
+        vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
 
     EXPECT_EQ(ZX_ERR_INTERNAL, status);
 

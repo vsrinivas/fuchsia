@@ -97,13 +97,13 @@ Block MakeHeader(uint64_t generation) {
     return ret;
 }
 
-Snapshot SnapshotAndScan(zx::vmo vmo,
+Snapshot SnapshotAndScan(const zx::vmo& vmo,
                          fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>>* blocks,
                          size_t* free_blocks, size_t* allocated_blocks) {
     *free_blocks = *allocated_blocks = 0;
 
     Snapshot snapshot;
-    Snapshot::Create(std::move(vmo), &snapshot);
+    Snapshot::Create(vmo, &snapshot);
     if (snapshot) {
         inspect::vmo::internal::ScanBlocks(
             snapshot.data(), snapshot.size(), [&](BlockIndex index, const Block* block) {
@@ -137,7 +137,7 @@ bool CreateIntMetric() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header and 2 for each metric.
@@ -192,7 +192,7 @@ bool CreateUintMetric() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header and 2 for each metric.
@@ -247,7 +247,7 @@ bool CreateDoubleMetric() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header and 2 for each metric.
@@ -297,7 +297,7 @@ bool CreateSmallProperties() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1), 2 single extent properties (6)
@@ -359,7 +359,7 @@ bool CreateLargeSingleExtentProperties() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1), 2 single extent properties (6)
@@ -426,7 +426,7 @@ bool CreateMultiExtentProperty() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1), 1 property (2) with 3 extents (3)
@@ -490,7 +490,7 @@ bool SetSmallProperty() {
         fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
         size_t free_blocks, allocated_blocks;
         auto snapshot =
-            SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+            SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
         ASSERT_TRUE(snapshot);
 
         // Header (1), 1 single extent property (3)
@@ -541,7 +541,7 @@ bool SetLargeProperty() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1), 1 single extent property (3)
@@ -586,7 +586,7 @@ bool SetPropertyOutOfMemory() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1) only, property failed to fit.
@@ -615,7 +615,7 @@ bool CreateObjectHierarchy() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1), root (2), requests (2), 2 metrics (4), small property (3)
@@ -710,7 +710,7 @@ bool TombstoneTest() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // Header (1), root tombstone (2), requests (2)
@@ -772,7 +772,7 @@ bool TombstoneCleanup() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     // 2 each for:
@@ -899,7 +899,7 @@ bool MultithreadingTest() {
     fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
     size_t free_blocks, allocated_blocks;
     auto snapshot =
-        SnapshotAndScan(state->GetReadOnlyVmoClone(), &blocks, &free_blocks, &allocated_blocks);
+        SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
     ASSERT_TRUE(snapshot);
 
     EXPECT_TRUE(CompareBlock(blocks.find(0)->block,

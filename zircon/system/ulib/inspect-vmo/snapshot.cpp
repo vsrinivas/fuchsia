@@ -13,15 +13,15 @@ using internal::Block;
 Snapshot::Snapshot(fbl::Array<uint8_t> buffer)
     : buffer_(std::move(buffer)) {}
 
-zx_status_t Snapshot::Create(zx::vmo vmo, Snapshot* out_snapshot) {
+zx_status_t Snapshot::Create(const zx::vmo& vmo, Snapshot* out_snapshot) {
     return Snapshot::Create(std::move(vmo), kDefaultOptions, out_snapshot);
 }
 
-zx_status_t Snapshot::Create(zx::vmo vmo, Options options, Snapshot* out_snapshot) {
+zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, Snapshot* out_snapshot) {
     return Snapshot::Create(std::move(vmo), std::move(options), nullptr, out_snapshot);
 }
 
-zx_status_t Snapshot::Create(zx::vmo vmo, Options options, ReadObserver read_observer,
+zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver read_observer,
                              Snapshot* out_snapshot) {
     size_t tries_left = options.read_attempts;
 
@@ -92,7 +92,7 @@ zx_status_t Snapshot::Create(zx::vmo vmo, Options options, ReadObserver read_obs
     return ZX_ERR_INTERNAL;
 }
 
-zx_status_t Snapshot::Read(zx::vmo& vmo, size_t size, uint8_t* buffer) {
+zx_status_t Snapshot::Read(const zx::vmo& vmo, size_t size, uint8_t* buffer) {
     memset(buffer, 0, size);
     return vmo.read(buffer, 0, size);
 }

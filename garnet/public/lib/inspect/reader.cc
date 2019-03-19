@@ -410,7 +410,7 @@ fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot) {
   return reader.GetRootObject();
 }
 
-fit::result<ObjectHierarchy> ReadFromVmo(zx::vmo vmo) {
+fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo) {
   inspect::vmo::Snapshot snapshot;
   if (inspect::vmo::Snapshot::Create(std::move(vmo), &snapshot) != ZX_OK) {
     return fit::error();

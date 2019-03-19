@@ -45,13 +45,12 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
   dump[4000] = '\0';
 
   inspect::vmo::Snapshot snapshot;
-  ASSERT_EQ(ZX_OK, inspect::vmo::Snapshot::Create(
-                       inspector->GetReadOnlyVmoClone(), &snapshot));
+  ASSERT_EQ(ZX_OK,
+            inspect::vmo::Snapshot::Create(inspector->GetVmo(), &snapshot));
 
   std::vector<fit::result<inspect::ObjectHierarchy>> hierarchies;
   hierarchies.emplace_back(inspect::ReadFromSnapshot(std::move(snapshot)));
-  hierarchies.emplace_back(
-      inspect::ReadFromVmo(inspector->GetReadOnlyVmoClone()));
+  hierarchies.emplace_back(inspect::ReadFromVmo(inspector->GetVmo()));
   for (auto& root : hierarchies) {
     ASSERT_TRUE(root.is_ok());
     EXPECT_THAT(

@@ -28,9 +28,9 @@ public:
     Inspector& operator=(const Inspector&) = delete;
     Inspector& operator=(Inspector&&) = default;
 
-    // Return a read-only clone of the VMO stored by this inspector. This
-    // may be passed to other processes for inspection.
-    zx::vmo GetReadOnlyVmoClone() const { return state_->GetReadOnlyVmoClone(); }
+    // Return a reference to the contained VMO. This VMO may be duplicated
+    // and passed to reader processes for inspection.
+    const zx::vmo& GetVmo() const { return state_->GetVmo(); }
 
     // Creates a new object stored at the root of the given VMO.
     // By convention, the object returned by the first call of this method is the root of the tree.
