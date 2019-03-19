@@ -5,7 +5,8 @@
     "sandbox": {
         "services": [
             "fuchsia.pkg.PackageCache",
-            "fuchsia.pkg.PackageResolver"
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.sys.Launcher"
         ]
     }
 }
