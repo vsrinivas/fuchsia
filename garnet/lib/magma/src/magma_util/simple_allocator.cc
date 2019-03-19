@@ -9,14 +9,7 @@
 #include "simple_allocator.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include <limits.h> // PAGE_SIZE
 #include <memory>
-
-#if PAGE_SIZE == 4096
-#define PAGE_SIZE_POW2 12
-#else
-#error Must define PAGE_SIZE_POW2
-#endif
 
 namespace magma {
 
@@ -80,14 +73,15 @@ bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
     DLOG("Alloc size 0x%zx align_pow2 0x%x", size, align_pow2);
     DASSERT(addr_out);
 
-    size = magma::round_up(size, PAGE_SIZE);
+    size = magma::round_up(size, magma::page_size());
     if (size == 0)
         return DRETF(false, "can't allocate size zero");
 
     DASSERT(magma::is_page_aligned(size));
 
-    if (align_pow2 < PAGE_SIZE_POW2)
-        align_pow2 = PAGE_SIZE_POW2;
+    const auto page_shift = magma::page_shift();
+    if (align_pow2 < page_shift)
+        align_pow2 = page_shift;
 
     uint64_t align = 1UL << align_pow2;
     uint64_t addr;

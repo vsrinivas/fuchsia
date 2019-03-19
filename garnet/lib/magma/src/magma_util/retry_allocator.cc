@@ -4,8 +4,6 @@
 
 #include "retry_allocator.h"
 
-#include <limits.h> // PAGE_SIZE
-
 #include <iterator>
 #include <memory>
 
@@ -21,7 +19,7 @@ std::unique_ptr<RetryAllocator> RetryAllocator::Create(uint64_t base, uint64_t s
 
 bool RetryAllocator::Free(uint64_t start, uint64_t size)
 {
-    size = magma::round_up(size, PAGE_SIZE);
+    size = magma::round_up(size, magma::page_size());
     auto current_region = free_regions_.insert(std::make_pair(start, size)).first;
 
     // Attempt to combine with previous region.
@@ -51,10 +49,10 @@ bool RetryAllocator::Alloc(size_t size, uint8_t align_pow2, AllocationFunction m
 {
     if (size == 0)
         return DRETF(false, "Can't allocate size 0");
-    size = magma::round_up(size, PAGE_SIZE);
+    size = magma::round_up(size, magma::page_size());
     uint64_t alignment = 1 << align_pow2;
-    if (alignment < PAGE_SIZE)
-        alignment = PAGE_SIZE;
+    if (alignment < magma::page_size())
+        alignment = magma::page_size();
     uint64_t address = magma::round_up(base_, alignment);
     while (true) {
         if (address - base_ + size > size_)
@@ -87,7 +85,7 @@ bool RetryAllocator::Alloc(size_t size, uint8_t align_pow2, AllocationFunction m
     --it;
     uint64_t first_range_start = it->first;
     uint64_t first_range_length = address - first_range_start;
-    uint64_t second_range_start = magma::round_up(address + size, PAGE_SIZE);
+    uint64_t second_range_start = magma::round_up(address + size, magma::page_size());
     uint64_t second_range_length = it->first + it->second - second_range_start;
     if (first_range_length)
         it->second = first_range_length;

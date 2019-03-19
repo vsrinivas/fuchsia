@@ -9,6 +9,7 @@
 #include <limits.h> // PAGE_SIZE
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
 
 // Files #including macros.h may assume that it #includes inttypes.h.
 // So, for convenience, they don't need to follow "#include-what-you-use" for that header.
@@ -135,7 +136,27 @@ __attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, con
     void operator=(const TypeName&) = delete
 #endif
 
-static inline bool is_page_aligned(uint64_t val) { return (val & (PAGE_SIZE - 1)) == 0; }
+static inline uint64_t page_size()
+{
+#ifdef PAGE_SIZE
+  return PAGE_SIZE;
+#else
+    long page_size = sysconf(_SC_PAGESIZE);
+    DASSERT(page_size > 0);
+    return page_size;
+#endif
+}
+
+static inline uint32_t page_shift()
+{
+#if PAGE_SIZE == 4096
+    return 12;
+#else
+    return __builtin_ctz(::magma::page_size());
+#endif
+}
+
+static inline bool is_page_aligned(uint64_t val) { return (val & (::magma::page_size() - 1)) == 0; }
 
 static inline uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(n >> 32); }
 
