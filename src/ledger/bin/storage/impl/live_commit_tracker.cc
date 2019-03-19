@@ -40,11 +40,13 @@ void LiveCommitTracker::RemoveHeads(const std::vector<CommitId>& commit_ids) {
   }
 }
 
-std::vector<CommitId> LiveCommitTracker::GetHeads() {
-  auto result = std::vector<CommitId>();
+std::vector<std::unique_ptr<const Commit>> LiveCommitTracker::GetHeads() {
+  auto result = std::vector<std::unique_ptr<const Commit>>();
   result.reserve(heads_.size());
   std::transform(heads_.begin(), heads_.end(), std::back_inserter(result),
-                 [](const auto& p) -> CommitId { return p->GetId(); });
+                 [](const auto& p) -> std::unique_ptr<const Commit> {
+                   return p->Clone();
+                 });
   return result;
 }
 

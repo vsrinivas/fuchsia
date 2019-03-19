@@ -100,8 +100,8 @@ void PageUpload::VerifyUnsyncedCommits(
     return;
   }
 
-  std::vector<storage::CommitId> heads;
-  storage::Status status = storage_->GetHeadCommitIds(&heads);
+  std::vector<std::unique_ptr<const storage::Commit>> heads;
+  storage::Status status = storage_->GetHeadCommits(&heads);
   if (status != storage::Status::OK) {
     HandleError("Failed to retrieve the current heads");
     return;

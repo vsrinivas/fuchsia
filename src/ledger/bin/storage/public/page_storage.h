@@ -49,10 +49,11 @@ class PageStorage : public PageSyncClient {
   // Returns the id of this page.
   virtual PageId GetId() = 0;
 
-  // Finds the ids of all head commits. It is guaranteed that valid pages have
-  // at least one head commit, even if they are empty. The returned list is
-  // sorted according to |Commit::TimestampOrdered|.
-  virtual Status GetHeadCommitIds(std::vector<CommitId>* head_commit_ids) = 0;
+  // Finds all head commits. It is guaranteed that valid pages have at least one
+  // head commit, even if they are empty. The returned list is sorted according
+  // to |Commit::TimestampOrdered|.
+  virtual Status GetHeadCommits(
+      std::vector<std::unique_ptr<const Commit>>* head_commits) = 0;
   // Finds the ids of all merge commits that have as parents the commits with
   // ids |parent1_id| and |parent2_id| and calls the given |callback| with the
   // result.

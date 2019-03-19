@@ -341,12 +341,12 @@ void PageCommunicatorImpl::OnNewCommits(
     commits_to_upload_.emplace_back(commit->Clone());
   }
   // We need to check if we need to merge first.
-  std::vector<storage::CommitId> commit_ids;
-  storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
+  std::vector<std::unique_ptr<const storage::Commit>> head_commits;
+  storage::Status status = storage_->GetHeadCommits(&head_commits);
   if (status != storage::Status::OK) {
     return;
   }
-  if (commit_ids.size() != 1) {
+  if (head_commits.size() != 1) {
     // A merge needs to happen, let's wait until we
     // have one.
     return;

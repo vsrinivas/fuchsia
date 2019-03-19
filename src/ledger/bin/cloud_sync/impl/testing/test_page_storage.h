@@ -35,8 +35,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
 
-  storage::Status GetHeadCommitIds(
-      std::vector<storage::CommitId>* head_commit_ids) override;
+  storage::Status GetHeadCommits(
+      std::vector<std::unique_ptr<const storage::Commit>>* head_commits)
+      override;
 
   void GetCommit(storage::CommitIdView commit_id,
                  fit::function<void(storage::Status,

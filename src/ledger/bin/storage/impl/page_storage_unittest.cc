@@ -318,17 +318,17 @@ class PageStorageTest : public ledger::TestWithEnvironment {
  protected:
   PageStorage* GetStorage() { return storage_.get(); }
 
-  std::vector<CommitId> GetHeads() {
-    std::vector<CommitId> ids;
-    Status status = storage_->GetHeadCommitIds(&ids);
+  std::vector<std::unique_ptr<const Commit>> GetHeads() {
+    std::vector<std::unique_ptr<const Commit>> heads;
+    Status status = storage_->GetHeadCommits(&heads);
     EXPECT_EQ(Status::OK, status);
-    return ids;
+    return heads;
   }
 
   std::unique_ptr<const Commit> GetFirstHead() {
-    std::vector<CommitId> ids = GetHeads();
-    EXPECT_FALSE(ids.empty());
-    return GetCommit(ids[0]);
+    std::vector<std::unique_ptr<const Commit>> heads = GetHeads();
+    EXPECT_FALSE(heads.empty());
+    return std::move(heads[0]);
   }
 
   std::unique_ptr<const Commit> GetCommit(const CommitId& id) {
@@ -957,7 +957,7 @@ TEST_F(PageStorageTest, SyncCommits) {
 
 TEST_F(PageStorageTest, HeadCommits) {
   // Every page should have one initial head commit.
-  std::vector<CommitId> heads = GetHeads();
+  std::vector<std::unique_ptr<const Commit>> heads = GetHeads();
   EXPECT_EQ(1u, heads.size());
 
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -980,7 +980,7 @@ TEST_F(PageStorageTest, HeadCommits) {
 
   heads = GetHeads();
   ASSERT_EQ(1u, heads.size());
-  EXPECT_EQ(id, heads[0]);
+  EXPECT_EQ(id, heads[0]->GetId());
 }
 
 TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
@@ -1027,12 +1027,12 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
   }
 
   // Check that GetHeadCommitIds returns sorted commits.
-  std::vector<CommitId> heads;
-  Status status = storage_->GetHeadCommitIds(&heads);
+  std::vector<std::unique_ptr<const Commit>> heads;
+  Status status = storage_->GetHeadCommits(&heads);
   EXPECT_EQ(Status::OK, status);
   std::sort(sorted_commits.begin(), sorted_commits.end());
   for (size_t i = 0; i < sorted_commits.size(); ++i) {
-    EXPECT_EQ(sorted_commits[i].second, heads[i]);
+    EXPECT_EQ(sorted_commits[i].second, heads[i]->GetId());
   }
 }
 
@@ -2118,7 +2118,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
 }
 
 TEST_F(PageStorageTest, NoOpCommit) {
-  std::vector<CommitId> heads = GetHeads();
+  std::vector<std::unique_ptr<const Commit>> heads = GetHeads();
   ASSERT_FALSE(heads.empty());
 
   std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
@@ -2141,7 +2141,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
   ASSERT_EQ(Status::OK, status);
   ASSERT_TRUE(commit);
   // Expect that the commit id is the same as the original one.
-  EXPECT_EQ(heads[0], commit->GetId());
+  EXPECT_EQ(heads[0]->GetId(), commit->GetId());
 }
 
 // Check that receiving a remote commit and commiting locally at the same time

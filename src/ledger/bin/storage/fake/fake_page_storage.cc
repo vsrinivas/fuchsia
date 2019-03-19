@@ -76,21 +76,22 @@ FakePageStorage::~FakePageStorage() {}
 
 PageId FakePageStorage::GetId() { return page_id_; }
 
-Status FakePageStorage::GetHeadCommitIds(
-    std::vector<CommitId>* head_commit_ids) {
+Status FakePageStorage::GetHeadCommits(
+    std::vector<std::unique_ptr<const Commit>>* head_commits) {
   std::vector<std::pair<CommitId, zx::time_utc>> heads(heads_.begin(),
                                                        heads_.end());
   std::sort(heads.begin(), heads.end(), [](const auto& p1, const auto& p2) {
     return std::tie(p1.second, p1.first) < std::tie(p2.second, p2.first);
   });
-  std::vector<CommitId> commit_ids;
-  commit_ids.reserve(heads.size());
-  std::transform(heads.begin(), heads.end(), std::back_inserter(commit_ids),
-                 [](auto p) { return p.first; });
-  if (commit_ids.empty()) {
-    commit_ids.emplace_back(storage::kFirstPageCommitId.ToString());
+  std::vector<std::unique_ptr<const Commit>> commits;
+  commits.reserve(heads.size());
+  for (const auto& [commit_id, _] : heads) {
+    commits.push_back(std::make_unique<FakeCommit>(journals_[commit_id].get()));
   }
-  head_commit_ids->swap(commit_ids);
+  if (commits.empty()) {
+    commits.push_back(std::make_unique<const FakeRootCommit>());
+  }
+  head_commits->swap(commits);
   return Status::OK;
 }
 

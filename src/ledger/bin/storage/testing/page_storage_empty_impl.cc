@@ -18,8 +18,8 @@ void PageStorageEmptyImpl::SetSyncDelegate(PageSyncDelegate* /*page_sync*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-Status PageStorageEmptyImpl::GetHeadCommitIds(
-    std::vector<CommitId>* head_commit_ids) {
+Status PageStorageEmptyImpl::GetHeadCommits(
+    std::vector<std::unique_ptr<const Commit>>* head_commit) {
   FXL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }

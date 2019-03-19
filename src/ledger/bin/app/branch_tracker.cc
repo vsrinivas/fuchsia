@@ -277,36 +277,19 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
 
 BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
 
-void BranchTracker::Init(fit::function<void(storage::Status)> on_done) {
-  std::vector<storage::CommitId> commit_ids;
-  storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
+storage::Status BranchTracker::Init() {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  storage::Status status = storage_->GetHeadCommits(&commits);
   if (status != storage::Status::OK) {
-    on_done(status);
-    return;
+    return status;
   }
 
-  FXL_DCHECK(!commit_ids.empty());
-  // current_commit_ will be updated to have a correct value after the first
-  // Commit received in OnNewCommits or StopTransaction.
+  FXL_DCHECK(!commits.empty());
   FXL_DCHECK(!current_commit_);
-  current_commit_id_ = std::move(commit_ids[0]);
-  storage_->GetCommit(
-      current_commit_id_,
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                           [this, on_done = std::move(on_done)](
-                               storage::Status status,
-                               std::unique_ptr<const storage::Commit> commit) {
-                             if (status != storage::Status::OK) {
-                               on_done(status);
-                               return;
-                             }
 
-                             current_commit_ = std::move(commit);
-
-                             storage_->AddCommitWatcher(this);
-
-                             on_done(storage::Status::OK);
-                           }));
+  current_commit_ = std::move(commits[0]);
+  storage_->AddCommitWatcher(this);
+  return storage::Status::OK;
 }
 
 void BranchTracker::set_on_empty(fit::closure on_empty_callback) {
@@ -314,7 +297,6 @@ void BranchTracker::set_on_empty(fit::closure on_empty_callback) {
 }
 
 std::unique_ptr<const storage::Commit> BranchTracker::GetBranchHead() {
-  FXL_DCHECK(current_commit_->GetId() == current_commit_id_);
   return current_commit_->Clone();
 }
 
@@ -322,21 +304,21 @@ void BranchTracker::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& commits,
     storage::ChangeSource /*source*/) {
   bool changed = false;
-  const std::unique_ptr<const storage::Commit>* new_current_commit = nullptr;
+  const std::unique_ptr<const storage::Commit>* new_current_commit =
+      &current_commit_;
   for (const auto& commit : commits) {
-    if (commit->GetId() == current_commit_id_) {
+    if (commit->GetId() == (*new_current_commit)->GetId()) {
       continue;
     }
     // This assumes commits are received in (partial) order. If the commit
-    // doesn't have current_commit_id_ as a parent it is not part of this branch
+    // doesn't have current_commit_ as a parent it is not part of this branch
     // and should be ignored.
     std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
-    if (std::find(parent_ids.begin(), parent_ids.end(), current_commit_id_) ==
-        parent_ids.end()) {
+    if (std::find(parent_ids.begin(), parent_ids.end(),
+                  (*new_current_commit)->GetId()) == parent_ids.end()) {
       continue;
     }
     changed = true;
-    current_commit_id_ = commit->GetId();
     new_current_commit = &commit;
   }
   if (changed) {
@@ -371,7 +353,6 @@ void BranchTracker::StopTransaction(
   transaction_in_progress_ = false;
 
   if (commit) {
-    current_commit_id_ = commit->GetId();
     current_commit_ = std::move(commit);
   }
 

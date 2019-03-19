@@ -32,7 +32,7 @@ class LiveCommitTracker {
   void RemoveHeads(const std::vector<CommitId>& commit_id);
 
   // Returns the current heads of a page, ordered by their associated time.
-  std::vector<CommitId> GetHeads();
+  std::vector<std::unique_ptr<const Commit>> GetHeads();
 
  private:
   class CommitComparator {

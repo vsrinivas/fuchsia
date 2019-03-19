@@ -133,10 +133,10 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
   page_sync_ = page_sync;
 }
 
-Status PageStorageImpl::GetHeadCommitIds(
-    std::vector<CommitId>* head_commit_ids) {
-  FXL_DCHECK(head_commit_ids);
-  *head_commit_ids = commit_tracker_.GetHeads();
+Status PageStorageImpl::GetHeadCommits(
+    std::vector<std::unique_ptr<const Commit>>* head_commits) {
+  FXL_DCHECK(head_commits);
+  *head_commits = commit_tracker_.GetHeads();
   return Status::OK;
 }
 

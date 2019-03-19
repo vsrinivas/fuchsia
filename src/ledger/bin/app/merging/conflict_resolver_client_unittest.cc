@@ -162,10 +162,10 @@ TEST_F(ConflictResolverClientTest, Error) {
   });
 
   merge_resolver_->SetMergeStrategy(std::move(custom_merge_strategy));
-  std::vector<storage::CommitId> ids;
-  storage::Status status = page_storage_->GetHeadCommitIds(&ids);
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  storage::Status status = page_storage_->GetHeadCommits(&commits);
   EXPECT_EQ(storage::Status::OK, status);
-  EXPECT_EQ(2u, ids.size());
+  EXPECT_EQ(2u, commits.size());
 
   RunLoopUntilIdle();
 
@@ -219,21 +219,15 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
   EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
 
-  std::vector<storage::CommitId> ids;
-  storage::Status storage_status = page_storage_->GetHeadCommitIds(&ids);
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  storage::Status storage_status = page_storage_->GetHeadCommits(&commits);
   EXPECT_EQ(storage::Status::OK, storage_status);
   // The merge happened.
-  EXPECT_EQ(1u, ids.size());
+  EXPECT_EQ(1u, commits.size());
 
   bool called;
   // Let's verify the contents.
-  std::unique_ptr<const storage::Commit> commit;
-  page_storage_->GetCommit(ids[0],
-                           callback::Capture(callback::SetWhenCalled(&called),
-                                             &storage_status, &commit));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, storage_status);
+  std::unique_ptr<const storage::Commit> commit = std::move(commits[0]);
 
   storage::Entry key1_entry, key2_entry;
   page_storage_->GetEntryFromCommit(
@@ -297,22 +291,15 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
   EXPECT_EQ(ZX_OK, conflict_resolver_impl.requests[0]->result_provider_status);
 
-  std::vector<storage::CommitId> ids;
-  storage::Status storage_status = page_storage_->GetHeadCommitIds(&ids);
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  storage::Status storage_status = page_storage_->GetHeadCommits(&commits);
   EXPECT_EQ(storage::Status::OK, storage_status);
   // The merge happened.
-  EXPECT_EQ(1u, ids.size());
+  EXPECT_EQ(1u, commits.size());
 
   // Let's verify the contents.
+  std::unique_ptr<const storage::Commit> commit = std::move(commits[0]);
   bool called;
-  std::unique_ptr<const storage::Commit> commit;
-  page_storage_->GetCommit(ids[0],
-                           callback::Capture(callback::SetWhenCalled(&called),
-                                             &storage_status, &commit));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(storage::Status::OK, storage_status);
-
   storage::Entry key1_entry, key2_entry;
   page_storage_->GetEntryFromCommit(
       *commit, "key1",

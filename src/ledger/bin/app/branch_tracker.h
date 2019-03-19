@@ -30,7 +30,7 @@ class BranchTracker : public storage::CommitWatcher {
                 PageManager* manager, storage::PageStorage* storage);
   ~BranchTracker() override;
 
-  void Init(fit::function<void(storage::Status)> on_done);
+  storage::Status Init();
 
   void set_on_empty(fit::closure on_empty_callback);
 
@@ -76,17 +76,7 @@ class BranchTracker : public storage::CommitWatcher {
   fit::closure on_empty_callback_;
 
   bool transaction_in_progress_;
-  // The following two variables hold the commit object and id correspondingly
-  // of the commit tracked by this BranchTracker. |current_commit_| is used
-  // for notifying the watchers. On initialization, |current_commit_id_| is set
-  // to track the first head as returned from PageStorage. |current_commit_| at
-  // that point equals nullptr and is only updated with a valid Commit,
-  // corresponding to the tracked id, after the first call to OnNewCommits or
-  // StopTransaction. Since the notifications are sent to the watchers only
-  // after updating the tracked commit, the value of the |current_commit_| at
-  // initialization (which is set to nullptr) is not necessary.
   std::unique_ptr<const storage::Commit> current_commit_;
-  storage::CommitId current_commit_id_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<BranchTracker> weak_factory_;

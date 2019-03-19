@@ -39,9 +39,10 @@ void TestPageStorage::SetSyncDelegate(
   page_sync_delegate_ = page_sync_delegate;
 }
 
-storage::Status TestPageStorage::GetHeadCommitIds(
-    std::vector<storage::CommitId>* head_commit_ids) {
-  *head_commit_ids = std::vector<storage::CommitId>(head_count);
+storage::Status TestPageStorage::GetHeadCommits(
+    std::vector<std::unique_ptr<const storage::Commit>>* head_commits) {
+  *head_commits =
+      std::vector<std::unique_ptr<const storage::Commit>>(head_count);
   return storage::Status::OK;
 }
 

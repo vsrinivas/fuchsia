@@ -152,11 +152,11 @@ TEST_F(JournalTest, JournalsPutRollback) {
   // changed.
   journal_.reset();
 
-  std::vector<CommitId> heads;
-  Status status = page_storage_.GetHeadCommitIds(&heads);
+  std::vector<std::unique_ptr<const Commit>> heads;
+  Status status = page_storage_.GetHeadCommits(&heads);
   ASSERT_EQ(Status::OK, status);
   ASSERT_THAT(heads, SizeIs(1));
-  EXPECT_EQ(kFirstPageCommitId, heads[0]);
+  EXPECT_EQ(kFirstPageCommitId, heads[0]->GetId());
 }
 
 TEST_F(JournalTest, MultiplePutsDeletes) {

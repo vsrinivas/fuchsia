@@ -77,9 +77,12 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_; }
 
-  storage::Status GetHeadCommitIds(
-      std::vector<storage::CommitId>* head_commit_ids) override {
-    *head_commit_ids = {"commit_id"};
+  storage::Status GetHeadCommits(
+      std::vector<std::unique_ptr<const storage::Commit>>* head_commits)
+      override {
+    *head_commits = std::vector<std::unique_ptr<const storage::Commit>>();
+    head_commits->push_back(
+        std::make_unique<const FakeCommit>("commit_id", "data"));
     return storage::Status::OK;
   }
 

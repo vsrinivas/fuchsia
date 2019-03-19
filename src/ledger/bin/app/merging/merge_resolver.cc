@@ -200,8 +200,8 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
     return;
   }
   check_conflicts_in_progress_ = true;
-  std::vector<storage::CommitId> heads;
-  storage::Status s = storage_->GetHeadCommitIds(&heads);
+  std::vector<std::unique_ptr<const storage::Commit>> heads;
+  storage::Status s = storage_->GetHeadCommits(&heads);
   check_conflicts_in_progress_ = false;
 
   if (merge_candidates_->NeedsReset()) {
@@ -241,9 +241,9 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
                    std::move(heads[head_indexes.second]));
 }
 
-void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
-                                     storage::CommitId head1,
-                                     storage::CommitId head2) {
+void MergeResolver::ResolveConflicts(
+    DelayedStatus delayed_status, std::unique_ptr<const storage::Commit> head1,
+    std::unique_ptr<const storage::Commit> head2) {
   auto cleanup = fit::defer(task_runner_.MakeScoped([this, delayed_status] {
     // |merge_in_progress_| must be reset before calling
     // |on_empty_callback_|.
@@ -265,73 +265,44 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   TRACE_ASYNC_BEGIN("ledger", "merge", id);
   auto tracing = fit::defer([id] { TRACE_ASYNC_END("ledger", "merge", id); });
 
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<
-      storage::Status, std::unique_ptr<const storage::Commit>>>(
-      storage::Status::OK);
-  storage_->GetCommit(head1, waiter->NewCallback());
-  storage_->GetCommit(head2, waiter->NewCallback());
-  waiter->Finalize(TRACE_CALLBACK(
-      task_runner_.MakeScoped(
-          [this, delayed_status, cleanup = std::move(cleanup),
-           tracing = std::move(tracing)](
-              storage::Status status,
-              std::vector<std::unique_ptr<const storage::Commit>>
-                  commits) mutable {
-            if (status != storage::Status::OK) {
-              FXL_LOG(ERROR)
-                  << "Failed to retrieve head commits. storage::Status: "
-                  << status;
-              return;
-            }
-            FXL_DCHECK(commits.size() == 2);
-            FXL_DCHECK(
-                storage::Commit::TimestampOrdered(commits[0], commits[1]));
+  FXL_DCHECK(storage::Commit::TimestampOrdered(head1, head2));
 
-            if (commits[0]->GetParentIds().size() == 2 &&
-                commits[1]->GetParentIds().size() == 2) {
-              if (delayed_status == DelayedStatus::MAY_DELAY) {
-                // If trying to merge 2 merge commits, add some delay with
-                // exponential backoff.
-                auto delay_callback = [this] {
-                  in_delay_ = false;
-                  CheckConflicts(DelayedStatus::DONT_DELAY);
-                };
-                in_delay_ = true;
-                task_runner_.PostDelayedTask(
-                    TRACE_CALLBACK(std::move(delay_callback), "ledger",
-                                   "merge_delay"),
-                    backoff_->GetNext());
-                cleanup.cancel();
-                merge_in_progress_ = false;
-                // We don't want to continue merging if nobody is interested
-                // (all clients disconnected).
-                if (on_empty_callback_) {
-                  on_empty_callback_();
-                }
-                return;
-              }
-              // If delayed_status is not initial, report the merge.
-              ReportEvent(CobaltEvent::MERGED_COMMITS_MERGED);
-            } else {
-              // No longer merging 2 merge commits, reinitialize the exponential
-              // backoff.
-              backoff_->Reset();
-            }
+  if (head1->GetParentIds().size() == 2 && head2->GetParentIds().size() == 2) {
+    if (delayed_status == DelayedStatus::MAY_DELAY) {
+      // If trying to merge 2 merge commits, add some delay with
+      // exponential backoff.
+      auto delay_callback = [this] {
+        in_delay_ = false;
+        CheckConflicts(DelayedStatus::DONT_DELAY);
+      };
+      in_delay_ = true;
+      task_runner_.PostDelayedTask(
+          TRACE_CALLBACK(std::move(delay_callback), "ledger", "merge_delay"),
+          backoff_->GetNext());
+      cleanup.cancel();
+      merge_in_progress_ = false;
+      // We don't want to continue merging if nobody is interested
+      // (all clients disconnected).
+      if (on_empty_callback_) {
+        on_empty_callback_();
+      }
+      return;
+    }
+    // If delayed_status is not initial, report the merge.
+    ReportEvent(CobaltEvent::MERGED_COMMITS_MERGED);
+  } else {
+    // No longer merging 2 merge commits, reinitialize the exponential
+    // backoff.
+    backoff_->Reset();
+  }
 
-            // If the strategy has been changed, bail early.
-            if (has_next_strategy_) {
-              return;
-            }
-
-            // Merge the first two commits using the most recent one as the
-            // base.
-            RecursiveMergeOneStep(
-                std::move(commits[0]), std::move(commits[1]),
-                [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
-                  ReportEvent(CobaltEvent::COMMITS_MERGED);
-                });
-          }),
-      "ledger", "merge_get_commit_finalize"));
+  // Merge the first two commits using the most recent one as the
+  // base.
+  RecursiveMergeOneStep(
+      std::move(head1), std::move(head2),
+      [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
+        ReportEvent(CobaltEvent::COMMITS_MERGED);
+      });
 }
 
 void MergeResolver::RecursiveMergeOneStep(

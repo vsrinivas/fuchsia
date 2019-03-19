@@ -85,8 +85,9 @@ class MergeResolver : public storage::CommitWatcher {
 
   void PostCheckConflicts(DelayedStatus delayed_status);
   void CheckConflicts(DelayedStatus delayed_status);
-  void ResolveConflicts(DelayedStatus delayed_status, storage::CommitId head1,
-                        storage::CommitId head2);
+  void ResolveConflicts(DelayedStatus delayed_status,
+                        std::unique_ptr<const storage::Commit> head1,
+                        std::unique_ptr<const storage::Commit> head2);
 
   // Does recursive merging, stops when one commit has been produced.
   void RecursiveMergeOneStep(

@@ -51,15 +51,13 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
 PageDelegate::~PageDelegate() {}
 
 void PageDelegate::Init(fit::function<void(storage::Status)> on_done) {
-  branch_tracker_.Init(
-      [this, on_done = std::move(on_done)](storage::Status status) {
-        if (status != storage::Status::OK) {
-          on_done(status);
-          return;
-        }
-        page_impl_->SetPageDelegate(this);
-        on_done(storage::Status::OK);
-      });
+  storage::Status status = branch_tracker_.Init();
+  if (status != storage::Status::OK) {
+    on_done(status);
+    return;
+  }
+  page_impl_->SetPageDelegate(this);
+  on_done(storage::Status::OK);
 }
 
 void PageDelegate::GetSnapshot(
