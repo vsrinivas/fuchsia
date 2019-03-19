@@ -77,7 +77,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       __UNUSED auto* dummy = board.release();
     }
 
-    // Add a composite device
     const zx_bind_inst_t root_match[] = {
         BI_MATCH(),
     };
@@ -119,7 +118,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_COMPOSITE },
     };
     status = device_add_composite(parent, "composite-dev", props, fbl::count_of(props), composite1,
-                                  fbl::count_of(composite1), 0);
+                                  fbl::count_of(composite1), UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "TestBoard::Create: device_add_composite failed: %d\n", status);
     }
