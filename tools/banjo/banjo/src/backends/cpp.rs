@@ -703,10 +703,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_interfaces(
         &self,
-        namespaces: &Vec<ast::Decl>,
+        namespace: &Vec<ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespaces
+        namespace
             .iter()
             .filter_map(filter_interface)
             .map(|(name, methods, attributes)| {
@@ -731,10 +731,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_protocols(
         &self,
-        namespaces: &Vec<ast::Decl>,
+        namespace: &Vec<ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespaces
+        namespace
             .iter()
             .filter_map(filter_protocol)
             .map(|(name, methods, attributes)| {
@@ -771,40 +771,34 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         .map(|n| format!("#include <{}.h>", n))
         .chain(
             // Include handle headers for zx_handle_t wrapper types used in interfaces.
-            ast.namespaces
+            ast.namespaces[&ast.primary_namespace]
                 .iter()
-                .filter(|n| n.0 != "zx")
-                .flat_map(|n| {
-                    n.1.iter()
-                        .filter_map(|decl| {
-                            // Find all interfaces and extract their methods.
-                            if let ast::Decl::Interface { ref methods, .. } = *decl {
-                                Some(methods)
-                            } else {
-                                None
-                            }
-                        })
-                        .flat_map(|methods| {
-                            // Find all handle in/out params in each method.
-                            methods.iter().flat_map(|method| {
-                                method
-                                    .in_params
-                                    .iter()
-                                    .filter_map(|(_, ty)| match ty {
-                                        ast::Ty::Handle { .. } => Some(ty),
-                                        _ => None,
-                                    })
-                                    .chain(method.out_params.iter().filter_map(
-                                        |(_, ty)| match ty {
-                                            ast::Ty::Handle { .. } => Some(ty),
-                                            _ => None,
-                                        },
-                                    ))
-                                    .map(|ty| ty_to_cpp_str(ast, true, ty).unwrap())
-                            })
-                        })
-                    // Place into set to remove duplicates.
+                .filter_map(|decl| {
+                    // Find all interfaces and extract their methods.
+                    if let ast::Decl::Interface { ref methods, .. } = *decl {
+                        Some(methods)
+                    } else {
+                        None
+                    }
                 })
+                .flat_map(|methods| {
+                    // Find all handle in/out params in each method.
+                    methods.iter().flat_map(|method| {
+                        method
+                            .in_params
+                            .iter()
+                            .filter_map(|(_, ty)| match ty {
+                                ast::Ty::Handle { ty, .. } => Some(ty),
+                                _ => None,
+                            })
+                            .chain(method.out_params.iter().filter_map(|(_, ty)| match ty {
+                                ast::Ty::Handle { ty, .. } => Some(ty),
+                                _ => None,
+                            }))
+                            .map(|ty| handle_ty_to_cpp_str(ast, ty).unwrap())
+                    })
+                })
+                // Place into set to remove duplicates.
                 .collect::<HashSet<String>>()
                 .into_iter()
                 .map(|ty| format!("#include <lib/zx/{}.h>", &ty[4..])),
