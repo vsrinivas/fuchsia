@@ -22,6 +22,8 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <minfs/writeback-async.h>
+
+#include "vnode-allocation.h"
 #endif
 
 #include <fbl/algorithm.h>
@@ -212,7 +214,10 @@ public:
 
 #ifdef __Fuchsia__
     // Returns the capacity of the writeback buffer, in blocks.
-    size_t WritebackCapacity() const { return writeback_->GetCapacity(); }
+    size_t WritebackCapacity() const {
+        ZX_DEBUG_ASSERT(writeback_ != nullptr);
+        return writeback_->GetCapacity();
+    }
 
     void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
     void Shutdown(fs::Vfs::ShutdownCallback cb) final;
@@ -411,6 +416,9 @@ public:
     zx_status_t GetMetrics(fidl_txn_t* transaction);
     zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* transaction);
     zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) const;
+
+    // Using the provided |transaction|, allocate all data blocks pending in |allocation_state_|.
+    void AllocateData(Transaction* transaction);
 #endif
 
     // TODO(rvargas): Make private.
@@ -504,23 +512,7 @@ private:
     // assumed that any space between |inode_.size| and the nearest block is
     // filled with zeroes in the internal VMO. This function validates that
     // assumption.
-    inline void ValidateVmoTail() const {
-#if defined(MINFS_PARANOID_MODE) && defined(__Fuchsia__)
-        if (!vmo_.is_valid()) {
-            return;
-        }
-
-        // Verify that everything not allocated to "inode_.size" in the
-        // last block is filled with zeroes.
-        char buf[kMinfsBlockSize];
-        const size_t vmo_size = fbl::round_up(inode_.size, kMinfsBlockSize);
-        ZX_ASSERT(vmo_.read(buf, inode_.size, vmo_size - inode_.size) == ZX_OK);
-        for (size_t i = 0; i < vmo_size - inode_.size; i++) {
-            ZX_ASSERT_MSG(buf[i] == 0, "vmo[%" PRIu64 "] != 0 (inode size = %u)\n",
-                          inode_.size + i, inode_.size);
-        }
-#endif  // MINFS_PARANOID_MODE && __Fuchsia__
-    }
+    void ValidateVmoTail(blk_t inode_size) const;
 
     enum class BlockOp {
         kRead,
@@ -668,6 +660,14 @@ private:
     // - Are fully unlinked (link count == 0)
     void Purge(Transaction* transaction);
 
+    blk_t GetBlockCount() const;
+
+    // Returns current size of vnode.
+    blk_t GetSize() const;
+
+    // Sets current size of vnode.
+    void SetSize(blk_t new_size);
+
 #ifdef __Fuchsia__
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
@@ -734,6 +734,8 @@ private:
 
     fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};
+
+    PendingAllocationData allocation_state_;
 #endif
 
     ino_t ino_{};

@@ -65,6 +65,9 @@ library("minfs") {
       "$zx/system/ulib/zx",
       "$zx/system/ulib/zxcpp",
     ]
-    sources += [ "writeback-async.cpp" ]
+    sources += [
+      "vnode-allocation.cpp",
+      "writeback-async.cpp",
+    ]
   }
 }
