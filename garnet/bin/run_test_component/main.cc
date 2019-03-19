@@ -17,10 +17,9 @@
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/component/cpp/testing/enclosing_environment.h"
-#include "lib/component/cpp/testing/test_util.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/sys/cpp/service_directory.h"
+#include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 
@@ -137,12 +136,12 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto env_services = sys::ServiceDirectory::CreateFromNamespace();
 
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::EnvironmentPtr parent_env;
   fuchsia::sys::LauncherPtr launcher;
-  std::unique_ptr<component::testing::EnclosingEnvironment> enclosing_env;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
   auto map_entry = config.url_map().find(parse_result.launch_info.url);
   if (map_entry != config.url_map().end()) {
@@ -161,9 +160,8 @@ int main(int argc, const char** argv) {
     parse_result.launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     parent_env->GetLauncher(launcher.NewRequest());
   } else {
-    context->ConnectToEnvironmentService(parent_env.NewRequest());
-    auto env_services =
-        component::testing::EnvironmentServices::Create(parent_env);
+    env_services->Connect(parent_env.NewRequest());
+    auto env_services = sys::testing::EnvironmentServices::Create(parent_env);
     auto services = test_metadata.TakeServices();
     bool provide_real_log_sink = true;
     for (auto& service : services) {
@@ -187,7 +185,7 @@ int main(int argc, const char** argv) {
     zx_cprng_draw(&rand, sizeof(rand));
     std::string env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, rand);
     fuchsia::sys::EnvironmentOptions env_opt{.delete_storage_on_death = true};
-    enclosing_env = component::testing::EnclosingEnvironment::Create(
+    enclosing_env = sys::testing::EnclosingEnvironment::Create(
         std::move(env_label), parent_env, std::move(env_services),
         std::move(env_opt));
     launcher = enclosing_env->launcher_ptr();

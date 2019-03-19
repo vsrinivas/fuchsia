@@ -20,11 +20,11 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/cmx",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/pkg_url",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/sys/cpp",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/fidl/fuchsia-net-stack",
@@ -41,11 +41,11 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",
   ]
