@@ -120,6 +120,8 @@ pub mod scrypt {
     // ensure that we don't use too much memory.
     const SCRYPT_MAX_MEM: usize = usize::max_value();
 
+    // TODO(joshlf): Provide a custom Debug impl for ScryptHash?
+
     /// The output of the scrypt password hashing function.
     #[must_use]
     #[allow(non_snake_case)]
@@ -146,13 +148,13 @@ pub mod scrypt {
         #[allow(non_snake_case)]
         #[must_use]
         pub fn new(
-            hash: [u8; SCRYPT_HASH_LEN], salt: [u8; SCRYPT_SALT_LEN], N: u64, r: u64, p: u64,
+            hash: [u8; SCRYPT_HASH_LEN],
+            salt: [u8; SCRYPT_SALT_LEN],
+            N: u64,
+            r: u64,
+            p: u64,
         ) -> ScryptHash {
-            ScryptHash {
-                hash,
-                salt,
-                params: ScryptParams { N, r, p },
-            }
+            ScryptHash { hash, salt, params: ScryptParams { N, r, p } }
         }
 
         /// Gets the hash.
@@ -194,12 +196,9 @@ pub mod scrypt {
             params.p,
             SCRYPT_MAX_MEM,
             &mut hash,
-        ).unwrap();
-        ScryptHash {
-            hash,
-            salt,
-            params: *params,
-        }
+        )
+        .unwrap();
+        ScryptHash { hash, salt, params: *params }
     }
 
     /// Verifies a password against an scrypt hash.
@@ -217,7 +216,8 @@ pub mod scrypt {
             hash.params.p,
             SCRYPT_MAX_MEM,
             &mut out_hash,
-        ).is_err()
+        )
+        .is_err()
         {
             return false;
         }
@@ -237,12 +237,7 @@ pub mod scrypt {
                 let mut params = SCRYPT_PARAMS_LAPTOP;
                 params.N /= 4;
                 let hash = scrypt_generate(&pass, &params);
-                assert!(
-                    scrypt_verify(&pass, &hash),
-                    "pass: {:?}, hash: {:?}",
-                    &pass[..],
-                    hash
-                );
+                assert!(scrypt_verify(&pass, &hash), "pass: {:?}, hash: {:?}", &pass[..], hash);
             }
         }
     }

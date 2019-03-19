@@ -51,6 +51,10 @@ mod inner {
 ///
 /// The P curves are defined by NIST and are used in the ECDSA and ECDH
 /// algorithms.
+///
+/// [`P256`]: ::public::ec::P256
+/// [`P384`]: ::public::ec::P384
+/// [`P521`]: ::public::ec::P521
 pub trait PCurve: Sized + Copy + Clone + Default + Display + Debug + self::inner::PCurve {}
 
 /// The P-256 curve.
@@ -124,10 +128,7 @@ impl CurveKind {
             self::NID_P256 => Ok(CurveKind::P256),
             self::NID_P384 => Ok(CurveKind::P384),
             self::NID_P521 => Ok(CurveKind::P521),
-            _ => Err(Error::new(format!(
-                "unsupported curve: {}",
-                nid_name(nid).unwrap()
-            ))),
+            _ => Err(Error::new(format!("unsupported curve: {}", nid_name(nid).unwrap()))),
         }
     }
 }

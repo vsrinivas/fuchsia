@@ -6,6 +6,7 @@
 
 pub mod ec;
 pub mod ed25519;
+pub mod rsa;
 
 use boringssl::{CHeapWrapper, CStackWrapper};
 use public::inner::BoringDerKey;
@@ -16,6 +17,20 @@ use Error;
 pub trait PublicKey: Sealed + Sized {
     /// The type of the private component.
     type Private: PrivateKey<Public = Self>;
+
+    /// Verifies a message with this public key.
+    ///
+    /// `is_valid` verifies that a message was signed by the private key
+    /// corresponding to this public key. It is equivalent to
+    /// `signature.is_valid(self, message)`.
+    #[must_use]
+    fn is_valid<S: Signature<PrivateKey = Self::Private>>(
+        &self,
+        message: &[u8],
+        signature: &S,
+    ) -> bool {
+        signature.is_valid(self, message)
+    }
 }
 
 /// The private component of a public/private key pair.
@@ -26,13 +41,116 @@ pub trait PrivateKey: Sealed + Sized {
     /// Gets the public key corresponding to this private key.
     #[must_use]
     fn public(&self) -> Self::Public;
+
+    /// Signs a message with this private key.
+    ///
+    /// `sign` signs a message with this key using the signature scheme `S`. It
+    /// is equivalent to `S::sign(self, message)`.
+    #[must_use]
+    fn sign<S: Signature<PrivateKey = Self>>(&self, message: &[u8]) -> Result<S, Error> {
+        S::sign(self, message)
+    }
 }
 
 /// A public key which can be encoded as a DER object.
-pub trait DerPublicKey: PublicKey + self::inner::DerKey {}
+pub trait DerPublicKey: PublicKey + self::inner::DerKey {
+    /// Marshals a public key in DER format.
+    ///
+    /// `marshal_to_der` marshals a public key as a DER-encoded
+    /// SubjectPublicKeyInfo structure as defined in [RFC 5280].
+    ///
+    /// [RFC 5280]: https://tools.ietf.org/html/rfc5280
+    #[must_use]
+    fn marshal_to_der(&self) -> Vec<u8> {
+        let mut evp_pkey = CHeapWrapper::default();
+        self.boring().pkey_assign(&mut evp_pkey);
+        // cbb_new can only fail due to OOM
+        let mut cbb = CStackWrapper::cbb_new(64).unwrap();
+        evp_pkey.evp_marshal_public_key(&mut cbb).expect("failed to marshal public key");
+        cbb.cbb_with_data(<[u8]>::to_vec)
+    }
+
+    /// Parses a public key in DER format.
+    ///
+    /// `parse_from_der` parses a public key from a DER-encoded
+    /// SubjectPublicKeyInfo structure as defined in [RFC 5280].
+    ///
+    /// # Elliptic Curve Keys
+    ///
+    /// For Elliptic Curve keys ([`EcPubKey`]), the curve itself is validated.
+    /// If the curve is not known ahead of time, and any curve must be supported
+    /// at runtime, use the [`EcPubKeyAnyCurve::parse_from_der`] function.
+    ///
+    /// [RFC 5280]: https://tools.ietf.org/html/rfc5280
+    /// [`EcPubKey`]: ::public::ec::EcPubKey
+    /// [`EcPubKeyAnyCurve::parse_from_der`]: ::public::ec::EcPubKeyAnyCurve::parse_from_der
+    #[must_use]
+    fn parse_from_der(bytes: &[u8]) -> Result<Self, Error> {
+        CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
+            let mut evp_pkey = CHeapWrapper::evp_parse_public_key(cbs)?;
+            // NOTE: For EC, panics if evp_pkey doesn't have its group set. This is
+            // OK because EVP_parse_public_key guarantees that the returned key has
+            // its group set.
+            let key = Self::Boring::pkey_get(&mut evp_pkey)?;
+            if cbs.cbs_len() > 0 {
+                return Err(Error::new("malformed DER input".to_string()));
+            }
+            Ok(Self::from_boring(key))
+        })
+    }
+}
 
 /// A private key which can be encoded as a DER object.
-pub trait DerPrivateKey: PrivateKey + self::inner::DerKey {}
+pub trait DerPrivateKey: PrivateKey + self::inner::DerKey {
+    /// Marshals a private key in DER format.
+    ///
+    /// `marshal_to_der` marshal a private key as a DER-encoded structure. The
+    /// exact structure encoded depends on the type of key:
+    /// - For an EC key, it is an ECPrivateKey structure as defined in [RFC
+    ///   5915].
+    /// - For an RSA key, it is an RSAPrivateKey structure as defined in [RFC
+    ///   3447].
+    ///
+    /// [RFC 5915]: https://tools.ietf.org/html/rfc5915
+    /// [RFC 3447]: https://tools.ietf.org/html/rfc3447
+    #[must_use]
+    fn marshal_to_der(&self) -> Vec<u8> {
+        // cbb_new can only fail due to OOM
+        let mut cbb = CStackWrapper::cbb_new(64).unwrap();
+        self.boring().marshal_private_key(&mut cbb).expect("failed to marshal private key");
+        cbb.cbb_with_data(<[u8]>::to_vec)
+    }
+
+    /// Parses a private key in DER format.
+    ///
+    /// `parse_from_der` parses a private key from a DER-encoded format. The
+    /// exact structure expected depends on the type of key:
+    /// - For an EC key, it is an ECPrivateKey structure as defined in [RFC
+    ///   5915].
+    /// - For an RSA key, it is an RSAPrivateKey structure as defined in [RFC
+    ///   3447].
+    ///
+    /// # Elliptic Curve Keys
+    ///
+    /// For Elliptic Curve keys ([`EcPrivKey`]), the curve itself is validated. If
+    /// the curve is not known ahead of time, and any curve must be supported at
+    /// runtime, use the [`EcPrivKeyAnyCurve::parse_from_der`] function.
+    ///
+    /// [RFC 5915]: https://tools.ietf.org/html/rfc5915
+    /// [RFC 3447]: https://tools.ietf.org/html/rfc3447
+    /// [`EcPrivKey`]: ::public::ec::EcPrivKey
+    /// [`EcPrivKeyAnyCurve::parse_from_der`]: ::public::ec::EcPrivKeyAnyCurve::parse_from_der
+    #[must_use]
+    fn parse_from_der(bytes: &[u8]) -> Result<Self, Error> {
+        CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
+            let key = Self::Boring::parse_private_key(cbs)?;
+            if cbs.cbs_len() > 0 {
+                return Err(Error::new("malformed DER input".to_string()));
+            }
+            Ok(Self::from_boring(key))
+        })
+    }
+}
 
 /// A cryptographic signature generated by a private key.
 pub trait Signature: Sealed + Sized {
@@ -51,10 +169,10 @@ pub trait Signature: Sealed + Sized {
     ///
     /// The input to this function is always a message, never a digest. If a
     /// signature scheme calls for hashing a message and signing the hash
-    /// digest, `verify` is responsible for both hashing and verifying the
+    /// digest, `is_valid` is responsible for both hashing and verifying the
     /// digest.
     #[must_use]
-    fn verify(&self, key: &<Self::PrivateKey as PrivateKey>::Public, message: &[u8]) -> bool;
+    fn is_valid(&self, key: &<Self::PrivateKey as PrivateKey>::Public, message: &[u8]) -> bool;
 }
 
 mod inner {
@@ -83,100 +201,10 @@ mod inner {
         /// The underlying BoringSSL object wrapper type.
         type Boring: BoringDerKey;
 
-        fn get_boring(&self) -> &Self::Boring;
+        fn boring(&self) -> &Self::Boring;
 
-        fn from_boring(Self::Boring) -> Self;
+        fn from_boring(boring: Self::Boring) -> Self;
     }
-}
-
-/// Marshals a public key in DER format.
-///
-/// `marshal_public_key_der` marshals a public key as a DER-encoded
-/// SubjectPublicKeyInfo structure as defined in [RFC 5280].
-///
-/// [RFC 5280]: https://tools.ietf.org/html/rfc5280
-#[must_use]
-pub fn marshal_public_key_der<P: DerPublicKey>(key: &P) -> Vec<u8> {
-    let mut evp_pkey = CHeapWrapper::default();
-    key.get_boring().pkey_assign(&mut evp_pkey);
-    // cbb_new can only fail due to OOM
-    let mut cbb = CStackWrapper::cbb_new(64).unwrap();
-    evp_pkey
-        .evp_marshal_public_key(&mut cbb)
-        .expect("failed to marshal public key");
-    cbb.cbb_with_data(<[u8]>::to_vec)
-}
-
-/// Marshals a private key in DER format.
-///
-/// `marshal_private_key_der` marshal a private key as a DER-encoded structure.
-/// The exact structure encoded depends on the type of key:
-/// - For an EC key, it is an ECPrivateKey structure as defined in [RFC 5915].
-/// - For an RSA key, it is an RSAPrivateKey structure as defined in [RFC 3447].
-///
-/// [RFC 5915]: https://tools.ietf.org/html/rfc5915
-/// [RFC 3447]: https://tools.ietf.org/html/rfc3447
-#[must_use]
-pub fn marshal_private_key_der<P: DerPrivateKey>(key: &P) -> Vec<u8> {
-    // cbb_new can only fail due to OOM
-    let mut cbb = CStackWrapper::cbb_new(64).unwrap();
-    key.get_boring()
-        .marshal_private_key(&mut cbb)
-        .expect("failed to marshal private key");
-    cbb.cbb_with_data(<[u8]>::to_vec)
-}
-
-/// Parses a public key in DER format.
-///
-/// `parse_public_key_der` parses a public key from a DER-encoded
-/// SubjectPublicKeyInfo structure as defined in [RFC 5280].
-///
-/// # Elliptic Curve Keys
-///
-/// For Elliptic Curve keys (`EcPubKey`), the curve itself is validated. If the
-/// curve is not known ahead of time, and any curve must be supported at
-/// runtime, use the [`::public::ec::parse_public_key_der_any_curve`] function.
-///
-/// [RFC 5280]: https://tools.ietf.org/html/rfc5280
-#[must_use]
-pub fn parse_public_key_der<P: DerPublicKey>(bytes: &[u8]) -> Result<P, Error> {
-    CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
-        let mut evp_pkey = CHeapWrapper::evp_parse_public_key(cbs)?;
-        // NOTE: For EC, panics if evp_pkey doesn't have its group set. This is
-        // OK because EVP_parse_public_key guarantees that the returned key has
-        // its group set.
-        let key = P::Boring::pkey_get(&mut evp_pkey)?;
-        if cbs.cbs_len() > 0 {
-            return Err(Error::new("malformed DER input".to_string()));
-        }
-        Ok(P::from_boring(key))
-    })
-}
-
-/// Parses a private key in DER format.
-///
-/// `parse_private_key_der` parses a private key from a DER-encoded format. The
-/// exact structure expected depends on the type of key:
-/// - For an EC key, it is an ECPrivateKey structure as defined in [RFC 5915].
-/// - For an RSA key, it is an RSAPrivateKey structure as defined in [RFC 3447].
-///
-/// # Elliptic Curve Keys
-///
-/// For Elliptic Curve keys (`EcPrivKey`), the curve itself is validated. If the
-/// curve is not known ahead of time, and any curve must be supported at
-/// runtime, use the [`::public::ec::parse_private_key_der_any_curve`] function.
-///
-/// [RFC 5915]: https://tools.ietf.org/html/rfc5915
-/// [RFC 3447]: https://tools.ietf.org/html/rfc3447
-#[must_use]
-pub fn parse_private_key_der<P: DerPrivateKey>(bytes: &[u8]) -> Result<P, Error> {
-    CStackWrapper::cbs_with_temp_buffer(bytes, |cbs| {
-        let key = P::Boring::parse_private_key(cbs)?;
-        if cbs.cbs_len() > 0 {
-            return Err(Error::new("malformed DER input".to_string()));
-        }
-        Ok(P::from_boring(key))
-    })
 }
 
 #[cfg(test)]
@@ -190,18 +218,31 @@ mod testutil {
     /// invalid (it's up to the caller). If the byte slice is too short, it
     /// fills in the remaining bytes with zeroes.
     pub fn test_signature_smoke<S: Signature, F: Fn(&[u8]) -> S, G: Fn(&S) -> &[u8]>(
-        key: &S::PrivateKey, sig_from_bytes: F, bytes_from_sig: G,
+        key: &S::PrivateKey,
+        sig_from_bytes: F,
+        bytes_from_sig: G,
     ) {
         // Sign the message, verify the signature, and return the signature.
         // Also verify that, if the wrong signature is used, the signature fails
         // to verify. Also verify that sig_from_bytes works.
         fn sign_and_verify<S: Signature, F: Fn(&[u8]) -> S, G: Fn(&S) -> &[u8]>(
-            key: &S::PrivateKey, message: &[u8], sig_from_bytes: F, bytes_from_sig: G,
+            key: &S::PrivateKey,
+            message: &[u8],
+            sig_from_bytes: F,
+            bytes_from_sig: G,
         ) -> S {
             let sig = S::sign(key, message).unwrap();
-            assert!(sig.verify(&key.public(), message));
+            assert!(sig.is_valid(&key.public(), message));
+            // Make sure the PrivateKey::sign and PublicKey::is_valid convenience
+            // functions also work.
+            let sig = key.sign::<S>(message).unwrap();
+            assert!(key.public().is_valid(message, &sig));
             let sig2 = S::sign(&key, bytes_from_sig(&sig)).unwrap();
-            assert!(!sig2.verify(&key.public(), message));
+            assert!(!sig2.is_valid(&key.public(), message));
+            // Make sure the PrivateKey::sign and PublicKey::is_valid convenience
+            // functions also work.
+            let sig2 = key.sign::<S>(bytes_from_sig(&sig)).unwrap();
+            assert!(!key.public().is_valid(message, &sig2));
             sig_from_bytes(bytes_from_sig(&sig))
         }
 
@@ -209,12 +250,8 @@ mod testutil {
         // the next message to test, and repeat many times.
         let mut msg = Vec::new();
         for _ in 0..16 {
-            msg = bytes_from_sig(&sign_and_verify(
-                key,
-                &msg,
-                &sig_from_bytes,
-                &bytes_from_sig,
-            )).to_vec();
+            msg = bytes_from_sig(&sign_and_verify(key, &msg, &sig_from_bytes, &bytes_from_sig))
+                .to_vec();
         }
     }
 }
