@@ -38,14 +38,7 @@ func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.D
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	found := false
-	roots := d.fs.index.PackageBlobs()
-	for _, root := range roots {
-		if root == parts[0] {
-			found = true
-			break
-		}
-	}
+	_, found := d.fs.index.GetRoot(parts[0])
 	if !found {
 		return nil, nil, nil, fs.ErrNotFound
 	}

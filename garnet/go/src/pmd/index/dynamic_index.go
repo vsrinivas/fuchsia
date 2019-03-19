@@ -31,6 +31,9 @@ type DynamicIndex struct {
 	// mu protects all following fields
 	mu sync.Mutex
 
+	// roots is a map of merkleroot -> package name/version for active packages
+	roots map[string]pkg.Package
+
 	// installing is a map of merkleroot -> package name/version
 	installing map[string]pkg.Package
 
@@ -48,6 +51,7 @@ func NewDynamic(root string, static *StaticIndex, am amberer.AmberClient) *Dynam
 	return &DynamicIndex{
 		root:        root,
 		static:      static,
+		roots:       make(map[string]pkg.Package),
 		installing:  make(map[string]pkg.Package),
 		needs:       make(map[string]map[string]struct{}),
 		waiting:     make(map[string]map[string]struct{}),
@@ -274,6 +278,61 @@ func (idx *DynamicIndex) Notify(roots ...string) {
 	}
 
 	idx.amberClient.PackagesActivated(roots)
+}
+
+// GetRoot looks for a package by merkleroot, returning the matching package and
+// true, if found, an empty package and false otherwise.
+func (idx *DynamicIndex) GetRoot(root string) (pkg.Package, bool) {
+	p, found := idx.static.GetRoot(root)
+	if found {
+		return p, found
+	}
+
+	idx.mu.Lock()
+	p, found = idx.roots[root]
+	idx.mu.Unlock()
+	if found {
+		// We found a blob in the cached index, but, we can't trust that, because the
+		// source of consistency we keep is the filesystem, so next we check that:
+		b, err := ioutil.ReadFile(idx.PackageVersionPath(p.Name, p.Version))
+
+		// we're good
+		if err == nil && string(b) == root {
+			return p, found
+		}
+
+		// otherwise disk is ahead of us, and we need to take the slow path
+		idx.mu.Lock()
+		delete(idx.roots, root)
+		idx.mu.Unlock()
+	}
+
+	// slow path
+
+	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
+	if err != nil {
+		log.Printf("glob all extant dynamic packages: %s", err)
+		return p, false
+	}
+
+	for _, path := range paths {
+		merkle, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Printf("read dynamic package index %s: %s", path, err)
+			continue
+		}
+		if string(merkle) == root {
+			p.Name = filepath.Base(filepath.Dir(path))
+			p.Version = filepath.Base(path)
+
+			idx.mu.Lock()
+			idx.roots[root] = p
+			idx.mu.Unlock()
+
+			return p, true
+		}
+	}
+	return p, false
 }
 
 // PackageBlobs returns the list of blobs which are meta FARs backing packages
