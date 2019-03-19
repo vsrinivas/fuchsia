@@ -4,27 +4,25 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/expose.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fxl/strings/substitute.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <zircon/device/vfs.h>
 
 #include "gmock/gmock.h"
-#include "lib/component/cpp/environment_services_helper.h"
-#include "lib/component/cpp/expose.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/strings/substitute.h"
-#include "lib/svc/cpp/services.h"
 #include "src/lib/files/glob.h"
 
 namespace component {
 namespace {
 
 using ::fxl::Substitute;
+using sys::testing::EnclosingEnvironment;
 using ::testing::ElementsAre;
-using testing::EnclosingEnvironment;
 using ::testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
@@ -33,7 +31,7 @@ constexpr char kTestComponent[] =
     "inspect_vmo_test_app.cmx";
 constexpr char kTestProcessName[] = "inspect_vmo_test_app.cmx";
 
-class InspectTest : public component::testing::TestWithEnvironment {
+class InspectTest : public sys::testing::TestWithEnvironment {
  protected:
   InspectTest() {
     fuchsia::sys::LaunchInfo launch_info;

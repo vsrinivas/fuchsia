@@ -5,25 +5,22 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/expose.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fxl/strings/substitute.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "gmock/gmock.h"
-#include "lib/component/cpp/environment_services_helper.h"
-#include "lib/component/cpp/expose.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/strings/substitute.h"
-#include "lib/svc/cpp/services.h"
 #include "src/lib/files/glob.h"
 
 namespace component {
 namespace {
 
 using ::fxl::Substitute;
+using sys::testing::EnclosingEnvironment;
 using ::testing::ElementsAre;
-using testing::EnclosingEnvironment;
 using ::testing::UnorderedElementsAre;
 using ByteVector = ::component::Property::ByteVector;
 
@@ -32,7 +29,7 @@ const char kTestComponent[] =
     "inspect_test_app.cmx";
 const char kTestProcessName[] = "inspect_test_app.cmx";
 
-class InspectTest : public component::testing::TestWithEnvironment {
+class InspectTest : public sys::testing::TestWithEnvironment {
  protected:
   InspectTest() {
     fuchsia::sys::LaunchInfo launch_info;

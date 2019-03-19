@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-
 #include <fidl/examples/echo/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <unistd.h>
+#include <memory>
 
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
 
@@ -17,11 +20,11 @@ namespace component {
 namespace {
 
 using fuchsia::sys::TerminationReason;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::TestWithEnvironment;
 using test::component::mockrunner::MockComponentPtr;
 using test::component::mockrunner::MockComponentSyncPtr;
-using testing::EnclosingEnvironment;
 using testing::MockRunnerRegistry;
-using testing::TestWithEnvironment;
 
 const char kRealm[] = "realmrunnerintegrationtest";
 const char kComponentForRunner[] =
@@ -47,7 +50,7 @@ class RealmRunnerTest : public TestWithEnvironment {
     enclosing_environment_->ConnectToService(fuchsia::sys::Environment::Name_,
                                              env.NewRequest().TakeChannel());
     auto registry = std::make_unique<MockRunnerRegistry>();
-    auto services = testing::EnvironmentServices::Create(env);
+    auto services = sys::testing::EnvironmentServices::Create(env);
     EXPECT_EQ(ZX_OK, services->AddService(registry->GetHandler()));
     auto nested_environment = EnclosingEnvironment::Create(
         "nested-environment", env, std::move(services), std::move(options));
@@ -291,9 +294,10 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   constexpr char dummy_service_name[] = "dummy_service";
 
   // launch component with service.
-  Services services;
+  zx::channel request;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   auto launch_info = CreateLaunchInfo(kComponentForRunner);
-  launch_info.directory_request = services.NewRequest();
+  launch_info.directory_request = std::move(request);
   auto component =
       enclosing_environment_->CreateComponent(std::move(launch_info));
 
@@ -302,27 +306,28 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   ASSERT_TRUE(WaitForComponentCount(1));
 
   // create and publish fake service
-  auto fake_service_dir = fbl::AdoptRef(new fs::PseudoDir());
+  vfs::PseudoDir fake_service_dir;
   bool connect_called = false;
-  fake_service_dir->AddEntry(
+  fake_service_dir.AddEntry(
       dummy_service_name,
-      fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
-        connect_called = true;
-        return ZX_OK;
-      })));
-  fs::SynchronousVfs vfs(async_get_default_dispatcher());
+      std::make_unique<vfs::Service>(
+          [&](zx::channel channel, async_dispatcher_t* dispatcher) {
+            connect_called = true;
+          }));
   MockComponentSyncPtr component_ptr;
   runner_registry_.runner()->runner_ptr()->ConnectToComponent(
       runner_registry_.runner()->components()[0].unique_id,
       component_ptr.NewRequest());
-  ASSERT_EQ(ZX_OK, component_ptr->SetServiceDirectory(
-                       testing::OpenAsDirectory(&vfs, fake_service_dir)));
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
+  fake_service_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+                         dir_handle.NewRequest().TakeChannel());
+  ASSERT_EQ(ZX_OK,
+            component_ptr->SetServiceDirectory(dir_handle.TakeChannel()));
   ASSERT_EQ(ZX_OK, component_ptr->PublishService(dummy_service_name));
 
   // try to connect to fake service
   fidl::examples::echo::EchoPtr echo;
-  services.ConnectToService(echo.NewRequest().TakeChannel(),
-                            dummy_service_name);
+  services.Connect(echo.NewRequest(), dummy_service_name);
   ASSERT_TRUE(RunLoopUntil([&] { return connect_called; }));
 }
 

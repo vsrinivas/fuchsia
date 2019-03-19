@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "fs/vmo-file.h"
-#include "lib/async-loop/cpp/loop.h"
-#include "lib/inspect/component.h"
-#include "sdk/lib/sys/cpp/startup_context.h"
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/inspect/component.h>
+#include <lib/sys/cpp/component_context.h>
 
 class Item {
  public:
@@ -47,7 +48,7 @@ class Table {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = sys::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::CreateFromStartupInfo();
   auto inspector = inspect::ComponentInspector::Initialize(context.get());
   auto& root = inspector->root_tree()->GetRoot();
 

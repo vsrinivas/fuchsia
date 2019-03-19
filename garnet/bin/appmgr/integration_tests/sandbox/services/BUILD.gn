@@ -40,9 +40,9 @@ sandbox_test_package("multiple_components") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
   ]
   environments = basic_envs

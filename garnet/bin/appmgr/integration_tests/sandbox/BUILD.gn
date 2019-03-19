@@ -13,10 +13,10 @@ source_set("namespace_test") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
   ]
 }

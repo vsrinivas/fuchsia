@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/file_descriptor.h>
-#include "lib/component/cpp/testing/test_with_environment.h"
+#include <lib/sys/cpp/testing/test_with_environment.h>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace component {
 namespace {
 
-using testing::EnclosingEnvironment;
+using sys::testing::EnclosingEnvironment;
 
 constexpr char kTestComponent1[] =
     "fuchsia-pkg://fuchsia.com/components_binary_test#meta/program1.cmx";
@@ -18,7 +19,7 @@ constexpr char kTestComponent2[] =
     "fuchsia-pkg://fuchsia.com/components_binary_test#meta/program2.cmx";
 constexpr char kRealm[] = "test";
 
-class ComponentsBinaryArgvTest : public component::testing::TestWithEnvironment {
+class ComponentsBinaryArgvTest : public sys::testing::TestWithEnvironment {
  protected:
   void OpenNewOutFile() {
     ASSERT_TRUE(tmp_dir_.NewTempFile(&out_file_));
@@ -46,9 +47,11 @@ class ComponentsBinaryArgvTest : public component::testing::TestWithEnvironment 
     return launch_info;
   }
 
-  void RunComponent(const std::string& url, const std::vector<std::string>& args = {}) {
+  void RunComponent(const std::string& url,
+                    const std::vector<std::string>& args = {}) {
     fuchsia::sys::ComponentControllerPtr controller;
-    environment_->CreateComponent(CreateLaunchInfo(url, std::move(args)), controller.NewRequest());
+    environment_->CreateComponent(CreateLaunchInfo(url, std::move(args)),
+                                  controller.NewRequest());
 
     int64_t return_code = INT64_MIN;
     controller.events().OnTerminated =

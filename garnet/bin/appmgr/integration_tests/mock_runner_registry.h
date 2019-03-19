@@ -6,9 +6,8 @@
 #define GARNET_BIN_APPMGR_INTEGRATION_TESTS_MOCK_RUNNER_REGISTRY_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <test/component/mockrunner/cpp/fidl.h>
-
-#include "lib/fidl/cpp/binding_set.h"
 
 namespace component {
 namespace testing {

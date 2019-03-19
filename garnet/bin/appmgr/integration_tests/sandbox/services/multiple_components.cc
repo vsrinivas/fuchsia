@@ -12,7 +12,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <zircon/syscalls.h>
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_util.h"
 
 // This test runs multiple components in the same environment, and checks that
 // their service sandboxes are isolated.

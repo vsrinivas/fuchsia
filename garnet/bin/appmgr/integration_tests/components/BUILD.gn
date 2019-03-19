@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/testing/environments.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "components_test_app"
@@ -38,18 +38,17 @@ executable("components_binary_argv_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/lib/sys/cpp/testing:integration",
   ]
 }
 
 test_package("components_binary_test") {
   deps = [
-    ":components_binary_argv_test",
     ":bin",
     ":bin2",
+    ":components_binary_argv_test",
   ]
 
   binaries = [

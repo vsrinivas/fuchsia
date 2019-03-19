@@ -4,17 +4,16 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/join_strings.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/join_strings.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/file_descriptor.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
@@ -24,7 +23,7 @@ namespace {
 
 // This test fixture will provide a way to run components in provided launchers
 // and check for errors.
-class HubTest : public component::testing::TestWithEnvironment {
+class HubTest : public sys::testing::TestWithEnvironment {
  protected:
   // This would launch component and check that it returns correct
   // |expected_return_code|.
@@ -102,7 +101,8 @@ TEST_F(HubTest, Services) {
     ASSERT_TRUE(config.ParseFromDirectory("/system/data/sysmgr"));
     // The following path is deprecated, and because config-data is component
     // name isolated, it will be impossible to continue to do this in future:
-    ASSERT_TRUE(config.ParseFromDirectory("/pkgfs/packages/config-data/0/data/sysmgr"));
+    ASSERT_TRUE(
+        config.ParseFromDirectory("/pkgfs/packages/config-data/0/data/sysmgr"));
     const auto service_map = config.TakeServices();
     for (const auto& e : service_map) {
       expected_files.push_back(e.first);

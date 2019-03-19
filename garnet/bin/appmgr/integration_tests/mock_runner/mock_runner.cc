@@ -4,13 +4,12 @@
 
 #include "garnet/bin/appmgr/integration_tests/mock_runner/mock_runner.h"
 
-#include <memory>
-
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
+#include <memory>
 
 namespace component {
 namespace testing {
@@ -25,7 +24,8 @@ FakeSubComponent::FakeSubComponent(
       alive_(true),
       binding_(this),
       runner_(runner),
-      startup_context_(StartupContext::CreateFrom(std::move(startup_info))) {
+      component_context_(
+          sys::ComponentContext::CreateFrom(std::move(startup_info))) {
   if (controller.is_valid()) {
     binding_.Bind(std::move(controller));
     binding_.set_error_handler([this](zx_status_t status) { Kill(); });
@@ -57,26 +57,26 @@ void FakeSubComponent::PublishService(::std::string service_name,
   // publish to root as appmgr assumes that all the components started by
   // runners publish services using legacy style
   std::string sname = service_name;
-  startup_context_->outgoing().public_dir()->AddEntry(
-      sname.c_str(),
-      fbl::AdoptRef(new fs::Service([sname, this](zx::channel channel) {
-        fdio_service_connect_at(service_dir_.get(), sname.c_str(),
-                                channel.release());
-        return ZX_OK;
-      })));
+  component_context_->outgoing().AddPublicService(
+      std::make_unique<vfs::Service>(
+          [sname, this](zx::channel channel, async_dispatcher_t* dispatcher) {
+            fdio_service_connect_at(service_dir_.get(), sname.c_str(),
+                                    channel.release());
+          }),
+      sname);
   callback();
 }
 
 MockRunner::MockRunner()
     : loop_(&kAsyncLoopConfigAttachToThread),
-      context_(component::StartupContext::CreateFromStartupInfo()),
+      context_(sys::ComponentContext::CreateFromStartupInfo()),
       mock_binding_(this),
       component_id_counter_(0) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   mockrunner::MockRunnerPtr mock_runner;
   mock_binding_.Bind(mock_runner.NewRequest());
   mockrunner::MockRunnerRegistryPtr runner_registry_ptr;
-  context_->ConnectToEnvironmentService(runner_registry_ptr.NewRequest());
+  context_->svc()->Connect(runner_registry_ptr.NewRequest());
   runner_registry_ptr->Register(std::move(mock_runner));
 }
 

@@ -9,11 +9,10 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/macros.h>
+#include <lib/sys/cpp/component_context.h>
 #include <test/component/mockrunner/cpp/fidl.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
 
 namespace component {
 namespace testing {
@@ -47,8 +46,7 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
 
   void ConnectToService(::std::string service_name,
                         zx::channel channel) override {
-    startup_context_->ConnectToEnvironmentService(service_name,
-                                                  std::move(channel));
+    component_context_->svc()->Connect(service_name, std::move(channel));
   }
 
   void SetServiceDirectory(zx::channel channel) override {
@@ -73,7 +71,7 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fidl::BindingSet<mockrunner::MockComponent> mock_bindings_;
   MockRunner* runner_;
-  std::unique_ptr<StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeSubComponent);
 };
@@ -101,7 +99,7 @@ class MockRunner : public fuchsia::sys::Runner, public mockrunner::MockRunner {
       override;
 
   async::Loop loop_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
   fidl::Binding<mockrunner::MockRunner> mock_binding_;
   uint64_t component_id_counter_;

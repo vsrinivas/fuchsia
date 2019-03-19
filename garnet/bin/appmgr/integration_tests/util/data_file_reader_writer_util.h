@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_APPMGR_INTEGRATION_TESTS_UTIL_DATA_FILE_READER_WRITER_UTIL_H_
 #define GARNET_BIN_APPMGR_INTEGRATION_TESTS_UTIL_DATA_FILE_READER_WRITER_UTIL_H_
 
-#include <string>
-
-#include <lib/component/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <test/appmgr/integration/cpp/fidl.h>
+#include <string>
 
 namespace component {
 namespace testing {
 
-class DataFileReaderWriterUtil : virtual public TestWithEnvironment {
+class DataFileReaderWriterUtil
+    : virtual public sys::testing::TestWithEnvironment {
  protected:
   fidl::StringPtr ReadFileSync(
       const test::appmgr::integration::DataFileReaderWriterPtr& util,

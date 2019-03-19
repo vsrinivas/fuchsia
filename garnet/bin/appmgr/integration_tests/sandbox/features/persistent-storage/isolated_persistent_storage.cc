@@ -5,9 +5,9 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fxl/logging.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
@@ -33,7 +33,7 @@ constexpr char kDifferentTestUtilURL[] =
 using test::appmgr::integration::DataFileReaderWriterPtr;
 
 class IsolatedPersistentStorageTest
-    : virtual public component::testing::TestWithEnvironment,
+    : virtual public sys::testing::TestWithEnvironment,
       public component::testing::DataFileReaderWriterUtil {
  protected:
   IsolatedPersistentStorageTest()
@@ -56,11 +56,11 @@ class IsolatedPersistentStorageTest
 
   // Verify that a file written in one component's /data dir is not accessible
   // by the other component.
-  void VerifyIsolated(component::Services services1,
-                      component::Services services2) {
+  void VerifyIsolated(const sys::ServiceDirectory& services1,
+                      const sys::ServiceDirectory& services2) {
     DataFileReaderWriterPtr util1, util2;
-    services1.ConnectToService(util1.NewRequest());
-    services2.ConnectToService(util2.NewRequest());
+    services1.Connect(util1.NewRequest());
+    services2.Connect(util2.NewRequest());
 
     // Can't use ASSERT_TRUE/ASSERT_EQ macros here since this isn't the test
     // body, and ASSERT_* macros just 'return;' to exit the test.
@@ -69,24 +69,23 @@ class IsolatedPersistentStorageTest
     EXPECT_NE(ReadFileSync(util2, kTestFileName).get(), test_file_content_);
   }
 
-  std::unique_ptr<component::testing::EnclosingEnvironment> env1_;
-  std::unique_ptr<component::testing::EnclosingEnvironment> env2_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env1_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env2_;
   std::string test_file_content_;
 };
 
 TEST_F(IsolatedPersistentStorageTest, SameComponentDifferentEnvironments) {
   // Create two instances of the same utility component in separate
   // environments.
-  component::Services services1, services2;
+  zx::channel request1, request2;
+  auto services1 = sys::ServiceDirectory::CreateWithRequest(&request1);
+  auto services2 = sys::ServiceDirectory::CreateWithRequest(&request2);
+
   fuchsia::sys::ComponentControllerPtr ctrl1, ctrl2;
   fuchsia::sys::LaunchInfo launch_info1{
-      .url = kTestUtilURL,
-      .directory_request = services1.NewRequest(),
-  };
+      .url = kTestUtilURL, .directory_request = std::move(request1)};
   fuchsia::sys::LaunchInfo launch_info2{
-      .url = kTestUtilURL,
-      .directory_request = services2.NewRequest(),
-  };
+      .url = kTestUtilURL, .directory_request = std::move(request2)};
   env1_->CreateComponent(std::move(launch_info1), ctrl1.NewRequest());
   env2_->CreateComponent(std::move(launch_info2), ctrl2.NewRequest());
 
@@ -101,16 +100,14 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentNestedEnvironments) {
 
   // Create two instances of the same utility component in the parent and child
   // environments.
-  component::Services services1, services2;
+  zx::channel request1, request2;
+  auto services1 = sys::ServiceDirectory::CreateWithRequest(&request1);
+  auto services2 = sys::ServiceDirectory::CreateWithRequest(&request2);
   fuchsia::sys::ComponentControllerPtr ctrl1, ctrl2;
   fuchsia::sys::LaunchInfo launch_info1{
-      .url = kTestUtilURL,
-      .directory_request = services1.NewRequest(),
-  };
+      .url = kTestUtilURL, .directory_request = std::move(request1)};
   fuchsia::sys::LaunchInfo launch_info2{
-      .url = kTestUtilURL,
-      .directory_request = services2.NewRequest(),
-  };
+      .url = kTestUtilURL, .directory_request = std::move(request2)};
   env1_->CreateComponent(std::move(launch_info1), ctrl1.NewRequest());
   env1_nested->CreateComponent(std::move(launch_info2), ctrl2.NewRequest());
 
@@ -120,16 +117,14 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentNestedEnvironments) {
 TEST_F(IsolatedPersistentStorageTest, DifferentComponentsSameEnvironment) {
   // Create two instances of the same utility component in separate
   // environments.
-  component::Services services1, services2;
+  zx::channel request1, request2;
+  auto services1 = sys::ServiceDirectory::CreateWithRequest(&request1);
+  auto services2 = sys::ServiceDirectory::CreateWithRequest(&request2);
   fuchsia::sys::ComponentControllerPtr ctrl1, ctrl2;
   fuchsia::sys::LaunchInfo launch_info1{
-      .url = kTestUtilURL,
-      .directory_request = services1.NewRequest(),
-  };
+      .url = kTestUtilURL, .directory_request = std::move(request1)};
   fuchsia::sys::LaunchInfo launch_info2{
-      .url = kDifferentTestUtilURL,
-      .directory_request = services2.NewRequest(),
-  };
+      .url = kDifferentTestUtilURL, .directory_request = std::move(request2)};
   env1_->CreateComponent(std::move(launch_info1), ctrl1.NewRequest());
   env1_->CreateComponent(std::move(launch_info2), ctrl2.NewRequest());
 
@@ -138,27 +133,25 @@ TEST_F(IsolatedPersistentStorageTest, DifferentComponentsSameEnvironment) {
 
 TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   // Create utility component in some environment.
-  component::Services services;
+  zx::channel request;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   fuchsia::sys::ComponentControllerPtr ctrl;
   DataFileReaderWriterPtr util;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kTestUtilURL,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info{.url = kTestUtilURL,
+                                       .directory_request = std::move(request)};
   env1_->CreateComponent(std::move(launch_info), ctrl.NewRequest());
-  services.ConnectToService(util.NewRequest());
+  services.Connect(util.NewRequest());
 
   EXPECT_EQ(WriteFileSync(util, kTestFileName, test_file_content_), ZX_OK);
   EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);
 
   // Kill the component and then recreate it in the same environment.
+  services = sys::ServiceDirectory::CreateWithRequest(&request);
   ctrl->Kill();
   launch_info = fuchsia::sys::LaunchInfo{
-      .url = kTestUtilURL,
-      .directory_request = services.NewRequest(),
-  };
+      .url = kTestUtilURL, .directory_request = std::move(request)};
   env1_->CreateComponent(std::move(launch_info), ctrl.NewRequest());
-  services.ConnectToService(util.NewRequest());
+  services.Connect(util.NewRequest());
 
   // File should still exist.
   EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);

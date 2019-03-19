@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -18,19 +19,21 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/logging.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <test/appmgr/integration/cpp/fidl.h>
+
 #include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 #include "garnet/bin/appmgr/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/logging.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace component {
@@ -41,9 +44,9 @@ using fuchsia::sys::TerminationReason;
 using ::testing::AnyOf;
 using ::testing::Eq;
 
+using sys::testing::EnclosingEnvironment;
+using sys::testing::TestWithEnvironment;
 using test::appmgr::integration::DataFileReaderWriterPtr;
-using testing::EnclosingEnvironment;
-using testing::TestWithEnvironment;
 
 class RealmTest : virtual public TestWithEnvironment {
  protected:
@@ -288,7 +291,8 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   constexpr char kTestFileContent[] = "the-best-file-content";
 
   // Create an environment with 'delete_storage_on_death' option enabled.
-  component::Services services;
+  zx::channel request;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   DataFileReaderWriterPtr util;
   auto enclosing_environment = CreateNewEnclosingEnvironment(
       kRealm, CreateServices(),
@@ -296,8 +300,8 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   auto ctrl = RunComponent(
       enclosing_environment.get(),
       "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx",
-      services.NewRequest());
-  services.ConnectToService(util.NewRequest());
+      std::move(request));
+  services.Connect(util.NewRequest());
 
   // Write some arbitrary file content into the test util's "/data" dir, and
   // verify that we can read it back.
@@ -311,13 +315,14 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   ASSERT_TRUE(RunLoopUntil([&] { return killed; }));
 
   // Recreate the environment and component using the same environment label.
+  services = sys::ServiceDirectory::CreateWithRequest(&request);
   enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, CreateServices());
   ctrl = RunComponent(
       enclosing_environment.get(),
       "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx",
-      services.NewRequest());
-  services.ConnectToService(util.NewRequest());
+      std::move(request));
+  services.Connect(util.NewRequest());
 
   // Verify that the file no longer exists.
   EXPECT_TRUE(ReadFileSync(util, kTestFileName).is_null());
@@ -382,13 +387,12 @@ INSTANTIATE_TEST_SUITE_P(
 class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
  protected:
   RealmFakeLoaderTest() {
-    loader_service_ =
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+    loader_service_ = std::make_shared<vfs::Service>(
+        [this](zx::channel channel, async_dispatcher_t* dispatcher) {
           bindings_.AddBinding(
               this,
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
-          return ZX_OK;
-        }));
+        });
     enclosing_environment_ = CreateNewEnclosingEnvironment(
         kRealm, CreateServicesWithCustomLoader(loader_service_));
   }
@@ -407,7 +411,7 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
   std::unique_ptr<EnclosingEnvironment> enclosing_environment_;
 
  private:
-  fbl::RefPtr<fs::Service> loader_service_;
+  std::shared_ptr<vfs::Service> loader_service_;
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;
   std::string component_url_;
 };
