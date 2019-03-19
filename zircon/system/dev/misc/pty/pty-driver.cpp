@@ -30,7 +30,8 @@ static zx_device_t* pty_root;
 
 static zx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size_t* actual) {
     if (len == 0) {
-        return 0;
+        *actual = 0;
+        return ZX_OK;
     }
 
     pty_server_dev_t* psd = static_cast<pty_server_dev_t*>(containerof(ps, pty_server_dev_t, srv));

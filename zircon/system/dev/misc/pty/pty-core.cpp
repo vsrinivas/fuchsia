@@ -10,6 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <fbl/auto_lock.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/pty.h>
 #include <zircon/errors.h>
@@ -69,6 +70,21 @@ static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t 
     }
 }
 
+static zx_status_t pty_client_write_chunk_locked(pty_client_t* pc, pty_server_t* ps,
+                                                 const void* buf, size_t count,
+                                                 size_t* actual) {
+    size_t length;
+
+    zx_status_t status = ps->recv(ps, buf, count, &length);
+    if (status == ZX_OK) {
+        *actual = length;
+    } else if (status == ZX_ERR_SHOULD_WAIT) {
+        device_state_clr(pc->zxdev, DEV_STATE_WRITABLE);
+    }
+
+    return status;
+}
+
 static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                                     size_t* actual) {
     auto pc = static_cast<pty_client_t*>(ctx);
@@ -77,21 +93,82 @@ static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx
 
     zx_status_t status;
 
-    mtx_lock(&ps->lock);
-    if (pc->flags & PTY_CLI_ACTIVE) {
-        size_t length;
-        status = ps->recv(ps, buf, count, &length);
-        if (status == ZX_OK) {
-            *actual = length;
-        } else if (status == ZX_ERR_SHOULD_WAIT) {
-            device_state_clr(pc->zxdev, DEV_STATE_WRITABLE);
-        }
-    } else {
-        status = (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
+    if (count == 0) {
+        *actual = 0;
+        return ZX_OK;
     }
-    mtx_unlock(&ps->lock);
 
-    return status;
+    fbl::AutoLock lock(&ps->lock);
+
+    if (!(pc->flags & PTY_CLI_ACTIVE)) {
+        return (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
+    }
+
+    if (pc->flags & PTY_FEATURE_RAW) {
+        return pty_client_write_chunk_locked(pc, ps, buf, count, actual);
+    }
+
+    // newline translation time
+    auto chunk_start = static_cast<const char*>(buf);
+    auto chunk_end = chunk_start;
+    size_t chunk_length;
+    size_t chunk_actual;
+    size_t sent = 0;
+
+    auto partial_result = [&sent, actual](zx_status_t status) {
+        if (sent) {
+            *actual = sent;
+            return ZX_OK;
+        }
+        return status;
+    };
+
+    for (size_t i = 0; i < count; i++) {
+        // just iterate until there's a linefeed character
+        if (*chunk_end != '\n') {
+            chunk_end++;
+            continue;
+        }
+
+        // send up to (but not including) the linefeed
+        chunk_length = chunk_end - chunk_start;
+        status = pty_client_write_chunk_locked(pc, ps, chunk_start, chunk_length, &chunk_actual);
+        if (status != ZX_OK) {
+            return partial_result(status);
+        }
+
+        sent += chunk_actual;
+        if (chunk_actual != chunk_length) {
+            return partial_result(status);
+        }
+
+        // send the line ending
+        status = pty_client_write_chunk_locked(pc, ps, "\r\n", 2, &chunk_actual);
+        if (status != ZX_OK) {
+            return partial_result(status);
+        }
+
+        // this case means only the \r of the \r\n was sent; report to the caller
+        // as if it didn't work at all
+        if (chunk_actual != 2) {
+            return partial_result(status);
+        }
+
+        // don't increment for the \r
+        sent++;
+
+        chunk_start = chunk_end + 1;
+        chunk_end = chunk_start;
+    }
+
+    // finish up the buffer if necessary
+    chunk_length = chunk_end - chunk_start;
+    status = pty_client_write_chunk_locked(pc, ps, chunk_start, chunk_length, &chunk_actual);
+    if (status == ZX_OK) {
+        sent += chunk_actual;
+    }
+
+    return partial_result(status);
 }
 
 // mask of invalid features
