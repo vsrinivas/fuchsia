@@ -254,10 +254,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	if config.Power != nil {
 		defer func() {
-			logger.Debugf(ctx, "rebooting the node %q\n", config.Nodename)
+			logger.Debugf(ctx, "rebooting the node %q\n", config.Network.Nodename)
 
-			if err := config.Power.RebootDevice(signers, config.Nodename); err != nil {
-				logger.Errorf(ctx, "failed to reboot %q: %v\n", config.Nodename, err)
+			if err := config.Power.RebootDevice(signers, config.Network.Nodename); err != nil {
+				logger.Errorf(ctx, "failed to reboot %q: %v\n", config.Network.Nodename, err)
 			}
 		}()
 	}
@@ -285,7 +285,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, config.Nodename, args, config.SSHKeys[0], signers, syslog)
+		errs <- r.runCmd(ctx, imgs, config.Network.Nodename, args, config.SSHKeys[0], signers, syslog)
 	}()
 
 	select {

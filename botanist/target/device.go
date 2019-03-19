@@ -22,16 +22,31 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	// The duration we allow for the netstack to come up when booting.
+	netstackTimeout = 90 * time.Second
+)
+
 // DeviceConfig contains the static properties of a target device.
 type DeviceConfig struct {
-	// Nodename is the hostname of the device that we want to boot on.
-	Nodename string `json:"nodename"`
+	// Network is the network properties of the target.
+	Network NetworkProperties `json:"network"`
 
 	// Power is the attached power management configuration.
 	Power *power.Client `json:"power,omitempty"`
 
 	// SSHKeys are the default system keys to be used with the device.
 	SSHKeys []string `json:"keys,omitempty"`
+}
+
+// NetworkProperties are the static network properties of a target.
+type NetworkProperties struct {
+	// Nodename is the hostname of the device that we want to boot on.
+	Nodename string `json:"nodename"`
+
+	// IPv4Addr is the IPv4 address, if statically given. If not provided, it may be
+	// resolved via the netstack's MDNS server.
+	IPv4Addr string `json:"ipv4"`
 }
 
 // DeviceOptions represents lifecycle options for a target.
@@ -92,13 +107,28 @@ func NewDeviceTarget(config DeviceConfig, opts DeviceOptions) (*DeviceTarget, er
 
 // Nodename returns the name of the node.
 func (t *DeviceTarget) Nodename() string {
-	return t.config.Nodename
+	return t.config.Network.Nodename
 }
 
 // IPv6 returns the link-local IPv6 address of the node.
 func (t *DeviceTarget) IPv6Addr() (*net.UDPAddr, error) {
 	addr, err := netutil.GetNodeAddress(context.Background(), t.Nodename(), false)
 	return addr, err
+}
+
+// IPv4Addr returns the IPv4 address of the node. If not provided in the config, then it
+// will be resolved against the target-side MDNS server.
+func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
+	if t.config.Network.IPv4Addr != "" {
+		return net.ParseIP(t.config.Network.IPv4Addr), nil
+	}
+	addr, err := botanist.ResolveIPv4(context.Background(), t.Nodename(), netstackTimeout)
+	return addr, err
+}
+
+// SSHKey returns the private SSH key path associated with the authorized key to be paved.
+func (t *DeviceTarget) SSHKey() string {
+	return t.config.SSHKeys[0]
 }
 
 // Start starts the device target.
