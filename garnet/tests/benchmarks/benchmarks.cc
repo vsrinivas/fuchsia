@@ -75,8 +75,9 @@ int main(int argc, const char** argv) {
     FXL_LOG(INFO) << "Storage perf tests skipped on bot '"
                   << benchmarks_bot_name << "'";
   } else {
-    FXL_LOG(ERROR) << "Bot '" << benchmarks_bot_name
-                   << "' not recognized: please update benchmarks.cc in garnet";
+    FXL_LOG(ERROR)
+        << "Bot '" << benchmarks_bot_name
+        << "' not recognized: please update benchmarks.cc in garnet.";
     exit(1);
   }
 
