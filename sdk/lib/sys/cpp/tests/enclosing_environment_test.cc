@@ -7,16 +7,16 @@
 
 #include "fidl/examples/echo/cpp/fidl.h"
 #include "lib/async/cpp/wait.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
+#include "lib/async/dispatcher.h"
+#include "lib/sys/cpp/testing/test_with_environment.h"
 
 using namespace fuchsia::sys;
 namespace echo = ::fidl::examples::echo;
 
-namespace component::testing::test {
+namespace sys::testing::test {
 
 constexpr char kHelperProc[] =
-    "fuchsia-pkg://fuchsia.com/lib_component_test#meta/helper_proc.cmx";
-constexpr zx::duration kTimeout = zx::sec(2);
+    "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/helper_proc.cmx";
 constexpr int kNumberOfTries = 3;
 
 // helper class that creates and listens on
@@ -85,8 +85,7 @@ class EnclosingEnvTest : public TestWithEnvironment {
         EXPECT_EQ(rsp, "hello");
         req_done = true;
       });
-      if (RunLoopWithTimeoutOrUntil([&req_done]() { return req_done; },
-                                    kTimeout)) {
+      if (RunLoopUntil([&req_done]() { return req_done; })) {
         return true;
       } else {
         std::cerr << "Didn't receive echo response in attempt number "
@@ -118,8 +117,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
     ASSERT_EQ(rsp, "hello");
     req_done = true;
   });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&req_done]() { return req_done; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&req_done]() { return req_done; }));
 
   // reset flag, and send the kill string
   req_done = false;
@@ -130,8 +128,8 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   });
 
   // wait until we see the response AND the channel closing
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&req_done, &got_error]() { return req_done && got_error; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil(
+      [&req_done, &got_error]() { return req_done && got_error; }));
 
   // Try to communicate with server again, we expect
   // it to be spun up once more
@@ -167,8 +165,7 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
     ASSERT_EQ(rsp, "hello");
     req_done = true;
   });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&req_done]() { return req_done; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&req_done]() { return req_done; }));
   // check that the launch info factory function was called only once
   EXPECT_EQ(call_counter, 1);
 
@@ -181,8 +178,8 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
   });
 
   // wait until we see the response AND the channel closing
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&req_done, &got_error]() { return req_done && got_error; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil(
+      [&req_done, &got_error]() { return req_done && got_error; }));
 
   // Try to communicate with server again, we expect
   // it to be spun up once more
@@ -225,24 +222,22 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
 
   // now it's just a matter of waiting for the socket readers to
   // have seen those strings:
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&cout_reader, &cerr_reader]() {
-        return cout_reader.GetString().find("potato") != std::string::npos &&
-               cerr_reader.GetString().find("tomato") != std::string::npos;
-      },
-      kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&cout_reader, &cerr_reader]() {
+    return cout_reader.GetString().find("potato") != std::string::npos &&
+           cerr_reader.GetString().find("tomato") != std::string::npos;
+  }));
 }
 
 class FakeLoader : public fuchsia::sys::Loader {
  public:
   FakeLoader() {
-    loader_service_ =
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+    loader_service_ = std::make_shared<vfs::Service>(
+        [this](zx::channel channel, async_dispatcher_t* dispatcher) {
           bindings_.AddBinding(
               this,
-              fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
-          return ZX_OK;
-        }));
+              fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)),
+              dispatcher);
+        });
   }
 
   void LoadUrl(std::string url, LoadUrlCallback callback) override {
@@ -251,10 +246,10 @@ class FakeLoader : public fuchsia::sys::Loader {
   }
   std::vector<std::string>& component_urls() { return component_urls_; };
 
-  fbl::RefPtr<fs::Service> loader_service() { return loader_service_; }
+  std::shared_ptr<vfs::Service> loader_service() { return loader_service_; }
 
  private:
-  fbl::RefPtr<fs::Service> loader_service_;
+  std::shared_ptr<vfs::Service> loader_service_;
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;
   std::vector<std::string> component_urls_;
 };
@@ -283,10 +278,10 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
     echo::EchoPtr echo;
     env->ConnectToService(echo.NewRequest(), svc_names[i]);
   }
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&loader]() { return loader.component_urls().size() == 3; }, kTimeout))
-      << loader.component_urls().size();
+  ASSERT_TRUE(RunLoopUntil([&loader]() {
+    return loader.component_urls().size() == 3;
+  })) << loader.component_urls().size();
   ASSERT_EQ(loader.component_urls(), urls);
 }
 
-}  // namespace component::testing::test
+}  // namespace sys::testing::test

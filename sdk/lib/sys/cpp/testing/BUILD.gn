@@ -30,3 +30,45 @@ source_set("unit") {
 
   public_configs = [ "//sdk/config" ]
 }
+
+source_set("integration") {
+  testonly = true
+
+  sources = [
+    "test_with_environment.cc",
+    "test_with_environment.h",
+  ]
+
+  public_deps = [
+    ":enclosing_environment",
+    "//garnet/public/lib/gtest",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
+source_set("enclosing_environment") {
+  testonly = true
+
+  sources = [
+    "enclosing_environment.cc",
+    "enclosing_environment.h",
+    "launcher_impl.cc",
+    "launcher_impl.h",
+  ]
+
+  deps = [
+    "//third_party/rapidjson",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/vfs/cpp",
+    "//sdk/lib/vfs/cpp",
+    "//zircon/public/lib/async-default",
+  ]
+}

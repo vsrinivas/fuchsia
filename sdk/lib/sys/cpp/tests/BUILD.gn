@@ -43,6 +43,38 @@ test("component_cpp_testing_unittests") {
   ]
 }
 
+test("component_cpp_testing_tests") {
+  sources = [
+    "enclosing_environment_test.cc",
+  ]
+
+  deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/fidl",
+  ]
+}
+
+executable("helper_proc") {
+  testonly = true
+
+  sources = [
+    "helper.cc",
+  ]
+
+  deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
 # TODO(IN-933): Reenable once fuchsia_test_component is supported.
 # fuchsia_test_component("component_cpp_unittests_component") {
 #   deps = [
@@ -62,8 +94,23 @@ test("component_cpp_testing_unittests") {
 # TODO(IN-933): Convert back to package
 test_package("component_cpp_tests") {
   deps = [
+    ":component_cpp_testing_tests",
     ":component_cpp_testing_unittests",
     ":component_cpp_unittests",
+    ":helper_proc",
+  ]
+
+  binaries = [
+    {
+      name = "helper_proc"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/helper_proc.cmx")
+      dest = "helper_proc.cmx"
+    },
   ]
 
   tests = [
@@ -73,6 +120,10 @@ test_package("component_cpp_tests") {
     },
     {
       name = "component_cpp_testing_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "component_cpp_testing_tests"
       environments = basic_envs
     },
   ]

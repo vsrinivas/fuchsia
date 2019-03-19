@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Deprecated
-// Please use one in //sdk/lib/sys/cpp/testing
+#ifndef LIB_SYS_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_
+#define LIB_SYS_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_
 
-#ifndef LIB_COMPONENT_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_
-#define LIB_COMPONENT_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_
-
-#include <fs/pseudo-dir.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <lib/sys/cpp/testing/launcher_impl.h>
 
-#include "lib/component/cpp/testing/enclosing_environment.h"
-#include "lib/component/cpp/testing/launcher_impl.h"
-#include "lib/component/cpp/testing/termination_result.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/gtest/real_loop_fixture.h"
-
-namespace component {
+namespace sys {
 namespace testing {
+
+// Combines the return code and termination reason from a Component termination.
+struct TerminationResult {
+  int64_t return_code;
+  fuchsia::sys::TerminationReason reason;
+};
 
 // Test fixture for tests to run Components inside a new isolated Environment,
 // wrapped in a enclosing Environment.
@@ -60,7 +60,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     return launcher;
   }
 
-  const std::shared_ptr<component::Services>& real_services() {
+  const std::shared_ptr<sys::ServiceDirectory>& real_services() {
     return real_services_;
   }
 
@@ -92,7 +92,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   }
 
   std::unique_ptr<EnvironmentServices> CreateServicesWithCustomLoader(
-      const fbl::RefPtr<fs::Service>& loader_service) {
+      const std::shared_ptr<vfs::Service>& loader_service) {
     return EnvironmentServices::CreateWithCustomLoader(real_env_,
                                                        loader_service);
   }
@@ -125,12 +125,12 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
       TerminationResult* termination_result = nullptr);
 
  private:
-  std::shared_ptr<component::Services> real_services_;
+  std::shared_ptr<sys::ServiceDirectory> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;
   LauncherImpl real_launcher_;
 };
 
 }  // namespace testing
-}  // namespace component
+}  // namespace sys
 
-#endif  // LIB_COMPONENT_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_
+#endif  // LIB_SYS_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_

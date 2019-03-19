@@ -2,27 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Deprecated
-// Please use one in //sdk/lib/sys/cpp/testing
-
-#ifndef LIB_COMPONENT_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
-#define LIB_COMPONENT_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
+#ifndef LIB_SYS_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
+#define LIB_SYS_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
 
 #include <memory>
 #include <string>
 #include <unordered_map>
 
-#include <fs/pseudo-dir.h>
-#include <fs/service.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/launcher_impl.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/service.h>
 
-#include "lib/component/cpp/testing/launcher_impl.h"
-#include "lib/svc/cpp/services.h"
-
-namespace component {
+namespace sys {
 namespace testing {
 
 class EnclosingEnvironment;
@@ -50,7 +45,7 @@ class EnvironmentServices {
   // Creates services with custom loader service.
   static std::unique_ptr<EnvironmentServices> CreateWithCustomLoader(
       const fuchsia::sys::EnvironmentPtr& parent_env,
-      const fbl::RefPtr<fs::Service>& loader_service,
+      const std::shared_ptr<vfs::Service>& loader_service,
       async_dispatcher_t* dispatcher = nullptr);
 
   // Adds the specified interface to the set of services.
@@ -67,17 +62,21 @@ class EnvironmentServices {
   zx_status_t AddService(fidl::InterfaceRequestHandler<Interface> handler,
                          const std::string& service_name = Interface::Name_) {
     svc_names_.push_back(service_name);
-    return svc_->AddEntry(
-        service_name.c_str(),
-        fbl::AdoptRef(new fs::Service(
-            [handler = std::move(handler)](zx::channel channel) {
+    return svc_.AddEntry(
+        service_name,
+        std::make_unique<vfs::Service>(
+            [handler = std::move(handler)](zx::channel channel,
+                                           async_dispatcher_t* dispatcher) {
               handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-              return ZX_OK;
-            })));
+            }));
   }
 
   // Adds the specified service to the set of services.
-  zx_status_t AddService(const fbl::RefPtr<fs::Service> service,
+  zx_status_t AddSharedService(const std::shared_ptr<vfs::Service>& service,
+                               const std::string& service_name);
+
+  // Adds the specified service to the set of services.
+  zx_status_t AddService(std::unique_ptr<vfs::Service> service,
                          const std::string& service_name);
 
   // Adds the specified service to the set of services.
@@ -113,20 +112,20 @@ class EnvironmentServices {
  private:
   friend class EnclosingEnvironment;
   EnvironmentServices(const fuchsia::sys::EnvironmentPtr& parent_env,
-                      const fbl::RefPtr<fs::Service>& loader_service,
+                      const std::shared_ptr<vfs::Service>& loader_service,
                       async_dispatcher_t* dispatcher = nullptr);
 
   void set_enclosing_env(EnclosingEnvironment* e) { enclosing_env_ = e; }
 
-  std::unique_ptr<fs::SynchronousVfs> vfs_;
-  fbl::RefPtr<fs::PseudoDir> svc_;
+  vfs::PseudoDir svc_;
   fidl::VectorPtr<std::string> svc_names_;
-  fuchsia::sys::ServiceProviderPtr parent_svc_;
+  sys::ServiceDirectory parent_svc_;
   // Pointer to containing environment. Not owned.
   EnclosingEnvironment* enclosing_env_ = nullptr;
+  async_dispatcher_t* dispatcher_;
 
   // Keep track of all singleton services, indexed by url.
-  std::unordered_map<std::string, component::Services> singleton_services_;
+  std::unordered_map<std::string, sys::ServiceDirectory> singleton_services_;
 };
 
 // EnclosingEnvironment wraps a new isolated environment for test |parent_env|
@@ -198,11 +197,11 @@ class EnclosingEnvironment {
   // with custom loader service.
   std::unique_ptr<EnclosingEnvironment>
   CreateNestedEnclosingEnvironmentWithLoader(
-      const std::string& label, fbl::RefPtr<fs::Service> loader_service);
+      const std::string& label, std::shared_ptr<vfs::Service> loader_service);
 
   // Connects to service provided by this environment.
   void ConnectToService(fidl::StringPtr service_name, zx::channel channel) {
-    service_provider_->ConnectToService(service_name, std::move(channel));
+    service_provider_.Connect(service_name, std::move(channel));
   }
 
   // Connects to service provided by this environment.
@@ -237,13 +236,13 @@ class EnclosingEnvironment {
   bool running_ = false;
   const std::string label_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  fuchsia::sys::ServiceProviderPtr service_provider_;
+  sys::ServiceDirectory service_provider_;
   LauncherImpl launcher_;
   std::unique_ptr<EnvironmentServices> services_;
   fit::function<void(bool)> running_changed_callback_;
 };
 
 }  // namespace testing
-}  // namespace component
+}  // namespace sys
 
-#endif  // LIB_COMPONENT_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
+#endif  // LIB_SYS_CPP_TESTING_ENCLOSING_ENVIRONMENT_H_
