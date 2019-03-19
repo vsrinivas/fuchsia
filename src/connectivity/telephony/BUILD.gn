@@ -7,5 +7,6 @@ group("telephony") {
   public_deps = [
     "//src/connectivity/telephony/config",
     "//src/connectivity/telephony/modem-mgr",
+    "//src/connectivity/telephony/tools/ril-ctl",
   ]
 }
