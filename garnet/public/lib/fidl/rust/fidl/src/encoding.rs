@@ -2124,7 +2124,16 @@ macro_rules! fidl_xunion {
                     return Err($crate::Error::Invalid);
                 }
 
-                decoder.read_out_of_line(num_bytes as usize, |decoder| {
+                let member_inline_size = match ordinal {
+                    $(
+                        $member_ordinal => $crate::fidl_inline_size!($member_ty),
+                    )*
+                    // Unknown payloads are considered a wholly-inline string
+                    // of bytes.
+                    _ => num_bytes as usize,
+                };
+
+                decoder.read_out_of_line(member_inline_size, |decoder| {
                     decoder.recurse(|decoder| {
                         match ordinal {
                             $(
@@ -3184,5 +3193,22 @@ mod test {
         let mut blah = &mut [&mut [1, 2, 3, 4, 5], &mut [5, 4, 3, 2, 1]];
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         assert!(Encoder::encode(bytes, handles, &mut blah).is_ok());
+    }
+
+    #[test]
+    fn xunion_with_out_of_line_data() {
+        fidl_xunion! {
+            name: XUnion,
+            members: [
+                Variant {
+                    ty: Vec<u8>,
+                    ordinal: 1,
+                },
+            ],
+        }
+
+        identities![
+            XUnion::Variant(vec![1, 2, 3]),
+        ];
     }
 }
