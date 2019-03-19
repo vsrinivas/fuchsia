@@ -30,8 +30,8 @@ void TestDeviceSet::SetWatcher(
   set_watcher_calls++;
   watched_fingerprint = convert::ToString(fingerprint);
   set_watcher = watcher.Bind();
-  if (set_watcher_status_to_return == cloud_provider::Status::NETWORK_ERROR) {
-    set_watcher->OnNetworkError();
+  if (set_watcher_status_to_return != cloud_provider::Status::OK) {
+    set_watcher->OnError(set_watcher_status_to_return);
   }
   callback(set_watcher_status_to_return);
 }

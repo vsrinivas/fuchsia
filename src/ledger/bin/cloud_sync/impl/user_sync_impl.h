@@ -45,7 +45,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   // cloud_provider::DeviceSetWatcher:
   void OnCloudErased() override;
 
-  void OnNetworkError() override;
+  void OnError(cloud_provider::Status status) override;
 
   // Checks that the cloud was not erased since the last sync using the device
   // fingerprint.

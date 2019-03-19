@@ -30,7 +30,7 @@ class DeviceSetImplTest : public gtest::TestLoopFixture,
   // cloud_provider::DeviceSetWatcher:
   void OnCloudErased() override { on_cloud_erased_calls_++; }
 
-  void OnNetworkError() override { on_network_error_calls_++; }
+  void OnError(cloud_provider::Status status) override { on_error_calls_++; }
 
  protected:
   cloud_provider::DeviceSetPtr device_set_;
@@ -40,7 +40,7 @@ class DeviceSetImplTest : public gtest::TestLoopFixture,
 
   fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
   int on_cloud_erased_calls_ = 0;
-  int on_network_error_calls_ = 0;
+  int on_error_calls_ = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImplTest);

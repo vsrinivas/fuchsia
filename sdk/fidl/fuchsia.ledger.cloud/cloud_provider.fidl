@@ -78,9 +78,12 @@ protocol DeviceSetWatcher {
     /// further calls are made on the watcher after this is called.
     OnCloudErased();
 
-    /// Called when the network connection is lost. No further calls are made on
-    /// the watcher after this is called.
-    OnNetworkError();
+    /// Called when an error occured. Most common errors are:
+    ///   - NOT_FOUND, if the fingerprint was not found in the cloud when registering the watcher.
+    ///   - NETWORK_ERROR if the network connection is lost.
+    ///
+    /// No further calls are made on the watcher after this is called.
+    OnError(Status status);
 };
 
 // TODO(ppi): switch to a format defined in a FIDL table, so that the protocol

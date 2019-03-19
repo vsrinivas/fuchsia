@@ -68,7 +68,7 @@ void UserSyncImpl::OnCloudErased() {
   on_version_mismatch_();
 }
 
-void UserSyncImpl::OnNetworkError() {
+void UserSyncImpl::OnError(cloud_provider::Status status) {
   task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); },
                                backoff_->GetNext());
 }
@@ -201,7 +201,7 @@ void UserSyncImpl::SetCloudErasedWatcher() {
                             // Don't handle errors - in case of error, the
                             // corresponding call is made on the watcher
                             // itself and handled there (OnCloudErased(),
-                            // OnNetworkError()).
+                            // OnError()).
                           });
 }
 

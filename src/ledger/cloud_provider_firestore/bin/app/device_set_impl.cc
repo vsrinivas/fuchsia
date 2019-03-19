@@ -237,7 +237,11 @@ void DeviceSetImpl::OnFinished(grpc::Status status) {
   if (status.error_code() == grpc::UNAVAILABLE ||
       status.error_code() == grpc::UNAUTHENTICATED) {
     if (watcher_) {
-      watcher_->OnNetworkError();
+      cloud_provider::Status watcher_status =
+          (status.error_code() == grpc::UNAVAILABLE)
+              ? cloud_provider::Status::NETWORK_ERROR
+              : cloud_provider::Status::AUTH_ERROR;
+      watcher_->OnError(watcher_status);
     }
     return;
   }

@@ -44,7 +44,7 @@ class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
   // DeviceSetWatcher:
   void OnCloudErased() override { on_cloud_erased_calls_++; }
 
-  void OnNetworkError() override {
+  void OnError(Status status) override {
     // Do nothing - the validation test suite currently does not inject and test
     // for network errors.
     FXL_NOTIMPLEMENTED();
