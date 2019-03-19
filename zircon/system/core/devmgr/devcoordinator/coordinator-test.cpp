@@ -8,8 +8,8 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/coding.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
+#include <zxtest/zxtest.h>
 
 #include "coordinator.h"
 #include "devfs.h"
@@ -34,20 +34,14 @@ devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher) {
     return config;
 }
 
-bool InitializeCoreDevices() {
-    BEGIN_TEST;
-
+TEST(CoordinatorTestCase, InitializeCoreDevices) {
     devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
-
-    END_TEST;
 }
 
-bool OpenVirtcon() {
-    BEGIN_TEST;
-
+TEST(CoordinatorTestCase, OpenVirtcon) {
     devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 
     zx::channel client, server;
@@ -73,12 +67,9 @@ bool OpenVirtcon() {
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(1, actual_handles);
     ASSERT_TRUE(sender_channel.is_valid());
-
-    END_TEST;
 }
 
-bool DumpState() {
-    BEGIN_TEST;
+TEST(CoordinatorTestCase, DumpState) {
     devmgr::Coordinator coordinator(DefaultConfig(nullptr));
 
     zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
@@ -99,13 +90,9 @@ bool DumpState() {
     ASSERT_EQ(ZX_OK, writer.vmo().read(buf, 0, writer.written()));
 
     ASSERT_NE(nullptr, strstr(buf, "[root]"));
-
-    END_TEST;
 }
 
-bool LoadDriver() {
-    BEGIN_TEST;
-
+TEST(CoordinatorTestCase, LoadDriver) {
     bool found_driver = false;
     auto callback = [&found_driver](devmgr::Driver* drv, const char* version) {
         delete drv;
@@ -113,13 +100,9 @@ bool LoadDriver() {
     };
     devmgr::load_driver(kDriverPath, callback);
     ASSERT_TRUE(found_driver);
-
-    END_TEST;
 }
 
-bool BindDrivers() {
-    BEGIN_TEST;
-
+TEST(CoordinatorTestCase, BindDrivers) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
 
@@ -136,13 +119,9 @@ bool BindDrivers() {
     loop.RunUntilIdle();
     ASSERT_EQ(1, coordinator.drivers().size_slow());
     ASSERT_EQ(driver, &coordinator.drivers().front());
-
-    END_TEST;
 }
 
-bool InitializeCoordinator(devmgr::Coordinator* coordinator) {
-    BEGIN_HELPER;
-
+void InitializeCoordinator(devmgr::Coordinator* coordinator) {
     zx_status_t status = coordinator->InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
@@ -160,15 +139,11 @@ bool InitializeCoordinator(devmgr::Coordinator* coordinator) {
     status = devmgr::devfs_publish(coordinator->root_device(), coordinator->sys_device());
     ASSERT_EQ(ZX_OK, status);
     coordinator->set_running(true);
-
-    END_HELPER;
 }
 
 // Waits for a BindDriver request to come in on remote, checks that it is for
 // the expected driver, and then sends a ZX_OK response.
-bool CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver) {
-    BEGIN_HELPER;
-
+void CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver) {
     // Wait for the BindDriver request.
     zx_signals_t pending;
     zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
@@ -211,17 +186,13 @@ bool CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
     ASSERT_EQ(0, actual_handles);
     status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
     ASSERT_EQ(ZX_OK, status);
-
-    END_HELPER;
 }
 
-bool BindDevices() {
-    BEGIN_TEST;
-
+TEST(CoordinatorTestCase, BindDevices) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
 
-    ASSERT_TRUE(InitializeCoordinator(&coordinator));
+    ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
     // Add the device.
     zx::channel local, remote;
@@ -251,23 +222,19 @@ bool BindDevices() {
     ASSERT_EQ(ZX_OK, status);
 
     // Wait for the BindDriver request.
-    ASSERT_TRUE(CheckBindDriverReceived(remote, kDriverPath));
+    ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(remote, kDriverPath));
     loop.RunUntilIdle();
 
     // Reset the fake devhost connection.
     dev->set_host(nullptr);
     remote.reset();
     loop.RunUntilIdle();
-
-    END_TEST;
 }
 
 // Waits for a CreateDevice request to come in on remote, checks
 // expectations, and sends a ZX_OK response.
-bool CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_driver,
+void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_driver,
                                zx::channel* device_remote) {
-    BEGIN_HELPER;
-
     // Wait for the CreateDevice request.
     zx_signals_t pending;
     zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
@@ -300,16 +267,12 @@ bool CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
                     reinterpret_cast<const uint8_t*>(req->driver_path.data), req->driver_path.size,
                     "");
-
-    END_HELPER;
 }
 
 // Waits for a CreateCompositeDevice request to come in on remote, checks
 // expectations, and sends a ZX_OK response.
-bool CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
+void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
                                         size_t expected_components_count) {
-    BEGIN_HELPER;
-
     // Wait for the CreateCompositeDevice request.
     zx_signals_t pending;
     zx_status_t status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
@@ -356,19 +319,15 @@ bool CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
     ASSERT_EQ(0, actual_handles);
     status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
     ASSERT_EQ(ZX_OK, status);
-
-    END_HELPER;
 }
 
 // Helper for BindComposite for issuing an AddComposite for a composite with the
 // given components.  It's assumed that these components are children of
 // the platform_bus and have the given protocol_id
-bool BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bus,
+void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bus,
                                   const uint32_t* protocol_ids, size_t component_count,
                                   const zx_device_prop_t* props, size_t props_count,
                                   const char* name) {
-    BEGIN_HELPER;
-
     auto components = std::make_unique<fuchsia_device_manager_DeviceComponent[]>(component_count);
     for (size_t i = 0; i < component_count; ++i) {
         // Define a union type to avoid violating the strict aliasing rule.
@@ -391,19 +350,14 @@ bool BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
                                               components.get(), component_count,
                                               0 /* coresident index */),
               ZX_OK);
-
-    END_HELPER;
 }
 
-template <bool DefineCompositeBeforeDevices>
-bool BindComposite() {
-    BEGIN_TEST;
-
+void BindCompositeImpl(bool define_composite_before_devices) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
 
-    ASSERT_TRUE(InitializeCoordinator(&coordinator));
-    ASSERT_NONNULL(coordinator.component_driver());
+    ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+    ASSERT_NOT_NULL(coordinator.component_driver());
 
     // Create a mock devhost and connect the test device to it, so that all of
     // its children show up there
@@ -421,8 +375,8 @@ bool BindComposite() {
     // Set up the sys device proxy
     ASSERT_EQ(coordinator.PrepareProxy(coordinator.sys_device(), &host), ZX_OK);
     loop.RunUntilIdle();
-    ASSERT_TRUE(CheckCreateDeviceReceived(devhost_remote, kSystemDriverPath,
-                                          &platform_bus_devhost_remote));
+    ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(devhost_remote, kSystemDriverPath,
+                                                       &platform_bus_devhost_remote));
     loop.RunUntilIdle();
 
     // Create a child of the sys_device, since only directly children of it can
@@ -452,10 +406,10 @@ bool BindComposite() {
     static_assert(fbl::count_of(protocol_id) == fbl::count_of(devices));
 
     const char* kCompositeDevName = "composite-dev";
-    if constexpr (DefineCompositeBeforeDevices) {
-        ASSERT_TRUE(BindCompositeDefineComposite(platform_bus, protocol_id,
-                                                 fbl::count_of(protocol_id),
-                                                 nullptr /* props */, 0, kCompositeDevName));
+    if (define_composite_before_devices) {
+        ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
+                platform_bus, protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
+                0, kCompositeDevName));
     }
 
     // Add the devices to construct the composite out of.
@@ -475,10 +429,10 @@ bool BindComposite() {
         loop.RunUntilIdle();
     }
 
-    if constexpr (!DefineCompositeBeforeDevices) {
-        ASSERT_TRUE(BindCompositeDefineComposite(platform_bus, protocol_id,
-                                                 fbl::count_of(protocol_id),
-                                                 nullptr /* props */, 0, kCompositeDevName));
+    if (!define_composite_before_devices) {
+        ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
+                platform_bus, protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
+                0, kCompositeDevName));
     }
 
     fbl::RefPtr<devmgr::Device> component_devices[fbl::count_of(devices)];
@@ -486,7 +440,7 @@ bool BindComposite() {
     for (size_t i = 0; i < fbl::count_of(devices); ++i) {
         // Wait for the components to get bound
         fbl::String driver = coordinator.component_driver()->libname;
-        ASSERT_TRUE(CheckBindDriverReceived(device_rpcs[i], driver.data()));
+        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_rpcs[i], driver.data()));
         loop.RunUntilIdle();
 
         // Synthesize the AddDevice request the component driver would send
@@ -504,24 +458,23 @@ bool BindComposite() {
         loop.RunUntilIdle();
     }
 
-    ASSERT_TRUE(CheckCreateCompositeDeviceReceived(devhost_remote, kCompositeDevName,
-                                                   fbl::count_of(devices)));
+    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote, kCompositeDevName,
+                                                                fbl::count_of(devices)));
 
     loop.RunUntilIdle();
     host.devices().clear();
+}
 
-    END_TEST;
+TEST(CoordinatorTestCase, BindCompositeDefineAfterDevices) {
+    ASSERT_NO_FATAL_FAILURES(BindCompositeImpl(false));
+}
+
+TEST(CoordinatorTestCase, BindCompositeDefineBeforeDevices) {
+    ASSERT_NO_FATAL_FAILURES(BindCompositeImpl(true));
 }
 
 } // namespace
 
-BEGIN_TEST_CASE(coordinator_tests)
-RUN_TEST(InitializeCoreDevices)
-RUN_TEST(OpenVirtcon)
-RUN_TEST(DumpState)
-RUN_TEST(LoadDriver)
-RUN_TEST(BindDrivers)
-RUN_TEST(BindDevices)
-RUN_TEST(BindComposite<false>)
-RUN_TEST(BindComposite<true>)
-END_TEST_CASE(coordinator_tests)
+int main(int argc, char** argv) {
+    return RUN_ALL_TESTS(argc, argv);
+}

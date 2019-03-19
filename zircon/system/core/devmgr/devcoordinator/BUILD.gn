@@ -93,7 +93,7 @@ test("devcoordinator-test") {
   ]
   deps = [
     ":common",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
     "../shared:env",
   ]
 }

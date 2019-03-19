@@ -5,8 +5,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <unittest/unittest.h>
 #include <zircon/driver/binding.h>
+#include <zxtest/zxtest.h>
 
 #include "binding-internal.h"
 
@@ -18,7 +18,11 @@ public:
                uint32_t protocol_id)
             : parent_(std::move(parent)), protocol_id_(protocol_id) {
         fbl::Array<zx_device_prop_t> props_array(new zx_device_prop_t[props_count], props_count);
-        memcpy(props_array.get(), props, sizeof(props[0]) * props_count);
+        if (props != nullptr) {
+            memcpy(props_array.get(), props, sizeof(props[0]) * props_count);
+        } else {
+            ASSERT_EQ(props_count, 0);
+        }
         props_ = std::move(props_array);
         for (const auto& prop : props_) {
             if (prop.id >= BIND_TOPO_START && prop.id <= BIND_TOPO_END) {
@@ -56,20 +60,14 @@ fbl::Array<const zx_bind_inst_t> MakeBindProgram(const zx_bind_inst_t (&insts)[N
     return array;
 }
 
-bool composite_match_zero_parts() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchZeroParts) {
     auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, 0);
 
     Match match = MatchParts(device, nullptr, 0);
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_one_part_one_device_fail() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchOnePartOneDeviceFail) {
     constexpr uint32_t kProtocolId = 1;
     auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId);
 
@@ -82,13 +80,9 @@ bool composite_match_one_part_one_device_fail() {
 
     Match match = MatchParts(device, parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_one_part_one_device_succeed() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchOnePartOneDeviceSucceed) {
     constexpr uint32_t kProtocolId = 1;
     auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId);
 
@@ -101,13 +95,9 @@ bool composite_match_one_part_one_device_succeed() {
 
     Match match = MatchParts(device, parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_two_part_one_device() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartOneDevice) {
     constexpr uint32_t kProtocolId = 1;
     auto device = fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId);
 
@@ -126,13 +116,9 @@ bool composite_match_two_part_one_device() {
 
     Match match = MatchParts(device, parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_zero_parts_two_devices() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchZeroPartsTwoDevices) {
     fbl::RefPtr<MockDevice> devices[] = {
         fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, 0),
         fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, 0),
@@ -140,13 +126,9 @@ bool composite_match_zero_parts_two_devices() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], nullptr, 0);
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_one_part_two_devices() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchOnePartTwoDevices) {
     constexpr uint32_t kProtocolId = 1;
     fbl::RefPtr<MockDevice> devices[] = {
         fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId),
@@ -163,13 +145,9 @@ bool composite_match_one_part_two_devices() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_two_devices_fail() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsTwoDevicesFail) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     fbl::RefPtr<MockDevice> devices[] = {
@@ -192,13 +170,9 @@ bool composite_match_two_parts_two_devices_fail() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_two_devices_succeed() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsTwoDevicesSucceed) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     fbl::RefPtr<MockDevice> devices[] = {
@@ -219,13 +193,9 @@ bool composite_match_two_parts_two_devices_succeed() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_three_parts_two_devices() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchThreePartsTwoDevices) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     fbl::RefPtr<MockDevice> devices[] = {
@@ -250,13 +220,9 @@ bool composite_match_three_parts_two_devices() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_three_devices_no_mid_topo_fail1() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesNoMidTopoFail1) {
     // No topological property on the middle device
     zx_device_prop_t mid_props[] ={
         { BIND_PCI_DID, 0, 1234 },
@@ -285,13 +251,9 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail1() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_three_devices_no_mid_topo_fail2() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesNoMidTopoFail2) {
     // No topological property on the middle device
     zx_device_prop_t mid_props[] ={
         { BIND_PCI_DID, 0, 1234 },
@@ -320,13 +282,9 @@ bool composite_match_two_parts_three_devices_no_mid_topo_fail2() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_three_devices_no_mid_topo_success() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesNoMidTopoSuccess) {
     // No topological property on the middle device
     zx_device_prop_t mid_props[] ={
         { BIND_PCI_DID, 0, 1234 },
@@ -354,13 +312,9 @@ bool composite_match_two_parts_three_devices_no_mid_topo_success() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_three_devices_mid_topo() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesMidTopo) {
     // Topological property on the middle device
     zx_device_prop_t mid_props[] = {
         { BIND_PCI_DID, 0, 1234 },
@@ -391,13 +345,9 @@ bool composite_match_two_parts_three_devices_mid_topo() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_three_parts_three_devices_mid_topo() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchThreePartsThreeDevicesMidTopo) {
     // Topological property on the middle device
     zx_device_prop_t mid_props[] = {
         { BIND_PCI_DID, 0, 1234 },
@@ -430,13 +380,9 @@ bool composite_match_three_parts_three_devices_mid_topo() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_two_parts_four_devices_one_topo() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchTwoPartsFourDevicesOneTopo) {
     // Topological property on the middle device
     zx_device_prop_t mid_props[] = {
         { BIND_PCI_DID, 0, 1234 },
@@ -467,13 +413,9 @@ bool composite_match_two_parts_four_devices_one_topo() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::None);
-
-    END_TEST;
 }
 
-bool composite_match_three_parts_four_devices_one_topo() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesOneTopo) {
     // Topological property on the middle device
     zx_device_prop_t mid_props[] = {
         { BIND_PCI_DID, 0, 1234 },
@@ -508,13 +450,9 @@ bool composite_match_three_parts_four_devices_one_topo() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_four_parts_four_devices_one_topo() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchFourPartsFourDevicesOneTopo) {
     // Topological property on the middle device
     zx_device_prop_t mid_props[] = {
         { BIND_PCI_DID, 0, 1234 },
@@ -553,13 +491,9 @@ bool composite_match_four_parts_four_devices_one_topo() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_three_parts_four_devices_ambiguous() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesAmbiguous) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
@@ -588,13 +522,9 @@ bool composite_match_three_parts_four_devices_ambiguous() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::Many);
-
-    END_TEST;
 }
 
-bool composite_match_three_parts_four_devices_ambiguous_against_leaf() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesAmbiguousAgainstLeaf) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
@@ -624,13 +554,9 @@ bool composite_match_three_parts_four_devices_ambiguous_against_leaf() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_three_parts_four_devices_ambiguous_against_root() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesAmbiguousAgainstRoot) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
@@ -660,13 +586,9 @@ bool composite_match_three_parts_four_devices_ambiguous_against_root() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_complex_topology() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchComplexTopology) {
     zx_device_prop_t props1[] = {
         { BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0) },
     };
@@ -715,13 +637,9 @@ bool composite_match_complex_topology() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::One);
-
-    END_TEST;
 }
 
-bool composite_match_complex_ambiguity() {
-    BEGIN_TEST;
-
+TEST(BindingTestCase, CompositeMatchComplexAmbiguity) {
     constexpr uint32_t kProtocolId1 = 1;
     constexpr uint32_t kProtocolId2 = 2;
     constexpr uint32_t kProtocolId3 = 3;
@@ -755,38 +673,6 @@ bool composite_match_complex_ambiguity() {
 
     Match match = MatchParts(devices[fbl::count_of(devices) - 1], parts, fbl::count_of(parts));
     ASSERT_EQ(match, Match::Many);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(binding_tests)
-RUN_TEST(composite_match_zero_parts)
-RUN_TEST(composite_match_one_part_one_device_fail)
-RUN_TEST(composite_match_one_part_one_device_succeed)
-RUN_TEST(composite_match_two_part_one_device)
-
-RUN_TEST(composite_match_zero_parts_two_devices)
-RUN_TEST(composite_match_one_part_two_devices)
-RUN_TEST(composite_match_two_parts_two_devices_fail)
-RUN_TEST(composite_match_two_parts_two_devices_succeed)
-RUN_TEST(composite_match_three_parts_two_devices)
-
-RUN_TEST(composite_match_two_parts_three_devices_no_mid_topo_success)
-RUN_TEST(composite_match_two_parts_three_devices_no_mid_topo_fail1)
-RUN_TEST(composite_match_two_parts_three_devices_no_mid_topo_fail2)
-RUN_TEST(composite_match_two_parts_three_devices_mid_topo)
-RUN_TEST(composite_match_three_parts_three_devices_mid_topo)
-
-RUN_TEST(composite_match_two_parts_four_devices_one_topo)
-RUN_TEST(composite_match_three_parts_four_devices_one_topo)
-RUN_TEST(composite_match_four_parts_four_devices_one_topo)
-RUN_TEST(composite_match_three_parts_four_devices_ambiguous)
-RUN_TEST(composite_match_three_parts_four_devices_ambiguous_against_leaf)
-RUN_TEST(composite_match_three_parts_four_devices_ambiguous_against_root)
-
-RUN_TEST(composite_match_complex_topology)
-RUN_TEST(composite_match_complex_ambiguity)
-
-END_TEST_CASE(binding_tests)
