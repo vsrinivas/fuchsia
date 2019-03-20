@@ -222,9 +222,10 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
     for entry in manifest:
         try:
             info = None
-            # Don't inspect data resources in the manifest. Regardless of the
+            # Don't inspect data or firmware resources in the manifest. Regardless of the
             # bits in these files, we treat them as opaque data.
-            if not entry.target.startswith('data/'):
+            if not entry.target.startswith(
+                    'data/') and not entry.target.startswith('lib/firmware/'):
                 info = binary_info(entry.source)
         except IOError as e:
             raise Exception('%s from %s' % (e, entry))
