@@ -10,7 +10,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
@@ -18,6 +17,7 @@ import (
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
+	"fuchsia.googlesource.com/tools/runner"
 
 	"github.com/google/subcommands"
 	"golang.org/x/crypto/ssh"
@@ -168,31 +168,30 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
-	cmd := exec.Cmd{
-		Path:   args[0],
-		Args:   args,
-		Env:    env,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
+
+	stdout := os.Stdout
 	if r.cmdStdout != "" {
 		f, err := os.Create(r.cmdStdout)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
-		cmd.Stdout = f
+		stdout = f
 	}
+	stderr := os.Stderr
 	if r.cmdStderr != "" {
 		f, err := os.Create(r.cmdStderr)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
-		cmd.Stderr = f
+		stderr = f
 	}
 
-	if err := botanist.Run(ctx, cmd); err != nil {
+	runner := runner.SubprocessRunner{
+		Env: env,
+	}
+	if err := runner.Run(ctx, args, stdout, stderr); err != nil {
 		if ctx.Err() != nil {
 			return fmt.Errorf("command timed out after %v", r.timeout)
 		}

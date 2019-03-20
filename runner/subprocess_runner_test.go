@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package testrunner_test
+package runner
 
 import (
 	"bytes"
@@ -11,8 +11,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"fuchsia.googlesource.com/tools/testrunner"
 )
 
 const (
@@ -25,13 +23,13 @@ func TestSubprocessRunner(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("should execute a commmand", func(t *testing.T) {
-			runner := testrunner.SubprocessRunner{}
+			r := SubprocessRunner{}
 			message := "Hello, World!"
 			command := []string{"/bin/echo", message}
 
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
-			if err := runner.Run(context.Background(), command, stdout, stderr); err != nil {
+			if err := r.Run(context.Background(), command, stdout, stderr); err != nil {
 				t.Fatalf("failed to run test. Got an error %v", err)
 			}
 
@@ -49,13 +47,13 @@ func TestSubprocessRunner(t *testing.T) {
 		t.Run("should error if the context Completes before the commmand", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			runner := testrunner.SubprocessRunner{}
+			r := SubprocessRunner{}
 			command := []string{"/bin/sleep", "5"}
 
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
 
-			err := runner.Run(ctx, command, stdout, stderr)
+			err := r.Run(ctx, command, stdout, stderr)
 			stdoutS := strings.TrimSpace(stdout.String())
 			stderrS := strings.TrimSpace(stderr.String())
 
@@ -69,13 +67,13 @@ func TestSubprocessRunner(t *testing.T) {
 		})
 
 		t.Run("should return an error if the command fails", func(t *testing.T) {
-			runner := testrunner.SubprocessRunner{}
+			r := SubprocessRunner{}
 			command := []string{"not_a_command_12345"}
 
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
 
-			err := runner.Run(context.Background(), command, stdout, stderr)
+			err := r.Run(context.Background(), command, stdout, stderr)
 			stdoutS := strings.TrimSpace(stdout.String())
 			stderrS := strings.TrimSpace(stderr.String())
 

@@ -9,6 +9,8 @@ import (
 	"io"
 
 	"golang.org/x/crypto/ssh"
+
+	"fuchsia.googlesource.com/tools/runner"
 )
 
 // The program on fuchsia used to stream system logs through a shell, not to be confused
@@ -17,7 +19,7 @@ const logListener = "bin/log_listener"
 
 // Syslogger represents an session with a Fuchsia instance through which system logs may be streamed.
 type Syslogger struct {
-	session *ssh.Session
+	r *runner.SSHRunner
 }
 
 // NewSyslogger creates a new Syslogger, given an SSH session with a Fuchsia instance.
@@ -26,35 +28,18 @@ func NewSyslogger(client *ssh.Client) (*Syslogger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Syslogger{session: session}, nil
+	return &Syslogger{r: &runner.SSHRunner{Session: session}}, nil
 }
 
 // Stream writes system logs to a given writer; it blocks until the stream is
 // is terminated or a Done is signaled.
 func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 	// Note: Fuchsia's log_listener does not write to stderr.
-	s.session.Stdout = output
-	// TERM-dumb, to avoid a loop fetching a cursor position.
-	if err := s.session.Start("TERM=dumb; " + logListener); err != nil {
-		return err
-	}
-
-	done := make(chan error)
-	go func() {
-		done <- s.session.Wait()
-	}()
-
-	select {
-	case err := <-done:
-		return err
-	case <-ctx.Done():
-		s.session.Signal(ssh.SIGKILL)
-		return nil
-	}
+	return s.r.Run(ctx, []string{logListener}, output, nil)
 }
 
 // Close tidies up the system logging session with the corresponding fuchsia instance.
 func (s *Syslogger) Close() error {
-	s.session.Signal(ssh.SIGKILL)
-	return s.session.Close()
+	s.r.Session.Signal(ssh.SIGKILL)
+	return s.r.Session.Close()
 }

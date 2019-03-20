@@ -14,7 +14,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -26,8 +25,10 @@ import (
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
+	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/tftp"
+
 	"github.com/google/subcommands"
 	"golang.org/x/crypto/ssh"
 )
@@ -174,22 +175,16 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	// Define multiwriters so cmd outputs to both stdout/stderr and respective buffers
 	// This allows users to see output on the fly while also storing results
 	var stdoutBuf, stderrBuf bytes.Buffer
-	stdoutWriter := io.MultiWriter(os.Stdout, &stdoutBuf)
-	stderrWriter := io.MultiWriter(os.Stdout, &stderrBuf)
+	stdout := io.MultiWriter(os.Stdout, &stdoutBuf)
+	stderr := io.MultiWriter(os.Stdout, &stderrBuf)
 
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Minute)
 	defer cancel()
-
-	hostCmd := exec.Cmd{
-		Path:   cmd.hostCmd,
-		Args:   []string{cmd.hostCmd},
-		Dir:    tmpDir,
-		Stdout: stdoutWriter,
-		Stderr: stderrWriter,
-	}
-
 	logger.Debugf(ctx, "executing command: %q\n", cmd.hostCmd)
-	hostCmdErr := botanist.Run(ctx, hostCmd)
+	runner := runner.SubprocessRunner{
+		WD: tmpDir,
+	}
+	hostCmdErr := runner.Run(ctx, []string{cmd.hostCmd}, stdout, stderr)
 
 	// Create summary JSON based on host command exit code.
 	summaryBuffer, err := cmd.hostSummaryJSON(ctx, hostCmdErr)

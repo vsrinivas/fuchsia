@@ -11,7 +11,7 @@ import (
 	"path"
 
 	"fuchsia.googlesource.com/tools/botanist"
-	"fuchsia.googlesource.com/tools/testrunner"
+	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/testsharder"
 	"golang.org/x/crypto/ssh"
 )
@@ -39,7 +39,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		command = []string{test.Path}
 	}
 
-	runner := &testrunner.SubprocessRunner{
+	runner := &runner.SubprocessRunner{
 		WD:  t.wd,
 		Env: t.env,
 	}
@@ -73,7 +73,7 @@ func (t *SSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.W
 	}
 	defer session.Close()
 
-	runner := &testrunner.SSHRunner{Session: session}
+	runner := &runner.SSHRunner{Session: session}
 	return runner.Run(ctx, test.Command, stdout, stderr)
 }
 
