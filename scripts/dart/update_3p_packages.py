@@ -32,7 +32,6 @@ ROOT_PUBSPECS = [
 # project.
 PROJECT_DEPENDENCIES = [
     'src/testing/sl4f/client',
-    'topaz/bin/xi',
     'topaz/public/dart/widgets',
     'topaz/public/lib',
     'topaz/tools',
