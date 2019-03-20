@@ -56,19 +56,8 @@ type QEMUConfig struct {
 	// KVM specifies whether to enable hardware virtualization acceleration.
 	KVM bool `json:"kvm"`
 
-	// Network specifies whether to emulate a network device.
-	Network bool `json:"network"`
-
 	// MinFS is the filesystem to mount as a device.
 	MinFS *MinFS `json:"minfs,omitempty"`
-}
-
-// NewQEMUConfig returns a new QEMU configuration.
-func NewQEMUConfig() *QEMUConfig {
-	return &QEMUConfig{
-		CPU:    4,
-		Memory: 4096,
-	}
 }
 
 // QEMUTarget is a QEMU target.
@@ -141,11 +130,10 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 		})
 	}
 
-	var networks []qemu.Netdev
-	if d.config.Network {
-		networks = append(networks, qemu.Netdev{
+	networks := []qemu.Netdev{
+		qemu.Netdev{
 			ID: "net0",
-		})
+		},
 	}
 
 	config := qemu.Config{

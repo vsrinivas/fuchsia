@@ -42,9 +42,6 @@ type QEMUCommand struct {
 
 	// EnableKVM dictates whether to enable KVM.
 	enableKVM bool
-
-	// EnableNetworking dictates whether to enable external networking.
-	enableNetworking bool
 }
 
 func (*QEMUCommand) Name() string {
@@ -66,7 +63,6 @@ func (cmd *QEMUCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.minFSBlkDevPCIAddr, "pci-addr", "06.0", "minFS block device PCI address")
 	f.StringVar(&cmd.targetArch, "arch", "", "target architecture (x64 or arm64)")
 	f.BoolVar(&cmd.enableKVM, "use-kvm", false, "whether to enable KVM")
-	f.BoolVar(&cmd.enableNetworking, "enable-networking", false, "whether to enable external networking")
 }
 
 func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error {
@@ -81,12 +77,11 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 
 	// TODO: pass this directly from a file.
 	config := target.QEMUConfig{
-		CPU:     4,
-		Memory:  4096,
-		Path:    cmd.qemuBinDir,
-		Target:  cmd.targetArch,
-		KVM:     cmd.enableKVM,
-		Network: cmd.enableNetworking,
+		CPU:    4,
+		Memory: 4096,
+		Path:   cmd.qemuBinDir,
+		Target: cmd.targetArch,
+		KVM:    cmd.enableKVM,
 	}
 	if cmd.minFSImage != "" {
 		config.MinFS = &target.MinFS{
