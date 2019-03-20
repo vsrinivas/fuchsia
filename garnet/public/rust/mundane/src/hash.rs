@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: remove this line once rust updated to 1.35.0.
-#![allow(deprecated)]
-
 //! Cryptographic hash functions.
 
 use std::fmt::{self, Debug, Display, Formatter};

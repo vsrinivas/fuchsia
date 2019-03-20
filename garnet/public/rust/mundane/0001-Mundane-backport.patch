@@ -567,10 +567,10 @@ index 3b6ac46..6c1b11d 100644
          }
      };
 diff --git a/src/hash.rs b/src/hash.rs
-index 4f2ca68..96e1708 100644
+index 4f2ca68..97ad2cc 100644
 --- a/src/hash.rs
 +++ b/src/hash.rs
-@@ -1,8 +1,9 @@
+@@ -1,8 +1,6 @@
 -// Copyright 2018 Google LLC
 -//
 -// Use of this source code is governed by an MIT-style
@@ -579,9 +579,6 @@ index 4f2ca68..96e1708 100644
 +// Copyright 2018 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
-+
-+// TODO: remove this line once rust updated to 1.35.0.
-+#![allow(deprecated)]
  
  //! Cryptographic hash functions.
  
