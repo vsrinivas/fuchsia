@@ -57,13 +57,15 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |device_settings_manager| Service to look-up whether device needs factory
   // reset.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
-  explicit BasemgrImpl(
+  BasemgrImpl(
       const modular::BasemgrSettings& settings,
       const std::vector<modular::SessionShellSettings>& session_shell_settings,
       fuchsia::sys::Launcher* const launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-      fuchsia::wlan::service::WlanPtr wlan, fit::function<void()> on_shutdown);
+      fuchsia::wlan::service::WlanPtr wlan,
+      fuchsia::auth::account::AccountManagerPtr account_manager,
+      fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
 
@@ -145,7 +147,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
   // Used to reset Wi-Fi during factory reset.
   fuchsia::wlan::service::WlanPtr wlan_;
-
+  // Used for account management in the framework.
+  fuchsia::auth::account::AccountManagerPtr account_manager_;
   fit::function<void()> on_shutdown_;
 
   // Holds the presentation service.

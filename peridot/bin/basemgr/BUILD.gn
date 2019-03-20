@@ -11,6 +11,11 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 declare_args() {
   # Whether basemgr should automatically login as a guest user.
   auto_login_to_guest = false
+
+  # Whether basemgr and dev_base_shell should use account_manager for account
+  # creation. This is a temporary flag while modular transitions to use account
+  # manager.
+  use_account_manager = false
 }
 
 flatbuffer("users") {
@@ -52,6 +57,7 @@ executable_package("basemgr") {
     "//peridot/lib/ledger_client:constants",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
@@ -126,6 +132,7 @@ source_set("lib") {
     "//peridot/lib/fidl:environment",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/public/lib/async/cpp:future",
+    "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -137,8 +144,15 @@ source_set("lib") {
     "//zircon/public/lib/trace",
   ]
 
-  if (auto_login_to_guest) {
+  if (auto_login_to_guest && use_account_manager) {
+    public_configs = [
+      ":auto_login_to_guest",
+      ":use_account_manager",
+    ]
+  } else if (auto_login_to_guest) {
     public_configs = [ ":auto_login_to_guest" ]
+  } else if (use_account_manager) {
+    public_configs = [ ":use_account_manager" ]
   }
 }
 
@@ -150,6 +164,12 @@ executable_package("dev_base_shell") {
     },
   ]
 
+  deps = [
+    ":dev_base_shell_source_set",
+  ]
+}
+
+source_set("dev_base_shell_source_set") {
   sources = [
     "dev_base_shell.cc",
   ]
@@ -160,10 +180,15 @@ executable_package("dev_base_shell") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
+    "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
+
+  if (use_account_manager) {
+    public_configs = [ ":use_account_manager" ]
+  }
 }
 
 executable("session_context_impl_unittest") {
@@ -187,4 +212,8 @@ executable("session_context_impl_unittest") {
 
 config("auto_login_to_guest") {
   defines = [ "AUTO_LOGIN_TO_GUEST" ]
+}
+
+config("use_account_manager") {
+  defines = [ "USE_ACCOUNT_MANAGER" ]
 }

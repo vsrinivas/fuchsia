@@ -30,7 +30,11 @@ void SessionProvider::StartSession(
     fuchsia::modular::auth::AccountPtr account,
     fuchsia::auth::TokenManagerPtr ledger_token_manager,
     fuchsia::auth::TokenManagerPtr agent_token_manager) {
-  FXL_CHECK(!session_context_) << "Session context already exists.";
+  if (session_context_) {
+    FXL_LOG(WARNING) << "StartSession() called when session context already "
+                        "exists. Try calling SessionProvider::Teardown()";
+    return;
+  }
 
   auto done = [this](bool logout_users) {
     auto delete_session_context = [this] {

@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
@@ -28,6 +29,14 @@
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 
 namespace modular {
+
+namespace {
+#ifdef USE_ACCOUNT_MANAGER
+constexpr bool kUseAccountManager = true;
+#else
+constexpr bool kUseAccountManager = false;
+#endif
+}  // namespace
 
 class Settings {
  public:
@@ -67,6 +76,8 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
+    this->startup_context()->ConnectToEnvironmentService(
+        account_manager_.NewRequest());
     if (settings_.use_test_runner) {
       testing::Init(this->startup_context(), __FILE__);
       testing::Await(testing::kTestShutdown,
@@ -138,6 +149,32 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   }
 
   void Connect() {
+    // If we are using account manager for authentication, we provision a new
+    // auth account with the expectation that basemgr is subscribed as an
+    // account listener.
+    if (kUseAccountManager) {
+      // Ignore settings_user and always create a Fuchsia account if there isn't
+      // one already.
+      if (view_owner_request_) {
+        account_manager_->GetAccountIds(
+            [this](
+                std::vector<fuchsia::auth::account::LocalAccountId> accounts) {
+              if (!accounts.empty()) {
+                return;
+              }
+
+              account_manager_->ProvisionNewAccount(
+                  [](fuchsia::auth::account::Status,
+                     std::unique_ptr<fuchsia::auth::account::LocalAccountId>) {
+                    FXL_LOG(INFO) << "Provisioned new account. Translating "
+                                     "this account into a "
+                                     "fuchsia::modular::auth::Account.";
+                  });
+            });
+      }
+      return;
+    }
+
     if (user_provider_ && view_owner_request_) {
       if (settings_.user.empty()) {
         // Incognito mode.
@@ -180,6 +217,9 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
       view_owner_request_;
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserProviderPtr user_provider_;
+
+  fuchsia::auth::account::AccountManagerPtr account_manager_;
+
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);

@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_BASEMGR_USER_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_BASEMGR_USER_PROVIDER_IMPL_H_
 
+#include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -24,7 +25,8 @@ struct UsersStorage;
 namespace modular {
 
 class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
-                         fuchsia::modular::UserProvider {
+                         fuchsia::modular::UserProvider,
+                         fuchsia::auth::account::AccountListener {
  public:
   // Called after UserProviderImpl successfully logs in a user.
   using OnLoginCallback =
@@ -34,7 +36,8 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // All parameters must outlive UserProviderImpl.
   UserProviderImpl(
-      fuchsia::auth::TokenManagerFactory* token_manager_factory,
+      fuchsia::auth::account::AccountManager* const account_manager,
+      fuchsia::auth::TokenManagerFactory* const token_manager_factory,
       fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
       OnLoginCallback on_login);
 
@@ -77,8 +80,29 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void LoginInternal(fuchsia::modular::auth::AccountPtr account,
                      fuchsia::modular::UserLoginParams params);
 
+  // Currently AccountListener is only exercised by test code (see
+  // dev_base_shell.cc). OnInitialize, user_provider_impl will try to start a
+  // session with a guest modular account if there are already auth accounts on
+  // the device. OnAccountAdded, user_provider_impl will try to start a session
+  // with a a guest modular account.
+  //
+  // |fuchsia::auth::account::AccountListner|
+  void OnInitialize(std::vector<fuchsia::auth::account::AccountAuthState>,
+                    OnInitializeCallback) override;
+  // |fuchsia::auth::account::AccountListner|
+  void OnAccountAdded(fuchsia::auth::account::LocalAccountId,
+                      OnAccountAddedCallback) override;
+  // |fuchsia::auth::account::AccountListner|
+  void OnAccountRemoved(fuchsia::auth::account::LocalAccountId,
+                        OnAccountRemovedCallback) override;
+  // |fuchsia::auth::account::AccountListner|
+  void OnAuthStateChanged(fuchsia::auth::account::AccountAuthState,
+                          OnAuthStateChangedCallback) override;
+
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
+  fuchsia::auth::account::AccountManager* const
+      account_manager_;  // Neither owned nor copied.
   fuchsia::auth::TokenManagerFactory* const
       token_manager_factory_;  // Neither owned nor copied.
   fuchsia::auth::AuthenticationContextProviderPtr
@@ -86,6 +110,8 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
+  fidl::Binding<fuchsia::auth::account::AccountListener>
+      account_listener_binding_;
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 

@@ -8,6 +8,7 @@
 
 #include <lib/fit/function.h>
 #include <lib/fxl/strings/string_printf.h>
+#include <zircon/status.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -19,6 +20,12 @@
 namespace modular {
 
 namespace {
+
+#ifdef USE_ACCOUNT_MANAGER
+constexpr bool kUseAccountManager = true;
+#else
+constexpr bool kUseAccountManager = false;
+#endif
 
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
@@ -112,14 +119,17 @@ std::vector<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    fuchsia::auth::TokenManagerFactory* token_manager_factory,
+    fuchsia::auth::account::AccountManager* const account_manager,
+    fuchsia::auth::TokenManagerFactory* const token_manager_factory,
     fuchsia::auth::AuthenticationContextProviderPtr
         authentication_context_provider,
     OnLoginCallback on_login)
-    : token_manager_factory_(token_manager_factory),
+    : account_manager_(account_manager),
+      token_manager_factory_(token_manager_factory),
       authentication_context_provider_(
           std::move(authentication_context_provider)),
       authentication_context_provider_binding_(this),
+      account_listener_binding_(this),
       on_login_(std::move(on_login)) {
   FXL_DCHECK(token_manager_factory_);
   FXL_DCHECK(authentication_context_provider_);
@@ -146,6 +156,33 @@ UserProviderImpl::UserProviderImpl(
     if (!Parse(serialized_users)) {
       return;
     }
+  }
+
+  // Register UserProvider as an AccountListener if we are using account
+  // manager. For now, this will directly translate newly added auth accounts
+  // into fuchsia.modular accounts.
+  if (kUseAccountManager) {
+    account_listener_binding_.set_error_handler([this](zx_status_t status) {
+      account_listener_binding_.Unbind();
+      FXL_LOG(FATAL) << "AccountListener disconnected with status: "
+                     << zx_status_get_string(status);
+    });
+
+    fuchsia::auth::account::AccountListenerOptions options;
+    options.initial_state = true;
+    options.add_account = true;
+    options.remove_account = true;
+    account_manager_->RegisterAccountListener(
+        account_listener_binding_.NewBinding(), std::move(options),
+        [](fuchsia::auth::account::Status status) {
+          if (status == fuchsia::auth::account::Status::OK) {
+            FXL_LOG(INFO) << "AccountListener registered.";
+          } else {
+            FXL_LOG(FATAL)
+                << "AccountListener registration failed with status: "
+                << (uint32_t)status;
+          }
+        });
   }
 }
 
@@ -498,6 +535,38 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
 
   on_login_(std::move(account), std::move(ledger_token_manager),
             std::move(agent_token_manager));
+}
+
+void UserProviderImpl::OnInitialize(
+    std::vector<fuchsia::auth::account::AccountAuthState> account_auth_states,
+    OnInitializeCallback callback) {
+  FXL_LOG(INFO) << "OnInitialize called";
+  if (!account_auth_states.empty()) {
+    fuchsia::modular::UserLoginParams params;
+    Login(std::move(params));
+  }
+  callback();
+}
+
+void UserProviderImpl::OnAccountAdded(fuchsia::auth::account::LocalAccountId,
+                                      OnAccountAddedCallback callback) {
+  FXL_LOG(INFO) << "OnAccountAdded called";
+  fuchsia::modular::UserLoginParams params;
+  Login(std::move(params));
+  callback();
+}
+
+void UserProviderImpl::OnAccountRemoved(fuchsia::auth::account::LocalAccountId,
+                                        OnAccountRemovedCallback callback) {
+  FXL_LOG(INFO) << "OnAccountRemoved called";
+  callback();
+}
+
+void UserProviderImpl::OnAuthStateChanged(
+    fuchsia::auth::account::AccountAuthState,
+    OnAuthStateChangedCallback callback) {
+  FXL_LOG(INFO) << "OnAuthStateChanged called";
+  callback();
 }
 
 }  // namespace modular

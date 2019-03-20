@@ -60,13 +60,16 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-    fuchsia::wlan::service::WlanPtr wlan, fit::function<void()> on_shutdown)
+    fuchsia::wlan::service::WlanPtr wlan,
+    fuchsia::auth::account::AccountManagerPtr account_manager,
+    fit::function<void()> on_shutdown)
     : settings_(settings),
       session_shell_settings_(session_shell_settings),
       launcher_(launcher),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
       wlan_(std::move(wlan)),
+      account_manager_(std::move(account_manager)),
       on_shutdown_(std::move(on_shutdown)),
       base_shell_context_binding_(this),
       authentication_context_provider_binding_(this),
@@ -184,7 +187,7 @@ void BasemgrImpl::Start() {
       token_manager_factory_.NewRequest());
 
   user_provider_impl_ = std::make_unique<UserProviderImpl>(
-      token_manager_factory_.get(),
+      account_manager_.get(), token_manager_factory_.get(),
       authentication_context_provider_binding_.NewBinding().Bind(),
       /* on_login= */
       [this](fuchsia::modular::auth::AccountPtr account,

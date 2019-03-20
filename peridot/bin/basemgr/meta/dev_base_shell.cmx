@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.auth.account.AccountManager",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.ComponentContext",
             "fuchsia.sys.Launcher",

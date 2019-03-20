@@ -7,6 +7,7 @@
             "deprecated-global-persistent-storage"
         ],
         "services": [
+            "fuchsia.auth.account.AccountManager",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.ui.policy.Presenter",
