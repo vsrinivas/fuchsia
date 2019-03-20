@@ -268,16 +268,29 @@ private:
     unsigned int files_ = 0;
 
     OutputStream CreateFile(const char* outfile) {
-        // Remove the file in case it exists.  This makes it safe to
-        // to do e.g. `zbi -o boot.zbi boot.zbi --entry=bin/foo=mybuild/foo`
-        // to modify a file "in-place" because the input `boot.zbi` will
-        // already have been opened before the new `boot.zbi` is created.
-        remove(outfile);
+        auto openit = [outfile]() {
+            return fbl::unique_fd(
+                open(outfile, O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, 0666));
+        };
 
-        fbl::unique_fd fd(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
-        if (!fd && errno == ENOENT) {
-            MakeDirs(outfile);
-            fd.reset(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
+        fbl::unique_fd fd = openit();
+        if (!fd) {
+            switch (errno) {
+            case ENOENT:
+                MakeDirs(outfile);
+                fd = openit();
+                break;
+
+            case EEXIST:
+                // Remove the file in case it exists.  This makes it safe to do
+                // e.g. `zbi -o boot.zbi boot.zbi --entry=bin/foo=my/foo` to
+                // modify a file "in-place" because the input `boot.zbi` will
+                // already have been opened before the new `boot.zbi` is
+                // created.
+                remove(outfile);
+                fd = openit();
+                break;
+            }
         }
         if (!fd) {
             fprintf(stderr, "cannot create %s: %s\n",
