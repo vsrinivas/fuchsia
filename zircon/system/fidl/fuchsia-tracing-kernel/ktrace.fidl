@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.tracing.kernel;
+
+using zx;
+
+// TODO(ZX-448): Allow providing a vmo of the buffer to use.
+
+[Layout = "Simple"]
+protocol Controller {
+    /// Start tracing.
+    Start(uint32 group_mask) -> (zx.status status);
+
+    /// Stop tracing.
+    Stop() -> (zx.status status);
+
+    /// Rewind the trace buffer.
+    Rewind() -> (zx.status status);
+
+    /// Get the number of bytes written to the trace buffer.
+    /// |size| is valid if, and only if, |status| is ZX_OK.
+    GetBytesWritten() -> (zx.status status, uint64 size);
+};

@@ -14,6 +14,7 @@ group("tools") {
     "fidl:tools",
     "fvm",
     "kernel-buildsig",
+    "ktrace-dump",
     "loglistener",
     "merkleroot",
     "minfs",

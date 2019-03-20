@@ -2,15 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ktrace") {
+executable("ktrace") {
   sources = [
-    "ktrace.c",
+    "ktrace.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-tracing-kernel:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
   ]
 }

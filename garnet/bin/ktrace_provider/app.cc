@@ -7,16 +7,19 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/ktrace.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
 #include "garnet/bin/ktrace_provider/importer.h"
 #include "garnet/bin/ktrace_provider/reader.h"
 #include "lib/fxl/arraysize.h"
-#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 
 namespace ktrace_provider {
@@ -46,30 +49,54 @@ constexpr char kRetainCategory[] = "kernel:retain";
 
 constexpr char kLogCategory[] = "log";
 
-fxl::UniqueFD OpenKTrace() {
-  int result = open(kKTraceDev, O_WRONLY);
-  if (result < 0) {
+zx::channel OpenKTrace() {
+  int fd = open(kKTraceDev, O_WRONLY);
+  if (fd < 0) {
     FXL_LOG(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
+    return zx::channel();
   }
-  return fxl::UniqueFD(result);  // take ownership here
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get " << kKTraceDev << " channel: "
+                   << zx_status_get_string(status);
+    return zx::channel();
+  }
+  return channel;
 }
 
-void IoctlKtraceStop(int fd) {
-  zx_status_t status = ioctl_ktrace_stop(fd);
-  if (status != ZX_OK)
-    FXL_LOG(ERROR) << "ioctl_ktrace_stop failed: status=" << status;
+void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
+                    zx_status_t rqst_status) {
+  if (fidl_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status="
+                   << fidl_status;
+  } else if (rqst_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Ktrace " << rqst_name << " failed: status="
+                   << rqst_status;
+  }
 }
 
-void IoctlKtraceRewind(int fd) {
-  zx_status_t status = ioctl_ktrace_rewind(fd);
-  if (status != ZX_OK)
-    FXL_LOG(ERROR) << "ioctl_ktrace_rewind failed: status=" << status;
+void RequestKtraceStop(const zx::channel& channel) {
+  zx_status_t stop_status;
+  zx_status_t status =
+    fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
+  LogFidlFailure("stop", status, stop_status);
 }
 
-void IoctlKtraceStart(int fd, uint32_t group_mask) {
-  zx_status_t status = ioctl_ktrace_start(fd, &group_mask);
-  if (status != ZX_OK)
-    FXL_LOG(ERROR) << "ioctl_ktrace_start failed: status=" << status;
+void RequestKtraceRewind(const zx::channel& channel) {
+  zx_status_t rewind_status;
+  zx_status_t status =
+    fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
+  LogFidlFailure("rewind", status, rewind_status);
+}
+
+void RequestKtraceStart(const zx::channel& channel, uint32_t group_mask) {
+  zx_status_t start_status;
+  zx_status_t status =
+    fuchsia_tracing_kernel_ControllerStart(channel.get(), group_mask,
+                                           &start_status);
+  LogFidlFailure("start", status, start_status);
 }
 
 }  // namespace
@@ -128,8 +155,8 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
 
   FXL_LOG(INFO) << "Starting ktrace";
 
-  fxl::UniqueFD fd = OpenKTrace();
-  if (!fd.is_valid()) {
+  zx::channel channel = OpenKTrace();
+  if (!channel) {
     return;
   }
 
@@ -140,11 +167,11 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
   }
   current_group_mask_ = group_mask;
 
-  IoctlKtraceStop(fd.get());
+  RequestKtraceStop(channel);
   if (!retain_current_data) {
-    IoctlKtraceRewind(fd.get());
+    RequestKtraceRewind(channel);
   }
-  IoctlKtraceStart(fd.get(), group_mask);
+  RequestKtraceStart(channel, group_mask);
 
   FXL_LOG(INFO) << "Started ktrace";
 }
@@ -157,9 +184,11 @@ void App::StopKTrace() {
 
   FXL_LOG(INFO) << "Stopping ktrace";
 
-  fxl::UniqueFD fd = OpenKTrace();
-  if (fd.is_valid()) {
-    IoctlKtraceStop(fd.get());
+  {
+    zx::channel channel = OpenKTrace();
+    if (channel) {
+      RequestKtraceStop(channel);
+    }
   }
 
   // Acquire a context for writing to the trace buffer.
