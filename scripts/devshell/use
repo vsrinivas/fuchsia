@@ -12,16 +12,35 @@
 ## (and DIR has not been removed since).  The next `fx build` or other
 ## such command will now refer to DIR.  The previous build directory is
 ## left in place, so you can switch back again with `fx use` later.
+##
+## fx use without arguments will list the available build directories, naming
+## the current active build directory (if any).
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 function main {
   if [[ $# -ne 1 ]]; then
-    fx-command-help
+    fx-warn "no new build dir selected, listing build directories:"
+    fx-config-read
+    local current="${FUCHSIA_BUILD_DIR##"${FUCHSIA_DIR}"/}"
+    echo "${current} (current)"
+    for d in ${FUCHSIA_DIR}/out/*; do
+      local build_dir="${d##"${FUCHSIA_DIR}"/}"
+      if [[ "${build_dir}" != "out/build-zircon" && "${build_dir}" != "${current}" ]]; then
+        echo "${build_dir}"
+      fi
+    done
     return 1
   fi
 
   local -r build_dir="$1"
+
+  case "${build_dir}" in
+  -h|--help)
+    fx-command-help
+    return 0
+    ;;
+  esac
 
   if [[ "$build_dir" == /* ]]; then
     local -r full_build_dir="${build_dir}"
