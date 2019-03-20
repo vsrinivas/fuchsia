@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/virtual_audio"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.virtualaudio.Control",
+            "fuchsia.virtualaudio.Input",
+            "fuchsia.virtualaudio.Output"
+        ]
+    }
+}
