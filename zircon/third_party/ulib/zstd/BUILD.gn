@@ -27,9 +27,38 @@ library("zstd") {
     "lib/decompress/zstd_ddict.c",
     "lib/decompress/zstd_decompress.c",
     "lib/decompress/zstd_decompress_block.c",
+    "lib/dictBuilder/cover.c",
+    "lib/dictBuilder/divsufsort.c",
+    "lib/dictBuilder/fastcover.c",
+    "lib/dictBuilder/zdict.c",
   ]
   include_dirs = [
     "include/zstd",
     "lib/common",
+    "lib/dictBuilder",
+  ]
+}
+
+executable("zstdcli") {
+  output_name = "zstd"
+  sources = [
+    "programs/benchfn.c",
+    "programs/benchzstd.c",
+    "programs/datagen.c",
+    "programs/dibio.c",
+    "programs/fileio.c",
+    "programs/util.c",
+    "programs/zstdcli.c",
+  ]
+  deps = [
+    ":zstd",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+  ]
+  include_dirs = [
+    "include/zstd",
+    "lib/common",
+    "lib/dictBuilder",
+    "programs",
   ]
 }

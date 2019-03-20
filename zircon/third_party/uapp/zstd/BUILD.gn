@@ -2,12 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("uapp") {
+group("zstd") {
   deps = [
-    "dash",
-    "fsck-msdosfs",
-    "kilo",
-    "mkfs-msdosfs",
-    "zstd",
+    "$zx/third_party/ulib/zstd:zstdcli",
   ]
 }
