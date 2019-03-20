@@ -22,7 +22,7 @@ namespace zxcrypt {
 // operations.  To perform block operations, |Unseal| must first be called with a valid key and
 // slot, which will cause an unsealed |zxcrypt::Device| to be added to the device tree.
 class DeviceManager;
-using DeviceManagerType = ddk::Device<DeviceManager, ddk::Unbindable>;
+using DeviceManagerType = ddk::Device<DeviceManager, ddk::Unbindable, ddk::Messageable>;
 class DeviceManager final : public DeviceManagerType {
 public:
     explicit DeviceManager(zx_device_t* parent)
@@ -36,6 +36,9 @@ public:
     // ddk::Device methods; see ddktl/device.h
     void DdkUnbind() __TA_EXCLUDES(mtx_);
     void DdkRelease();
+
+    // ddk::Messageable methods
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
 
     // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
     zx_status_t Unseal(const uint8_t* ikm, size_t ikm_len, key_slot_t slot)
