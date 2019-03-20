@@ -33,9 +33,14 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.realpath(
     os.path.abspath(__file__)))))
 
+SYSROOT_PREFIXES = [
+    'ZIRCON_SYSTEM_PUBLIC',
+    'ZIRCON_THIRD_PARTY_ULIB_MUSL_INCLUDE',
+]
+sysroot_prefix = re.compile('^(' + string.join(SYSROOT_PREFIXES, '|') + ')_')
+
 PUBLIC_PREFIXES = [
     'ZIRCON_SYSTEM_ULIB_.*_INCLUDE',
-    'ZIRCON_SYSTEM_PUBLIC',
     'GARNET_PUBLIC',
     'PERIDOT_PUBLIC',
     'TOPAZ_PUBLIC',
@@ -48,9 +53,25 @@ all_header_guards = collections.defaultdict(list)
 pragma_once = re.compile('^#pragma once$')
 disallowed_header_characters = re.compile('[^a-zA-Z0-9_]')
 
-def adjust_for_layer(header_guard):
-    """Remove internal layer prefix from public headers if applicable."""
-    return public_prefix.sub('', header_guard, 1)
+def adjust_for_location(header_guard):
+    """Remove internal location prefix from public headers if applicable."""
+    # Remove public prefixes
+    header_guard = public_prefix.sub('', header_guard, 1)
+    # Replace sysroot prefixes
+    header_guard = sysroot_prefix.sub('SYSROOT_', header_guard, 1)
+
+    return header_guard
+
+
+def header_guard_from_path(path):
+    """Compute the header guard from the path"""
+    assert(path.startswith(FUCHSIA_ROOT))
+    relative_path = path[len(FUCHSIA_ROOT):].strip('/')
+    upper_path = relative_path.upper()
+    header_guard = re.sub(disallowed_header_characters, '_', upper_path) + '_'
+    header_guard = adjust_for_location(header_guard)
+    return header_guard
+
 
 def check_file(path, fix_guards=False):
     """Check whether the file has a correct header guard.
@@ -72,11 +93,7 @@ def check_file(path, fix_guards=False):
     if path[-2:] != '.h':
         return True
 
-    assert(path.startswith(FUCHSIA_ROOT))
-    relative_path = path[len(FUCHSIA_ROOT):].strip('/')
-    upper_path = relative_path.upper()
-    header_guard = re.sub(disallowed_header_characters, '_', upper_path) + '_'
-    header_guard = adjust_for_layer(header_guard)
+    header_guard = header_guard_from_path(path)
     all_header_guards[header_guard].append(path)
 
     ifndef = re.compile('^#ifndef %s$' % header_guard)
