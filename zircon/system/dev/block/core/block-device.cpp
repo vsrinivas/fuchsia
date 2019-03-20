@@ -76,8 +76,7 @@ public:
 
     void BlockQuery(block_info_t* block_info, size_t* op_size);
     void BlockQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie);
-    zx_status_t GetStats(const void* cmd, size_t cmd_len, void* reply, size_t reply_len,
-                         size_t* out_actual);
+    zx_status_t GetStats(bool clear, block_stats_t* out);
 
 private:
     static int ServerThread(void* arg);
@@ -244,14 +243,14 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 
 zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, void* reply,
                                   size_t reply_len, size_t* out_actual) {
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     switch (op) {
     case IOCTL_BLOCK_GET_FIFOS:
         return GetFifos(reinterpret_cast<zx_handle_t*>(reply), reply_len, out_actual);
     case IOCTL_BLOCK_ATTACH_VMO:
         return AttachVmo(cmd, cmd_len, reinterpret_cast<vmoid_t*>(reply), reply_len, out_actual);
-    case IOCTL_BLOCK_FIFO_CLOSE: {
+    case IOCTL_BLOCK_FIFO_CLOSE:
         return server_manager_.CloseFifoServer();
-    }
     case IOCTL_BLOCK_RR_PART:
         return Rebind();
     case IOCTL_BLOCK_GET_INFO: {
@@ -271,7 +270,17 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         return ZX_OK;
     }
     case IOCTL_BLOCK_GET_STATS: {
-        return GetStats(cmd, cmd_len, reply, reply_len, out_actual);
+        if (cmd_len != sizeof(bool)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (reply_len < sizeof(block_stats_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        status = GetStats(*(static_cast<const bool*>(cmd)), static_cast<block_stats_t*>(reply));
+        if (status == ZX_OK) {
+            *out_actual = sizeof(block_stats_t);
+        }
+        return status;
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         if (!parent_partition_protocol_.is_valid()) {
@@ -282,7 +291,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         if (reply_len < GUID_LENGTH) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_TYPE, guid);
+        status = parent_partition_protocol_.GetGuid(GUIDTYPE_TYPE, guid);
         if (status != ZX_OK) {
             return status;
         }
@@ -298,7 +307,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         if (reply_len < GUID_LENGTH) {
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
-        zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_INSTANCE, guid);
+        status = parent_partition_protocol_.GetGuid(GUIDTYPE_INSTANCE, guid);
         if (status != ZX_OK) {
             return status;
         }
@@ -310,7 +319,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
             return ZX_ERR_NOT_SUPPORTED;
         }
         char* name = static_cast<char*>(reply);
-        zx_status_t status = parent_partition_protocol_.GetName(name, reply_len);
+        status = parent_partition_protocol_.GetName(name, reply_len);
         if (status != ZX_OK) {
             return status;
         }
@@ -355,7 +364,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
             return ZX_ERR_BUFFER_TOO_SMALL;
         }
         auto info = static_cast<parent_volume_info_t*>(reply);
-        zx_status_t status = parent_volume_protocol_.Query(info);
+        status = parent_volume_protocol_.Query(info);
         if (status != ZX_OK) {
             return status;
         }
@@ -383,11 +392,9 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         auto response = static_cast<query_response_t*>(reply);
         response->count = 0;
         slice_region_t* out_regions = reinterpret_cast<slice_region_t*>(response->vslice_range);
-        zx_status_t status = parent_volume_protocol_.QuerySlices(request->vslice_start,
-                                                                 request->count,
-                                                                 out_regions,
-                                                                 MAX_FVM_VSLICE_REQUESTS,
-                                                                 &response->count);
+        status = parent_volume_protocol_.QuerySlices(request->vslice_start, request->count,
+                                                     out_regions, MAX_FVM_VSLICE_REQUESTS,
+                                                     &response->count);
         if (status != ZX_OK) {
             return status;
         }
@@ -541,16 +548,7 @@ void BlockDevice::BlockQueue(block_op_t* op, block_impl_queue_callback completio
     parent_protocol_.Queue(op, completion_cb, cookie);
 }
 
-zx_status_t BlockDevice::GetStats(const void* cmd, size_t cmd_len, void* reply,
-                                  size_t reply_len, size_t* out_actual) {
-    if (cmd_len != sizeof(bool)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    block_stats_t* out = reinterpret_cast<block_stats_t*>(reply);
-    if (reply_len < sizeof(*out)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
+zx_status_t BlockDevice::GetStats(bool clear, block_stats_t* out) {
     fbl::AutoLock lock(&stat_lock_);
     if (enable_stats_) {
         out->total_ops = stats_.total_ops;
@@ -559,7 +557,6 @@ zx_status_t BlockDevice::GetStats(const void* cmd, size_t cmd_len, void* reply,
         out->total_blocks_read = stats_.total_blocks_read;
         out->total_writes = stats_.total_writes;
         out->total_blocks_written = stats_.total_blocks_written;
-        bool clear = *(bool*)cmd;
         if (clear) {
             stats_.total_ops = 0;
             stats_.total_blocks = 0;
@@ -568,7 +565,6 @@ zx_status_t BlockDevice::GetStats(const void* cmd, size_t cmd_len, void* reply,
             stats_.total_writes = 0;
             stats_.total_blocks_written = 0;
         }
-        *out_actual = sizeof(*out);
         return ZX_OK;
     } else {
         return ZX_ERR_NOT_SUPPORTED;
