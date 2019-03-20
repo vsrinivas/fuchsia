@@ -21,7 +21,6 @@ library("fbl") {
     "fbl/intrusive_single_list.h",
     "fbl/intrusive_wavl_tree.h",
     "fbl/intrusive_wavl_tree_internal.h",
-    "fbl/limits.h",
     "fbl/macros.h",
     "fbl/mutex.h",
     "fbl/null_lock.h",

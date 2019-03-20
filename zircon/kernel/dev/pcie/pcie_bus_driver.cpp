@@ -12,9 +12,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
 #include <fbl/mutex.h>
 #include <inttypes.h>
+#include <ktl/limits.h>
 #include <ktl/move.h>
 #include <lib/pci/pio.h>
 #include <lk/init.h>
@@ -427,7 +427,7 @@ zx_status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
     if (aspace == PciAddrSpace::MMIO) {
         // Figure out if this goes in the low region, the high region, or needs
         // to be split into two regions.
-        constexpr uint64_t U32_MAX = fbl::numeric_limits<uint32_t>::max();
+        constexpr uint64_t U32_MAX = ktl::numeric_limits<uint32_t>::max();
         auto& mmio_lo = mmio_lo_regions_;
         auto& mmio_hi = mmio_hi_regions_;
 

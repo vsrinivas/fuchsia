@@ -11,7 +11,6 @@
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/limits.h>
 #include <inttypes.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>

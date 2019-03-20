@@ -23,9 +23,9 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_free_ptr.h>
+#include <ktl/limits.h>
 #include <ktl/unique_ptr.h>
 #include <zircon/syscalls/pci.h>
 
@@ -303,7 +303,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
         }
 
         // TODO(johngro): Update the syscall to pass a paddr_t for base instead of a uint64_t
-        ASSERT(arg->addr_windows[0].base < fbl::numeric_limits<paddr_t>::max());
+        ASSERT(arg->addr_windows[0].base < ktl::numeric_limits<paddr_t>::max());
 
         fbl::AllocChecker ac;
         auto addr_provider = ktl::make_unique<MmioPcieAddressProvider>(&ac);

@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <err.h>
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
 #include <inttypes.h>
 #include <string.h>
 

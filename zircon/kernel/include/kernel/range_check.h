@@ -8,15 +8,15 @@
 #pragma once
 
 #include <fbl/algorithm.h>
-#include <fbl/limits.h>
+#include <ktl/limits.h>
 
 // utility function to test that offset + len is entirely within a range
 // returns false if out of range
 // NOTE: only use unsigned lengths
 template <typename O, typename L>
 static inline bool InRange(O offset, L len, O trim_to_len) {
-    static_assert(fbl::numeric_limits<O>::is_signed == false, "InRange requires unsigned type O");
-    static_assert(fbl::numeric_limits<L>::is_signed == false, "InRange requires unsigned type L");
+    static_assert(ktl::numeric_limits<O>::is_signed == false, "InRange requires unsigned type O");
+    static_assert(ktl::numeric_limits<L>::is_signed == false, "InRange requires unsigned type L");
 
     // trim offset/len to the range
     if (offset + len < offset) {
@@ -43,8 +43,8 @@ static inline bool InRange(O offset, L len, O trim_to_len) {
 // NOTE: only use unsigned lengths
 template <typename O, typename L>
 static inline bool TrimRange(O offset, L len, O trim_to_len, L* len_out) {
-    static_assert(fbl::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
-    static_assert(fbl::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
+    static_assert(ktl::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
+    static_assert(ktl::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
 
     // start off returning the initial value
     *len_out = len;
@@ -70,8 +70,8 @@ static inline bool TrimRange(O offset, L len, O trim_to_len, L* len_out) {
 // given two offset/length pairs, determine if they overlap at all
 template <typename O, typename L>
 static inline bool Intersects(O offset1, L len1, O offset2, L len2) {
-    static_assert(fbl::numeric_limits<O>::is_signed == false, "Intersects requires unsigned type O");
-    static_assert(fbl::numeric_limits<L>::is_signed == false, "Intersects requires unsigned type L");
+    static_assert(ktl::numeric_limits<O>::is_signed == false, "Intersects requires unsigned type O");
+    static_assert(ktl::numeric_limits<L>::is_signed == false, "Intersects requires unsigned type L");
 
     // Can't overlap a zero-length region.
     if (len1 == 0 || len2 == 0) {
@@ -95,8 +95,8 @@ static inline bool Intersects(O offset1, L len1, O offset2, L len2) {
 // returns results in *offset_out and *len_out
 template <typename O, typename L>
 static inline bool GetIntersect(O offset1, L len1, O offset2, L len2, O* offset_out, L* len_out) {
-    static_assert(fbl::numeric_limits<O>::is_signed == false, "GetIntersect requires unsigned type O");
-    static_assert(fbl::numeric_limits<L>::is_signed == false, "GetIntersect requires unsigned type L");
+    static_assert(ktl::numeric_limits<O>::is_signed == false, "GetIntersect requires unsigned type O");
+    static_assert(ktl::numeric_limits<L>::is_signed == false, "GetIntersect requires unsigned type L");
 
     // see if they intersect at all
     if (!Intersects(offset1, len1, offset2, len2)) {

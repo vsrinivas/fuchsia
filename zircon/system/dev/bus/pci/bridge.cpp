@@ -15,8 +15,8 @@
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/limits.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <string.h>
 #include <zircon/compiler.h>
 

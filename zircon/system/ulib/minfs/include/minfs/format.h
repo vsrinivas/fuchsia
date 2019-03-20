@@ -8,7 +8,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <fbl/limits.h>
 #include <fbl/macros.h>
 
 #include <zircon/types.h>

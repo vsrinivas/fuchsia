@@ -7,6 +7,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <ktl/limits.h>
 #include <pretty/sizes.h>
 #include <string.h>
 #include <trace.h>

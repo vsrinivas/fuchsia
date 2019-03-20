@@ -10,7 +10,6 @@
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/unique_ptr.h>
 #include <ktl/move.h>

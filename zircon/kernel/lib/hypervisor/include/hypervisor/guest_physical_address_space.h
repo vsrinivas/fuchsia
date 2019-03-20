@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <fbl/limits.h>
 #include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 #include <vm/vm_aspace.h>
