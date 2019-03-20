@@ -722,6 +722,45 @@ private:
     bool owned_ = true;
 };
 
+// File represents one node in the BOOTFS directory graph.  It holds either a
+// FileContents (for a file) or a Directory (for a directory).
+class File;
+
+// Directory represents a subdirectory in the BOOTFS directory graph.
+// It maps names (with no slashes) to File nodes.
+using Directory = std::map<std::string, const File*>;
+
+class File final {
+public:
+    File() = default;
+
+    explicit File(std::unique_ptr<const FileContents> file) :
+        file_(std::move(file)) {}
+
+    explicit File(std::unique_ptr<const Directory> dir) :
+        dir_(std::move(dir)) {}
+
+    operator bool() const {
+        return dir_ || file_;
+    }
+
+    bool IsDir() const {
+        return bool(dir_);
+    }
+
+    auto AsDir() const {
+        return dir_.get();
+    }
+
+    auto AsContents() const {
+        return file_.get();
+    }
+
+private:
+    std::unique_ptr<const FileContents> file_;
+    std::unique_ptr<const Directory> dir_;
+};
+
 // This is used for all opening of files and directories for input.
 // It tracks all files opened so a depfile can be written at the end.
 //
@@ -735,9 +774,8 @@ private:
 //  * opened files' contents are cached by file identity so multiple
 //    input file names reaching the same actual file (via different
 //    unnormalized paths or links) reuse the same mapped contents
+//  * directories read are cached fully
 //  * TODO(mcgrathr): identical contents from disparate sources
-//
-// TODO(mcgrathr): Directories are not cached.
 class FileOpener {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileOpener);
@@ -749,25 +787,25 @@ public:
         auto& cache = name_cache_[file];
         if (!cache) {
             struct stat st;
-            auto fd = Open(file, &st);
-            cache = OpenFile(file, std::move(fd), st);
+            auto [cached_file, fd] = Open(file, &st);
+            OpenFile(cached_file, std::move(fd), st, file);
+            cache = cached_file;
         }
-        return cache;
+        return cache->AsContents();
     }
 
-    // Like OpenFile, but instead of a fatal error if it's a directory,
-    // run the if_dir() function and return nullptr.
-    template <typename Func>
-    const FileContents* OpenFileOrDir(const char* file, Func if_dir) {
+    // Like OpenFile, but also accept a directory.
+    const File* OpenFileOrDir(const char* file) {
         auto& cache = name_cache_[file];
         if (!cache) {
             struct stat st;
-            auto fd = Open(file, &st);
+            auto [cached_file, fd] = Open(file, &st);
             if (S_ISDIR(st.st_mode)) {
-                if_dir(std::move(fd));
-                return nullptr;
+                OpenDirectory(cached_file, std::move(fd), file);
+            } else {
+                OpenFile(cached_file, std::move(fd), st, file);
             }
-            cache = OpenFile(file, std::move(fd), st);
+            cache = cached_file;
         }
         return cache;
     }
@@ -817,13 +855,13 @@ private:
         decltype((struct stat){}.st_ino) ino_;
     };
 
-    // Cache of contents by file identity.
-    // The cache owns the FileContents, so they all live forever
-    // and raw const FileContents* pointers are used to access them.
-    std::map<FileId, FileContents> file_cache_;
+    // Cache of contents by file identity.  The cache owns the File
+    // objects, so they all live forever and raw const File* pointers
+    // are used to access them.
+    std::map<FileId, File> file_cache_;
 
     // Cache of contents by file name.  These point into the file_cache_.
-    std::unordered_map<std::string, const FileContents*> name_cache_;
+    std::unordered_map<std::string, const File*> name_cache_;
 
     // These are created by Emplace() and kept here both to de-duplicate them
     // and to tie their lifetimes to the FileOpener (to parallel file_cache_).
@@ -833,7 +871,7 @@ private:
     // region of the image).
     std::unordered_set<FileContents, FileContents::Hash> memory_cache_;
 
-    fbl::unique_fd Open(const char* file, struct stat* st) {
+    std::pair<File*, fbl::unique_fd> Open(const char* file, struct stat* st) {
         fbl::unique_fd fd(open(file, O_RDONLY));
         if (!fd) {
             perror(file);
@@ -843,21 +881,37 @@ private:
             perror("fstat");
             exit(1);
         }
-        return fd;
+        return {&file_cache_[FileId(*st)], std::move(fd)};
     }
 
-    const FileContents* OpenFile(const char* file,
-                                 fbl::unique_fd fd,
-                                 const struct stat& st) {
+    void OpenFile(File* cached,
+                  fbl::unique_fd fd, const struct stat& st, const char* file) {
         if (!S_ISREG(st.st_mode)) {
             fprintf(stderr, "%s: not a regular file\n", file);
             exit(1);
         }
-        auto [it, fresh] = file_cache_.try_emplace(FileId(st));
-        if (fresh) {
-            it->second = FileContents::Map(std::move(fd), st, file);
+        *cached = File(std::make_unique<const FileContents>(
+                           FileContents::Map(std::move(fd), st, file)));
+    }
+
+    void OpenDirectory(File* cached, fbl::unique_fd fd, std::string file) {
+        DIR* dir = fdopendir(fd.release());
+        if (!dir) {
+            perror("fdopendir");
+            exit(1);
         }
-        return &it->second;
+        file += "/";
+        auto dirmap = std::make_unique<Directory>();
+        const dirent* d;
+        while ((d = readdir(dir)) != nullptr) {
+            if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")) {
+                continue;
+            }
+            std::string path = file + d->d_name;
+            (*dirmap)[d->d_name] = OpenFileOrDir(path.c_str());
+        }
+        closedir(dir);
+        *cached = File(std::move(dirmap));
     }
 };
 
@@ -921,9 +975,9 @@ private:
 
 class DirectoryInputFileGenerator : public InputFileGenerator {
 public:
-    DirectoryInputFileGenerator(fbl::unique_fd fd, std::string prefix)
+    DirectoryInputFileGenerator(const Directory* dir, std::string prefix)
         : source_prefix_(std::move(prefix)) {
-        walk_pos_.emplace_front(MakeUniqueDir(std::move(fd)), 0);
+        walk_pos_.emplace_front(dir, 0);
     }
 
     ~DirectoryInputFileGenerator() override = default;
@@ -931,22 +985,19 @@ public:
     bool Next(FileOpener* opener, const std::string& prefix,
               value_type* value) override {
         do {
-            const dirent* d = readdir(walk_pos_.front().dir.get());
-            if (!d) {
+            auto& it = walk_pos_.front().it;
+            if (it == walk_pos_.front().end) {
                 Ascend();
                 continue;
             }
-            if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")) {
-                continue;
-            }
-            std::string source = source_prefix_ + walk_prefix_ + d->d_name;
-            auto file = opener->OpenFileOrDir(
-                source.c_str(),
-                [&](fbl::unique_fd fd) {
-                    Descend(std::move(fd), d->d_name);
-                });
-            if (file) {
-                *value = value_type{prefix + walk_prefix_ + d->d_name, file};
+            std::string source = source_prefix_ + walk_prefix_ + it->first;
+            if (it->second->IsDir()) {
+                Descend(it->second->AsDir(), it->first);
+                ++it;
+            } else {
+                *value = value_type{prefix + walk_prefix_ + it->first,
+                                    it->second->AsContents()};
+                ++it;
                 return true;
             }
         } while (!walk_pos_.empty());
@@ -954,26 +1005,15 @@ public:
     }
 
 private:
-    // std::unique_ptr for fdopendir/closedir.
-    static void DeleteUniqueDir(DIR* dir) {
-        closedir(dir);
-    }
-    using UniqueDir = std::unique_ptr<DIR, decltype(&DeleteUniqueDir)>;
-    UniqueDir MakeUniqueDir(fbl::unique_fd fd) {
-        DIR* dir = fdopendir(fd.release());
-        if (!dir) {
-            perror("fdopendir");
-            exit(1);
-        }
-        return UniqueDir(dir, &DeleteUniqueDir);
-    }
+    using DirIterator = Directory::const_iterator;
 
     // State of our depth-first directory tree walk.
     struct WalkState {
-        WalkState(UniqueDir d, size_t len)
-            : dir(std::move(d)), parent_prefix_len(len) {
+        WalkState(const Directory *dir, size_t len)
+            : it(dir->begin()), end(dir->end()), parent_prefix_len(len) {
         }
-        UniqueDir dir;
+        DirIterator it;
+        const DirIterator end;
         size_t parent_prefix_len;
     };
 
@@ -981,14 +1021,15 @@ private:
     std::forward_list<WalkState> walk_pos_;
     std::string walk_prefix_;
 
-    void Descend(fbl::unique_fd fd, const char* name) {
+    void Descend(const Directory* dir, const std::string& name) {
         size_t parent = walk_prefix_.size();
         walk_prefix_ += name;
         walk_prefix_ += "/";
-        walk_pos_.emplace_front(MakeUniqueDir(std::move(fd)), parent);
+        walk_pos_.emplace_front(dir, parent);
     }
 
     void Ascend() {
+        assert(walk_pos_.front().it == walk_pos_.front().end);
         walk_prefix_.resize(walk_pos_.front().parent_prefix_len);
         walk_pos_.pop_front();
     }
@@ -2007,8 +2048,10 @@ int main(int argc, char** argv) {
         }
         assert(opt == 1);
 
+        auto input = opener.OpenFileOrDir(optarg);
+
         // A directory populates the BOOTFS.
-        auto if_dir = [&](fbl::unique_fd fd) {
+        if (input->IsDir()) {
             // Calculate the prefix for opening files within the directory.
             // This won't be part of the BOOTFS file name.
             std::string dir_prefix(optarg);
@@ -2016,18 +2059,12 @@ int main(int argc, char** argv) {
                 dir_prefix.push_back('/');
             }
             bootfs_input.emplace_back(
-                new DirectoryInputFileGenerator(std::move(fd),
+                new DirectoryInputFileGenerator(input->AsDir(),
                                                 std::move(dir_prefix)));
-        };
-
-        const FileContents* file =
-            input_manifest ?
-            opener.OpenFileOrDir(optarg, if_dir) :
-            opener.OpenFile(optarg);
-
-        if (!file) {
             continue;
         }
+
+        auto file = input->AsContents();
 
         if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
             if (ImportFile(file, optarg, &items)) {
