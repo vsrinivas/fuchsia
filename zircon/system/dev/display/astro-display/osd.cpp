@@ -152,6 +152,8 @@ void Osd::FlipOnVsync(uint8_t idx) {
     }
 
     if (rdma_channel < 0) {
+        DISP_ERROR("Could not find any available RDMA channels!\n");
+        Dump();
         ZX_DEBUG_ASSERT(false);
         return;
     }
@@ -578,6 +580,57 @@ void Osd::Dump() {
             reg = VPU_VIU_OSD2_BLK0_CFG_W4;
         DISP_INFO("reg[0x%x]: 0x%08x\n\n", reg, READ32_REG(VPU, reg));
     }
+
+
+    DISP_INFO("Dumping all RDMA related Registers\n\n");
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_MAN = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_MAN));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_MAN = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_MAN));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_1 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_1));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_1 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_1));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_2 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_2));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_2 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_2));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_3 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_3));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_3 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_3));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_4 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_4));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_4 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_4));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_5 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_5));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_5 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_5));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_6 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_6));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_6 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_6));
+    DISP_INFO("VPU_RDMA_AHB_START_ADDR_7 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_7));
+    DISP_INFO("VPU_RDMA_AHB_END_ADDR_7 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_7));
+    DISP_INFO("VPU_RDMA_ACCESS_AUTO = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO));
+    DISP_INFO("VPU_RDMA_ACCESS_AUTO2 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO2));
+    DISP_INFO("VPU_RDMA_ACCESS_AUTO3 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO3));
+    DISP_INFO("VPU_RDMA_ACCESS_MAN = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_ACCESS_MAN));
+    DISP_INFO("VPU_RDMA_CTRL = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_CTRL));
+    DISP_INFO("VPU_RDMA_STATUS = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_STATUS));
+    DISP_INFO("VPU_RDMA_STATUS2 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_STATUS2));
+    DISP_INFO("VPU_RDMA_STATUS3 = 0x%x\n",
+              vpu_mmio_->Read32(VPU_RDMA_STATUS3));
 }
 
 void Osd::Release() {
