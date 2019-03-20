@@ -172,6 +172,9 @@ indefinitely to incrementally update resources within a session.
 A `Node` resource represents a graphical object which can be assembled into
 a hierarchy called a `node tree` for rendering.
 
+[Here](resource_lifecycle.md) is a walk-through on how Scenic internally manages
+the lifecycle of Node-like resources and embedded Views.
+
 TODO: Discuss this in more detail, especially hierarchical modeling concepts
 such as per-node transforms, groups, adding and removing children, etc.
 
