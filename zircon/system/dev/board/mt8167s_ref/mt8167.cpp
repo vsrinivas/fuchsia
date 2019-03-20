@@ -68,6 +68,14 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "SysmemInit() failed\n");
         return -1;
     }
+    if (PowerInit() != ZX_OK) {
+        zxlogf(ERROR, "PowerInit() failed\n");
+        return -1;
+    }
+    if (ClkInit() != ZX_OK) {
+        zxlogf(ERROR, "ClkInit() failed\n");
+        return -1;
+    }
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
@@ -76,11 +84,6 @@ int Mt8167::Thread() {
         zxlogf(ERROR, "I2cInit() failed\n");
         return -1;
     }
-    if (ClkInit() != ZX_OK) {
-        zxlogf(ERROR, "ClkInit() failed\n");
-        return -1;
-    }
-
     // Then the platform device drivers.
 
     // eMMC
@@ -133,12 +136,13 @@ int Mt8167::Thread() {
 }
 
 zx_status_t Mt8167::Start() {
-    int rc = thrd_create_with_name(&thread_,
-                                   [](void* arg) -> int {
-                                       return reinterpret_cast<Mt8167*>(arg)->Thread();
-                                   },
-                                   this,
-                                   "mt8167-start-thread");
+    int rc = thrd_create_with_name(
+        &thread_,
+        [](void* arg) -> int {
+            return reinterpret_cast<Mt8167*>(arg)->Thread();
+        },
+        this,
+        "mt8167-start-thread");
     if (rc != thrd_success) {
         return ZX_ERR_INTERNAL;
     }
@@ -154,7 +158,7 @@ zx_status_t mt8167_bind(void* ctx, zx_device_t* parent) {
     return board_mt8167::Mt8167::Create(parent);
 }
 
-static zx_driver_ops_t driver_ops = [](){
+static zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops;
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = mt8167_bind;
@@ -164,12 +168,11 @@ static zx_driver_ops_t driver_ops = [](){
 } // namespace board_mt8167
 
 ZIRCON_DRIVER_BEGIN(mt8167, board_mt8167::driver_ops, "zircon", "0.1", 7)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK, 0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_LABEL(0),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_CLEO),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_EAGLE),
-ZIRCON_DRIVER_END(mt8167)
-
+    ZIRCON_DRIVER_END(mt8167)

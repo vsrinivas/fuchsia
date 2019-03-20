@@ -60,6 +60,7 @@ private:
     zx_status_t I2cInit();
     zx_status_t ButtonsInit();
     zx_status_t ClkInit();
+    zx_status_t PowerInit();
     zx_status_t UsbInit();
     zx_status_t ThermalInit();
     zx_status_t TouchInit();

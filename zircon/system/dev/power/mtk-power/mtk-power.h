@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <threads.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/powerimpl.h>
+#include <lib/mmio/mmio.h>
+#include <threads.h>
 
 namespace power {
 
@@ -21,9 +21,9 @@ public:
     explicit MtkPower(zx_device_t* parent,
                       const ddk::PDev& pdev,
                       ddk::MmioBuffer mmio)
-        : MtkPowerType(parent), pdev_(pdev), pmic_mmio_(std::move(mmio)){}
+        : MtkPowerType(parent), pdev_(pdev), pmic_mmio_(std::move(mmio)) {}
 
-    ~MtkPower();
+    ~MtkPower() = default;
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Device protocol implementation
@@ -37,6 +37,14 @@ public:
 private:
     ddk::PDev pdev_;
     ddk::MmioBuffer pmic_mmio_;
+
+    zx_status_t Bind();
+    zx_status_t Init();
+    zx_status_t Test(uint32_t index);
+    void WaitForIdle();
+    void WaitForValidClr();
+    zx_status_t ReadPMICReg(uint32_t reg_addr, uint32_t* reg_value);
+    zx_status_t WritePMICReg(uint32_t reg_addr, uint32_t value);
 };
 
 } //namespace power
