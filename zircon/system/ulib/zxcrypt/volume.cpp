@@ -121,7 +121,6 @@ zx_status_t Volume::Shred() {
     return ZX_OK;
 }
 
-
 zx_status_t Volume::GetSlotOffset(key_slot_t slot, zx_off_t* out) const {
     if (!block_.get()) {
         xprintf("not initialized\n");
@@ -176,10 +175,10 @@ zx_status_t Volume::Init() {
             // Ask about the next contiguous range
             SliceRegion ranges[MAX_SLICE_REGIONS];
             uint64_t slice_count;
-            if ((rc = DoBlockFvmVsliceQuery(i+1, ranges, &slice_count)) != ZX_OK ||
+            if ((rc = DoBlockFvmVsliceQuery(i + 1, ranges, &slice_count)) != ZX_OK ||
                 slice_count == 0 ||
                 ((range = ranges[0].count) == 0)) {
-                xprintf("ioctl_block_fvm_vslice_query failed: %s\n", zx_status_get_string(rc));
+                xprintf("FVM Vslice Query failed: %s\n", zx_status_get_string(rc));
                 return rc;
             }
             // If already allocated, continue

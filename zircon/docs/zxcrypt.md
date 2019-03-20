@@ -138,7 +138,7 @@ There are a number of areas where further work could, should, or must be done:
 * __Unbind on-demand__ ([bug][zx1138])
 
   Currently, there is no way to ask a zxcrypt driver to unbind on demand.  The only way currently is
-  to force the underlying device to unbind it, for example by issuing an `IOCTL_BLOCK_RR_PART`
+  to force the underlying device to unbind it, for example by issuing a `RebindDevice`
   command to a device that supports it.
 
 * __Surface hidden bind failures__

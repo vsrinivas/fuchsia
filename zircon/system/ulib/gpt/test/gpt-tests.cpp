@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
@@ -295,7 +297,8 @@ typedef bool (*TestFunction)(LibGptTest* libGptTest);
 #define RUN_TEST_WRAP(test_name) RUN_TEST_MEDIUM(TestWrapper<test_name>)
 
 // A test wrapper which runs a libgpt test.
-template <TestFunction TestFunc> bool TestWrapper(void) {
+template <TestFunction TestFunc>
+bool TestWrapper(void) {
     BEGIN_TEST;
 
     LibGptTest libGptTest(gUseRamDisk);
@@ -377,9 +380,13 @@ bool LibGptTest::InitDisk(const char* disk_path) {
     snprintf(disk_path_, PATH_MAX, "%s", disk_path);
     fbl::unique_fd fd(open(disk_path_, O_RDWR));
     ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
-    block_info_t block_info;
-    ssize_t rc = ioctl_block_get_info(fd.get(), &block_info);
-    ASSERT_EQ(rc, sizeof(block_info), "Could not query block device info");
+    fzl::UnownedFdioCaller disk_caller(fd.get());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status,
+                                                  &block_info),
+              ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
 
     blk_size_ = block_info.block_size;
     blk_count_ = block_info.block_count;
@@ -632,7 +639,8 @@ bool RangeTest(LibGptTest* libGptTest) {
 }
 
 // Test adding total_partitions partitions to GPT w/o writing to disk
-template <uint32_t total_partitions, bool sync> bool AddPartitionTest(LibGptTest* libGptTest) {
+template <uint32_t total_partitions, bool sync>
+bool AddPartitionTest(LibGptTest* libGptTest) {
     BEGIN_TEST;
     ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
 
@@ -676,7 +684,8 @@ bool RemovePartitionAllTest(LibGptTest* libGptTest) {
     END_TEST;
 }
 
-template <uint32_t total_partitions, bool sync> bool SetPartitionTypeTest(LibGptTest* libGptTest) {
+template <uint32_t total_partitions, bool sync>
+bool SetPartitionTypeTest(LibGptTest* libGptTest) {
     BEGIN_TEST;
     guid_t before, after;
 
@@ -710,7 +719,8 @@ template <uint32_t total_partitions, bool sync> bool SetPartitionTypeTest(LibGpt
     END_TEST;
 }
 
-template <uint32_t total_partitions, bool sync> bool SetPartitionGuidTest(LibGptTest* libGptTest) {
+template <uint32_t total_partitions, bool sync>
+bool SetPartitionGuidTest(LibGptTest* libGptTest) {
     BEGIN_TEST;
     guid_t before, after;
 
@@ -891,7 +901,8 @@ bool PartitionFlagsFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t
     END_HELPER;
 }
 
-template <uint32_t total_partitions, bool sync> bool PartitionFlagsTest(LibGptTest* libGptTest) {
+template <uint32_t total_partitions, bool sync>
+bool PartitionFlagsTest(LibGptTest* libGptTest) {
     BEGIN_TEST;
 
     ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
@@ -908,7 +919,8 @@ template <uint32_t total_partitions, bool sync> bool PartitionFlagsTest(LibGptTe
 }
 
 // Test if Diffs after adding partitions reflect all the changes.
-template <uint32_t total_partitions> bool DiffsTest(LibGptTest* libGptTest) {
+template <uint32_t total_partitions>
+bool DiffsTest(LibGptTest* libGptTest) {
     BEGIN_TEST;
     uint32_t diffs;
 
