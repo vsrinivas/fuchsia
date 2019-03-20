@@ -99,6 +99,10 @@ class NdmBaseDriver : public NdmDriver {
     // Deletes the underlying NDM volume.
     bool RemoveNdmVolume();
 
+    // Saves and restores bad block data for volume extension.
+    bool SaveBadBlockData();
+    bool RestoreBadBlockData();
+
     // Inspects |data_len| bytes from |data| and |spare_len| bytes from |spare|
     // looking for a typical empty (erased) page. Returns true if all bits are 1.
     bool IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, const uint8_t* spare,

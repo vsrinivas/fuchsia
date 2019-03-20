@@ -17,6 +17,14 @@
 
 namespace {
 
+uint32_t GetParameter(const char* key) {
+    const char* value = getenv(key);
+    if (!value) {
+        return 0;
+    }
+    return static_cast<uint32_t>(strtoul(value, nullptr, 0));
+}
+
 class NandDriverImpl : public ftl::NandDriver {
   public:
     constexpr static bool kUseHardware = true;
@@ -38,6 +46,10 @@ class NandDriverImpl : public ftl::NandDriver {
     const fuchsia_hardware_nand_Info& info() const final { return info_; }
 
 private:
+    // Returns true if initialization was performed with an alternate configuration.
+    // |options| is passed by value, so a temporary object will be created by the
+    // compiler.
+    bool HandleAlternateConfig(const ftl::Volume* ftl_volume, ftl::VolumeOptions options);
     bool GetBadBlocks();
 
     ftl::OobDoubler parent_;
@@ -69,11 +81,15 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
         .block_size = info_.page_size * info_.pages_per_block,
         .page_size = info_.page_size,
         .eb_size = info_.oob_size,
+        // If flags change, make sure that HandleAlternateConfig() still makes sense.
         .flags = ftl::kReadOnlyInit
     };
 
     if (!IsNdmDataPresent(options)) {
-        // TODO(rvargas): Look somewhere else.
+        if (HandleAlternateConfig(ftl_volume, options)) {
+            // Already handled.
+            return nullptr;
+        }
         options.flags = 0;
     }
 
@@ -237,6 +253,55 @@ int NandDriverImpl::IsBadBlock(uint32_t page_num) {
 
 bool NandDriverImpl::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
     return IsEmptyPageImpl(data, info_.page_size, spare, info_.oob_size);
+}
+
+bool NandDriverImpl::HandleAlternateConfig(const ftl::Volume* ftl_volume,
+                                           ftl::VolumeOptions options) {
+    uint32_t num_blocks = GetParameter("driver.ftl.original-size");
+    if (!num_blocks || num_blocks >= info_.num_blocks) {
+        return false;
+    }
+
+    options.num_blocks = num_blocks;
+    options.max_bad_blocks /= 2;  // TODO(rvargas): remove this.
+
+    if (!IsNdmDataPresent(options)) {
+        // Nothing at the alternate location.
+        return false;
+    }
+    RemoveNdmVolume();
+
+    options.flags = 0;  // Allow automatic fixing of errors.
+    zxlogf(INFO, "FTL: About to read volume of size %u blocks", num_blocks);
+    if (!IsNdmDataPresent(options)) {
+        zxlogf(ERROR, "FTL: Failed to read initial volume");
+        return true;
+    }
+
+    if (!SaveBadBlockData()) {
+        zxlogf(ERROR, "FTL: Failed to extract bad block table");
+        return true;
+    }
+    RemoveNdmVolume();
+
+    options.num_blocks = info_.num_blocks;
+    if (!IsNdmDataPresent(options)) {
+        zxlogf(ERROR, "FTL: Failed to NDM extend volume");
+        return true;
+    }
+    if (!RestoreBadBlockData()) {
+        zxlogf(ERROR, "FTL: Failed to write bad block table");
+        return true;
+    }
+
+    const char* error = CreateNdmVolume(ftl_volume, options);
+    if (error) {
+        zxlogf(ERROR, "FTL: Failed to extend volume: %s", error);
+    } else {
+        zxlogf(INFO, "FTL: Volume successfully extended");
+    }
+
+    return true;
 }
 
 bool NandDriverImpl::GetBadBlocks() {

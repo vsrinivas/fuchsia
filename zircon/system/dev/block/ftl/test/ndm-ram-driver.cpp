@@ -28,6 +28,35 @@ bool IsFlagSet(uint8_t flag, const uint8_t* where) {
 
 }  // namespace
 
+bool NdmRamDriver::DoubleSize() {
+    ZX_ASSERT(use_half_size_);
+
+    // This mimics the code of NandDriverImpl::HandleAlternateConfig with the
+    // exceptions of not having to confirm the existence of a small device, and
+    // leaving final re-initialization to FtlShell::Reatach (controlled by the
+    // test code).
+
+    if (!IsNdmDataPresent(options_)) {
+        return false;
+    }
+
+    if (!SaveBadBlockData()) {
+        return false;
+    }
+    RemoveNdmVolume();
+
+    options_.num_blocks *= 2;
+    use_half_size_ = false;
+    if (!IsNdmDataPresent(options_)) {
+        return false;
+    }
+    if (!RestoreBadBlockData()) {
+        return false;
+    }
+
+    return true;
+}
+
 const char* NdmRamDriver::Init() {
     size_t num_pages = PagesPerBlock() * options_.num_blocks;
     size_t volume_size = num_pages  * (options_.page_size + options_.eb_size);
@@ -35,6 +64,9 @@ const char* NdmRamDriver::Init() {
     flags_ = fbl::Array<uint8_t>(new uint8_t[num_pages], num_pages);
     memset(volume_.get(), 0xff, volume_size);
     memset(flags_.get(), 0, num_pages);
+    if (use_half_size_) {
+        options_.num_blocks /= 2;
+    }
 
     return nullptr;
 }

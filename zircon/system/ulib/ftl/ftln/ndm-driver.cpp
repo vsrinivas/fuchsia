@@ -171,6 +171,14 @@ bool NdmBaseDriver::RemoveNdmVolume() {
     return false;
 }
 
+bool NdmBaseDriver::SaveBadBlockData() {
+    return ndmExtractBBL(ndm_) >= 0 ? true : false;
+}
+
+bool NdmBaseDriver::RestoreBadBlockData() {
+    return ndmInsertBBL(ndm_) == 0 ? true : false;
+}
+
 bool NdmBaseDriver::IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, const uint8_t* spare,
                                     uint32_t spare_len) const {
     const int64_t* pointer = reinterpret_cast<const int64_t*>(data);

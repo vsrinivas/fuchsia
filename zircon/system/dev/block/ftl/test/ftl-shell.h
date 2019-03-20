@@ -16,6 +16,7 @@ class FtlShell : public ftl::FtlInstance {
     virtual ~FtlShell() {}
 
     bool Init(const ftl::VolumeOptions& options);
+    bool InitWithDriver(std::unique_ptr<NdmRamDriver> driver);
     bool ReAttach();
 
     ftl::Volume* volume() { return &volume_; }

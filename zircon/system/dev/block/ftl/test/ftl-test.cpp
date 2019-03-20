@@ -158,6 +158,7 @@ TEST(FtlTest, Stats) {
 
 class FtlTest : public zxtest::Test {
   public:
+    using PageCount = uint32_t;
     FtlTest() : rand_seed_(static_cast<uint32_t>(time(nullptr))) { srand(rand_seed_); }
     ~FtlTest() {
         if (zxtest::Runner::GetInstance()->CurrentTestHasFailures()) {
@@ -167,20 +168,20 @@ class FtlTest : public zxtest::Test {
 
     void SetUp() override;
 
-    // Goes over a single iteration of the "main" ftl test. |num_pages| is the
+    // Goes over a single iteration of the "main" ftl test. |write_size| is the
     // number of pages to write at the same time.
-    void SingleLoop(uint32_t num_pages);
+    void SingleLoop(PageCount write_size);
 
-  private:
+  protected:
     // Returns the value to use for when writing |page_num|.
     uint32_t GetKey(uint32_t page_num) {
         return (write_counters_[page_num] << 24) | page_num;
     }
 
     // Fills the page buffer with a known pattern for each page.
-    void PrepareBuffer(uint32_t page_num, uint32_t num_pages);
+    void PrepareBuffer(uint32_t page_num, uint32_t write_size);
 
-    void CheckVolume(uint32_t num_pages);
+    void CheckVolume(uint32_t write_size, uint32_t total_pages);
 
     FtlShell ftl_;
     ftl::Volume* volume_ = nullptr;
@@ -198,10 +199,10 @@ void FtlTest::SetUp() {
     memset(write_counters_.get(), 0, write_counters_.size());
 }
 
-void FtlTest::SingleLoop(uint32_t num_pages) {
+void FtlTest::SingleLoop(PageCount write_size) {
     ASSERT_OK(volume_->Mount());
 
-    size_t buffer_size = num_pages * ftl_.page_size() / sizeof(uint32_t);
+    size_t buffer_size = write_size * ftl_.page_size() / sizeof(uint32_t);
     page_buffer_.reset(new uint32_t[buffer_size], buffer_size);
     memset(page_buffer_.get(), 0, page_buffer_.size() * sizeof(page_buffer_[0]));
 
@@ -215,7 +216,7 @@ void FtlTest::SingleLoop(uint32_t num_pages) {
 
     // Write every page in the volume once.
     for (uint32_t page = 0; page < ftl_.num_pages();) {
-        uint32_t count = fbl::min(ftl_.num_pages() - page, num_pages);
+        uint32_t count = fbl::min(ftl_.num_pages() - page, write_size);
         PrepareBuffer(page, count);
 
         ASSERT_OK(volume_->Write(page, count, page_buffer_.get()));
@@ -223,7 +224,7 @@ void FtlTest::SingleLoop(uint32_t num_pages) {
     }
 
     ASSERT_OK(volume_->Flush());
-    ASSERT_NO_FATAL_FAILURES(CheckVolume(num_pages));
+    ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
 
     // Randomly rewrite half the pages in the volume.
     for (uint32_t i = 0; i < ftl_.num_pages() / 2; i++) {
@@ -233,20 +234,20 @@ void FtlTest::SingleLoop(uint32_t num_pages) {
         ASSERT_OK(volume_->Write(page, 1, page_buffer_.get()));
     }
 
-    ASSERT_NO_FATAL_FAILURES(CheckVolume(num_pages));
+    ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
 
     // Detach and re-add test volume without erasing the media.
     ASSERT_OK(volume_->Unmount());
     ASSERT_TRUE(ftl_.ReAttach());
-    ASSERT_NO_FATAL_FAILURES(CheckVolume(num_pages));
+    ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
 
     ASSERT_OK(volume_->Unmount());
 }
 
-void FtlTest::PrepareBuffer(uint32_t page_num, uint32_t num_pages) {
+void FtlTest::PrepareBuffer(uint32_t page_num, uint32_t write_size) {
     uint32_t* key_buffer = page_buffer_.get();
 
-    for (; num_pages; num_pages--, page_num++) {
+    for (; write_size; write_size--, page_num++) {
         write_counters_[page_num]++;
         uint32_t value = GetKey(page_num);
 
@@ -257,10 +258,10 @@ void FtlTest::PrepareBuffer(uint32_t page_num, uint32_t num_pages) {
     }
 }
 
-void FtlTest::CheckVolume(uint32_t num_pages) {
-    for (uint32_t page = 0; page < ftl_.num_pages();) {
-        uint32_t count = fbl::min(ftl_.num_pages() - page, num_pages);
-        ASSERT_OK(volume_->Read(page, count, page_buffer_.get()));
+void FtlTest::CheckVolume(uint32_t write_size, uint32_t total_pages) {
+    for (uint32_t page = 0; page < total_pages;) {
+        uint32_t count = fbl::min(total_pages - page, write_size);
+        ASSERT_OK(volume_->Read(page, count, page_buffer_.get()), "page %u", page);
 
         // Verify each page independently.
         uint32_t* key_buffer = page_buffer_.get();
@@ -286,6 +287,55 @@ TEST_F(FtlTest, MultiplePass) {
     for (int i = 1; i < 7; i++) {
         ASSERT_NO_FATAL_FAILURES(SingleLoop(i * 3), "i: %d", i);
     }
+}
+
+class FtlExtendTest : public FtlTest {
+  public:
+    void SetUp() override {}
+
+    // Performs the required steps so that an FtlTest method would see a volume
+    // that matches the current state.
+    void SetUpBaseTest();
+};
+
+void FtlExtendTest::SetUpBaseTest() {
+    volume_ = ftl_.volume();
+    ASSERT_OK(volume_->Unmount());
+
+    write_counters_.reset(new uint8_t[ftl_.num_pages()], ftl_.num_pages());
+    memset(write_counters_.get(), 0, write_counters_.size());
+}
+
+TEST_F(FtlExtendTest, ExtendVolume) {
+    ftl::VolumeOptions options = kDefaultOptions;
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(options);
+
+    // Retain a pointer. The driver's lifetime is tied to ftl_.
+    NdmRamDriver* driver = driver_to_pass.get();
+    driver->set_use_half_size(true);
+    ASSERT_EQ(driver->Init(), nullptr);
+    ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+    SetUpBaseTest();
+
+    // Start by writing to the "small" volume.
+
+    const int kWriteSize = 5;
+    uint32_t original_size = ftl_.num_pages();
+    ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+    ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, original_size));
+
+    // Double the volume size.
+
+    ASSERT_TRUE(driver->Detach());
+    ASSERT_TRUE(driver->DoubleSize());
+    ASSERT_TRUE(ftl_.ReAttach());
+
+    // Verify the contents of the first half of the volume.
+    ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, original_size));
+
+    // Now make sure the whole volume works as expected.
+    SetUpBaseTest();
+    ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
 }
 
 } // namespace

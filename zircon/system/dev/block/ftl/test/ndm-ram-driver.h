@@ -20,6 +20,12 @@ class NdmRamDriver : public ftl::NdmBaseDriver {
     NdmRamDriver(const ftl::VolumeOptions& options) : options_(options) {}
     ~NdmRamDriver() final {}
 
+    // Makes only half of the space visible.
+    void set_use_half_size(bool value) { use_half_size_ = value; }
+
+    // Extends the visible volume to the whole size of the storage.
+    bool DoubleSize();
+
     // NdmDriver interface:
     const char* Init() final;
     const char* Attach(const ftl::Volume* ftl_volume) final;
@@ -59,4 +65,6 @@ class NdmRamDriver : public ftl::NdmBaseDriver {
     int ecc_error_interval_ = 0;  // Controls simulation of ECC errors.
     int bad_block_interval_ = 0;  // Controls simulation of bad blocks.
     uint32_t num_bad_blocks_ = 0;
+
+    bool use_half_size_ = false;  // Allows testing of volume extension.
 };

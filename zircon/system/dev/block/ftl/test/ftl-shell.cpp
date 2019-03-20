@@ -16,6 +16,11 @@ bool FtlShell::Init(const ftl::VolumeOptions& options) {
     return error ? false : true;
 }
 
+bool FtlShell::InitWithDriver(std::unique_ptr<NdmRamDriver> driver) {
+    const char* error = volume_.Init(std::move(driver));
+    return error ? false : true;
+}
+
 bool FtlShell::ReAttach() {
     const char* error = volume_.ReAttach();
     return error ? false : true;
