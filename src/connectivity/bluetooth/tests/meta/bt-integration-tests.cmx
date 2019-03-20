@@ -9,7 +9,7 @@
         }
     },
     "program": {
-        "binary": "test/bt-host-integration-tests"
+        "binary": "test/bt-integration-tests"
     },
     "sandbox": {
         "dev": [

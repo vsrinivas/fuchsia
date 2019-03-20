@@ -10,7 +10,7 @@ test_package("tests") {
   package_name = "bluetooth-tests"
 
   deps = [
-    "integration",
+    "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:tests",
   ]
 
@@ -20,8 +20,8 @@ test_package("tests") {
       environments = basic_envs
     },
     {
-      name = "rust_crates/integration"
-      dest = "bt-host-integration-tests"
+      name = "rust_crates/bt_integration_tests"
+      dest = "bt-integration-tests"
       environments = basic_envs
     },
   ]

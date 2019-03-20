@@ -130,7 +130,7 @@ With these two tips, the full bt-host-unittests suite runs in ~2 seconds.
 
 #### Integration Tests
 
-TODO(armansito): Describe integration tests
+See the [Integration Test README](tests/integration/README.md)
 
 ### Controlling Log Verbosity
 

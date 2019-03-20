@@ -43,14 +43,7 @@ where
             .unwrap_or_else(|e| eprintln!("Error handling central events: {:?}", e)),
     );
 
-    let result = await!(test(state));
-
-    if result.is_ok() {
-        println!("\x1b[32mPASSED\x1b[0m");
-    } else {
-        println!("\x1b[31mFAILED\x1b[0m");
-    }
-    result
+    await!(test(state))
 }
 
 // All Fake HCI Devices have this address
