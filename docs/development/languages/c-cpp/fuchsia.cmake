@@ -50,4 +50,21 @@ file(GLOB_RECURSE SRC
         ${PROJECT_SOURCE_DIR}/*.cpp
         )
 
+# Work around an issue of dart-pkg having checked in a symlink to a header that itself is not
+# checked in. Because the problematic content (for now) is just an on-macOS integration test,
+# we should probably just not import that content into the Fuchsia development environment at
+# all.
+# TODO(BLD-393): Don't import uninteresting-to-Fuchsia parts of the Flutter repository.
+set(n_paths, 0)
+foreach (TMP_PATH ${SRC})
+    if(${TMP_PATH} MATCHES "\/third_party\/dart-pkg")
+        message("removing ${TMP_PATH}")
+        MATH(EXPR n_paths "${n_paths}+1")
+        list (REMOVE_ITEM SRC ${TMP_PATH})
+    endif()
+endforeach(TMP_PATH)
+message("${n_paths} files from `/third_party/dart-pkg/` removed")
+
 add_executable(fuchsia ${SRC})
+
+# TODO(BLD-392): This file should be at least "sanity" (executes without failing) tested.
