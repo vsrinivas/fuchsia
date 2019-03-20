@@ -8,12 +8,14 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
+use fidl_fuchsia_ui_text as txt;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use regex::Regex;
 use std::char;
+use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::{Arc, Weak};
 use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
@@ -29,10 +31,38 @@ pub const HID_USAGE_KEY_DELETE: u32 = 0x2e;
 /// so it can be accessed from multiple places.
 pub struct ImeState {
     text_state: uii::TextInputState,
+
+    /// A handle to call methods on the text field.
     client: Box<uii::InputMethodEditorClientProxyInterface>,
+
     keyboard_type: uii::KeyboardType,
     action: uii::InputMethodAction,
     ime_service: ImeService,
+
+    /// We expose a TextField interface to an input method. There are also legacy
+    /// input methods that just send key events through inject_input — in this case,
+    /// input_method would be None, and these events would be handled by the
+    /// inject_input method. ImeState can only handle talking to one input_method
+    /// at a time; it's the responsibility of some other code (likely inside
+    /// ImeService) to multiplex multiple TextField interfaces into this one.
+    input_method: Option<txt::TextFieldControlHandle>,
+
+    /// A number used to serve the TextField interface. It increments any time any
+    /// party makes a change to the state.
+    revision: u64,
+
+    /// A TextPoint is a u64 token that represents a character position in the new
+    /// TextField interface. Each token is a unique ID; this represents the ID we
+    /// will assign to the next TextPoint that is created. It increments every time
+    /// a TextPoint is created. This is never reset, even when TextPoints are
+    /// invalidated; TextPoints have globally unique IDs.
+    next_text_point_id: u64,
+
+    /// A TextPoint is a u64 token that represents a character position in the new
+    /// TextField interface. This maps TextPoint IDs to byte indexes inside
+    /// `text_state.text`. When a new revision is created, all preexisting TextPoints
+    /// are deleted, which means we clear this out.
+    text_points: HashMap<u64, usize>,
 }
 
 /// A service that talks to a text field, providing it edits and cursor state updates
@@ -54,6 +84,10 @@ impl Ime {
             keyboard_type,
             action,
             ime_service,
+            revision: 0,
+            next_text_point_id: 0,
+            text_points: HashMap::new(),
+            input_method: None,
         };
         Ime(Arc::new(Mutex::new(state)))
     }
@@ -66,6 +100,33 @@ impl Ime {
         weak.upgrade().map(|arc| Ime(arc))
     }
 
+    pub fn bind_text_field(&self, mut stream: txt::TextFieldRequestStream) {
+        let control_handle = stream.control_handle();
+        {
+            let mut state = self.0.lock();
+            let res = control_handle.send_on_update(&mut state.as_text_field_state());
+            if let Err(e) = res {
+                fx_log_err!("{}", e);
+            } else {
+                state.input_method = Some(control_handle);
+            }
+        }
+        let self_clone = self.clone();
+        fuchsia_async::spawn(
+            async move {
+                while let Some(msg) = await!(stream.try_next())
+                    .context("error reading value from text field request stream")?
+                {
+                    if let Err(e) = self_clone.handle_text_field_msg(msg) {
+                        fx_log_err!("Error when replying to TextFieldRequest: {}", e);
+                    }
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        );
+    }
+
     pub fn bind_ime(&self, chan: fuchsia_async::Channel) {
         let self_clone = self.clone();
         let self_clone_2 = self.clone();
@@ -75,28 +136,7 @@ impl Ime {
                 while let Some(msg) = await!(stream.try_next())
                     .context("error reading value from IME request stream")?
                 {
-                    match msg {
-                        ImeReq::SetKeyboardType { keyboard_type, .. } => {
-                            let mut state = self_clone.0.lock();
-                            state.keyboard_type = keyboard_type;
-                        }
-                        ImeReq::SetState { state, .. } => {
-                            self_clone.set_state(state);
-                        }
-                        ImeReq::InjectInput { event, .. } => {
-                            self_clone.inject_input(event);
-                        }
-                        ImeReq::Show { .. } => {
-                            // clone to ensure we only hold one lock at a time
-                            let ime_service = self_clone.0.lock().ime_service.clone();
-                            ime_service.show_keyboard();
-                        }
-                        ImeReq::Hide { .. } => {
-                            // clone to ensure we only hold one lock at a time
-                            let ime_service = self_clone.0.lock().ime_service.clone();
-                            ime_service.hide_keyboard();
-                        }
-                    }
+                    self_clone.handle_ime_message(msg);
                 }
                 Ok(())
             }
@@ -110,9 +150,65 @@ impl Ime {
         );
     }
 
+    /// Handles a TextFieldRequest, returning a FIDL error if one occurred when sending a reply.
+    // TODO(lard): finish implementation
+    fn handle_text_field_msg(&self, msg: txt::TextFieldRequest) -> Result<(), fidl::Error> {
+        match msg {
+            txt::TextFieldRequest::PointOffset { responder, .. } => {
+                return responder.send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
+            }
+            txt::TextFieldRequest::Distance { responder, .. } => {
+                return responder.send(0, txt::TextError::BadRequest);
+            }
+            txt::TextFieldRequest::Contents { responder, .. } => {
+                return responder.send(
+                    "",
+                    &mut txt::TextPoint { id: 0 },
+                    txt::TextError::BadRequest,
+                );
+            }
+            txt::TextFieldRequest::CommitEdit { responder, .. } => {
+                return responder.send(txt::TextError::BadRequest);
+            }
+            // other cases don't have a responder, so we can just ignore in this temporary code
+            // instead of replying with an error.
+            _ => {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Handles a request from the legancy IME API, an InputMethodEditorRequest.
+    fn handle_ime_message(&self, msg: uii::InputMethodEditorRequest) {
+        match msg {
+            ImeReq::SetKeyboardType { keyboard_type, .. } => {
+                let mut state = self.0.lock();
+                state.keyboard_type = keyboard_type;
+            }
+            ImeReq::SetState { state, .. } => {
+                self.set_state(state);
+            }
+            ImeReq::InjectInput { event, .. } => {
+                self.inject_input(event);
+            }
+            ImeReq::Show { .. } => {
+                // clone to ensure we only hold one lock at a time
+                let ime_service = self.0.lock().ime_service.clone();
+                ime_service.show_keyboard();
+            }
+            ImeReq::Hide { .. } => {
+                // clone to ensure we only hold one lock at a time
+                let ime_service = self.0.lock().ime_service.clone();
+                ime_service.hide_keyboard();
+            }
+        }
+    }
+
     fn set_state(&self, input_state: uii::TextInputState) {
-        self.0.lock().text_state = input_state;
-        // the old C++ IME implementation didn't call did_update_state here, so we won't either.
+        let mut state = self.0.lock();
+        state.text_state = input_state;
+        // the old C++ IME implementation didn't call did_update_state here, so this second argument is false.
+        state.increment_revision(None, false);
     }
 
     pub fn inject_input(&self, event: uii::InputEvent) {
@@ -127,24 +223,24 @@ impl Ime {
         {
             if keyboard_event.code_point != 0 {
                 state.type_keycode(keyboard_event.code_point);
-                state.did_update_state(keyboard_event)
+                state.increment_revision(Some(keyboard_event), true)
             } else {
                 match keyboard_event.hid_usage {
                     HID_USAGE_KEY_BACKSPACE => {
                         state.delete_backward();
-                        state.did_update_state(keyboard_event);
+                        state.increment_revision(Some(keyboard_event), true);
                     }
                     HID_USAGE_KEY_DELETE => {
                         state.delete_forward();
-                        state.did_update_state(keyboard_event);
+                        state.increment_revision(Some(keyboard_event), true);
                     }
                     HID_USAGE_KEY_LEFT => {
                         state.cursor_horizontal_move(keyboard_event.modifiers, false);
-                        state.did_update_state(keyboard_event);
+                        state.increment_revision(Some(keyboard_event), true);
                     }
                     HID_USAGE_KEY_RIGHT => {
                         state.cursor_horizontal_move(keyboard_event.modifiers, true);
-                        state.did_update_state(keyboard_event);
+                        state.increment_revision(Some(keyboard_event), true);
                     }
                     HID_USAGE_KEY_ENTER => {
                         state.client.on_action(state.action).unwrap_or_else(|e| {
@@ -153,7 +249,7 @@ impl Ime {
                     }
                     _ => {
                         // Not an editing key, forward the event to clients.
-                        state.did_update_state(keyboard_event);
+                        state.increment_revision(Some(keyboard_event), true);
                     }
                 }
             }
@@ -191,13 +287,85 @@ enum GraphemeTraversal {
 }
 
 impl ImeState {
-    pub fn did_update_state(&mut self, e: uii::KeyboardEvent) {
-        self.client
-            .did_update_state(
-                &mut self.text_state,
-                Some(OutOfLine(&mut uii::InputEvent::Keyboard(e))),
-            )
-            .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
+    /// Any time the state is updated, this method is called, which allows ImeState to inform any
+    /// listening clients (either TextField or InputMethodEditorClientProxy) that state has updated.
+    /// If InputMethodEditorClient caused the update with SetState, set call_did_update_state so that
+    /// we don't send its own edit back to it. Otherwise, set to true.
+    pub fn increment_revision(
+        &mut self,
+        e: Option<uii::KeyboardEvent>,
+        call_did_update_state: bool,
+    ) {
+        self.revision += 1;
+        self.text_points = HashMap::new();
+        let mut state = self.as_text_field_state();
+        if let Some(input_method) = &self.input_method {
+            if let Err(e) = input_method.send_on_update(&mut state) {
+                fx_log_err!("error when sending update to TextField listener: {}", e);
+            }
+        }
+
+        if call_did_update_state {
+            if let Some(ev) = e {
+                self.client
+                    .did_update_state(
+                        &mut self.text_state,
+                        Some(OutOfLine(&mut uii::InputEvent::Keyboard(ev))),
+                    )
+                    .unwrap_or_else(|e| {
+                        fx_log_warn!("error sending state update to ImeClient: {:?}", e)
+                    });
+            } else {
+                self.client.did_update_state(&mut self.text_state, None).unwrap_or_else(|e| {
+                    fx_log_warn!("error sending state update to ImeClient: {:?}", e)
+                });
+            }
+        }
+    }
+
+    /// Converts the current self.text_state (the IME API v1 representation of the text field's state)
+    /// into the v2 representation txt::TextFieldState.
+    fn as_text_field_state(&mut self) -> txt::TextFieldState {
+        let anchor_first = self.text_state.selection.base < self.text_state.selection.extent;
+        txt::TextFieldState {
+            document: txt::TextRange {
+                start: self.new_point(0),
+                end: self.new_point(self.text_state.text.len()),
+            },
+            selection: Some(Box::new(txt::TextSelection {
+                range: txt::TextRange {
+                    start: self.new_point(if anchor_first {
+                        self.text_state.selection.base as usize
+                    } else {
+                        self.text_state.selection.extent as usize
+                    }),
+                    end: self.new_point(if anchor_first {
+                        self.text_state.selection.extent as usize
+                    } else {
+                        self.text_state.selection.base as usize
+                    }),
+                },
+                anchor: if anchor_first {
+                    txt::TextSelectionAnchor::AnchoredAtStart
+                } else {
+                    txt::TextSelectionAnchor::AnchoredAtEnd
+                },
+                affinity: txt::TextAffinity::Upstream,
+            })),
+            // TODO(lard): these three regions should be correctly populated from text_state.
+            composition: None,
+            composition_highlight: None,
+            dead_key_highlight: None,
+            revision: self.revision,
+        }
+    }
+
+    /// Creates a new TextPoint corresponding to the byte index `index`.
+    fn new_point(&mut self, index: usize) -> txt::TextPoint {
+        let id = self.next_text_point_id;
+        self.next_text_point_id += 1;
+        self.text_points.insert(id, index);
+        txt::TextPoint { id }
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist

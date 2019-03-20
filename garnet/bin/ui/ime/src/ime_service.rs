@@ -6,6 +6,7 @@ use crate::ime::{Ime, ImeState};
 use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
+use fidl_fuchsia_ui_text as txt;
 use fuchsia_syslog::fx_log_err;
 use futures::prelude::*;
 use parking_lot::Mutex;
@@ -15,6 +16,11 @@ pub struct ImeServiceState {
     pub keyboard_visible: bool,
     pub active_ime: Option<Weak<Mutex<ImeState>>>,
     pub visibility_listeners: Vec<uii::ImeVisibilityServiceControlHandle>,
+
+    /// `TextInputContext` is a service provided to input methods that want to edit text. Whenever
+    /// a new text field is focused, we provide a TextField interface to any connected `TextInputContext`s,
+    /// which are listed here.
+    pub text_input_context_clients: Vec<txt::TextInputContextControlHandle>,
 }
 
 /// The internal state of the IMEService, usually held behind an Arc<Mutex>
@@ -43,6 +49,7 @@ impl ImeService {
             keyboard_visible: false,
             active_ime: None,
             visibility_listeners: Vec::new(),
+            text_input_context_clients: Vec::new(),
         })))
     }
 
@@ -66,7 +73,7 @@ impl ImeService {
         }
     }
 
-    fn get_input_method_editor(
+    pub fn get_input_method_editor(
         &mut self,
         keyboard_type: uii::KeyboardType,
         action: uii::InputMethodAction,
@@ -74,14 +81,20 @@ impl ImeService {
         client: ClientEnd<uii::InputMethodEditorClientMarker>,
         editor: ServerEnd<uii::InputMethodEditorMarker>,
     ) {
-        if let Ok(client_proxy) = client.into_proxy() {
-            let ime = Ime::new(keyboard_type, action, initial_state, client_proxy, self.clone());
-            let mut state = self.0.lock();
-            state.active_ime = Some(ime.downgrade());
-            if let Ok(chan) = fuchsia_async::Channel::from_channel(editor.into_channel()) {
-                ime.bind_ime(chan);
-            }
+        let client_proxy = match client.into_proxy() {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        let ime = Ime::new(keyboard_type, action, initial_state, client_proxy, self.clone());
+        let mut state = self.0.lock();
+        state.active_ime = Some(ime.downgrade());
+        if let Ok(chan) = fuchsia_async::Channel::from_channel(editor.into_channel()) {
+            ime.bind_ime(chan);
         }
+        state.text_input_context_clients.retain(|listener| {
+            // drop listeners if they error on send
+            bind_new_text_field(&ime, &listener).is_ok()
+        });
     }
 
     pub fn show_keyboard(&self) {
@@ -92,7 +105,9 @@ impl ImeService {
         self.0.lock().update_keyboard_visibility(false);
     }
 
-    fn inject_input(&mut self, event: uii::InputEvent) {
+    /// This is called by the operating system when input from the physical keyboard comes in.
+    /// It also is called by legacy onscreen keyboards that just simulate physical keyboard input.
+    fn inject_input(&mut self, mut event: uii::InputEvent) {
         let ime = {
             let state = self.0.lock();
             let active_ime_weak = match state.active_ime {
@@ -104,7 +119,15 @@ impl ImeService {
                 None => return, // IME no longer exists
             }
         };
-        ime.inject_input(event);
+        self.0.lock().text_input_context_clients.retain(|listener| {
+            // drop listeners if they error on send
+            listener.send_on_input_event(&mut event).is_ok()
+        });
+        // only use the default text input handler in ime.rs if there are no text_input_context_clients
+        // attached to handle it
+        if self.0.lock().text_input_context_clients.len() == 0 {
+            ime.inject_input(event);
+        }
     }
 
     pub fn bind_ime_service(&self, chan: fuchsia_async::Channel) {
@@ -167,6 +190,56 @@ impl ImeService {
                 .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
     }
+
+    pub fn bind_text_input_context(&self, chan: fuchsia_async::Channel) {
+        let self_clone = self.clone();
+        fuchsia_async::spawn(
+            async move {
+                let mut stream = txt::TextInputContextRequestStream::from_channel(chan);
+                let control_handle = stream.control_handle();
+                {
+                    let mut state = self_clone.0.lock();
+
+                    let active_ime_opt = match state.active_ime {
+                        Some(ref weak) => Ime::upgrade(weak),
+                        None => None, // no currently active IME
+                    };
+
+                    if let Some(active_ime) = active_ime_opt {
+                        if let Err(e) = bind_new_text_field(&active_ime, &control_handle) {
+                            fx_log_err!("Error when binding text field for newly connected TextInputContext: {}", e);
+                        }
+                    }
+                    state.text_input_context_clients.push(control_handle)
+                }
+                while let Some(msg) = await!(stream.try_next())
+                    .context("error reading value from text input context request stream")?
+                {
+                    match msg {
+                        txt::TextInputContextRequest::HideKeyboard { .. } => {
+                            self_clone.hide_keyboard();
+                        }
+                    }
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        );
+    }
+}
+
+pub fn bind_new_text_field(
+    active_ime: &Ime,
+    control_handle: &txt::TextInputContextControlHandle,
+) -> Result<(), fidl::Error> {
+    let (client_end, request_stream) =
+        fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
+            .expect("Failed to create text field request stream");
+    // TODO(lard): this currently overwrites active_ime's TextField, since it only supports
+    // one at a time. In the future, ImeService should multiplex multiple TextField
+    // implementations into Ime.
+    active_ime.bind_text_field(request_stream);
+    control_handle.send_on_focus(client_end)
 }
 
 #[cfg(test)]
