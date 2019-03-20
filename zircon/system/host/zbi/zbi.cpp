@@ -747,41 +747,6 @@ void RequireRegularFile(const struct stat& st, const char* file) {
     }
 }
 
-class GroupFilter {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(GroupFilter);
-    GroupFilter() = default;
-
-    void SetFilter(const char* groups) {
-        if (!strcmp(groups, "all")) {
-            groups_.reset();
-        } else {
-            not_ = groups[0] == '!';
-            if (not_) {
-                ++groups;
-            }
-            groups_ = std::make_unique<std::set<std::string>>();
-            while (const char* p = strchr(groups, ',')) {
-                groups_->emplace(groups, p - groups);
-                groups = p + 1;
-            }
-            groups_->emplace(groups);
-        }
-    }
-
-    bool AllowsUnspecified() const {
-        return !groups_ || not_;
-    }
-
-    bool Allows(const std::string& group) const {
-        return !groups_ || (groups_->find(group) == groups_->end()) == not_;
-    }
-
-private:
-    std::unique_ptr<std::set<std::string>> groups_;
-    bool not_ = false;
-};
-
 // Base class for ManifestInputFileGenerator and DirectoryInputFileGenerator.
 // These both deliver target name -> file contents mappings until they don't.
 struct InputFileGenerator {
@@ -798,9 +763,8 @@ using InputFileGeneratorList =
 
 class ManifestInputFileGenerator : public InputFileGenerator {
 public:
-    ManifestInputFileGenerator(FileContents file, std::string prefix,
-                               const GroupFilter* filter)
-        : file_(std::move(file)), prefix_(std::move(prefix)), filter_(filter) {
+    ManifestInputFileGenerator(FileContents file, std::string prefix)
+        : file_(std::move(file)), prefix_(std::move(prefix)) {
         read_ptr_ = static_cast<const char*>(
             file_.View(0, file_.exact_size()).iov_base);
         eof_ = read_ptr_ + file_.exact_size();
@@ -826,17 +790,14 @@ public:
                 exit(1);
             }
 
-            line = AllowEntry(line, eq, eol);
-            if (line) {
-                std::string target(line, eq - line);
-                std::string source(eq + 1, eol - (eq + 1));
-                struct stat st;
-                auto fd = opener->Open(source, &st);
-                RequireRegularFile(st, source.c_str());
-                auto file = FileContents::Map(fd, st, source.c_str());
-                *value = value_type{prefix + target, std::move(file)};
-                return true;
-            }
+            std::string target(line, eq - line);
+            std::string source(eq + 1, eol - (eq + 1));
+            struct stat st;
+            auto fd = opener->Open(source, &st);
+            RequireRegularFile(st, source.c_str());
+            auto file = FileContents::Map(fd, st, source.c_str());
+            *value = value_type{prefix + target, std::move(file)};
+            return true;
         }
         return false;
     }
@@ -844,28 +805,8 @@ public:
 private:
     FileContents file_;
     const std::string prefix_;
-    const GroupFilter* filter_ = nullptr;
     const char* read_ptr_ = nullptr;
     const char* eof_ = nullptr;
-
-    // Returns the beginning of the `target=source` portion of the entry
-    // if the entry is allowed by the filter, otherwise nullptr.
-    const char* AllowEntry(const char* start, const char* eq, const char* eol) {
-        if (*start != '{') {
-            // This entry doesn't specify a group.
-            return filter_->AllowsUnspecified() ? start : nullptr;
-        }
-        auto end_group = static_cast<const char*>(
-            memchr(start + 1, '}', eq - start));
-        if (!end_group) {
-            fprintf(stderr,
-                    "manifest entry has '{' but no '}': %.*s\n",
-                    static_cast<int>(eol - start), start);
-            exit(1);
-        }
-        std::string group(start + 1, end_group - 1 - start);
-        return filter_->Allows(group) ? end_group + 1 : nullptr;
-    }
 };
 
 class DirectoryInputFileGenerator : public InputFileGenerator {
@@ -1719,7 +1660,7 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:e:FxXRg:hto:p:sT:uv";
+constexpr const char kOptString[] = "-B:cd:e:FxXRhto:p:sT:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
@@ -1729,7 +1670,6 @@ constexpr const option kLongOpts[] = {
     {"extract", no_argument, nullptr, 'x'},
     {"extract-items", no_argument, nullptr, 'X'},
     {"extract-raw", no_argument, nullptr, 'R'},
-    {"groups", required_argument, nullptr, 'g'},
     {"help", no_argument, nullptr, 'h'},
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
@@ -1762,7 +1702,6 @@ file and the `--output` FILE, to append more items.\n\
 \n\
 Input control switches apply to subsequent input arguments:\n\
     --files, -F                    read BOOTFS manifest files (default)\n\
-    --groups=GROUPS, -g GROUPS     comma-separated list of manifest groups\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
     --type=TYPE, -T TYPE           input files are TYPE items (see below)\n\
     --compressed, -c               compress RAMDISK images (default)\n\
@@ -1777,10 +1716,8 @@ With `--files` or `-F` (the default state), files with ZBI_TYPE_CONTAINER\n\
 headers are incomplete boot files and other files are BOOTFS manifest files.\n\
 Each DIRECTORY is listed recursively and handled just like a manifest file\n\
 using the path relative to DIRECTORY as the target name (before any PREFIX).\n\
-Each `--group`, `--prefix`, `-g`, or `-p` switch affects each file from a\n\
+Each `--prefix` or `-p` switch affects each file from a\n\
 manifest or directory in subsequent FILE or DIRECTORY arguments.\n\
-If GROUPS starts with `!` then only manifest entries that match none of\n\
-the listed groups are used.\n\
 \n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
@@ -1823,7 +1760,6 @@ void usage(const char* progname) {
 
 int main(int argc, char** argv) {
     FileOpener opener;
-    GroupFilter filter;
     const char* outfile = nullptr;
     const char* depfile = nullptr;
     uint32_t complete_arch = kImageArchUndefined;
@@ -1911,10 +1847,6 @@ int main(int argc, char** argv) {
             }
             continue;
 
-        case 'g':
-            filter.SetFilter(optarg);
-            continue;
-
         case 't':
             list_contents = true;
             continue;
@@ -1965,7 +1897,7 @@ int main(int argc, char** argv) {
             if (input_manifest) {
                 bootfs_input.emplace_back(
                     new ManifestInputFileGenerator(FileContents(optarg, false),
-                                                   prefix, &filter));
+                                                   prefix));
             } else if (input_type == ZBI_TYPE_CONTAINER) {
                 fprintf(stderr,
                         "cannot use --entry (-e) with --target=CONTAINER\n");
@@ -2015,8 +1947,7 @@ int main(int argc, char** argv) {
             } else if (input_manifest) {
                 // It must be a manifest file.
                 bootfs_input.emplace_back(
-                    new ManifestInputFileGenerator(std::move(file),
-                                                   prefix, &filter));
+                    new ManifestInputFileGenerator(std::move(file), prefix));
             } else {
                 fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
                 exit(1);
