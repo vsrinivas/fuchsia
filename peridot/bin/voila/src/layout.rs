@@ -4,18 +4,32 @@
 
 use carnelian::{Point, Rect, Size};
 use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};
-use fuchsia_scenic::{EntityNode, ViewHolder};
+use fuchsia_scenic::{EntityNode, SessionPtr, ViewHolder};
+
+use crate::toggle::Toggle;
+
+const CONTROLLER_VIEW_HEIGHT: f32 = 25.0;
 
 /// Container for data related to a single child view displaying an emulated session.
 pub struct ChildViewData {
     bounds: Option<Rect>,
     host_node: EntityNode,
     host_view_holder: ViewHolder,
+    pub toggle: Toggle,
 }
 
 impl ChildViewData {
-    pub fn new(host_node: EntityNode, host_view_holder: ViewHolder) -> ChildViewData {
-        ChildViewData { bounds: None, host_node: host_node, host_view_holder: host_view_holder }
+    pub fn new(
+        host_node: EntityNode,
+        host_view_holder: ViewHolder,
+        toggle: Toggle,
+    ) -> ChildViewData {
+        ChildViewData {
+            bounds: None,
+            host_node: host_node,
+            host_view_holder: host_view_holder,
+            toggle: toggle,
+        }
     }
 
     pub fn id(&self) -> u32 {
@@ -26,35 +40,76 @@ impl ChildViewData {
 /// Lays out the given child views using the given container.
 ///
 /// Voila uses a column layout to display 2 or more emulated sessions side by side.
-pub fn layout(child_views: &mut [&mut ChildViewData], size: &Size) -> Result<(), failure::Error> {
+pub fn layout(
+    child_views: &mut [&mut ChildViewData],
+    size: &Size,
+    session: &SessionPtr,
+) -> Result<(), failure::Error> {
     if child_views.is_empty() {
         return Ok(());
     }
     let num_views = child_views.len();
 
-    let tile_height = size.height;
     let tile_width = (size.width / num_views as f32).floor();
+    let tile_height = size.height;
     for (column_index, view) in child_views.iter_mut().enumerate() {
         let tile_bounds = Rect::new(
             Point::new(column_index as f32 * tile_width, 0.0),
             Size::new(tile_width, tile_height),
         );
-        let tile_bounds = inset(&tile_bounds, 5.0);
-        let view_properties = ViewProperties {
-            bounding_box: BoundingBox {
-                min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-                max: Vec3 { x: tile_bounds.size.width, y: tile_bounds.size.height, z: 0.0 },
-            },
-            inset_from_min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            inset_from_max: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            focus_change: true,
-            downward_input: false,
-        };
-        view.host_view_holder.set_view_properties(view_properties);
-        view.host_node.set_translation(tile_bounds.origin.x, tile_bounds.origin.y, 0.0);
-        view.bounds = Some(tile_bounds);
+        layout_replica(view, &tile_bounds, session)?;
     }
     Ok(())
+}
+
+fn layout_replica(
+    view: &mut ChildViewData,
+    bounds: &Rect,
+    session: &SessionPtr,
+) -> Result<(), failure::Error> {
+    let (replica_bounds, controller_bounds) = split_bounds(&bounds, CONTROLLER_VIEW_HEIGHT);
+
+    // Update the session view.
+    let replica_bounds = inset(&replica_bounds, 5.0);
+    let view_properties = ViewProperties {
+        bounding_box: BoundingBox {
+            min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+            max: Vec3 { x: replica_bounds.size.width, y: replica_bounds.size.height, z: 0.0 },
+        },
+        inset_from_min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+        inset_from_max: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+        focus_change: true,
+        downward_input: false,
+    };
+    view.host_view_holder.set_view_properties(view_properties);
+    view.host_node.set_translation(replica_bounds.origin.x, replica_bounds.origin.y, 0.0);
+    view.bounds = Some(replica_bounds);
+
+    // Update the controller view.
+    match controller_bounds {
+        None => {
+            // TODO(ppi): hide the controller when it doesn't fit on the screen.
+        }
+        Some(rect) => view.toggle.update(&inset(&rect, 5.0), session)?,
+    }
+
+    Ok(())
+}
+
+/// Splits the screen area available for one replica into a replica view and a controller view.
+fn split_bounds(bounds: &Rect, controller_view_height: f32) -> (Rect, Option<Rect>) {
+    if bounds.size.height < controller_view_height * 2.0 {
+        return ((*bounds).clone(), None);
+    }
+    let replica_bounds = Rect::new(
+        bounds.origin.clone(),
+        Size::new(bounds.size.width, bounds.size.height - controller_view_height),
+    );
+    let controller_bounds = Rect::new(
+        Point::new(bounds.origin.x, bounds.origin.y + bounds.size.height - controller_view_height),
+        Size::new(bounds.size.width, controller_view_height),
+    );
+    (replica_bounds, Some(controller_bounds))
 }
 
 /// Reduces the given bounds to leave the given amount of padding around it.
@@ -73,6 +128,33 @@ fn inset(rect: &Rect, padding: f32) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn split_bounds_works_correctly() {
+        let bounds = Rect::new(Point::new(10.0, 20.0), Size::new(75.0, 80.0));
+
+        let (replica_bounds, maybe_controller_bounds) = split_bounds(&bounds, 10.0);
+
+        assert_eq!(replica_bounds.origin.x, 10.0);
+        assert_eq!(replica_bounds.origin.y, 20.0);
+        assert_eq!(replica_bounds.size.width, 75.0);
+        assert_eq!(replica_bounds.size.height, 70.0);
+
+        assert_eq!(maybe_controller_bounds.is_some(), true);
+        let controller_bounds = maybe_controller_bounds.expect("expected bounds to be present");
+        assert_eq!(controller_bounds.origin.x, 10.0);
+        assert_eq!(controller_bounds.origin.y, 90.0);
+        assert_eq!(controller_bounds.size.width, 75.0);
+        assert_eq!(controller_bounds.size.height, 10.0);
+    }
+
+    #[test]
+    fn split_bounds_with_no_space_for_controller_hides_controller() {
+        let bounds = Rect::new(Point::new(0.0, 0.0), Size::new(10.0, 10.0));
+
+        let (_replica_bounds, maybe_controller_bounds) = split_bounds(&bounds, 6.0);
+        assert_eq!(maybe_controller_bounds.is_none(), true);
+    }
 
     #[test]
     fn inset_empty_returns_empty() {

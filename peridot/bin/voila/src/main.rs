@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use carnelian::{
-    set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
+    set_node_color, App, AppAssistant, Color, Message, Point, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey,
 };
 use failure::{Error, ResultExt};
@@ -15,6 +15,7 @@ use fidl_fuchsia_modular::AppConfig;
 use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
 use fidl_fuchsia_modular_internal::{SessionContextMarker, SessionmgrMarker};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
+use fidl_fuchsia_ui_input::PointerEvent;
 use fidl_fuchsia_ui_views::ViewHolderToken;
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::{
@@ -31,12 +32,16 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 mod layout;
+mod message;
 mod replica;
 mod session_context;
+mod toggle;
 
 use crate::layout::{layout, ChildViewData};
+use crate::message::VoilaMessage;
 use crate::replica::make_replica_env;
 use crate::session_context::SessionContext;
+use crate::toggle::Toggle;
 
 const CLOUD_PROVIDER_URI: &str = fuchsia_single_component_package_url!("cloud_provider_in_memory");
 const ERMINE_URI: &str = fuchsia_single_component_package_url!("ermine");
@@ -64,7 +69,6 @@ impl AppAssistant for VoilaAppAssistant {
     }
 }
 
-#[allow(unused)]
 struct VoilaViewAssistant {
     background_node: ShapeNode,
     circle_node: ShapeNode,
@@ -121,7 +125,8 @@ impl VoilaViewAssistant {
         host_node.attach(&host_view_holder);
         root_node.add_child(&host_node);
 
-        let view_data = ChildViewData::new(host_node, host_view_holder);
+        let view_data = ChildViewData::new(host_node, host_view_holder, Toggle::new(&session)?);
+        root_node.add_child(&view_data.toggle.node());
         let session_data = ReplicaData {
             environment_ctrl: environment_ctrl,
             sessionmgr_app: app,
@@ -161,7 +166,6 @@ impl VoilaViewAssistant {
 
 impl ViewAssistant for VoilaViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        fx_log_info!("setup");
         set_node_color(
             context.session,
             &self.background_node,
@@ -199,7 +203,41 @@ impl ViewAssistant for VoilaViewAssistant {
 
         let mut views: Vec<&mut ChildViewData> =
             self.replicas.iter_mut().map(|(_key, child_session)| &mut child_session.view).collect();
-        layout(&mut views, &context.size)?;
+        layout(&mut views, &context.size, &context.session)?;
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: Message) {
+        if let Some(voila_message) = message.downcast_ref::<VoilaMessage>() {
+            match voila_message {
+                VoilaMessage::ReplicaConnectivityToggled(key) => {
+                    let maybe_replica = self.replicas.get_mut(key);
+                    match maybe_replica {
+                        Some(replica) => replica.view.toggle.toggle(),
+                        None => {
+                            fx_log_warn!("did not find the toggle to toggle");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn handle_pointer_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        pointer_event: &PointerEvent,
+    ) -> Result<(), Error> {
+        for (key, child_session) in &mut self.replicas {
+            if child_session
+                .view
+                .toggle
+                .bounds
+                .contains(&Point::new(pointer_event.x, pointer_event.y))
+            {
+                child_session.view.toggle.handle_pointer_event(context, pointer_event, *key);
+            }
+        }
         Ok(())
     }
 }
