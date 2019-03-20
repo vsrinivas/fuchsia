@@ -138,7 +138,8 @@ void WriteReply(const LaunchReply& reply, uint32_t transaction_id,
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
   writer->WriteUint32(static_cast<uint32_t>(reply.inferior_type));
   writer->WriteUint32(reply.status);
-  writer->WriteUint64(reply.process_koid);
+  writer->WriteUint64(reply.process_id);
+  writer->WriteUint64(reply.component_id);
   writer->WriteString(reply.process_name);
 }
 
@@ -507,6 +508,7 @@ void WriteNotifyProcessStarting(const NotifyProcessStarting& notify,
                                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessStarting, 0);
   writer->WriteUint64(notify.koid);
+  writer->WriteUint32(notify.component_id);
   writer->WriteString(notify.name);
 }
 

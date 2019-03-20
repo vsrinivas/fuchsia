@@ -26,16 +26,16 @@ const char* WatchTypeToString(WatchType);
 // be used in the debug agent.
 class MessageLoopTarget : public MessageLoop {
  public:
-  // New message loops should be suscribed here.
+  // New message loops must be suscribed here.
   enum class Type {
     kAsync,
     kZircon,
     kLast,
   };
+  static const char* TypeToString(Type);
 
   // Set by a message loop at InitTarget();
   static Type current_message_loop_type;
-  static const char* TypeToString(Type);
 
   // Target message loops can call wither Init or InitTarget. The difference is
   // that InitTarget will return a status about what happened, whether Init
@@ -45,6 +45,10 @@ class MessageLoopTarget : public MessageLoop {
   virtual ~MessageLoopTarget();
 
   virtual Type GetType() const = 0;
+
+  // Fidl requires a special dispatcher to be setup. Not all message loops
+  // support it.
+  virtual bool SupportsFidl() const = 0;
 
   // Runs until timeout. Mostly used in tests.
   void RunUntilTimeout(zx::duration timeout);

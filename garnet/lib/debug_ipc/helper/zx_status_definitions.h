@@ -18,7 +18,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr zx_status_t kZxOK = 0;
+constexpr zx_status_t kZxOk = 0;
 
 // ======= Internal failures =======
 // ZX_ERR_INTERNAL: The system encountered an otherwise unspecified error

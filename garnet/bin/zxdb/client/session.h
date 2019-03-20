@@ -7,6 +7,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "garnet/bin/zxdb/client/session_observer.h"
@@ -108,6 +109,11 @@ class Session {
   // connected.
   const ArchInfo* arch_info() const { return arch_info_.get(); }
 
+  // When the client tells the agent to launch a component, it will return an
+  // unique id identifying that launch. Later, when the component effectively
+  // starts, the session will use that ID to know which component it is.
+  void ExpectComponent(uint32_t component_id);
+
   // Dispatches these particular notification types from the agent. These are
   // public since tests will commonly want to synthesize these events.
   //
@@ -121,6 +127,7 @@ class Session {
   void DispatchNotifyException(const debug_ipc::NotifyException& notify,
                                bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
+  void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
 
  protected:
   fxl::ObserverList<SessionObserver> observers_;
@@ -187,6 +194,10 @@ class Session {
 
   std::map<uint32_t, Callback> pending_;
   uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.
+
+  // Component ids that the session is currently waiting on.
+  // See ExpectComponent comments for more information on these ids.
+  std::set<uint32_t> expected_components_;
 
   SystemImpl system_;
 

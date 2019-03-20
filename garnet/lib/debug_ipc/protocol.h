@@ -109,8 +109,15 @@ struct LaunchReply {
   // process or a component.
   InferiorType inferior_type;
 
-  zx_status_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
-  uint64_t process_koid = 0;
+  // zx_status_t value from launch, ZX_OK on success.
+  zx_status_t status = 0;
+
+  // These fields are mutually exclusive. If InferiorType is process, then
+  // process_id != 0 and component_id == 0. If it's component, it's the other
+  // way around.
+  uint64_t process_id = 0;
+  uint64_t component_id = 0;
+
   std::string process_name;
 };
 
@@ -311,6 +318,12 @@ struct WriteRegistersReply {
 // Notify that a new process was created in debugged job.
 struct NotifyProcessStarting {
   uint64_t koid = 0;
+  // When components are launched from the debugger, they look like normal
+  // processes starting. The debug agent sets an id to them so the debugger can
+  // detect them and start them as they would normal processes.
+  //
+  // 0 means non set.
+  uint32_t component_id = 0;
   std::string name = "";
 };
 

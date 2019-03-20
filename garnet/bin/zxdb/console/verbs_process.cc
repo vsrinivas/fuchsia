@@ -18,6 +18,8 @@
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/lib/debug_ipc/debug/logging.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -160,7 +162,8 @@ void LaunchComponent(const Command& cmd) {
   request.inferior_type = debug_ipc::InferiorType::kComponent;
   request.argv = cmd.args();
 
-  auto launch_cb = [](const Err& err, debug_ipc::LaunchReply reply) {
+  auto launch_cb = [target = cmd.target()->GetWeakPtr()](
+                       const Err& err, debug_ipc::LaunchReply reply) {
     FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
         << "Expected Component, Got: "
         << debug_ipc::InferiorTypeToString(reply.inferior_type);
@@ -169,13 +172,21 @@ void LaunchComponent(const Command& cmd) {
       return;
     }
 
-    if (reply.status != 0) {
+    if (reply.status != debug_ipc::kZxOk) {
       // TODO(donosoc): This should interpret the component termination reason
       //                values.
-      Console::get()->Output(
-          Err("Could not start component %s.", reply.process_name.c_str()));
+      Console::get()->Output(Err("Could not start component %s: %s",
+                                 reply.process_name.c_str(),
+                                 debug_ipc::ZxStatusToString(reply.status)));
       return;
     }
+
+    FXL_DCHECK(target);
+
+    // We tell the session we will be expecting this component.
+    FXL_DCHECK(reply.process_id == 0);
+    FXL_DCHECK(reply.component_id != 0);
+    target->session()->ExpectComponent(reply.component_id);
   };
 
   cmd.target()->session()->remote_api()->Launch(std::move(request),

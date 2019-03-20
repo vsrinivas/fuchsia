@@ -177,7 +177,9 @@ bool ReadReply(MessageReader* reader, LaunchReply* reply,
 
   if (!reader->ReadInt32(&reply->status))
     return false;
-  if (!reader->ReadUint64(&reply->process_koid))
+  if (!reader->ReadUint64(&reply->process_id))
+    return false;
+  if (!reader->ReadUint64(&reply->component_id))
     return false;
   if (!reader->ReadString(&reply->process_name))
     return false;
@@ -549,6 +551,8 @@ bool ReadNotifyProcessStarting(MessageReader* reader,
   if (!reader->ReadHeader(&header))
     return false;
   if (!reader->ReadUint64(&process->koid))
+    return false;
+  if (!reader->ReadUint32(&process->component_id))
     return false;
   if (!reader->ReadString(&process->name))
     return false;

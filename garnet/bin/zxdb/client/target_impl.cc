@@ -42,7 +42,6 @@ std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
 
 void TargetImpl::ProcessCreatedInJob(uint64_t koid,
                                      const std::string& process_name) {
-  TIME_BLOCK();
   FXL_DCHECK(state_ == State::kNone);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 
@@ -52,6 +51,19 @@ void TargetImpl::ProcessCreatedInJob(uint64_t koid,
   system_->NotifyDidCreateProcess(process_.get());
   for (auto& observer : observers())
     observer.DidCreateProcess(this, process_.get(), true);
+}
+
+void TargetImpl::ProcessCreatedAsComponent(uint64_t koid,
+                                           const std::string& process_name) {
+  FXL_DCHECK(state_ == State::kNone);
+  FXL_DCHECK(!process_.get());
+
+  state_ = State::kRunning;
+  process_ = std::make_unique<ProcessImpl>(this, koid, process_name,
+                                           Process::StartType::kLaunch);
+  system_->NotifyDidCreateProcess(process_.get());
+  for (auto& observer : observers())
+    observer.DidCreateProcess(this, process_.get(), false);
 }
 
 void TargetImpl::CreateProcessForTesting(uint64_t koid,
@@ -105,7 +117,7 @@ void TargetImpl::Launch(Callback callback) {
       request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::LaunchReply reply) {
         TargetImpl::OnLaunchOrAttachReplyThunk(weak_target, callback, err,
-                                               reply.process_koid, reply.status,
+                                               reply.process_id, reply.status,
                                                reply.process_name);
       });
 }

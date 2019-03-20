@@ -11,7 +11,7 @@ namespace debug_ipc {
 
 const char* ZxStatusToString(zx_status_t status) {
   switch (status) {
-    case kZxOK:
+    case kZxOk:
       return "ZX_OK";
     case kZxErrInternal:
       return "ZX_ERR_INTERNAL";

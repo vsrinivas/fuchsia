@@ -44,7 +44,8 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
-  void OnProcessStart(zx::process process) override;
+  void OnProcessStart(const std::string& filter, zx::process,
+                      zx::thread initial_thread) override;
 
   bool should_quit() const { return should_quit_; }
 
@@ -144,6 +145,16 @@ class DebugAgent : public RemoteAPI,
   // TODO(donosoc): Hopefully we could get the created job for the component
   //                so we can only filter on that.
   zx_koid_t component_root_job_koid_ = 0;
+
+  // Launching a component is an async operation. Each launch is assigned an
+  // unique id so it can be comunicated to the client.
+  uint32_t next_component_id_ = 1;
+
+  // Each component launch is asigned an unique filter and id. This is because
+  // new components are attached via the job filter mechanism. When a particular
+  // filter attached, we use this id to know which component launch just
+  // happened and we can comunicate it to the client.
+  std::map<std::string, uint32_t> expected_components_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };

@@ -34,6 +34,12 @@ class TargetImpl : public Target {
   // will not have started running yet.
   void ProcessCreatedInJob(uint64_t koid, const std::string& process_name);
 
+  // Notification that a new process was created as a new component.
+  // We need the distinction because they look identical as a process caught
+  // by a job filter.
+  void ProcessCreatedAsComponent(uint64_t koid,
+                                 const std::string& process_name);
+
   // Tests can use this to create a target for mocking purposes without making
   // any IPC. To destroy call ImplicitlyDetach().
   void CreateProcessForTesting(uint64_t koid, const std::string& process_name);

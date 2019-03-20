@@ -28,6 +28,7 @@ class MessageLoopZircon : public MessageLoopTarget {
   void QuitNow() override;
 
   Type GetType() const override { return Type::kZircon; }
+  bool SupportsFidl() const override { return false; }
 
   // Runs until timeout. Mostly used in tests.
   void RunUntilTimeout(zx::duration timeout);

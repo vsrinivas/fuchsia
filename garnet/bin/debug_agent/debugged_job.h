@@ -19,9 +19,17 @@
 
 namespace debug_agent {
 
+class DebuggedJob;
+
 class ProcessStartHandler {
  public:
-  virtual void OnProcessStart(zx::process process) = 0;
+  // This will pass ownership of both the process and the initial thread.
+  // It's the job of the handler to eventually resume that thread.
+  //
+  // The DebuggedJob matching filter passed in case the handler is tracking from
+  // which this event comes from.
+  virtual void OnProcessStart(const std::string& filter, zx::process process,
+                              zx::thread thread) = 0;
 };
 
 class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {

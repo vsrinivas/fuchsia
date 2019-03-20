@@ -42,6 +42,7 @@ class MessageLoopAsync : public MessageLoopTarget {
   zx_status_t InitTarget() override;
 
   Type GetType() const override { return Type::kAsync; }
+  bool SupportsFidl() const override { return true; }
 
   void Cleanup() override;
 

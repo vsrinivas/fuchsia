@@ -140,7 +140,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;
     debug_ipc::ProcessBreakpointSettings location = {};
-    location.process_koid = launch_reply.process_koid;
+    location.process_koid = launch_reply.process_id;
     location.address = module_function;
 
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
@@ -153,7 +153,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // Resume the process now that the breakpoint is installed.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = launch_reply.process_koid;
+    resume_request.process_koid = launch_reply.process_id;
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
@@ -163,7 +163,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
-    EXPECT_EQ(exception.process_koid, launch_reply.process_koid);
+    EXPECT_EQ(exception.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kSoftware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 

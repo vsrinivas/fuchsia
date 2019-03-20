@@ -139,7 +139,7 @@ TEST_F(TargetImplTest, LaunchKill) {
   sink().set_launch_err(Err());
   debug_ipc::LaunchReply requested_reply;
   requested_reply.status = 0;
-  requested_reply.process_koid = kKoid;
+  requested_reply.process_id = kKoid;
   requested_reply.process_name = "my name";
   sink().set_launch_reply(requested_reply);
 

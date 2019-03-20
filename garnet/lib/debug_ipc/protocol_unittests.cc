@@ -97,14 +97,16 @@ TEST(Protocol, LaunchReply) {
   LaunchReply initial;
   initial.inferior_type = InferiorType::kComponent;
   initial.status = 67;
-  initial.process_koid = 0x1234;
+  initial.process_id = 0x1234;
+  initial.component_id = 0x5678;
   initial.process_name = "winword.exe";
 
   LaunchReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(second.inferior_type, InferiorType::kComponent);
   EXPECT_EQ(initial.status, second.status);
-  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.process_id, second.process_id);
+  EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.process_name, second.process_name);
 }
 
@@ -743,6 +745,35 @@ TEST(Protocol, NotifyModules) {
   EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
   EXPECT_EQ(initial.stopped_thread_koids, second.stopped_thread_koids);
+}
+
+TEST(Protocol, NotifyProcessStarting) {
+  NotifyProcessStarting initial;
+  initial.koid = 10;
+  initial.component_id = 2;
+  initial.name = "some_process";
+
+  NotifyProcessStarting second;
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second,
+                                               &WriteNotifyProcessStarting,
+                                               &ReadNotifyProcessStarting));
+
+  EXPECT_EQ(initial.koid, second.koid);
+  EXPECT_EQ(initial.component_id, second.component_id);
+  EXPECT_EQ(initial.name, second.name);
+}
+
+TEST(Protocol, NotifyProcessExiting) {
+  NotifyProcessExiting initial;
+  initial.process_koid = 10;
+  initial.return_code = 3;
+
+  NotifyProcessExiting second;
+  ASSERT_TRUE(SerializeDeserializeNotification(
+      initial, &second, &WriteNotifyProcessExiting, &ReadNotifyProcessExiting));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.return_code, second.return_code);
 }
 
 }  // namespace debug_ipc

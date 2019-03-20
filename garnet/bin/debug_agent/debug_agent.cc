@@ -22,6 +22,8 @@
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/debug/logging.h"
+#include "garnet/lib/debug_ipc/helper/component_utils.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -39,26 +41,45 @@ DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
 
 DebugAgent::~DebugAgent() = default;
 
-void DebugAgent::OnProcessStart(zx::process process) {
+void DebugAgent::OnProcessStart(const std::string& filter, zx::process process,
+                                zx::thread initial_thread) {
   TIME_BLOCK();
-  auto koid = KoidForObject(process);
-  auto name = NameForObject(process);
+  auto process_koid = KoidForObject(process);
+  auto process_name = NameForObject(process);
+  auto thread_koid = KoidForObject(initial_thread);
+
+  debug_ipc::NotifyProcessStarting notify;
+  notify.koid = process_koid;
+  notify.name = process_name;
+
+  // We check whether this is a component launch we're expecting.
+  auto it = expected_components_.find(filter);
+  if (it != expected_components_.end())
+    notify.component_id = it->second;
+
+  DEBUG_LOG() << "Process starting. Name: " << process_name
+              << ", filter: " << filter
+              << ", component id: " << notify.component_id;
 
   // Send notification, then create debug process so that thread notification is
-  // sent after this
-  debug_ipc::NotifyProcessStarting notify;
-  notify.koid = koid;
-  notify.name = name;
+  // sent after this.
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(notify, &writer);
   stream()->Write(writer.MessageComplete());
 
   DebuggedProcessCreateInfo create_info;
-  create_info.name = name;
-  create_info.koid = koid;
+  create_info.koid = process_koid;
+  create_info.name = process_name;
   create_info.handle = std::move(process);
   create_info.resume_initial_thread = false;
   AddDebuggedProcess(std::move(create_info));
+
+  // Attached to the process. At that point it will get a new thread
+  // notification for the initial thread which it can stop or continue as it
+  // desires. Therefore, we can always resume the thread in the "new process"
+  // exception.
+  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
+      thread_koid, initial_thread, 0);
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
@@ -540,7 +561,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   }
 
   // Success, fill out the reply.
-  reply->process_koid = process_koid;
+  reply->process_id = process_koid;
   reply->process_name = NameForObject(process);
   reply->status = ZX_OK;
 }
@@ -549,12 +570,27 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
                                  debug_ipc::LaunchReply* reply) {
   const auto& pkg_url = request.argv.front();
 
-  DEBUG_LOG() << "Running url \"" << pkg_url << "\" as component.";
+  debug_ipc::ComponentDescription desc;
+  if (!debug_ipc::ExtractComponentFromPackageUrl(pkg_url, &desc)) {
+    FXL_LOG(WARNING) << "Invalid package url: " << pkg_url;
+    reply->status = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+
+  auto& filter = desc.component_name;
+  DEBUG_LOG() << "Running component. Url: " << pkg_url
+              << ", filter: " << filter;
 
   *reply = {};
+  reply->process_name = filter;
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
+
+  if (!debug_ipc::MessageLoopTarget::Current()->SupportsFidl()) {
+    reply->status = ZX_ERR_NOT_SUPPORTED;
+    return;
+  }
+
   if (component_root_job_koid_ == 0) {
-    reply->process_name = pkg_url;
     reply->status = ZX_ERR_BAD_STATE;
     return;
   }
@@ -569,7 +605,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   // TODO(donosoc): Filters should be removed on attach or failure.
   DebuggedJob* job = GetDebuggedJob(component_root_job_koid_);
   FXL_DCHECK(job);
-  job->AppendFilter(pkg_url);
+  job->AppendFilter(filter);
 
   fuchsia::sys::LauncherSyncPtr launcher;
   services_->Connect(launcher.NewRequest());
@@ -595,13 +631,17 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   // destroyed.
   controller.get()->Detach();
 
+  // Store the filter associate to the unique id for that filter.
+  uint32_t component_id = next_component_id_++;
+  expected_components_[filter] = component_id;
+  reply->component_id = component_id;
+
   // TODO(donosoc): This should be replaced with the actual TerminationReason
   //                provided by the fidl interface. But this requires to put
   //                it in debug_ipc/helper so that the client can interpret
   //                it and this CL is big enough already.
   //                For now, we just reply OK.
-  reply->inferior_type = debug_ipc::InferiorType::kComponent;
-  reply->process_name = pkg_url;
+  reply->status = ZX_OK;
 }
 
 }  // namespace debug_agent

@@ -71,15 +71,9 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   if (matching_filter) {
     DEBUG_LOG() << "Filter " << matching_filter->filter << " matches process "
                 << proc_name << ". Attaching.";
-    handler_->OnProcessStart(std::move(process));
+    handler_->OnProcessStart(matching_filter->filter, std::move(process),
+                             std::move(thread));
   }
-
-  // Attached to the process. At that point it will get a new thread
-  // notification for the initial thread which it can stop or continue as it
-  // desires. Therefore, we can always resume the thread in the "new process"
-  // exception.
-  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(thread_koid,
-                                                               thread, 0);
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {
@@ -107,12 +101,6 @@ void DebuggedJob::SetFilters(std::vector<std::string> filters) {
 }
 
 void DebuggedJob::AppendFilter(std::string filter) {
-  // We check if this is a package url. If that is the case, me only need
-  // the component as a filter, as the whole URL won't match.
-  debug_ipc::ComponentDescription desc;
-  if (debug_ipc::ExtractComponentFromPackageUrl(filter, &desc))
-    filter = desc.component_name;
-
   // We check whether this filter already exists.
   for (auto& existent_filter : filters_) {
     if (existent_filter.filter == filter)

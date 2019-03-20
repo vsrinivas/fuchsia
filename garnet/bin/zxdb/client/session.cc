@@ -29,6 +29,7 @@
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/debug/block_timer.h"
+#include "garnet/lib/debug_ipc/debug/logging.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -566,6 +567,38 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   }
 }
 
+void Session::DispatchProcessStarting(
+    const debug_ipc::NotifyProcessStarting& notify) {
+  // Search the targets to see if there is a non-attached empty one.
+  // Normally this would be the initial one. Assume that targets that have
+  // a name have been set up by the user which we don't want to overwrite.
+  TargetImpl* found_target = nullptr;
+  for (TargetImpl* target : system_.GetTargetImpls()) {
+    if (target->GetState() == Target::State::kNone &&
+        target->GetArgs().empty()) {
+      found_target = target;
+      break;
+    }
+  }
+
+  if (!found_target)  // No empty target, make a new one.
+    found_target = system_.CreateNewTargetImpl(nullptr);
+
+  if (notify.component_id == 0) {
+    found_target->ProcessCreatedInJob(notify.koid, notify.name);
+    return;
+  }
+
+  // We should be expecting this component.
+  auto it = expected_components_.find(notify.component_id);
+  FXL_DCHECK(it != expected_components_.end());
+  found_target->ProcessCreatedAsComponent(notify.koid, notify.name);
+
+  // Now that the target is created, we can resume the process and make the
+  // first thread to execute.
+  found_target->process()->Continue();
+}
+
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
                                    std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
@@ -583,23 +616,8 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
       debug_ipc::NotifyProcessStarting notify;
-      if (!debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
-        return;
-
-      // Search the targets to see if there is a non-attached empty one.
-      // Normally this would be the initial one. Assume that targets that have
-      // a name have been set up by the user which we don't want to overwrite.
-      TargetImpl* found_target = nullptr;
-      for (TargetImpl* target : system_.GetTargetImpls()) {
-        if (target->GetState() == Target::State::kNone &&
-            target->GetArgs().empty()) {
-          found_target = target;
-          break;
-        }
-      }
-      if (!found_target)  // No empty target, make a new one.
-        found_target = system_.CreateNewTargetImpl(nullptr);
-      found_target->ProcessCreatedInJob(notify.koid, notify.name);
+      if (debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
+        DispatchProcessStarting(notify);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
@@ -712,6 +730,11 @@ void Session::SendSessionNotification(SessionObserver::NotificationType type,
                                       const std::string& msg) {
   for (auto& observer : observers_)
     observer.HandleNotification(type, msg);
+}
+
+void Session::ExpectComponent(uint32_t component_id) {
+  FXL_DCHECK(expected_components_.count(component_id) == 0);
+  expected_components_.insert(component_id);
 }
 
 fxl::WeakPtr<Session> Session::GetWeakPtr() {
