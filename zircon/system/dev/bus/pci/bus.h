@@ -82,7 +82,7 @@ private:
     // members
     ddk::PcirootProtocolClient pciroot_;
     pci_platform_info_t info_;
-    mmio_buffer_t ecam_;
+    std::optional<ddk::MmioBuffer> ecam_;
     bool has_ecam_;
     fbl::unique_ptr<PciRoot> root_;
     mutable fbl::Mutex dev_list_lock_;

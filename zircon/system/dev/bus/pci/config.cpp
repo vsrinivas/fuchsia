@@ -58,7 +58,7 @@ constexpr PciReg16 Config::kBridgeControl;
 
 // MMIO Config Implementation
 zx_status_t MmioConfig::Create(pci_bdf_t bdf,
-                               mmio_buffer_t* ecam,
+                               ddk::MmioBuffer* ecam,
                                uint8_t start_bus,
                                uint8_t end_bus,
                                fbl::RefPtr<Config>* config) {
@@ -69,7 +69,7 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_paddr_t bdf_start = reinterpret_cast<zx_paddr_t>(ecam->vaddr);
+    zx_paddr_t bdf_start = reinterpret_cast<zx_paddr_t>(ecam->get());
     // Find the offset into the ecam region for the given bdf address. Every bus
     // has 32 devices, every device has 8 functions, and each function has an
     // extended config space of 4096 bytes. The base address of the vmo provided

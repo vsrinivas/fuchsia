@@ -108,14 +108,15 @@ zx_status_t Bus::MapEcam(void) {
         return status;
     }
 
-    status = mmio_buffer_init(&ecam_, 0, size, info_.ecam_vmo, ZX_CACHE_POLICY_UNCACHED);
+    status = ddk::MmioBuffer::Create(0, size, zx::vmo(info_.ecam_vmo), ZX_CACHE_POLICY_UNCACHED,
+                                     &ecam_);
     if (status != ZX_OK) {
         pci_errorf("couldn't map ecam vmo: %d!\n", status);
         return status;
     }
 
     pci_infof("ecam for segment %u mapped at %p (size: %#zx)\n", info_.segment_group,
-              ecam_.vaddr, ecam_.size);
+              ecam_->get(), ecam_->get_size());
     has_ecam_ = true;
     return ZX_OK;
 }
@@ -123,7 +124,8 @@ zx_status_t Bus::MapEcam(void) {
 zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* out_config) {
     zx_status_t status;
     if (has_ecam_) {
-        status = MmioConfig::Create(bdf, &ecam_, info_.start_bus_num, info_.end_bus_num, out_config);
+        status = MmioConfig::Create(bdf, &(*ecam_), info_.start_bus_num, info_.end_bus_num,
+                                    out_config);
     } else {
         status = ProxyConfig::Create(bdf, &pciroot_, out_config);
     }
@@ -236,9 +238,6 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
 }
 
 void Bus::DdkRelease() {
-    if (ecam_.vaddr) {
-        mmio_buffer_release(&ecam_);
-    }
     delete this;
 }
 

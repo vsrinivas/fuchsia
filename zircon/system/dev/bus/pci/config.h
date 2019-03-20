@@ -11,6 +11,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/mmio/mmio.h>
 #include <stdio.h>
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>
@@ -153,7 +154,7 @@ protected:
 class MmioConfig final : public Config {
 public:
     static zx_status_t Create(pci_bdf_t bdf,
-                              mmio_buffer_t* ecam_,
+                              ddk::MmioBuffer* ecam_,
                               uint8_t start_bus,
                               uint8_t end_bus,
                               fbl::RefPtr<Config>* config);
