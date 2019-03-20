@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <string_view>
+
+#include "garnet/bin/zxdb/symbols/base_type.h"
+
+namespace zxdb {
+
+// Looks up the given type name. If it is a known builtin type name, a
+// symbol defining that type will be returned. Otherwise an empty refptr will
+// be returned.
+fxl::RefPtr<BaseType> GetBuiltinType(std::string_view name);
+
+}  // namespace zxdb

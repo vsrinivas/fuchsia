@@ -19,7 +19,7 @@ const int BaseType::kBaseTypeUTF;
 
 BaseType::BaseType() : Type(DwarfTag::kBaseType) {}
 
-BaseType::BaseType(int base_type, int byte_size, const std::string& name)
+BaseType::BaseType(int base_type, uint32_t byte_size, const std::string& name)
     : Type(DwarfTag::kBaseType), base_type_(base_type) {
   set_byte_size(byte_size);
   set_assigned_name(name);
