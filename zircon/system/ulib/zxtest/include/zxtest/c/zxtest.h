@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __Fuchsia__
+#include <zircon/status.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -211,6 +215,22 @@ static void zxtest_clean_buffer(char** buffer) {
             _RETURN_IF_FATAL(fatal);                                                               \
         }                                                                                          \
     } while (0)
+
+#ifdef __Fuchsia__
+#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                     \
+    do {                                                                                           \
+        const zx_status_t _actual = (const zx_status_t)(actual);                                   \
+        const zx_status_t _expected = (const zx_status_t)(expected);                               \
+        if (!(op(_actual, _expected))) {                                                           \
+            _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
+            _ZXTEST_ASSERT(msg_buffer, #expected, zx_status_get_string(_expected), #actual,        \
+                           zx_status_get_string(_actual), file, line, fatal);                      \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)
+#else
+#define _ASSERT_VAR_STATUS(...) _ASSERT_VAR(__VA_ARGS__)
+#endif
 
 #define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
     _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line,   \

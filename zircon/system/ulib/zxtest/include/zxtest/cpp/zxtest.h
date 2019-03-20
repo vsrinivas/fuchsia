@@ -14,6 +14,10 @@
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test.h>
 
+#ifdef __Fuchsia__
+#include <zircon/status.h>
+#endif
+
 // Macro definitions for usage within CPP.
 #define RUN_ALL_TESTS(argc, argv) zxtest::RunAllTests(argc, argv)
 
@@ -164,6 +168,27 @@ bool CompareHelper(const Actual& actual, const Expected& expected, const Compare
             _RETURN_IF_FATAL(fatal);                                                               \
         }                                                                                          \
     } while (0)
+
+#ifdef __Fuchsia__
+#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                     \
+    do {                                                                                           \
+        auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                    \
+            return op(actual_, expected_);                                                         \
+        };                                                                                         \
+        auto desc_gen = [&]() -> fbl::String {                                                     \
+            _GEN_ASSERT_DESC(out_desc, desc, __VA_ARGS__);                                         \
+            return out_desc;                                                                       \
+        };                                                                                         \
+        auto print = [](const auto& val) { return zx_status_get_string(val); };                    \
+        if (!zxtest::internal::EvalCondition(actual, expected, #actual, #expected,                 \
+                                             {.filename = file, .line_number = line}, fatal,       \
+                                             false, buffer_compare, desc_gen, print)) {            \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)
+#else
+#define _ASSERT_VAR_STATUS(...) _ASSERT_VAR(__VA_ARGS__)
+#endif
 
 #define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)               \
     do {                                                                                           \
