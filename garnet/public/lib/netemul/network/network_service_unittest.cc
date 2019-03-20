@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
+#include <lib/netemul/network/ethernet_client.h>
+#include <lib/netemul/network/fake_endpoint.h>
+#include <lib/netemul/network/netdump.h>
+#include <lib/netemul/network/netdump_parser.h>
+#include <lib/netemul/network/network_context.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <unordered_set>
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/netemul/network/ethernet_client.h"
-#include "lib/netemul/network/fake_endpoint.h"
-#include "lib/netemul/network/netdump.h"
-#include "lib/netemul/network/netdump_parser.h"
-#include "lib/netemul/network/network_context.h"
 
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
@@ -25,9 +26,9 @@ namespace testing {
 
 static const EthernetConfig TestEthBuffConfig = {.buff_size = 512, .nbufs = 10};
 
-using component::testing::EnclosingEnvironment;
-using component::testing::EnvironmentServices;
-using component::testing::TestWithEnvironment;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::EnvironmentServices;
+using sys::testing::TestWithEnvironment;
 class NetworkServiceTest : public TestWithEnvironment {
  public:
   using FNetworkManager = NetworkManager::FNetworkManager;
@@ -45,7 +46,7 @@ class NetworkServiceTest : public TestWithEnvironment {
  protected:
   void SetUp() override {
     fuchsia::sys::EnvironmentPtr parent_env;
-    real_services()->ConnectToService(parent_env.NewRequest());
+    real_services()->Connect(parent_env.NewRequest());
 
     svc_loop_ =
         std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);

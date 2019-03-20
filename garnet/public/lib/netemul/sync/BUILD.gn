@@ -38,8 +38,8 @@ executable("sync_test_bin") {
 
   deps = [
     ":sync_service",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fzl",
   ]
 }

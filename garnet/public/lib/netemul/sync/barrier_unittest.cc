@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component/cpp/environment_services_helper.h>
-#include <lib/component/cpp/testing/test_util.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
+#include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "sync_manager.h"
 
@@ -20,9 +19,9 @@
 namespace netemul {
 namespace testing {
 
-using component::testing::EnclosingEnvironment;
-using component::testing::EnvironmentServices;
-using component::testing::TestWithEnvironment;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::EnvironmentServices;
+using sys::testing::TestWithEnvironment;
 
 static const char* kMainTestBarrier = "test-barrier";
 static const char* kAltTestBarrier = "alt-barrier";
@@ -34,7 +33,7 @@ class BarrierTest : public TestWithEnvironment {
  protected:
   void SetUp() override {
     fuchsia::sys::EnvironmentPtr parent_env;
-    real_services()->ConnectToService(parent_env.NewRequest());
+    real_services()->Connect(parent_env.NewRequest());
 
     svc_loop_ =
         std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);

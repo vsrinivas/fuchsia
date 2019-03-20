@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/netemul/network/ethertap_client.h"
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/netemul/network/ethernet_client.h"
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/netemul/network/ethernet_client.h>
+#include <lib/netemul/network/ethertap_client.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 namespace netemul {
 namespace testing {
@@ -20,7 +20,7 @@ namespace testing {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil( \
       [this]() { return eth(ethnu)->online(); }, zx::sec(5)))
 
-using component::testing::TestWithEnvironment;
+using sys::testing::TestWithEnvironment;
 class EthertapClientTest : public TestWithEnvironment {
  public:
   // pushes an interface into local vectors

@@ -88,8 +88,8 @@ executable("network_test_bin") {
     ":ethertap",
     ":netdump",
     ":network_service",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fzl",
   ]
 }
