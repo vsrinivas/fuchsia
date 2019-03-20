@@ -29,6 +29,7 @@ config("config") {
 
 driver("platform-bus-x86") {
   sources = [
+    "acpi-nswalk.c",
     "acpi-dev/dev-battery.c",
     "acpi-dev/dev-cros-ec/dev.cpp",
     "acpi-dev/dev-cros-ec/motion.cpp",
