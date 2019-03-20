@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <limits>
 #include <list>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <set>
@@ -27,6 +28,8 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -652,6 +655,19 @@ public:
     size_t exact_size() const { return exact_size_; }
     size_t mapped_size() const { return mapped_size_; }
 
+    // Equality means pointer equality, so two separately-reached
+    // slices of the same piece of an input BOOTFS, for example.
+    bool operator==(const FileContents& other) const {
+        return (exact_size() == other.exact_size() &&
+                mapped_ == other.mapped_);
+    }
+
+    struct Hash {
+        std::size_t operator()(const FileContents& file) const {
+            return std::hash<decltype(file.mapped_)>()(file.mapped_);
+        }
+    };
+
     static FileContents Map(const fbl::unique_fd& fd,
                             const struct stat& st,
                             const char* filename) {
@@ -706,66 +722,151 @@ private:
     bool owned_ = true;
 };
 
+// This is used for all opening of files and directories for input.
+// It tracks all files opened so a depfile can be written at the end.
+//
+// The opener caches FileContents objects representing every file mapped
+// in.  These objects live in the cache for the lifetime of the opener.
+// Opener methods return const FileContents* raw pointers to indicate
+// they are never owned by the caller.
+//
+// The opener caches on multiple levels:
+//  * input file names are cached so reuse doesn't hit the filesystem at all
+//  * opened files' contents are cached by file identity so multiple
+//    input file names reaching the same actual file (via different
+//    unnormalized paths or links) reuse the same mapped contents
+//  * TODO(mcgrathr): identical contents from disparate sources
+//
+// TODO(mcgrathr): Directories are not cached.
 class FileOpener {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileOpener);
     FileOpener() = default;
 
-    void Init(const char* output_file, const char* depfile) {
+    // The returned FileContents is cached and lives forever (for the lifetime
+    // of the FileOpener).
+    const FileContents* OpenFile(const char* file) {
+        auto& cache = name_cache_[file];
+        if (!cache) {
+            struct stat st;
+            auto fd = Open(file, &st);
+            cache = OpenFile(file, std::move(fd), st);
+        }
+        return cache;
+    }
+
+    // Like OpenFile, but instead of a fatal error if it's a directory,
+    // run the if_dir() function and return nullptr.
+    template <typename Func>
+    const FileContents* OpenFileOrDir(const char* file, Func if_dir) {
+        auto& cache = name_cache_[file];
+        if (!cache) {
+            struct stat st;
+            auto fd = Open(file, &st);
+            if (S_ISDIR(st.st_mode)) {
+                if_dir(std::move(fd));
+                return nullptr;
+            }
+            cache = OpenFile(file, std::move(fd), st);
+        }
+        return cache;
+    }
+
+    // Construct a new "unowned" FileContents in place.  The returned
+    // pointer lives for the lifetime of the FileOpener.  Hence, the
+    // true owner of the data this FileContents points to must be kept
+    // alive for the lifetime of the FileOpener.
+    template <typename... Args>
+    const FileContents* Emplace(Args&&... args) {
+        return &*memory_cache_.emplace(std::forward<Args>(args)...).first;
+    }
+
+    void WriteDepfile(const char* output_file, const char* depfile) {
         if (depfile) {
-            depfile_ = fopen(depfile, "w");
-            if (!depfile_) {
+            auto f = fopen(depfile, "w");
+            if (!f) {
                 perror(depfile);
                 exit(1);
             }
-            fprintf(depfile_, "%s:", output_file);
+            fprintf(f, "%s:", output_file);
+            for (const auto& [file, _] : name_cache_) {
+                fprintf(f, " %s", file.c_str());
+            }
+            putc('\n', f);
+            fclose(f);
         }
     }
 
-    fbl::unique_fd Open(const char* file, struct stat* st = nullptr) {
+private:
+    class FileId {
+    public:
+        explicit FileId(const struct stat& st)
+            : dev_(st.st_dev), ino_(st.st_ino) {}
+
+        bool operator==(const FileId& other) const {
+            return dev_ == other.dev_ && ino_ == other.ino_;
+        }
+
+        bool operator<(const FileId& other) const {
+            return (dev_ < other.dev_ ||
+                    (dev_ == other.dev_ && ino_ < other.ino_));
+        }
+
+    private:
+        decltype((struct stat){}.st_dev) dev_;
+        decltype((struct stat){}.st_ino) ino_;
+    };
+
+    // Cache of contents by file identity.
+    // The cache owns the FileContents, so they all live forever
+    // and raw const FileContents* pointers are used to access them.
+    std::map<FileId, FileContents> file_cache_;
+
+    // Cache of contents by file name.  These point into the file_cache_.
+    std::unordered_map<std::string, const FileContents*> name_cache_;
+
+    // These are created by Emplace() and kept here both to de-duplicate them
+    // and to tie their lifetimes to the FileOpener (to parallel file_cache_).
+    // De-duplication here only actually occurs for files extracted from an
+    // input BOOTFS in Item::ReadBootFS in case the input filesystem used
+    // "hard links" (i.e. multiple directory entries pointing to the same
+    // region of the image).
+    std::unordered_set<FileContents, FileContents::Hash> memory_cache_;
+
+    fbl::unique_fd Open(const char* file, struct stat* st) {
         fbl::unique_fd fd(open(file, O_RDONLY));
         if (!fd) {
             perror(file);
             exit(1);
         }
-        if (st && fstat(fd.get(), st) < 0) {
+        if (fstat(fd.get(), st) < 0) {
             perror("fstat");
             exit(1);
-        }
-        if (depfile_) {
-            fprintf(depfile_, " %s", file);
         }
         return fd;
     }
 
-    fbl::unique_fd Open(const std::string& file, struct stat* st = nullptr) {
-        return Open(file.c_str(), st);
-    }
-
-    ~FileOpener() {
-        if (depfile_) {
-            fputc('\n', depfile_);
-            fclose(depfile_);
+    const FileContents* OpenFile(const char* file,
+                                 fbl::unique_fd fd,
+                                 const struct stat& st) {
+        if (!S_ISREG(st.st_mode)) {
+            fprintf(stderr, "%s: not a regular file\n", file);
+            exit(1);
         }
+        auto [it, fresh] = file_cache_.try_emplace(FileId(st));
+        if (fresh) {
+            it->second = FileContents::Map(std::move(fd), st, file);
+        }
+        return &it->second;
     }
-
-private:
-    FILE* depfile_ = nullptr;
 };
-
-void RequireRegularFile(const struct stat& st, const char* file) {
-    if (!S_ISREG(st.st_mode)) {
-        fprintf(stderr, "%s: not a regular file\n", file);
-        exit(1);
-    }
-}
 
 // Base class for ManifestInputFileGenerator and DirectoryInputFileGenerator.
 // These both deliver target name -> file contents mappings until they don't.
 struct InputFileGenerator {
     struct value_type {
         std::string target;
-        FileContents file;
+        const FileContents* file;
     };
     virtual ~InputFileGenerator() = default;
     virtual bool Next(FileOpener*, const std::string& prefix, value_type*) = 0;
@@ -776,11 +877,11 @@ using InputFileGeneratorList =
 
 class ManifestInputFileGenerator : public InputFileGenerator {
 public:
-    ManifestInputFileGenerator(FileContents file, std::string prefix)
-        : file_(std::move(file)), prefix_(std::move(prefix)) {
+    ManifestInputFileGenerator(const FileContents* file, std::string prefix)
+        : prefix_(std::move(prefix)) {
         read_ptr_ = static_cast<const char*>(
-            file_.View(0, file_.exact_size()).iov_base);
-        eof_ = read_ptr_ + file_.exact_size();
+            file->View(0, file->exact_size()).iov_base);
+        eof_ = read_ptr_ + file->exact_size();
     }
 
     ~ManifestInputFileGenerator() override = default;
@@ -805,18 +906,14 @@ public:
 
             std::string target(line, eq - line);
             std::string source(eq + 1, eol - (eq + 1));
-            struct stat st;
-            auto fd = opener->Open(source, &st);
-            RequireRegularFile(st, source.c_str());
-            auto file = FileContents::Map(fd, st, source.c_str());
-            *value = value_type{prefix + target, std::move(file)};
+            *value = value_type{prefix_ + prefix + target,
+                                opener->OpenFile(source.c_str())};
             return true;
         }
         return false;
     }
 
 private:
-    FileContents file_;
     const std::string prefix_;
     const char* read_ptr_ = nullptr;
     const char* eof_ = nullptr;
@@ -842,17 +939,14 @@ public:
             if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")) {
                 continue;
             }
-            std::string target = prefix + walk_prefix_ + d->d_name;
             std::string source = source_prefix_ + walk_prefix_ + d->d_name;
-            struct stat st;
-            auto fd = opener->Open(source, &st);
-            if (S_ISDIR(st.st_mode)) {
-                Descend(std::move(fd), d->d_name);
-            } else {
-                RequireRegularFile(st, source.c_str());
-                auto file = FileContents::Map(std::move(fd), st,
-                                              source.c_str());
-                *value = value_type{std::move(target), std::move(file)};
+            auto file = opener->OpenFileOrDir(
+                source.c_str(),
+                [&](fbl::unique_fd fd) {
+                    Descend(std::move(fd), d->d_name);
+                });
+            if (file) {
+                *value = value_type{prefix + walk_prefix_ + d->d_name, file};
                 return true;
             }
         } while (!walk_pos_.empty());
@@ -1051,15 +1145,11 @@ Extracted items use the file names shown below:\n\
     void OwnBuffer(std::unique_ptr<std::byte[]> buffer) {
         buffers_.push_front(std::move(buffer));
     }
-    void OwnFile(FileContents file) {
-        files_.push_front(std::move(file));
-    }
 
     // Consume another Item while keeping its owned buffers and files alive.
     void TakeOwned(ItemPtr other) {
         if (other) {
             buffers_.splice_after(buffers_.before_begin(), other->buffers_);
-            files_.splice_after(files_.before_begin(), other->files_);
         }
     }
 
@@ -1085,11 +1175,11 @@ Extracted items use the file names shown below:\n\
 
     // Create from raw file contents.
     static ItemPtr CreateFromFile(
-        FileContents file, uint32_t type, bool compress) {
+        const FileContents* file, uint32_t type, bool compress) {
         bool null_terminate = type == ZBI_TYPE_CMDLINE;
         compress = compress && TypeIsStorage(type);
 
-        size_t size = file.exact_size() + (null_terminate ? 1 : 0);
+        size_t size = file->exact_size() + (null_terminate ? 1 : 0);
         if (size > UINT32_MAX) {
             fprintf(stderr, "input file too large\n");
             exit(1);
@@ -1099,51 +1189,48 @@ Extracted items use the file names shown below:\n\
 
         // If we need some zeros, see if they're already right there
         // in the last mapped page past the exact end of the file.
-        if (size <= file.mapped_size()) {
+        if (size <= file->mapped_size()) {
             // Use the padding that's already there.
-            item->payload_.emplace_front(file.PageRoundedView(0, size));
+            item->payload_.emplace_front(file->PageRoundedView(0, size));
         } else {
             // No space, so we need a separate padding buffer.
             if (null_terminate) {
                 item->payload_.emplace_front(Iovec("", 1));
             }
-            item->payload_.emplace_front(file.View(0, file.exact_size()));
+            item->payload_.emplace_front(file->View(0, file->exact_size()));
         }
 
         if (!compress) {
             // Compute the checksum now so the item is ready to write out.
             Checksummer crc;
-            crc.Write(file.View(0, file.exact_size()));
+            crc.Write(file->View(0, file->exact_size()));
             if (null_terminate) {
                 crc.Write(Iovec("", 1));
             }
             crc.FinalizeHeader(&item->header_);
         }
 
-        // The item now owns the file mapping that its payload points into.
-        item->OwnFile(std::move(file));
-
         return item;
     }
 
     // Create from an existing fully-baked item in an input file.
-    static ItemPtr CreateFromItem(const FileContents& file,
+    static ItemPtr CreateFromItem(const FileContents* file,
                                   uint32_t offset) {
-        if (offset > file.exact_size() ||
-            file.exact_size() - offset < sizeof(zbi_header_t)) {
+        if (offset > file->exact_size() ||
+            file->exact_size() - offset < sizeof(zbi_header_t)) {
             fprintf(stderr, "input file too short for next header\n");
             exit(1);
         }
         const zbi_header_t* header = static_cast<const zbi_header_t*>(
-            file.View(offset, sizeof(zbi_header_t)).iov_base);
+            file->View(offset, sizeof(zbi_header_t)).iov_base);
         offset += sizeof(zbi_header_t);
-        if (file.exact_size() - offset < header->length) {
+        if (file->exact_size() - offset < header->length) {
             fprintf(stderr, "input file too short for payload of %u bytes\n",
                     header->length);
             exit(1);
         }
         auto item = MakeItem(*header);
-        item->payload_.emplace_front(file.View(offset, header->length));
+        item->payload_.emplace_front(file->View(offset, header->length));
         return item;
     }
 
@@ -1195,8 +1282,9 @@ Extracted items use the file names shown below:\n\
                 dirsize += ZBI_BOOTFS_DIRENT_SIZE(next.target.size() + 1);
                 Entry entry;
                 entry.name.swap(next.target);
-                entry.data_len = static_cast<uint32_t>(next.file.exact_size());
-                if (entry.data_len != next.file.exact_size()) {
+                entry.data_len =
+                    static_cast<uint32_t>(next.file->exact_size());
+                if (entry.data_len != next.file->exact_size()) {
                     fprintf(stderr,
                             "input file size exceeds format maximum\n");
                     exit(1);
@@ -1204,9 +1292,8 @@ Extracted items use the file names shown below:\n\
                 uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.data_len);
                 bodysize += size;
                 item->payload_.emplace_back(
-                    next.file.PageRoundedView(0, size));
+                    next.file->PageRoundedView(0, size));
                 entries.push_back(std::move(entry));
-                item->OwnFile(std::move(next.file));
             }
         }
 
@@ -1351,7 +1438,6 @@ private:
     std::list<const iovec> payload_;
     // The payload_ items might point into these buffers.  They're just
     // stored here to own the buffers until the payload is exhausted.
-    std::forward_list<FileContents> files_;
     std::forward_list<std::unique_ptr<std::byte[]>> buffers_;
     const bool compress_;
 
@@ -1592,7 +1678,7 @@ private:
         ~BootFSInputFileGenerator() override = default;
 
         // Copying from an existing BOOTFS ignores the --prefix setting.
-        bool Next(FileOpener*, const std::string&,
+        bool Next(FileOpener* opener, const std::string&,
                   value_type* value) override {
             if (!dir_) {
                 return false;
@@ -1601,7 +1687,7 @@ private:
                 exit(1);
             }
             value->target = dir_->name;
-            value->file = FileContents(*dir_, item_->payload_data());
+            value->file = opener->Emplace(*dir_, item_->payload_data());
             ++dir_;
             return true;
         }
@@ -1616,19 +1702,19 @@ constexpr decltype(Item::kItemTypes_) Item::kItemTypes_;
 
 using ItemList = std::vector<ItemPtr>;
 
-bool ImportFile(const FileContents& file, const char* filename,
+bool ImportFile(const FileContents* file, const char* filename,
                 ItemList* items) {
-    if (file.exact_size() <= (sizeof(zbi_header_t) * 2)) {
+    if (file->exact_size() <= (sizeof(zbi_header_t) * 2)) {
         return false;
     }
     const zbi_header_t* header = static_cast<const zbi_header_t*>(
-        file.View(0, sizeof(zbi_header_t)).iov_base);
+        file->View(0, sizeof(zbi_header_t)).iov_base);
     if (!(header->type == ZBI_TYPE_CONTAINER &&
           header->extra == ZBI_CONTAINER_MAGIC &&
           header->magic == ZBI_ITEM_MAGIC)) {
         return false;
     }
-    size_t file_size = file.exact_size() - sizeof(zbi_header_t);
+    size_t file_size = file->exact_size() - sizeof(zbi_header_t);
     if (file_size != header->length) {
         fprintf(stderr, "%s: header size doesn't match file size\n", filename);
         exit(1);
@@ -1642,7 +1728,7 @@ bool ImportFile(const FileContents& file, const char* filename,
         auto item = Item::CreateFromItem(file, pos);
         pos += item->TotalSize();
         items->push_back(std::move(item));
-    } while (pos < file.exact_size());
+    } while (pos < file->exact_size());
     return true;
 }
 
@@ -1814,17 +1900,7 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "only one depfile\n");
                 exit(1);
             }
-            if (!outfile) {
-                fprintf(stderr,
-                        "--output -or -o must precede --depfile or -d\n");
-                exit(1);
-            }
-            if (!items.empty()) {
-                fprintf(stderr, "--depfile or -d must precede inputs\n");
-                exit(1);
-            }
             depfile = optarg;
-            opener.Init(outfile, depfile);
             continue;
 
         case 'F':
@@ -1909,8 +1985,9 @@ int main(int argc, char** argv) {
         case 'e':
             if (input_manifest) {
                 bootfs_input.emplace_back(
-                    new ManifestInputFileGenerator(FileContents(optarg, false),
-                                                   prefix));
+                    new ManifestInputFileGenerator(
+                        opener.Emplace(optarg, false),
+                        prefix));
             } else if (input_type == ZBI_TYPE_CONTAINER) {
                 fprintf(stderr,
                         "cannot use --entry (-e) with --target=CONTAINER\n");
@@ -1918,7 +1995,7 @@ int main(int argc, char** argv) {
             } else {
                 items.push_back(
                     Item::CreateFromFile(
-                        FileContents(optarg, input_type == ZBI_TYPE_CMDLINE),
+                        opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE),
                         input_type, compressed));
             }
             continue;
@@ -1930,11 +2007,8 @@ int main(int argc, char** argv) {
         }
         assert(opt == 1);
 
-        struct stat st;
-        auto fd = opener.Open(optarg, &st);
-
         // A directory populates the BOOTFS.
-        if (input_manifest && S_ISDIR(st.st_mode)) {
+        auto if_dir = [&](fbl::unique_fd fd) {
             // Calculate the prefix for opening files within the directory.
             // This won't be part of the BOOTFS file name.
             std::string dir_prefix(optarg);
@@ -1944,29 +2018,30 @@ int main(int argc, char** argv) {
             bootfs_input.emplace_back(
                 new DirectoryInputFileGenerator(std::move(fd),
                                                 std::move(dir_prefix)));
+        };
+
+        const FileContents* file =
+            input_manifest ?
+            opener.OpenFileOrDir(optarg, if_dir) :
+            opener.OpenFile(optarg);
+
+        if (!file) {
             continue;
         }
 
-        // Anything else must be a regular file.
-        RequireRegularFile(st, optarg);
-        auto file = FileContents::Map(std::move(fd), st, optarg);
-
         if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
             if (ImportFile(file, optarg, &items)) {
-                // It's another file in ZBI format.  The last item will own
-                // the file buffer, so it lives until all earlier items are
-                // exhausted.
-                items.back()->OwnFile(std::move(file));
+                // It's another file in ZBI format.
             } else if (input_manifest) {
                 // It must be a manifest file.
                 bootfs_input.emplace_back(
-                    new ManifestInputFileGenerator(std::move(file), prefix));
+                    new ManifestInputFileGenerator(file, prefix));
             } else {
                 fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
                 exit(1);
             }
         } else {
-            items.push_back(Item::CreateFromFile(std::move(file),
+            items.push_back(Item::CreateFromFile(file,
                                                  input_type, compressed));
         }
     }
@@ -2094,6 +2169,7 @@ int main(int argc, char** argv) {
     }
 
     // Now we're ready to start writing output!
+    opener.WriteDepfile(outfile, depfile);
     FileWriter writer(outfile, std::move(prefix));
 
     if (list_contents || verbose || extract) {
@@ -2129,7 +2205,8 @@ int main(int argc, char** argv) {
                 while (generator->Next(&opener, prefix, &next)) {
                     if (name_matcher.Matches(next.target.c_str())) {
                         writer.RawFile(next.target.c_str())
-                            .Write(next.file.View(0, next.file.exact_size()));
+                            .Write(next.file->View(
+                                       0, next.file->exact_size()));
                     }
                 }
             }
