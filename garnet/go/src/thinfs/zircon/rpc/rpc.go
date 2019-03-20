@@ -110,6 +110,14 @@ type directoryWrapper struct {
 	e       zx.Event
 }
 
+func (d *directoryWrapper) getCookie(h zx.Handle) (uint64, error) {
+	return h.GetCookie(zx.ProcHandle)
+}
+
+func (d *directoryWrapper) setCookie(cookie uint64) error {
+	return d.e.Handle().SetCookie(zx.ProcHandle, cookie)
+}
+
 func (d *directoryWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) error {
 	newDir, err := d.dir.Dup()
 	zxErr := errorToZx(err)
@@ -137,7 +145,7 @@ func (d *directoryWrapper) Close() (int32, error) {
 	d.vfs.Lock()
 	defer d.vfs.Unlock()
 	if zx.Handle(d.e) != zx.HandleInvalid {
-		d.e.Handle().SetCookie(zx.ProcHandle, 0)
+		d.setCookie(0)
 	}
 	d.vfs.DirectoryService.Remove(d.token)
 	delete(d.vfs.dirs, d.token)
@@ -323,7 +331,7 @@ func (d *directoryWrapper) GetToken() (int32, zx.Handle, error) {
 	if e1, err = e0.Duplicate(zx.RightSameRights); err != nil {
 		goto fail_event_created
 	}
-	if err := e0.Handle().SetCookie(zx.ProcHandle, uint64(d.token)); err != nil {
+	if err := d.setCookie(uint64(d.token)); err != nil {
 		goto fail_event_duplicated
 	}
 	return int32(zx.ErrOk), zx.Handle(e1), nil
@@ -342,7 +350,7 @@ func (d *directoryWrapper) Rename(src string, token zx.Handle, dst string) (int3
 	}
 	d.vfs.Lock()
 	defer d.vfs.Unlock()
-	cookie, err := token.GetCookie(zx.ProcHandle)
+	cookie, err := d.getCookie(token)
 	if err != nil {
 		return int32(zx.ErrInvalidArgs), nil
 	}
