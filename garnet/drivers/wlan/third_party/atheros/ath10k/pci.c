@@ -3307,7 +3307,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
         ath10k_err("unrecognized device ID: %#0" PRIx16 "\n", pci_info.device_id);
         return ZX_ERR_NOT_SUPPORTED;
     }
-    ath10k_info("ath10k: Probed chip %s ver: %.1f\n", chip_name, version);
+    ath10k_info("Probed chip %s ver: %.1f\n", chip_name, version);
 
     ret =
         ath10k_core_create(&ar, sizeof(*ar_pci), dev, ATH10K_BUS_PCI, hw_rev, &ath10k_pci_hif_ops);
