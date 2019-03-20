@@ -146,25 +146,19 @@ func interfaceStats(a *netstatApp, name string) error {
 		return nil
 	}
 
-	var candidate *netstack.NetInterface2
-	var found bool
-	var knownInterfaces []string
-	for i, iface := range nics {
-		knownInterfaces = append(knownInterfaces, iface.Name)
+	knownInterfaces := make([]string, 0, len(nics))
+	for _, iface := range nics {
 		if strings.HasPrefix(iface.Name, name) {
-			candidate = &nics[i]
-			found = true
+			s, err := a.netstack.GetStats(iface.Id)
+			if err != nil {
+				return fmt.Errorf("couldn't get stats for interface: %s", err)
+			}
+			fmt.Println(netInterfaceStats(s).String())
+			return nil
 		}
+		knownInterfaces = append(knownInterfaces, iface.Name)
 	}
-	if !found {
-		return fmt.Errorf("no interface matched %s in %s", name, knownInterfaces)
-	}
-	s, err := a.netstack.GetStats(candidate.Id)
-	if err != nil {
-		return fmt.Errorf("couldn't get stats for interface: %s", err)
-	}
-	fmt.Printf("%s\n", netInterfaceStats(s))
-	return nil
+	return fmt.Errorf("no interface matched %s in %s", name, knownInterfaces)
 }
 
 func dumpStats(a *netstatApp) {
