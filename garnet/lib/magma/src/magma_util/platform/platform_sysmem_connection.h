@@ -18,6 +18,7 @@ struct PlatformBufferDescription {
     uint32_t count = 0;
     bool has_format_modifier = false;
     uint64_t format_modifier = 0u;
+    uint32_t coherency_domain = MAGMA_COHERENCY_DOMAIN_CPU;
     magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
 };
 

@@ -544,6 +544,18 @@ magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_get_buffer_coherency_domain(magma_buffer_format_description_t description,
+                                                 uint32_t* coherency_domain_out)
+{
+    if (!description) {
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
+    }
+    auto buffer_description =
+        reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
+    *coherency_domain_out = buffer_description->coherency_domain;
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_get_buffer_count(magma_buffer_format_description_t description,
                                       uint32_t* count_out)
 {

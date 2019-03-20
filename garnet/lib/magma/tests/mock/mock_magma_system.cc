@@ -274,6 +274,12 @@ magma_buffer_collection_set_constraints(magma_sysmem_connection_t connection,
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
+magma_status_t magma_get_buffer_coherency_domain(magma_buffer_format_description_t description,
+                                                 uint32_t* coherency_domain_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t
 magma_get_buffer_format_description(const void* image_data, uint64_t image_data_size,
                                     magma_buffer_format_description_t* description_out)

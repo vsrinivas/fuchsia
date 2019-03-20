@@ -62,6 +62,11 @@ enum {
     MAGMA_FORMAT_MODIFIER_ARM_AFBC_32x8 = 0x0800000000000002,
 };
 
+enum {
+    MAGMA_COHERENCY_DOMAIN_CPU = 0,
+    MAGMA_COHERENCY_DOMAIN_RAM = 1,
+};
+
 #define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
 #define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
 
@@ -159,6 +164,8 @@ typedef struct {
     uint32_t usage;
     magma_bool_t secure_permitted;
     magma_bool_t secure_required;
+    magma_bool_t ram_domain_supported;
+    magma_bool_t cpu_domain_supported;
 } magma_buffer_format_constraints_t;
 
 #if defined(__cplusplus)

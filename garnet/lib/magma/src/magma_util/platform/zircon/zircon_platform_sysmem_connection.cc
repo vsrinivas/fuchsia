@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "magma_common_defs.h"
 #include "platform_sysmem_connection.h"
 
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -100,6 +101,20 @@ static Status
 InitializeDescriptionFromSettings(const fuchsia::sysmem::SingleBufferSettings& settings,
                                   PlatformBufferDescription* description_out)
 {
+    switch (settings.buffer_settings.coherency_domain) {
+        case fuchsia::sysmem::CoherencyDomain::Ram:
+            description_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_RAM;
+            break;
+
+        case fuchsia::sysmem::CoherencyDomain::Cpu:
+            description_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_CPU;
+            break;
+
+        default:
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Unsupported coherency domain: %d",
+                            settings.buffer_settings.coherency_domain);
+    }
+
     description_out->is_secure = settings.buffer_settings.is_secure;
     description_out->has_format_modifier =
         settings.image_format_constraints.pixel_format.has_format_modifier;

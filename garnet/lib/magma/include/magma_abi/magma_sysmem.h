@@ -40,6 +40,9 @@ magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_
                                                 magma_bool_t* has_format_modifier_out,
                                                 uint64_t* format_modifier_out);
 
+magma_status_t magma_get_buffer_coherency_domain(magma_buffer_format_description_t description,
+                                                 uint32_t* coherency_domain_out);
+
 // Get the number of buffers allocated in a buffer collection.
 magma_status_t magma_get_buffer_count(magma_buffer_format_description_t description,
                                       uint32_t* count_out);
