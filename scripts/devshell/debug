@@ -29,6 +29,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
+source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 # Defaults.
 port=2345
@@ -101,4 +102,10 @@ while true; do
 done
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
-"${FUCHSIA_BUILD_DIR}/host_x64/zxdb" "--connect" "[${target}]:${port}" "--quit-agent-on-exit" "$@"
+"${FUCHSIA_BUILD_DIR}/host_x64/zxdb" \
+  "--connect" "[${target}]:${port}" \
+  "--quit-agent-on-exit" \
+  "--symbol-repo=${FUCHSIA_BUILD_DIR}" \
+  "--symbol-repo=${ZIRCON_BUILDROOT}" \
+  "--symbol-repo=${BUILDTOOLS_CLANG_DIR}/lib/debug" \
+  "$@"

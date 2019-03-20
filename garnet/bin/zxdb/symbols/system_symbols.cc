@@ -34,23 +34,6 @@ std::string GetBuildDir() {
   return path;
 }
 
-std::string GetZirconDir() {
-  std::string path = GetBuildDir();
-  if (path.empty())
-    return path;
-
-  if (path[path.size() - 1] == '/') {
-    path.resize(path.size() - 1);
-  }
-
-  size_t last_slash = path.rfind('/');
-  if (last_slash != std::string::npos) {
-    path.resize(last_slash);
-  }
-
-  return CatPathComponents(path, "build-zircon");
-}
-
 }  // namespace
 
 // SystemSymbols::ModuleRef ----------------------------------------------------
@@ -72,12 +55,7 @@ void SystemSymbols::ModuleRef::SystemSymbolsDeleting() {
 
 // SystemSymbols ---------------------------------------------------------------
 
-SystemSymbols::SystemSymbols() : build_dir_(GetBuildDir()) {
-  // Add the build directory symbols to the index. Obviously, if we are not in
-  // tree, these won't be present.
-  build_id_index_.AddRepoSymbolSource(build_dir_);
-  build_id_index_.AddRepoSymbolSource(GetZirconDir());
-}
+SystemSymbols::SystemSymbols() : build_dir_(GetBuildDir()) {}
 
 SystemSymbols::~SystemSymbols() {
   // Disown any remaining ModuleRefs so they don't call us back.

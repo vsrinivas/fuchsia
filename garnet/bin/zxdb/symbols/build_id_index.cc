@@ -253,8 +253,14 @@ void BuildIDIndex::EnsureCacheClean() {
   for (const auto& mapping : manual_mappings_)
     build_id_to_file_.insert(mapping);
 
-  for (const auto& path : repo_sources_)
-    status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
+  for (const auto& path : repo_sources_) {
+    std::error_code ec;
+    auto buildid_path = std::filesystem::path(path) / ".build-id";
+
+    if (std::filesystem::is_directory(buildid_path, ec)) {
+      status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
+    }
+  }
 
   cache_dirty_ = false;
 }
