@@ -183,7 +183,7 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	defer cancel()
 	logger.Debugf(ctx, "executing command: %q\n", cmd.hostCmd)
 	runner := runner.SubprocessRunner{
-		WD: tmpDir,
+		Dir: tmpDir,
 	}
 	hostCmdErr := runner.Run(ctx, []string{cmd.hostCmd}, stdout, stderr)
 

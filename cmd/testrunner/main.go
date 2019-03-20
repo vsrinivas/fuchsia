@@ -118,7 +118,7 @@ func execute(tests []testsharder.Test, output *Output, nodename, sshKeyFile stri
 	}
 
 	localTester := &SubprocessTester{
-		wd:  localWD,
+		dir: localWD,
 		env: os.Environ(),
 	}
 

@@ -13,9 +13,9 @@ import (
 
 // SubprocessRunner is a Runner that runs commands as local subprocesses.
 type SubprocessRunner struct {
-	// WD is the working directory of the subprocesses; if unspecified, that
+	// Dir is the working directory of the subprocesses; if unspecified, that
 	// of the current process will be used.
-	WD string
+	Dir string
 
 	// Env is the environment of the subprocess, following the usual convention of a list of
 	// strings of the form "<environment variable name>=<value>".
@@ -31,7 +31,7 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		Args:        command,
 		Stdout:      stdout,
 		Stderr:      stderr,
-		Dir:         r.WD,
+		Dir:         r.Dir,
 		Env:         r.Env,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}

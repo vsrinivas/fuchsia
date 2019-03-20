@@ -26,7 +26,7 @@ type Tester func(context.Context, testsharder.Test, io.Writer, io.Writer) error
 
 // SubprocessTester executes tests in local subprocesses.
 type SubprocessTester struct {
-	wd  string
+	dir string
 	env []string
 }
 
@@ -40,7 +40,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	runner := &runner.SubprocessRunner{
-		WD:  t.wd,
+		Dir: t.dir,
 		Env: t.env,
 	}
 
