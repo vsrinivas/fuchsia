@@ -15,5 +15,6 @@ pub use hash::insecure_sha1_digest::InsecureSha1Digest;
 #[allow(deprecated)]
 pub use hmac::insecure_hmac_sha1::InsecureHmacSha1;
 
+#[cfg(feature = "kdf")]
 #[allow(deprecated)]
 pub use kdf::insecure_pbkdf2_hmac_sha1::insecure_pbkdf2_hmac_sha1;

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO: remove this line once rust updated to 1.35.0.
+#![allow(deprecated)]
+
 //! Cryptographic hash functions.
 
 use std::fmt::{self, Debug, Display, Formatter};
@@ -9,10 +12,13 @@ use std::fmt::{self, Debug, Display, Formatter};
 use boringssl::{self, CStackWrapper};
 
 pub(crate) mod inner {
+    use std::os::raw::c_int;
+
     use boringssl::{CRef, EVP_MD};
 
     pub trait Hasher {
         fn evp_md() -> CRef<'static, EVP_MD>;
+        fn nid() -> c_int;
     }
 
     pub trait Digest {
@@ -92,13 +98,14 @@ pub trait Digest: Eq + PartialEq + Display + Debug + Sized + self::inner::Digest
 }
 
 // NOTE: InsecureSha1 is not publicly available; it is only used in HMAC-SHA1.
+#[cfg(feature = "insecure")]
 #[deprecated(note = "SHA-1 is considered insecure")]
-#[allow(deprecated)] // FIXME(https://github.com/rust-lang/rust/issues/58822)
 #[derive(Default)]
 pub(crate) struct InsecureSha1 {
     ctx: CStackWrapper<boringssl::SHA_CTX>,
 }
 
+#[cfg(feature = "insecure")]
 pub(crate) mod insecure_sha1_digest {
     use boringssl;
 
@@ -119,6 +126,8 @@ pub struct Sha256 {
     ctx: CStackWrapper<boringssl::SHA256_CTX>,
 }
 
+impl_debug!(Sha256, "Sha256");
+
 /// The digest output by the SHA-256 hash function.
 #[must_use]
 pub struct Sha256Digest(pub(crate) [u8; boringssl::SHA256_DIGEST_LENGTH as usize]);
@@ -129,14 +138,14 @@ pub struct Sha384 {
     ctx: CStackWrapper<boringssl::SHA512_CTX>,
 }
 
+impl_debug!(Sha384, "Sha384");
+
 impl Default for Sha384 {
     fn default() -> Sha384 {
         // The Default impl for CStackWrapper<boringssl::SHA512_CTX> initializes
         // it for a SHA-512 hash. Thus, we have to implement Default manually
         // instead of deriving Default on Sha384.
-        Sha384 {
-            ctx: CStackWrapper::sha384_new(),
-        }
+        Sha384 { ctx: CStackWrapper::sha384_new() }
     }
 }
 
@@ -150,6 +159,8 @@ pub struct Sha384Digest(pub(crate) [u8; boringssl::SHA384_DIGEST_LENGTH as usize
 pub struct Sha512 {
     ctx: CStackWrapper<boringssl::SHA512_CTX>,
 }
+
+impl_debug!(Sha512, "Sha512");
 
 /// The digest output by the SHA-512 hash function.
 #[must_use]
@@ -167,7 +178,7 @@ pub struct Sha512Digest(pub(crate) [u8; boringssl::SHA512_DIGEST_LENGTH as usize
 /// For the digest type, the traits `PartialEq`, `Eq`, `Display`, and `Debug`
 /// are also implemented.
 macro_rules! impl_hash {
-    ($name:ident, $digest_name:path, $digest_len:path, $update:ident, $final:ident, $evp_md:ident) => {
+    ($name:ident, $digest_name:path, $digest_len:path, $update:ident, $final:ident, $evp_md:ident, $nid:ident) => {
         #[allow(deprecated)]
         impl ::util::Sealed for $name {}
         #[allow(deprecated)]
@@ -186,6 +197,10 @@ macro_rules! impl_hash {
         impl self::inner::Hasher for $name {
             fn evp_md() -> ::boringssl::CRef<'static, ::boringssl::EVP_MD> {
                 ::boringssl::CRef::$evp_md()
+            }
+            fn nid() -> ::std::os::raw::c_int {
+                use std::convert::TryInto;
+                ::boringssl::$nid.try_into().unwrap()
             }
         }
         #[allow(deprecated)]
@@ -238,13 +253,15 @@ macro_rules! impl_hash {
     };
 }
 
+#[cfg(feature = "insecure")]
 impl_hash!(
     InsecureSha1,
     self::insecure_sha1_digest::InsecureSha1Digest,
     boringssl::SHA_DIGEST_LENGTH,
     sha1_update,
     sha1_final,
-    evp_sha1
+    evp_sha1,
+    NID_sha1
 );
 impl_hash!(
     Sha256,
@@ -252,7 +269,8 @@ impl_hash!(
     boringssl::SHA256_DIGEST_LENGTH,
     sha256_update,
     sha256_final,
-    evp_sha256
+    evp_sha256,
+    NID_sha256
 );
 impl_hash!(
     Sha384,
@@ -260,7 +278,8 @@ impl_hash!(
     boringssl::SHA384_DIGEST_LENGTH,
     sha384_update,
     sha384_final,
-    evp_sha384
+    evp_sha384,
+    NID_sha384
 );
 impl_hash!(
     Sha512,
@@ -268,34 +287,43 @@ impl_hash!(
     boringssl::SHA512_DIGEST_LENGTH,
     sha512_update,
     sha512_final,
-    evp_sha512
+    evp_sha512,
+    NID_sha512
 );
 
 #[cfg(test)]
 mod tests {
-    use super::{insecure_sha1_digest::*, *};
+    #[cfg(feature = "insecure")]
+    use super::insecure_sha1_digest::*;
+    use super::*;
 
     #[test]
     fn test_constants() {
-        #[allow(deprecated)]
-        let len = <InsecureSha1 as Hasher>::Digest::DIGEST_LEN;
-        assert_eq!(len, 20);
         assert_eq!(<Sha256 as Hasher>::Digest::DIGEST_LEN, 32);
         assert_eq!(<Sha384 as Hasher>::Digest::DIGEST_LEN, 48);
         assert_eq!(<Sha512 as Hasher>::Digest::DIGEST_LEN, 64);
 
-        #[allow(deprecated)]
-        let len = InsecureSha1Digest::DIGEST_LEN;
-        assert_eq!(len, 20);
         assert_eq!(<Sha256 as Hasher>::Digest::DIGEST_LEN, 32);
         assert_eq!(<Sha384 as Hasher>::Digest::DIGEST_LEN, 48);
         assert_eq!(<Sha512 as Hasher>::Digest::DIGEST_LEN, 64);
+
+        #[cfg(feature = "insecure")]
+        {
+            #[allow(deprecated)]
+            let len = <InsecureSha1 as Hasher>::Digest::DIGEST_LEN;
+            assert_eq!(len, 20);
+
+            #[allow(deprecated)]
+            let len = InsecureSha1Digest::DIGEST_LEN;
+            assert_eq!(len, 20);
+        }
     }
 
     #[test]
     fn test_hash() {
         struct TestCase {
             input: &'static [u8],
+            #[cfg(feature = "insecure")]
             #[allow(deprecated)]
             sha1: <InsecureSha1 as Hasher>::Digest,
             sha256: <Sha256 as Hasher>::Digest,
@@ -322,6 +350,7 @@ mod tests {
                 }
                 assert_eq!(&hash.finish(), digest, "input: {:?}", input);
             }
+            #[cfg(feature = "insecure")]
             #[allow(deprecated)]
             test::<InsecureSha1>(case.input, &case.sha1);
             test::<Sha256>(case.input, &case.sha256);
@@ -334,6 +363,7 @@ mod tests {
                 #[allow(deprecated)]
                 TestCase {
                     input: &$input,
+                    #[cfg(feature = "insecure")]
                     sha1: InsecureSha1Digest($sha1),
                     sha256: Sha256Digest($sha256),
                     sha384: Sha384Digest($sha384),
