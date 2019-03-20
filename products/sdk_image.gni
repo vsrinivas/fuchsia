@@ -31,4 +31,9 @@ monolith += [
 preinstall += []
 
 # TODO(DX-980): Add/move dev tools to this set once TUF repositories are set up.
-available += []
+available += [
+  "topaz/packages/prod/dart_aot_product_runner",
+  "topaz/packages/prod/dart_aot_runner",
+  "topaz/packages/prod/flutter_aot",
+  "topaz/packages/prod/flutter_aot_product",
+]
