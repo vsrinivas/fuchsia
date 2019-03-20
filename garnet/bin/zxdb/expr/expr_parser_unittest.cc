@@ -25,13 +25,13 @@ NameLookupResult TestLookupName(const Identifier& ident) {
     return NameLookupResult(NameLookupResult::kNamespace);
   if (StringBeginsWith(name, "Type")) {
     // Make up a random class to go with the type.
-    //
-    // NOTE: This won't convert to a string matching the input because we don't
-    // set the name. To get that right we would have to generate a full symbol
-    // hierarchy for nested namespaces and classes.
-    return NameLookupResult(
-        NameLookupResult::kType,
-        fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
+    auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+    type->set_assigned_name("Type");
+
+    // NOTE: This doesn't qualify the type with namespaces or classes present
+    // in the identifier so qualified names ("Namespace::Type") won't convert
+    // to strings properly. This could be added if necessary.
+    return NameLookupResult(NameLookupResult::kType, std::move(type));
   }
   if (StringBeginsWith(name, "Template")) {
     if (comp.has_template()) {
@@ -499,6 +499,63 @@ TEST_F(ExprParserTest, NamesWithSymbolLookup) {
   EXPECT_EQ(
       "FUNCTIONCALL(\"Namespace\"; ::,\"Template\",<\"int\">; ::,\"fn\")\n",
       GetParseString("Namespace::Template<int>::fn()", &TestLookupName));
+}
+
+TEST_F(ExprParserTest, TrueFalse) {
+  EXPECT_EQ("LITERAL(true)\n", GetParseString("true"));
+  EXPECT_EQ("LITERAL(false)\n", GetParseString("false"));
+  EXPECT_EQ(
+      "BINARY_OP(&&)\n"
+      " LITERAL(false)\n"
+      " LITERAL(true)\n",
+      GetParseString("false&&true"));
+}
+
+TEST_F(ExprParserTest, Types) {
+  EXPECT_EQ("TYPE(Type)\n", GetParseString("Type", &TestLookupName));
+  EXPECT_EQ("IDENTIFIER(\"NotType\")\n",
+            GetParseString("NotType", &TestLookupName));
+
+  EXPECT_EQ("TYPE(const Type)\n",
+            GetParseString("const Type", &TestLookupName));
+  EXPECT_EQ("TYPE(const Type)\n",
+            GetParseString("Type const", &TestLookupName));
+
+  // It would be better it this printed as "const volatile Type" but our
+  // heuristic for moving modifiers to the beginning isn't good enough.
+  EXPECT_EQ("TYPE(volatile Type const)\n",
+            GetParseString("const volatile Type", &TestLookupName));
+
+  // Duplicate const qualifications.
+  auto result = Parse("const Type const", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Duplicate 'const' type qualification.", parser().err().msg());
+  result = Parse("const const Type", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Duplicate 'const' type qualification.", parser().err().msg());
+
+  EXPECT_EQ("TYPE(Type*)\n", GetParseString("Type*", &TestLookupName));
+  EXPECT_EQ("TYPE(Type**)\n", GetParseString("Type * *", &TestLookupName));
+  EXPECT_EQ("TYPE(Type&&)\n", GetParseString("Type &&", &TestLookupName));
+  EXPECT_EQ("TYPE(Type&**)\n", GetParseString("Type&**", &TestLookupName));
+  EXPECT_EQ("TYPE(volatile Type* restrict* const)\n",
+            GetParseString("Type volatile *restrict* const", &TestLookupName));
+
+  // "const" should force us into type mode.
+  result = Parse("const NonType", &TestLookupName);
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Expected a type name but could not find a type named 'NonType'.",
+            parser().err().msg());
+
+  // Try sizeof() with both a type and a non-type.
+  EXPECT_EQ(
+      "FUNCTIONCALL(\"sizeof\")\n"
+      " TYPE(Type*)\n",
+      GetParseString("sizeof(Type*)", &TestLookupName));
+  EXPECT_EQ(
+      "FUNCTIONCALL(\"sizeof\")\n"
+      " IDENTIFIER(\"foo\")\n",
+      GetParseString("sizeof(foo)", &TestLookupName));
 }
 
 }  // namespace zxdb

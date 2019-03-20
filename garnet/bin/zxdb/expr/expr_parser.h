@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/expr/expr_node.h"
 #include "garnet/bin/zxdb/expr/expr_token.h"
 #include "garnet/bin/zxdb/expr/name_lookup.h"
+#include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 
 namespace zxdb {
 
@@ -54,6 +55,12 @@ class ExprParser {
   //
   // On error, has_error() will be set and an empty ParseNameResult will be
   // returned (with empty identifier and type).
+  //
+  // The |expand_types| flag indicates if ParseName() should call ParseType()
+  // when it identifies a type name identifier. This will then handle following
+  // type modifiers like "*" and "&&". External callers will want to set this.
+  // This flag is set to false when called by ParseType() to avoid recursive
+  // calls.
   struct ParseNameResult {
     ParseNameResult() = default;
 
@@ -64,7 +71,21 @@ class ExprParser {
     // null, the result is a non-type or an error.
     fxl::RefPtr<Type> type;
   };
-  ParseNameResult ParseName();
+  ParseNameResult ParseName(bool expand_types);
+
+  // Parses a type starting at cur_token() and returns it. Returns a null type
+  // and sets has_error() on failure.
+  //
+  // If the optional_base is empty, the whole type will be parsed. Examples
+  // of things that it will handle in this case: "const Foo *", "Bar &", "int".
+  //
+  // This may be called by ParseName when it realizes that it just generated
+  // a type. This is necessary to handle stuff like "*" and "&&" that follow
+  // the type name and modify it. In this case, the optional_base would be the
+  // type name corresponding to the identifier (e.g. "my_ns::MyClass") and the
+  // tokens at cur_token() might be "* *" or "&&" or something that's not a
+  // valid type modifier at all (which will mark the type parsing complete).
+  fxl::RefPtr<Type> ParseType(fxl::RefPtr<Type> optional_base);
 
   // Parses template parameter lists. The "stop_before" parameter indicates how
   // the list is expected to end (i.e. ">"). Sets the error on failure.
@@ -107,6 +128,22 @@ class ExprParser {
   // token. It will advance to the next token.
   const ExprToken& Consume(ExprToken::Type type, const ExprToken& error_token,
                            const char* error_msg);
+
+  // Reads a sequence of cv-qualifiers (plus "restrict" for C) and appends to
+  // the vector in order. Only matching tokens are consumed, it stops consuming
+  // at the next non-qualifier.
+  //
+  // Duplicate qualifications will trigger errors (has_error() will be set).
+  // The input is *not* reset so this can be used to add qualifiers to an
+  // existing set while also triggering errors for duplicates for the
+  // additions.
+  void ConsumeCVQualifier(std::vector<DwarfTag>* qual);
+
+  // Applies the given type modifier tags to the given input in order and
+  // returns the newly qualified type.
+  fxl::RefPtr<Type> ApplyQualifiers(
+      fxl::RefPtr<Type> input,
+      const std::vector<DwarfTag>& qual);
 
   void SetError(const ExprToken& token, std::string msg);
 

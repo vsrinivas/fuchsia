@@ -4,8 +4,11 @@
 
 #include "garnet/bin/zxdb/expr/expr_parser.h"
 
+#include <algorithm>
+
 #include "garnet/bin/zxdb/expr/name_lookup.h"
 #include "garnet/bin/zxdb/expr/template_type_extractor.h"
+#include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -110,9 +113,9 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kColonColon
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kTrue
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kFalse
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kConst
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kVolatile
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kRestrict
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kConst
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kVolatile
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kRestrict
 };
 // clang-format on
 
@@ -179,18 +182,22 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   return left;
 }
 
-ExprParser::ParseNameResult ExprParser::ParseName() {
+ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
   // Grammar we support. Note "identifier" in this context is a single token
   // of type "name" (more like how the C++ spec uses it), while our Identifier
   // class represents a whole name with scopes and templates.
   //
-  //   name := type-name | non-type-identifier
+  //   name := type-name | other-identifier
   //
-  //   type-name :=
-  //       [ type-name "::" ] identifier [ "<" template-list ">" ]
-  //       "::" identifier [ "<" template-list ">" ]
+  //   type-name := [ scope-name "::" ] identifier [ "<" template-list ">" ]
   //
-  //   non-type-identifier := [ <type-name> "::" ] <identifier>
+  //   other-identifier := [ <scope-name> "::" ] <identifier>
+  //
+  //   scope-name := ( namespace-name | type-name )
+  //
+  // The thing that differentiates type names, namespace names, and other
+  // identifiers is the symbol lookup function rather than something in the
+  // grammar.
   //
   // The thing this doesn't handle is templatized functions, for example:
   //   auto foo = &MyClass::MyFunc<int>;
@@ -347,6 +354,10 @@ ExprParser::ParseNameResult ExprParser::ParseName() {
       default: {
         // Any other token type means we're done. The outer parser will figure
         // out what it means.
+        if (expand_types && result.type) {
+          // When we found a type, add on any trailing modifiers like "*".
+          result.type = ParseType(std::move(result.type));
+        }
         return result;
       }
     }
@@ -377,6 +388,89 @@ ExprParser::ParseNameResult ExprParser::ParseName() {
   FXL_NOTREACHED();
   SetError(ExprToken(), "Internal error.");
   return ParseNameResult();
+}
+
+fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
+  // The thing we want to parse is:
+  //
+  //   cv-qualifier := [ "const" ] [ "volatile" ] [ "restrict" ]
+  //
+  //   ptr-operator := ( "*" | "&" | "&&" ) cv-qualifier
+  //
+  //   type-id := cv-qualifier type-name cv-qualifier [ ptr-operator ] *
+  //
+  // Our logic is much more permissive than C++. This is both because it makes
+  // the code simpler, and because certain constructs may be used by other
+  // languages. For example, this allows references to references and
+  // "int & const" while C++ says you can't apply const to the reference itself
+  // (it permits only "const int&" or "int const &" which are the same). It
+  // also allows "restrict" to be used in invalid places.
+
+  fxl::RefPtr<Type> type;
+  std::vector<DwarfTag> type_qual;
+  if (optional_base) {
+    // Type name already known, start parsing after it.
+    type = std::move(optional_base);
+  } else {
+    // Read "const", etc. that comes before the type name.
+    ConsumeCVQualifier(&type_qual);
+    if (has_error())
+      return nullptr;
+
+    // Read the type name itself.
+    if (at_end()) {
+      SetError(ExprToken(), "Expected type name before end of input.");
+      return nullptr;
+    }
+    const ExprToken& first_name_token = cur_token();  // For error blame below.
+    ParseNameResult parse_result = ParseName(false);
+    if (has_error())
+      return nullptr;
+    if (!parse_result.type) {
+      SetError(first_name_token,
+               fxl::StringPrintf(
+                   "Expected a type name but could not find a type named '%s'.",
+                   parse_result.ident.GetFullName().c_str()));
+      return nullptr;
+    }
+    type = std::move(parse_result.type);
+  }
+
+  // Read "const" etc. that comes after the type name. These apply the same
+  // as the ones that come before it so get appended and can't duplicate them.
+  ConsumeCVQualifier(&type_qual);
+  if (has_error())
+    return nullptr;
+  type = ApplyQualifiers(std::move(type), type_qual);
+
+  // Parse the ptr-operators that can be present after the type.
+  while (!at_end()) {
+    // Read the operator.
+    const ExprToken& token = cur_token();
+    if (token.type() == ExprToken::kStar) {
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
+                                               LazySymbol(std::move(type)));
+    } else if (token.type() == ExprToken::kAmpersand) {
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
+                                               LazySymbol(std::move(type)));
+    } else if (token.type() == ExprToken::kDoubleAnd) {
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType,
+                                               LazySymbol(std::move(type)));
+    } else {
+      // Done with the ptr-operators.
+      break;
+    }
+    Consume();  // Eat the operator token.
+
+    // Apply any const-volatile-restrict to the operator.
+    std::vector<DwarfTag> qual;
+    ConsumeCVQualifier(&qual);
+    if (has_error())
+      return nullptr;
+    type = ApplyQualifiers(std::move(type), qual);
+  }
+
+  return type;
 }
 
 // A list is any sequence of comma-separated types. We don't parse the types
@@ -581,20 +675,22 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
   FXL_DCHECK(cur_ > 0);
   cur_--;
 
-  // TODO(brettw) handle const/volatile/restrict here to force type
-  // parsing mode.
+  if (token.type() == ExprToken::kConst ||
+      token.type() == ExprToken::kVolatile ||
+      token.type() == ExprToken::kRestrict) {
+    // These start a type name, force type parsing mode.
+    fxl::RefPtr<Type> type = ParseType(fxl::RefPtr<Type>());
+    if (has_error())
+      return nullptr;
+    return fxl::MakeRefCounted<TypeExprNode>(std::move(type));
+  }
 
-  ParseNameResult result = ParseName();
+  ParseNameResult result = ParseName(true);
   if (has_error())
     return nullptr;
 
-  if (result.type) {
-    // TODO(brettw) go into type parsing mode.
-    SetError(token, "Type, implement me.");
-    return nullptr;
-  }
-
-  // Normal identifier.
+  if (result.type)
+    return fxl::MakeRefCounted<TypeExprNode>(std::move(result.type));
   return fxl::MakeRefCounted<IdentifierExprNode>(std::move(result.ident));
 }
 
@@ -634,6 +730,47 @@ const ExprToken& ExprParser::Consume(ExprToken::Type type,
 
   SetError(error_token, error_msg);
   return kInvalidToken;
+}
+
+void ExprParser::ConsumeCVQualifier(std::vector<DwarfTag>* qual) {
+  while (!at_end()) {
+    const ExprToken& token = cur_token();
+
+    DwarfTag tag = DwarfTag::kNone;
+    if (token.type() == ExprToken::kConst) {
+      tag = DwarfTag::kConstType;
+    } else if (token.type() == ExprToken::kVolatile) {
+      tag = DwarfTag::kVolatileType;
+    } else if (token.type() == ExprToken::kRestrict) {
+      tag = DwarfTag::kRestrictType;
+    } else {
+      // Not a qualification token, done.
+      return;
+    }
+
+    // Can't have duplicates.
+    if (std::find(qual->begin(), qual->end(), tag) != qual->end()) {
+      SetError(token, fxl::StringPrintf("Duplicate '%s' type qualification.",
+                                        token.value().c_str()));
+      return;
+    }
+
+    qual->push_back(tag);
+    Consume();
+  }
+}
+
+fxl::RefPtr<Type> ExprParser::ApplyQualifiers(
+    fxl::RefPtr<Type> input, const std::vector<DwarfTag>& qual) {
+  fxl::RefPtr<Type> type = std::move(input);
+
+  // Apply the qualifiers in reverse order so the rightmost one is applied
+  // first.
+  for (auto iter = qual.rbegin(); iter != qual.rend(); ++iter) {
+    type =
+        fxl::MakeRefCounted<ModifiedType>(*iter, LazySymbol(std::move(type)));
+  }
+  return type;
 }
 
 void ExprParser::SetError(const ExprToken& token, std::string msg) {
