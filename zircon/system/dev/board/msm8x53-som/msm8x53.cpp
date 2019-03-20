@@ -60,6 +60,11 @@ int Msm8x53::Thread() {
         return -1;
     }
 
+    if (PilInit() != ZX_OK) {
+        zxlogf(ERROR, "PilInit() failed\n");
+        return -1;
+    }
+
     return 0;
 }
 
