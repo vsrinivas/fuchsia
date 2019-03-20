@@ -116,7 +116,7 @@ int SendFramesToScenic(RawFrames&& raw_frames) {
 
 // To see frames manually, run
 /*
-  fx shell set_root_view \
+  fx shell present_view \
   fuchsia-pkg://fuchsia.com/raw_frames_test#meta/raw_frames_test.cmx \
   --imagepipe
 */

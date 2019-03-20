@@ -17,6 +17,8 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
+  FXL_LOG(WARNING) << "NOTE: This tool is deprecated and WILL BE DELETED "
+                   << "04/20/2019.  Use present_view instead.";
   FXL_LOG(WARNING) << "BE ADVISED: The set_root_view tool takes the URL to an "
                       "app that provided the ViewProvider interface and makes "
                       "it's view the root view.";
@@ -30,8 +32,6 @@ int main(int argc, const char** argv) {
   FXL_LOG(WARNING)
       << "If scenic is already running on your system you "
          "will probably want to kill it before invoking this tool.";
-  FXL_LOG(WARNING)
-      << "Use the newer present_view tool for launching apps with Views V2.";
 
   const auto& positional_args = command_line.positional_args();
   if (positional_args.empty()) {
