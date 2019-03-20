@@ -42,7 +42,6 @@ pub async fn run_resolver_service(
             should_reconnect = false;
         }
 
-
         let status = await!(resolve(&amber, &cache, package_uri, selectors, update_policy, dir));
 
         // TODO this is an overbroad error type for this, make it more accurate
@@ -69,7 +68,6 @@ async fn resolve<'a>(
     _update_policy: UpdatePolicy,
     dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
-
     let uri = FuchsiaPkgUri::parse(&pkg_uri).map_err(|err| {
         fx_log_err!("failed to parse package uri {:?}: {}", pkg_uri, err);
         Err(Status::INVALID_ARGS)
@@ -502,7 +500,7 @@ mod tests {
                     Ok(vec![gen_merkle_file('b')]),
                 ));
                 // Package name, variant, and merkle
-                let url = format!("fuchsia-pkg://fuchsia.com/bar/stable/{}", gen_merkle('c'));
+                let url = format!("fuchsia-pkg://fuchsia.com/bar/stable?hash={}", gen_merkle('c'));
                 await!(test.run_resolve(&url, Ok(vec![gen_merkle_file('c')],)));
                 // Package resource
                 await!(test.run_resolve(

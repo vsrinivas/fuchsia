@@ -192,7 +192,7 @@ or a resource, depending on which parts are included.
 ## Syntax
 
 ```
-fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>[/<pkg-hash>]][#<resource-path>]]
+fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>][?hash=<pkg-hash>][#<resource-path>]]
 ```
 
 **Scheme: (required)**
@@ -209,9 +209,10 @@ fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>[/<pkg-hash>]][#<resourc
  * Optionally followed by...
    * A single `/` character.
    * The package variant.
-   * Optionally followed by…
-     * A single `/` character.
-     * The package hash.
+
+**Package Hash: (optional, only valid if a package was specified)**
+ * The string `?hash=`.
+ * The [package hash](#package-hash).
 
 **Resource Path: (optional, only valid if a package was specified)**
  * A single `#` character.
@@ -261,4 +262,4 @@ beyond the scope of this document.
    * `fuchsia-pkg://fuchsia.com/fuchsia-shell-utils/stable#bin/ls`
    * `fuchsia-pkg://google.com/chrome/stable#meta/webview.component`
  * a resource from a specific hashed revision of a package:
-   * `fuchsia-pkg://google.com/chrome/stable/80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a#meta/webview.component`
+   * `fuchsia-pkg://google.com/chrome/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a#meta/webview.component`
