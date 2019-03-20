@@ -30,6 +30,7 @@ CMakeLists.txt
 compile_commands.json
 cmake-build-debug/
 cscope.*
+default.profraw
 rls*.log
 Session.vim
 tags
