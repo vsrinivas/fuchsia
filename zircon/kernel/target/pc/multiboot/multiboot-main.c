@@ -184,10 +184,13 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
               " for ZBI header", mod->mod_start, mod->mod_end);
     }
 
-    // TODO(mcgrathr): Sanity check disabled for now because Depthcharge as of
+    // TODO(crbug.com/917455): Sanity check disabled for now because Depthcharge
+    // as of
     // https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/firmware-eve-9584.B
     // prepends items and adjusts the ZBI container header, but fails to update
-    // the Multiboot module_t header to match.
+    // the Multiboot module_t header to match.  This is now fixed upstream by
+    // https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/b80fb0a9b04c97769ffe73babddf0aa9e3bc0b94#
+    // but not yet rolled out to all devices.
     if (zbi_len < sizeof(*zbi) + zbi->length && 0) {
         panic("insufficient multiboot module [%#"PRIx32",%#"PRIx32")"
               " for ZBI length %#"PRIx32,
