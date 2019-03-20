@@ -1154,3 +1154,10 @@ group("omaha_client") {
     "//garnet/packages/prod:omaha_client",
   ]
 }
+
+group("webpki_roots_fuchsia") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/webpki-roots-fuchsia:webpki-roots-fuchsia_tests",
+  ]
+}

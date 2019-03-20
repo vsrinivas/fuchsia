@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/webpki_roots_fuchsia_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ]
+    }
+}

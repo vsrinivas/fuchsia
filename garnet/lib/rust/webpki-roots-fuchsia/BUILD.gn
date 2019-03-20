@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("webpki-roots-fuchsia") {
+  name = "webpki-roots-fuchsia"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:untrusted",
+    "//third_party/rust_crates:webpki",
+  ]
+}
+
+test_package("webpki-roots-fuchsia_tests") {
+  deps = [
+    ":webpki-roots-fuchsia",
+  ]
+
+  tests = [
+    {
+      name = "webpki_roots_fuchsia_lib_test"
+    },
+  ]
+}
