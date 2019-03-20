@@ -8,18 +8,24 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 )
 
 type FakeGCSClient struct {
 	uploaded map[string]string
 	gcsFiles map[string]bool
+	mu       sync.Mutex
 }
 
 func (client *FakeGCSClient) uploadSingleFile(ctx context.Context, name, localPath string) error {
+	// Use a mutex since this function might run concurrently.
+	client.mu.Lock()
 	client.uploaded[name] = localPath
+	client.mu.Unlock()
 	return nil
 }
+
 func (client *FakeGCSClient) exists(object string) bool {
 	return client.gcsFiles[object]
 }
