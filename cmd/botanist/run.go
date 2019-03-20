@@ -17,13 +17,10 @@ import (
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/netutil"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/sshutil"
 
 	"github.com/google/subcommands"
-	"golang.org/x/crypto/ssh"
 )
 
 const netstackTimeout time.Duration = 1 * time.Minute
@@ -92,52 +89,15 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKeyFile string, signers []ssh.Signer, syslog io.Writer) error {
-	// Set up log listener and dump kernel output to stdout.
-	l, err := netboot.NewLogListener(nodename)
-	if err != nil {
-		return fmt.Errorf("cannot listen: %v", err)
-	}
-	go func() {
-		defer l.Close()
-		logger.Debugf(ctx, "starting log listener\n")
-		for {
-			data, err := l.Listen()
-			if err != nil {
-				continue
-			}
-			fmt.Print(data)
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-	}()
-
-	addr, err := netutil.GetNodeAddress(ctx, nodename, false)
-	if err != nil {
-		return err
-	}
-
-	// Boot fuchsia.
-	var bootMode int
-	if r.netboot {
-		bootMode = botanist.ModeNetboot
-	} else {
-		bootMode = botanist.ModePave
-	}
-	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, signers); err != nil {
-		return err
-	}
-
+func (r *RunCommand) runCmd(ctx context.Context, args []string, device *target.DeviceTarget, syslog io.Writer) error {
+	nodename := device.Nodename()
 	// If having paved, SSH in and stream syslogs back to a file sink.
 	if !r.netboot && syslog != nil {
-		privKey, err := ioutil.ReadFile(privKeyFile)
+		p, err := ioutil.ReadFile(device.SSHKey())
 		if err != nil {
 			return err
 		}
-		config, err := sshutil.DefaultSSHConfig(privKey)
+		config, err := sshutil.DefaultSSHConfig(p)
 		if err != nil {
 			return err
 		}
@@ -155,7 +115,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		}()
 	}
 
-	ip, err := botanist.ResolveIPv4(ctx, nodename, netstackTimeout)
+	ip, err := device.IPv4Addr()
 	if err == nil {
 		logger.Infof(ctx, "IPv4 address of %s found: %s", nodename, ip)
 	} else {
@@ -166,7 +126,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		os.Environ(),
 		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
 		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%v", ip),
-		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", privKeyFile),
+		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", device.SSHKey()),
 	)
 
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
@@ -211,36 +171,18 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	configs, err := target.LoadDeviceConfigs(r.deviceFile)
 	if err != nil {
-		return fmt.Errorf("failed to load device config file %q", r.deviceFile)
+		return fmt.Errorf("failed to load target config file %q", r.deviceFile)
 	} else if len(configs) != 1 {
-		return fmt.Errorf("expected 1 entry in the device config file; found %d", len(configs))
+		return fmt.Errorf("`botanist run` only supports configuration for a single target")
 	}
-	config := configs[0]
-
-	// If an SSH key is specified in the options, prepend it the configs list so that it
-	// corresponds to the authorized key that would be paved.
-	if r.sshKey != "" {
-		config.SSHKeys = append([]string{r.sshKey}, config.SSHKeys...)
+	opts := target.DeviceOptions{
+		Netboot:  r.netboot,
+		Fastboot: r.fastboot,
+		SSHKey:   r.sshKey,
 	}
-	if len(config.SSHKeys) == 0 {
-		return fmt.Errorf("SSH keys must be supplied in the config entry in %q or via -ssh", r.deviceFile)
-	}
-	var privKeys [][]byte
-	for _, keyPath := range config.SSHKeys {
-		p, err := ioutil.ReadFile(keyPath)
-		if err != nil {
-			return fmt.Errorf("could not read SSH key file %q: %v", keyPath, err)
-		}
-		privKeys = append(privKeys, p)
-	}
-
-	var signers []ssh.Signer
-	for _, p := range privKeys {
-		signer, err := ssh.ParsePrivateKey(p)
-		if err != nil {
-			return err
-		}
-		signers = append(signers, signer)
+	device, err := target.NewDeviceTarget(configs[0], opts)
+	if err != nil {
+		return err
 	}
 
 	var syslog io.WriteCloser
@@ -252,40 +194,21 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer syslog.Close()
 	}
 
-	if config.Power != nil {
-		defer func() {
-			logger.Debugf(ctx, "rebooting the node %q\n", config.Network.Nodename)
-
-			if err := config.Power.RebootDevice(signers, config.Network.Nodename); err != nil {
-				logger.Errorf(ctx, "failed to reboot %q: %v\n", config.Network.Nodename, err)
-			}
-		}()
-	}
+	defer func() {
+		logger.Debugf(ctx, "rebooting the node %q\n", device.Nodename())
+		device.Restart(ctx)
+	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	errs := make(chan error)
 	go func() {
-		if r.fastboot != "" {
-			zirconR := imgs.Get("zircon-r")
-			if zirconR == nil {
-				errs <- fmt.Errorf("zircon-r not provided")
-				return
-			}
-			// If it can't find any fastboot device, the fastboot
-			// tool will hang waiting, so we add a timeout.
-			// All fastboot operations take less than a second on
-			// a developer workstation, so two minutes to flash and
-			// continue is very generous.
-			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-			defer cancel()
-			logger.Debugf(ctx, "flashing to zedboot with fastboot\n")
-			if err := botanist.FastbootToZedboot(ctx, r.fastboot, zirconR.Path); err != nil {
-				errs <- err
-				return
-			}
+		if err := device.Start(ctx, imgs, r.zirconArgs); err != nil {
+			errs <- err
 		}
-		errs <- r.runCmd(ctx, imgs, config.Network.Nodename, args, config.SSHKeys[0], signers, syslog)
+	}()
+	go func() {
+		errs <- r.runCmd(ctx, args, device, syslog)
 	}()
 
 	select {
@@ -293,7 +216,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return err
 	case <-ctx.Done():
 	}
-
 	return nil
 }
 
