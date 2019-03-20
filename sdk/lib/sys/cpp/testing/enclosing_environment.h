@@ -9,8 +9,11 @@
 #include <string>
 #include <unordered_map>
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/launcher_impl.h>
@@ -108,6 +111,20 @@ class EnvironmentServices {
   // This will only work if parent environment actually provides said service
   // and the service is in the test component's service whitelist.
   zx_status_t AllowParentService(const std::string& service_name);
+
+  // Serve service directory using |flags| and returns a new |InterfaceHandle|;
+  // Will cause exception if serving fails.
+  fidl::InterfaceHandle<fuchsia::io::Directory> ServeServiceDir(
+      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE);
+
+  // Serves service directory using passed |request| and returns status.
+  zx_status_t ServeServiceDir(
+      fidl::InterfaceRequest<fuchsia::io::Directory> request,
+      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE);
+
+  // Serves service directory using passed |request| and returns status.
+  zx_status_t ServeServiceDir(
+      zx::channel request, uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE);
 
  private:
   friend class EnclosingEnvironment;

@@ -12,6 +12,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
+#include <zircon/assert.h>
 #include <memory>
 
 namespace sys {
@@ -122,6 +123,23 @@ zx_status_t EnvironmentServices::AllowParentService(
           }));
 }
 
+fidl::InterfaceHandle<fuchsia::io::Directory>
+EnvironmentServices::ServeServiceDir(uint32_t flags) {
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  ZX_ASSERT(ServeServiceDir(dir.NewRequest(), flags) == ZX_OK);
+  return dir;
+}
+
+zx_status_t EnvironmentServices::ServeServiceDir(
+    fidl::InterfaceRequest<fuchsia::io::Directory> request, uint32_t flags) {
+  return ServeServiceDir(request.TakeChannel(), flags);
+}
+
+zx_status_t EnvironmentServices::ServeServiceDir(zx::channel request,
+                                                 uint32_t flags) {
+  return svc_.Serve(flags, std::move(request), dispatcher_);
+}
+
 EnclosingEnvironment::EnclosingEnvironment(
     const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
     std::unique_ptr<EnvironmentServices> services,
@@ -132,10 +150,7 @@ EnclosingEnvironment::EnclosingEnvironment(
   // Start environment with services.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = std::move(services_->svc_names_);
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  services_->svc_.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
-                        dir_handle.NewRequest().TakeChannel());
-  service_list->host_directory = dir_handle.TakeChannel();
+  service_list->host_directory = services_->ServeServiceDir().TakeChannel();
   fuchsia::sys::EnvironmentPtr env;
 
   parent_env->CreateNestedEnvironment(env.NewRequest(),

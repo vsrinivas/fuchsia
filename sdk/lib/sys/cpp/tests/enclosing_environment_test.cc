@@ -6,8 +6,10 @@
 #include <zircon/processargs.h>
 
 #include "fidl/examples/echo/cpp/fidl.h"
+#include "lib/async-loop/cpp/loop.h"
 #include "lib/async/cpp/wait.h"
 #include "lib/async/dispatcher.h"
+#include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "lib/sys/cpp/testing/test_with_environment.h"
 
 using namespace fuchsia::sys;
@@ -134,6 +136,29 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   // Try to communicate with server again, we expect
   // it to be spun up once more
   ASSERT_TRUE(TryEchoService(env));
+}
+
+TEST_F(EnclosingEnvTest, EnclosingEnvOnASeperateThread) {
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env = nullptr;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  loop.StartThread("vfs test thread");
+
+  auto svc =
+      sys::testing::EnvironmentServices::Create(real_env(), loop.dispatcher());
+
+  LaunchInfo linfo;
+  linfo.url = kHelperProc;
+  linfo.arguments.reset({"--echo", "--kill=die"});
+  svc->AddServiceWithLaunchInfo(std::move(linfo), echo::Echo::Name_);
+  env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+
+  echo::EchoSyncPtr echo_ptr;
+  env->ConnectToService(echo_ptr.NewRequest());
+  fidl::StringPtr response;
+  echo_ptr->EchoString("hello1", &response);
+
+  ASSERT_EQ(response, "hello1");
 }
 
 TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
