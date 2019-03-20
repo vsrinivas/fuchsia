@@ -27,7 +27,7 @@ BOOT_IMG=
 VBMETA_IMG=
 ZIRCON_BOOTIMAGE=
 MKBOOTIMG_ARGS=
-USE_RAMDISK=true
+RAMDISK_TYPE="dummy"
 
 function HELP {
     echo "help:"
@@ -45,7 +45,7 @@ function HELP {
     echo "-m                                : Add mexec option to command line"
     echo "-M                                : membase for mkbootimg (default ${MEMBASE})"
     echo "-o                                : output boot.img file (defaults to <build-dir>/<board>-boot.img)"
-    echo "-r                                : don't add a ramdisk to the boot image"
+    echo "-r (none | dummy | zbi)           : choose the type of ramdisk to add to the image, defaults to dummy"
     echo "-v                                : output vbmeta.img file (defaults to <build-dir>/<board>-vbmeta.img)"
     echo "-z                                : input zircon ZBI file (defaults to <build-dir>/<board>-boot.img)"
     exit 1
@@ -55,7 +55,7 @@ function HELP {
 DTB_OFFSET=0x03000000
 BOOT_PARTITION_SIZE=33554432
 
-while getopts "ab:B:c:C::d:D:ghK:lmM:o:rv:z:" FLAG; do
+while getopts "ab:B:c:C::d:D:ghK:lmM:o:r:v:z:" FLAG; do
     case $FLAG in
         a) USE_AVB=true;;
         b) BOARD="${OPTARG}";;
@@ -71,7 +71,7 @@ while getopts "ab:B:c:C::d:D:ghK:lmM:o:rv:z:" FLAG; do
         m) MEXEC=true;;
         M) MEMBASE="${OPTARG}";;
         o) BOOT_IMG="${OPTARG}";;
-        r) USE_RAMDISK=false;;
+        r) RAMDISK_TYPE="${OPTARG}";;
         v) VBMETA_IMG="${OPTARG}";;
         z) ZIRCON_BOOTIMAGE="${OPTARG}";;
         \?)
@@ -97,6 +97,13 @@ if [[ -n "${DTB_PATH}" ]] &&
    [[ "${DTB_DEST}" != "kdtb" ]] &&
    [[ "${DTB_DEST}" != "mkbootimg" ]]; then
     echo Invalid dtb destination ${DTB_DEST}
+    HELP
+fi
+
+if [[ "${RAMDISK_TYPE}" != "none" ]] &&
+   [[ "${RAMDISK_TYPE}" != "dummy" ]] &&
+   [[ "${RAMDISK_TYPE}" != "zbi" ]]; then
+    echo invalid ramdisk type ${RAMDISK_TYPE}
     HELP
 fi
 
@@ -178,13 +185,14 @@ else
 fi
 
 # some bootloaders insist on having a ramdisk
-RAMDISK="${BUILD_DIR}/dummy-ramdisk"
-echo "foo" > "${RAMDISK}"
-
-if [[ ${USE_RAMDISK} == true ]]; then
-    RAMDISK_OPTION="--ramdisk ${RAMDISK}"
-else
+if [[ "${RAMDISK_TYPE}" == "zbi" ]]; then
+    RAMDISK_OPTION="--ramdisk ${ZIRCON_BOOTIMAGE}"
+elif [[ "${RAMDISK_TYPE}" == "none" ]]; then
     RAMDISK_OPTION=""
+else
+    RAMDISK="${BUILD_DIR}/dummy-ramdisk"
+    echo "foo" > "${RAMDISK}"
+    RAMDISK_OPTION="--ramdisk ${RAMDISK}"
 fi
 
 # create our boot.img
