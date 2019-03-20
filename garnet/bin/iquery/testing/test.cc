@@ -5,32 +5,31 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fdio/spawn.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/spawn.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <regex>
 
 #include "gmock/gmock.h"
-#include "lib/component/cpp/environment_services_helper.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/glob.h"
-#include "src/lib/files/path.h"
+
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/glob.h"
+#include "src/lib/files/path.h"
 
 namespace {
 
 constexpr char kGoldenPath[] = "/pkg/data/iquery_goldens";
 constexpr char kBinPrefix[] = "/pkg/bin";
 
-using component::testing::EnclosingEnvironment;
+using sys::testing::EnclosingEnvironment;
 using ::testing::StartsWith;
 
-class IqueryGoldenTest : public component::testing::TestWithEnvironment,
+class IqueryGoldenTest : public sys::testing::TestWithEnvironment,
                          public testing::WithParamInterface<std::string> {
  protected:
   IqueryGoldenTest() {

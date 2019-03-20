@@ -13,9 +13,9 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/inspect:component",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -30,9 +30,9 @@ executable("test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
   ]
 }

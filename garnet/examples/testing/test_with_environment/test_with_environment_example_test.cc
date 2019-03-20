@@ -4,9 +4,9 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "garnet/examples/testing/test_with_environment/fake_echo.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
 
 // This test file demostrates how to use |TestWithEnvironment|.
 
@@ -14,11 +14,11 @@ namespace echo {
 namespace testing {
 namespace {
 
-using component::testing::EnclosingEnvironment;
-using component::testing::EnvironmentServices;
-using component::testing::TestWithEnvironment;
 using fidl::examples::echo::EchoPtr;
 using fuchsia::sys::LaunchInfo;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::EnvironmentServices;
+using sys::testing::TestWithEnvironment;
 
 const char kEnvironment[] = "environment_test";
 const auto kTimeout = zx::sec(5);

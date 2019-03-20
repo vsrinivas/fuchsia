@@ -13,18 +13,18 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace intl_wisdom {
 
-using component::testing::TestWithEnvironment;
 using fuchsia::sys::ComponentControllerPtr;
 using fuchsia::sys::LaunchInfo;
+using sys::testing::TestWithEnvironment;
 
 constexpr char kIntlWisdomClientPackage[] =
     "fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_client.cmx";

@@ -76,11 +76,10 @@ executable("package_updating_loader_test") {
     ":interface",
     "//garnet/bin/sysmgr:lib",
     "//garnet/examples/fidl/services:echo",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]

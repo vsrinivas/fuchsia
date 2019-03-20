@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "fake_rtc_device.h"
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <time.h>
@@ -10,19 +12,19 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include "fake_rtc_device.h"
+
+#include <lib/fsl/io/fd.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fxl/strings/substitute.h>
+#include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/service.h>
+#include <lib/zx/time.h>
+
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/timezone.h"
 #include "gmock/gmock.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fsl/io/fd.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/strings/substitute.h"
-#include "lib/sys/cpp/file_descriptor.h"
-#include "lib/vfs/cpp/pseudo_dir.h"
-#include "lib/vfs/cpp/service.h"
-#include "lib/zx/time.h"
 #include "local_roughtime_server.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
@@ -36,12 +38,12 @@ namespace rtc = fuchsia::hardware::rtc;
 using chrono::steady_clock;
 using chrono::system_clock;
 using chrono::time_point;
-using component::testing::EnclosingEnvironment;
-using component::testing::EnvironmentServices;
-using component::testing::TestWithEnvironment;
 using files::ScopedTempDir;
 using fuchsia::sys::LaunchInfo;
 using fxl::StringPrintf;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::EnvironmentServices;
+using sys::testing::TestWithEnvironment;
 using time_server::FakeRtcDevice;
 using time_server::LocalRoughtimeServer;
 using time_server::Timezone;

@@ -13,24 +13,24 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/split_string.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/arraysize.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/gtest/real_loop_fixture.h"
-#include "lib/svc/cpp/services.h"
 
 namespace chrealm {
 namespace {
@@ -38,7 +38,7 @@ namespace {
 const char kMessage[] = "hello";
 const char kRealm[] = "chrealmtest";
 
-class ChrealmTest : public component::testing::TestWithEnvironment,
+class ChrealmTest : public sys::testing::TestWithEnvironment,
                     public fuchsia::testing::chrealm::TestService {
  public:
   void GetMessage(
@@ -48,8 +48,7 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
 
  protected:
   void CreateRealm(std::string* realm_path) {
-    const std::string kRealmGlob =
-        fxl::StringPrintf("/hub/r/%s/*", kRealm);
+    const std::string kRealmGlob = fxl::StringPrintf("/hub/r/%s/*", kRealm);
 
     ASSERT_EQ(files::Glob(kRealmGlob).size(), 0u);
 
@@ -126,7 +125,7 @@ class ChrealmTest : public component::testing::TestWithEnvironment,
   }
 
  private:
-  std::unique_ptr<component::testing::EnclosingEnvironment> enclosing_env_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env_;
   fidl::BindingSet<fuchsia::testing::chrealm::TestService> bindings_;
 };
 
@@ -141,12 +140,10 @@ TEST_F(ChrealmTest, ConnectToService) {
     // only finds the built-in services.
     std::string svc_contents;
     std::string hub_contents;
-    const std::vector<const char*> lssvc_args = {"/bin/chrealm",
-                                                 realm_path.c_str(), "--",
-                                                 "/bin/ls", "/svc"};
-    const std::vector<const char*> lshub_args = {"/bin/chrealm",
-                                                 realm_path.c_str(), "--",
-                                                 "/bin/ls", "/hub/svc"};
+    const std::vector<const char*> lssvc_args = {
+        "/bin/chrealm", realm_path.c_str(), "--", "/bin/ls", "/svc"};
+    const std::vector<const char*> lshub_args = {
+        "/bin/chrealm", realm_path.c_str(), "--", "/bin/ls", "/hub/svc"};
     RunCommand(lssvc_args, &svc_contents);
     RunCommand(lshub_args, &hub_contents);
     EXPECT_EQ(svc_contents, hub_contents);
@@ -158,7 +155,8 @@ TEST_F(ChrealmTest, ConnectToService) {
     std::string out;
     const std::vector<const char*> args = {
         "/bin/chrealm", realm_path.c_str(), "--", "/bin/run",
-        "fuchsia-pkg://fuchsia.com/chrealm_test_get_message#meta/chrealm_test_get_message.cmx"};
+        "fuchsia-pkg://fuchsia.com/chrealm_test_get_message#meta/"
+        "chrealm_test_get_message.cmx"};
     RunCommand(args, &out);
     EXPECT_EQ(kMessage, out);
   }
@@ -169,8 +167,8 @@ TEST_F(ChrealmTest, CreatedUnderRealmJob) {
   CreateRealm(&realm_path);
 
   zx_handle_t proc = ZX_HANDLE_INVALID;
-  const std::vector<const char*> args = {
-      "/bin/chrealm", realm_path.c_str(), "--", "/bin/yes"};
+  const std::vector<const char*> args = {"/bin/chrealm", realm_path.c_str(),
+                                         "--", "/bin/yes"};
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
   RunCommandAsync(args, pipefd[1], &proc);

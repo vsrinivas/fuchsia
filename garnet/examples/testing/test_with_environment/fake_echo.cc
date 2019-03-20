@@ -5,8 +5,7 @@
 #include "garnet/examples/testing/test_with_environment/fake_echo.h"
 
 #include <lib/async-loop/cpp/loop.h>
-
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 int main(int argc, char** argv) {
   if (argc != 2) {
@@ -16,7 +15,7 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   echo::testing::FakeEcho echo;
   echo.SetAnswer(argv[1]);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::CreateFromStartupInfo();
   context->outgoing().AddPublicService(echo.GetHandler());
   loop.Run();
   return 0;

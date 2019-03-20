@@ -6,8 +6,7 @@
 #define GARNET_EXAMPLES_TESTING_TEST_WITH_ENVIRONMENT_FAKE_ECHO_H_
 
 #include <fidl/examples/echo/cpp/fidl.h>
-
-#include "lib/fidl/cpp/binding_set.h"
+#include <lib/fidl/cpp/binding_set.h>
 
 namespace echo {
 namespace testing {

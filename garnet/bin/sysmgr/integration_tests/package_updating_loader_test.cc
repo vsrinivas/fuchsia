@@ -11,21 +11,21 @@
 #include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <fs/service.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/logging.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/logging.h"
 
 namespace sysmgr {
 namespace {
@@ -107,19 +107,17 @@ class ServiceProviderMock : fuchsia::sys::ServiceProvider {
 
 constexpr char kRealm[] = "package_updating_loader_env";
 
-class PackageUpdatingLoaderTest
-    : public component::testing::TestWithEnvironment {
+class PackageUpdatingLoaderTest : public sys::testing::TestWithEnvironment {
  protected:
   void Init(ServiceProviderMock* provider_service) {
     loader_ = std::make_unique<PackageUpdatingLoader>(
         std::unordered_set<std::string>{"my_resolver"},
         provider_service->Bind(), dispatcher());
-    loader_service_ =
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+    loader_service_ = std::make_shared<vfs::Service>(
+        [this](zx::channel channel, async_dispatcher_t* dispatcher) {
           loader_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
-          return ZX_OK;
-        }));
+        });
     auto services = CreateServicesWithCustomLoader(loader_service_);
     env_ = CreateNewEnclosingEnvironment(kRealm, std::move(services));
   }
@@ -139,11 +137,11 @@ class PackageUpdatingLoaderTest
                                              req.TakeChannel().release()));
   }
 
-  std::unique_ptr<component::testing::EnclosingEnvironment> env_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
 
  private:
   std::unique_ptr<PackageUpdatingLoader> loader_;
-  fbl::RefPtr<fs::Service> loader_service_;
+  std::shared_ptr<vfs::Service> loader_service_;
 };
 
 TEST_F(PackageUpdatingLoaderTest, Success) {
@@ -170,8 +168,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   // Verify that Resolve was called with the expected arguments.
   fuchsia::pkg::UpdatePolicy policy;
   policy.fetch_if_absent = true;
-  constexpr char kResolvedUrl[] =
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp/0";
+  constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/echo_server_cpp/0";
   EXPECT_EQ(resolver_service.args(),
             std::make_tuple(std::string(kResolvedUrl),
                             std::vector<std::string>{}, std::move(policy)));

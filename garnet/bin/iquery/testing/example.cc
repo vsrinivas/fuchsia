@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sdk/lib/sys/cpp/startup_context.h>
-#include "lib/async-loop/cpp/loop.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/inspect/component.h"
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/inspect/component.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <vector>
 
@@ -119,19 +119,19 @@ int main(int argc, char** argv) {
 
   // Exposing objects requires a loop and the startup context.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::CreateFromStartupInfo();
 
   // Legacy work required to expose an object tree over FIDL.
   auto root = component::ObjectDir::Make("root");
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
-  startup_context->outgoing().GetOrCreateDirectory("objects")->AddEntry(
+  component_context->outgoing().GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,
       std::make_unique<vfs::Service>(
           inspect_bindings_.GetHandler(root.object().get())));
   auto root_object_fidl = inspect::Object(root);
 
   auto inspector =
-      inspect::ComponentInspector::Initialize(startup_context.get());
+      inspect::ComponentInspector::Initialize(component_context.get());
   auto& root_object_vmo = inspector->root_tree()->GetRoot();
 
   // Storage for the two different table implementations, for ensuring they are
