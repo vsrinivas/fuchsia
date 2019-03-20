@@ -385,7 +385,7 @@ table Value {
 *   Tagged option type consisting of tag field and variadic contents.
 *   Tag field is represented with a **uint32 enum**.
 *   Size of union is the size of the tag field plus the size of the largest
-    option including padding necessary to satisfy its alignment requirements.
+    union variant including padding necessary to satisfy its alignment requirements.
 *   Alignment factor of union is defined by the maximal alignment factor of the
     tag field and any of its options.
 *   Union is padded so that its size is a multiple of its alignment factor.
@@ -446,7 +446,7 @@ to the selected option.
 
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, and is represented with a **uint32**.
-*   Ordinals are calculated by hashing the concatenated library name, union
+*   Ordinals are calculated by hashing the concatenated library name, xunion
     name, and member name, and retaining 31 bits.
     See [ordinal hashing] for further details.
 *   Nullable xunions are represented with a `0` ordinal, and a null envelope.
@@ -506,7 +506,7 @@ xunion Value {
 
 Messages which are sent directly through Zircon channels have a maximum total
 size (header + body) which is defined by the kernel (*currently 64 kB,
-eventual intent may be 16 kB*).</em>
+eventual intent may be 16 kB*).
 
 It is possible to extend interfaces by declaring additional methods. The
 language also supports creating derived interfaces provided the method ordinals
@@ -714,16 +714,18 @@ read the padding bytes.
 
 #### Maximum Recursion Depth
 
-FIDL arrays, vectors, structures, tables, and unions enable the construction of
-recursive messages. Left unchecked, processing excessively deep messages could
+FIDL arrays, vectors, structures, tables, unions, and xunions enable the
+construction of recursive messages.
+Left unchecked, processing excessively deep messages could
 lead to resource exhaustion of the consumer.
 
 For safety, the maximum recursion depth for all FIDL messages is limited to
 **32** levels of nested complex objects. The FIDL validator **must** enforce
 this by keeping track of the current nesting level during message validation.
 
-Complex objects are arrays, vectors, structures, tables, or unions which contain
-pointers or handles which require fix-up. These are precisely the kinds of
+Complex objects are arrays, vectors, structures, tables, unions, or xunions
+which contain pointers or handles which require fix-up.
+These are precisely the kinds of
 objects for which **encoding tables** must be generated. See [C
 Language Bindings](../../languages/c.md)
 for information about encoding
@@ -769,7 +771,7 @@ Conformant FIDL bindings must check all of the following integrity constraints:
     total size of the handle table. All handles are accounted for.
 *   The maximum recursion depth for complex objects is not exceeded.
 *   All enum values fall within their defined range.
-*   All union tag values fall within their defined range.
+*   All union and xunion tag values fall within their defined range.
 *   Encoding only:
     *   All pointers to sub-objects encountered during traversal refer precisely
         to the next buffer position where a sub-object is expected to appear. As
