@@ -30,7 +30,7 @@ class BatchGpuUploader {
   static std::unique_ptr<BatchGpuUploader> New(EscherWeakPtr weak_escher,
                                                int64_t frame_trace_number = 0);
 
-  BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_numberi = 0);
+  BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number = 0);
   ~BatchGpuUploader();
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy this
