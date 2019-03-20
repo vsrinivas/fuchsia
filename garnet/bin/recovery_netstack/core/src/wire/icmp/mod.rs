@@ -35,7 +35,7 @@ use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
 use crate::wire::util::checksum::Checksum;
 use crate::wire::util::fits_in_u32;
-use crate::wire::util::records::options::{OptionImpl, Options};
+use crate::wire::util::records::options::{Options, OptionsImpl};
 
 #[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -243,7 +243,7 @@ impl<B> MessageBody<B> for OriginalPacket<B> {
     }
 }
 
-impl<B, O: for<'a> OptionImpl<'a>> MessageBody<B> for Options<B, O> {
+impl<B, O: for<'a> OptionsImpl<'a>> MessageBody<B> for Options<B, O> {
     fn parse(bytes: B) -> ParseResult<Options<B, O>>
     where
         B: ByteSlice,

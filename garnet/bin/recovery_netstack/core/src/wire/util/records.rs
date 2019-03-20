@@ -86,10 +86,10 @@ pub(crate) trait RecordsImplLimit {
 pub(crate) trait RecordsImpl<'a>: RecordsImplErr + RecordsImplLimit {
     /// The type of a single record; the output from the `parse` function.
     ///
-    /// For long or variable-length data, the user is advised to make `Output` a
+    /// For long or variable-length data, the user is advised to make `Record` a
     /// reference into the bytes passed to `parse`. This is achievable because
     /// of the lifetime parameter to this trait.
-    type Output;
+    type Record;
 
     /// If Some(Self::Error), will emit the provided constant as an error if the
     /// provided buffer is exhausted while `Self::Limit` still reports
@@ -111,7 +111,7 @@ pub(crate) trait RecordsImpl<'a>: RecordsImplErr + RecordsImplLimit {
     ///
     /// `parse` must be deterministic, or else `Records::parse` cannot guarantee
     /// that future iterations will not produce errors (and panic).
-    fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Output>, Self::Error>;
+    fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Record>, Self::Error>;
 }
 
 impl<B, R> Records<B, R>
@@ -196,9 +196,9 @@ impl<'a, R> Iterator for RecordsIter<'a, R>
 where
     R: RecordsImpl<'a>,
 {
-    type Item = R::Output;
+    type Item = R::Record;
 
-    fn next(&mut self) -> Option<R::Output> {
+    fn next(&mut self) -> Option<R::Record> {
         let mut bytes = LongLivedBuff::new(self.bytes);
         // use match rather than expect because expect requires that Err: Debug
         #[allow(clippy::match_wild_err_arm)]
@@ -215,7 +215,7 @@ where
 ///
 /// On return, `bytes` will be pointing to the start of where a next record
 /// would be.
-fn next<'a, BV, R>(bytes: &mut BV, limit: &mut R::Limit) -> Result<Option<R::Output>, R::Error>
+fn next<'a, BV, R>(bytes: &mut BV, limit: &mut R::Limit) -> Result<Option<R::Record>, R::Error>
 where
     R: RecordsImpl<'a>,
     BV: BufferView<&'a [u8]>,
@@ -339,11 +339,11 @@ mod test {
     }
 
     impl<'a> RecordsImpl<'a> for LimitlessRecordImpl {
-        type Output = LayoutVerified<&'a [u8], DummyRecord>;
+        type Record = LayoutVerified<&'a [u8], DummyRecord>;
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Output>, Self::Error> {
+        ) -> Result<Option<Self::Record>, Self::Error> {
             parse_dummy_rec(data)
         }
     }
@@ -360,11 +360,11 @@ mod test {
     }
 
     impl<'a> RecordsImpl<'a> for LimitedRecordImpl {
-        type Output = LayoutVerified<&'a [u8], DummyRecord>;
+        type Record = LayoutVerified<&'a [u8], DummyRecord>;
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Output>, Self::Error> {
+        ) -> Result<Option<Self::Record>, Self::Error> {
             parse_dummy_rec(data)
         }
     }
@@ -381,12 +381,12 @@ mod test {
     }
 
     impl<'a> RecordsImpl<'a> for ExactLimitRecordImpl {
-        type Output = LayoutVerified<&'a [u8], DummyRecord>;
+        type Record = LayoutVerified<&'a [u8], DummyRecord>;
         const EXACT_LIMIT_ERROR: Option<Self::Error> = Some(());
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Output>, Self::Error> {
+        ) -> Result<Option<Self::Record>, Self::Error> {
             parse_dummy_rec(data)
         }
     }
@@ -445,27 +445,27 @@ pub(crate) mod options {
 
     impl<'a, O> RecordsImplErr for O
     where
-        O: OptionImpl<'a>,
+        O: OptionsImpl<'a>,
     {
         type Error = OptionParseErr<O::Error>;
     }
 
     impl<'a, O> RecordsImplLimit for O
     where
-        O: OptionImpl<'a>,
+        O: OptionsImpl<'a>,
     {
         type Limit = ();
     }
 
     impl<'a, O> RecordsImpl<'a> for O
     where
-        O: OptionImpl<'a>,
+        O: OptionsImpl<'a>,
     {
-        type Output = O::Output;
+        type Record = O::Option;
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Output>, Self::Error> {
+        ) -> Result<Option<Self::Record>, Self::Error> {
             next::<_, O>(data)
         }
     }
@@ -475,20 +475,11 @@ pub(crate) mod options {
     /// `OptionParseErr` is either `Internal`, which indicates that this module
     /// encountered a malformed sequence of options (likely with a length field
     /// larger than the remaining bytes in the options buffer), or `External`,
-    /// which indicates that the `OptionImpl::parse` callback returned an error.
+    /// which indicates that the `OptionsImpl::parse` callback returned an error.
     #[derive(Debug, Eq, PartialEq)]
     pub(crate) enum OptionParseErr<E> {
         Internal,
         External(E),
-    }
-
-    /// An implementation of an options parser which can return errors.
-    ///
-    /// This is split from the `OptionImpl` trait so that the associated `Error`
-    /// type does not depend on the lifetime parameter to `OptionImpl`.
-    /// Lifetimes aside, `OptionImplError` is conceptually part of `OptionImpl`.
-    pub(crate) trait OptionImplErr {
-        type Error;
     }
 
     // End of Options List in both IPv4 and TCP
@@ -497,12 +488,15 @@ pub(crate) mod options {
     // NOP in both IPv4 and TCP
     const NOP: u8 = 1;
 
-    /// An implementation of an options parser.
+    /// Common traits of option parsing and serialization.
     ///
-    /// `OptionImpl` provides functions to parse fixed- and variable-length
-    /// options. It is required in order to construct an `Options` or
-    /// `OptionIter`.
-    pub(crate) trait OptionImpl<'a>: OptionImplErr {
+    /// This is split from `OptionsImpl` so that the associated types do not
+    /// depend on the lifetime parameter to `OptionsImpl` and provide common
+    /// behavior to parsers and serializers.
+    pub(crate) trait OptionsImplLayout {
+        /// The error type that can be returned in Options parsing.
+        type Error;
+
         /// The value to multiply read lengths by.
         ///
         /// By default, this value is 1, but for some protocols (such as NDP)
@@ -514,13 +508,19 @@ pub(crate) mod options {
 
         /// The No-op type (if one exists).
         const NOP: Option<u8> = Some(NOP);
+    }
 
+    /// An implementation of an options parser.
+    ///
+    /// `OptionsImpl` provides functions to parse fixed- and variable-length
+    /// options. It is required in order to construct an `Options`.
+    pub(crate) trait OptionsImpl<'a>: OptionsImplLayout {
         /// The type of an option; the output from the `parse` function.
         ///
         /// For long or variable-length data, the user is advised to make
-        /// `Output` a reference into the bytes passed to `parse`. This is
+        /// `Option` a reference into the bytes passed to `parse`. This is
         /// achievable because of the lifetime parameter to this trait.
-        type Output;
+        type Option;
 
         /// Parse an option.
         ///
@@ -534,13 +534,13 @@ pub(crate) mod options {
         /// `parse` must be deterministic, or else `Options::parse` cannot
         /// guarantee that future iterations will not produce errors (and
         /// panic).
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error>;
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error>;
     }
 
-    fn next<'a, BV, O>(bytes: &mut BV) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
+    fn next<'a, BV, O>(bytes: &mut BV) -> Result<Option<O::Option>, OptionParseErr<O::Error>>
     where
         BV: BufferView<&'a [u8]>,
-        O: OptionImpl<'a>,
+        O: OptionsImpl<'a>,
     {
         // For an explanation of this format, see the "Options" section of
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
@@ -581,15 +581,16 @@ pub(crate) mod options {
         use super::*;
 
         #[derive(Debug)]
-        struct DummyOptionImpl;
+        struct DummyOptionsImpl;
 
-        impl OptionImplErr for DummyOptionImpl {
+        impl OptionsImplLayout for DummyOptionsImpl {
             type Error = ();
         }
-        impl<'a> OptionImpl<'a> for DummyOptionImpl {
-            type Output = (u8, Vec<u8>);
 
-            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error> {
+        impl<'a> OptionsImpl<'a> for DummyOptionsImpl {
+            type Option = (u8, Vec<u8>);
+
+            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error> {
                 let mut v = Vec::new();
                 v.extend_from_slice(data);
                 Ok(Some((kind, v)))
@@ -597,13 +598,14 @@ pub(crate) mod options {
         }
 
         #[derive(Debug)]
-        struct AlwaysErrOptionImpl;
+        struct AlwaysErrOptionsImpl;
 
-        impl OptionImplErr for AlwaysErrOptionImpl {
+        impl OptionsImplLayout for AlwaysErrOptionsImpl {
             type Error = ();
         }
-        impl<'a> OptionImpl<'a> for AlwaysErrOptionImpl {
-            type Output = ();
+
+        impl<'a> OptionsImpl<'a> for AlwaysErrOptionsImpl {
+            type Option = ();
 
             fn parse(_kind: u8, _data: &'a [u8]) -> Result<Option<()>, ()> {
                 Err(())
@@ -611,22 +613,22 @@ pub(crate) mod options {
         }
 
         #[derive(Debug)]
-        struct DummyNdpOptionImpl;
+        struct DummyNdpOptionsImpl;
 
-        impl OptionImplErr for DummyNdpOptionImpl {
+        impl OptionsImplLayout for DummyNdpOptionsImpl {
             type Error = ();
-        }
-
-        impl<'a> OptionImpl<'a> for DummyNdpOptionImpl {
-            type Output = (u8, Vec<u8>);
 
             const OPTION_LEN_MULTIPLIER: usize = 8;
 
             const END_OF_OPTIONS: Option<u8> = None;
 
             const NOP: Option<u8> = None;
+        }
 
-            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Output>, Self::Error> {
+        impl<'a> OptionsImpl<'a> for DummyNdpOptionsImpl {
+            type Option = (u8, Vec<u8>);
+
+            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error> {
                 let mut v = Vec::with_capacity(data.len());
                 v.extend_from_slice(data);
                 Ok(Some((kind, v)))
@@ -637,12 +639,12 @@ pub(crate) mod options {
         fn test_empty_options() {
             // all END_OF_OPTIONS
             let bytes = [END_OF_OPTIONS; 64];
-            let options = Options::<_, DummyOptionImpl>::parse(&bytes[..]).unwrap();
+            let options = Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
 
             // all NOP
             let bytes = [NOP; 64];
-            let options = Options::<_, DummyOptionImpl>::parse(&bytes[..]).unwrap();
+            let options = Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
         }
 
@@ -662,7 +664,7 @@ pub(crate) mod options {
                 bytes.push(NOP);
             }
 
-            let options = Options::<_, DummyOptionImpl>::parse(bytes.as_slice()).unwrap();
+            let options = Options::<_, DummyOptionsImpl>::parse(bytes.as_slice()).unwrap();
             for (idx, (kind, data)) in options.iter().enumerate() {
                 assert_eq!(kind as usize, idx + 3);
                 assert_eq!(data.len(), idx);
@@ -674,9 +676,9 @@ pub(crate) mod options {
             }
 
             // Test that we get no parse errors so long as
-            // AlwaysErrOptionImpl::parse is never called.
+            // AlwaysErrOptionsImpl::parse is never called.
             let bytes = [NOP; 64];
-            let options = Options::<_, AlwaysErrOptionImpl>::parse(&bytes[..]).unwrap();
+            let options = Options::<_, AlwaysErrOptionsImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
         }
 
@@ -693,7 +695,7 @@ pub(crate) mod options {
                 }
             }
 
-            let options = Options::<_, DummyNdpOptionImpl>::parse(bytes.as_slice()).unwrap();
+            let options = Options::<_, DummyNdpOptionsImpl>::parse(bytes.as_slice()).unwrap();
             for (idx, (kind, data)) in options.iter().enumerate() {
                 assert_eq!(kind as usize, idx);
                 assert_eq!(data.len(), ((idx + 1) * 8) - 2);
@@ -710,7 +712,7 @@ pub(crate) mod options {
             // the length byte is too short
             let bytes = [2, 1];
             assert_eq!(
-                Options::<_, DummyOptionImpl>::parse(&bytes[..]).unwrap_err(),
+                Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap_err(),
                 OptionParseErr::Internal
             );
 
@@ -719,21 +721,21 @@ pub(crate) mod options {
             // https://bugzilla.redhat.com/show_bug.cgi?id=1622404)
             let bytes = [2, 0];
             assert_eq!(
-                Options::<_, DummyOptionImpl>::parse(&bytes[..]).unwrap_err(),
+                Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap_err(),
                 OptionParseErr::Internal
             );
 
             // the length byte is too long
             let bytes = [2, 3];
             assert_eq!(
-                Options::<_, DummyOptionImpl>::parse(&bytes[..]).unwrap_err(),
+                Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap_err(),
                 OptionParseErr::Internal
             );
 
             // the buffer is fine, but the implementation returns a parse error
             let bytes = [2, 2];
             assert_eq!(
-                Options::<_, AlwaysErrOptionImpl>::parse(&bytes[..]).unwrap_err(),
+                Options::<_, AlwaysErrOptionsImpl>::parse(&bytes[..]).unwrap_err(),
                 OptionParseErr::External(())
             );
         }
@@ -752,7 +754,7 @@ pub(crate) mod options {
             // remaining buffer was >= 1, but it should've been a check for
             // >= 2, and the case below would have caused it to panic while
             // trying to access the length byte, which was a DoS vulnerability.
-            Options::<_, DummyOptionImpl>::parse(&[0x03, 0x03, 0x01, 0x03][..])
+            Options::<_, DummyOptionsImpl>::parse(&[0x03, 0x03, 0x01, 0x03][..])
                 .expect_err("Can detect malformed length bytes");
         }
     }

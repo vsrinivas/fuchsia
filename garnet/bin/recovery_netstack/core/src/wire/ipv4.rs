@@ -18,7 +18,7 @@ use crate::wire::util::checksum::Checksum;
 use crate::wire::util::fits_in_u16;
 use crate::wire::util::records::options::Options;
 
-use self::options::Ipv4OptionImpl;
+use self::options::Ipv4OptionsImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
 pub(crate) const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
@@ -70,7 +70,7 @@ impl HeaderPrefix {
 /// valid.
 pub(crate) struct Ipv4Packet<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
-    options: Options<B, Ipv4OptionImpl>,
+    options: Options<B, Ipv4OptionsImpl>,
     body: B,
 }
 
@@ -422,19 +422,19 @@ const MF_FLAG_OFFSET: u32 = 0;
 
 mod options {
     use crate::ip::{Ipv4Option, Ipv4OptionData};
-    use crate::wire::util::records::options::{OptionImpl, OptionImplErr};
+    use crate::wire::util::records::options::{OptionsImpl, OptionsImplLayout};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
 
-    pub(crate) struct Ipv4OptionImpl;
+    pub(crate) struct Ipv4OptionsImpl;
 
-    impl OptionImplErr for Ipv4OptionImpl {
+    impl OptionsImplLayout for Ipv4OptionsImpl {
         type Error = ();
     }
 
-    impl<'a> OptionImpl<'a> for Ipv4OptionImpl {
-        type Output = Ipv4Option<'a>;
+    impl<'a> OptionsImpl<'a> for Ipv4OptionsImpl {
+        type Option = Ipv4Option<'a>;
 
         fn parse(kind: u8, data: &[u8]) -> Result<Option<Ipv4Option>, ()> {
             let copied = kind & (1 << 7) > 0;

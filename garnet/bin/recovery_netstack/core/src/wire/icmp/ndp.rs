@@ -18,7 +18,7 @@ use crate::ip::{Ipv6, Ipv6Addr};
 use super::{IcmpIpExt, IcmpUnusedCode};
 
 pub(crate) type Options<B> =
-    crate::wire::util::records::options::Options<B, options::NdpOptionImpl>;
+    crate::wire::util::records::options::Options<B, options::NdpOptionsImpl>;
 
 /// An NDP Router Solicitation.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
@@ -93,7 +93,7 @@ pub(crate) mod options {
     use zerocopy::LayoutVerified;
 
     use crate::ip::Ipv6Addr;
-    use crate::wire::util::records::options::{OptionImpl, OptionImplErr};
+    use crate::wire::util::records::options::{OptionsImpl, OptionsImplLayout};
 
     create_net_enum! {
         NdpOptionType,
@@ -140,21 +140,21 @@ pub(crate) mod options {
     }
 
     #[derive(Debug)]
-    pub(crate) struct NdpOptionImpl;
+    pub(crate) struct NdpOptionsImpl;
 
-    impl OptionImplErr for NdpOptionImpl {
+    impl OptionsImplLayout for NdpOptionsImpl {
         type Error = String;
-    }
 
-    impl<'a> OptionImpl<'a> for NdpOptionImpl {
         // For NDP options the length should be multiplied by 8.
         const OPTION_LEN_MULTIPLIER: usize = 8;
 
         // NDP options don't have END_OF_OPTIONS or NOP.
         const END_OF_OPTIONS: Option<u8> = None;
         const NOP: Option<u8> = None;
+    }
 
-        type Output = NdpOption<'a>;
+    impl<'a> OptionsImpl<'a> for NdpOptionsImpl {
+        type Option = NdpOption<'a>;
 
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<NdpOption>, String> {
             Ok(Some(match NdpOptionType::from_u8(kind) {

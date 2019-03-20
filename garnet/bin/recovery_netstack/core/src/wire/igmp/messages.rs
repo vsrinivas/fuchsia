@@ -373,10 +373,10 @@ impl RecordsImplErr for IgmpMembershipReportV3 {
 }
 
 impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
-    type Output = GroupRecord<&'a [u8]>;
+    type Record = GroupRecord<&'a [u8]>;
     const EXACT_LIMIT_ERROR: Option<Self::Error> = Some(ParseError::Format);
 
-    fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Output>, Self::Error> {
+    fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Record>, Self::Error> {
         let header = data
             .take_obj_front::<GroupRecordHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "Can't take group record header"))?;
@@ -388,7 +388,7 @@ impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
         let _ = data
             .take_front(usize::from(header.aux_data_len) * 4)
             .ok_or_else(debug_err_fn!(ParseError::Format, "Can't skip auxiliary data"))?;
-        Ok(Some(Self::Output { header, sources }))
+        Ok(Some(Self::Record { header, sources }))
     }
 }
 

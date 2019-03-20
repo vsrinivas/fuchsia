@@ -21,7 +21,7 @@ use crate::wire::util::checksum::Checksum;
 use crate::wire::util::records::options::Options;
 use crate::wire::util::{fits_in_u16, fits_in_u32};
 
-use self::options::TcpOptionImpl;
+use self::options::TcpOptionsImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
 pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
@@ -66,7 +66,7 @@ impl HeaderPrefix {
 /// valid.
 pub(crate) struct TcpSegment<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
-    options: Options<B, TcpOptionImpl>,
+    options: Options<B, TcpOptionsImpl>,
     body: B,
 }
 
@@ -392,7 +392,7 @@ mod options {
     use zerocopy::LayoutVerified;
 
     use crate::transport::tcp::TcpOption;
-    use crate::wire::util::records::options::{OptionImpl, OptionImplErr};
+    use crate::wire::util::records::options::{OptionsImpl, OptionsImplLayout};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -402,14 +402,14 @@ mod options {
     const OPTION_KIND_SACK: u8 = 5;
     const OPTION_KIND_TIMESTAMP: u8 = 8;
 
-    pub(crate) struct TcpOptionImpl;
+    pub(crate) struct TcpOptionsImpl;
 
-    impl OptionImplErr for TcpOptionImpl {
+    impl OptionsImplLayout for TcpOptionsImpl {
         type Error = ();
     }
 
-    impl<'a> OptionImpl<'a> for TcpOptionImpl {
-        type Output = TcpOption<'a>;
+    impl<'a> OptionsImpl<'a> for TcpOptionsImpl {
+        type Option = TcpOption<'a>;
 
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption>, ()> {
             match kind {
