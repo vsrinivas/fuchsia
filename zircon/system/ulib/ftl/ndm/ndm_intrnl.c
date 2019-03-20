@@ -1885,10 +1885,10 @@ int ndmInsertBBL(NDM ndm) {
     show_rbbl(ndm->run_bad_blk, ndm->num_rbb);
 #endif
 
-    // Free bad block list memory, zero count, and return success.
+    // Free bad block list memory, zero count, and save the metadata.
     free(ExtractedList);
     ExtractedCnt = 0;
-    return 0;
+    return ndmWrCtrl(ndm);
 }
 #endif // BBL_INSERT_INC
 
