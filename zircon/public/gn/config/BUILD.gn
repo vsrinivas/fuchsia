@@ -449,7 +449,9 @@ config("no_stack_protector") {
 }
 
 config("no_safestack") {
-  cflags = [ "-fno-sanitize=safe-stack" ]
+  if (!is_gcc) {
+    cflags = [ "-fno-sanitize=safe-stack" ]
+  }
   configs = [ ":no_stack_protector" ]
 }
 

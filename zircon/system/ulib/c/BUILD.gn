@@ -30,10 +30,18 @@ library("c") {
   }
 }
 
-group("crt1") {
-  deps = [
-    "$zx/third_party/ulib/musl:crt1",
+source_set("crt1") {
+  sources = [
+    "Scrt1.cpp",
   ]
+
+  # This runs before all runtime setup.
+  configs += [ "$zx/public/gn/config:no_sanitizers" ]
+
+  # Minimize the code.  Even if there were lazy PLT resolution, it's never
+  # worthwhile to have PLT entries for main or __libc_start_main, since
+  # they are always used eagerly anyway.
+  cflags = [ "-fno-plt" ]
 }
 
 # TODO(BLD-353): The generic kludgery can't handle the weirdness here.
@@ -359,12 +367,10 @@ if (toolchain.environment == "user" && current_toolchain == toolchain.shlib &&
     }
 
     contents += [
-      "lib/Scrt1.o=BUILD/" + rebase_path(
-              get_label_info(
-                      "$zx/third_party/ulib/musl:crt1(${toolchain.label})",
-                      "target_out_dir") +
-                  "/arch/${toolchain.cpu}/crt1.Scrt1.S.o",
-              root_build_dir),
+      "lib/Scrt1.o=BUILD/" +
+          rebase_path(get_label_info(":crt1(${toolchain.label})",
+                                     "target_out_dir") + "/crt1.Scrt1.cpp.o",
+                      root_build_dir),
       "dist/lib/ld.so.1=BUILD/" +
           rebase_path("$target_out_dir/libc.so", root_build_dir),
     ]

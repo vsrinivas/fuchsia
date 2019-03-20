@@ -105,11 +105,4 @@ if (toolchain.environment == "user") {
       "zircon",
     ]
   }
-
-  source_set("crt1") {
-    visibility = [ "$zx/system/ulib/c:crt1" ]
-    sources = [
-      "arch/${toolchain.cpu}/Scrt1.S",
-    ]
-  }
 }

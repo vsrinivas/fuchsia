@@ -76,7 +76,7 @@ static void start_main(const struct start_params* p) {
 }
 
 __NO_SAFESTACK _Noreturn void __libc_start_main(
-    void* arg, int (*main)(int, char**, char**)) {
+    zx_handle_t bootstrap, int (*main)(int, char**, char**)) {
 
     // Initialize stack-protector canary value first thing.  Do the setjmp
     // manglers in the same call to avoid the overhead of two system calls.
@@ -97,8 +97,6 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     __asm__("# keepalive %0" :: "m"(randoms));
 
     // extract process startup information from channel in arg
-    zx_handle_t bootstrap = (uintptr_t)arg;
-
     struct start_params p = { .main = main };
     zx_status_t status = zxr_message_size(bootstrap, &p.nbytes, &p.nhandles);
     if (status != ZX_OK) {
