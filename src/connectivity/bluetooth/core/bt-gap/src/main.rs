@@ -18,7 +18,7 @@ use {
     fuchsia_app::server::ServicesServer,
     fuchsia_async as fasync,
     fuchsia_bluetooth::util,
-    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
     futures::{TryFutureExt, TryStreamExt},
 };
 
@@ -63,10 +63,14 @@ fn run() -> Result<(), Error> {
     let host_watcher = watch_hosts().try_for_each(move |msg| {
         let hd = watch_hd.clone();
         async {
-            match msg {
-                AdapterAdded(device_path) => await!(hd.add_adapter(device_path)),
-                AdapterRemoved(device_path) => hd.rm_adapter(device_path),
+            let result = match msg {
+                AdapterAdded(device_path) => await!(hd.add_adapter(device_path)).context("Error adding host"),
+                AdapterRemoved(device_path) => hd.rm_adapter(device_path).context("Error removing host"),
+            };
+            if let Err(err) = result {
+                fx_log_warn!("{:?}", err);
             }
+            Ok(())
         }
     });
 
