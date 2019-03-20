@@ -55,7 +55,7 @@ struct AndroidSvelteConfig {
 
 struct FuchsiaConfig {
   // 256MB Regions
-  typedef SizeClassAllocator64<SvelteSizeClassMap, 28U> Primary;
+  typedef SizeClassAllocator64<DefaultSizeClassMap, 28U> Primary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 8U>; // Shared, max 8 TSDs.
 };
