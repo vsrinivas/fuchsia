@@ -19,8 +19,8 @@
 
 namespace btatheros {
 
-using ::btlib::common::BufferView;
-using ::btlib::common::PacketView;
+using ::bt::common::BufferView;
+using ::bt::common::PacketView;
 
 // hard coded for Qualcomm Atheros chipset 0CF3:E300
 static constexpr size_t GET_TARGET_VERSION = 0x09;

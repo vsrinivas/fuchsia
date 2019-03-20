@@ -15,10 +15,10 @@
 
 namespace btintel {
 
-constexpr btlib::hci::OpCode kReadVersion = btlib::hci::VendorOpCode(0x0005);
+constexpr bt::hci::OpCode kReadVersion = bt::hci::VendorOpCode(0x0005);
 
 struct ReadVersionReturnParams {
-  btlib::hci::StatusCode status;
+  bt::hci::StatusCode status;
   uint8_t hw_platform;
   uint8_t hw_variant;
   uint8_t hw_revision;
@@ -33,39 +33,39 @@ struct ReadVersionReturnParams {
 constexpr uint8_t kBootloaderFirmwareVariant = 0x06;
 constexpr uint8_t kFirmwareFirmwareVariant = 0x23;
 
-constexpr btlib::hci::OpCode kLoadPatch = btlib::hci::VendorOpCode(0x008e);
+constexpr bt::hci::OpCode kLoadPatch = bt::hci::VendorOpCode(0x008e);
 
-constexpr btlib::hci::OpCode kSecureSend = btlib::hci::VendorOpCode(0x0009);
+constexpr bt::hci::OpCode kSecureSend = bt::hci::VendorOpCode(0x0009);
 
-constexpr btlib::hci::OpCode kReadBootParams = btlib::hci::VendorOpCode(0x000D);
+constexpr bt::hci::OpCode kReadBootParams = bt::hci::VendorOpCode(0x000D);
 
 struct ReadBootParamsReturnParams {
-  btlib::hci::StatusCode status;
+  bt::hci::StatusCode status;
   uint8_t otp_format;
   uint8_t otp_content;
   uint8_t otp_patch;
   uint16_t dev_revid;
-  btlib::hci::GenericEnableParam secure_boot;
+  bt::hci::GenericEnableParam secure_boot;
   uint8_t key_from_hdr;
   uint8_t key_type;
-  btlib::hci::GenericEnableParam otp_lock;
-  btlib::hci::GenericEnableParam api_lock;
-  btlib::hci::GenericEnableParam debug_lock;
-  btlib::common::DeviceAddressBytes otp_bdaddr;
+  bt::hci::GenericEnableParam otp_lock;
+  bt::hci::GenericEnableParam api_lock;
+  bt::hci::GenericEnableParam debug_lock;
+  bt::common::DeviceAddressBytes otp_bdaddr;
   uint8_t min_fw_build_num;
   uint8_t min_fw_build_week;
   uint8_t min_fw_build_year;
-  btlib::hci::GenericEnableParam limited_cce;
+  bt::hci::GenericEnableParam limited_cce;
   uint8_t unlocked_state;
 } __PACKED;
 
-constexpr btlib::hci::OpCode kReset = btlib::hci::VendorOpCode(0x0001);
+constexpr bt::hci::OpCode kReset = bt::hci::VendorOpCode(0x0001);
 
 struct ResetCommandParams {
   uint8_t data[8];
 } __PACKED;
 
-constexpr btlib::hci::OpCode kMfgModeChange = btlib::hci::VendorOpCode(0x0011);
+constexpr bt::hci::OpCode kMfgModeChange = bt::hci::VendorOpCode(0x0011);
 
 enum class MfgDisableMode : uint8_t {
   kNoPatches = 0x00,
@@ -74,7 +74,7 @@ enum class MfgDisableMode : uint8_t {
 };
 
 struct MfgModeChangeCommandParams {
-  btlib::hci::GenericEnableParam enable;
+  bt::hci::GenericEnableParam enable;
   MfgDisableMode disable_mode;
 } __PACKED;
 
@@ -104,16 +104,15 @@ class VendorHci {
 
   ReadBootParamsReturnParams SendReadBootParams() const;
 
-  btlib::hci::StatusCode SendHciReset() const;
+  bt::hci::StatusCode SendHciReset() const;
 
   void SendVendorReset() const;
 
-  bool SendSecureSend(uint8_t type,
-                      const btlib::common::BufferView& bytes) const;
+  bool SendSecureSend(uint8_t type, const bt::common::BufferView& bytes) const;
 
   bool SendAndExpect(
-      const btlib::common::PacketView<btlib::hci::CommandHeader>& command,
-      std::deque<btlib::common::BufferView> events) const;
+      const bt::common::PacketView<bt::hci::CommandHeader>& command,
+      std::deque<bt::common::BufferView> events) const;
 
   void EnterManufacturerMode();
 
@@ -130,12 +129,12 @@ class VendorHci {
   // True when we are in Manufacturer Mode
   bool manufacturer_;
 
-  void SendCommand(const btlib::common::PacketView<btlib::hci::CommandHeader>&
-                       command) const;
+  void SendCommand(
+      const bt::common::PacketView<bt::hci::CommandHeader>& command) const;
 
-  std::unique_ptr<btlib::hci::EventPacket> WaitForEventPacket(
+  std::unique_ptr<bt::hci::EventPacket> WaitForEventPacket(
       zx::duration timeout = zx::sec(5),
-      btlib::hci::EventCode expected_event = 0) const;
+      bt::hci::EventCode expected_event = 0) const;
 };
 
 }  // namespace btintel

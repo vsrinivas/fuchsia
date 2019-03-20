@@ -48,11 +48,11 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  auto severity = btlib::common::LogSeverity::ERROR;
+  auto severity = bt::common::LogSeverity::ERROR;
   if (cl.HasOption("verbose", nullptr)) {
-    severity = btlib::common::LogSeverity::TRACE;
+    severity = bt::common::LogSeverity::TRACE;
   }
-  btlib::common::UsePrintf(severity);
+  bt::common::UsePrintf(severity);
 
   std::string hci_dev_path = kDefaultHCIDev;
   if (cl.GetOptionValue("dev", &hci_dev_path) && hci_dev_path.empty()) {
@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
   }
 
   auto hci_dev =
-      std::make_unique<::btlib::hci::FidlDeviceWrapper>(std::move(local));
-  auto hci = ::btlib::hci::Transport::Create(std::move(hci_dev));
+      std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
+  auto hci = ::bt::hci::Transport::Create(std::move(hci_dev));
   if (!hci->Initialize()) {
     return EXIT_FAILURE;
   }

@@ -98,7 +98,7 @@ the [`bluetooth-tests`](tests/BUILD.gn) package.
 * And use the `--verbose` flag to set log verbosity:
 
   ```
-  # This logs all messages logged using FXL_VLOG up to level 2 (equivalent to ::btlib::common::LogSeverity:SPEW)
+  # This logs all messages logged using FXL_VLOG up to level 2 (equivalent to ::bt::common::LogSeverity:SPEW)
   $ run-test-component bt-host-unittests --verbose=2
   ```
 

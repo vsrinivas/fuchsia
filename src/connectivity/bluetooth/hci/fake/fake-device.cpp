@@ -15,9 +15,9 @@
 
 #include "fake-device.h"
 
-using ::btlib::common::DeviceAddress;
-using ::btlib::testing::FakeController;
-using ::btlib::testing::FakeDevice;
+using ::bt::common::DeviceAddress;
+using ::bt::testing::FakeController;
+using ::bt::testing::FakeDevice;
 
 namespace bthci_fake {
 
@@ -77,7 +77,7 @@ zx_status_t Device::Bind() {
 
   // A Sample LE remote device for le-scan to pick up.
   // TODO(BT-229): add tooling for adding/removing fake devices
-  const auto kAdvData0 = btlib::common::CreateStaticByteBuffer(
+  const auto kAdvData0 = bt::common::CreateStaticByteBuffer(
       // Flags
       0x02, 0x01, 0x02,
 
@@ -93,7 +93,7 @@ zx_status_t Device::Bind() {
   // A Sample BR/EDR remote device to interact with.
   device = std::make_unique<FakeDevice>(kAddress1, false, false);
   // A Toy Game
-  device->set_class_of_device(btlib::common::DeviceClass({0x14, 0x08, 0x00}));
+  device->set_class_of_device(bt::common::DeviceClass({0x14, 0x08, 0x00}));
   fake_device_->AddDevice(std::move(device));
 
   // Add a LE device that always fails to connect.
@@ -101,7 +101,7 @@ zx_status_t Device::Bind() {
   // clients of this driver.
   device = std::make_unique<FakeDevice>(kAddress2, true, true);
   device->SetAdvertisingData(kAdvData0);
-  device->set_connect_response(btlib::hci::StatusCode::kConnectionTimeout);
+  device->set_connect_response(bt::hci::StatusCode::kConnectionTimeout);
   fake_device_->AddDevice(std::move(device));
 
   loop_.StartThread("bt_hci_fake");

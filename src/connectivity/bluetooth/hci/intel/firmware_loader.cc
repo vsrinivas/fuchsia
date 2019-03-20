@@ -23,8 +23,8 @@
 
 namespace btintel {
 
-using ::btlib::common::BufferView;
-using ::btlib::common::PacketView;
+using ::bt::common::BufferView;
+using ::bt::common::PacketView;
 
 FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
                                                     const size_t& len) {
@@ -33,16 +33,16 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
   size_t offset = 0;
   bool patched = false;
 
-  if (file.size() < sizeof(btlib::hci::CommandHeader)) {
+  if (file.size() < sizeof(bt::hci::CommandHeader)) {
     errorf("FirmwareLoader: Error: BSEQ too small: %zu < %zu\n", len,
-           sizeof(btlib::hci::CommandHeader));
+           sizeof(bt::hci::CommandHeader));
     return LoadStatus::kError;
   }
 
   // A bseq file consists of a sequence of:
   // - [0x01] [command w/params]
   // - [0x02] [expected event w/params]
-  while (file.size() - offset > sizeof(btlib::hci::CommandHeader)) {
+  while (file.size() - offset > sizeof(bt::hci::CommandHeader)) {
     // Parse the next items
     if (file[offset] != 0x01) {
       errorf("FirmwareLoader: Error: expected command packet\n");
@@ -50,26 +50,26 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadBseq(const void* firmware,
     }
     offset++;
     BufferView command_view = file.view(offset);
-    PacketView<btlib::hci::CommandHeader> command(&command_view);
-    command = PacketView<btlib::hci::CommandHeader>(
+    PacketView<bt::hci::CommandHeader> command(&command_view);
+    command = PacketView<bt::hci::CommandHeader>(
         &command_view, command.header().parameter_total_size);
     offset += command.size();
     if (!patched && le16toh(command.header().opcode) == kLoadPatch) {
       patched = true;
     }
-    if ((file.size() - offset <= sizeof(btlib::hci::EventHeader)) ||
+    if ((file.size() - offset <= sizeof(bt::hci::EventHeader)) ||
         (file[offset] != 0x02)) {
       errorf("FirmwareLoader: Error: expected event packet\n");
       return LoadStatus::kError;
     }
     std::deque<BufferView> events;
-    while ((file.size() - offset > sizeof(btlib::hci::EventHeader)) &&
+    while ((file.size() - offset > sizeof(bt::hci::EventHeader)) &&
            (file[offset] == 0x02)) {
       offset++;
       BufferView event_view = file.view(offset);
-      PacketView<btlib::hci::EventHeader> event(&event_view);
+      PacketView<bt::hci::EventHeader> event(&event_view);
       size_t event_size =
-          sizeof(btlib::hci::EventHeader) + event.header().parameter_total_size;
+          sizeof(bt::hci::EventHeader) + event.header().parameter_total_size;
       events.emplace_back(file.view(offset, event_size));
       offset += event_size;
     }
@@ -120,9 +120,9 @@ FirmwareLoader::LoadStatus FirmwareLoader::LoadSfi(const void* firmware,
   // param size can be a multiple of 4 bytes]
   while (offset < file.size()) {
     auto next_cmd = file.view(offset + frag_len);
-    PacketView<btlib::hci::CommandHeader> header(&next_cmd);
-    size_t cmd_size = sizeof(btlib::hci::CommandHeader) +
-                      header.header().parameter_total_size;
+    PacketView<bt::hci::CommandHeader> header(&next_cmd);
+    size_t cmd_size =
+        sizeof(bt::hci::CommandHeader) + header.header().parameter_total_size;
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
       if (!hci_acl_.SendSecureSend(0x01, file.view(offset, frag_len))) {

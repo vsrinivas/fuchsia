@@ -49,7 +49,7 @@ class Device {
 
  private:
   async::Loop loop_ __TA_GUARDED(device_lock_);
-  fbl::RefPtr<btlib::testing::FakeController> fake_device_
+  fbl::RefPtr<bt::testing::FakeController> fake_device_
       __TA_GUARDED(device_lock_);
 
   std::mutex device_lock_;

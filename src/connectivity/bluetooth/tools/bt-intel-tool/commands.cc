@@ -23,10 +23,10 @@
 #include "bt_intel.h"
 #include "intel_firmware_loader.h"
 
-using btlib::hci::CommandPacket;
-using btlib::hci::EventPacket;
-using btlib::hci::GenericEnableParam;
-using btlib::hci::StatusCode;
+using bt::hci::CommandPacket;
+using bt::hci::EventPacket;
+using bt::hci::GenericEnableParam;
+using bt::hci::StatusCode;
 
 using std::placeholders::_1;
 using std::placeholders::_2;

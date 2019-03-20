@@ -27,8 +27,8 @@
 
 #include "lib/fxl/strings/string_printf.h"
 
-using ::btlib::common::BufferView;
-using ::btlib::common::PacketView;
+using ::bt::common::BufferView;
+using ::bt::common::PacketView;
 
 namespace bt_intel {
 
@@ -108,16 +108,16 @@ bool SecureSend(CommandChannel* channel, uint8_t type,
   bool abort = false;
   while (left > 0 && !abort) {
     size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
-    auto cmd = ::btlib::hci::CommandPacket::New(kSecureSend, frag_len + 1);
+    auto cmd = ::bt::hci::CommandPacket::New(kSecureSend, frag_len + 1);
     auto data = cmd->mutable_view()->mutable_payload_data();
     data[0] = type;
     data.Write(bytes.view(bytes.size() - left, frag_len), 1);
 
     channel->SendCommandSync(cmd->view(), [&abort](const auto& event) {
-      if (event.event_code() == ::btlib::hci::kCommandCompleteEventCode) {
+      if (event.event_code() == ::bt::hci::kCommandCompleteEventCode) {
         const auto& event_params =
             event.view()
-                .template payload<::btlib::hci::CommandCompleteEventParams>();
+                .template payload<::bt::hci::CommandCompleteEventParams>();
         if (le16toh(event_params.command_opcode) != kSecureSend) {
           std::cerr << "\nIntelFirmwareLoader: Received command complete for "
                        "something else!"
@@ -132,7 +132,7 @@ bool SecureSend(CommandChannel* channel, uint8_t type,
         return;
       }
       if (event.event_code() ==
-          ::btlib::hci::kVendorDebugEventCode) {  // Vendor Event Code
+          ::bt::hci::kVendorDebugEventCode) {  // Vendor Event Code
         const auto& params =
             event.view().template payload<IntelSecureSendEventParams>();
         printf(
@@ -175,7 +175,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
   // - [0x01] [command w/params]
   // - [0x02] [expected event w/params]
   bool patched = false;
-  while (file.size() - ptr > sizeof(::btlib::hci::CommandHeader)) {
+  while (file.size() - ptr > sizeof(::bt::hci::CommandHeader)) {
     // Parse the next items
     if (*file.at(ptr) != 0x01) {
       std::cerr << "IntelFirmwareLoader: Error: malformed file, expected "
@@ -187,7 +187,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
     // Read the next command.
     ptr++;
     auto command_view = file.view(ptr);
-    PacketView<::btlib::hci::CommandHeader> command(&command_view);
+    PacketView<::bt::hci::CommandHeader> command(&command_view);
     command.Resize(command.header().parameter_total_size);
     ptr += command.size();
 
@@ -195,7 +195,7 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
       patched = true;
     }
 
-    if ((file.size() - ptr <= sizeof(::btlib::hci::EventHeader)) ||
+    if ((file.size() - ptr <= sizeof(::bt::hci::EventHeader)) ||
         (*file.at(ptr) != 0x02)) {
       std::cerr << "IntelFirmwareLoader: Error: malformed file, expected Event "
                    "Packet marker"
@@ -205,11 +205,11 @@ IntelFirmwareLoader::LoadStatus IntelFirmwareLoader::LoadBseq(
 
     // Assemble the expected events.
     std::deque<BufferView> events;
-    while ((file.size() - ptr > sizeof(::btlib::hci::EventHeader)) &&
+    while ((file.size() - ptr > sizeof(::bt::hci::EventHeader)) &&
            (*file.at(ptr) == 0x02)) {
       ptr++;
       auto view = file.view(ptr);
-      PacketView<::btlib::hci::EventHeader> event(&view);
+      PacketView<::bt::hci::EventHeader> event(&view);
       event.Resize(event.header().parameter_total_size);
       events.emplace_back(event.data());
       ptr += event.size();
@@ -265,9 +265,9 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
   // param size can be a multiple of 4 bytes]
   while (ptr < file.size()) {
     auto next_cmd = file.view(ptr + frag_len);
-    PacketView<::btlib::hci::CommandHeader> header(&next_cmd);
-    size_t cmd_size = sizeof(::btlib::hci::CommandHeader) +
-                      header.header().parameter_total_size;
+    PacketView<::bt::hci::CommandHeader> header(&next_cmd);
+    size_t cmd_size =
+        sizeof(::bt::hci::CommandHeader) + header.header().parameter_total_size;
     frag_len += cmd_size;
     if ((frag_len % 4) == 0) {
       if (!SecureSend(channel_, 0x01, file.view(ptr, frag_len))) {
@@ -283,11 +283,10 @@ bool IntelFirmwareLoader::LoadSfi(const std::string& filename) {
 }
 
 bool IntelFirmwareLoader::RunCommandAndExpect(
-    const PacketView<::btlib::hci::CommandHeader>& command,
+    const PacketView<::bt::hci::CommandHeader>& command,
     std::deque<BufferView>& events) {
   bool failed = false;
-  auto event_cb = [&events,
-                   &failed](const ::btlib::hci::EventPacket& evt_packet) {
+  auto event_cb = [&events, &failed](const ::bt::hci::EventPacket& evt_packet) {
     auto expected = events.front();
     if (evt_packet.view().size() != expected.size()) {
       std::cerr << "IntelFirmwareLoader: event size mismatch! "

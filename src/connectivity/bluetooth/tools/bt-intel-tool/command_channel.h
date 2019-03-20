@@ -31,19 +31,19 @@ class CommandChannel {
   // Sets the event callback to be called when an HCI Event arrives on the
   // channel.
   using EventCallback =
-      fit::function<void(const ::btlib::hci::EventPacket& event_packet)>;
+      fit::function<void(const ::bt::hci::EventPacket& event_packet)>;
   void SetEventCallback(EventCallback callback);
 
   // Sends the command in |command| to the controller. The channel must
   // be Ready when this is called.
   void SendCommand(
-      const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command);
+      const ::bt::common::PacketView<::bt::hci::CommandHeader>& command);
 
   // Sends the command in |command| to the controller and waits for
   // an Event, which is delivered to |callback| before this function
   // returns.
   void SendCommandSync(
-      const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
+      const ::bt::common::PacketView<::bt::hci::CommandHeader>& command,
       EventCallback callback);
 
  private:

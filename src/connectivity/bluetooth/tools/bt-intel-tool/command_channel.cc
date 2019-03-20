@@ -113,7 +113,7 @@ void CommandChannel::SetEventCallback(EventCallback callback) {
 }
 
 void CommandChannel::SendCommand(
-    const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command) {
+    const ::bt::common::PacketView<::bt::hci::CommandHeader>& command) {
   zx::channel* channel = &cmd_channel_;
   // Bootloader Secure Send commands are sent and responded to via the bulk
   // endpoint (ACL channel)
@@ -130,7 +130,7 @@ void CommandChannel::SendCommand(
 }
 
 void CommandChannel::SendCommandSync(
-    const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
+    const ::bt::common::PacketView<::bt::hci::CommandHeader>& command,
     EventCallback callback) {
   bool received = false;
   auto previous_cb = std::move(event_callback_);
@@ -193,8 +193,8 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
     uint32_t read_size;
     // Allocate a buffer for the event. Since we don't know the size
     // beforehand we allocate the largest possible buffer.
-    auto packet = ::btlib::hci::EventPacket::New(
-        ::btlib::hci::slab_allocators::kLargeControlPayloadSize);
+    auto packet = ::bt::hci::EventPacket::New(
+        ::bt::hci::slab_allocators::kLargeControlPayloadSize);
     if (!packet) {
       std::cerr << "CommandChannel: Failed to allocate event packet!"
                 << std::endl;
@@ -211,16 +211,15 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel,
       return;
     }
 
-    if (read_size < sizeof(::btlib::hci::EventHeader)) {
+    if (read_size < sizeof(::bt::hci::EventHeader)) {
       std::cerr << "CommandChannel: Malformed event packet - "
-                << "expected at least " << sizeof(::btlib::hci::EventHeader)
+                << "expected at least " << sizeof(::bt::hci::EventHeader)
                 << " bytes, got " << read_size << std::endl;
       continue;
     }
 
     // Compare the received payload size to what is in the header.
-    const size_t rx_payload_size =
-        read_size - sizeof(::btlib::hci::EventHeader);
+    const size_t rx_payload_size = read_size - sizeof(::bt::hci::EventHeader);
     const size_t size_from_header =
         packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {

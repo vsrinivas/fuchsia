@@ -15,15 +15,15 @@ namespace hcitool {
 
 class CommandData final {
  public:
-  CommandData(::btlib::hci::CommandChannel* cmd_channel,
+  CommandData(::bt::hci::CommandChannel* cmd_channel,
               async_dispatcher_t* dispatcher)
       : cmd_channel_(cmd_channel), dispatcher_(dispatcher) {}
 
-  ::btlib::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }
+  ::bt::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
  private:
-  ::btlib::hci::CommandChannel* cmd_channel_;
+  ::bt::hci::CommandChannel* cmd_channel_;
   async_dispatcher_t* dispatcher_;
 };
 

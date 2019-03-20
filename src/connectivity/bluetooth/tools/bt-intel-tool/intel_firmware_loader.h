@@ -51,8 +51,8 @@ class IntelFirmwareLoader {
   // Returns true if the events returned matched the expected |event_bytes|,
   // false otherwise.
   bool RunCommandAndExpect(
-      const ::btlib::common::PacketView<::btlib::hci::CommandHeader>& command,
-      std::deque<::btlib::common::BufferView>& event_bytes);
+      const ::bt::common::PacketView<::bt::hci::CommandHeader>& command,
+      std::deque<::bt::common::BufferView>& event_bytes);
 
   // The command channel to use
   CommandChannel* channel_;

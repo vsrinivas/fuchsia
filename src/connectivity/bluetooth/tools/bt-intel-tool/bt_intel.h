@@ -10,13 +10,12 @@
 
 namespace bt_intel {
 
-constexpr ::btlib::hci::OpCode kLoadPatch = ::btlib::hci::VendorOpCode(0x008e);
+constexpr ::bt::hci::OpCode kLoadPatch = ::bt::hci::VendorOpCode(0x008e);
 
-constexpr ::btlib::hci::OpCode kReadVersion =
-    ::btlib::hci::VendorOpCode(0x0005);
+constexpr ::bt::hci::OpCode kReadVersion = ::bt::hci::VendorOpCode(0x0005);
 
 struct IntelVersionReturnParams {
-  ::btlib::hci::StatusCode status;
+  ::bt::hci::StatusCode status;
   uint8_t hw_platform;
   uint8_t hw_variant;
   uint8_t hw_revision;
@@ -28,37 +27,36 @@ struct IntelVersionReturnParams {
   uint8_t fw_patch_num;
 } __PACKED;
 
-constexpr btlib::hci::OpCode kSecureSend = ::btlib::hci::VendorOpCode(0x0009);
-constexpr ::btlib::hci::OpCode kReadBootParams =
-    ::btlib::hci::VendorOpCode(0x000D);
+constexpr bt::hci::OpCode kSecureSend = ::bt::hci::VendorOpCode(0x0009);
+constexpr ::bt::hci::OpCode kReadBootParams = ::bt::hci::VendorOpCode(0x000D);
 
 struct IntelReadBootParamsReturnParams {
-  ::btlib::hci::StatusCode status;
+  ::bt::hci::StatusCode status;
   uint8_t otp_format;
   uint8_t otp_content;
   uint8_t otp_patch;
   uint16_t dev_revid;
-  ::btlib::hci::GenericEnableParam secure_boot;
+  ::bt::hci::GenericEnableParam secure_boot;
   uint8_t key_from_hdr;
   uint8_t key_type;
-  ::btlib::hci::GenericEnableParam otp_lock;
-  ::btlib::hci::GenericEnableParam api_lock;
-  ::btlib::hci::GenericEnableParam debug_lock;
-  ::btlib::common::DeviceAddressBytes otp_bdaddr;
+  ::bt::hci::GenericEnableParam otp_lock;
+  ::bt::hci::GenericEnableParam api_lock;
+  ::bt::hci::GenericEnableParam debug_lock;
+  ::bt::common::DeviceAddressBytes otp_bdaddr;
   uint8_t min_fw_build_num;
   uint8_t min_fw_build_week;
   uint8_t min_fw_build_year;
-  ::btlib::hci::GenericEnableParam limited_cce;
+  ::bt::hci::GenericEnableParam limited_cce;
   uint8_t unlocked_state;
 } __PACKED;
 
-constexpr ::btlib::hci::OpCode kReset = ::btlib::hci::VendorOpCode(0x0001);
+constexpr ::bt::hci::OpCode kReset = ::bt::hci::VendorOpCode(0x0001);
 
 struct IntelResetCommandParams {
   uint8_t data[8];
 } __PACKED;
 
-constexpr btlib::hci::OpCode kMfgModeChange = btlib::hci::VendorOpCode(0x0011);
+constexpr bt::hci::OpCode kMfgModeChange = bt::hci::VendorOpCode(0x0011);
 
 enum class MfgDisableMode : uint8_t {
   kNoPatches = 0x00,
@@ -67,7 +65,7 @@ enum class MfgDisableMode : uint8_t {
 };
 
 struct IntelMfgModeChangeCommandParams {
-  btlib::hci::GenericEnableParam enable;
+  bt::hci::GenericEnableParam enable;
   MfgDisableMode disable_mode;
 } __PACKED;
 
