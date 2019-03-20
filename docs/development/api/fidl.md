@@ -94,6 +94,30 @@ identifiers.  Our style is as follows:
     * Capitalize the first letter of each word and join all words together for
       _upper camel case_ (`NonNullHttpClient`).
 
+#### Usage
+
+The following table maps the case usage to the element:
+
+Element                    | Casing             | Example
+---------------------------|--------------------|-----------------
+`bits`                     | _upper camel case_ | `InfoFeatures`
+bitfield members           | _upper snake case_ | `WLAN_SNOOP`
+`const`                    | _upper snake case_ | `MAX_NAMES`
+primitive alias            | _lower snake case_ | `hw_partition`
+`protocol`                 | _upper camel case_ | `AudioRenderer`
+protocol method parameters | _lower snake case_ | `enable_powersave`
+protocol methods           | _upper camel case_ | `GetBatteryStatus`
+`struct`                   | _upper camel case_ | `KeyboardEvent`
+struct members             | _lower snake case_ | `child_pid`
+`table`                    | _upper camel case_ | `ComponentDecl`
+table members              | _lower snake case_ | `num_rx`
+`union`                    | _upper camel case_ | `BufferFormat`
+union members              | _lower snake case_ | `vax_primary`
+`xunion`                   | _upper camel case_ | `ZirconHandle`
+xunion members             | _lower snake case_ | `pdp8_iot`
+`enum`                     | _upper camel case_ | `PixelFormat`
+enum members               | _upper snake case_ | `RGB_888`
+
 ### Libraries
 
 Library names are period-separated lists of identifiers. Portions of the library
@@ -163,23 +187,15 @@ scoped by the library name in some fashion.
 
 ### Primitive aliases
 
-Primitive aliases must be named in `lower_snake_case`.
+Primitive aliases must not repeat names from the enclosing library.  In all
+target languages, primitive aliases are replaced by the underlying primitive
+type and therefore do not cause name collisions.
 
 ```fidl
 using vaddr = uint64;
 ```
 
-Primitive aliases must not repeat names from the enclosing library.  In all
-target languages, primitive aliases are replaced by the underlying primitive
-type and therefore do not cause name collisions.
-
 ### Constants
-
-Constants must be named in `ALL_CAPS_SNAKE_CASE`.
-
-```fidl
-const uint64 FOO_BAR = 4096;
-```
 
 Constant names must not repeat names from the enclosing library.  In all target
 languages, constant names are scoped by their enclosing library.
@@ -187,11 +203,15 @@ languages, constant names are scoped by their enclosing library.
 Constants that describe minimum and maximum bounds should use the prefix `MIN_`
 and `MAX_`, respectively.
 
+```fidl
+const uint64 MAX_NAMES = 32;
+```
+
 ### Protocols
 
 Protocols are specified with the `protocol` keyword.
 
-Protocols must be named in `UpperCamelCase` and must be noun phrases.
+Protocols must be noun phrases.
 Typically, protocols are named using nouns that suggest an action.  For
 example, `AudioRenderer` is a noun that suggests that the protocol is related
 to rendering audio.  Similarly, `Launcher` is a noun that suggests that the
@@ -219,36 +239,37 @@ the library name.  Second, the "service" suffix is banned.
 Notice that the successor library simply omits this altogether by being
 explicit in naming the service it offers `fuchsia.net.http.Loader`.
 
-### Methods
+#### Methods
 
-Methods must be named in `UpperCamelCase` and must be verb phrases.  For
-example, `GetBatteryStatus` and `CreateSession` are verb phrases that indicate
-what action the method performs.
+Methods must must be verb phrases.
+For example, `GetBatteryStatus` and `CreateSession` are verb phrases that
+indicate what action the method performs.
 
 Methods on "listener" or "observer" protocols that are called when an event
 occurs should be prefixed with `On` and describe the event that occurred in the
 past tense.  For example, the `ViewContainerListener` protocol has a method
-named `OnChildAttached`.  Similarly, events (i.e., unsolicited messages from the
-server to the client) should be prefixed with `On` and describe the event that
-occurred in the past tense.  For example, the `AudioCapturer` protocol has an
-event named `OnPacketCaptured`.
+named `OnChildAttached`.
 
-### Parameters
+#### Events
 
-Parameter must be named in `lower_snake_case`.
+Similarly, events (i.e., unsolicited messages from the server to the client)
+should be prefixed with `On` and describe the event that occurred in the past
+tense.
+For example, the `AudioCapturer` protocol has an event named
+`OnPacketCaptured`.
 
-### Structs, unions, and tables
+### Structs, unions, xunions, and tables
 
-Structs, unions, and tables must be named in `UpperCamelCase` and must be noun
-phrases. For example, `Point` is a struct that defines a location in space and
+Structs, unions, xunions, and tables must be noun phrases.
+For example, `Point` is a struct that defines a location in space and
 `KeyboardEvent` is a struct that defines a keyboard-related event.
 
-### Structs, unions, and tables members
+### Struct, union, xunion, and table members
 
-Structs, unions, and tables members must be named in `lower_snake_case`. Prefer
-names with a single word when practical because single-word names render more
-consistently across target languages.  However, do not be afraid to use
-multiple words if a single word would be ambiguous or confusing.
+Prefer struct, union, xunion, and table member names with a single word when
+practical (single-word names render more consistently across target languages).
+However, do not be afraid to use multiple words if a single word would be
+ambiguous or confusing.
 
 Member names must not repeat names from the enclosing type (or library).  For
 example, the `KeyboardEvent` member that contains the time the event was
@@ -258,13 +279,11 @@ languages, member names are scoped by their enclosing type.
 
 ### Enums
 
-Enums must be named in `UpperCamelCase` and must be noun phrases.  For example,
-`PixelFormat` is an enum that defines how colors are encoded into bits in an
-image.
+Enums must be noun phrases.
+For example, `PixelFormat` is an enum that defines how colors are encoded
+into bits in an image.
 
 ### Enum members
-
-Enum members must be named in `ALL_CAPS_SNAKE_CASE`.
 
 Enum member names must not repeat names from the enclosing type (or library).
 For example, members of `PixelFormat` enum should be named `ARGB` rather than
@@ -274,13 +293,11 @@ their enclosing type.
 
 ### Bitfields
 
-Bitfields must be named in `UpperCamelCase` and must be noun phrases.
+Bitfields must be noun phrases.
 For example, `InfoFeatures` is a bitfield that indicates which features
 are present on an Ethernet interface.
 
 ### Bitfield members
-
-Bitfield members must be named in `ALL_CAPS_SNAKE_CASE`.
 
 Bitfield members must not repeat names from the enclosing type (or library).
 For example, members of `InfoFeatures` bitfield should be named `WLAN`
@@ -289,7 +306,6 @@ appears in the name of the enclosing type.
 In all target languages, bitfield member names are scoped by their
 enclosing type.
 
-
 ## Organization
 
 ### Syntax
@@ -297,9 +313,9 @@ enclosing type.
  * Use 4 space indents.
  * Never use tabs.
  * Avoid trailing whitespace.
- * Separate declarations for `struct`, `union`, `enum`, and `protocol`
-   constructs from other declarations with one blank line (two consecutive
-   newline characters).
+ * Separate declarations for `bits`, `enum`, `protocol`, `struct`, `table`,
+   `table`, `union`, and `xunion` constructs from other declarations with
+   one blank line (two consecutive newline characters).
  * End files with exactly one newline character.
 
 ### Comments

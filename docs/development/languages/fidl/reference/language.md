@@ -13,8 +13,8 @@ You can find a modified [EBNF description of the FIDL grammar here](grammar.md).
 ## Syntax
 
 FIDL provides a syntax for declaring named
-constants, enums, structs, tables, unions, and protocols. These declarations are
-collected into libraries for distribution.
+bits, constants, enums, structs, tables, unions, xunions, and protocols.
+These declarations are collected into libraries for distribution.
 
 FIDL declarations are stored in plain text UTF-8 files. Each file consists of a
 sequence of semicolon-delimited declarations. The order of declarations within a
@@ -47,9 +47,9 @@ Note that documentation comments can also be provided via the
 The following are keywords in FIDL.
 
 ```
-array, as, bool, const, enum, float32, float64, handle, int8, int16,
+array, as, bits, bool, const, enum, float32, float64, handle, int8, int16,
 int32, int64, library, protocol, request, string, struct, table, uint8,
-uint16, uint32, uint64, union, using, vector
+uint16, uint32, uint64, union, using, xunion, vector
 ```
 
 #### Identifiers
@@ -116,8 +116,8 @@ a simplified syntax familiar to C programmers (see below for examples).
 
 #### Constants
 
-FIDL supports the following constant types: booleans, signed and unsigned integers,
-floating point values, strings, and enumerations.
+FIDL supports the following constant types: bits, booleans, signed and unsigned
+integers, floating point values, strings, and enumerations.
 The syntax is similar to C:
 
 ```fidl
@@ -142,6 +142,35 @@ constant expressions.
 > For greater clarity, there is no expression processing in FIDL; that is,
 > you *cannot* declare a constant as having the value `6 + 5`, for
 > example.
+
+#### Default Initialization
+
+Primitive structure members may have initialization values specified
+in the declaration.
+For example:
+
+```fidl
+struct Color {
+     uint32 background_rgb = 0xFF77FF; // fuchsia is the default background
+     uint32 foreground_rgb; // there is no default foreground color
+};
+```
+
+If the programmer does not supply a background color, the default
+value of `0xFF77FF` will be used.
+
+However, if the program does not supply a foreground color, there is no
+default.
+The foreground color must be supplied; otherwise it's a logic error on
+the programmer's part.
+
+There is a subtlety about the semantics and what defaults mean:
+
+* If the target language can support defaults (Dart, Rust, Go)
+    * then it MUST support defaults
+* If the target language cannot support defaults (C/C++)
+    * then it MAY provide support that programmers can optoinally
+      invoke (e.g., a macro in C).
 
 #### Declaration Separator
 
@@ -223,6 +252,25 @@ struct Sprite {
     uint32 index;
     uint32 color;
     bool visible;
+};
+```
+
+#### Bits
+
+*   Named bit types.
+*   Discrete subset of bit values chosen from an underlying integer primitive
+    type.
+*   Not nullable.
+*   Bits must have at least one member.
+
+##### Use
+
+```fidl
+// Bit definitions for Info.features field
+bits InfoFeatures : uint32 {
+    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
+    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
 };
 ```
 
@@ -517,17 +565,37 @@ struct Texture { string name; };
 
 ##### Use
 
-Union are denoted by their declared name (eg. **Pattern**) and nullability:
+Unions are denoted by their declared name (eg. **Pattern**) and nullability:
 
-*   **`Pattern`** : non-nullable Shape
-*   **`Pattern?`** : nullable Shape
+*   **`Pattern`** : non-nullable Pattern
+*   **`Pattern?`** : nullable Pattern
+
+#### Xunions
+
+*   Record type consisting of an ordinal and an envelope.
+*   Ordinal indicates member selection, envelope holds contents.
+*   Declaration is not intended to be modified once deployed; use protocol
+    extension instead.
+*   Reference may be nullable.
+*   Xunions contain one or more members. An xunion with no members would have
+    no inhabitants and thus would make little sense in a wire format.
+
+##### Declaration
 
 ```fidl
-struct Paint {
-    Pattern fg;
-    Pattern? bg;
+xunion Value {
+    int16 command;
+    Circle data;
+    float64 offset;
 };
 ```
+
+##### Use
+
+Xunions are denoted by their declared name (eg. **Value**) and nullability:
+
+*   **`Value`** : non-nullable Value
+*   **`Value?`** : nullable Value
 
 #### Protocols
 

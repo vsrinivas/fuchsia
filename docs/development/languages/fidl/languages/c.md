@@ -58,6 +58,7 @@ produces.
 
 | FIDL                                     | C Type                     |
 |------------------------------------------|----------------------------|
+| `bits`                                   | typedef to underlying type |
 | `bool`                                   | `bool`                     |
 | `int8`                                   | `int8_t`                   |
 | `uint8`                                  | `uint8_t`                  |
