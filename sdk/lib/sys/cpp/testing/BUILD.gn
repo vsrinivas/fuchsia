@@ -51,6 +51,8 @@ source_set("enclosing_environment") {
   testonly = true
 
   sources = [
+    "component_interceptor.cc",
+    "component_interceptor.h",
     "enclosing_environment.cc",
     "enclosing_environment.h",
     "launcher_impl.cc",

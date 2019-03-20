@@ -5,15 +5,12 @@
 #include <string>
 #include <vector>
 
-#include <fbl/ref_ptr.h>
-#include <fs/service.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/testing/component_interceptor.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_interceptor.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "gtest/gtest.h"
 
@@ -54,17 +51,15 @@ class TestLoader : fuchsia::sys::Loader {
 };
 
 // This fixture gives us a real_env().
-class ComponentInterceptorTest
-    : public component::testing::TestWithEnvironment {};
+class ComponentInterceptorTest : public sys::testing::TestWithEnvironment {};
 
 // This tests fallback-loader and intercept-url cases using the same enclosing
 // environment.
 TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
   TestLoader test_loader(real_env());
 
-  component::testing::ComponentInterceptor interceptor(
-      test_loader.NewRequest());
-  auto env = component::testing::EnclosingEnvironment::Create(
+  sys::testing::ComponentInterceptor interceptor(test_loader.NewRequest());
+  auto env = sys::testing::EnclosingEnvironment::Create(
       "test_harness", real_env(),
       interceptor.MakeEnvironmentServices(real_env()));
 
@@ -79,8 +74,7 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
     ASSERT_TRUE(interceptor.InterceptURL(
         kInterceptUrl, "",
         [&actual_url, &intercepted_url](
-            std::unique_ptr<component::testing::InterceptedComponent>
-                component) {
+            std::unique_ptr<sys::testing::InterceptedComponent> component) {
           intercepted_url = true;
           actual_url = component->startup_info().launch_info.url;
         }));
@@ -114,9 +108,8 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
 TEST_F(ComponentInterceptorTest, TestOnKill) {
   TestLoader test_loader(real_env());
 
-  component::testing::ComponentInterceptor interceptor(
-      test_loader.NewRequest());
-  auto env = component::testing::EnclosingEnvironment::Create(
+  sys::testing::ComponentInterceptor interceptor(test_loader.NewRequest());
+  auto env = sys::testing::EnclosingEnvironment::Create(
       "test_harness", real_env(),
       interceptor.MakeEnvironmentServices(real_env()));
 
@@ -126,10 +119,10 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
   std::string actual_url;
 
   bool killed = false;
-  std::unique_ptr<component::testing::InterceptedComponent> component;
+  std::unique_ptr<sys::testing::InterceptedComponent> component;
   ASSERT_TRUE(interceptor.InterceptURL(
       kInterceptUrl, "",
-      [&](std::unique_ptr<component::testing::InterceptedComponent> c) {
+      [&](std::unique_ptr<sys::testing::InterceptedComponent> c) {
         component = std::move(c);
         component->set_on_kill([&]() { killed = true; });
       }));
@@ -149,9 +142,9 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
 
 TEST_F(ComponentInterceptorTest, ExtraCmx) {
   auto interceptor =
-      component::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
+      sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
           real_env());
-  auto env = component::testing::EnclosingEnvironment::Create(
+  auto env = sys::testing::EnclosingEnvironment::Create(
       "test_harness", real_env(),
       interceptor.MakeEnvironmentServices(real_env()));
 
@@ -166,7 +159,7 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
           "data": "randomstring"
         }
       })",
-      [&](std::unique_ptr<component::testing::InterceptedComponent> c) {
+      [&](std::unique_ptr<sys::testing::InterceptedComponent> c) {
         intercepted_url = true;
         auto startup_info = c->TakeStartupInfo();
         for (const auto& metadata : startup_info.program_metadata.get()) {

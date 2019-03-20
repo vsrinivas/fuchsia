@@ -79,8 +79,6 @@ source_set("enclosing_environment") {
   sources = [
     "enclosing_environment.cc",
     "enclosing_environment.h",
-    "component_interceptor.cc",
-    "component_interceptor.h",
     "launcher_impl.cc",
     "launcher_impl.h",
   ]

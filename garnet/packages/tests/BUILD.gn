@@ -307,7 +307,6 @@ group("all") {
     "//garnet/packages/tests:json",
     "//garnet/packages/tests:kms",
     "//garnet/packages/tests:lib",
-    "//garnet/packages/tests:lib_component",
     "//garnet/packages/tests:libc",
     "//garnet/packages/tests:log_listener",
     "//garnet/packages/tests:logger",
@@ -1078,13 +1077,6 @@ group("stash") {
     "//garnet/bin/stash:stash_tests",
     "//garnet/bin/stash_ctl:stash_ctl_tests",
     "//garnet/packages/prod:stash",
-  ]
-}
-
-group("lib_component") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/lib/component/cpp/test:lib_component_test",
   ]
 }
 

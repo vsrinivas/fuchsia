@@ -2,21 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
-#define LIB_COMPONENT_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
+#ifndef LIB_SYS_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
+#define LIB_SYS_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
 
 #include <mutex>
 #include <string>
 
-#include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/enclosing_environment.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
 
-namespace component {
+namespace sys {
 namespace testing {
 
 using fuchsia::sys::TerminationReason;
@@ -138,26 +134,23 @@ class ComponentInterceptor : fuchsia::sys::Loader, fuchsia::sys::Runner {
   struct ComponentLoadInfo {
     ComponentLaunchHandler handler;
     // Fake component package directory where we host our fake manifest.
-    fbl::RefPtr<fs::PseudoDir> pkg_dir;
+    std::unique_ptr<vfs::PseudoDir> pkg_dir;
   };
   std::map<std::string, ComponentLoadInfo> intercepted_component_load_info_
       __TA_GUARDED(intercept_urls_mu_);
 
   fuchsia::sys::LoaderPtr fallback_loader_;
 
-  fbl::RefPtr<fs::Service> loader_svc_;
+  std::shared_ptr<vfs::Service> loader_svc_;
   fidl::BindingSet<fuchsia::sys::Loader> loader_bindings_;
   fidl::BindingSet<fuchsia::sys::Runner> runner_bindings_;
 
   async_dispatcher_t* dispatcher_;
 
-  // VFS hook for |ComponentLoadInfo.pkg_dir|s.
-  fs::SynchronousVfs vfs_;
-
   std::unique_ptr<EnclosingEnvironment> env_;
 };
 
 }  // namespace testing
-}  // namespace component
+}  // namespace sys
 
-#endif  // LIB_COMPONENT_CPP_TESTING_COMPONENT_INTERCEPTOR_H_
+#endif  // LIB_SYS_CPP_TESTING_COMPONENT_INTERCEPTOR_H_

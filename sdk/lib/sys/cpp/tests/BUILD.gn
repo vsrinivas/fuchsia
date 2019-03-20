@@ -45,6 +45,7 @@ test("component_cpp_testing_unittests") {
 
 test("component_cpp_testing_tests") {
   sources = [
+    "component_interceptor_unittest.cc",
     "enclosing_environment_test.cc",
   ]
 
