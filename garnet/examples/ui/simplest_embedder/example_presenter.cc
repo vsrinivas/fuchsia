@@ -46,14 +46,6 @@ void ExamplePresenter::PresentView(
   ScenicSessionPresent();
 }
 
-void ExamplePresenter::Present2(
-    zx::eventpair view_holder_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request) {
-  PresentView(scenic::ToViewHolderToken(std::move(view_holder_token)),
-              std::move(presentation_request));
-}
-
 void ExamplePresenter::MaybeSetPresentationSize() {
   if (compositor_ && presentation_) {
     presentation_->SetSize(width_, height_);

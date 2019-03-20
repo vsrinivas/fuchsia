@@ -65,13 +65,6 @@ void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
   AddPresentation(std::move(presentation));
 }
 
-void App::Present2(zx::eventpair view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation_request) {
-  PresentView(scenic::ToViewHolderToken(std::move(view_holder_token)),
-              std::move(presentation_request));
-}
-
 void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());
