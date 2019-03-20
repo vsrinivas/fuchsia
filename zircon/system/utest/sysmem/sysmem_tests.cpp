@@ -160,6 +160,8 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
         .physically_contiguous_required = false,
         .secure_required = false,
         .secure_permitted = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
     status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
@@ -179,6 +181,8 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem_CoherencyDomain_Cpu, "");
     ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
     for (uint32_t i = 0; i < 64; ++i) {
@@ -236,6 +240,8 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
         .physically_contiguous_required = false,
         .secure_required = false,
         .secure_permitted = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
     };
     constraints->image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
@@ -280,6 +286,8 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024 * 3 / 2, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem_CoherencyDomain_Cpu, "");
     // We specified image_format_constraints so the result must also have
     // image_format_constraints.
     ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
@@ -325,6 +333,8 @@ extern "C" bool test_sysmem_no_token(void) {
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    // Ask for display usage to encourage using the ram coherency domain.
+    constraints->usage.display = fuchsia_sysmem_displayUsageLayer;
     constraints->min_buffer_count_for_camping = 3;
     constraints->has_buffer_memory_constraints = true;
     constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
@@ -333,6 +343,8 @@ extern "C" bool test_sysmem_no_token(void) {
         .physically_contiguous_required = false,
         .secure_required = false,
         .secure_permitted = false,
+        .ram_domain_supported = true,
+        .cpu_domain_supported = true,
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
     status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
@@ -352,6 +364,8 @@ extern "C" bool test_sysmem_no_token(void) {
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
+    ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem_CoherencyDomain_Ram, "");
     ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
     for (uint32_t i = 0; i < 64; ++i) {
@@ -437,6 +451,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         .physically_contiguous_required = false,
         .secure_required = false,
         .secure_permitted = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
     };
     constraints_1->image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 =
@@ -721,6 +737,8 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
         .physically_contiguous_required = false,
         .secure_required = false,
         .secure_permitted = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
     };
 
     // constraints_2 is just a copy of constraints_1 - since both participants

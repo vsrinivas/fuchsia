@@ -178,12 +178,28 @@ struct BufferMemoryConstraints {
     ///
     /// When aggregating BufferCollectionConstraints, these values boolean-AND.
     bool secure_permitted = false;
+
+    /// By default, participants must ensure the CPU can read or write data to
+    /// the buffer without cache operations. If they support using the RAM
+    /// domain, data must be available in RAM (with CPU cache state such that
+    /// the RAM data won't get corrupted by a dirty CPU cache line writing
+    /// incorrect data to RAM), and a consumer reading using the CPU must
+    /// invalidate CPU cache before reading (the producer doesn't guarantee
+    /// zero stale "clean" cache lines)
+    bool ram_domain_supported = false;
+    bool cpu_domain_supported = true;
+};
+
+enum CoherencyDomain {
+    Cpu = 0;
+    Ram = 1;
 };
 
 struct BufferMemorySettings {
     uint32 size_bytes;
     bool is_physically_contiguous;
     bool is_secure;
+    CoherencyDomain coherency_domain;
 };
 
 /// Describes constraints on layout of image data in buffers.

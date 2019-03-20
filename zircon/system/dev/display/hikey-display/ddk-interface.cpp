@@ -161,6 +161,8 @@ zx_status_t HiDisplay::DisplayControllerImplSetBufferCollectionConstraints(const
     buffer_constraints.physically_contiguous_required = true;
     buffer_constraints.secure_required = false;
     buffer_constraints.secure_permitted = false;
+    buffer_constraints.ram_domain_supported = true;
+    buffer_constraints.cpu_domain_supported = true;
     constraints.image_format_constraints_count = 1;
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[0];

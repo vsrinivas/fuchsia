@@ -672,6 +672,13 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
         return false;
     }
 
+    if (acc->has_buffer_memory_constraints &&
+        !acc->buffer_memory_constraints.ram_domain_supported &&
+        !acc->buffer_memory_constraints.cpu_domain_supported) {
+        LogError("Neither RAM nor CPU coherency domains supported");
+        return false;
+    }
+
     if (!acc->image_format_constraints_count) {
         for (uint32_t i = 0; i < c->image_format_constraints_count; ++i) {
             // struct copy
@@ -726,6 +733,8 @@ bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
         LogError("secure_required && !secure_permitted");
         return false;
     }
+    acc->ram_domain_supported = acc->ram_domain_supported && c->ram_domain_supported;
+    acc->cpu_domain_supported = acc->cpu_domain_supported && c->cpu_domain_supported;
     return true;
 }
 
@@ -916,6 +925,22 @@ bool LogicalBufferCollection::IsColorSpaceEqual(
     return a.type == b.type;
 }
 
+static fuchsia_sysmem_CoherencyDomain
+GetCoherencyDomain(const fuchsia_sysmem_BufferCollectionConstraints* constraints) {
+    if (!constraints->has_buffer_memory_constraints)
+        return fuchsia_sysmem_CoherencyDomain_Cpu;
+
+    if (!constraints->buffer_memory_constraints.ram_domain_supported)
+        return fuchsia_sysmem_CoherencyDomain_Cpu;
+    if (!constraints->buffer_memory_constraints.cpu_domain_supported)
+        return fuchsia_sysmem_CoherencyDomain_Ram;
+
+    // Display controllers generally aren't cache coherent.
+    // TODO - base on the system in use.
+    return constraints->usage.display != 0 ? fuchsia_sysmem_CoherencyDomain_Ram
+                                           : fuchsia_sysmem_CoherencyDomain_Cpu;
+}
+
 BufferCollection::BufferCollectionInfo
 LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
     ZX_DEBUG_ASSERT(constraints_);
@@ -969,6 +994,7 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
         min_size_bytes = buffer_constraints->min_size_bytes;
         max_size_bytes = buffer_constraints->max_size_bytes;
     }
+    buffer_settings->coherency_domain = GetCoherencyDomain(constraints_.get());
 
     // It's allowed for zero participants to have any ImageFormatConstraint(s),
     // in which case the combined constraints_ will have zero (and that's fine,
