@@ -140,8 +140,7 @@ template("rustc_macro") {
   proc_macro_target_out_bin_path = "$proc_macro_target_root_out_dir/rust_crates/lib${crate_name}_proc_macro${macro_extension}"
   out_bin_path =
       "${root_out_dir}/rust_crates/lib${crate_name}${macro_extension}"
-  copy(copy_binary_target) {
-    visibility = [ ":${target_name}" ]
+  copy_with_build_id(copy_binary_target) {
     forward_variables_from(invoker, [ "testonly " ])
     deps = [
       proc_macro_host_target,
@@ -152,6 +151,7 @@ template("rustc_macro") {
     outputs = [
       out_bin_path,
     ]
+    override_os = host_os
   }
 
   # Group all of the `copy` targets into one group which is publicly exposed.

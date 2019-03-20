@@ -305,16 +305,16 @@ def strip_binary_manifest(manifest, stripped_dir, build_id_dir, clang_lib_dir,
         examined.add(debugfile)
         return debug
 
-    # The toolchain-supplied shared libraries, and Rust binaries, are
-    # delivered unstripped.  For these, strip the binary right here and
-    # update the manifest entry to point to the stripped file.
+    # The toolchain-supplied shared libraries are delivered unstripped.  For
+    # these, strip the binary right here and update the manifest entry to point
+    # to the stripped file.
     def make_debug_file(entry, info):
         debug = info
         stripped = os.path.join(stripped_dir, entry.target)
         dir = os.path.dirname(stripped)
         if not os.path.isdir(dir):
             os.makedirs(dir)
-        if info.strip(stripped, build_id_dir):
+        if info.strip(stripped):
             new_output = True
         info = binary_info(stripped)
         assert info, ("Stripped file '%s' for '%s' is invalid" %

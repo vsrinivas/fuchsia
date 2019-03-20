@@ -8,6 +8,113 @@ import("//build/rust/config.gni")  # for rust_config
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/test_spec.gni")
 
+# Copies a binary or shared object file, linking to it in the .build-id
+# directory if it is an ELF file. Strips fuchsia binaries and shared objects.
+#
+# Parameters
+#
+#   sources
+#     Required: A single source file to copy. This is only a list for
+#     consistency with other target types. This file should NOT have been
+#     copied prior to this target, or we may waste space.
+#
+#    outputs
+#     Required: A single destination to copy the file to. This is only a list
+#     for consistency with other target types.
+#
+#   override_os:
+#     Optional: Override the OS that the file is assumed to be built for. By
+#     default, we use the current_os.
+template("copy_with_build_id") {
+  forward_variables_from(invoker,
+                         [
+                           "visibility",
+                           "override_os",
+                         ])
+
+  srcs = invoker.sources
+  outs = invoker.outputs
+  assert(srcs == [ srcs[0] ], "Must specify exactly one source")
+  assert(outs == [ outs[0] ], "Must specify exactly one output")
+
+  os = current_os
+  if (defined(override_os)) {
+    os = override_os
+  }
+  use_strip = os == "fuchsia"
+
+  group_deps = []
+
+  objcopy_target_name = "${target_name}_objcopy"
+  group_deps += [ ":${objcopy_target_name}" ]
+  action(objcopy_target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "visibility",
+                             "sources",
+                             "outputs",
+                           ])
+
+    stamp_file = outs[0] + ".build-id.stamp"
+
+    script = "//build/rust/stamp.sh"
+    args = [ rebase_path(stamp_file) ]
+    sources = srcs
+    outputs = [
+      stamp_file,
+    ]
+
+    # Link all ELF files into .build-id.
+    # TODO(tmandry): Enable for linux when ELF note bug is fixed.
+    if (os == "fuchsia") {
+      args += [
+        rebase_path("${root_build_dir}/${clang_prefix}/llvm-objcopy"),
+        "--build-id-link-dir=.build-id",
+      ]
+      if (use_strip) {
+        args += [
+          # TODO(jakehehrlich): Make this use --strip-sections.
+          "--strip-all",
+          "--build-id-link-input=.debug",
+          "--build-id-link-output=",
+          rebase_path(sources[0]),
+          rebase_path(outs[0]),
+        ]
+        outputs += [ outs[0] ]
+      } else {
+        # This invocation replaces the input file with (what should be) an
+        # identical copy of itself. This is the reason that the file should not
+        # have been copied (i.e. hard linked) before, or we will have duplicate
+        # data in the build directory.
+        #
+        # Ideally, we would have a tool that only does .build-id linking without
+        # making a copy, but this works okay for now.
+        args += [
+          "--build-id-link-output=.debug",
+          rebase_path(sources[0]),
+        ]
+      }
+    }
+  }
+
+  # If we did not produce a stripped copy above, we should copy the source to
+  # the destination.
+  if (!use_strip) {
+    copy_target_name = "${target_name}_copy"
+    group_deps += [ ":${copy_target_name}" ]
+    copy(copy_target_name) {
+      forward_variables_from(invoker, "*", [ "visibility" ])
+      # sources, outputs forwarded
+    }
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = group_deps
+  }
+}
+
 template("rustc_third_party_artifact") {
   # Dummy build target to match the one in rustc_artifact
   build_target_name = "${target_name}_build"
@@ -134,7 +241,8 @@ template("rustc_artifact") {
   }
   output_file = "${first_party_crate_root}/$output_filename"
   output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
-  test_output_file = "${root_out_dir}/${crate_name}_${invoker.type}_test"
+  test_filename = "${crate_name}_${invoker.type}_test"
+  test_output_file = "${root_out_dir}/exe.unstripped/${test_filename}"
 
   build_target_name = "${target_name}_build"
   group_deps += [ ":${build_target_name}" ]
@@ -287,13 +395,14 @@ template("rustc_artifact") {
     }
   }
 
-  # Copy binaries and staticlibs out of rust_crates/* into the root dir
-  # TODO(cramertj) remove and replace with writing directly to the root
-  # dir once all existing build rules have moved off of using rust_crates/*
-  if (type == "bin" || type == "staticlib") {
+  if (type == "staticlib") {
+    output_path = "${root_out_dir}/${output_filename}"
+
+    # Copy staticlibs out of rust_crates/* into the root dir
+    # TODO(cramertj) remove and replace with writing directly to the root
+    # dir once all existing build rules have moved off of using rust_crates/*
     copy_target_name = "${target_name}_copy"
     group_deps += [ ":${copy_target_name}" ]
-    output_path = "${root_out_dir}/${prefix}${crate_name}${extension}"
     copy(copy_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
@@ -307,12 +416,50 @@ template("rustc_artifact") {
         output_path,
       ]
     }
+  }
 
-    # if appropriate, create an SDK atom for the binary/staticlib that we just
-    # copied
-    if (type == "bin" && defined(invoker.sdk_category) &&
-        invoker.sdk_category != "excluded" && !is_fuchsia &&
-        !(defined(invoker.test) && invoker.test)) {
+  if (type == "bin") {
+    output_path_unstripped = "${root_out_dir}/exe.unstripped/${output_filename}"
+    output_path = "${root_out_dir}/${output_filename}"
+
+    # Copy binaries out of rust_crates/* into the root dir
+    # TODO(cramertj) remove and replace with writing directly to the root
+    # dir once all existing build rules have moved off of using rust_crates/*
+    copy_target_name = "${target_name}_copy"  # depended upon below
+    group_deps += [ ":${copy_target_name}" ]
+    copy(copy_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":${build_target_name}",
+      ]
+      sources = [
+        output_file,
+      ]
+      outputs = [
+        output_path_unstripped,
+      ]
+    }
+
+    strip_target_name = "${target_name}_strip"
+    group_deps += [ ":${strip_target_name}" ]
+    copy_with_build_id(strip_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":${copy_target_name}",
+      ]
+      sources = [
+        output_path_unstripped,
+      ]
+      outputs = [
+        output_path,
+      ]
+    }
+
+    # if appropriate, create an SDK atom for the binary that we just stripped
+    if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
+        !is_fuchsia && !(defined(invoker.test) && invoker.test)) {
       output_name = target_name
       file_base = "tools/$output_name"
 
@@ -343,10 +490,33 @@ template("rustc_artifact") {
           deps = invoker.sdk_deps
         }
 
-        non_sdk_deps = [ ":$copy_target_name" ]
+        non_sdk_deps = [ ":$strip_target_name" ]
       }
     }
   }
+
+  if (with_unit_tests) {
+    strip_test_target_name = "${target_name}_test_strip"
+    group_deps += [ ":${strip_test_target_name}" ]
+
+    test_output_path = "${root_out_dir}/${test_filename}"
+
+    copy_with_build_id(strip_test_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":${build_target_name}",
+      ]
+      sources = [
+        test_output_file,
+      ]
+      outputs = [
+        test_output_path,
+      ]
+    }
+  }
+
+  # proc macros are stripped and copied inside `rustc_macro.gni`.
 
   cargo_toml_target_name = "${target_name}_cargo"
   group_deps += [ ":${cargo_toml_target_name}" ]
