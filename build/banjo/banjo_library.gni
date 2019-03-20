@@ -249,12 +249,12 @@ template("banjo_library") {
     output = target[4]
 
     if (backend != "rust") {
-      compiled_action(target_name) {
+      action(target_name) {
         forward_variables_from(invoker, [ "testonly" ])
 
         visibility = [ ":*" ]
 
-        tool = "//zircon/public/tool/banjoc"
+        script = "//zircon/prebuilt/downloads/banjo/banjo_bin"
 
         inputs = [
           response_file,

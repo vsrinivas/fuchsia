@@ -15,3 +15,9 @@ sdk_prebuilt_executable("symbolize") {
 
   prebuilt = "//zircon/prebuilt/downloads/symbolize"
 }
+
+sdk_prebuilt_executable("banjo") {
+  category = "partner"
+
+  prebuilt = "//zircon/prebuilt/downloads/banjo/banjo_bin"
+}

@@ -11,7 +11,8 @@ import("config.gni")
 # This default target is empty because there are multiple flavors of SDKs and
 # there is no "default" one. The empty target is still needed so that all the
 # other targets in this file are attached to the build graph.
-group("sdk") {}
+group("sdk") {
+}
 
 sdk_documentation("open_source") {
   name = "open_source"
@@ -48,6 +49,7 @@ sdk("ddk") {
   category = "partner"
 
   deps = [
+    "tools:banjo_sdk($host_toolchain)",
     "//zircon/public/banjo/ddk-driver:ddk-driver_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-acpi:ddk-protocol-acpi_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-amlogiccanvas:ddk-protocol-amlogiccanvas_sdk($banjo_toolchain)",
@@ -89,8 +91,6 @@ sdk("ddk") {
     "//zircon/public/lib/ddktl:ddktl_sdk",
     "//zircon/public/lib/driver:driver_sdk",
     "//zircon/public/sysroot:sysroot_sdk",
-    "//zircon/public/tool/banjo-format:banjo-format_sdk($host_toolchain)",
-    "//zircon/public/tool/banjoc:banjoc_sdk($host_toolchain)",
     "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
     "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
   ]
