@@ -9,6 +9,7 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/power.h>
 #include <lib/mmio/mmio.h>
 
 #include <lib/zx/bti.h>
@@ -24,11 +25,9 @@ public:
     PDev() {}
 
     // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
-    PDev(pdev_protocol_t* proto)
-        : PDevProtocolClient(proto) {}
+    PDev(pdev_protocol_t* proto) : PDevProtocolClient(proto) {}
 
-    PDev(zx_device_t* parent)
-        : PDevProtocolClient(parent) {}
+    PDev(zx_device_t* parent) : PDevProtocolClient(parent) {}
 
     ~PDev() = default;
 
@@ -48,8 +47,9 @@ public:
     I2cChannel GetI2c(uint32_t index);
     GpioProtocolClient GetGpio(uint32_t index);
     ClockProtocolClient GetClk(uint32_t index);
+    PowerProtocolClient GetPower(uint32_t index);
 };
 
 } // namespace ddk
 
-#endif  // DDKTL_PDEV_H_
+#endif // DDKTL_PDEV_H_

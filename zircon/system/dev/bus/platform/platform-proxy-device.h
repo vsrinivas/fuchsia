@@ -10,6 +10,7 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
+#include <ddktl/protocol/power.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -90,6 +91,26 @@ private:
     fbl::RefPtr<PlatformProxy> proxy_;
 };
 
+class ProxyPower : public ddk::PowerProtocol<ProxyPower> {
+public:
+    explicit ProxyPower(uint32_t device_id, uint32_t index, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), index_(index), proxy_(proxy) {}
+
+    zx_status_t PowerEnablePowerDomain();
+    zx_status_t PowerDisablePowerDomain();
+    zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
+
+    void GetProtocol(power_protocol_t* proto) {
+        proto->ops = &power_protocol_ops_;
+        proto->ctx = this;
+    }
+
+private:
+    uint32_t device_id_;
+    uint32_t index_;
+    fbl::RefPtr<PlatformProxy> proxy_;
+};
+
 class ProxyDevice;
 using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
@@ -159,6 +180,7 @@ private:
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyGpio> gpios_;
+    fbl::Vector<ProxyPower> power_domains_;
     fbl::Vector<ProxyI2c> i2cs_;
     ProxyClock clk_;
 

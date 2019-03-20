@@ -5,16 +5,13 @@
 library ddk.protocol.powerimpl;
 
 using zx;
-
-enum PowerDomainStatus : uint8 {
-    DISABLED = 0;
-    ENABLED =  1;
-};
+using ddk.protocol.power;
 
 [Layout = "ddk-protocol"]
 interface PowerImpl {
     /// Get status of a power domain
-    GetPowerDomainStatus(uint32 index) -> (zx.status s, PowerDomainStatus status);
+    GetPowerDomainStatus(uint32 index) -> (zx.status s,
+                                           ddk.protocol.power.PowerDomainStatus status);
     /// Enable a power domain
     EnablePowerDomain(uint32 index) -> (zx.status s);
     /// Disable a power domain

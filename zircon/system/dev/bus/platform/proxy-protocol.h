@@ -7,6 +7,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform/proxy.h>
+#include <ddktl/protocol/powerimpl.h>
 
 namespace platform_bus {
 
@@ -59,13 +60,14 @@ typedef struct {
 } rpc_pdev_metadata_rsp_t;
 
 // Maximum number of protocols that can be returned via PDEV_GET_PROTOCOLS.
-static constexpr size_t PROXY_MAX_PROTOCOLS = ((PLATFORM_PROXY_MAX_DATA - sizeof(rpc_pdev_rsp_t))
-                                                / sizeof(uint32_t));
+static constexpr size_t PROXY_MAX_PROTOCOLS =
+    ((PLATFORM_PROXY_MAX_DATA - sizeof(rpc_pdev_rsp_t)) / sizeof(uint32_t));
 
 // Maximum I2C transfer is I2C_MAX_TRANSFER_SIZE minus size of largest header.
-static constexpr uint32_t I2C_MAX_TRANSFER_SIZE = (PROXY_MAX_TRANSFER_SIZE -
-            (sizeof(rpc_pdev_req_t) > sizeof(rpc_pdev_rsp_t) ?
-             sizeof(rpc_pdev_req_t) : sizeof(rpc_pdev_rsp_t)));
+static constexpr uint32_t I2C_MAX_TRANSFER_SIZE =
+    (PROXY_MAX_TRANSFER_SIZE - (sizeof(rpc_pdev_req_t) > sizeof(rpc_pdev_rsp_t)
+                                    ? sizeof(rpc_pdev_req_t)
+                                    : sizeof(rpc_pdev_rsp_t)));
 
 // ZX_PROTOCOL_GPIO proxy support.
 enum {
@@ -124,5 +126,22 @@ typedef struct {
     platform_proxy_req_t header;
     uint32_t index;
 } rpc_clk_req_t;
+
+// ZX_PROTOCOL_POWER proxy support.
+enum {
+    POWER_ENABLE,
+    POWER_DISABLE,
+    POWER_GET_STATUS,
+};
+
+typedef struct {
+    platform_proxy_req_t header;
+    uint32_t index;
+} rpc_power_req_t;
+
+typedef struct {
+    platform_proxy_rsp_t header;
+    power_domain_status_t status;
+} rpc_power_rsp_t;
 
 } // namespace platform_bus

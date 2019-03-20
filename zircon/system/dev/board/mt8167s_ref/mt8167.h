@@ -15,6 +15,7 @@
 #include <threads.h>
 
 #include <ddk/usb-peripheral-config.h>
+#include <soc/mt8167/mt8167-power.h>
 
 namespace board_mt8167 {
 

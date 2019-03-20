@@ -251,6 +251,42 @@ zx_status_t ProxyClock::ClockDisable(uint32_t index) {
     return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp, sizeof(resp));
 }
 
+zx_status_t ProxyPower::PowerEnablePowerDomain() {
+    rpc_power_req_t req = {};
+    rpc_power_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.header.op = POWER_ENABLE;
+    req.index = index_;
+
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ProxyPower::PowerDisablePowerDomain() {
+    rpc_power_req_t req = {};
+    rpc_power_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.header.op = POWER_DISABLE;
+    req.index = index_;
+
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ProxyPower::PowerGetPowerDomainStatus(power_domain_status_t* out_status) {
+    rpc_power_req_t req = {};
+    rpc_power_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.header.op = POWER_GET_STATUS;
+    req.index = index_;
+
+    zx_status_t status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header,
+                                     sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_status = resp.status;
+    return status;
+}
+
 zx_status_t ProxyDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     if (index >= mmios_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -391,6 +427,14 @@ zx_status_t ProxyDevice::PDevGetProtocol(uint32_t proto_id, uint32_t index, void
         return ZX_OK;
     }
 
+    if (proto_id == ZX_PROTOCOL_POWER) {
+        if (index >= power_domains_.size()) {
+            return ZX_ERR_OUT_OF_RANGE;
+        }
+        auto* proto = static_cast<power_protocol_t*>(out_protocol);
+        power_domains_[index].GetProtocol(proto);
+        return ZX_OK;
+    }
     // For other protocols, fall through to DdkGetProtocol if index is zero
     if (index != 0) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -501,6 +545,14 @@ zx_status_t ProxyDevice::InitCommon() {
     for (uint32_t i = 0; i < info.gpio_count; i++) {
         ProxyGpio gpio(device_id_, i, proxy_);
         gpios_.push_back(std::move(gpio), &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+    }
+
+    for (uint32_t i = 0; i < info.power_domain_count; i++) {
+        ProxyPower power_domain(device_id_, i, proxy_);
+        power_domains_.push_back(std::move(power_domain), &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -618,6 +670,19 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         // Return zeroth GPIO resource.
         auto* proto = static_cast<gpio_protocol_t*>(out);
         gpios_[0].GetProtocol(proto);
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_POWER: {
+        auto count = power_domains_.size();
+        if (count == 0) {
+            return ZX_ERR_NOT_SUPPORTED;
+        } else if (count > 1) {
+            zxlogf(ERROR, "%s: device has more than one power domain\n", __func__);
+            return ZX_ERR_BAD_STATE;
+        }
+        // Return zeroth power domain resource.
+        auto* proto = static_cast<power_protocol_t*>(out);
+        power_domains_[0].GetProtocol(proto);
         return ZX_OK;
     }
     case ZX_PROTOCOL_I2C: {

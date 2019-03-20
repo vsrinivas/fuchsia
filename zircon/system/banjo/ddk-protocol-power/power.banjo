@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.power;
+
+using zx;
+
+enum PowerDomainStatus : uint8 {
+    DISABLED = 1;
+    ENABLED =  2;
+};
+
+[Layout = "ddk-protocol"]
+interface Power {
+    EnablePowerDomain() -> (zx.status s);
+    DisablePowerDomain() -> (zx.status s);
+    GetPowerDomainStatus() -> (zx.status s, PowerDomainStatus status);
+};

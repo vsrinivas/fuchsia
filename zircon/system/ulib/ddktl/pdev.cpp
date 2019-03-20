@@ -52,6 +52,16 @@ GpioProtocolClient PDev::GetGpio(uint32_t index) {
     return GpioProtocolClient(&gpio);
 }
 
+PowerProtocolClient PDev::GetPower(uint32_t index) {
+    power_protocol_t power;
+    size_t actual;
+    zx_status_t res = GetProtocol(ZX_PROTOCOL_POWER, index, &power, sizeof(power), &actual);
+    if (res != ZX_OK || actual != sizeof(power)) {
+        return {};
+    }
+    return PowerProtocolClient(&power);
+}
+
 ClockProtocolClient PDev::GetClk(uint32_t index) {
     clock_protocol_t clk;
     size_t actual;

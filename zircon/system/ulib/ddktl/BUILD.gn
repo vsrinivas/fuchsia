@@ -21,6 +21,9 @@ library("ddktl") {
     # <ddktl/pdev.h> has #include <ddktl/protocol/gpio.h>.
     "$zx/system/banjo/ddk-protocol-gpio",
 
+    # <ddktl/pdev.h> has #include <ddktl/protocol/power.h>.
+    "$zx/system/banjo/ddk-protocol-power",
+
     # <ddktl/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "$zx/system/banjo/ddk-protocol-platform-device",
 
