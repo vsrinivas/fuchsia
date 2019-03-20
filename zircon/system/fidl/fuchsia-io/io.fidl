@@ -371,14 +371,38 @@ protocol DirectoryWatcher {
 protocol Directory {
     compose Node;
 
-    /// Open a new object relative to this directory object.
+    /// Opens a new object relative to this directory object.
     ///
     /// Flags may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
     /// The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
     /// on the |object| handle, indicating the type of object opened.
     Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
 
-    /// Remove an object relative to this directory object.
+    /// Detaches an object from this directory object.
+    ///
+    /// The underlying object may or may not be deleted after this method
+    /// completes: although the link will be removed from the containing directory,
+    /// objects with multiple references (such as files which are still open)
+    /// will not actually be destroyed until all references are removed.
+    ///
+    /// If a directory is unlinked while it still has an open reference,
+    /// it must become read-only, preventing new entries from being created
+    /// until all references close and the directory is destroyed.
+    ///
+    /// |path| identifies the file which should be detached.
+    /// If |path| contains multiple segments, separated by "/" characters,
+    /// then the directory is traversed, one segment at a time, relative to the
+    /// originally accessed Directory.
+    ///
+    /// Returns:
+    ///   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
+    ///     allow writable access.
+    ///   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
+    ///   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
+    ///   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
+    ///   ZX_ERR_UNAVAILABLE if |path| is ".".
+    ///
+    /// Other errors may be returned for filesystem-specific reasons.
     Unlink(string:MAX_PATH path) -> (zx.status s);
 
     /// Reads a collection of variably sized dirents into a buffer.
