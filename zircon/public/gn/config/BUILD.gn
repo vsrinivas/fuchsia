@@ -526,13 +526,16 @@ config("integer-paranoia") {
   ]
 }
 
+if (current_os == "mac") {
+  libcxx_dir = "${toolchain.tool_dir}/../lib"
+}
+
 config("static-libc++") {
   if (current_os == "mac") {
     # The macOS driver doesn't support -static-libstdc++ properly, so pass
     # the libraries directly.  This has to locate the files explicitly in
     # the toolchain, because -lc++ would look for the shared library.
     ldflags = [ "-nostdlib++" ]
-    libcxx_dir = "${toolchain.tool_dir}/../lib"
     libs = [
       "$libcxx_dir/libc++abi.a",
       "$libcxx_dir/libc++.a",
@@ -547,6 +550,14 @@ config("static-libc++") {
         "pthread",
       ]
     }
+  }
+}
+
+config("libc++fs") {
+  if (current_os == "mac") {
+    libs = [ "$libcxx_dir/libc++fs.a" ]
+  } else {
+    libs = [ "c++fs" ]
   }
 }
 

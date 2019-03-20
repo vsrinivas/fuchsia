@@ -13,6 +13,7 @@
 #include <deque>
 #include <dirent.h>
 #include <fcntl.h>
+#include <filesystem>
 #include <fnmatch.h>
 #include <forward_list>
 #include <functional>
@@ -241,7 +242,7 @@ private:
 
 class FileWriter {
 public:
-    FileWriter(const char* outfile, std::string prefix)
+    FileWriter(const char* outfile, std::filesystem::path prefix)
         : prefix_(std::move(prefix)), outfile_(outfile) {
     }
 
@@ -260,13 +261,13 @@ public:
                 return CreateFile(outfile_);
             }
         } else {
-            auto file = prefix_ + name;
+            auto file = prefix_ / name;
             return CreateFile(file.c_str());
         }
     }
 
 private:
-    std::string prefix_;
+    std::filesystem::path prefix_;
     const char* outfile_ = nullptr;
     unsigned int files_ = 0;
 
@@ -279,10 +280,18 @@ private:
         fbl::unique_fd fd = openit();
         if (!fd) {
             switch (errno) {
-            case ENOENT:
-                MakeDirs(outfile);
+            case ENOENT: {
+                std::filesystem::path dir(outfile);
+                dir.remove_filename();
+                std::error_code ec;
+                if (!std::filesystem::create_directories(dir, ec) && ec) {
+                    fprintf(stderr, "cannot create directory %s: %s\n",
+                            dir.c_str(), ec.message().c_str());
+                    exit(1);
+                }
                 fd = openit();
                 break;
+            }
 
             case EEXIST:
                 // Remove the file in case it exists.  This makes it safe to do
@@ -296,34 +305,11 @@ private:
             }
         }
         if (!fd) {
-            fprintf(stderr, "cannot create %s: %s\n",
-                    outfile, strerror(errno));
+            fprintf(stderr, "cannot create %s: %s\n", outfile, strerror(errno));
             exit(1);
         }
 
         return OutputStream(std::move(fd));
-    }
-
-    static void MakeDirs(const std::string& name) {
-        auto lastslash = name.rfind('/');
-        if (lastslash == std::string::npos) {
-            return;
-        }
-        auto dir = name.substr(0, lastslash);
-        if (mkdir(dir.c_str(), 0777) == 0) {
-            return;
-        }
-        if (errno == ENOENT) {
-            MakeDirs(dir);
-            if (mkdir(dir.c_str(), 0777) == 0) {
-                return;
-            }
-        }
-        if (errno != EEXIST) {
-            fprintf(stderr, "mkdir: %s: %s\n",
-                    dir.c_str(), strerror(errno));
-            exit(1);
-        }
     }
 };
 
@@ -611,6 +597,11 @@ std::unique_ptr<std::byte[]> Decompress(const std::list<const iovec>& payload,
 
 #undef LZ4F_CALL
 
+template <typename T>
+std::size_t HashValue(const T& x) {
+    return std::hash<std::decay_t<T>>()(x);
+}
+
 class FileContents {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileContents);
@@ -664,7 +655,7 @@ public:
 
     struct Hash {
         std::size_t operator()(const FileContents& file) const {
-            return std::hash<decltype(file.mapped_)>()(file.mapped_);
+            return HashValue(file.mapped_);
         }
     };
 
@@ -761,6 +752,12 @@ private:
     std::unique_ptr<const Directory> dir_;
 };
 
+struct PathHash {
+    std::size_t operator()(const std::filesystem::path& file) const {
+        return HashValue(file.native());
+    }
+};
+
 // This is used for all opening of files and directories for input.
 // It tracks all files opened so a depfile can be written at the end.
 //
@@ -783,7 +780,8 @@ public:
 
     // The returned FileContents is cached and lives forever (for the lifetime
     // of the FileOpener).
-    const FileContents* OpenFile(const char* file) {
+    const FileContents* OpenFile(std::filesystem::path file) {
+        file.make_preferred();
         auto& cache = name_cache_[file];
         if (!cache) {
             struct stat st;
@@ -795,15 +793,16 @@ public:
     }
 
     // Like OpenFile, but also accept a directory.
-    const File* OpenFileOrDir(const char* file) {
+    const File* OpenFileOrDir(std::filesystem::path file) {
+        file.make_preferred();
         auto& cache = name_cache_[file];
         if (!cache) {
             struct stat st;
             auto [cached_file, fd] = Open(file, &st);
             if (S_ISDIR(st.st_mode)) {
-                OpenDirectory(cached_file, std::move(fd), file);
+                OpenDirectory(cached_file, std::move(fd), std::move(file));
             } else {
-                OpenFile(cached_file, std::move(fd), st, file);
+                OpenFile(cached_file, std::move(fd), st, std::move(file));
             }
             cache = cached_file;
         }
@@ -861,7 +860,8 @@ private:
     std::map<FileId, File> file_cache_;
 
     // Cache of contents by file name.  These point into the file_cache_.
-    std::unordered_map<std::string, const File*> name_cache_;
+    std::unordered_map<std::filesystem::path, const File*,
+                       PathHash> name_cache_;
 
     // These are created by Emplace() and kept here both to de-duplicate them
     // and to tie their lifetimes to the FileOpener (to parallel file_cache_).
@@ -871,10 +871,11 @@ private:
     // region of the image).
     std::unordered_set<FileContents, FileContents::Hash> memory_cache_;
 
-    std::pair<File*, fbl::unique_fd> Open(const char* file, struct stat* st) {
-        fbl::unique_fd fd(open(file, O_RDONLY));
+    std::pair<File*, fbl::unique_fd> Open(const std::filesystem::path& file,
+                                          struct stat* st) {
+        fbl::unique_fd fd(open(file.c_str(), O_RDONLY));
         if (!fd) {
-            perror(file);
+            perror(file.c_str());
             exit(1);
         }
         if (fstat(fd.get(), st) < 0) {
@@ -885,30 +886,33 @@ private:
     }
 
     void OpenFile(File* cached,
-                  fbl::unique_fd fd, const struct stat& st, const char* file) {
+                  fbl::unique_fd fd, const struct stat& st,
+                  std::filesystem::path file) {
         if (!S_ISREG(st.st_mode)) {
-            fprintf(stderr, "%s: not a regular file\n", file);
+            fprintf(stderr, "%s: not a regular file\n", file.c_str());
             exit(1);
         }
-        *cached = File(std::make_unique<const FileContents>(
-                           FileContents::Map(std::move(fd), st, file)));
+        *cached =
+            File(std::make_unique<const FileContents>(
+                     FileContents::Map(std::move(fd), st, file.c_str())));
     }
 
-    void OpenDirectory(File* cached, fbl::unique_fd fd, std::string file) {
+    void OpenDirectory(File* cached, fbl::unique_fd fd,
+                       std::filesystem::path file) {
         DIR* dir = fdopendir(fd.release());
         if (!dir) {
             perror("fdopendir");
             exit(1);
         }
-        file += "/";
         auto dirmap = std::make_unique<Directory>();
         const dirent* d;
         while ((d = readdir(dir)) != nullptr) {
             if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")) {
                 continue;
             }
-            std::string path = file + d->d_name;
-            (*dirmap)[d->d_name] = OpenFileOrDir(path.c_str());
+            file /= d->d_name;
+            (*dirmap)[d->d_name] = OpenFileOrDir(file.c_str());
+            file.remove_filename();
         }
         closedir(dir);
         *cached = File(std::move(dirmap));
@@ -919,11 +923,13 @@ private:
 // These both deliver target name -> file contents mappings until they don't.
 struct InputFileGenerator {
     struct value_type {
-        std::string target;
+        std::filesystem::path target;
         const FileContents* file;
     };
     virtual ~InputFileGenerator() = default;
-    virtual bool Next(FileOpener*, const std::string& prefix, value_type*) = 0;
+    virtual bool Next(FileOpener*,
+                      const std::filesystem::path& prefix,
+                      value_type*) = 0;
 };
 
 using InputFileGeneratorList =
@@ -931,7 +937,8 @@ using InputFileGeneratorList =
 
 class ManifestInputFileGenerator : public InputFileGenerator {
 public:
-    ManifestInputFileGenerator(const FileContents* file, std::string prefix)
+    ManifestInputFileGenerator(const FileContents* file,
+                               std::filesystem::path prefix)
         : prefix_(std::move(prefix)) {
         read_ptr_ = static_cast<const char*>(
             file->View(0, file->exact_size()).iov_base);
@@ -940,7 +947,7 @@ public:
 
     ~ManifestInputFileGenerator() override = default;
 
-    bool Next(FileOpener* opener, const std::string& prefix,
+    bool Next(FileOpener* opener, const std::filesystem::path& prefix,
               value_type* value) override {
         while (read_ptr_ != eof_) {
             auto eol = static_cast<const char*>(
@@ -958,31 +965,34 @@ public:
                 exit(1);
             }
 
-            std::string target(line, eq - line);
-            std::string source(eq + 1, eol - (eq + 1));
-            *value = value_type{prefix_ + prefix + target,
-                                opener->OpenFile(source.c_str())};
+            value->target = prefix_ / prefix / "";
+            value->target.concat(line, eq);
+            value->target = value->target.lexically_normal();
+
+            value->file = opener->OpenFile({eq + 1, eol});
+
             return true;
         }
         return false;
     }
 
 private:
-    const std::string prefix_;
+    const std::filesystem::path prefix_;
     const char* read_ptr_ = nullptr;
     const char* eof_ = nullptr;
 };
 
 class DirectoryInputFileGenerator : public InputFileGenerator {
 public:
-    DirectoryInputFileGenerator(const Directory* dir, std::string prefix)
+    DirectoryInputFileGenerator(const Directory* dir,
+                                std::filesystem::path prefix)
         : source_prefix_(std::move(prefix)) {
         walk_pos_.emplace_front(dir, 0);
     }
 
     ~DirectoryInputFileGenerator() override = default;
 
-    bool Next(FileOpener* opener, const std::string& prefix,
+    bool Next(FileOpener* opener, const std::filesystem::path& prefix,
               value_type* value) override {
         do {
             auto& it = walk_pos_.front().it;
@@ -990,13 +1000,13 @@ public:
                 Ascend();
                 continue;
             }
-            std::string source = source_prefix_ + walk_prefix_ + it->first;
             if (it->second->IsDir()) {
                 Descend(it->second->AsDir(), it->first);
                 ++it;
             } else {
-                *value = value_type{prefix + walk_prefix_ + it->first,
-                                    it->second->AsContents()};
+                value->target =
+                    (prefix / walk_prefix_ / it->first).lexically_normal();
+                value->file = it->second->AsContents();
                 ++it;
                 return true;
             }
@@ -1057,24 +1067,25 @@ public:
         return sscanf(name, "%x%n", abi_type, &i) == 1 && name[i] == '\0';
     }
 
-    static std::string ExtractedFileName(unsigned int n, uint32_t zbi_type,
-                                         bool raw) {
-        std::string name;
+    static std::filesystem::path ExtractedFileName(
+        unsigned int n, uint32_t zbi_type, bool raw) {
+        std::filesystem::path path;
         char buf[32];
         const auto info = ItemTypeInfo(zbi_type);
         if (info.name) {
             snprintf(buf, sizeof(buf), "%03u.", n);
-            name = buf;
+            std::string name(buf);
             name += info.name;
             for (auto& c : name) {
                 c = static_cast<unsigned char>(std::tolower(c));
             }
+            path = std::move(name);
         } else {
             snprintf(buf, sizeof(buf), "%03u.%08x", n, zbi_type);
-            name = buf;
+            path = buf;
         }
-        name += (raw && info.extension) ? info.extension : ".zbi";
-        return name;
+        return path.replace_extension(
+            (raw && info.extension) ? info.extension : ".zbi");
     }
 
     static void PrintTypeUsage(FILE* out) {
@@ -1302,7 +1313,7 @@ Extracted items use the file names shown below:\n\
                                 const InputFileGeneratorList& input,
                                 const Filter& include_file,
                                 bool sort,
-                                const std::string& prefix,
+                                const std::filesystem::path& prefix,
                                 bool compress) {
         auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
@@ -1316,13 +1327,12 @@ Extracted items use the file names shown below:\n\
         for (const auto& generator : input) {
             InputFileGenerator::value_type next;
             while (generator->Next(opener, prefix, &next)) {
-                if (!include_file(next.target.c_str())) {
+                Entry entry{next.target.generic_string()};
+                if (!include_file(entry.name.c_str())) {
                     continue;
                 }
                 // Accumulate the space needed for each zbi_bootfs_dirent_t.
-                dirsize += ZBI_BOOTFS_DIRENT_SIZE(next.target.size() + 1);
-                Entry entry;
-                entry.name.swap(next.target);
+                dirsize += ZBI_BOOTFS_DIRENT_SIZE(entry.name.size() + 1);
                 entry.data_len =
                     static_cast<uint32_t>(next.file->exact_size());
                 if (entry.data_len != next.file->exact_size()) {
@@ -1406,18 +1416,17 @@ Extracted items use the file names shown below:\n\
     }
 
     void ExtractItem(FileWriter* writer, NameMatcher* matcher) {
-        std::string namestr = ExtractedFileName(writer->NextFileNumber(),
-                                                type(), false);
-        auto name = namestr.c_str();
+        auto path = ExtractedFileName(writer->NextFileNumber(),
+                                         type(), false);
+        auto name = path.c_str();
         if (matcher->Matches(name, true)) {
             WriteZBI(writer, name, (Item* const[]){this});
         }
     }
 
     void ExtractRaw(FileWriter* writer, NameMatcher* matcher) {
-        std::string namestr = ExtractedFileName(writer->NextFileNumber(),
-                                                type(), true);
-        auto name = namestr.c_str();
+        auto path = ExtractedFileName(writer->NextFileNumber(), type(), true);
+        auto name = path.c_str();
         if (matcher->Matches(name, true)) {
             if (type() == ZBI_TYPE_CMDLINE) {
                 // Drop a trailing NUL.
@@ -1719,7 +1728,7 @@ private:
         ~BootFSInputFileGenerator() override = default;
 
         // Copying from an existing BOOTFS ignores the --prefix setting.
-        bool Next(FileOpener* opener, const std::string&,
+        bool Next(FileOpener* opener, const std::filesystem::path&,
                   value_type* value) override {
             if (!dir_) {
                 return false;
@@ -1914,7 +1923,7 @@ int main(int argc, char** argv) {
     bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
-    std::string prefix;
+    std::filesystem::path prefix;
     int opt;
     while ((opt = getopt_long(argc, argv,
                               kOptString, kLongOpts, nullptr)) != -1) {
@@ -1958,23 +1967,19 @@ int main(int argc, char** argv) {
             continue;
 
         case 'p':
-            // A nonempty prefix should have no leading slashes and
-            // exactly one trailing slash.
+            // The directory prefix must be a relative path.
             prefix = optarg;
-            while (!prefix.empty() && prefix.front() == '/') {
-                prefix.erase(0, 1);
-            }
-            if (!prefix.empty() && prefix.back() == '/') {
-                prefix.pop_back();
-            }
-            if (prefix.empty() && optarg[0] != '\0') {
-                fprintf(stderr, "\
---prefix cannot be /; use --prefix= (empty) instead\n");
+            if (prefix.is_absolute()) {
+                fprintf(stderr,
+                        "--prefix should be relative (no leading slash)\n");
                 exit(1);
             }
-            if (!prefix.empty()) {
-                prefix.push_back('/');
+            if (prefix.empty()) {
+                // Normalize to a nonempty prefix so /= works right.
+                // We'll normalize the concatenation before using it anyway.
+                prefix = ".";
             }
+            prefix = prefix.lexically_normal();
             continue;
 
         case 't':
@@ -2054,13 +2059,10 @@ int main(int argc, char** argv) {
         if (input->IsDir()) {
             // Calculate the prefix for opening files within the directory.
             // This won't be part of the BOOTFS file name.
-            std::string dir_prefix(optarg);
-            if (dir_prefix.back() != '/') {
-                dir_prefix.push_back('/');
-            }
+            std::filesystem::path dir_prefix(optarg);
             bootfs_input.emplace_back(
-                new DirectoryInputFileGenerator(input->AsDir(),
-                                                std::move(dir_prefix)));
+                new DirectoryInputFileGenerator(
+                    input->AsDir(), dir_prefix.lexically_normal()));
             continue;
         }
 
@@ -2240,7 +2242,8 @@ int main(int argc, char** argv) {
                 auto generator = Item::ReadBootFS(std::move(item));
                 InputFileGenerator::value_type next;
                 while (generator->Next(&opener, prefix, &next)) {
-                    if (name_matcher.Matches(next.target.c_str())) {
+                    if (name_matcher.Matches(
+                            next.target.generic_string().c_str())) {
                         writer.RawFile(next.target.c_str())
                             .Write(next.file->View(
                                        0, next.file->exact_size()));
