@@ -1816,7 +1816,7 @@ where
                 fidl_encode!(&mut 0, encoder)?;
 
                 // Padding
-                encoder.next_slice(4)?;
+                encoder.next_slice(fidl_inline_align!(Self) - 4)?;
 
                 // Encode success value
                 fidl_encode!(val, encoder)?;
@@ -1826,7 +1826,7 @@ where
                 fidl_encode!(&mut 1, encoder)?;
 
                 // Padding
-                encoder.next_slice(4)?;
+                encoder.next_slice(fidl_inline_align!(Self) - 4)?;
 
                 // Encode Error value
                 fidl_encode!(val, encoder)?;
@@ -1859,7 +1859,7 @@ where
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let mut tag: u32 = 0;
         fidl_decode!(&mut tag, decoder)?;
-        decoder.next_slice(4)?;
+        decoder.next_slice(fidl_inline_align!(Self) - 4)?;
 
         match tag {
             0 => {
@@ -2609,6 +2609,48 @@ mod test {
         assert_eq!(out, Ok(42));
 
         Encoder::encode(buf, handle_buf, &mut OkayOrError::Error(3u32)).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, Err(3));
+    }
+
+    #[test]
+    fn result_and_union_compat_smaller() {
+        fidl_union! {
+            name: OkayOrError,
+            members: [
+                Okay {
+                    ty: (),
+                    offset: 4,
+                },
+                Error {
+                    ty: i32,
+                    offset: 4,
+                },
+            ],
+            size: 8,
+            align: 4,
+        };
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+
+        // result to union
+        Encoder::encode(buf, handle_buf, &mut Ok::<(), i32>(())).expect("Encoding failed");
+        let mut out = OkayOrError::new_empty();
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, OkayOrError::Okay(()));
+
+        Encoder::encode(buf, handle_buf, &mut Err::<(), i32>(5)).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, OkayOrError::Error(5));
+
+        // union to result
+        let mut out: std::result::Result<(), i32> = Decodable::new_empty();
+        Encoder::encode(buf, handle_buf, &mut OkayOrError::Okay(())).expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, Ok(()));
+
+        Encoder::encode(buf, handle_buf, &mut OkayOrError::Error(3i32)).expect("Encoding failed");
         Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, Err(3));
     }
