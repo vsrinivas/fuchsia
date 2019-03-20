@@ -5,7 +5,7 @@
 use {
     failure::Error,
     fidl_fuchsia_bluetooth_control::TechnologyType,
-    fuchsia_bluetooth::{ error::Error as BtError, expectation },
+    fuchsia_bluetooth::{error::Error as BtError, expectation},
 };
 
 use crate::harness::host_driver::{expect_eq, expect_remote_device, HostDriverHarness};
@@ -101,13 +101,13 @@ pub async fn test_list_devices(test_state: HostDriverHarness) -> Result<(), Erro
     // them. The fake HCI driver currently sets up one LE and one BR/EDR peer.
     await!(test_state.host_proxy().start_discovery())?;
     let expected_le = expectation::peer::address(FAKE_LE_DEVICE_ADDR)
-                .and(expectation::peer::technology(TechnologyType::LowEnergy));
+        .and(expectation::peer::technology(TechnologyType::LowEnergy));
 
     let expected_bredr = expectation::peer::address(FAKE_BREDR_DEVICE_ADDR)
-                .and(expectation::peer::technology(TechnologyType::Classic));
+        .and(expectation::peer::technology(TechnologyType::Classic));
 
     let expected_le2 = expectation::peer::address(FAKE_LE_CONN_ERROR_DEVICE_ADDR)
-                .and(expectation::peer::technology(TechnologyType::LowEnergy));
+        .and(expectation::peer::technology(TechnologyType::LowEnergy));
 
     await!(test_state.expect_peer(None, expected_le.clone()))?;
     await!(test_state.expect_peer(None, expected_bredr.clone()))?;
@@ -154,9 +154,8 @@ pub async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
     // Connecting to the success peer should return success and the peer should become connected.
     status = await!(test_state.host_proxy().connect(&success_dev.identifier))?;
     expect_true!(status.error.is_none())?;
-    await!(test_state.expect_peer(Some(success_dev.identifier.clone()),
-        expectation::peer::connected(true)))?;
+    await!(test_state
+        .expect_peer(Some(success_dev.identifier.clone()), expectation::peer::connected(true)))?;
 
     Ok(())
 }
-

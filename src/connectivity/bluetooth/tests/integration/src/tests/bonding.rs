@@ -6,14 +6,12 @@ use {
     failure::Error,
     fidl_fuchsia_bluetooth::Status,
     fidl_fuchsia_bluetooth_control::TechnologyType,
-    fidl_fuchsia_bluetooth_host::{
-        AddressType, BondingData, Key, LeData, Ltk, SecurityProperties,
-    },
+    fidl_fuchsia_bluetooth_host::{AddressType, BondingData, Key, LeData, Ltk, SecurityProperties},
     fuchsia_bluetooth::expectation,
     futures::TryFutureExt,
 };
 
-use crate::harness::host_driver::{HostDriverHarness, expect_eq, expect_remote_device};
+use crate::harness::host_driver::{expect_eq, expect_remote_device, HostDriverHarness};
 
 // TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.
 
@@ -51,7 +49,10 @@ fn new_le_bond_data(id: &str, address: &str, has_ltk: bool) -> BondingData {
     }
 }
 
-async fn add_bonds(state: &HostDriverHarness, mut bonds: Vec<BondingData>) -> Result<(Status), Error> {
+async fn add_bonds(
+    state: &HostDriverHarness,
+    mut bonds: Vec<BondingData>,
+) -> Result<(Status), Error> {
     await!(state.host_proxy().add_bonded_devices(&mut bonds.iter_mut()).err_into())
 }
 
@@ -91,7 +92,9 @@ pub async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> R
     Ok(())
 }
 
-pub async fn test_add_bonded_devices_no_ltk_fails(test_state: HostDriverHarness) -> Result<(), Error> {
+pub async fn test_add_bonded_devices_no_ltk_fails(
+    test_state: HostDriverHarness,
+) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = await!(test_state.host_proxy().list_devices())?;
     expect_eq!(vec![], devices)?;
@@ -107,7 +110,9 @@ pub async fn test_add_bonded_devices_no_ltk_fails(test_state: HostDriverHarness)
     Ok(())
 }
 
-pub async fn test_add_bonded_devices_duplicate_entry(test_state: HostDriverHarness) -> Result<(), Error> {
+pub async fn test_add_bonded_devices_duplicate_entry(
+    test_state: HostDriverHarness,
+) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = await!(test_state.host_proxy().list_devices())?;
     expect_eq!(vec![], devices)?;
@@ -141,7 +146,9 @@ pub async fn test_add_bonded_devices_duplicate_entry(test_state: HostDriverHarne
 
 // Tests that adding a list of bonding data with malformed content succeeds for the valid entries
 // but reports an error.
-pub async fn test_add_bonded_devices_invalid_entry(test_state: HostDriverHarness) -> Result<(), Error> {
+pub async fn test_add_bonded_devices_invalid_entry(
+    test_state: HostDriverHarness,
+) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = await!(test_state.host_proxy().list_devices())?;
     expect_eq!(vec![], devices)?;

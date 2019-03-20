@@ -9,6 +9,7 @@ rustc_binary("integration") {
   with_unit_tests = true
   deps = [
     "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",

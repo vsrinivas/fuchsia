@@ -5,29 +5,21 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
-    fidl_fuchsia_bluetooth_host::{
-        HostEvent, HostProxy,
-    },
+    fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
-        error::Error as BtError, fake_hci::FakeHciDevice, host, util::clone_host_state,
-        expectation::Predicate,
-        hci,
+        error::Error as BtError, expectation::Predicate, fake_hci::FakeHciDevice, hci, host,
+        util::clone_host_state,
     },
     fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher},
-    fuchsia_zircon::{DurationNum, Duration},
+    fuchsia_zircon::{Duration, DurationNum},
     futures::{future, task, Future, FutureExt, Poll, TryFutureExt, TryStreamExt},
-    parking_lot::{RwLock, RwLockReadGuard, MappedRwLockReadGuard},
+    parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
     slab::Slab,
-    std::{
-        borrow::Borrow,
-        collections::HashMap,
-        fs::File,
-        path::PathBuf,
-        pin::Pin,
-        sync::Arc,
-    },
+    std::{borrow::Borrow, collections::HashMap, fs::File, path::PathBuf, pin::Pin, sync::Arc},
 };
+
+use crate::harness::TestHarness;
 
 const BT_HOST_DIR: &str = "/dev/class/bt-host";
 const TIMEOUT_SECONDS: i64 = 10; // in seconds
@@ -84,9 +76,8 @@ impl HostDriverHarness {
     pub async fn expect_peer(
         &self,
         id: Option<String>,
-        target: Predicate<RemoteDevice>
-        ) -> Result<(), Error> {
-
+        target: Predicate<RemoteDevice>,
+    ) -> Result<(), Error> {
         let err_msg = format!("timed out waiting for remote device state (expected: {:?})", target);
         await!(RemoteDeviceStateFuture::new(self.clone(), id, Some(target))
             .on_timeout(timeout_duration().after_now(), move || Err(BtError::new(&err_msg).into())))
@@ -243,7 +234,8 @@ impl RemoteDeviceStateFuture {
     fn match_any_device(&self, target: &Option<Predicate<RemoteDevice>>) -> bool {
         target.as_ref().map_or(false, |target| {
             self.inner
-                .state.0
+                .state
+                .0
                 .read()
                 .remote_devices
                 .values()
@@ -388,7 +380,9 @@ async fn watch_for_host(watcher: VfsWatcher, hci_path: String) -> Result<(File, 
 
 async fn wait_for_host_removal(watcher: VfsWatcher, path: String) -> Result<(), Error> {
     await!(timeout(
-        wait_for_host_removal_helper(watcher, path), "timed out waiting for bt-host removal"))
+        wait_for_host_removal_helper(watcher, path),
+        "timed out waiting for bt-host removal"
+    ))
 }
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
@@ -426,35 +420,18 @@ where
     let watcher = VfsWatcher::new(&dir)?;
     host_test.0.write().close_fake_hci();
     await!(wait_for_host_removal(watcher, host_test.0.read().host_path.clone()))?;
+    result
+}
 
-    if result.is_ok() {
-        println!("\x1b[32mPASSED\x1b[0m");
-    } else {
-        println!("\x1b[31mFAILED\x1b[0m");
+impl TestHarness for HostDriverHarness {
+    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
+    where
+        F: FnOnce(Self) -> Fut,
+        Fut: Future<Output = Result<(), Error>>,
+    {
+        let mut executor = fasync::Executor::new().context("error creating event loop")?;
+        executor.run_singlethreaded(run_host_test_async(test_func))
     }
-    result
-}
-
-pub fn run_host_test<F, Fut>(test_func: F) -> Result<(), Error>
-where
-    F: FnOnce(HostDriverHarness) -> Fut,
-    Fut: Future<Output = Result<(), Error>>,
-{
-    let mut executor = fasync::Executor::new().context("error creating event loop")?;
-    let result = executor.run_singlethreaded(run_host_test_async(test_func));
-    if let Err(err) = &result {
-        println!("Error running test: {}", err);
-    };
-    result
-}
-
-// Prints out the test name and runs the test.
-macro_rules! run_host_test {
-    ($name:ident) => {{
-        print!("{}...", stringify!($name));
-        std::io::stdout().flush().unwrap();
-        run_host_test($name)
-    }};
 }
 
 pub fn expect_eq<T>(expected: &T, actual: &T) -> Result<(), Error>
