@@ -301,9 +301,9 @@ executable("device_tests") {
 
   deps = [
     ":device",
-    "//garnet/public/lib/component/cpp/testing",
     "//sdk/fidl/fuchsia.guest.device",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider",

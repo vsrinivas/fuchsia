@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <virtio/block.h>
 
 #include "garnet/bin/guest/vmm/device/block.h"
@@ -53,7 +53,7 @@ class VirtioBlockTest : public TestWithDevice {
     ASSERT_TRUE(fd_);
 
     // Start device execution.
-    services.ConnectToService(block_.NewRequest());
+    services.Connect(block_.NewRequest());
     uint64_t size;
     status =
         block_->Start(std::move(start_info), kVirtioBlockId,

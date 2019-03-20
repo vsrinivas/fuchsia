@@ -35,9 +35,9 @@ static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
 }
 
 zx_status_t EnclosedGuest::Start() {
-  real_services_->ConnectToService(real_env_.NewRequest());
-  auto services = component::testing::EnvironmentServices::Create(
-      real_env_, loop_.dispatcher());
+  real_services_->Connect(real_env_.NewRequest());
+  auto services =
+      sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
@@ -50,7 +50,7 @@ zx_status_t EnclosedGuest::Start() {
   status = services->AddService(mock_netstack_.GetHandler(),
                                 fuchsia::netstack::Netstack::Name_);
 
-  enclosing_environment_ = component::testing::EnclosingEnvironment::Create(
+  enclosing_environment_ = sys::testing::EnclosingEnvironment::Create(
       kRealm, real_env_, std::move(services));
   bool environment_running = RunLoopUntil(
       &loop_, [this] { return enclosing_environment_->is_running(); });

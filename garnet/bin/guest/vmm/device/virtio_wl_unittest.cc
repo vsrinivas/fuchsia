@@ -8,6 +8,7 @@
 #include <fuchsia/guest/device/cpp/fidl.h>
 #include <virtio/wl.h>
 
+#include <fbl/algorithm.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/zx/socket.h>
 
@@ -67,7 +68,7 @@ class VirtioWlTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.ConnectToService(wl_.NewRequest());
+    services.Connect(wl_.NewRequest());
     wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind());
     ASSERT_EQ(ZX_OK, status);
 

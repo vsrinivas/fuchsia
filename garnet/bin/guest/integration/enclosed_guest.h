@@ -7,8 +7,8 @@
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/environment_services_helper.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "garnet/bin/guest/integration/mock_netstack.h"
 #include "garnet/bin/guest/integration/test_serial.h"
@@ -34,7 +34,7 @@ class EnclosedGuest {
  public:
   EnclosedGuest()
       : loop_(&kAsyncLoopConfigAttachToThread),
-        real_services_(component::GetEnvironmentServices()) {}
+        real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
   virtual ~EnclosedGuest() {}
 
   zx_status_t Start();
@@ -77,10 +77,9 @@ class EnclosedGuest {
 
  private:
   async::Loop loop_;
-  std::shared_ptr<component::Services> real_services_;
+  std::shared_ptr<sys::ServiceDirectory> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;
-  std::unique_ptr<component::testing::EnclosingEnvironment>
-      enclosing_environment_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
   fuchsia::guest::EnvironmentManagerPtr environment_manager_;
   fuchsia::guest::EnvironmentControllerPtr environment_controller_;
   fuchsia::guest::InstanceControllerPtr instance_controller_;
@@ -100,9 +99,7 @@ class ZirconEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
-  std::string SerialPrompt() override {
-    return "$ ";
-  }
+  std::string SerialPrompt() override { return "$ "; }
 };
 
 class LinuxEnclosedGuest : public EnclosedGuest {
@@ -115,9 +112,7 @@ class LinuxEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
-  std::string SerialPrompt() override {
-    return "# ";
-  }
+  std::string SerialPrompt() override { return "# "; }
 };
 
 #endif  // GARNET_BIN_GUEST_INTEGRATION_ENCLOSED_GUEST_H_

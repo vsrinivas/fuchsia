@@ -26,8 +26,8 @@ class VirtioInputTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.ConnectToService(view_listener_.NewRequest());
-    services.ConnectToService(input_.NewRequest());
+    services.Connect(view_listener_.NewRequest());
+    services.Connect(input_.NewRequest());
     status = input_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 
@@ -102,12 +102,10 @@ TEST_F(VirtioInputTest, PointerMove) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x),
-            event_1->value);
+  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x), event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y),
-            event_2->value);
+  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y), event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_3->type);
 }
 
@@ -141,12 +139,10 @@ TEST_F(VirtioInputTest, PointerUp) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x),
-            event_1->value);
+  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x), event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y),
-            event_2->value);
+  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y), event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY, event_3->type);
   EXPECT_EQ(kButtonTouchCode, event_3->code);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY_RELEASED, event_3->value);

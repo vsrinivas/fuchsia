@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/vmm/device/test_with_device.h"
+#include <lib/sys/cpp/service_directory.h>
+#include <zx/channel.h>
+
 #include "garnet/bin/guest/vmm/device/config.h"
+#include "garnet/bin/guest/vmm/device/test_with_device.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
 #include <algorithm>
@@ -11,7 +14,7 @@
 zx_status_t TestWithDevice::LaunchDevice(
     const std::string& url, size_t phys_mem_size,
     fuchsia::guest::device::StartInfo* start_info,
-    std::unique_ptr<component::testing::EnvironmentServices> env_services) {
+    std::unique_ptr<sys::testing::EnvironmentServices> env_services) {
   if (!env_services) {
     env_services = CreateServices();
   }
@@ -29,11 +32,12 @@ zx_status_t TestWithDevice::LaunchDevice(
     return ZX_ERR_TIMED_OUT;
   }
 
+  zx::channel request;
+  services = sys::ServiceDirectory::CreateWithRequest(&request);
+
   // Create device process.
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = url,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info{.url = url,
+                                       .directory_request = std::move(request)};
   component_controller_ =
       enclosing_environment_->CreateComponent(std::move(launch_info));
 

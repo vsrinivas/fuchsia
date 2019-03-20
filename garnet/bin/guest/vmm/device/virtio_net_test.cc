@@ -7,7 +7,6 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/ethernet.h>
 
@@ -90,7 +89,7 @@ class VirtioNetTest : public TestWithDevice,
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.ConnectToService(net_.NewRequest());
+    services.Connect(net_.NewRequest());
     status = net_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 
