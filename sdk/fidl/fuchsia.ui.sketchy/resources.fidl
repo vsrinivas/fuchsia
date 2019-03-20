@@ -34,7 +34,6 @@ union ResourceArgs {
 // - ExtendStroke (as arg)
 // - FinishStroke (as arg)
 struct Stroke {
-    uint8 unused;
 };
 
 // A stroke-group is a container of strokes, which can be inserted into a Scenic
@@ -47,7 +46,6 @@ struct Stroke {
 // - fuchsia.ui.gfx.Detach
 // - fuchsia.ui.gfx.AddChild (as arg)
 struct StrokeGroup {
-    uint8 unused;
 };
 
 // A pen handles user input to create a path for a stroke.
@@ -59,7 +57,6 @@ struct StrokeGroup {
 // - FinishStroke
 // - SetPenStyle
 struct Pen {
-    uint8 unused;
 };
 
 // The classic Escher Sketcy Demo wobbly style that you know and love.

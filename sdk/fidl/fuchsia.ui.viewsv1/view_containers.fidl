@@ -193,7 +193,4 @@ protocol ViewContainerListener {
 //
 // This information is valid until the container removes the view.
 struct ViewInfo {
-    // There is currently no information here but we have preserved the
-    // plumbing for now.  May remove later.
-    uint8 dummy;
 };
