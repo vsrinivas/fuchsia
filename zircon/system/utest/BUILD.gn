@@ -187,7 +187,6 @@ if (current_cpu != "") {
     deps = [
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/zxtest/test",
-      "banjo-compiler",
       "fbl",
       "fidl-compiler",
       "fit",
