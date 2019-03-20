@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/gn/packages.gni")
 import("//build/package.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/goma.gni")
@@ -58,20 +59,22 @@ write_file("$root_build_dir/fx.config", _fx_config_lines)
 group("default") {
   deps = [
     ":copy_host_tests",
-    "//build/images",
     "//build/images:packages",
-    "//build/images:updates",
   ]
+  if (preinstall_package_labels != [] || monolith_package_labels != []) {
+    deps += [ "//build/images" ]
+  }
+  if (available_package_labels != []) {
+    deps += [ "//build/images:updates" ]
+  }
 }
 
 group("host_tests") {
   visibility = [ ":*" ]
-  deps = [
-    # Currently host tests dependencies wind up as dependencies of the packages.
-    # TODO: We should more cleanly separate host targets (including tests) from
-    # packages.
-    "//build/images:packages",
-  ]
+  public_deps = []
+  foreach(label, package_host_tests) {
+    public_deps += [ "$label($host_toolchain)" ]
+  }
 }
 
 # TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module.
@@ -86,6 +89,7 @@ generated_file("tests") {
   output_conversion = "json"
   deps = [
     ":host_tests",
+    "//build/images:packages",
   ]
 }
 
@@ -136,6 +140,7 @@ action("copy_host_tests") {
     ":host_tests",
     ":pseudo_tests",
     ":tests",
+    "//build/images:packages",
   ]
 }
 

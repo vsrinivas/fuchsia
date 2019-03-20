@@ -112,3 +112,9 @@ package_data_deps = []
 foreach(pkg, _preprocessed_products.data_deps) {
   package_data_deps += [ get_label_info(pkg, "label_no_toolchain") ]
 }
+
+# Labels of test() targets to be copied into $root_build_dir/host_tests.
+package_host_tests = []
+foreach(label, _preprocessed_products.host_tests) {
+  package_host_tests += [ get_label_info(label, "label_no_toolchain") ]
+}
