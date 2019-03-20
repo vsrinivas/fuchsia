@@ -36,11 +36,7 @@ class OccurrenceEvent : public Event {
       : Event(metric_id), event_code_(event_code) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogEvent(
-        metric_id(), event_code_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogEvent(metric_id(), event_code_, std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
 
@@ -60,11 +56,9 @@ class CountEvent : public Event {
         count_(count) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogEventCount(
-        metric_id(), event_code_, component_, period_duration_micros_, count_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogEventCount(metric_id(), event_code_, component_,
+                             period_duration_micros_, count_,
+                             std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
@@ -88,11 +82,8 @@ class ElapsedTimeEvent : public Event {
         elapsed_micros_(elapsed_micros) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogElapsedTime(
-        metric_id(), event_code_, component_, elapsed_micros_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogElapsedTime(metric_id(), event_code_, component_,
+                              elapsed_micros_, std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
@@ -114,11 +105,8 @@ class FrameRateEvent : public Event {
         fps_(fps) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogFrameRate(
-        metric_id(), event_code_, component_, fps_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogFrameRate(metric_id(), event_code_, component_, fps_,
+                            std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
@@ -140,11 +128,8 @@ class MemoryUsageEvent : public Event {
         bytes_(bytes) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogMemoryUsage(
-        metric_id(), event_code_, component_, bytes_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogMemoryUsage(metric_id(), event_code_, component_, bytes_,
+                              std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
@@ -162,11 +147,7 @@ class StringUsedEvent : public Event {
       : Event(metric_id), s_(s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogString(
-        metric_id(), s_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogString(metric_id(), s_, std::move(callback));
   }
   const std::string& s() const { return s_; }
 
@@ -187,11 +168,8 @@ class StartTimerEvent : public Event {
         timeout_s_(timeout_s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->StartTimer(
-        metric_id(), event_code_, component_, timer_id_, timestamp_, timeout_s_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->StartTimer(metric_id(), event_code_, component_, timer_id_,
+                          timestamp_, timeout_s_, std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
@@ -217,11 +195,7 @@ class EndTimerEvent : public Event {
         timeout_s_(timeout_s) {}
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->EndTimer(
-        timer_id_, timestamp_, timeout_s_,
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->EndTimer(timer_id_, timestamp_, timeout_s_, std::move(callback));
   }
   const std::string& timer_id() const { return timer_id_; }
   uint64_t timestamp() const { return timestamp_; }
@@ -246,11 +220,8 @@ class IntHistogramEvent : public Event {
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     std::vector<fuchsia::cobalt::HistogramBucket> histogram;
     FXL_CHECK(fidl::Clone(histogram_, &histogram) == ZX_OK);
-    (*logger)->LogIntHistogram(
-        metric_id(), event_code_, component_, std::move(histogram),
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogIntHistogram(metric_id(), event_code_, component_,
+                               std::move(histogram), std::move(callback));
   }
   uint32_t event_code() const { return event_code_; }
   const std::string& component() const { return component_; }
@@ -273,11 +244,8 @@ class CustomEvent : public Event {
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     std::vector<fuchsia::cobalt::CustomEventValue> event_values;
     FXL_CHECK(fidl::Clone(event_values_, &event_values) == ZX_OK);
-    (*logger)->LogCustomEvent(
-        metric_id(), std::move(event_values),
-        [callback = callback.share()](fuchsia::cobalt::Status status) {
-          callback(status);
-        });
+    (*logger)->LogCustomEvent(metric_id(), std::move(event_values),
+                              std::move(callback));
   }
   const std::vector<fuchsia::cobalt::CustomEventValue>& event_values() const {
     return event_values_;
