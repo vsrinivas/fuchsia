@@ -193,7 +193,7 @@ TEST(CommandParser, VerbSwitches) {
   // Expects a value for a long switch.
   err = ParseCommand("mem-read --size", &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Parameter needed for \"--size\".", err.msg());
+  EXPECT_EQ("Argument needed for \"--size\".", err.msg());
 
   // Valid short switch with value following.
   err = ParseCommand("mem-read -s 567 next", &output);
@@ -214,7 +214,7 @@ TEST(CommandParser, VerbSwitches) {
   // Expects a value for a short switch.
   err = ParseCommand("mem-read -s", &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Parameter needed for \"-s\".", err.msg());
+  EXPECT_EQ("Argument needed for \"-s\".", err.msg());
 }
 
 TEST(CommandParser, Completions) {

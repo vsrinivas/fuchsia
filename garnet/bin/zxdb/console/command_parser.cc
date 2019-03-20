@@ -110,181 +110,290 @@ bool IsIndexToken(const std::string& token) {
   return true;
 }
 
-// Consumes the next noun (and optional following integer) in the input at
-// *token_index. If valid, fills the information into the given command and
-// advances *token_index to the next unused token.
-//
-// *consumed will be set if any nouns were consumed (to disambiguate the
-// "error parsing" case and the "the next thing wasn't a noun" case).
-Err ConsumeNoun(const std::vector<std::string>& tokens, size_t* token_index,
-                Command* output, bool* consumed) {
-  *consumed = false;
+class Parser {
+ public:
+  Parser(Command* command) : command_(command) {}
 
-  const auto& nouns = GetStringNounMap();
-  auto found = nouns.find(tokens[*token_index]);
-  if (found == nouns.end())
-    return Err();  // Not a noun, but that's not an error.
+  const Err& Parse(const std::string& input) {
+    FXL_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
 
-  Noun noun = found->second;
-  if (output->HasNoun(noun))
-    return Err("Noun \"" + NounToString(noun) + "\" specified twice.");
+    ends_with_space_ = !input.empty() && input.back() == ' ';
+    err_ = TokenizeCommand(input, &tokens_);
 
-  // Advance to the next token.
-  (*token_index)++;
-
-  // Consume optional following index if it's all integers. For example, it
-  // could be "process 2 run" (with index) or "process run" (without).
-  size_t noun_index = Command::kNoIndex;
-  if ((*token_index) < tokens.size() && IsIndexToken(tokens[*token_index])) {
-    if (sscanf(tokens[*token_index].c_str(), "%zu", &noun_index) != 1) {
-      return Err("Invalid index \"" + tokens[*token_index] + "\" for \"" +
-                 NounToString(noun) + "\".");
+    if (err_.has_error()) {
+      return err_;
     }
-    (*token_index)++;
+
+    while (Advance())
+      ;
+
+    return err_;
   }
 
-  *consumed = true;
-  output->SetNoun(noun, noun_index);
-  return Err();
+  const Err& Parse(const std::vector<std::string>& tokens) {
+    FXL_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
+
+    tokens_ = tokens;
+
+    while (Advance())
+      ;
+
+    return err_;
+  }
+
+  Err err() { return err_; }
+
+  bool at_end() { return tokens_.size() == pos_; }
+
+ private:
+  struct State {
+    bool (Parser::*advance)();
+
+    State(bool (Parser::*advance)()) : advance(advance) {}
+  };
+
+  const std::string& token() { return tokens_[pos_]; }
+
+  bool Advance() { return (this->*(state_->advance))(); }
+
+  bool Consume(const State& state) {
+    GoTo(state);
+    return Consume();
+  }
+
+  bool GoTo(const State& state) {
+    state_ = &state;
+    return true;
+  }
+
+  bool Consume() {
+    pos_++;
+    return true;
+  }
+
+  bool Fail(const std::string& msg) {
+    err_ = Err(msg);
+    return false;
+  }
+
+  bool Accept() { return false; }
+
+  bool DoNounState();
+  bool DoNounIndexState();
+  bool DoVerbState();
+  bool DoSwitchesState();
+  bool DoSwitchState();
+  bool DoLongSwitchState();
+  bool DoSwitchArgState();
+  bool DoArgState();
+
+  static const State kNounState;
+  static const State kNounIndexState;
+  static const State kVerbState;
+  static const State kSwitchesState;
+  static const State kSwitchState;
+  static const State kLongSwitchState;
+  static const State kSwitchArgState;
+  static const State kArgState;
+
+  bool ends_with_space_ = false;
+  Command* command_ = nullptr;
+  const State* state_ = &kNounState;
+  Err err_;
+
+  // The current parse position within the token stream.
+  size_t pos_ = 0;
+
+  // This is set by NounState and can be read from NounIndexState.
+  Noun noun_;
+
+  // As soon as we parse a valid verb, this points to its VerbRecord.
+  const VerbRecord* verb_record_ = nullptr;
+
+  // This is set to the record for the found switch by SwitchState, and should
+  // be readable from SwitchArgState.
+  const SwitchRecord* sw_record_ = nullptr;
+
+  // This is set to the text of the switch by SwitchState, and can be read from
+  // SwitchArgState for error-reporting purposes.
+  std::string sw_name_;
+
+  // This is set by SwitchState when we have an argument that is in the same
+  // token as the switch itself (i.e. `--foo=1` or `-f1`). It is read from
+  // SwitchArgState, and if it is populated, we take the argument from there
+  // instead of consuming another token.
+  std::optional<std::string> sw_value_ = std::nullopt;
+
+  std::vector<std::string> tokens_;
+};
+
+const Parser::State Parser::kNounState(&Parser::DoNounState);
+const Parser::State Parser::kNounIndexState(&Parser::DoNounIndexState);
+const Parser::State Parser::kVerbState(&Parser::DoVerbState);
+const Parser::State Parser::kSwitchesState(&Parser::DoSwitchesState);
+const Parser::State Parser::kSwitchState(&Parser::DoSwitchState);
+const Parser::State Parser::kLongSwitchState(&Parser::DoLongSwitchState);
+const Parser::State Parser::kSwitchArgState(&Parser::DoSwitchArgState);
+const Parser::State Parser::kArgState(&Parser::DoArgState);
+
+bool Parser::DoNounState() {
+  if (at_end()) {
+    return Accept();
+  }
+
+  const auto& nouns = GetStringNounMap();
+  auto found = nouns.find(token());
+  if (found == nouns.end()) {
+    if (pos_ > 0 && !at_end() && token()[0] == '-') {
+      return GoTo(Parser::kSwitchesState);
+    } else {
+      return GoTo(Parser::kVerbState);
+    }
+  }
+
+  noun_ = found->second;
+  if (command_->HasNoun(noun_)) {
+    return Fail("Noun \"" + NounToString(noun_) + "\" specified twice.");
+  }
+
+  return Consume(Parser::kNounIndexState);
 }
 
-// Continue to consume nouns from the token stream until either no more tokens
-// have been found or we reached the end of tokens.
-//
-// If successful, it will add the nouns to the command and will update the
-// token_index to the next token to be evaluated.
-Err ConsumeNouns(const std::vector<std::string>& tokens, size_t* token_index,
-                 Command* output) {
-  bool found_noun = false;  // Whether the next token(s) were nouns
-  do {
-    Err err = ConsumeNoun(tokens, token_index, output, &found_noun);
-    if (err.has_error())
-      return err;
-  } while (found_noun && (*token_index < tokens.size()));
+// Consume optional following index if it's all integers. For example, it
+// could be "process 2 run" (with index) or "process run" (without).
+bool Parser::DoNounIndexState() {
+  if (at_end() || !IsIndexToken(token())) {
+    command_->SetNoun(noun_, Command::kNoIndex);
+    return GoTo(Parser::kNounState);
+  }
 
-  return Err();
+  size_t noun_index = Command::kNoIndex;
+  if (sscanf(token().c_str(), "%zu", &noun_index) != 1) {
+    return Fail("Invalid index \"" + token() + "\" for \"" +
+                NounToString(noun_) + "\".");
+  }
+
+  command_->SetNoun(noun_, noun_index);
+  return Consume(Parser::kNounState);
 }
 
-// Consumes the next token expecting to find a verb. If valid it will register
-// the verb into the command and will advance the token_index variable.
-//
-// It's possible there's no verb in which case this will put null into
-// *verb_record and return success.
-//
-// Will update a given pointer to the respective VerbRecord. We return by
-// pointer because VerbRecords are unique and non-copyable/movable.
-Err ConsumeVerb(const std::vector<std::string>& tokens, size_t* token_index_ptr,
-                Command* output, const VerbRecord** verb_record) {
-  // Reference makes the code easier to understand
-  size_t& token_index = *token_index_ptr;
-  const std::string& token = tokens[token_index];
+bool Parser::DoSwitchesState() {
+  if (at_end()) {
+    return Accept();
+  }
+
+  if (token()[0] != '-') {
+    return GoTo(Parser::kArgState);
+  }
+
+  if (token() == "--") {
+    return Consume(Parser::kArgState);
+  }
+
+  if (token().size() == 1) {
+    return Fail("Invalid switch \"-\".");
+  }
+
+  if (token()[1] == '-') {
+    return GoTo(Parser::kLongSwitchState);
+  } else {
+    return GoTo(Parser::kSwitchState);
+  }
+}
+
+bool Parser::DoLongSwitchState() {
+  const std::vector<SwitchRecord>& switches =
+      verb_record_ ? verb_record_->switches : GetNounSwitches();
+
+  // Two-hyphen (--) switch.
+  size_t equals_index = std::string::npos;
+  sw_record_ = FindLongSwitch(token(), switches, &equals_index);
+  if (!sw_record_) {
+    return Fail("Unknown switch \"" + token() + "\".");
+  }
+
+  sw_name_ = std::string("--") + sw_record_->name;
+
+  if (equals_index != std::string::npos) {
+    // Extract the token following the equals sign.
+    sw_value_ = token().substr(equals_index + 1);
+  } else {
+    sw_value_ = std::nullopt;
+  }
+
+  return Consume(Parser::kSwitchArgState);
+}
+
+bool Parser::DoSwitchState() {
+  const std::vector<SwitchRecord>& switches =
+      verb_record_ ? verb_record_->switches : GetNounSwitches();
+  std::string value;
+
+  // Single-dash token means one character.
+  char switch_char = token()[1];
+  sw_record_ = FindSwitch(switch_char, switches);
+  if (!sw_record_) {
+    return Fail(std::string("Unknown switch \"-") + switch_char + "\".");
+  }
+
+  sw_name_ = std::string("-") + sw_record_->ch;
+
+  if (token().size() > 2) {
+    sw_value_ = token().substr(2);
+  }
+
+  return Consume(Parser::kSwitchArgState);
+}
+
+bool Parser::DoSwitchArgState() {
+  if (!sw_record_->has_value && !sw_value_) {
+    command_->SetSwitch(sw_record_->id, "");
+    return GoTo(Parser::kSwitchesState);
+  }
+
+  if (!sw_record_->has_value) {
+    return Fail(std::string("--") + sw_record_->name + " takes no argument.");
+  }
+
+  if (sw_value_) {
+    command_->SetSwitch(sw_record_->id, std::move(*sw_value_));
+    return GoTo(Parser::kSwitchesState);
+  } else if (at_end()) {
+    return Fail("Argument needed for \"" + sw_name_ + "\".");
+  } else {
+    command_->SetSwitch(sw_record_->id, token());
+    return Consume(Parser::kSwitchesState);
+  }
+}
+
+bool Parser::DoVerbState() {
+  if (at_end()) {
+    return Accept();
+  }
 
   // Consume the verb.
   const auto& verb_strings = GetStringVerbMap();
-  auto found_verb_str = verb_strings.find(token);
+  auto found_verb_str = verb_strings.find(token());
   if (found_verb_str == verb_strings.end()) {
-    return Err("The string \"" + token + "\" is not a valid verb.");
+    return Fail("The string \"" + token() + "\" is not a valid verb.");
   }
-  output->set_verb(found_verb_str->second);
-  token_index++;
+
+  command_->set_verb(found_verb_str->second);
 
   // Find the verb record.
   const auto& verbs = GetVerbs();
-  auto found_verb = verbs.find(output->verb());
+  auto found_verb = verbs.find(command_->verb());
   FXL_DCHECK(found_verb != verbs.end());  // Valid verb should always be found.
-  *verb_record = &found_verb->second;
+  verb_record_ = &found_verb->second;
 
-  return Err();
+  return Consume(Parser::kSwitchesState);
 }
 
-// Consumes tokens and interprets them as switches. Each verb has a particular
-// set of switches associated to it. The appearance of another switch means
-// the command is erroneous.
-//
-// If successful, it will set the switches to the command and will update the
-// token_index to the next token to be evaluated.
-Err ConsumeSwitches(const std::vector<std::string>& tokens,
-                    size_t* token_index_ptr, Command* output,
-                    const std::vector<SwitchRecord>& switches) {
-  // Reference makes the code easier to understand
-  size_t& token_index = *token_index_ptr;
-
-  // Look for switches.
-  while (token_index < tokens.size()) {
-    const std::string& token = tokens[token_index];
-
-    // "--" marks the end of switches.
-    if (token == "--") {
-      token_index++;
-      break;
-    }
-
-    // Not a switch, everything else is an arg.
-    if (token[0] != '-')
-      break;
-
-    if (token.size() == 1)
-      return Err("Invalid switch \"-\".");
-
-    const SwitchRecord* sw_record = nullptr;
-    std::string value;
-    bool next_token_is_value = false;
-
-    if (token[1] == '-') {
-      // Two-hyphen (--) switch.
-      size_t equals_index = std::string::npos;
-      sw_record = FindLongSwitch(token, switches, &equals_index);
-      if (!sw_record)
-        return Err("Unknown switch \"" + token + "\".");
-
-      if (equals_index == std::string::npos) {
-        // "--foo bar" format.
-        next_token_is_value = sw_record->has_value;
-      } else {
-        // "--foo=bar" format.
-        if (sw_record->has_value) {
-          // Extract the token following the equals sign.
-          value = token.substr(equals_index + 1);
-        } else {
-          return Err("The switch " + token.substr(0, equals_index) +
-                     " does not take a value.");
-        }
-      }
-    } else {
-      // Single-dash token means one character.
-      char switch_char = token[1];
-      sw_record = FindSwitch(switch_char, switches);
-      if (!sw_record)
-        return Err(std::string("Unknown switch \"-") + switch_char + "\".");
-
-      if (token.size() > 2) {
-        // Single character switch with stuff after it: it's the argument "-a4"
-        if (!sw_record->has_value) {
-          return Err(std::string("Extra characters after \"-") + switch_char +
-                     "\".");
-        }
-        value = token.substr(2);
-      } else {
-        next_token_is_value = sw_record->has_value;
-      }
-    }
-
-    // Expecting a value as the next token.
-    if (next_token_is_value) {
-      if (token_index == tokens.size() - 1) {
-        // No more tokens to consume.
-        return Err(std::string("Parameter needed for \"") + token + "\".");
-      } else {
-        token_index++;
-        value = tokens[token_index];
-      }
-    }
-    output->SetSwitch(sw_record->id, std::move(value));
-
-    token_index++;
-  }
-
-  return Err();
+bool Parser::DoArgState() {
+  std::vector<std::string> args(tokens_.begin() + pos_, tokens_.end());
+  command_->set_args(std::move(args));
+  pos_ = tokens_.size();
+  return Accept();
 }
 
 }  // namespace
@@ -323,51 +432,20 @@ Err TokenizeCommand(const std::string& input,
 Err ParseCommand(const std::string& input, Command* output) {
   *output = Command();
 
-  std::vector<std::string> tokens;
-  Err err = TokenizeCommand(input, &tokens);
-  if (err.has_error() || tokens.empty())
-    return err;
+  Parser parser(output);
+  parser.Parse(input);
 
-  return ParseCommand(tokens, output);
+  FXL_DCHECK(parser.err().has_error() || parser.at_end());
+
+  return parser.err();
 }
 
 Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
   *output = Command();
-  if (tokens.empty())
-    return Err();
 
-  // Keep track of the next token to evaluate
-  size_t token_index = 0;
+  Parser parser(output);
 
-  // We look for all the possible nouns within the tokens
-  Err noun_err = ConsumeNouns(tokens, &token_index, output);
-  if (noun_err.has_error())
-    return noun_err;
-
-  // If no more tokens, then no verb was specified (for example "process 2").
-  if (token_index == tokens.size())
-    return Err();
-
-  // Check for verb and get a reference to its record if there is one.
-  const VerbRecord* verb_record = nullptr;
-  if (tokens[token_index].size() >= 1 && tokens[token_index][0] != '-') {
-    // Not a switch, read verb.
-    Err verb_err = ConsumeVerb(tokens, &token_index, output, &verb_record);
-    if (verb_err.has_error())
-      return verb_err;
-  }
-
-  // Switches.
-  const std::vector<SwitchRecord>& switches =
-      verb_record ? verb_record->switches : GetNounSwitches();
-  Err switch_err = ConsumeSwitches(tokens, &token_index, output, switches);
-  if (switch_err.has_error())
-    return switch_err;
-
-  // Every token left is an argument to the command
-  std::vector<std::string> args(tokens.begin() + token_index, tokens.end());
-  output->set_args(std::move(args));
-  return Err();
+  return parser.Parse(tokens);
 }
 
 // It would be nice to do more context-aware completions. For now, just
