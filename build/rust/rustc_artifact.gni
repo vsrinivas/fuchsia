@@ -325,6 +325,22 @@ template("rustc_artifact") {
 
     out_info_path = "${target_out_dir}/${target_name}_info.json"
 
+    # The set of unstable features permitted as per
+    # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/languages/rust/unstable.md
+    unstable_rust_features = [
+      "async_await",
+      "await_macro",
+      "futures_api",
+    ]
+
+    # Specifically enable specialization for use in recovery_netstack.
+    # This flag is not allowed to be introduced in new code.
+    if (defined(
+        invoker.__unstable_recovery_netstack_only_specialization_bypass)) {
+      unstable_rust_features +=
+          invoker.__unstable_recovery_netstack_only_specialization_bypass
+    }
+
     args = [
       "--crate-root",
       rebase_path(root_file),
@@ -365,6 +381,13 @@ template("rustc_artifact") {
           feature,
         ]
       }
+    }
+
+    foreach(unstable_rust_feature, unstable_rust_features) {
+      args += [
+        "--unstable-rust-feature",
+        unstable_rust_feature,
+      ]
     }
 
     args += rust_build_args

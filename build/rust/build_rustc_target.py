@@ -134,6 +134,11 @@ def main():
                         help="Whether or not to error on warnings (deny=error, allow=ignore)",
                         choices=["deny", "allow"],
                         required=True)
+    parser.add_argument("--unstable-rust-feature",
+                        help="Unstable Rust feature to allow",
+                        action="append",
+                        dest="unstable_rust_features",
+                        required=False)
     parser.add_argument("--feature",
                         help="Feature to enable",
                         action="append",
@@ -171,6 +176,7 @@ def main():
         "-Cdebuginfo=%s" % args.symbol_level,
         "-Lnative=%s" % args.shared_libs_root,
         "--color=always",
+        "-Zallow-features=%s" % ",".join(args.unstable_rust_features or [])
     ]
     if args.features:
         for feature in args.features:

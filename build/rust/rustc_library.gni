@@ -62,19 +62,21 @@ import("//build/rust/rustc_artifact.gni")
 #   }
 template("rustc_library") {
   rustc_artifact(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "name",
-                             "version",
-                             "edition",
-                             "deps",
-                             "non_rust_deps",
-                             "with_unit_tests",
-                             "test_environments",
-                             "source_root",
-                             "testonly",
-                             "features",
-                           ])
+    forward_variables_from(
+        invoker,
+        [
+          "name",
+          "version",
+          "edition",
+          "deps",
+          "non_rust_deps",
+          "with_unit_tests",
+          "test_environments",
+          "source_root",
+          "testonly",
+          "features",
+          "__unstable_recovery_netstack_only_specialization_bypass",
+        ])
     type = "lib"
   }
 }

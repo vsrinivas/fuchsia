@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(arbitrary_self_types, futures_api)]
+#![feature(futures_api)]
 
 use {
     fuchsia_async::{
