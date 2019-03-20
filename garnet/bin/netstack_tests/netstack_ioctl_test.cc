@@ -8,7 +8,13 @@
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/netemul/network/ethernet_client.h>
+#include <lib/netemul/network/ethertap_client.h>
+#include <lib/netemul/network/ethertap_types.h>
 #include <lib/netstack/c/netconfig.h>
+#include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/termination_reason.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/socket.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -25,16 +31,8 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/netemul/network/ethernet_client.h"
-#include "lib/netemul/network/ethertap_client.h"
-#include "lib/netemul/network/ethertap_types.h"
-#include "lib/sys/cpp/file_descriptor.h"
-#include "lib/sys/cpp/termination_reason.h"
-
 namespace {
-class NetstackIoctlTest : public component::testing::TestWithEnvironment {};
+class NetstackIoctlTest : public sys::testing::TestWithEnvironment {};
 
 const char kNetstackUrl[] =
     "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
