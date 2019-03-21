@@ -3,7 +3,7 @@ The `vmm` app enables booting a guest operating system using the Zircon
 hypervisor. The hypervisor and VMM are collectively referred to as "Machina".
 
 These instructions will guide you through creating minimal Zircon and Linux
-guests. For instructions on building a more comprehensive linux guest system
+guests. For instructions on building a more comprehensive Linux guest system
 see the [debian_guest](pkg/debian_guest/README.md) package.
 
 These instructions assume a general familiarity with how to netboot the target
@@ -19,6 +19,9 @@ $ fx pave
 Where `${ARCH}` is one of `x64` or `arm64`.
 
 ### Note for external developers
+(Googlers: You don't need to do this, the Linux images are downloaded from CIPD
+by jiri.)
+
 The linux_guest package expects the Linux kernel binaries to be in
 `garnet/bin/guest/pkg/linux_guest`, you should create them before running
 `fx full-build` by running the following scripts:
@@ -56,18 +59,37 @@ Running a guest on QEMU on x64 requires kvm (i.e. pass `-k` to fx run):
 $ fx run -k
 ```
 
-Running a guest on QEMU on arm64 requires either using GICv2 (pass `-G 2`).
+You may also need to enable nested KVM on your host machine. The following
+instructions assume a Linux host machine with an Intel processor.
+
+To check whether nested virtualization is enabled (Y = enabled, 0 or N = not
+enabled):
+```
+$ cat /sys/module/kvm_intel/parameters/nested
+```
+
+To enable nested virtualization until the next reboot:
+```
+$ modprobe -r kvm_intel
+$ modprobe kvm_intel nested=1
+```
+To make the change permanent add the following line to
+`/etc/modprobe.d/kvm.conf`
+```
+options kvm_intel nested=1
+```
+
+Running an arm64 guest on QEMU requires either using GICv2 (pass `-G 2`).
 ```
 $ fx run -G 2
 ```
 
 Or using a more recent version of QEMU (try 2.12.0). Older versions of QEMU do
-not correctly emulate GICv3 when running with multiple guest VCPUs. If you do
-this, then you will need to launch the guest with `gic=3`.
+not correctly emulate GICv3 when running with multiple guest VCPUs.
 ```
 $ fx run -q /path/to/recent/qemu/aarch64-softmmu
 ...
-$ guest launch (linux_guest|zircon_guest) --gic=3
+$ guest launch (linux_guest|zircon_guest)
 ```
 
 ## Running from Topaz
