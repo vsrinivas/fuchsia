@@ -8,7 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 namespace examples {
 
@@ -16,10 +16,10 @@ class MediaApp {
  public:
   MediaApp(fit::closure quit_callback);
 
-  void Run(sys::StartupContext* app_context);
+  void Run(sys::ComponentContext* app_context);
 
  private:
-  void AcquireAudioRenderer(sys::StartupContext* app_context);
+  void AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetStreamType();
 
   zx_status_t CreateMemoryMapping();

@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
 
 #include <fuchsia/camera/cpp/fidl.h>
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace camera {
 
@@ -14,7 +14,7 @@ class Client {
  public:
   Client();
 
-  explicit Client(std::unique_ptr<sys::StartupContext> context);
+  explicit Client(std::unique_ptr<sys::ComponentContext> context);
 
   fuchsia::camera::ControlSyncPtr& camera();
 
@@ -38,7 +38,7 @@ class Client {
 
  private:
   fuchsia::camera::ControlSyncPtr camera_control_;
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::camera::ManagerSyncPtr manager_;
 };
 

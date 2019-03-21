@@ -5,7 +5,7 @@
 #ifndef LIB_SYS_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 #define LIB_SYS_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_for_test.h>
 
 namespace sys {

@@ -10,7 +10,7 @@
 
 #include <fuchsia/tts/cpp/fidl.h>
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace tts {
 
@@ -18,7 +18,7 @@ class TtsSpeaker;
 
 class TtsServiceImpl {
  public:
-  TtsServiceImpl(std::unique_ptr<sys::StartupContext> startup_context);
+  TtsServiceImpl(std::unique_ptr<sys::ComponentContext> startup_context);
   ~TtsServiceImpl();
 
   zx_status_t Init();
@@ -46,7 +46,7 @@ class TtsServiceImpl {
 
   friend class Client;
 
-  std::unique_ptr<sys::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> startup_context_;
   std::set<Client*> clients_;
   async_dispatcher_t* dispatcher_;
 

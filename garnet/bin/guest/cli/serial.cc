@@ -123,7 +123,7 @@ void SerialConsole::Start(zx::socket socket) {
 }
 
 void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
-                   sys::StartupContext* context) {
+                   sys::ComponentContext* context) {
   // Connect to environment.
   fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
   context->svc()->Connect(environment_manager.NewRequest());

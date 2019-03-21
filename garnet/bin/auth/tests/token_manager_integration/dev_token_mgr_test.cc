@@ -21,7 +21,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/sys/cpp/service_directory.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
@@ -73,7 +73,7 @@ class DevTokenManagerAppTest
       fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : startup_context_(sys::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(sys::ComponentContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
@@ -134,7 +134,7 @@ class DevTokenManagerAppTest
   }
 
  private:
-  std::unique_ptr<sys::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> startup_context_;
   fuchsia::sys::ComponentControllerPtr controller_;
 
  protected:
@@ -424,7 +424,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto context = sys::StartupContext::CreateFromStartupInfo();
+    auto context = sys::ComponentContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

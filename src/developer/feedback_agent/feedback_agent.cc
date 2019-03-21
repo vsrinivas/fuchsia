@@ -16,7 +16,7 @@
 namespace fuchsia {
 namespace feedback {
 
-FeedbackAgent::FeedbackAgent(::sys::StartupContext* startup_context)
+FeedbackAgent::FeedbackAgent(::sys::ComponentContext* startup_context)
     : context_(startup_context) {
   ConnectToScenic();
 }

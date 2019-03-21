@@ -10,7 +10,7 @@
 #include "garnet/bin/guest/cli/serial.h"
 
 void handle_launch(int argc, const char* argv[], async::Loop* loop,
-                   sys::StartupContext* context) {
+                   sys::ComponentContext* context) {
   // Create environment.
   fuchsia::guest::EnvironmentManagerPtr environment_manager;
   context->svc()->Connect(environment_manager.NewRequest());

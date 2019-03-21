@@ -14,7 +14,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 int main(int argc, const char** argv) {
   std::string server_url =
@@ -36,7 +36,7 @@ int main(int argc, const char** argv) {
   launch_info.url = server_url;
   launch_info.directory_request = directory.NewRequest().TakeChannel();
   fuchsia::sys::LauncherPtr launcher;
-  auto context = sys::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::CreateFromStartupInfo();
   context->svc()->Connect(launcher.NewRequest());
   fuchsia::sys::ComponentControllerPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());

@@ -8,7 +8,7 @@
 #include "intl_wisdom_client.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async/default.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/icu_data/cpp/icu_data.h"
 #include "lib/zx/process.h"
@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   intl_wisdom::IntlWisdomClient client(
-      sys::StartupContext::CreateFromStartupInfo());
+      sys::ComponentContext::CreateFromStartupInfo());
   client.Start(server_url);
   client.SendRequest(timestamp, *time_zone, [&loop](fidl::StringPtr response) {
     printf("Response:\n%s\n", response->data());

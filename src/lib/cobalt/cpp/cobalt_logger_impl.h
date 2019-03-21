@@ -310,7 +310,7 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
 
 class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
  public:
-  CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::StartupContext* context,
+  CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                    fuchsia::cobalt::ProjectProfile profile);
 
   ~CobaltLoggerImpl() override{};
@@ -320,7 +320,7 @@ class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
   ConnectToLoggerFactory() override;
 
  private:
-  sys::StartupContext* context_;
+  sys::ComponentContext* context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltLoggerImpl);
 };
 

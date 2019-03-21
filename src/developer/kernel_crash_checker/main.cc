@@ -13,7 +13,7 @@
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/logging.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -23,7 +23,7 @@
 
 class CrashAnalyzer {
  public:
-  CrashAnalyzer() : context_(sys::StartupContext::CreateFromStartupInfo()) {
+  CrashAnalyzer() : context_(sys::ComponentContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
   }
 
@@ -46,7 +46,7 @@ class CrashAnalyzer {
   }
 
  private:
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 int main(int argc, char** argv) {
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fuchsia::net::ConnectivityPtr connectivity =
-      sys::StartupContext::CreateFromStartupInfo()
+      sys::ComponentContext::CreateFromStartupInfo()
           ->svc()
           ->Connect<fuchsia::net::Connectivity>();
   connectivity.events().OnNetworkReachable = [&crashlog_vmo](bool reachable) {

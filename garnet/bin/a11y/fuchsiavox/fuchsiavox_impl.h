@@ -9,7 +9,7 @@
 #include <fuchsia/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/a11y/fuchsiavox/gesture_listener.h"
 #include "lib/fxl/logging.h"
@@ -28,7 +28,7 @@ namespace fuchsiavox {
 // to simulate one finger, but that is handled only in the gesture recognizer.
 class FuchsiavoxImpl : public GestureListener {
  public:
-  explicit FuchsiavoxImpl(sys::StartupContext* startup_context);
+  explicit FuchsiavoxImpl(sys::ComponentContext* startup_context);
   ~FuchsiavoxImpl() = default;
 
  private:

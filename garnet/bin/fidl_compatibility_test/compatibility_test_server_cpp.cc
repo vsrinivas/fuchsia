@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <string>
 #include <lib/zx/channel.h>
 
@@ -21,7 +21,7 @@ class EchoServerApp : public Echo {
  public:
   explicit EchoServerApp(async::Loop* loop)
       : loop_(loop),
-        context_(sys::StartupContext::CreateFromStartupInfo()) {
+        context_(sys::ComponentContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 
@@ -81,7 +81,7 @@ class EchoServerApp : public Echo {
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
   async::Loop* loop_;
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<Echo> bindings_;
   std::vector<std::unique_ptr<EchoClientApp>> client_apps_;
 };

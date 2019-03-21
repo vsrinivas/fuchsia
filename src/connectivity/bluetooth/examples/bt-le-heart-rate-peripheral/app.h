@@ -10,7 +10,7 @@
 #include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "service.h"
 
@@ -33,7 +33,7 @@ class App final {
   void OnCentralDisconnected(fidl::StringPtr device_id);
 
   // Application
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
 
   // GATT
   Service service_;

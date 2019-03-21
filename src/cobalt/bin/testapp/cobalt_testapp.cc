@@ -28,7 +28,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/cobalt/bin/testapp/tests.h"
 

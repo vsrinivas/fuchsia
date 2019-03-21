@@ -8,7 +8,7 @@
 #include <zircon/syscalls.h>
 #include <cmath>
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -37,7 +37,7 @@ constexpr size_t kNumPacketsToSend =
 
 namespace examples {
 
-MediaApp::MediaApp(std::unique_ptr<sys::StartupContext> context)
+MediaApp::MediaApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}
 MediaApp::~MediaApp() = default;
 

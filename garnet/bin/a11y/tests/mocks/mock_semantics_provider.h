@@ -9,7 +9,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -21,7 +21,7 @@ class MockSemanticsProvider : public fuchsia::accessibility::SemanticsProvider {
   // On initialization, MockSemanticsProvider tries to connect to
   // |fuchsia::accessibility::SemanticsRoot| service in |context_| and
   // registers with its |view_id_| and |binding|.
-  MockSemanticsProvider(sys::StartupContext* context, zx_koid_t view_id);
+  MockSemanticsProvider(sys::ComponentContext* context, zx_koid_t view_id);
   ~MockSemanticsProvider() = default;
 
   // These functions directly call the |fuchsia::accessibility::SemanticsRoot|
@@ -36,7 +36,7 @@ class MockSemanticsProvider : public fuchsia::accessibility::SemanticsProvider {
       int32_t node_id, fuchsia::accessibility::Action action) override {}
 
   fidl::Binding<fuchsia::accessibility::SemanticsProvider> binding_;
-  sys::StartupContext* context_;
+  sys::ComponentContext* context_;
   fuchsia::accessibility::SemanticsRootPtr root_;
   zx_koid_t view_id_;
 

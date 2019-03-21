@@ -10,7 +10,7 @@
 #define LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
 
 #include <fidl/test/compatibility/cpp/fidl.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <memory>
 #include <string>
 #include <lib/zx/process.h>
@@ -31,7 +31,7 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   sys::ServiceDirectory echo_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;
   EchoPtr echo_;

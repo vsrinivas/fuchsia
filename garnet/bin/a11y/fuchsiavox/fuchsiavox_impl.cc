@@ -6,7 +6,7 @@
 
 namespace fuchsiavox {
 
-FuchsiavoxImpl::FuchsiavoxImpl(sys::StartupContext* startup_context) {
+FuchsiavoxImpl::FuchsiavoxImpl(sys::ComponentContext* startup_context) {
   manager_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Cannot connect to a11y manager";
   });

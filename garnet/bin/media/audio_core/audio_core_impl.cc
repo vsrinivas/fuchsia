@@ -18,7 +18,7 @@ namespace media::audio {
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
 AudioCoreImpl::AudioCoreImpl(
-    std::unique_ptr<sys::StartupContext> startup_context)
+    std::unique_ptr<sys::ComponentContext> startup_context)
     : device_manager_(this), ctx_(std::move(startup_context)) {
   // Stash a pointer to our async object.
   dispatcher_ = async_get_default_dispatcher();

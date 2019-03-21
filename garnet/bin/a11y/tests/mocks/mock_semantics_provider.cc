@@ -6,7 +6,7 @@
 
 namespace accessibility_test {
 
-MockSemanticsProvider::MockSemanticsProvider(sys::StartupContext* context,
+MockSemanticsProvider::MockSemanticsProvider(sys::ComponentContext* context,
                                              zx_koid_t view_id)
     : binding_(this), context_(context), view_id_(view_id) {
   context_->svc()->Connect(root_.NewRequest());

@@ -11,7 +11,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 namespace fuchsia {
 namespace feedback {
@@ -19,7 +19,7 @@ namespace feedback {
 // Provides data useful to attach in feedback reports (crash or user feedback).
 class FeedbackAgent : public DataProvider {
  public:
-  FeedbackAgent(::sys::StartupContext* startup_context);
+  FeedbackAgent(::sys::ComponentContext* startup_context);
 
   // Returns all the feedback data except the screenshot, which is provided
   // separately.
@@ -38,7 +38,7 @@ class FeedbackAgent : public DataProvider {
   // most likely the loss of the connection with Scenic.
   void TerminateAllGetScreenshotCallbacks();
 
-  ::sys::StartupContext* context_;
+  ::sys::ComponentContext* context_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   bool is_connected_to_scenic_;

@@ -16,7 +16,7 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
@@ -72,7 +72,7 @@ class CobaltApp {
 
   encoder::SystemData system_data_;
 
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
 
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;

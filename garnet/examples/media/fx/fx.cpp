@@ -16,7 +16,7 @@
 #include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/media/timeline/timeline_function.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -753,8 +753,8 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  std::unique_ptr<sys::StartupContext> startup_context =
-      sys::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> startup_context =
+      sys::ComponentContext::CreateFromStartupInfo();
 
   fuchsia::media::AudioPtr audio =
       startup_context->svc()->Connect<fuchsia::media::Audio>();

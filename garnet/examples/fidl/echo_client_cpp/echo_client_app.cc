@@ -4,14 +4,14 @@
 
 #include "echo_client_app.h"
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace echo {
 
 EchoClientApp::EchoClientApp()
-    : EchoClientApp(sys::StartupContext::CreateFromStartupInfo()) {}
+    : EchoClientApp(sys::ComponentContext::CreateFromStartupInfo()) {}
 
-EchoClientApp::EchoClientApp(std::unique_ptr<sys::StartupContext> context)
+EchoClientApp::EchoClientApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}
 
 void EchoClientApp::Start(std::string server_url) {

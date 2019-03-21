@@ -14,7 +14,7 @@ ComponentInspector::ComponentInspector()
     : inspector_(), root_tree_(inspector_.CreateTree("root")) {}
 
 std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
-    sys::StartupContext* startup_context) {
+    sys::ComponentContext* startup_context) {
   ZX_ASSERT(!singleton_.lock());
 
   auto inspector =

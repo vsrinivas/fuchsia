@@ -7,7 +7,7 @@
 namespace fuchsiavox {
 
 App::App()
-    : startup_context_(sys::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(sys::ComponentContext::CreateFromStartupInfo()),
       fuchsiavox_(std::make_unique<FuchsiavoxImpl>(startup_context_.get())),
       gesture_detector_(std::make_unique<GestureDetector>(fuchsiavox_.get())) {}
 }  // namespace fuchsiavox

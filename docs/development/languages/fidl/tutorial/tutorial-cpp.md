@@ -119,7 +119,7 @@ Here's what the `EchoServerApp` constructor looks like:
 
 ```cpp
 EchoServerApp()
-    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    : context_(fuchsia::sys::ComponentContext::CreateFromStartupInfo()) {
   context_->outgoing().AddPublicService<Echo>(
       [this](fidl::InterfaceRequest<Echo> request) {
         bindings_.AddBinding(this, std::move(request));

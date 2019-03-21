@@ -7,7 +7,7 @@
 
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "lib/fxl/macros.h"
 
@@ -26,7 +26,7 @@ class App final : public fuchsia::bluetooth::le::CentralDelegate {
   void OnPeripheralDisconnected(::fidl::StringPtr identifier);
 
   async::Loop* const loop_;
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::bluetooth::le::CentralPtr central_;
 
   // Local CentralDelegate binding.

@@ -300,14 +300,14 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
   CobaltLoggerTest() : context_(InitStartupContext()) {}
   ~CobaltLoggerTest() override {}
 
-  sys::StartupContext* context() { return context_.get(); }
+  sys::ComponentContext* context() { return context_.get(); }
 
   FakeLoggerImpl* logger() { return factory_impl_->logger(); }
 
   CobaltLogger* cobalt_logger() { return cobalt_logger_.get(); }
 
  private:
-  std::unique_ptr<sys::StartupContext> InitStartupContext() {
+  std::unique_ptr<sys::ComponentContext> InitStartupContext() {
     service_directory = sys::testing::ServiceDirectoryForTest::Create();
     factory_impl_.reset(new FakeLoggerFactoryImpl());
     service_directory->AddService<fuchsia::cobalt::LoggerFactory>(
@@ -322,7 +322,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
         [this](fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
           launcher_request_ = std::move(request);
         });
-    return std::make_unique<sys::StartupContext>(service_directory,
+    return std::make_unique<sys::ComponentContext>(service_directory,
                                                  zx::channel());
   }
 
@@ -339,7 +339,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
   std::shared_ptr<sys::testing::ServiceDirectoryForTest> service_directory;
   std::unique_ptr<FakeLoggerFactoryImpl> factory_impl_;
   std::unique_ptr<FakeLoggerImpl> logger_;
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<CobaltLogger> cobalt_logger_;
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
   fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;

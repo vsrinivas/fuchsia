@@ -7,7 +7,7 @@
 
 #include <fuchsia/examples/intl/wisdom/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"
@@ -20,7 +20,7 @@ namespace intl_wisdom {
 // |AskForWisdom| with pithy multilingual remarks.
 class IntlWisdomServerImpl : fuchsia::examples::intl::wisdom::IntlWisdomServer {
  public:
-  IntlWisdomServerImpl(std::unique_ptr<sys::StartupContext> context);
+  IntlWisdomServerImpl(std::unique_ptr<sys::ComponentContext> context);
 
   // Responds with a multilingual string, using locales from the given
   // |intl_profile|.
@@ -38,7 +38,7 @@ class IntlWisdomServerImpl : fuchsia::examples::intl::wisdom::IntlWisdomServer {
       const long timestamp_ms, const std::vector<icu::Locale>& locales,
       const std::vector<std::unique_ptr<icu::Calendar>>& calendars) const;
 
-  std::unique_ptr<sys::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> startup_context_;
   fidl::BindingSet<fuchsia::examples::intl::wisdom::IntlWisdomServer> bindings_;
 };
 

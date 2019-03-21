@@ -7,7 +7,7 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include "src/developer/crashpad_agent/crashpad_agent.h"
@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
   fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
   startup_context->outgoing().AddPublicService(
       bindings.GetHandler(agent.get()));

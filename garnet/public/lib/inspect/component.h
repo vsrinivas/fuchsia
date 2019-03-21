@@ -6,7 +6,7 @@
 #define LIB_INSPECT_COMPONENT_H_
 
 #include <lib/inspect/inspect.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <string>
 
@@ -26,7 +26,7 @@ class ComponentInspector {
   // Initialize Inspection for the component. The returned ComponentInspector
   // must remain alive as long as inspection information needs to be available.
   [[nodiscard]] static std::shared_ptr<ComponentInspector> Initialize(
-      sys::StartupContext* startup_context);
+      sys::ComponentContext* startup_context);
 
   static std::shared_ptr<ComponentInspector> Get() { return singleton_.lock(); }
 

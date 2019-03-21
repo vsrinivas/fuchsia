@@ -9,7 +9,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <mutex>
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
@@ -29,7 +29,7 @@ namespace media::audio {
 
 class AudioCoreImpl : public fuchsia::media::AudioCore {
  public:
-  AudioCoreImpl(std::unique_ptr<sys::StartupContext> startup_context);
+  AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context);
   ~AudioCoreImpl() override;
 
   // Audio implementation.
@@ -93,7 +93,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
 
-  std::unique_ptr<sys::StartupContext> ctx_;
+  std::unique_ptr<sys::ComponentContext> ctx_;
 
   // State for dealing with cleanup tasks.
   std::mutex cleanup_queue_mutex_;

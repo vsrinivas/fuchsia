@@ -5,7 +5,7 @@
 #include "intl_wisdom_client.h"
 
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"
@@ -43,7 +43,7 @@ std::string GetShortTimeZoneKey(const TimeZone& time_zone) {
 }  // namespace
 
 IntlWisdomClient::IntlWisdomClient(
-    std::unique_ptr<sys::StartupContext> startup_context)
+    std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {}
 
 void IntlWisdomClient::Start(std::string server_url) {

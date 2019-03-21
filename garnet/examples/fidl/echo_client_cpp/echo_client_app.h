@@ -7,14 +7,14 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace echo {
 
 class EchoClientApp {
  public:
   EchoClientApp();
-  EchoClientApp(std::unique_ptr<sys::StartupContext> context);
+  EchoClientApp(std::unique_ptr<sys::ComponentContext> context);
 
   fidl::examples::echo::EchoPtr& echo() { return echo_; }
 
@@ -24,7 +24,7 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fidl::examples::echo::EchoPtr echo_;
 };

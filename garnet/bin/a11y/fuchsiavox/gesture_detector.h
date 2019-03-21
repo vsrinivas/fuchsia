@@ -10,7 +10,7 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/a11y/fuchsiavox/gesture_listener.h"
 #include "lib/fxl/logging.h"

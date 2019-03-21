@@ -5,7 +5,7 @@
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "lib/sys/cpp/testing/test_with_context.h"
 
 namespace cobalt {
@@ -18,7 +18,7 @@ using fuchsia::cobalt::SystemDataUpdaterPtr;
 
 class CobaltAppForTest {
  public:
-  CobaltAppForTest(std::unique_ptr<sys::StartupContext> context)
+  CobaltAppForTest(std::unique_ptr<sys::ComponentContext> context)
       : system_data_("test", "test"), context_(std::move(context)) {
     system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
 
@@ -32,7 +32,7 @@ class CobaltAppForTest {
  private:
   SystemData system_data_;
 
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>

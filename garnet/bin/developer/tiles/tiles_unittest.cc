@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 #include <lib/fxl/logging.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/startup_context_for_test.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 

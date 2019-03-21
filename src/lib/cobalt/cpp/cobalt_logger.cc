@@ -14,7 +14,7 @@ using fuchsia::cobalt::ProjectProfile;
 namespace cobalt {
 
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, sys::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     const std::string& config_path,
     fuchsia::cobalt::ReleaseStage release_stage) {
   fsl::SizedVmo config_vmo;
@@ -31,7 +31,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 }
 
 std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
-                                              sys::StartupContext* context,
+                                              sys::ComponentContext* context,
                                               ProjectProfile profile) {
   return std::make_unique<CobaltLoggerImpl>(dispatcher, context,
                                             std::move(profile));

@@ -17,7 +17,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
 namespace cobalt {
@@ -33,7 +33,7 @@ class CobaltTestApp {
   CobaltTestApp(bool use_network, bool do_environment_test,
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
-        context_(sys::StartupContext::CreateFromStartupInfo()),
+        context_(sys::ComponentContext::CreateFromStartupInfo()),
         logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
 
   // We have multiple testing strategies based on the method we use to
@@ -79,7 +79,7 @@ class CobaltTestApp {
   bool RequestSendSoonTests();
 
   bool do_environment_test_;
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   CobaltTestAppLogger logger_;

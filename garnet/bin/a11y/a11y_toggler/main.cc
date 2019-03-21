@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "lib/fxl/logging.h"
 
@@ -27,7 +27,7 @@ class A11yToggler {
 A11yToggler::A11yToggler(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto context_ = sys::StartupContext::CreateFromStartupInfo();
+  auto context_ = sys::ComponentContext::CreateFromStartupInfo();
   context_->svc()->Connect(a11y_toggler_.NewRequest());
   a11y_toggler_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Connection error connecting to a11y toggler.";

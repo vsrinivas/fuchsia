@@ -8,12 +8,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
                           async::Loop* loop,
-                          sys::StartupContext* context);
+                          sys::ComponentContext* context);
 void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
-                         sys::StartupContext* context);
+                         sys::ComponentContext* context);
 
 #endif  // GARNET_BIN_GUEST_CLI_SOCAT_H_

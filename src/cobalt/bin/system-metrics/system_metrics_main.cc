@@ -8,13 +8,13 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = sys::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::CreateFromStartupInfo();
 
   // Create the SystemMetricsDaemon and start it.
   SystemMetricsDaemon daemon(loop.dispatcher(), context.get());

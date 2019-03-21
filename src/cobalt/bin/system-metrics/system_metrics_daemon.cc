@@ -32,7 +32,7 @@ using fuchsia_system_metrics::FuchsiaUpPingEventCode;
 using std::chrono::steady_clock;
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
-                                         sys::StartupContext* context)
+                                         sys::ComponentContext* context)
     : SystemMetricsDaemon(
           dispatcher, context, nullptr,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock())) {
@@ -40,7 +40,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
 }
 
 SystemMetricsDaemon::SystemMetricsDaemon(
-    async_dispatcher_t* dispatcher, sys::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     fuchsia::cobalt::Logger_Sync* logger,
     std::unique_ptr<cobalt::SteadyClock> clock)
     : dispatcher_(dispatcher),

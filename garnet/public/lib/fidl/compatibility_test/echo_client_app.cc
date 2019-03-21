@@ -11,7 +11,7 @@ namespace test {
 namespace compatibility {
 
 EchoClientApp::EchoClientApp()
-    : context_(sys::StartupContext::CreateFromStartupInfo()) {}
+    : context_(sys::ComponentContext::CreateFromStartupInfo()) {}
 
 EchoPtr& EchoClientApp::echo() { return echo_; }
 

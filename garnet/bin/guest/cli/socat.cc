@@ -44,7 +44,7 @@ class GuestVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
 };
 
 void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
-                         sys::StartupContext* context) {
+                         sys::ComponentContext* context) {
   fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
   context->svc()->Connect(environment_manager.NewRequest());
   fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;
@@ -66,7 +66,7 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
 
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
                           async::Loop* loop,
-                          sys::StartupContext* context) {
+                          sys::ComponentContext* context) {
   fuchsia::guest::EnvironmentManagerSyncPtr environment_manager;
   context->svc()->Connect(environment_manager.NewRequest());
   fuchsia::guest::EnvironmentControllerSyncPtr environment_controller;

@@ -6,7 +6,7 @@
 #define SRC_LIB_COBALT_CPP_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
 
 namespace cobalt {
@@ -317,7 +317,7 @@ class CobaltLogger {
 // metrics are permitted to be collected. The default value of GA (Generally
 // Available) permits only metrics tagged as GA.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, sys::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     const std::string& config_path,
     fuchsia::cobalt::ReleaseStage release_stage =
         fuchsia::cobalt::ReleaseStage::GA);
@@ -333,7 +333,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // |profile| The ProjectProfile struct that contains the configuration for this
 // CobaltLogger.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, sys::StartupContext* context,
+    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
     fuchsia::cobalt::ProjectProfile profile);
 
 }  // namespace cobalt

@@ -6,13 +6,13 @@
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 using fuchsia::testing::runner::TestRunnerSyncPtr;
 
 namespace test_runner {
 
-void ReportResult(std::string identity, sys::StartupContext* context,
+void ReportResult(std::string identity, sys::ComponentContext* context,
                   std::vector<TestResultPtr> results) {
   TestRunnerSyncPtr test_runner;
   context->svc()->Connect(test_runner.NewRequest());

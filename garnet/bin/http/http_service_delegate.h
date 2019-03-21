@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "garnet/bin/http/http_service_impl.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace http {
 
@@ -18,7 +18,7 @@ class HttpServiceDelegate {
   ~HttpServiceDelegate();
 
  private:
-  std::unique_ptr<sys::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   HttpServiceImpl http_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HttpServiceDelegate);

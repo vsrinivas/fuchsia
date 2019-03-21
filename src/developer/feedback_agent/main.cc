@@ -7,7 +7,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include "src/developer/feedback_agent/feedback_agent.h"
@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback_agent"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
   fuchsia::feedback::FeedbackAgent feedback_agent(startup_context.get());
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings;
   startup_context->outgoing().AddPublicService(

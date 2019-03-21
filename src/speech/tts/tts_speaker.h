@@ -18,7 +18,7 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace tts {
@@ -28,7 +28,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   TtsSpeaker(async_dispatcher_t* master_dispatcher);
   ~TtsSpeaker() = default;
 
-  zx_status_t Init(const std::unique_ptr<sys::StartupContext>& startup_context);
+  zx_status_t Init(const std::unique_ptr<sys::ComponentContext>& startup_context);
 
   zx_status_t Speak(fidl::StringPtr words, fit::closure speak_complete_cbk);
   void Shutdown();

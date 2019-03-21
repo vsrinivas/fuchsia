@@ -30,7 +30,7 @@ MediaApp::MediaApp(fit::closure quit_callback)
 }
 
 // Prepare for playback, submit initial data and start the presentation timeline
-void MediaApp::Run(sys::StartupContext* app_context) {
+void MediaApp::Run(sys::ComponentContext* app_context) {
   AcquireAudioRenderer(app_context);
   SetStreamType();
 
@@ -58,7 +58,7 @@ void MediaApp::Run(sys::StartupContext* app_context) {
 
 // Use StartupContext to acquire AudioPtr, which we only need in order to get
 // an AudioRendererPtr. Set an error handler, in case of channel closure.
-void MediaApp::AcquireAudioRenderer(sys::StartupContext* app_context) {
+void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   fuchsia::media::AudioPtr audio =
       app_context->svc()->Connect<fuchsia::media::Audio>();
 
@@ -163,7 +163,7 @@ void MediaApp::Shutdown() {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
 
   examples::MediaApp media_app([&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

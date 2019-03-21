@@ -9,7 +9,7 @@
 
 #include <utility>
 
-#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/component_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
@@ -28,7 +28,7 @@ class TtsClient {
 TtsClient::TtsClient(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto app_ctx = sys::StartupContext::CreateFromStartupInfo();
+  auto app_ctx = sys::ComponentContext::CreateFromStartupInfo();
   tts_service_ =
       app_ctx->svc()->Connect<fuchsia::tts::TtsService>();
   tts_service_.set_error_handler([this](zx_status_t status) {

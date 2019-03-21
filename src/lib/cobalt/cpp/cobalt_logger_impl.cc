@@ -247,7 +247,7 @@ void BaseCobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
 }
 
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                                   sys::StartupContext* context,
+                                   sys::ComponentContext* context,
                                    ProjectProfile profile)
     : BaseCobaltLoggerImpl(dispatcher, std::move(profile)), context_(context) {
   ConnectToCobaltApplication();

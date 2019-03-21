@@ -7,7 +7,7 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/sys/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/a11y/fuchsiavox/fuchsiavox_impl.h"
 #include "garnet/bin/a11y/fuchsiavox/gesture_detector.h"
@@ -24,7 +24,7 @@ class App {
   ~App() = default;
 
  private:
-  std::unique_ptr<sys::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> startup_context_;
 
   std::unique_ptr<FuchsiavoxImpl> fuchsiavox_;
   std::unique_ptr<GestureDetector> gesture_detector_;
