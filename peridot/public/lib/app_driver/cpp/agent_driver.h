@@ -68,6 +68,8 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
                        fuchsia::modular::AgentContext>()),
         impl_(std::make_unique<Impl>(static_cast<AgentHost*>(this))) {}
 
+  virtual ~AgentDriver() = default;
+
  private:
   // |AgentHost|
   component::StartupContext* startup_context() override { return context_; }
