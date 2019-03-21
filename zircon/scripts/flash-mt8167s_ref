@@ -33,6 +33,6 @@ while getopts "c:mh" FLAG; do
 done
 shift $((OPTIND-1))
 
-"${ZIRCON_DIR}/kernel/target/arm64/board/mt8167s_ref/package-image.sh" -B "${ZIRCON_DIR}/build-gcc" -r "${EXTRA_ARGS[@]}"
+"${ZIRCON_DIR}/kernel/target/arm64/board/mt8167s_ref/package-image.sh" -B "${ZIRCON_DIR}/build-gcc" -r none "${EXTRA_ARGS[@]}"
 
 "${SCRIPTS_DIR}/flash-avb" -b mt8167s_ref "$@"
