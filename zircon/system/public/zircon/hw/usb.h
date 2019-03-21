@@ -201,6 +201,9 @@ typedef struct {
     uint16_t wMaxPacketSize;
     uint8_t bInterval;
 } __attribute__ ((packed)) usb_endpoint_descriptor_t;
+#define usb_ep_num(ep)          ((ep)->bEndpointAddress & USB_ENDPOINT_NUM_MASK)
+// usb_ep_num2() useful with you have bEndpointAddress outside of a descriptor.
+#define usb_ep_num2(addr)       ((addr) & USB_ENDPOINT_NUM_MASK)
 #define usb_ep_direction(ep)    ((ep)->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
 #define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
 #define usb_ep_sync_type(ep)    ((ep)->bmAttributes & USB_ENDPOINT_SYNCHRONIZATION_MASK)

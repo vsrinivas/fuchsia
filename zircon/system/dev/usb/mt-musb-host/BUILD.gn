@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("mt-musb-host") {
+  sources = [
+    "usb-device.cpp",
+    "usb-endpoint.cpp",
+    "usb-hci.cpp",
+    "usb-root-hub.cpp",
+    "usb-spew.cpp",
+    "usb-transaction.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-usb-bus",
+    "$zx/system/banjo/ddk-protocol-usb-hci",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mt8167",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("usb-transaction-test") {
+  sources = [
+    "usb-transaction-test.cpp",
+    "usb-transaction.cpp",
+  ]
+  deps = [
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mt8167",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

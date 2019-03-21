@@ -9,7 +9,7 @@
 
 namespace board_mt8167 {
 
-// Function Address Register
+// Function Address Register (peripheral mode)
 class FADDR : public hwreg::RegisterBase<FADDR, uint8_t> {
 public:
     DEF_FIELD(6, 0, function_address);
@@ -258,6 +258,62 @@ public:
     static auto Get() { return hwreg::RegisterAddr<RAMINFO>(0x79); }
 };
 
+// RX Toggle State Register
+class RXTOG : public hwreg::RegisterBase<RXTOG, uint16_t> {
+public:
+    DEF_BIT(8, ep8rxtog);
+    DEF_BIT(7, ep7rxtog);
+    DEF_BIT(6, ep6rxtog);
+    DEF_BIT(5, ep5rxtog);
+    DEF_BIT(4, ep4rxtog);
+    DEF_BIT(3, ep3rxtog);
+    DEF_BIT(2, ep2rxtog);
+    DEF_BIT(1, ep1rxtog);
+    static auto Get() { return hwreg::RegisterAddr<RXTOG>(0x80); }
+};
+
+// RX Toggle Write-Enable Register
+class RXTOGEN : public hwreg::RegisterBase<RXTOGEN, uint16_t> {
+public:
+    DEF_BIT(8, ep8rxtogen);
+    DEF_BIT(7, ep7rxtogen);
+    DEF_BIT(6, ep6rxtogen);
+    DEF_BIT(5, ep5rxtogen);
+    DEF_BIT(4, ep4rxtogen);
+    DEF_BIT(3, ep3rxtogen);
+    DEF_BIT(2, ep2rxtogen);
+    DEF_BIT(1, ep1rxtogen);
+    static auto Get() { return hwreg::RegisterAddr<RXTOGEN>(0x82); }
+};
+
+// TX Toggle State Register
+class TXTOG : public hwreg::RegisterBase<TXTOG, uint16_t> {
+public:
+    DEF_BIT(8, ep8txtog);
+    DEF_BIT(7, ep7txtog);
+    DEF_BIT(6, ep6txtog);
+    DEF_BIT(5, ep5txtog);
+    DEF_BIT(4, ep4txtog);
+    DEF_BIT(3, ep3txtog);
+    DEF_BIT(2, ep2txtog);
+    DEF_BIT(1, ep1txtog);
+    static auto Get() { return hwreg::RegisterAddr<TXTOG>(0x84); }
+};
+
+// TX Toggle Write-Enable Register
+class TXTOGEN : public hwreg::RegisterBase<TXTOGEN, uint16_t> {
+public:
+    DEF_BIT(8, ep8txtogen);
+    DEF_BIT(7, ep7txtogen);
+    DEF_BIT(6, ep6txtogen);
+    DEF_BIT(5, ep5txtogen);
+    DEF_BIT(4, ep4txtogen);
+    DEF_BIT(3, ep3txtogen);
+    DEF_BIT(2, ep2txtogen);
+    DEF_BIT(1, ep1txtogen);
+    static auto Get() { return hwreg::RegisterAddr<TXTOGEN>(0x86); }
+};
+
 // USB Level 1 Interrupt Status Register
 class USB_L1INTS : public hwreg::RegisterBase<USB_L1INTS, uint32_t, hwreg::EnablePrinter> {
 public:
@@ -459,7 +515,7 @@ public:
 class TXINTERVAL : public hwreg::RegisterBase<TXINTERVAL, uint8_t> {
 public:
     DEF_FIELD(7, 0, tx_polling_interval_nak_limit_m);
-    static auto Get() { return hwreg::RegisterAddr<TXINTERVAL>(0x1b); }
+    static auto Get(uint32_t ep) { return hwreg::RegisterAddr<TXINTERVAL>(0x10b + ep * 0x10); }
 };
 
 // RX Type Register
@@ -541,6 +597,30 @@ public:
     DEF_BIT(1, ahbwait_sel);
     DEF_BIT(0, boundary_1k_cross_en);
     static auto Get() { return hwreg::RegisterAddr<DMA_CONFIG>(0x220); }
+};
+
+// RX total packets expected from IN-endpoint (host mode)
+class RXPKTCOUNT : public hwreg::RegisterBase<RXPKTCOUNT, uint16_t> {
+public:
+    DEF_FIELD(15, 0, rxpktcount);
+    static auto Get(uint32_t ep) { return hwreg::RegisterAddr<RXPKTCOUNT>(0x300 + ep * 4); }
+};
+
+// Endpoint TX-function Address (host mode)
+class TXFUNCADDR : public hwreg::RegisterBase<TXFUNCADDR, uint8_t> {
+public:
+    DEF_FIELD(6, 0, tx_func_addr);
+    static auto Get(uint32_t ep) {
+        uint32_t addr = (ep & 1) ? (0x488 + (ep >> 1) * 10) : (0x480 + (ep >> 1) * 0x10);
+        return hwreg::RegisterAddr<TXFUNCADDR>(addr);
+    }
+};
+
+// Endpoint RX-function Address (host mode)
+class RXFUNCADDR : public hwreg::RegisterBase<RXFUNCADDR, uint8_t> {
+public:
+    DEF_FIELD(6, 0, rx_func_addr);
+    static auto Get(uint32_t ep) { return hwreg::RegisterAddr<RXFUNCADDR>(0x484 + ep * 8); }
 };
 
 } // namespace board_mt8167

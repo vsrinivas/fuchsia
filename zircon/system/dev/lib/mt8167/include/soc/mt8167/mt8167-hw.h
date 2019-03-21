@@ -37,6 +37,8 @@
 
 #define MT8167_USB0_BASE                                    0x11100000
 #define MT8167_USB0_LENGTH                                  0x1000
+#define MT8167_USB1_BASE                                    0x11190000
+#define MT8167_USB1_LENGTH                                  0x1000
 
 #define MT8167_USBPHY_BASE                                  0x11110800
 #define MT8167_USBPHY_LENGTH                                0x800
@@ -121,6 +123,7 @@
 #define MT8167_IRQ_RGX                                      217
 #define MT8167_IRQ_WDT                                      230
 #define MT8167_IRQ_I2C3                                     241
+#define MT8167_IRQ_USB_MCU_P1                               242
 #define MT8167_IRQ_UART2                                    243
 
 #define MT8167_I2C_CNT                                      3
