@@ -38,7 +38,7 @@ bool ExprTokenizer::Tokenize() {
     if (done())
       break;
 
-    ExprToken::Type type = ClassifyCurrent();
+    ExprTokenType type = ClassifyCurrent();
     if (has_error())
       break;
 
@@ -83,68 +83,68 @@ void ExprTokenizer::AdvanceToNextToken() {
     AdvanceOneChar();
 }
 
-void ExprTokenizer::AdvanceToEndOfToken(ExprToken::Type type) {
+void ExprTokenizer::AdvanceToEndOfToken(ExprTokenType type) {
   switch (type) {
-    case ExprToken::kInteger:
+    case ExprTokenType::kInteger:
       do {
         AdvanceOneChar();
       } while (!at_end() && IsIntegerContinuingChar(cur_char()));
       break;
 
-    case ExprToken::kName:
+    case ExprTokenType::kName:
       do {
         AdvanceOneChar();
       } while (!at_end() && IsNameContinuingChar(cur_char()));
       break;
 
-    case ExprToken::kArrow:
-    case ExprToken::kColonColon:
-    case ExprToken::kEquality:
-    case ExprToken::kDoubleAnd:
-    case ExprToken::kLogicalOr:
+    case ExprTokenType::kArrow:
+    case ExprTokenType::kColonColon:
+    case ExprTokenType::kEquality:
+    case ExprTokenType::kDoubleAnd:
+    case ExprTokenType::kLogicalOr:
       // The classification code should already have validated there were two
       // characters available.
       AdvanceOneChar();
       AdvanceOneChar();
       break;
 
-    case ExprToken::kEquals:
-    case ExprToken::kDot:
-    case ExprToken::kComma:
-    case ExprToken::kStar:
-    case ExprToken::kAmpersand:
-    case ExprToken::kBitwiseOr:
-    case ExprToken::kLeftSquare:
-    case ExprToken::kRightSquare:
-    case ExprToken::kLeftParen:
-    case ExprToken::kRightParen:
-    case ExprToken::kLess:
-    case ExprToken::kGreater:
-    case ExprToken::kMinus:
-    case ExprToken::kPlus:
+    case ExprTokenType::kEquals:
+    case ExprTokenType::kDot:
+    case ExprTokenType::kComma:
+    case ExprTokenType::kStar:
+    case ExprTokenType::kAmpersand:
+    case ExprTokenType::kBitwiseOr:
+    case ExprTokenType::kLeftSquare:
+    case ExprTokenType::kRightSquare:
+    case ExprTokenType::kLeftParen:
+    case ExprTokenType::kRightParen:
+    case ExprTokenType::kLess:
+    case ExprTokenType::kGreater:
+    case ExprTokenType::kMinus:
+    case ExprTokenType::kPlus:
       AdvanceOneChar();  // All are one char.
       break;
 
     // If we add too many more keywords we should have a more flexible system
     // rather than hardcoding all lengths here.
-    case ExprToken::kTrue:
+    case ExprTokenType::kTrue:
       AdvanceChars(4);
       break;
-    case ExprToken::kFalse:
+    case ExprTokenType::kFalse:
       AdvanceChars(5);
       break;
-    case ExprToken::kConst:
+    case ExprTokenType::kConst:
       AdvanceChars(5);
       break;
-    case ExprToken::kVolatile:
+    case ExprTokenType::kVolatile:
       AdvanceChars(8);
       break;
-    case ExprToken::kRestrict:
+    case ExprTokenType::kRestrict:
       AdvanceChars(8);
       break;
 
-    case ExprToken::kInvalid:
-    case ExprToken::kNumTypes:
+    case ExprTokenType::kInvalid:
+    case ExprTokenType::kNumTypes:
       FXL_NOTREACHED();
       err_ = Err("Internal parser error.");
       error_location_ = cur_;
@@ -165,9 +165,8 @@ bool ExprTokenizer::IsCurrentString(std::string_view s) const {
 bool ExprTokenizer::IsCurrentName(std::string_view s) const {
   if (!IsCurrentString(s))
     return false;
-  return input_.size() == cur_ + s.size() ||  // End of buffer.
+  return input_.size() == cur_ + s.size() ||              // End of buffer.
          !IsNameContinuingChar(input_[cur_ + s.size()]);  // Non-name char.
-
 }
 
 bool ExprTokenizer::IsCurrentWhitespace() const {
@@ -176,30 +175,30 @@ bool ExprTokenizer::IsCurrentWhitespace() const {
   return c == 0x0A || c == 0x0D || c == 0x20;
 }
 
-ExprToken::Type ExprTokenizer::ClassifyCurrent() {
+ExprTokenType ExprTokenizer::ClassifyCurrent() {
   FXL_DCHECK(!at_end());
   char cur = cur_char();
 
   // Numbers.
   if (IsIntegerFirstChar(cur))
-    return ExprToken::kInteger;
+    return ExprTokenType::kInteger;
 
   // Words.
   if (IsNameFirstChar(cur)) {
     // Check for special keywords.
     if (IsCurrentName("true"))
-      return ExprToken::kTrue;
+      return ExprTokenType::kTrue;
     else if (IsCurrentName("false"))
-      return ExprToken::kFalse;
+      return ExprTokenType::kFalse;
     else if (IsCurrentName("const"))
-      return ExprToken::kConst;
+      return ExprTokenType::kConst;
     else if (IsCurrentName("volatile"))
-      return ExprToken::kVolatile;
+      return ExprTokenType::kVolatile;
     else if (IsCurrentName("restrict"))
-      return ExprToken::kRestrict;
+      return ExprTokenType::kRestrict;
 
     // Everything else is a general name.
-    return ExprToken::kName;
+    return ExprTokenType::kName;
   }
 
   // Punctuation.
@@ -208,66 +207,66 @@ ExprToken::Type ExprTokenizer::ClassifyCurrent() {
       // Hyphen could be itself or an arrow, look ahead.
       if (can_advance()) {
         if (input_[cur_ + 1] == '>')
-          return ExprToken::kArrow;
+          return ExprTokenType::kArrow;
       }
       // Anything else is a standalone hyphen.
-      return ExprToken::kMinus;
+      return ExprTokenType::kMinus;
     case '=':
       // Check for "==".
       if (can_advance()) {
         if (input_[cur_ + 1] == '=')
-          return ExprToken::kEquality;
+          return ExprTokenType::kEquality;
       }
-      return ExprToken::kEquals;
+      return ExprTokenType::kEquals;
     case '.':
-      return ExprToken::kDot;
+      return ExprTokenType::kDot;
     case ',':
-      return ExprToken::kComma;
+      return ExprTokenType::kComma;
     case '*':
-      return ExprToken::kStar;
+      return ExprTokenType::kStar;
     case '&':
       // Check for "&&".
       if (can_advance()) {
         if (input_[cur_ + 1] == '&')
-          return ExprToken::kDoubleAnd;
+          return ExprTokenType::kDoubleAnd;
       }
-      return ExprToken::kAmpersand;
+      return ExprTokenType::kAmpersand;
     case '|':
       // Check for "||".
       if (can_advance()) {
         if (input_[cur_ + 1] == '|')
-          return ExprToken::kLogicalOr;
+          return ExprTokenType::kLogicalOr;
       }
-      return ExprToken::kBitwiseOr;
+      return ExprTokenType::kBitwiseOr;
     case '[':
-      return ExprToken::kLeftSquare;
+      return ExprTokenType::kLeftSquare;
     case ']':
-      return ExprToken::kRightSquare;
+      return ExprTokenType::kRightSquare;
     case '(':
-      return ExprToken::kLeftParen;
+      return ExprTokenType::kLeftParen;
     case ')':
-      return ExprToken::kRightParen;
+      return ExprTokenType::kRightParen;
     case '<':
-      return ExprToken::kLess;
+      return ExprTokenType::kLess;
     case '>':
-      return ExprToken::kGreater;
+      return ExprTokenType::kGreater;
     case ':':
       // Currently only support colons as part of "::", look ahead.
       if (can_advance()) {
         if (input_[cur_ + 1] == ':')
-          return ExprToken::kColonColon;
+          return ExprTokenType::kColonColon;
       }
       // Any other use of colon is an error.
       error_location_ = cur_;
       err_ = Err("Invalid standalone ':' in expression.\n" +
                  GetErrorContext(input_, cur_));
-      return ExprToken::kInvalid;
+      return ExprTokenType::kInvalid;
     default:
       error_location_ = cur_;
       err_ = Err(
           fxl::StringPrintf("Invalid character '%c' in expression.\n", cur) +
           GetErrorContext(input_, cur_));
-      return ExprToken::kInvalid;
+      return ExprTokenType::kInvalid;
   }
 }
 

@@ -276,7 +276,7 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
 
   // Look up an identifier that's not present.
   auto present = fxl::MakeRefCounted<IdentifierExprNode>(
-      ExprToken(ExprToken::Type::kName, "present", 0));
+      ExprToken(ExprTokenType::kName, "present", 0));
   bool called = false;
   Err out_err;
   ExprValue out_value;

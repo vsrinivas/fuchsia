@@ -10,11 +10,11 @@ namespace zxdb {
 
 TEST(IndexWalker, ComponentMatchesNameOnly) {
   Identifier::Component foo_comp(ExprToken(),
-                                 ExprToken(ExprToken::kName, "Foo", 0));
+                                 ExprToken(ExprTokenType::kName, "Foo", 0));
   Identifier::Component foo_template_comp(
-      ExprToken(), ExprToken(ExprToken::kName, "Foo", 0),
-      ExprToken(ExprToken::kLess, "<", 10), {"A", "b"},
-      ExprToken(ExprToken::kGreater, ">", 100));
+      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
+      ExprToken(ExprTokenType::kGreater, ">", 100));
 
   // Simple name-only comparisons.
   EXPECT_TRUE(IndexWalker::ComponentMatchesNameOnly("Foo", foo_comp));
@@ -31,15 +31,15 @@ TEST(IndexWalker, ComponentMatchesNameOnly) {
 
 TEST(IndexWalker, ComponentMatchesTemplateOnly) {
   Identifier::Component foo_comp(ExprToken(),
-                                 ExprToken(ExprToken::kName, "Foo", 0));
+                                 ExprToken(ExprTokenType::kName, "Foo", 0));
   Identifier::Component foo_template_comp(
-      ExprToken(), ExprToken(ExprToken::kName, "Foo", 0),
-      ExprToken(ExprToken::kLess, "<", 10), {"A", "b"},
-      ExprToken(ExprToken::kGreater, ">", 100));
+      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
+      ExprToken(ExprTokenType::kGreater, ">", 100));
   Identifier::Component foo_empty_template_comp(
-      ExprToken(), ExprToken(ExprToken::kName, "Foo", 0),
-      ExprToken(ExprToken::kLess, "<", 10), {},
-      ExprToken(ExprToken::kGreater, ">", 100));
+      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kLess, "<", 10), {},
+      ExprToken(ExprTokenType::kGreater, ">", 100));
 
   // Neither inputs have templates (should be a match).
   EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_comp));
@@ -62,11 +62,11 @@ TEST(IndexWalker, ComponentMatchesTemplateOnly) {
 // Most cases are tested by ComponentMatchesNameOnly and ...TemplateOnly above.
 TEST(IndexWalker, ComponentMatches) {
   Identifier::Component foo_comp(ExprToken(),
-                                 ExprToken(ExprToken::kName, "Foo", 0));
+                                 ExprToken(ExprTokenType::kName, "Foo", 0));
   Identifier::Component foo_template_comp(
-      ExprToken(), ExprToken(ExprToken::kName, "Foo", 0),
-      ExprToken(ExprToken::kLess, "<", 10), {"A", "b"},
-      ExprToken(ExprToken::kGreater, ">", 100));
+      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0),
+      ExprToken(ExprTokenType::kLess, "<", 10), {"A", "b"},
+      ExprToken(ExprTokenType::kGreater, ">", 100));
 
   EXPECT_TRUE(IndexWalker::ComponentMatches("Foo", foo_comp));
   EXPECT_FALSE(IndexWalker::ComponentMatches("Foo<>", foo_comp));
@@ -127,7 +127,7 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_EQ(foo_node, walker.current());
 
   // Walk to the "Bar<int,char>" identifier.
-  auto[err1, bar_int_char] = Identifier::FromString("Bar < int , char >");
+  auto [err1, bar_int_char] = Identifier::FromString("Bar < int , char >");
   EXPECT_FALSE(err1.has_error()) << err1.msg();
   EXPECT_TRUE(walker.WalkInto(bar_int_char));
   EXPECT_EQ(bar_int_char_node, walker.current());
@@ -147,13 +147,13 @@ TEST(IndexWalker, WalkInto) {
 
   // Parse the Barf identifier for the following two tests. This one has a
   // toplevel scope.
-  auto[err2, barf] = Identifier::FromString("::Foo::Barf<int>");
+  auto [err2, barf] = Identifier::FromString("::Foo::Barf<int>");
   EXPECT_FALSE(err2.has_error()) << err2.msg();
 
   // Walk to the "Foo::Bar9<int>" with copying the walker.
   {
     IndexWalker nested_walker(walker);
-    auto[err2, bar9] = Identifier::FromString("Foo :: Bar9 < int >");
+    auto [err2, bar9] = Identifier::FromString("Foo :: Bar9 < int >");
     EXPECT_FALSE(err2.has_error()) << err2.msg();
     EXPECT_TRUE(nested_walker.WalkInto(bar9));
     EXPECT_EQ(bar9_node, nested_walker.current());

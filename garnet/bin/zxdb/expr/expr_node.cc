@@ -47,7 +47,7 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
   //
   // TODO(brettw) when we add more mathematical operations we'll want a
   // more flexible system for getting the results out.
-  if (op_token.type() == ExprToken::kMinus) {
+  if (op_token.type() == ExprTokenType::kMinus) {
     // Currently "-" is the only unary operator.  Since this is a debugger
     // primarily for C-like languages, use the C rules for negating values: the
     // result type is the same as the input, and negating an unsigned value
@@ -338,17 +338,17 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
 void LiteralExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                            EvalCallback cb) const {
   switch (token_.type()) {
-    case ExprToken::kInteger: {
+    case ExprTokenType::kInteger: {
       ExprValue value;
       Err err = StringToNumber(token_.value(), &value);
       cb(err, std::move(value));
       break;
     }
-    case ExprToken::kTrue: {
+    case ExprTokenType::kTrue: {
       cb(Err(), ExprValue(true));
       break;
     }
-    case ExprToken::kFalse: {
+    case ExprTokenType::kFalse: {
       cb(Err(), ExprValue(false));
       break;
     }
@@ -363,7 +363,7 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
 
 void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
-  bool is_arrow = accessor_.type() == ExprToken::kArrow;
+  bool is_arrow = accessor_.type() == ExprTokenType::kArrow;
   left_->EvalFollowReferences(
       context, [context, is_arrow, member = member_, cb = std::move(cb)](
                    const Err& err, ExprValue base) {

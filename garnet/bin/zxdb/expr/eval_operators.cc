@@ -46,7 +46,7 @@ void DoAssignment(fxl::RefPtr<ExprEvalContext> context,
   // the coerced value.
   context->GetDataProvider()->WriteMemory(
       dest.address(), std::move(data),
-      [ coerced = std::move(coerced), cb = std::move(cb) ](const Err& err) {
+      [coerced = std::move(coerced), cb = std::move(cb)](const Err& err) {
         if (err.has_error())
           cb(err, ExprValue());
         else
@@ -58,15 +58,15 @@ void DoBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
                       const ExprValue& left_value, const ExprToken& op,
                       const ExprValue& right_value, EvalCallback cb) {
   switch (op.type()) {
-    case ExprToken::kEquals:
+    case ExprTokenType::kEquals:
       DoAssignment(std::move(context), left_value, right_value, std::move(cb));
       break;
 
-    case ExprToken::kEquality:
-    case ExprToken::kAmpersand:
-    case ExprToken::kDoubleAnd:
-    case ExprToken::kBitwiseOr:
-    case ExprToken::kLogicalOr:
+    case ExprTokenType::kEquality:
+    case ExprTokenType::kAmpersand:
+    case ExprTokenType::kDoubleAnd:
+    case ExprTokenType::kBitwiseOr:
+    case ExprTokenType::kLogicalOr:
     default:
       cb(Err("Unsupported binary operator '%s', sorry!", op.value().c_str()),
          ExprValue());
@@ -79,7 +79,7 @@ void DoBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
 void EvalBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
                         const fxl::RefPtr<ExprNode>& left, const ExprToken& op,
                         const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
-  left->Eval(context, [ context, op, right, cb = std::move(cb) ](
+  left->Eval(context, [context, op, right, cb = std::move(cb)](
                           const Err& err, ExprValue left_value) {
     if (err.has_error()) {
       cb(err, ExprValue());
@@ -88,12 +88,12 @@ void EvalBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
 
     // Note: if we implement ||, need to special-case here so evaluation
     // short-circuits if the "left" is true.
-    right->Eval(context, [
-      context, left_value = std::move(left_value), op, cb = std::move(cb)
-    ](const Err& err, ExprValue right_value) {
-      DoBinaryOperator(std::move(context), left_value, op, right_value,
-                       std::move(cb));
-    });
+    right->Eval(context,
+                [context, left_value = std::move(left_value), op,
+                 cb = std::move(cb)](const Err& err, ExprValue right_value) {
+                  DoBinaryOperator(std::move(context), left_value, op,
+                                   right_value, std::move(cb));
+                });
   });
 }
 

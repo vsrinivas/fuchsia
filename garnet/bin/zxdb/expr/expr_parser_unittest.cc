@@ -112,7 +112,7 @@ TEST_F(ExprParserTest, Dot) {
 
   const MemberAccessExprNode* access = result->AsMemberAccess();
   ASSERT_TRUE(access);
-  EXPECT_EQ(ExprToken::kDot, access->accessor().type());
+  EXPECT_EQ(ExprTokenType::kDot, access->accessor().type());
   EXPECT_EQ(".", access->accessor().value());
 
   // Left side is the "base" identifier.
@@ -154,7 +154,7 @@ TEST_F(ExprParserTest, Arrow) {
 
   const MemberAccessExprNode* access = result->AsMemberAccess();
   ASSERT_TRUE(access);
-  EXPECT_EQ(ExprToken::kArrow, access->accessor().type());
+  EXPECT_EQ(ExprTokenType::kArrow, access->accessor().type());
   EXPECT_EQ("->", access->accessor().value());
 
   // Left side is the "base" identifier.

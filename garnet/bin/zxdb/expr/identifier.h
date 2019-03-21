@@ -48,9 +48,9 @@ class Identifier {
     // Constructor for names without templates for use by tests that hard-code
     // values.
     Component(bool has_separator, const std::string& name)
-        : name_(ExprToken::kName, name, 0) {
+        : name_(ExprTokenType::kName, name, 0) {
       if (has_separator)
-        separator_ = ExprToken(ExprToken::kColonColon, "::", 0);
+        separator_ = ExprToken(ExprTokenType::kColonColon, "::", 0);
     }
 
     // Constructor for names with templates. The contents will be a
@@ -65,10 +65,10 @@ class Identifier {
           template_end_(std::move(template_end)) {}
 
     bool has_separator() const {
-      return separator_.type() != ExprToken::kInvalid;
+      return separator_.type() != ExprTokenType::kInvalid;
     }
     bool has_template() const {
-      return template_begin_.type() != ExprToken::kInvalid;
+      return template_begin_.type() != ExprTokenType::kInvalid;
     }
 
     const ExprToken& separator() const { return separator_; }

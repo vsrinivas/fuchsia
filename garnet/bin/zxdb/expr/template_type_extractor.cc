@@ -13,10 +13,10 @@ namespace {
 
 // Tracks the level of nesting of brackets.
 struct Nesting {
-  Nesting(size_t i, ExprToken::Type e) : opening_index(i), end(e) {}
+  Nesting(size_t i, ExprTokenType e) : opening_index(i), end(e) {}
 
-  size_t opening_index = 0;  // Index of opening bracket.
-  ExprToken::Type end = ExprToken::kInvalid;  // Expected closing bracket.
+  size_t opening_index = 0;                     // Index of opening bracket.
+  ExprTokenType end = ExprTokenType::kInvalid;  // Expected closing bracket.
 };
 
 // A table of operators that need special handling. These are ones that can
@@ -28,23 +28,23 @@ struct Nesting {
 // (e.g. "operator+" is a subset of "operator++"), the more specific one should
 // be first.
 struct OperatorRecord {
-  ExprToken::Type first;
-  ExprToken::Type second;
+  ExprTokenType first;
+  ExprTokenType second;
 };
 const OperatorRecord kOperators[] = {
-    {ExprToken::kLess, ExprToken::kLess},        // <<
-    {ExprToken::kLess, ExprToken::kInvalid},     // <
-    {ExprToken::kGreater, ExprToken::kGreater},  // >>
-    {ExprToken::kGreater, ExprToken::kInvalid},  // >
-    {ExprToken::kComma, ExprToken::kInvalid},    // ,
+    {ExprTokenType::kLess, ExprTokenType::kLess},        // <<
+    {ExprTokenType::kLess, ExprTokenType::kInvalid},     // <
+    {ExprTokenType::kGreater, ExprTokenType::kGreater},  // >>
+    {ExprTokenType::kGreater, ExprTokenType::kInvalid},  // >
+    {ExprTokenType::kComma, ExprTokenType::kInvalid},    // ,
 };
 
 bool IsNamelikeToken(const ExprToken& token) {
-  return token.type() == ExprToken::kName ||
-         token.type() == ExprToken::kTrue ||
-         token.type() == ExprToken::kFalse ||
-         token.type() == ExprToken::kConst ||
-         token.type() == ExprToken::kVolatile;
+  return token.type() == ExprTokenType::kName ||
+         token.type() == ExprTokenType::kTrue ||
+         token.type() == ExprTokenType::kFalse ||
+         token.type() == ExprTokenType::kConst ||
+         token.type() == ExprTokenType::kVolatile;
 }
 
 // Returns true if the token at the given index needs a space before it to
@@ -64,7 +64,7 @@ bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index,
 
   // Put a space after a comma. This is undesirable in the case of "operator,"
   // appearing as in "template<CmpOp a = operator,>" but not a big deal.
-  if (tokens[index - 1].type() == ExprToken::kComma)
+  if (tokens[index - 1].type() == ExprTokenType::kComma)
     return true;
 
   // Most other things can go next to each other as far as valid C++ goes.
@@ -87,13 +87,13 @@ void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index,
   int matched_tokens = 0;
 
   // The second token we're looking for.
-  ExprToken::Type second_type = tokens.size() > *index + 2
-                                    ? tokens[*index + 2].type()
-                                    : ExprToken::kInvalid;
+  ExprTokenType second_type = tokens.size() > *index + 2
+                                  ? tokens[*index + 2].type()
+                                  : ExprTokenType::kInvalid;
   for (const auto& cur_op : kOperators) {
     if (cur_op.first == tokens[*index + 1].type()) {
       // First character matched.
-      if (cur_op.second == ExprToken::kInvalid) {
+      if (cur_op.second == ExprTokenType::kInvalid) {
         // Anything matches, we found it.
         matched_tokens = 1;
         break;
@@ -155,27 +155,28 @@ TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens,
   std::vector<Nesting> nesting;
   size_t i = begin_token;
   for (; i < tokens.size(); i++) {
-    ExprToken::Type type = tokens[i].type();
-    if (type == ExprToken::kLeftSquare) {
+    ExprTokenType type = tokens[i].type();
+    if (type == ExprTokenType::kLeftSquare) {
       // [
-      nesting.emplace_back(i, ExprToken::kRightSquare);
-    } else if (type == ExprToken::kLeftParen) {
+      nesting.emplace_back(i, ExprTokenType::kRightSquare);
+    } else if (type == ExprTokenType::kLeftParen) {
       // (
-      nesting.emplace_back(i, ExprToken::kRightParen);
-    } else if (type == ExprToken::kLess) {
+      nesting.emplace_back(i, ExprTokenType::kRightParen);
+    } else if (type == ExprTokenType::kLess) {
       // < (the sequences "operator<" and "operator<<" were handled when we
       //    got the "operator" token).
-      nesting.emplace_back(i, ExprToken::kGreater);
-    } else if (nesting.empty() &&
-               (type == ExprToken::kGreater || type == ExprToken::kRightParen ||
-                type == ExprToken::kComma)) {
+      nesting.emplace_back(i, ExprTokenType::kGreater);
+    } else if (nesting.empty() && (type == ExprTokenType::kGreater ||
+                                   type == ExprTokenType::kRightParen ||
+                                   type == ExprTokenType::kComma)) {
       // These tokens mark the end of a type when seen without nesting. Usually
       // this marks the end of the enclosing cast or template.
       break;
     } else if (!nesting.empty() && type == nesting.back().end) {
       // Found the closing token for a previous opening one.
       nesting.pop_back();
-    } else if (type == ExprToken::kName && tokens[i].value() == "operator") {
+    } else if (type == ExprTokenType::kName &&
+               tokens[i].value() == "operator") {
       // Possible space before "operator".
       if (NeedsSpaceBefore(tokens, begin_token, i))
         result.canonical_name.push_back(' ');

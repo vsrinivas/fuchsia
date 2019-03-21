@@ -47,7 +47,7 @@ class ExprTokenizer {
   void AdvanceChars(int n);
   void AdvanceOneChar();
   void AdvanceToNextToken();
-  void AdvanceToEndOfToken(ExprToken::Type type);
+  void AdvanceToEndOfToken(ExprTokenType type);
 
   bool IsCurrentWhitespace() const;
 
@@ -60,7 +60,7 @@ class ExprTokenizer {
   // the one after that is a name boundary (punctuation, end of buffer, etc.).
   bool IsCurrentName(std::string_view s) const;
 
-  ExprToken::Type ClassifyCurrent();
+  ExprTokenType ClassifyCurrent();
 
   bool done() const { return at_end() || has_error(); }
   bool has_error() const { return err_.has_error(); }

@@ -39,7 +39,7 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
 
   // This identifier should be found synchronously and returned.
   auto good_identifier = fxl::MakeRefCounted<IdentifierExprNode>(
-      ExprToken(ExprToken::Type::kName, "foo", 0));
+      ExprToken(ExprTokenType::kName, "foo", 0));
   bool called = false;
   Err out_err;
   ExprValue out_value;
@@ -57,7 +57,7 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
 
   // This identifier should be not found.
   auto bad_identifier = fxl::MakeRefCounted<IdentifierExprNode>(
-      ExprToken(ExprToken::Type::kName, "bar", 0));
+      ExprToken(ExprTokenType::kName, "bar", 0));
   called = false;
   out_value = ExprValue();
   bad_identifier->Eval(context, [&called, &out_err, &out_value](
@@ -80,7 +80,7 @@ void DoUnaryMinusTest(T in) {
   context->AddVariable("foo", foo_expected);
 
   auto identifier = fxl::MakeRefCounted<IdentifierExprNode>(
-      ExprToken(ExprToken::kName, "foo", 0));
+      ExprToken(ExprTokenType::kName, "foo", 0));
 
   // Validate the value by itself. This also has the effect of checking the
   // ExprValue type-specific constructor.
@@ -102,7 +102,7 @@ void DoUnaryMinusTest(T in) {
 
   // Apply a unary '-' to that value.
   auto unary = fxl::MakeRefCounted<UnaryOpExprNode>(
-      ExprToken(ExprToken::kMinus, "-", 0), std::move(identifier));
+      ExprToken(ExprTokenType::kMinus, "-", 0), std::move(identifier));
   unary->Eval(context,
               [&called, &out_err, &out_value](const Err& err, ExprValue value) {
                 called = true;
@@ -154,9 +154,9 @@ TEST_F(ExprNodeTest, UnaryMinus) {
   context->AddVariable("foo", expected);
 
   auto identifier = fxl::MakeRefCounted<IdentifierExprNode>(
-      ExprToken(ExprToken::kName, "foo", 0));
+      ExprToken(ExprTokenType::kName, "foo", 0));
   auto unary = fxl::MakeRefCounted<UnaryOpExprNode>(
-      ExprToken(ExprToken::kMinus, "-", 0), std::move(identifier));
+      ExprToken(ExprTokenType::kMinus, "-", 0), std::move(identifier));
 
   bool called = false;
   Err out_err;
@@ -363,7 +363,7 @@ TEST_F(ExprNodeTest, FunctionCall) {
   // Parameter for the call.
   std::vector<fxl::RefPtr<ExprNode>> args;
   args.push_back(fxl::MakeRefCounted<LiteralExprNode>(
-      ExprToken(ExprToken::Type::kInteger, "255", 0)));
+      ExprToken(ExprTokenType::kInteger, "255", 0)));
 
   auto call_node =
       fxl::MakeRefCounted<FunctionCallExprNode>(reinterpret, std::move(args));
@@ -394,8 +394,8 @@ TEST_F(ExprNodeTest, MemberAccess) {
   auto struct_node = fxl::MakeRefCounted<MockExprNode>(
       true, ExprValue(sc, {0x78, 0x56, 0x34, 0x12}));
   auto access_node = fxl::MakeRefCounted<MemberAccessExprNode>(
-      struct_node, ExprToken(ExprToken::Type::kDot, ".", 0),
-      Identifier(ExprToken(ExprToken::Type::kName, "a", 0)));
+      struct_node, ExprToken(ExprTokenType::kDot, ".", 0),
+      Identifier(ExprToken(ExprTokenType::kName, "a", 0)));
 
   // Do the call.
   bool called = false;
@@ -429,8 +429,8 @@ TEST_F(ExprNodeTest, MemberAccess) {
       false, ExprValue(foo_ptr_type,
                        {0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}));
   auto access_ptr_node = fxl::MakeRefCounted<MemberAccessExprNode>(
-      struct_ptr_node, ExprToken(ExprToken::Type::kArrow, "->", 0),
-      Identifier(ExprToken(ExprToken::Type::kName, "b", 0)));
+      struct_ptr_node, ExprToken(ExprTokenType::kArrow, "->", 0),
+      Identifier(ExprToken(ExprTokenType::kName, "b", 0)));
 
   // Do the call.
   called = false;

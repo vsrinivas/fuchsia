@@ -89,12 +89,12 @@ class ExprParser {
 
   // Parses template parameter lists. The "stop_before" parameter indicates how
   // the list is expected to end (i.e. ">"). Sets the error on failure.
-  std::vector<std::string> ParseTemplateList(ExprToken::Type stop_before);
+  std::vector<std::string> ParseTemplateList(ExprTokenType stop_before);
 
   // Parses comma-separated lists of expressions. Runs until the given ending
   // token is found (normally a ')' for a function call).
   std::vector<fxl::RefPtr<ExprNode>> ParseExpressionList(
-      ExprToken::Type stop_before);
+      ExprTokenType stop_before);
 
   fxl::RefPtr<ExprNode> AmpersandPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> BinaryOpInfix(fxl::RefPtr<ExprNode> left,
@@ -116,7 +116,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
-  bool LookAhead(ExprToken::Type type) const;
+  bool LookAhead(ExprTokenType type) const;
 
   // Returns the next token or the invalid token if nothing is left. Advances
   // to the next token.
@@ -126,7 +126,7 @@ class ExprParser {
   // available and the type matches. Otherwise, sets the error condition using
   // the given error_token and message, and returns a reference to an invalid
   // token. It will advance to the next token.
-  const ExprToken& Consume(ExprToken::Type type, const ExprToken& error_token,
+  const ExprToken& Consume(ExprTokenType type, const ExprToken& error_token,
                            const char* error_msg);
 
   // Reads a sequence of cv-qualifiers (plus "restrict" for C) and appends to
@@ -141,9 +141,8 @@ class ExprParser {
 
   // Applies the given type modifier tags to the given input in order and
   // returns the newly qualified type.
-  fxl::RefPtr<Type> ApplyQualifiers(
-      fxl::RefPtr<Type> input,
-      const std::vector<DwarfTag>& qual);
+  fxl::RefPtr<Type> ApplyQualifiers(fxl::RefPtr<Type> input,
+                                    const std::vector<DwarfTag>& qual);
 
   void SetError(const ExprToken& token, std::string msg);
 
@@ -153,6 +152,7 @@ class ExprParser {
   bool has_error() const { return err_.has_error(); }
   bool at_end() const { return cur_ == tokens_.size(); }
 
+  static const DispatchInfo& DispatchForToken(const ExprToken& token);
   static DispatchInfo kDispatchInfo[];
 
   // Possibly null, see constructor.

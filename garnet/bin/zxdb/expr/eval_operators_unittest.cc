@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/expr/eval_operators.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/common/test_with_loop.h"
-#include "garnet/bin/zxdb/expr/eval_operators.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/mock_expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/mock_expr_node.h"
@@ -18,8 +18,7 @@ namespace {
 
 class EvalOperators : public TestWithLoop {
  public:
-  EvalOperators() : eval_context_(fxl::MakeRefCounted<MockExprEvalContext>()) {
-  }
+  EvalOperators() : eval_context_(fxl::MakeRefCounted<MockExprEvalContext>()) {}
   ~EvalOperators() = default;
 
   fxl::RefPtr<MockExprEvalContext>& eval_context() { return eval_context_; }
@@ -28,9 +27,7 @@ class EvalOperators : public TestWithLoop {
   fxl::RefPtr<MockExprEvalContext> eval_context_;
 };
 
-void QuitNow() {
-  debug_ipc::MessageLoop::Current()->QuitNow();
-}
+void QuitNow() { debug_ipc::MessageLoop::Current()->QuitNow(); }
 
 }  // namespace
 
@@ -43,22 +40,23 @@ TEST_F(EvalOperators, Assignment) {
   ExprValue dest(int32_type, {0, 0, 0, 0}, ExprValueSource(kAddress));
   auto dest_node = fxl::MakeRefCounted<MockExprNode>(false, dest);
 
-  ExprToken assign(ExprToken::kEquals, "=", 0);
+  ExprToken assign(ExprTokenType::kEquals, "=", 0);
 
-  std::vector<uint8_t> data { 0x12, 0x34, 0x56, 0x78 };
+  std::vector<uint8_t> data{0x12, 0x34, 0x56, 0x78};
   ExprValue source(int32_type, data, ExprValueSource());
   auto source_node = fxl::MakeRefCounted<MockExprNode>(false, source);
 
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  EvalBinaryOperator(eval_context(), dest_node, assign, source_node,
+  EvalBinaryOperator(
+      eval_context(), dest_node, assign, source_node,
       [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-      called = true;
-    out_err = err;
-    out_value = value;
-    QuitNow();
-  });
+        called = true;
+        out_err = err;
+        out_value = value;
+        QuitNow();
+      });
 
   EXPECT_FALSE(called);
   loop().Run();

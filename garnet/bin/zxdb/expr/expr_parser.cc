@@ -126,8 +126,9 @@ ExprParser::ExprParser(std::vector<ExprToken> tokens,
                        NameLookupCallback name_lookup)
     : name_lookup_callback_(std::move(name_lookup)),
       tokens_(std::move(tokens)) {
-  static_assert(arraysize(ExprParser::kDispatchInfo) == ExprToken::kNumTypes,
-                "kDispatchInfo needs updating to match ExprToken::Type");
+  static_assert(arraysize(ExprParser::kDispatchInfo) ==
+                    static_cast<int>(ExprTokenType::kNumTypes),
+                "kDispatchInfo needs updating to match ExprTokenType");
 }
 
 fxl::RefPtr<ExprNode> ExprParser::Parse() {
@@ -153,7 +154,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
     return nullptr;
 
   const ExprToken& token = Consume();
-  PrefixFunc prefix = kDispatchInfo[token.type()].prefix;
+  PrefixFunc prefix = DispatchForToken(token).prefix;
 
   if (!prefix) {
     SetError(token, fxl::StringPrintf("Unexpected token '%s'.",
@@ -165,10 +166,9 @@ fxl::RefPtr<ExprNode> ExprParser::ParseExpression(int precedence) {
   if (has_error())
     return left;
 
-  while (!at_end() &&
-         precedence < kDispatchInfo[cur_token().type()].precedence) {
+  while (!at_end() && precedence < DispatchForToken(cur_token()).precedence) {
     const ExprToken& next_token = Consume();
-    InfixFunc infix = kDispatchInfo[next_token.type()].infix;
+    InfixFunc infix = DispatchForToken(next_token).infix;
     if (!infix) {
       SetError(next_token, fxl::StringPrintf("Unexpected token '%s'.",
                                              next_token.value().c_str()));
@@ -227,7 +227,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
   while (!at_end()) {
     const ExprToken& token = cur_token();
     switch (token.type()) {
-      case ExprToken::kColonColon: {
+      case ExprTokenType::kColonColon: {
         // "::" can only follow nothing, a namespace or type name.
         if (mode != kBegin && mode != kNamespace && mode != kType &&
             mode != kAnything) {
@@ -243,7 +243,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         break;
       }
 
-      case ExprToken::kLess: {
+      case ExprTokenType::kLess: {
         // "<" can only come after a template name.
         if (mode == kNamespace || mode == kType) {
           // Generate a nicer error for these cases.
@@ -267,13 +267,14 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         prev_token = &Consume();  // Eat the "<".
 
         // Extract the contents of the template.
-        std::vector<std::string> list = ParseTemplateList(ExprToken::kGreater);
+        std::vector<std::string> list =
+            ParseTemplateList(ExprTokenType::kGreater);
         if (has_error())
           return ParseNameResult();
 
         // Ending ">".
         const ExprToken& template_end =
-            Consume(ExprToken::kGreater, token, "Expected '>' to match.");
+            Consume(ExprTokenType::kGreater, token, "Expected '>' to match.");
         if (has_error())
           return ParseNameResult();
 
@@ -307,7 +308,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         continue;  // Don't Consume() since we already ate the token.
       }
 
-      case ExprToken::kName: {
+      case ExprTokenType::kName: {
         // Names can only follow nothing or "::".
         if (mode == kType) {
           // Normally in C++ a name can follow a type, so make a special error
@@ -447,13 +448,13 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   while (!at_end()) {
     // Read the operator.
     const ExprToken& token = cur_token();
-    if (token.type() == ExprToken::kStar) {
+    if (token.type() == ExprTokenType::kStar) {
       type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                LazySymbol(std::move(type)));
-    } else if (token.type() == ExprToken::kAmpersand) {
+    } else if (token.type() == ExprTokenType::kAmpersand) {
       type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
                                                LazySymbol(std::move(type)));
-    } else if (token.type() == ExprToken::kDoubleAnd) {
+    } else if (token.type() == ExprTokenType::kDoubleAnd) {
       type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType,
                                                LazySymbol(std::move(type)));
     } else {
@@ -476,7 +477,7 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
 // A list is any sequence of comma-separated types. We don't parse the types
 // (this is hard) but instead skip over them.
 std::vector<std::string> ExprParser::ParseTemplateList(
-    ExprToken::Type stop_before) {
+    ExprTokenType stop_before) {
   std::vector<std::string> result;
 
   bool first_time = true;
@@ -485,7 +486,7 @@ std::vector<std::string> ExprParser::ParseTemplateList(
       first_time = false;
     } else {
       // Expect comma to separate items.
-      if (LookAhead(ExprToken::kComma)) {
+      if (LookAhead(ExprTokenType::kComma)) {
         Consume();
       } else {
         SetError(cur_token(), "Expected ',' separating expressions.");
@@ -515,7 +516,7 @@ std::vector<std::string> ExprParser::ParseTemplateList(
 // do. A more general approach would implement a comma infix which constructs a
 // new type of ExprNode.
 std::vector<fxl::RefPtr<ExprNode>> ExprParser::ParseExpressionList(
-    ExprToken::Type stop_before) {
+    ExprTokenType stop_before) {
   std::vector<fxl::RefPtr<ExprNode>> result;
 
   bool first_time = true;
@@ -524,7 +525,7 @@ std::vector<fxl::RefPtr<ExprNode>> ExprParser::ParseExpressionList(
       first_time = false;
     } else {
       // Expect comma to separate items.
-      if (LookAhead(ExprToken::kComma)) {
+      if (LookAhead(ExprTokenType::kComma)) {
         Consume();
       } else {
         SetError(cur_token(), "Expected ',' separating expressions.");
@@ -552,7 +553,7 @@ fxl::RefPtr<ExprNode> ExprParser::AmpersandPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::BinaryOpInfix(fxl::RefPtr<ExprNode> left,
                                                 const ExprToken& token) {
-  const DispatchInfo& dispatch = kDispatchInfo[token.type()];
+  const DispatchInfo& dispatch = DispatchForToken(token);
   fxl::RefPtr<ExprNode> right = ParseExpression(dispatch.precedence);
   if (!has_error() && !right) {
     SetError(token, fxl::StringPrintf("Expected expression after '%s'.",
@@ -593,7 +594,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   if (!has_error() && !expr)
     SetError(token, "Expected expression inside '('.");
   if (!has_error())
-    Consume(ExprToken::kRightParen, token, "Expected ')' to match.");
+    Consume(ExprTokenType::kRightParen, token, "Expected ')' to match.");
   if (has_error())
     return nullptr;
 
@@ -627,10 +628,10 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
 
   // Read the function parameters.
   std::vector<fxl::RefPtr<ExprNode>> args =
-      ParseExpressionList(ExprToken::Type::kRightParen);
+      ParseExpressionList(ExprTokenType::kRightParen);
   if (has_error())
     return nullptr;
-  Consume(ExprToken::kRightParen, token, "Expected ')' to match.");
+  Consume(ExprTokenType::kRightParen, token, "Expected ')' to match.");
 
   return fxl::MakeRefCounted<FunctionCallExprNode>(std::move(name),
                                                    std::move(args));
@@ -642,7 +643,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
   if (!has_error() && !inner)
     SetError(token, "Expected expression inside '['.");
   if (!has_error())
-    Consume(ExprToken::kRightSquare, token, "Expected ']' to match.");
+    Consume(ExprTokenType::kRightSquare, token, "Expected ']' to match.");
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<ArrayAccessExprNode>(std::move(left),
@@ -687,9 +688,9 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
   FXL_DCHECK(cur_ > 0);
   cur_--;
 
-  if (token.type() == ExprToken::kConst ||
-      token.type() == ExprToken::kVolatile ||
-      token.type() == ExprToken::kRestrict) {
+  if (token.type() == ExprTokenType::kConst ||
+      token.type() == ExprTokenType::kVolatile ||
+      token.type() == ExprTokenType::kRestrict) {
     // These start a type name, force type parsing mode.
     fxl::RefPtr<Type> type = ParseType(fxl::RefPtr<Type>());
     if (has_error())
@@ -715,7 +716,7 @@ fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
   return fxl::MakeRefCounted<DereferenceExprNode>(std::move(right));
 }
 
-bool ExprParser::LookAhead(ExprToken::Type type) const {
+bool ExprParser::LookAhead(ExprTokenType type) const {
   if (at_end())
     return false;
   return cur_token().type() == type;
@@ -727,7 +728,7 @@ const ExprToken& ExprParser::Consume() {
   return tokens_[cur_++];
 }
 
-const ExprToken& ExprParser::Consume(ExprToken::Type type,
+const ExprToken& ExprParser::Consume(ExprTokenType type,
                                      const ExprToken& error_token,
                                      const char* error_msg) {
   FXL_DCHECK(!has_error());  // Should have error-checked before calling.
@@ -749,11 +750,11 @@ void ExprParser::ConsumeCVQualifier(std::vector<DwarfTag>* qual) {
     const ExprToken& token = cur_token();
 
     DwarfTag tag = DwarfTag::kNone;
-    if (token.type() == ExprToken::kConst) {
+    if (token.type() == ExprTokenType::kConst) {
       tag = DwarfTag::kConstType;
-    } else if (token.type() == ExprToken::kVolatile) {
+    } else if (token.type() == ExprTokenType::kVolatile) {
       tag = DwarfTag::kVolatileType;
-    } else if (token.type() == ExprToken::kRestrict) {
+    } else if (token.type() == ExprTokenType::kRestrict) {
       tag = DwarfTag::kRestrictType;
     } else {
       // Not a qualification token, done.
@@ -788,6 +789,14 @@ fxl::RefPtr<Type> ExprParser::ApplyQualifiers(
 void ExprParser::SetError(const ExprToken& token, std::string msg) {
   err_ = Err(std::move(msg));
   error_token_ = token;
+}
+
+// static
+const ExprParser::DispatchInfo& ExprParser::DispatchForToken(
+    const ExprToken& token) {
+  size_t index = static_cast<size_t>(token.type());
+  FXL_DCHECK(index < arraysize(kDispatchInfo));
+  return kDispatchInfo[index];
 }
 
 }  // namespace zxdb

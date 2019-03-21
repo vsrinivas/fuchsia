@@ -15,29 +15,29 @@ TEST(Identifier, GetFullName) {
 
   // Single name with no "::" at the beginning.
   unqualified.AppendComponent(ExprToken(),
-                              ExprToken(ExprToken::kName, "First", 2));
+                              ExprToken(ExprTokenType::kName, "First", 2));
   EXPECT_EQ("First", unqualified.GetFullName());
 
   // Single name with a "::" at the beginning.
   Identifier qualified;
-  qualified.AppendComponent(ExprToken(ExprToken::kColonColon, "::", 0),
-                            ExprToken(ExprToken::kName, "First", 2));
+  qualified.AppendComponent(ExprToken(ExprTokenType::kColonColon, "::", 0),
+                            ExprToken(ExprTokenType::kName, "First", 2));
   EXPECT_EQ("::First", qualified.GetFullName());
 
   // Append some template stuff.
-  qualified.AppendComponent(ExprToken(ExprToken::kColonColon, "::", 7),
-                            ExprToken(ExprToken::kName, "Second", 9),
-                            ExprToken(ExprToken::kLess, "<", 15),
+  qualified.AppendComponent(ExprToken(ExprTokenType::kColonColon, "::", 7),
+                            ExprToken(ExprTokenType::kName, "Second", 9),
+                            ExprToken(ExprTokenType::kLess, "<", 15),
                             {"int", "Foo"},
-                            ExprToken(ExprToken::kGreater, ">", 24));
+                            ExprToken(ExprTokenType::kGreater, ">", 24));
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
 }
 
 TEST(Identifier, GetScope) {
-  ExprToken colon_colon(ExprToken::kColonColon, "::", 0);
-  ExprToken name1(ExprToken::kName, "Name1", 100);
-  ExprToken name2(ExprToken::kName, "Name2", 100);
-  ExprToken name3(ExprToken::kName, "Name3", 100);
+  ExprToken colon_colon(ExprTokenType::kColonColon, "::", 0);
+  ExprToken name1(ExprTokenType::kName, "Name1", 100);
+  ExprToken name2(ExprTokenType::kName, "Name2", 100);
+  ExprToken name3(ExprTokenType::kName, "Name3", 100);
 
   // "" -> "".
   Identifier empty;
@@ -69,7 +69,8 @@ TEST(Identifier, GetScope) {
   Identifier three_scoped_names(Identifier::Component(ExprToken(), name1));
   three_scoped_names.AppendComponent(Identifier::Component(colon_colon, name2));
   three_scoped_names.AppendComponent(Identifier::Component(colon_colon, name3));
-  EXPECT_EQ("\"Name1\"; ::,\"Name2\"", three_scoped_names.GetScope().GetDebugName());
+  EXPECT_EQ("\"Name1\"; ::,\"Name2\"",
+            three_scoped_names.GetScope().GetDebugName());
 }
 
 TEST(Identifier, InGlobalNamespace) {
@@ -78,30 +79,30 @@ TEST(Identifier, InGlobalNamespace) {
 
   Identifier non_global;
   non_global.AppendComponent(Identifier::Component(
-      ExprToken(), ExprToken(ExprToken::kName, "Foo", 0)));
+      ExprToken(), ExprToken(ExprTokenType::kName, "Foo", 0)));
   EXPECT_FALSE(non_global.InGlobalNamespace());
 
   Identifier global;
   global.AppendComponent(
-      Identifier::Component(ExprToken(ExprToken::kColonColon, "::", 0),
-                            ExprToken(ExprToken::kName, "Foo", 0)));
+      Identifier::Component(ExprToken(ExprTokenType::kColonColon, "::", 0),
+                            ExprToken(ExprTokenType::kName, "Foo", 0)));
   EXPECT_TRUE(global.InGlobalNamespace());
 }
 
 TEST(Identifier, FromString) {
   // Empty input.
-  auto[empty_err, empty_ident] = Identifier::FromString("");
+  auto [empty_err, empty_ident] = Identifier::FromString("");
   EXPECT_TRUE(empty_err.has_error());
   EXPECT_EQ("No input to parse.", empty_err.msg());
   EXPECT_EQ("", empty_ident.GetDebugName());
 
   // Normal word.
-  auto[word_err, word_ident] = Identifier::FromString("foo");
+  auto [word_err, word_ident] = Identifier::FromString("foo");
   EXPECT_FALSE(word_err.has_error()) << word_err.msg();
   EXPECT_EQ("\"foo\"", word_ident.GetDebugName());
 
   // Complicated identifier (copied from STL).
-  auto[complex_err, complex_ident] = Identifier::FromString(
+  auto [complex_err, complex_ident] = Identifier::FromString(
       "std::unordered_map<"
       "std::__2::basic_string<char>, "
       "unsigned long, "
@@ -125,7 +126,7 @@ TEST(Identifier, FromString) {
 
 TEST(Identifier, FromStringError) {
   // Error from input.
-  auto[bad_err, bad_ident] = Identifier::FromString("Foo<Bar");
+  auto [bad_err, bad_ident] = Identifier::FromString("Foo<Bar");
   EXPECT_TRUE(bad_err.has_error());
   EXPECT_EQ("Expected '>' to match. Hit the end of input instead.",
             bad_err.msg());

@@ -27,7 +27,7 @@ void EvalExpression(const std::string& input,
     // Add context information since we have the original input string (the
     // parser doesn't have this).
     ExprToken error_token = parser.error_token();
-    if (error_token.type() != ExprToken::Type::kInvalid) {
+    if (error_token.type() != ExprTokenType::kInvalid) {
       Err context_err(
           parser.err().type(),
           parser.err().msg() + "\n" +

@@ -144,7 +144,7 @@ TEST(FindVariable, FindLocalVariable) {
 
   // Find "value" in the nested block should give the block's one.
   Identifier value_ident(
-      ExprToken(ExprToken::kName, var_value->GetAssignedName(), 0));
+      ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0));
   auto found = FindVariable(nullptr, block.get(), &symbol_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_value.get(), found->variable());
@@ -156,8 +156,8 @@ TEST(FindVariable, FindLocalVariable) {
 
   // Find "::value" should match nothing.
   Identifier value_global_ident(Identifier::Component(
-      ExprToken(ExprToken::kColonColon, "::", 0),
-      ExprToken(ExprToken::kName, var_value->GetAssignedName(), 0)));
+      ExprToken(ExprTokenType::kColonColon, "::", 0),
+      ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0)));
   found = FindVariable(nullptr, function.get(), &symbol_context,
                        value_global_ident);
   EXPECT_FALSE(found);
@@ -165,7 +165,7 @@ TEST(FindVariable, FindLocalVariable) {
   // Find "block_local" in the block should be found, but in the function it
   // should not be.
   Identifier block_local_ident(
-      ExprToken(ExprToken::kName, block_other->GetAssignedName(), 0));
+      ExprToken(ExprTokenType::kName, block_other->GetAssignedName(), 0));
   found =
       FindVariable(nullptr, block.get(), &symbol_context, block_local_ident);
   EXPECT_TRUE(found);
@@ -176,7 +176,7 @@ TEST(FindVariable, FindLocalVariable) {
 
   // Finding the other function parameter in the block should work.
   Identifier other_param_ident(
-      ExprToken(ExprToken::kName, param_other->GetAssignedName(), 0));
+      ExprToken(ExprTokenType::kName, param_other->GetAssignedName(), 0));
   found =
       FindVariable(nullptr, block.get(), &symbol_context, other_param_ident);
   EXPECT_TRUE(found);
@@ -185,7 +185,7 @@ TEST(FindVariable, FindLocalVariable) {
   // Look up the variable "ns::ns_value" using the name "ns_value" (no
   // namespace) from within the context of the "ns::function()" function.
   // The namespace of the function should be implicitly picked up.
-  Identifier ns_value_ident(ExprToken(ExprToken::kName, kNsVarName, 0));
+  Identifier ns_value_ident(ExprToken(ExprTokenType::kName, kNsVarName, 0));
   found = FindVariable(&setup.process(), block.get(), &symbol_context,
                        ns_value_ident);
   EXPECT_TRUE(found);
@@ -211,10 +211,10 @@ TEST(FindVariable, FindGlobalVariable) {
   const char kVar2Name[] = "var2";      // Only in module 2
   const char kNotFoundName[] = "notfound";
 
-  Identifier global_ident(ExprToken(ExprToken::kName, kGlobalName, 0));
-  Identifier var1_ident(ExprToken(ExprToken::kName, kVar1Name, 0));
-  Identifier var2_ident(ExprToken(ExprToken::kName, kVar2Name, 0));
-  Identifier notfound_ident(ExprToken(ExprToken::kName, kNotFoundName, 0));
+  Identifier global_ident(ExprToken(ExprTokenType::kName, kGlobalName, 0));
+  Identifier var1_ident(ExprToken(ExprTokenType::kName, kVar1Name, 0));
+  Identifier var2_ident(ExprToken(ExprTokenType::kName, kVar2Name, 0));
+  Identifier notfound_ident(ExprToken(ExprTokenType::kName, kNotFoundName, 0));
 
   // Module 1.
   auto mod1 = std::make_unique<MockModuleSymbols>("mod1.so");
@@ -273,14 +273,14 @@ TEST(FindVariable, FindGlobalVariableInModule) {
   // Make a global variable in the toplevel namespace.
   TestGlobalVariable global(&mod_sym, &root, kVarName);
 
-  Identifier var_ident(ExprToken(ExprToken::kName, kVarName, 0));
+  Identifier var_ident(ExprToken(ExprTokenType::kName, kVarName, 0));
   auto found = FindGlobalVariableInModule(&mod_sym, Identifier(), var_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global.var.get(), found->variable());
 
   // Say we're in some nested namespace and search for the same name. It should
   // find the variable in the upper namespace.
-  Identifier nested_ns(ExprToken(ExprToken::kName, kNsName, 0));
+  Identifier nested_ns(ExprToken(ExprTokenType::kName, kNsName, 0));
   found = FindGlobalVariableInModule(&mod_sym, nested_ns, var_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global.var.get(), found->variable());
@@ -298,8 +298,8 @@ TEST(FindVariable, FindGlobalVariableInModule) {
   // Now do the same search but globally qualify the input "::var" which should
   // match only the toplevel one.
   Identifier var_global_ident(
-      Identifier::Component(ExprToken(ExprToken::kColonColon, "::", 0),
-                            ExprToken(ExprToken::kName, kVarName, 0)));
+      Identifier::Component(ExprToken(ExprTokenType::kColonColon, "::", 0),
+                            ExprToken(ExprTokenType::kName, kVarName, 0)));
   found = FindGlobalVariableInModule(&mod_sym, nested_ns, var_global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global.var.get(), found->variable());
