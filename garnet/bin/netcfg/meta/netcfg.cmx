@@ -7,7 +7,7 @@
             "class/ethernet"
         ],
         "features": [
-            "deprecated-global-persistent-storage"
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
