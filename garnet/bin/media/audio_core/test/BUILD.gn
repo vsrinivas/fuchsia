@@ -50,12 +50,16 @@ executable("audio_device_tests_bin") {
     "audio_device_test.cc",
     "audio_device_test.h",
     "audio_tests_shared.h",
+    "virtual_audio_device_test.cc",
+    "virtual_audio_device_test.h",
+    "virtual_audio_system_gain_test.cc",
   ]
 
   deps = [
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
   ]
 }
 

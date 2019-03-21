@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_core/test/audio_device_test.h"
+#include "garnet/bin/media/audio_core/test/virtual_audio_device_test.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/environment_services_helper.h"
 
@@ -17,6 +19,17 @@ class AudioDeviceEnvironment : public ::testing::Environment {
   void SetUp() override {
     // This is an unchanging input for the entire component; get it once here.
     auto environment_services = component::GetEnvironmentServices();
+
+    // We use this Control to enable virtualaudio immediately prior to test
+    // suites that require it, and to disable it immediately afterward.
+    fuchsia::virtualaudio::ControlSyncPtr control;
+    environment_services->ConnectToService(control.NewRequest());
+
+    // As test binary starts, disable any lingering virtual audio devices.
+    // Because this is a synchronous call, by the time it returns, DdkRemove has
+    // been called on each virtual audio device.
+    AudioDeviceTest::SetControl(std::move(control));
+    AudioDeviceTest::DisableVirtualDevices();
 
     // Unlike environment_services, each test case creates fresh FIDL instances.
     // In this one-time setup code we use a temp local var instance: it merely
@@ -39,11 +52,11 @@ class AudioDeviceEnvironment : public ::testing::Environment {
     // However, the overall binary returns non-zero (fail).
     ASSERT_TRUE(connected_to_audio_device_enumerator_service);
 
-    // Save this for all test cases to use
+    // Save these for all to use
     AudioDeviceTest::SetEnvironmentServices(environment_services);
   }
 
-  ///// If needed, these (overriding) functions would also need to be public.
+  // If needed, these (overriding) functions would also need to be public.
   // void TearDown() override {}
   // ~AudioFidlEnvironment() override {}
 };

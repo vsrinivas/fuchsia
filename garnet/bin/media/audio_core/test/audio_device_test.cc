@@ -22,6 +22,7 @@ namespace media::audio::test {
 //
 std::shared_ptr<const ::component::Services>
     AudioDeviceTest::environment_services_;
+fuchsia::virtualaudio::ControlSyncPtr AudioDeviceTest::control_;
 
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;
 uint16_t AudioDeviceTest::initial_output_device_count_ = kInvalidDeviceCount;
@@ -163,7 +164,8 @@ uint32_t AudioDeviceTest::SetFlagsFromBools(bool set_gain, bool set_mute,
 
 void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
   audio_dev_enum_->GetDevices(
-      [this, get_input](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
+      [this,
+       get_input](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
 
         for (auto& dev : devices) {
@@ -178,7 +180,8 @@ void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
 
 bool AudioDeviceTest::RetrieveGainInfoUsingGetDevices(uint64_t token) {
   audio_dev_enum_->GetDevices(
-      [this, token](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
+      [this,
+       token](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
 
         for (auto& dev : devices) {
@@ -226,7 +229,12 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
     return;
   }
 
-  // RunLoopWithTimeout(kDurationGranularity);
+  // Wait until all completion (not disconnect) callbacks drain out, then go on.
+  while (!error_occurred_) {
+    if (ExpectTimeout()) {
+      break;
+    }
+  }
 
   EXPECT_FALSE(error_occurred_);
   EXPECT_TRUE(audio_dev_enum_.is_bound());
@@ -293,37 +301,14 @@ TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
 
   uint16_t num_devs = kInvalidDeviceCount;
   audio_dev_enum_->GetDevices(
-      [this, &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
+      [this,
+       &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
         num_devs = devices.size();
       });
 
   EXPECT_TRUE(ExpectCallback());
   EXPECT_EQ(num_devs, 0u);
-}
-
-// Validate callback is received and default is same as from GetDevices.
-TEST_F(AudioDeviceTest, GetDefaultInputDeviceMatchesGetDevicesBaseline) {
-  RetrievePreExistingDevices();
-  if (!AudioDeviceTest::initial_input_device_count_) {
-    FXL_LOG(INFO) << "Test case requires an environment with audio devices";
-    return;
-  }
-
-  RetrieveTokenUsingGetDefault(true);
-  EXPECT_EQ(received_default_token_, AudioDeviceTest::initial_input_default_);
-}
-
-// Validate callback is received and default is same as from GetDevices.
-TEST_F(AudioDeviceTest, GetDefaultOutputDeviceMatchesGetDevicesBaseline) {
-  RetrievePreExistingDevices();
-  if (!AudioDeviceTest::initial_output_device_count_) {
-    FXL_LOG(INFO) << "Test case requires an environment with audio devices";
-    return;
-  }
-
-  RetrieveTokenUsingGetDefault(false);
-  EXPECT_EQ(received_default_token_, AudioDeviceTest::initial_output_default_);
 }
 
 TEST_F(AudioDeviceTest, GetDefaultInputDeviceHandlesLackOfDevices) {
@@ -342,38 +327,6 @@ TEST_F(AudioDeviceTest, GetDefaultOutputDeviceHandlesLackOfDevices) {
   }
   RetrieveTokenUsingGetDefault(false);
   EXPECT_EQ(received_default_token_, ZX_KOID_INVALID);
-}
-
-// Using preexisting devices (if any), validate GetDeviceGain callbacks
-// received, tokens match the request, and only valid gain_flag bits are set.
-// TODO(mpuryear): ensure >0-device scenario
-TEST_F(AudioDeviceTest, GetDeviceGainMatchesGetDevicesInputBaseline) {
-  if (!HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with audio devices";
-    return;
-  }
-
-  RetrieveGainInfoUsingGetDeviceGain(AudioDeviceTest::initial_input_default_);
-  EXPECT_EQ(received_gain_info_.gain_db,
-            AudioDeviceTest::initial_input_gain_db_);
-  EXPECT_EQ(received_gain_info_.flags,
-            AudioDeviceTest::initial_input_gain_flags_);
-}
-
-// Using preexisting devices (if any), validate GetDeviceGain callbacks
-// received, tokens match the request, and only valid gain_flag bits are set.
-// TODO(mpuryear): ensure >0-device scenario
-TEST_F(AudioDeviceTest, GetDeviceGainMatchesGetDevicesOutputBaseline) {
-  if (!HasPreExistingDevices()) {
-    FXL_LOG(INFO) << "Test case requires an environment with audio devices";
-    return;
-  }
-
-  RetrieveGainInfoUsingGetDeviceGain(AudioDeviceTest::initial_output_default_);
-  EXPECT_EQ(received_gain_info_.gain_db,
-            AudioDeviceTest::initial_output_gain_db_);
-  EXPECT_EQ(received_gain_info_.flags,
-            AudioDeviceTest::initial_output_gain_flags_);
 }
 
 // Given invalid token to GetDeviceGain, callback should be received with
