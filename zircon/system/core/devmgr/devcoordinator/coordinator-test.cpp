@@ -250,7 +250,7 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
                          &actual_handles);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_LT(0, actual_bytes);
-    ASSERT_EQ(2, actual_handles);
+    ASSERT_EQ(3, actual_handles);
     *device_remote = zx::channel(handles[0]);
     status = zx_handle_close(handles[1]);
     ASSERT_EQ(ZX_OK, status);

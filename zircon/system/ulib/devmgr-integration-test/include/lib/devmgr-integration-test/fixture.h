@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fbl/unique_ptr.h>
 #include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
@@ -21,8 +21,7 @@ public:
     IsolatedDevmgr& operator=(const IsolatedDevmgr&) = delete;
 
     IsolatedDevmgr(IsolatedDevmgr&& other)
-            : job_(std::move(other.job_)), devfs_root_(std::move(other.devfs_root_)) {
-    }
+        : job_(std::move(other.job_)), devfs_root_(std::move(other.devfs_root_)) {}
 
     IsolatedDevmgr& operator=(IsolatedDevmgr&& other) {
         job_ = std::move(other.job_);
@@ -52,6 +51,7 @@ public:
     void reset() {
         *this = IsolatedDevmgr();
     }
+
 private:
     // Job that contains the devmgr environment
     zx::job job_;

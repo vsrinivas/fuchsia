@@ -20,76 +20,75 @@ namespace driver_integration_test {
 
 namespace {
 
-constexpr char kBoardName[] = "driver-integration-test";
-
-// This board driver knows how to intepret the metadata for which devices to
+// This board driver knows how to interpret the metadata for which devices to
 // spawn.
 const zbi_platform_id_t kPlatformId = []() {
     zbi_platform_id_t plat_id = {};
     plat_id.vid = PDEV_VID_TEST;
     plat_id.pid = PDEV_PID_INTEGRATION_TEST;
-    strcpy(plat_id.board_name, kBoardName);
+    strcpy(plat_id.board_name, "driver-integration-test");
     return plat_id;
 }();
 
-zx_status_t GetBootdata(const fbl::Vector<board_test::DeviceEntry>& device_list,
-                        zx::vmo* bootdata_out) {
-    const size_t metadata_size = sizeof(board_test::DeviceList) +
-                                 device_list.size() * sizeof(board_test::DeviceEntry);
-    ZX_ASSERT(metadata_size < 1024);
-
-    // Serialize to expected metadata format.
-    fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[metadata_size]);
-    auto* devices = reinterpret_cast<board_test::DeviceList*>(metadata.get());
-    devices->count = device_list.size();
-    memcpy(devices->list, device_list.get(), devices->count * sizeof(board_test::DeviceEntry));
-
-    uint8_t zbi_buf[1024];
-    zbi::Zbi zbi(zbi_buf, sizeof(zbi_buf));
-    if (zbi.Reset() != ZBI_RESULT_OK) {
-        return ZX_ERR_INTERNAL;
+zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uint32_t type,
+                        uint32_t extra, zx::vmo* out, uint32_t* length) {
+    zx::vmo vmo;
+    switch (type) {
+    case ZBI_TYPE_PLATFORM_ID: {
+        zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+        status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+        if (status != ZX_OK) {
+            return status;
+        }
+        *length = sizeof(kPlatformId);
+        break;
     }
-    if (zbi.AppendSection(sizeof(kPlatformId), ZBI_TYPE_PLATFORM_ID, 0, ZBI_FLAG_VERSION,
-                          &kPlatformId) != ZBI_RESULT_OK) {
-        return ZX_ERR_INTERNAL;
+    case ZBI_TYPE_DRV_BOARD_PRIVATE: {
+        size_t list_size = sizeof(board_test::DeviceList);
+        size_t entry_size = entries.size() * sizeof(board_test::DeviceEntry);
+        zx_status_t status = zx::vmo::create(list_size + entry_size, 0, &vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+        board_test::DeviceList list{.count = entries.size()};
+        status = vmo.write(&list, 0, sizeof(list));
+        if (status != ZX_OK) {
+            return status;
+        }
+        status = vmo.write(entries.get(), list_size, entry_size);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *length = static_cast<uint32_t>(list_size + entry_size);
+        break;
     }
-    if (zbi.AppendSection(static_cast<uint32_t>(metadata_size), ZBI_TYPE_DRV_BOARD_PRIVATE,
-                          0, ZBI_FLAG_VERSION, metadata.get()) != ZBI_RESULT_OK) {
-        return ZX_ERR_INTERNAL;
+    default:
+        break;
     }
-    zx::vmo zbi_vmo;
-    zx_status_t status = zx::vmo::create(zbi.Length(), 0, &zbi_vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = zbi_vmo.write(zbi.Base(), 0, zbi.Length());
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    *bootdata_out = std::move(zbi_vmo);
+    *out = std::move(vmo);
     return ZX_OK;
 }
 
 } // namespace
 
-zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args args,
-                                   IsolatedDevmgr* out) {
+zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* out) {
     IsolatedDevmgr devmgr;
 
     devmgr_launcher::Args devmgr_args;
     devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
-    devmgr_args.driver_search_paths.swap(args.driver_search_paths);
-    devmgr_args.load_drivers.swap(args.load_drivers);
-    devmgr_args.disable_block_watcher = args.disable_block_watcher;
+    devmgr_args.driver_search_paths.swap(args->driver_search_paths);
+    devmgr_args.load_drivers.swap(args->load_drivers);
+    devmgr_args.disable_block_watcher = args->disable_block_watcher;
+    devmgr_args.get_boot_item =
+        [args](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
+            return GetBootItem(args->device_list, type, extra, out, length);
+        };
 
-    zx_status_t status = GetBootdata(args.device_list, &devmgr_args.bootdata);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(devmgr_args),
-                                                             &devmgr.devmgr_);
+    zx_status_t status =
+        devmgr_integration_test::IsolatedDevmgr::Create(std::move(devmgr_args), &devmgr.devmgr_);
     if (status != ZX_OK) {
         return status;
     }

@@ -34,7 +34,7 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <loader-service/loader-service.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/vfs.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
@@ -56,8 +56,9 @@
 
 namespace {
 
-constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
+constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
+constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
 struct {
     // The handle used to transmit messages to appmgr.
@@ -124,24 +125,6 @@ void do_autorun(const char* name, const char* cmd) {
     }
 }
 
-// Get the root resource from the root resource service. Not receiving the
-// startup handle is logged, but not fatal.  In test environments, it would not
-// be present.
-zx_status_t get_root_resource(zx::resource* root_resource) {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = fdio_service_connect(kRootResourcePath, remote.release());
-    if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: could not open root resource service, assuming test "
-                        "environment and continuing\n");
-        return ZX_OK;
-    }
-    return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
-}
-
 // Get kernel arguments from the arguments service.
 zx_status_t get_arguments(zx::vmo* args_vmo, size_t* args_size) {
     zx::channel local, remote;
@@ -154,6 +137,38 @@ zx_status_t get_arguments(zx::vmo* args_vmo, size_t* args_size) {
         return status;
     }
     return fuchsia_boot_ArgumentsGet(local.get(), args_vmo->reset_and_get_address(), args_size);
+}
+
+// Get ramdisk from the boot items service.
+zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fdio_service_connect(kItemsPath, remote.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint32_t length;
+    return fuchsia_boot_ItemsGet(local.get(), ZBI_TYPE_STORAGE_RAMDISK, 0,
+                                 ramdisk_vmo->reset_and_get_address(), &length);
+}
+
+// Get the root resource from the root resource service. Not receiving the
+// startup handle is logged, but not fatal.  In test environments, it would not
+// be present.
+zx_status_t get_root_resource(zx::resource* root_resource) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fdio_service_connect(kRootResourcePath, remote.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
 }
 
 int fuchsia_starter(void* arg) {
@@ -516,15 +531,15 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
     size_t n = 0;
     zx_handle_t ldsvc;
 
-    // pass / and /svc handles to fsboot
+    // pass /, /svc, and ldsvc handles to fshost
     if (zx_channel_create(0, g_handles.fs_root.reset_and_get_address(), &handles[0]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER0, 0);
     }
     if ((handles[n] = devmgr::fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
-        types[n++] = PA_HND(PA_USER0, 2);
+        types[n++] = PA_HND(PA_USER0, 1);
     }
     if (zx_channel_create(0, &ldsvc, &handles[n]) == ZX_OK) {
-        types[n++] = PA_HND(PA_USER0, 3);
+        types[n++] = PA_HND(PA_USER0, 2);
     } else {
         ldsvc = ZX_HANDLE_INVALID;
     }
@@ -535,20 +550,6 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
         ZX_OK) {
         handles[n] = fshost_event_duplicate.release();
         types[n++] = PA_HND(PA_USER1, 0);
-    }
-
-    // pass bootdata VMOs to fshost
-    for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
-        uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
-        if ((handles[n] = zx_take_startup_handle(type)) == ZX_HANDLE_INVALID) {
-            break;
-        }
-        zx_status_t status = coordinator->SetBootdata(zx::unowned_vmo(handles[n]));
-        if (status != ZX_OK) {
-            fprintf(stderr, "devcoordinator: failed to set bootdata: %d\n", status);
-            break;
-        }
-        types[n++] = type;
     }
 
     // pass VDSO VMOS to fshost
@@ -569,14 +570,12 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
         }
     }
 
-    // pass KERNEL FILE VMOS to fshost
-    for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
-        uint32_t type = PA_HND(PA_VMO_KERNEL_FILE, m);
-        if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
-            types[n++] = type;
-        } else {
-            break;
-        }
+    // pass ramdisk to fshost
+    zx::vmo ramdisk_vmo;
+    zx_status_t status = get_ramdisk(&ramdisk_vmo);
+    if (status == ZX_OK && ramdisk_vmo.is_valid()) {
+        handles[n] = ramdisk_vmo.release();
+        types[n++] = PA_HND(PA_VMO_BOOTDATA, 0);
     }
 
     // pass command line to the fshost
@@ -600,23 +599,6 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
 
     // switch to system loader service provided by fshost
     zx_handle_close(dl_set_loader_service(ldsvc));
-}
-
-zx::channel bootfs_root_clone() {
-    zx::channel boot, boot_remote;
-    zx_status_t status = zx::channel::create(0, &boot, &boot_remote);
-    if (status != ZX_OK) {
-        return zx::channel();
-    }
-
-    fdio_ns_t* ns;
-    status = fdio_ns_get_installed(&ns);
-    ZX_ASSERT(status == ZX_OK);
-    status = fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, boot_remote.release());
-    if (status != ZX_OK) {
-        return zx::channel();
-    }
-    return boot;
 }
 
 void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
@@ -845,12 +827,13 @@ zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {
         return devfs_root_clone();
     }
-    if (!strcmp(path, "boot")) {
-        return bootfs_root_clone();
-    }
     zx::channel h0, h1;
     if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
         return zx::channel();
+    }
+    if (!strcmp(path, "boot")) {
+        fdio_open("/boot", ZX_FS_RIGHT_READABLE, h1.release());
+        return h0;
     }
     zx::unowned_channel fs(g_handles.fs_root);
     int flags = FS_DIR_FLAGS;
@@ -864,10 +847,7 @@ zx::channel fs_clone(const char* path) {
         fs = devfs_root_borrow();
         path += 4;
     }
-    zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
-    if (status != ZX_OK) {
-        return zx::channel();
-    }
+    fdio_open_at(fs->get(), path, flags, h1.release());
     return h0;
 }
 
@@ -921,8 +901,8 @@ int main(int argc, char** argv) {
 
     status = get_root_resource(&config.root_resource);
     if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: did not receive root resource: %d\n", status);
-        return 1;
+        fprintf(stderr, "devcoordinator: failed to get root resource, assuming test "
+                        "environment and continuing\n");
     }
     // TODO: limit to enumerate rights
     status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);

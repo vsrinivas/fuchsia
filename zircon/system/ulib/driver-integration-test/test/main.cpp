@@ -23,11 +23,9 @@ using devmgr_integration_test::RecursiveWaitForFile;
 
 namespace {
 
-constexpr char kDeviceName[] = "fallback-rtc";
-
 const board_test::DeviceEntry kDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
-    strcpy(entry.name, kDeviceName);
+    strcpy(entry.name, "fallback-rtc");
     entry.vid = PDEV_VID_GENERIC;
     entry.pid = PDEV_PID_GENERIC;
     entry.did = PDEV_DID_RTC_FALLBACK;
@@ -42,7 +40,7 @@ bool enumeration_test() {
     args.device_list.push_back(kDeviceEntry);
 
     IsolatedDevmgr devmgr;
-    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
+    ASSERT_EQ(IsolatedDevmgr::Create(&args, &devmgr), ZX_OK);
 
     fbl::unique_fd fd;
     ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform",

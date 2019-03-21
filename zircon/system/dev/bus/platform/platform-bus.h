@@ -19,6 +19,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
@@ -43,7 +44,7 @@ class PlatformBus : public PlatformBusType,
                     public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
                     public ddk::IommuProtocol<PlatformBus> {
 public:
-    static zx_status_t Create(zx_device_t* parent, const char* name, zx::vmo zbi);
+    static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 
     // Device protocol implementation.
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -70,8 +71,8 @@ public:
     zx_status_t I2cTransact(uint32_t txid, rpc_i2c_req_t* req, const pbus_i2c_channel_t* channel,
                             zx_handle_t channel_handle);
 
-    zx_status_t GetZbiMetadata(uint32_t type, uint32_t extra, const void** out_metadata,
-                               uint32_t* out_size);
+    zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length);
+    zx_status_t GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out);
 
     // Protocol accessors for PlatformDevice.
     inline ddk::AmlogicCanvasProtocolClient* canvas() { return &*canvas_; }
@@ -86,17 +87,15 @@ public:
 private:
     pbus_sys_suspend_t suspend_cb_ = {};
 
-    explicit PlatformBus(zx_device_t* parent);
+    PlatformBus(zx_device_t* parent, zx::channel items_svc);
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
 
-    zx_status_t Init(zx::vmo zbi);
-
-    // Reads the platform ID and driver metadata records from the boot image.
-    zx_status_t ReadZbi(zx::vmo zbi);
+    zx_status_t Init();
 
     zx_status_t I2cInit(const i2c_impl_protocol_t* i2c);
 
+    zx::channel items_svc_;
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
@@ -112,9 +111,6 @@ private:
     sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);
     // Protects proto_completion_.
     fbl::Mutex proto_completion_mutex_;
-
-    // Metadata extracted from ZBI.
-    fbl::Array<uint8_t> metadata_;
 
     // List of I2C buses.
     fbl::Vector<fbl::unique_ptr<PlatformI2cBus>> i2c_buses_;

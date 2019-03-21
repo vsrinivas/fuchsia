@@ -8,11 +8,12 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/spawn.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <zircon/assert.h>
@@ -30,7 +31,8 @@ constexpr const char* kDevmgrPath = "/boot/bin/devcoordinator";
 
 namespace devmgr_launcher {
 
-zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
+zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
+                   zx::channel* devfs_root) {
     // Create containing job (and copy to send to devmgr)
     zx::job job, job_copy;
     zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -116,36 +118,34 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     fbl::Vector<fdio_spawn_action_t> actions;
     actions.push_back(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_SET_NAME,
-        .name = { .data = "test-devmgr" },
+        .name = {.data = "test-devmgr"},
     });
     actions.push_back(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = { .id = PA_HND(PA_JOB_DEFAULT, 0), .handle = job_copy.release() },
+        .h = {.id = PA_HND(PA_JOB_DEFAULT, 0), .handle = job_copy.release()},
     });
     actions.push_back(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = { .id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release() },
+        .h = {.id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release()},
     });
     actions.push_back(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = { .prefix = "/boot", .handle = bootfs_client.release() },
+        .ns = {.prefix = "/boot", .handle = bootfs_client.release()},
+    });
+    actions.push_back(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns = {.prefix = "/bootsvc", .handle = bootsvc_client.release()},
     });
     if (args.use_system_svchost) {
         actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-                    .ns = { .prefix = "/svc", .handle = svc_client.release() },
-        });
-    }
-    if (args.bootdata) {
-        actions.push_back(fdio_spawn_action_t{
-            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = PA_HND(PA_VMO_BOOTDATA, 0), .handle = args.bootdata.release() },
+            .ns = {.prefix = "/svc", .handle = svc_client.release()},
         });
     }
     if (!clone_stdio) {
         actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-            .fd = { .local_fd = args.stdio.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO },
+            .fd = {.local_fd = args.stdio.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO},
         });
     }
 
@@ -173,4 +173,4 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
     return ZX_OK;
 }
 
-} // namespace devmgr_integration_test
+} // namespace devmgr_launcher

@@ -38,6 +38,7 @@ executable("bootsvc") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/lz4",
+    "$zx/third_party/ulib/safemath",
   ]
   data_deps = [
     "$zx/system/core/devmgr/devcoordinator",
@@ -59,5 +60,6 @@ executable("bootsvc-tests") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/safemath",
   ]
 }

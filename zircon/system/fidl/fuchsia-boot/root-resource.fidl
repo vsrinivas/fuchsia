@@ -4,8 +4,6 @@
 
 library fuchsia.boot;
 
-using zx;
-
 /// Protocol for providing the root resource.
 [Discoverable, Layout = "Simple"]
 protocol RootResource {

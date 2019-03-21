@@ -6,10 +6,13 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 #include <lib/zx/channel.h>
+
+#include "util.h"
 
 namespace bootsvc {
 
@@ -38,11 +41,15 @@ private:
     fbl::RefPtr<fs::PseudoDir> root_;
 };
 
-// Create a service to provide the root resource.
-fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher);
-
-// Create a service to access boot arguments.
+// Create a service to retrieve boot arguments.
 fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                                 uint64_t size);
+
+// Create a service to retrieve ZBI items.
+fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
+                                            ItemMap map);
+
+// Create a service to provide the root resource.
+fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher);
 
 } // namespace bootsvc

@@ -7,22 +7,102 @@
 #include <ctype.h>
 
 #include <fs/connection.h>
+#include <safemath/checked_math.h>
+#include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
+
+namespace {
+
+// Returns true for boot item types that should be stored.
+bool StoreItem(uint32_t type) {
+    switch (type) {
+    case ZBI_TYPE_CRASHLOG:
+    case ZBI_TYPE_KERNEL_DRIVER:
+    case ZBI_TYPE_PLATFORM_ID:
+    case ZBI_TYPE_STORAGE_BOOTFS:
+    case ZBI_TYPE_STORAGE_RAMDISK:
+        return true;
+    default:
+        return ZBI_TYPE_DRV_METADATA(type);
+    }
+}
+
+bootsvc::ItemKey CreateItemKey(uint32_t type, uint32_t extra) {
+    switch (type) {
+    case ZBI_TYPE_STORAGE_BOOTFS:
+    case ZBI_TYPE_STORAGE_RAMDISK:
+        // If this is for storage, set the extra value to zero.
+        return bootsvc::ItemKey{.type = type, .extra = 0};
+    default:
+        // Otherwise, store the extra value.
+        return bootsvc::ItemKey{.type = type, .extra = extra};
+    }
+}
+
+bootsvc::ItemValue CreateItemValue(uint32_t type, uint32_t off, uint32_t len) {
+    switch (type) {
+    case ZBI_TYPE_STORAGE_BOOTFS:
+    case ZBI_TYPE_STORAGE_RAMDISK:
+        // If this is for storage, capture the ZBI header.
+        len = safemath::CheckAdd(len, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
+        break;
+    default:
+        // Otherwise, adjust the offset to skip the ZBI header.
+        off = safemath::CheckAdd(off, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
+    }
+    return bootsvc::ItemValue{.offset = off, .length = len};
+}
+
+} // namespace
 
 namespace bootsvc {
 
 const char* const kLastPanicFilePath = "log/last-panic.txt";
 
-fbl::Vector<zx::vmo> RetrieveBootdata() {
-    fbl::Vector<zx::vmo> vmos;
-    zx::vmo vmo;
-    for (unsigned n = 0;
-         vmo.reset(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, n))), vmo.is_valid();
-         n++) {
-        vmos.push_back(std::move(vmo));
+zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
+    // Validate boot container provided by startup handle.
+    zx::vmo vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
+    zbi_header_t header;
+    zx_status_t status = vmo.read(&header, 0, sizeof(header));
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to read ZBI container header: %s\n", zx_status_get_string(status));
+        return status;
+    } else if (header.type != ZBI_TYPE_CONTAINER || header.extra != ZBI_CONTAINER_MAGIC ||
+               header.magic != ZBI_ITEM_MAGIC || !(header.flags & ZBI_FLAG_VERSION)) {
+        printf("bootsvc: Invalid ZBI container header\n");
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    return vmos;
+
+    // Read boot items from boot container.
+    ItemMap map;
+    uint32_t off = sizeof(header);
+    uint32_t len = header.length;
+    while (len > sizeof(header)) {
+        status = vmo.read(&header, off, sizeof(header));
+        if (status != ZX_OK) {
+            printf("bootsvc: Failed to read ZBI item header: %s\n", zx_status_get_string(status));
+            return status;
+        } else if (header.type == ZBI_CONTAINER_MAGIC || header.magic != ZBI_ITEM_MAGIC) {
+            printf("bootsvc: Invalid ZBI item header\n");
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+        uint32_t item_len = ZBI_ALIGN(header.length + static_cast<uint32_t>(sizeof(zbi_header_t)));
+        if (item_len > len) {
+            printf("bootsvc: ZBI item too large (%u > %u)\n", item_len, len);
+            return ZX_ERR_IO_DATA_INTEGRITY;
+        } else if (StoreItem(header.type)) {
+            map.emplace(CreateItemKey(header.type, header.extra),
+                        CreateItemValue(header.type, off, header.length));
+        }
+        off = safemath::CheckAdd(off, item_len).ValueOrDie();
+        len = safemath::CheckSub(len, item_len).ValueOrDie();
+    }
+
+    *out_vmo = std::move(vmo);
+    *out_map = std::move(map);
+    return ZX_OK;
 }
 
 zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {

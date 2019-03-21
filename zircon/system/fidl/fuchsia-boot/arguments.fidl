@@ -4,7 +4,7 @@
 
 library fuchsia.boot;
 
-/// Protocol for accessing kernel arguments.
+/// Protocol for retrieving boot arguments.
 [Discoverable, Layout = "Simple"]
 protocol Arguments {
     /// Get a |vmo| containing boot arguments, along with the |size| of the boot

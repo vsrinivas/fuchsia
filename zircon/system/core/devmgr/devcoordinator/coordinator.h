@@ -158,7 +158,6 @@ public:
     ~Coordinator();
 
     zx_status_t InitializeCoreDevices(const char* sys_device_driver);
-    zx_status_t SetBootdata(const zx::unowned_vmo& vmo);
     bool InSuspend() const;
 
     zx_status_t ScanSystemDrivers();
@@ -275,7 +274,6 @@ private:
     // the context of a const member function, therefore it is also const. Given
     // that, we must make dmctl_socket_ mutable.
     mutable zx::socket dmctl_socket_;
-    zx::vmo bootdata_vmo_;
 
     // All Drivers
     fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;

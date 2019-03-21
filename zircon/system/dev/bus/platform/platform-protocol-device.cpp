@@ -258,11 +258,10 @@ zx_status_t ProtocolDevice::Start() {
 
         for (size_t i = 0; i < boot_metadata_count; i++) {
             const auto& metadata = resources_.boot_metadata(i);
-            const void* data;
-            uint32_t length;
-            status = bus_->GetZbiMetadata(metadata.zbi_type, metadata.zbi_extra, &data, &length);
+            fbl::Array<uint8_t> data;
+            status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &data);
             if (status == ZX_OK) {
-                status = DdkAddMetadata(metadata.zbi_type, data, length);
+                status = DdkAddMetadata(metadata.zbi_type, data.get(), data.size());
             }
             if (status != ZX_OK) {
                 DdkRemove();

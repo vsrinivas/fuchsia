@@ -12,6 +12,9 @@ library("devmgr-launcher") {
   sources = [
     "launcher.cpp",
   ]
+  public_deps = [
+    "$zx/system/ulib/fit",
+  ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

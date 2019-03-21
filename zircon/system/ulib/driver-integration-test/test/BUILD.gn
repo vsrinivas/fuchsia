@@ -10,6 +10,7 @@ group("test") {
 }
 
 test("driver-integration") {
+  test_group = "ddk"
   sources = [
     "main.cpp",
   ]

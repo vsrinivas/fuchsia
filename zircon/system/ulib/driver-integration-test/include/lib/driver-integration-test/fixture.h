@@ -30,7 +30,7 @@ public:
 
     // Launch a new isolated devmgr.  The instance will be destroyed when
     // |*out|'s dtor runs.
-    static zx_status_t Create(Args args, IsolatedDevmgr* out);
+    static zx_status_t Create(Args* args, IsolatedDevmgr* out);
 
     // Get a fd to the root of the isolate devmgr's devfs.  This fd
     // may be used with openat() and fdio_watch_directory().

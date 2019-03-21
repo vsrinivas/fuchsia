@@ -16,11 +16,13 @@
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl-async/bind.h>
@@ -57,8 +59,9 @@ namespace {
 // match the value used in system/dev/misc/sysinfo/sysinfo.c.
 constexpr uint32_t kIdHJobRoot = 4;
 
-constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
-constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
+constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
+constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
+constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
 
 // Tells VFS to exit by shutting down the fshost.
 void vfs_exit(const zx::event& fshost_event) {
@@ -354,13 +357,6 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
     }
 }
 
-zx_status_t Coordinator::SetBootdata(const zx::unowned_vmo& vmo) {
-    if (bootdata_vmo_.is_valid()) {
-        return ZX_ERR_ALREADY_EXISTS;
-    }
-    return vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &bootdata_vmo_);
-}
-
 void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const {
     zx_koid_t pid = dev->host() ? dev->host()->koid() : 0;
     char extra[256];
@@ -552,11 +548,6 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     actions[actions_count++] = (fdio_spawn_action_t){
         .action = FDIO_SPAWN_ACTION_SET_NAME,
         .name = {.data = name}};
-    // TODO: eventually devhosts should not have vfs access
-    actions[actions_count++] = (fdio_spawn_action_t){
-        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = {.prefix = "/boot", .handle = fs_clone("boot").release()},
-    };
     // TODO: constrain to /svc/device
     actions[actions_count++] = (fdio_spawn_action_t){
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
@@ -951,8 +942,8 @@ zx_status_t Coordinator::AddCompositeDevice(
 zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path,
                                       zx::vmo* vmo, size_t* size) {
     static const char* fwdirs[] = {
-        kBootFirmwareDir,
-        kSystemFirmwareDir,
+        kBootFirmwarePath,
+        kSystemFirmwarePath,
     };
 
     // Must be a relative path and no funny business.
@@ -1584,24 +1575,16 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
 
     // if this device has no devhost, first instantiate it
     if (dev->proxy->host() == nullptr) {
-        zx::channel h0;
-        // May be either a VMO or a channel.
-        zx::handle h1;
-
+        zx::channel h0, h1;
         // the immortal root devices do not provide proxy rpc
         bool need_proxy_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
 
-        if (need_proxy_rpc) {
+        if (need_proxy_rpc || dev == sys_device_) {
             // create rpc channel for proxy device to talk to the busdev it proxys
-            zx::channel c1;
-            if ((r = zx::channel::create(0, &h0, &c1)) < 0) {
+            if ((r = zx::channel::create(0, &h0, &h1)) < 0) {
                 log(ERROR, "devcoordinator: cannot create proxy rpc channel: %d\n", r);
                 return r;
             }
-            h1 = std::move(c1);
-        } else if (dev == sys_device_) {
-            // pass bootdata VMO handle to sys device
-            h1 = std::move(bootdata_vmo_);
         }
         if (target_devhost == nullptr) {
             if ((r = NewDevhost(devhostname, dev->host(), &target_devhost)) < 0) {
@@ -1617,6 +1600,11 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
         if (need_proxy_rpc) {
             if ((r = dh_send_connect_proxy(dev.get(), std::move(h0))) < 0) {
                 log(ERROR, "devcoordinator: dh_send_connect_proxy: %d\n", r);
+            }
+        }
+        if (dev == sys_device_) {
+            if ((r = fdio_service_connect(kItemsPath, h0.release())) != ZX_OK) {
+                log(ERROR, "devcoordinator: fdio_service_connect %s: %d\n", kItemsPath, r);
             }
         }
         if (dev->client_remote.is_valid()) {

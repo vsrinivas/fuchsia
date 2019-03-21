@@ -25,8 +25,8 @@ namespace platform_bus {
 zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
                                    fbl::unique_ptr<platform_bus::PlatformDevice>* out) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<platform_bus::PlatformDevice> dev(new (&ac)
-                                          platform_bus::PlatformDevice(parent, bus, pdev));
+    fbl::unique_ptr<platform_bus::PlatformDevice> dev(
+        new (&ac) platform_bus::PlatformDevice(parent, bus, pdev));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -63,9 +63,9 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
 
 // Create a resource and pass it back to the proxy along with necessary metadata
 // to create/map the VMO in the driver process.
-zx_status_t PlatformDevice::RpcGetMmio(const DeviceResources* dr, uint32_t index, zx_paddr_t* out_paddr,
-                                       size_t* out_length, zx_handle_t* out_handle,
-                                       uint32_t* out_handle_count) {
+zx_status_t PlatformDevice::RpcGetMmio(const DeviceResources* dr, uint32_t index,
+                                       zx_paddr_t* out_paddr, size_t* out_length,
+                                       zx_handle_t* out_handle, uint32_t* out_handle_count) {
     if (index >= dr->mmio_count()) {
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -172,7 +172,8 @@ zx_status_t PlatformDevice::RpcGetSmc(const DeviceResources* dr, uint32_t index,
     return ZX_OK;
 }
 
-zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr, pdev_device_info_t* out_info) {
+zx_status_t PlatformDevice::RpcGetDeviceInfo(const DeviceResources* dr,
+                                             pdev_device_info_t* out_info) {
     pdev_device_info_t info = {
         .vid = vid_,
         .pid = pid_,
@@ -222,27 +223,32 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
         *out_type = metadata.type;
         *actual = static_cast<uint32_t>(metadata.data_size);
         return ZX_OK;
-    } else {
-        // boot_metadata indices follow metadata indices.
-        index -= static_cast<uint32_t>(dr->metadata_count());
+    }
 
-        auto& metadata = dr->boot_metadata(index);
-        const void* data;
-        uint32_t length;
-        auto status = bus_->GetZbiMetadata(metadata.zbi_type, metadata.zbi_extra, &data, &length);
-        if (status == ZX_OK) {
-            if (length > buf_size) {
-                return ZX_ERR_BUFFER_TOO_SMALL;
-            }
-            memcpy(buf, data, length);
-            *out_type = metadata.zbi_type;
-            *actual = length;
-        }
+    // boot_metadata indices follow metadata indices.
+    index -= static_cast<uint32_t>(dr->metadata_count());
+
+    auto& metadata = dr->boot_metadata(index);
+    zx::vmo vmo;
+    uint32_t length;
+    zx_status_t status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &vmo, &length);
+    if (status != ZX_OK) {
+        return status;
+    } else if (length > buf_size) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    status = vmo.read(buf, 0, length);
+    if (status != ZX_OK) {
         return status;
     }
+    *out_type = metadata.zbi_type;
+    *actual = length;
+    return ZX_OK;
 }
 
-zx_status_t PlatformDevice::RpcGpioConfigIn(const DeviceResources* dr, uint32_t index, uint32_t flags) {
+zx_status_t PlatformDevice::RpcGpioConfigIn(const DeviceResources* dr, uint32_t index,
+                                            uint32_t flags) {
     if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -731,14 +737,13 @@ zx_status_t PlatformDevice::Start() {
         device_add_flags |= DEVICE_ADD_INVISIBLE;
     }
 
-    zx_status_t status;
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, vid_},
         {BIND_PLATFORM_DEV_PID, 0, pid_},
         {BIND_PLATFORM_DEV_DID, 0, did_},
     };
-
-    status = DdkAdd(name, device_add_flags, props, fbl::count_of(props), ZX_PROTOCOL_PDEV, argstr);
+    zx_status_t status = DdkAdd(name, device_add_flags, props, fbl::count_of(props),
+                                ZX_PROTOCOL_PDEV, argstr);
     if (status != ZX_OK) {
         return status;
     }
@@ -755,11 +760,10 @@ zx_status_t PlatformDevice::Start() {
 
         for (size_t i = 0; i < boot_metadata_count; i++) {
             const auto& metadata = dr->boot_metadata(i);
-            const void* data;
-            uint32_t length;
-            status = bus_->GetZbiMetadata(metadata.zbi_type, metadata.zbi_extra, &data, &length);
+            fbl::Array<uint8_t> data;
+            status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &data);
             if (status == ZX_OK) {
-                status = DdkAddMetadata(metadata.zbi_type, data, length);
+                status = DdkAddMetadata(metadata.zbi_type, data.get(), data.size());
             }
             if (status != ZX_OK) {
                 zxlogf(WARN, "%s failed to add metadata for new device\n", __func__);

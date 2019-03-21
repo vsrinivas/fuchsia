@@ -26,30 +26,29 @@ using devmgr_integration_test::RecursiveWaitForFile;
 
 namespace {
 
-constexpr char kBoardName[] = "pbus-test";
-
 zbi_platform_id_t kPlatformId = [](){
     zbi_platform_id_t plat_id = {};
     plat_id.vid = PDEV_VID_TEST;
     plat_id.pid = PDEV_PID_PBUS_TEST;
-    strcpy(plat_id.board_name, kBoardName);
+    strcpy(plat_id.board_name, "pbus-test");
     return plat_id;
 }();
 
-bool GetBootData(zx::vmo* bootdata_out) {
-    BEGIN_HELPER;
-    uint8_t zbi_buf[1024];
-    zbi::Zbi zbi(zbi_buf, 1024);
-    ASSERT_EQ(zbi.Reset(), ZBI_RESULT_OK);
-    ASSERT_EQ(zbi.AppendSection(sizeof(kPlatformId), ZBI_TYPE_PLATFORM_ID, 0, ZBI_FLAG_VERSION,
-                                &kPlatformId),
-              ZBI_RESULT_OK);
-    zx::vmo zbi_vmo;
-    ASSERT_EQ(zx::vmo::create(zbi.Length(), 0, &zbi_vmo), ZX_OK);
-    ASSERT_EQ(zbi_vmo.write(zbi.Base(), 0, zbi.Length()), ZX_OK);
-
-    *bootdata_out = std::move(zbi_vmo);
-    END_HELPER;
+zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
+    if (type != ZBI_TYPE_PLATFORM_ID) {
+        return ZX_OK;
+    }
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out = std::move(vmo);
+    return ZX_OK;
 }
 
 bool enumeration_test() {
@@ -58,7 +57,7 @@ bool enumeration_test() {
     devmgr_launcher::Args args;
     args.sys_device_driver = "/boot/driver/platform-bus.so";
     args.driver_search_paths.push_back("/boot/driver");
-    ASSERT_TRUE(GetBootData(&args.bootdata));
+    args.get_boot_item = GetBootItem;
 
     IsolatedDevmgr devmgr;
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);

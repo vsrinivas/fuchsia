@@ -4,14 +4,18 @@
 
 #pragma once
 
+#include <map>
+
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <lib/fdio/io.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
-#include <lib/zx/vmo.h>
 
 namespace devmgr_launcher {
+
+using GetBootItemFunction = fit::inline_function<
+    zx_status_t(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length)>;
 
 struct Args {
     // A list of absolute paths (in devmgr's view of the filesystem) to search
@@ -26,22 +30,22 @@ struct Args {
     // should be bound to the sys_device (the top-level device for most
     // devices).  If nullptr, this uses devmgr's default.
     const char* sys_device_driver = nullptr;
-    // VMO containing ZBI passed in from bootloader. Devmgr will simply
-    // forward this along to the sys_device as well as the fs_host.
-    zx::vmo bootdata;
     // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
     // inherits from the caller of Launch().
     fbl::unique_fd stdio;
-    // Select whether to use the system svchost or to launch a new one
+    // Select whether to use the system svchost or to launch a new one.
     bool use_system_svchost = false;
-    // If true, the block watcher will be disabled and will not start
+    // If true, the block watcher will be disabled and will not start.
     bool disable_block_watcher = false;
+    // Function to handle requests for boot items.
+    GetBootItemFunction get_boot_item;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it.
 //
 // Returns its containing job and a channel to the root of its devfs.
 // To destroy the devmgr, issue |devmgr_job->kill()|.
-zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root);
+zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
+                   zx::channel* devfs_root);
 
 } // namespace devmgr_launcher

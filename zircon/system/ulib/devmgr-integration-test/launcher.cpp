@@ -8,13 +8,72 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-launcher/launch.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
+#include <lib/fidl-async/bind.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+
+namespace {
+
+struct BootsvcData {
+    zx::channel server;
+    devmgr_launcher::GetBootItemFunction get_boot_item;
+};
+
+zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
+    auto& get_boot_item = *static_cast<devmgr_launcher::GetBootItemFunction*>(ctx);
+    zx::vmo vmo;
+    uint32_t length = 0;
+    if (get_boot_item) {
+        zx_status_t status = get_boot_item(type, extra, &vmo, &length);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    return fuchsia_boot_ItemsGet_reply(txn, vmo.release(), length);
+}
+
+constexpr fuchsia_boot_Items_ops kItemsOps = {
+    .Get = ItemsGet,
+};
+
+int bootsvc_main(void* arg) {
+    auto data = std::unique_ptr<BootsvcData>(static_cast<BootsvcData*>(arg));
+    async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+
+    // Quit the loop when the channel is closed.
+    async::Wait wait(data->server.get(), ZX_CHANNEL_PEER_CLOSED, [&loop](...) {
+        loop.Quit();
+    });
+
+    // Setup VFS.
+    fs::SynchronousVfs vfs(loop.dispatcher());
+    auto root = fbl::MakeRefCounted<fs::PseudoDir>();
+    auto node = fbl::MakeRefCounted<fs::Service>([&loop, &data](zx::channel channel) {
+        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
+        return fidl_bind(loop.dispatcher(), channel.release(), dispatch, &data->get_boot_item,
+                         &kItemsOps);
+    });
+    root->AddEntry(fuchsia_boot_Items_Name, node);
+
+    // Serve VFS on channel.
+    auto conn = fbl::make_unique<fs::Connection>(&vfs, root, std::move(data->server),
+                                                 ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE);
+    vfs.ServeConnection(std::move(conn));
+
+    return loop.Run();
+}
+
+} // namespace
 
 namespace devmgr_integration_test {
 
@@ -36,17 +95,32 @@ IsolatedDevmgr::~IsolatedDevmgr() {
     }
 }
 
-zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args,
-                                   IsolatedDevmgr* out) {
+zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
+    auto data = std::make_unique<BootsvcData>();
+    zx::channel bootsvc_client;
+    zx_status_t status = zx::channel::create(0, &bootsvc_client, &data->server);
+    if (status != ZX_OK) {
+        return status;
+    }
+    data->get_boot_item = std::move(args.get_boot_item);
+
+    thrd_t t;
+    int ret = thrd_create_with_name(&t, bootsvc_main, data.release(), "bootsvc");
+    if (ret != thrd_success) {
+        return ZX_ERR_INTERNAL;
+    }
+    thrd_detach(t);
+
     IsolatedDevmgr devmgr;
 
     zx::channel devfs;
-    zx_status_t status = devmgr_launcher::Launch(std::move(args), &devmgr.job_, &devfs);
+    status = devmgr_launcher::Launch(std::move(args), std::move(bootsvc_client), &devmgr.job_,
+                                     &devfs);
     if (status != ZX_OK) {
         return status;
     }
 
-    int fd = -1;
+    int fd;
     status = fdio_fd_create(devfs.release(), &fd);
     if (status != ZX_OK) {
         return status;
