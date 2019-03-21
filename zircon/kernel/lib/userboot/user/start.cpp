@@ -9,11 +9,10 @@
 #include "userboot-elf.h"
 #include "util.h"
 
+#include <lib/processargs/processargs.h>
 #include <zircon/stack.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
-#include <runtime/message.h>
-#include <runtime/processargs.h>
 #include <stdalign.h>
 #include <stdnoreturn.h>
 #include <string.h>
@@ -97,19 +96,19 @@ enum {
     uint32_t nbytes;
     uint32_t nhandles;
 
-    zx_status_t status = zxr_message_size(bootstrap_pipe, &nbytes, &nhandles);
-    check(log, status, "zxr_message_size failed on bootstrap pipe!");
+    zx_status_t status = processargs_message_size(bootstrap_pipe, &nbytes, &nhandles);
+    check(log, status, "processargs_message_size failed on bootstrap pipe!");
 
     // Read the bootstrap message from the kernel.
-    ZXR_PROCESSARGS_BUFFER(buffer,
-                           nbytes + EXTRA_HANDLE_COUNT * sizeof(uint32_t));
+    PROCESSARGS_BUFFER(buffer,
+                       nbytes + EXTRA_HANDLE_COUNT * sizeof(uint32_t));
     zx_handle_t handles[nhandles + EXTRA_HANDLE_COUNT];
     zx_proc_args_t* pargs;
     uint32_t* handle_info;
-    status = zxr_processargs_read(bootstrap_pipe,
-                                  buffer, nbytes, handles, nhandles,
-                                  &pargs, &handle_info);
-    check(log, status, "zxr_processargs_read failed on bootstrap message!");
+    status = processargs_read(bootstrap_pipe,
+                              buffer, nbytes, handles, nhandles,
+                              &pargs, &handle_info);
+    check(log, status, "processargs_read failed on bootstrap message!");
 
     // All done with the channel from the kernel now.  Let it go.
     zx_handle_close(bootstrap_pipe);
@@ -134,9 +133,9 @@ enum {
 
     // Extract the environment (aka kernel command line) strings.
     char* environ[pargs->environ_num + 1];
-    status = zxr_processargs_strings(buffer, nbytes, NULL, environ, NULL);
+    status = processargs_strings(buffer, nbytes, NULL, environ, NULL);
     check(log, status,
-          "zxr_processargs_strings failed on bootstrap message");
+          "processargs_strings failed on bootstrap message");
 
     // Process the kernel command line, which gives us options and also
     // becomes the environment strings for our child.

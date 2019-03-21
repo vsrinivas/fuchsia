@@ -79,7 +79,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/bootdata",
       "$zx/system/ulib/elfload",
       "$zx/system/ulib/ldmsg",
-      "$zx/system/ulib/runtime",
+      "$zx/system/ulib/processargs",
       "$zx/system/ulib/zircon:headers",
       "$zx/third_party/ulib/lz4",
       "$zx/third_party/ulib/musl/src/string:minimal_str",

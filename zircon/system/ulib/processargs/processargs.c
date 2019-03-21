@@ -2,18 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtime/processargs.h>
+#include <lib/processargs/processargs.h>
 #include <zircon/syscalls.h>
 
 // TODO(mcgrathr): Is there a better error code to use for marshalling
 // protocol violations?
 #define MALFORMED ZX_ERR_INVALID_ARGS
 
-zx_status_t zxr_processargs_read(zx_handle_t bootstrap,
-                                 void* buffer, uint32_t nbytes,
-                                 zx_handle_t handles[], uint32_t nhandles,
-                                 zx_proc_args_t** pargs,
-                                 uint32_t** handle_info) {
+zx_status_t processargs_message_size(zx_handle_t channel,
+                                     uint32_t* nbytes, uint32_t* nhandles) {
+    zx_status_t status = _zx_channel_read(
+        channel, 0, NULL, NULL, 0, 0, nbytes, nhandles);
+    if (status == ZX_ERR_BUFFER_TOO_SMALL)
+        status = ZX_OK;
+    return status;
+}
+
+zx_status_t processargs_read(zx_handle_t bootstrap,
+                             void* buffer, uint32_t nbytes,
+                             zx_handle_t handles[], uint32_t nhandles,
+                             zx_proc_args_t** pargs,
+                             uint32_t** handle_info) {
     if (nbytes < sizeof(zx_proc_args_t))
         return ZX_ERR_INVALID_ARGS;
     if ((uintptr_t)buffer % alignof(zx_proc_args_t) != 0)
@@ -69,8 +78,8 @@ static zx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[],
     return ZX_OK;
 }
 
-zx_status_t zxr_processargs_strings(void* msg, uint32_t bytes,
-                                    char* argv[], char* envp[], char* names[]) {
+zx_status_t processargs_strings(void* msg, uint32_t bytes,
+                                char* argv[], char* envp[], char* names[]) {
     zx_proc_args_t* const pa = msg;
     zx_status_t status = ZX_OK;
     if (argv != NULL) {

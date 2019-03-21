@@ -35,8 +35,7 @@
 #include <inttypes.h>
 
 #include <ldmsg/ldmsg.h>
-#include <runtime/message.h>
-#include <runtime/processargs.h>
+#include <lib/processargs/processargs.h>
 #include <runtime/thread.h>
 
 
@@ -1969,21 +1968,21 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     zx_handle_t bootstrap = (uintptr_t)start_arg;
 
     uint32_t nbytes, nhandles;
-    zx_status_t status = zxr_message_size(bootstrap, &nbytes, &nhandles);
+    zx_status_t status = processargs_message_size(bootstrap, &nbytes, &nhandles);
     if (status != ZX_OK) {
-        error("zxr_message_size bootstrap handle %#x failed: %d (%s)",
+        error("processargs_message_size bootstrap handle %#x failed: %d (%s)",
               bootstrap, status, _zx_status_get_string(status));
         nbytes = nhandles = 0;
     }
 
-    ZXR_PROCESSARGS_BUFFER(buffer, nbytes);
+    PROCESSARGS_BUFFER(buffer, nbytes);
     zx_handle_t handles[nhandles];
     zx_proc_args_t* procargs;
     uint32_t* handle_info;
     if (status == ZX_OK)
-        status = zxr_processargs_read(bootstrap, buffer, nbytes,
-                                      handles, nhandles,
-                                      &procargs, &handle_info);
+        status = processargs_read(bootstrap, buffer, nbytes,
+                                  handles, nhandles,
+                                  &procargs, &handle_info);
     if (status != ZX_OK) {
         error("bad message of %u bytes, %u handles"
               " from bootstrap handle %#x: %d (%s)",

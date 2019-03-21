@@ -6,10 +6,9 @@
 #include <stdatomic.h>
 #include <string.h>
 
+#include <lib/processargs/processargs.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
-#include <runtime/message.h>
-#include <runtime/processargs.h>
 #include <runtime/thread.h>
 
 struct start_params {
@@ -45,8 +44,8 @@ static void start_main(const struct start_params* p) {
     dummy_auxv[0] = dummy_auxv[1] = 0;
 
     char* names[namec + 1];
-    zx_status_t status = zxr_processargs_strings(p->buffer, p->nbytes,
-                                                 argv, __environ, names);
+    zx_status_t status = processargs_strings(p->buffer, p->nbytes,
+                                             argv, __environ, names);
     if (status != ZX_OK) {
         argc = namec = 0;
         argv = __environ = NULL;
@@ -98,18 +97,18 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
 
     // extract process startup information from channel in arg
     struct start_params p = { .main = main };
-    zx_status_t status = zxr_message_size(bootstrap, &p.nbytes, &p.nhandles);
+    zx_status_t status = processargs_message_size(bootstrap, &p.nbytes, &p.nhandles);
     if (status != ZX_OK) {
         p.nbytes = p.nhandles = 0;
     }
-    ZXR_PROCESSARGS_BUFFER(buffer, p.nbytes);
+    PROCESSARGS_BUFFER(buffer, p.nbytes);
     zx_handle_t handles[p.nhandles];
     p.buffer = buffer;
     p.handles = handles;
     if (status == ZX_OK) {
-        status = zxr_processargs_read(bootstrap, buffer, p.nbytes,
-                                      handles, p.nhandles,
-                                      &p.procargs, &p.handle_info);
+        status = processargs_read(bootstrap, buffer, p.nbytes,
+                                  handles, p.nhandles,
+                                  &p.procargs, &p.handle_info);
     }
 
     // Find the handles we're interested in among what we were given.

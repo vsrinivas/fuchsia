@@ -20,6 +20,7 @@ group("musl_internal") {
     "$zx/third_party/ulib/$malloc:*",
   ]
   public_deps = [
+    "$zx/system/ulib/processargs",
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/zircon",
   ]
