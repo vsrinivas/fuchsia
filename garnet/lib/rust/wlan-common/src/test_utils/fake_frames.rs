@@ -32,7 +32,7 @@ pub fn make_data_hdr(
     fc.set_from_ds(addr4.is_some());
     fc.set_to_ds(addr4.is_some());
     fc.set_htc_order(ht_ctrl.is_some());
-    let fc = fc.value().to_le_bytes();
+    let fc = fc.0.to_le_bytes();
 
     #[rustfmt::skip]
         let mut bytes = vec![
@@ -135,7 +135,7 @@ pub const MSDU_2_PAYLOAD : &[u8] = &[
 pub fn make_data_frame_amsdu() -> Vec<u8> {
     let mut qos_ctrl = QosControl(0);
     qos_ctrl.set_amsdu_present(true);
-    let mut amsdu_data_frame = make_data_hdr(None, qos_ctrl.value().to_le_bytes(), None);
+    let mut amsdu_data_frame = make_data_hdr(None, qos_ctrl.0.to_le_bytes(), None);
     #[rustfmt::skip]
     amsdu_data_frame.extend(&[
         // A-MSDU Subframe #1
@@ -163,7 +163,7 @@ pub fn make_data_frame_amsdu() -> Vec<u8> {
 pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {
     let mut qos_ctrl = QosControl(0);
     qos_ctrl.set_amsdu_present(true);
-    let mut amsdu_data_frame = make_data_hdr(None, qos_ctrl.value().to_le_bytes(), None);
+    let mut amsdu_data_frame = make_data_hdr(None, qos_ctrl.0.to_le_bytes(), None);
     #[rustfmt::skip]
         amsdu_data_frame.extend(&[
         // A-MSDU Subframe #1

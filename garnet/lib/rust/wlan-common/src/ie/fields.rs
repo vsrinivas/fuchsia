@@ -3,21 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    bitfield::bitfield,
+    wlan_bitfields::bitfields,
     zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
 };
 
 // IEEE Std 802.11-2016, 9.4.2.3
-bitfield! {
-    #[repr(C)]
-    #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
-    pub struct SupportedRate(u8);
-
-    pub rate, set_rate: 6, 0;
-    pub basic, set_basic: 7;
-
-    pub value, _: 7,0;
-}
+#[bitfields(
+    0..=6   rate,
+    7       basic,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
+pub struct SupportedRate(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.4
 #[derive(FromBytes, AsBytes, Unaligned)]
@@ -27,16 +24,13 @@ pub struct DsssParamSet {
 }
 
 // IEEE Std 802.11-2016, 9.2.4.6
-bitfield! {
-    #[repr(C)]
-    #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
-    pub struct BitmapControl(u8);
-
-    pub group_traffic, set_group_traffic: 0;
-    pub offset, set_offset: 7, 1;
-
-    pub value, _: 7,0;
-}
+#[bitfields(
+    0       group_traffic,
+    1..=7   offset,
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
+pub struct BitmapControl(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.6
 #[derive(FromBytes, AsBytes, Unaligned)]

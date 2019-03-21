@@ -36,11 +36,7 @@ impl std::fmt::Debug for FixedFields {
         writeln!(
             f,
             "fc: {:#b}, addr1: {:02X?}, addr2: {:02X?}, addr3: {:02X?}, seq: {}",
-            self.frame_ctrl.value(),
-            self.addr1,
-            self.addr2,
-            self.addr3,
-            self.seq_ctrl
+            self.frame_ctrl.0, self.addr1, self.addr2, self.addr3, self.seq_ctrl
         )?;
         Ok(())
     }
@@ -87,7 +83,7 @@ pub fn write_data_hdr<B: Appendable>(
     }
 
     let mut data_hdr = w.append_value_zeroed::<DataHdr>()?;
-    data_hdr.set_frame_ctrl(fixed.frame_ctrl.value());
+    data_hdr.set_frame_ctrl(fixed.frame_ctrl.0);
     data_hdr.addr1 = fixed.addr1;
     data_hdr.addr2 = fixed.addr2;
     data_hdr.addr3 = fixed.addr3;

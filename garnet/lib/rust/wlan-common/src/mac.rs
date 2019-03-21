@@ -4,11 +4,11 @@
 
 use {
     crate::{buffer_reader::BufferReader, utils::skip},
-    bitfield::bitfield,
     byteorder::{BigEndian, ByteOrder, LittleEndian},
     num::Unsigned,
     num_derive::{FromPrimitive, ToPrimitive},
     std::{marker::PhantomData, ops::Deref},
+    wlan_bitfields::bitfields,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
@@ -55,25 +55,21 @@ pub const ETHER_TYPE_EAPOL: u16 = 0x888E;
 pub const MAX_ETH_FRAME_LEN: usize = 2048;
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
-bitfield! {
-    #[derive(PartialEq)]
-    pub struct FrameControl(u16);
-    impl Debug;
-
-    pub protocol_version, set_protocol_version: 1, 0;
-    pub frame_type, set_frame_type: 3, 2;
-    pub frame_subtype, set_frame_subtype: 7, 4;
-    pub to_ds, set_to_ds: 8;
-    pub from_ds, set_from_ds: 9;
-    pub more_frag, set_more_frag: 19;
-    pub retry, set_retry: 11;
-    pub pwr_mgmt, set_pwr_mgmt: 12;
-    pub more_data, set_more_data: 13;
-    pub protected, set_protected: 14;
-    pub htc_order, set_htc_order: 15;
-
-    pub value, _: 15,0;
-}
+#[bitfields(
+    0..=1   protocol_version,
+    2..=3   frame_type,
+    4..=7   frame_subtype,
+    8       to_ds,
+    9       from_ds,
+    10      more_fragments,
+    11      retry,
+    12      power_mgmt,
+    13      more_data,
+    14      protected,
+    15      htc_order
+)]
+#[derive(PartialEq)]
+pub struct FrameControl(pub u16);
 
 impl FrameControl {
     pub fn from_bytes(bytes: &[u8]) -> Option<FrameControl> {
@@ -86,15 +82,11 @@ impl FrameControl {
 }
 
 // IEEE Std 802.11-2016, 9.2.4.4
-bitfield! {
-    pub struct SequenceControl(u16);
-    impl Debug;
-
-    pub frag_num, set_frag_num: 3, 0;
-    pub seq_num, set_seq_num: 15, 4;
-
-    pub value, _: 15,0;
-}
+#[bitfields(
+    0..=3   frag_num,
+    4..=15  seq_num,
+)]
+pub struct SequenceControl(pub u16);
 
 impl SequenceControl {
     pub fn from_bytes(bytes: &[u8]) -> Option<SequenceControl> {
@@ -107,61 +99,49 @@ impl SequenceControl {
 }
 
 // IEEE Std 802.11-2016, 9.2.4.6
-bitfield! {
-    #[repr(C)]
-    #[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
-    pub struct HtControl(u32);
+#[bitfields(
+    0       vht,
+    1..=29  middle, // see 9.2.4.6.2 for HT and 9.2.4.6.3 for VHT
+    30      ac_constraint,
+    31      rdg_more_ppdu,
+)]
+#[repr(C)]
+#[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
+pub struct HtControl(pub u32);
 
-    pub vht, set_vht: 0;
-    // Structure of this middle section is defined in 9.2.4.6.2 for HT,
-    // and 9.2.4.6.3 for VHT.
-    pub middle, set_middle: 29, 1;
-    pub ac_constraint, set_ac_constraint: 30;
-    pub rdg_more_ppdu, setrdg_more_ppdu: 31;
-
-    pub value, _: 31,0;
-}
+type RawCapabilityInfo = [u8; 2];
 
 // IEEE Std 802.11-2016, 9.4.1.4
-type RawCapabilityInfo = [u8; 2];
-bitfield! {
-    pub struct CapabilityInfo(u16);
-    impl Debug;
-
-    pub ess, set_ess: 0;
-    pub ibss, set_ibss: 1;
-    pub cf_pollable, set_cf_pollable: 2;
-    pub cf_poll_req, set_cf_poll_req: 3;
-    pub privacy, set_privacy: 4;
-    pub short_preamble, set_short_preamble: 5;
-    // bit 6-7 reserved
-    pub spectrum_mgmt, set_spectrum_mgmt: 8;
-    pub qos, set_qos: 9;
-    pub short_slot_time, set_short_slot_time: 10;
-    pub apsd, set_apsd: 11;
-    pub radio_msmt, set_radio_msmt: 12;
-    // bit 13 reserved
-    pub delayed_block_ack, set_delayed_block_ack: 14;
-    pub immediate_block_ack, set_immediate_block_ack: 15;
-
-    pub value, _: 15, 0;
-}
+#[bitfields(
+    0       ess,
+    1       ibss,
+    2       cf_pollable,
+    3       cf_poll_req,
+    4       privacy,
+    5       short_preamble,
+    6..=7   _,  // reserved
+    8       spectrum_mgmt,
+    9       qos,
+    10      short_slot_time,
+    11      apsd,
+    12      radio_measurement,
+    13      _,  // reserved
+    14      delayed_block_ack,
+    15      immediate_block_ack,
+)]
+pub struct CapabilityInfo(pub u16);
 
 // IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
-bitfield! {
-    #[repr(C)]
-    #[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
-    pub struct QosControl(u16);
-
-    pub tid, set_tid: 3, 0;
-    pub eosp, set_eosp: 4;
-    pub ack_policy, set_ack_policy: 6, 5;
-    pub amsdu_present, set_amsdu_present: 7;
-
-    // TODO(hahnr): Support various interpretations for remaining 8 bits.
-
-    pub value, _: 15, 0;
-}
+#[bitfields(
+    0..=3   tid,
+    4       eosp,
+    5..=6   ack_policy,
+    7       amsdu_present,
+    8..=15  high_byte, // interpretation varies
+)]
+#[repr(C)]
+#[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
+pub struct QosControl(pub u16);
 
 #[derive(PartialEq, Eq)]
 pub struct Presence<T: ?Sized>(bool, PhantomData<T>);
@@ -1279,10 +1259,10 @@ mod tests {
                 .expect("invalid data header");
         let mut fc = FrameControl(0);
         fc.set_to_ds(true);
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_dst_addr(&data_hdr), [5; 6]); // Addr3
         fc.set_to_ds(false);
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_dst_addr(&data_hdr), [3; 6]); // Addr1
     }
 
@@ -1294,22 +1274,22 @@ mod tests {
                 .expect("invalid data header");
         let mut fc = FrameControl(0);
         // to_ds == false && from_ds == false
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_src_addr(&data_hdr, None), Some([4; 6])); // Addr2
 
         fc.set_to_ds(true);
         // to_ds == true && from_ds == false
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_src_addr(&data_hdr, None), Some([4; 6])); // Addr2
 
         fc.set_from_ds(true);
         // to_ds == true && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_src_addr(&data_hdr, Some([11; 6])), Some([11; 6])); // Addr4
 
         fc.set_to_ds(false);
         // to_ds == false && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_src_addr(&data_hdr, None), Some([5; 6])); // Addr3
     }
 
@@ -1339,22 +1319,22 @@ mod tests {
                 .expect("invalid data header");
         let mut fc = FrameControl(0);
         // to_ds == false && from_ds == false
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_bssid(&data_hdr), Some([5; 6])); // Addr3
 
         fc.set_to_ds(true);
         // to_ds == true && from_ds == false
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_bssid(&data_hdr), Some([3; 6])); // Addr1
 
         fc.set_from_ds(true);
         // to_ds == true && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_bssid(&data_hdr), None);
 
         fc.set_to_ds(false);
         // to_ds == false && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.value());
+        data_hdr.set_frame_ctrl(fc.0);
         assert_eq!(data_bssid(&data_hdr), Some([4; 6])); // Addr2
     }
 }
