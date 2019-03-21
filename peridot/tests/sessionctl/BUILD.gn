@@ -14,8 +14,6 @@ executable("sessionctl_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/test_runner/cpp",
@@ -25,6 +23,7 @@ executable("sessionctl_test") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
   ]
 }

@@ -6,21 +6,19 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fxl/strings/join_strings.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include "lib/component/cpp/environment_services_helper.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
-#include "lib/fxl/strings/join_strings.h"
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionctl/session_ctl_constants.h"
 
 namespace sessionctl {
 
-class SessionCtlTest : public component::testing::TestWithEnvironment {
+class SessionCtlTest : public sys::testing::TestWithEnvironment {
  protected:
   void RunBasemgr() {
     std::vector<std::string> args;
