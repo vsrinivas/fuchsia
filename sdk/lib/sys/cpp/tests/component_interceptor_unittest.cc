@@ -74,9 +74,10 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
     ASSERT_TRUE(interceptor.InterceptURL(
         kInterceptUrl, "",
         [&actual_url, &intercepted_url](
+            fuchsia::sys::StartupInfo startup_info,
             std::unique_ptr<sys::testing::InterceptedComponent> component) {
           intercepted_url = true;
-          actual_url = component->startup_info().launch_info.url;
+          actual_url = startup_info.launch_info.url;
         }));
 
     fuchsia::sys::ComponentControllerPtr controller;
@@ -122,9 +123,12 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
   std::unique_ptr<sys::testing::InterceptedComponent> component;
   ASSERT_TRUE(interceptor.InterceptURL(
       kInterceptUrl, "",
-      [&](std::unique_ptr<sys::testing::InterceptedComponent> c) {
-        component = std::move(c);
-        component->set_on_kill([&]() { killed = true; });
+      [&](fuchsia::sys::StartupInfo startup_info,
+          std::unique_ptr<sys::testing::InterceptedComponent>
+              intercepted_component) {
+        component = std::move(intercepted_component);
+        component->set_on_kill([startup_info = std::move(startup_info),
+                                &killed]() { killed = true; });
       }));
 
   {
@@ -159,9 +163,9 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
           "data": "randomstring"
         }
       })",
-      [&](std::unique_ptr<sys::testing::InterceptedComponent> c) {
+      [&](fuchsia::sys::StartupInfo startup_info,
+          std::unique_ptr<sys::testing::InterceptedComponent> c) {
         intercepted_url = true;
-        auto startup_info = c->TakeStartupInfo();
         for (const auto& metadata : startup_info.program_metadata.get()) {
           program_metadata[metadata.key] = metadata.value;
         }

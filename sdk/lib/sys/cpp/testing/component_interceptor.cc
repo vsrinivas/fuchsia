@@ -158,29 +158,36 @@ void ComponentInterceptor::LoadUrl(std::string url, LoadUrlCallback response) {
 void ComponentInterceptor::StartComponent(
     fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+  // This is a buffer to store the move-only handler while we invoke it.
   ComponentLaunchHandler handler;
+  auto url = startup_info.launch_info.url;
   {
     std::lock_guard<std::mutex> lock(intercept_urls_mu_);
-    auto it =
-        intercepted_component_load_info_.find(startup_info.launch_info.url);
+    auto it = intercepted_component_load_info_.find(url);
     ZX_DEBUG_ASSERT(it != intercepted_component_load_info_.end());
 
-    // We maintain a reference to |handler| and unlock the mutex before calling
-    // it. This allows that handler to call InterceptURL() without deadlocking
-    // this on |intercept_urls_mu_|
-    handler = it->second.handler;
+    // This allows that handler to re-entrantly call InterceptURL() without
+    // deadlocking this on |intercept_urls_mu_|
+    handler = std::move(it->second.handler);
   }
 
-  handler(std::make_unique<InterceptedComponent>(
-      std::move(startup_info), std::move(controller), dispatcher_));
+  handler(std::move(startup_info), std::make_unique<InterceptedComponent>(
+                                       std::move(controller), dispatcher_));
+
+  // Put the |handler| back where it came from.
+  {
+    std::lock_guard<std::mutex> lock(intercept_urls_mu_);
+    auto it = intercepted_component_load_info_.find(url);
+    ZX_DEBUG_ASSERT(it != intercepted_component_load_info_.end());
+
+    it->second.handler = std::move(handler);
+  }
 }
 
 InterceptedComponent::InterceptedComponent(
-    fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     async_dispatcher_t* dispatcher)
     : binding_(this),
-      startup_info_(std::move(startup_info)),
       termination_reason_(TerminationReason::EXITED),
       exit_code_(ZX_OK) {
   binding_.Bind(std::move(request), dispatcher);

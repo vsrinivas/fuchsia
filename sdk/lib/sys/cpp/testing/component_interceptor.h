@@ -23,28 +23,19 @@ using fuchsia::sys::TerminationReason;
 class InterceptedComponent : public fuchsia::sys::ComponentController {
  public:
   // Called when this component is killed.
-  using OnKill = std::function<void()>;
+  using OnKill = fit::function<void()>;
 
   InterceptedComponent(
-      fuchsia::sys::StartupInfo startup_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
       async_dispatcher_t* dispatcher = nullptr);
 
   // resets |on_kill_| to nullptr and calls |Kill()|.
   ~InterceptedComponent() override;
 
-  fuchsia::sys::StartupInfo TakeStartupInfo() {
-    return std::move(startup_info_);
-  }
-
   void Exit(int64_t exit_code,
             TerminationReason reason = TerminationReason::EXITED);
 
   void set_on_kill(OnKill on_kill) { on_kill_ = std::move(on_kill); }
-
-  const fuchsia::sys::StartupInfo& startup_info() const {
-    return startup_info_;
-  };
 
  private:
   // |ComponentController|.
@@ -57,7 +48,6 @@ class InterceptedComponent : public fuchsia::sys::ComponentController {
   void Kill() override;
 
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
-  fuchsia::sys::StartupInfo startup_info_;
   TerminationReason termination_reason_;
   int64_t exit_code_;
   OnKill on_kill_;
@@ -71,8 +61,8 @@ class InterceptedComponent : public fuchsia::sys::ComponentController {
 // async dispatcher supplied to this class.
 class ComponentInterceptor : fuchsia::sys::Loader, fuchsia::sys::Runner {
  public:
-  using ComponentLaunchHandler =
-      std::function<void(std::unique_ptr<InterceptedComponent>)>;
+  using ComponentLaunchHandler = fit::function<void(
+      fuchsia::sys::StartupInfo, std::unique_ptr<InterceptedComponent>)>;
 
   ComponentInterceptor(fuchsia::sys::LoaderPtr fallback_loader,
                        async_dispatcher_t* dispatcher = nullptr);
