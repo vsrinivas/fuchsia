@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/type_support.h>
-
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
+
+#include <type_traits>
 
 namespace hid {
 namespace {
@@ -44,7 +44,7 @@ inline uint8_t ExtractBitsFromByte(uint8_t val, uint32_t begin, uint8_t count) {
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 template <typename T>
 bool ExtractUint(const Report& report, const hid::Attributes& attr, T* value_out) {
-    static_assert(fbl::is_pod<T>::value, "not POD");
+    static_assert(std::is_pod<T>::value, "not POD");
     if (attr.bit_sz > sizeof(T) * 8) {
         return false;
     }
