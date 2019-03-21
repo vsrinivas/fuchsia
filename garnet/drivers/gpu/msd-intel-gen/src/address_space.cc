@@ -77,6 +77,11 @@ magma::Status AddressSpace::MapBufferGpu(std::shared_ptr<AddressSpace> address_s
     if (!magma::is_page_aligned(gpu_addr))
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "gpu_addr 0x%lx not page aligned", gpu_addr);
 
+    if (gpu_addr + page_count * PAGE_SIZE > address_space->Size())
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "gpu_addr 0x%lx + page_count (%lu) > address space size (0x%lx)", gpu_addr,
+                        page_count, address_space->Size());
+
     magma::PlatformBuffer* platform_buffer = buffer->platform_buffer();
 
     if ((page_offset + page_count) * PAGE_SIZE > platform_buffer->size())
