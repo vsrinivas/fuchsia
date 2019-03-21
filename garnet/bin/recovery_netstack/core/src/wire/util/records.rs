@@ -11,7 +11,8 @@
 //!
 //! [`options`]: crate::wire::util::records::options
 
-use packet::BufferView;
+use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
+use std::marker::PhantomData;
 use std::ops::Deref;
 use zerocopy::ByteSlice;
 
@@ -112,6 +113,97 @@ pub(crate) trait RecordsImpl<'a>: RecordsImplErr + RecordsImplLimit {
     /// `parse` must be deterministic, or else `Records::parse` cannot guarantee
     /// that future iterations will not produce errors (and panic).
     fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Record>, Self::Error>;
+}
+
+/// An implementation of a records serializer.
+///
+/// `RecordsSerializerImpl` provides functions to serialize sequential records.
+/// It is required in order to construct a [`RecordsSerializer`].
+pub(crate) trait RecordsSerializerImpl<'a> {
+    /// The input type to this serializer.
+    ///
+    /// This is the analogous serializing version of `Record` in
+    /// [`RecordsImpl`]. Records serialization expects an `Iterator` of objects
+    /// of type `Record`.
+    type Record;
+    /// Provides the serialized length of a record.
+    ///
+    /// Returns the total length, in bytes, of `record`.
+    fn record_length(record: &Self::Record) -> usize;
+    /// Serializes `record`. into buffer `data`.
+    ///
+    /// The provided `data` buffer will **always** be sized to the value
+    /// returned by `record_length`.
+    fn serialize(data: &mut [u8], record: &Self::Record);
+}
+
+/// An instance of records serialization.
+///
+/// `RecordsSerializer` is instantiated with an `Iterator` that provides
+/// items to be serialized by a `RecordsSerializerImpl`.
+#[derive(Debug)]
+pub(crate) struct RecordsSerializer<'a, S, R: 'a, I>
+where
+    S: RecordsSerializerImpl<'a, Record = R>,
+    I: Iterator<Item = &'a R> + Clone,
+{
+    records: I,
+    _marker: PhantomData<S>,
+}
+
+impl<'a, S, R: 'a, I> RecordsSerializer<'a, S, R, I>
+where
+    S: RecordsSerializerImpl<'a, Record = R>,
+    I: Iterator<Item = &'a R> + Clone,
+{
+    /// Creates a new `RecordsSerializer` with given `records`.
+    ///
+    /// `records` must produce the same sequence of values from every iterator,
+    /// even if cloned. Serialization typically performed with two passes on
+    /// `records`: one to calculate the total length in bytes
+    /// (`records_bytes_len`) and another one to serialize to a buffer
+    /// (`serialize_records`). Violating this rule may cause panics or malformed
+    /// packets.
+    pub(crate) fn new(records: I) -> Self {
+        Self { records, _marker: PhantomData }
+    }
+
+    /// Returns the total length, in bytes, of the serialized records contained
+    /// within the `RecordsSerializer`.
+    fn records_bytes_len(&self) -> usize {
+        self.records.clone().map(|r| S::record_length(r)).sum()
+    }
+
+    /// `serialize_records` serializes all the records contained within the
+    /// `RecordsSerializer`.
+    ///
+    /// # Panics
+    ///
+    /// `serialize_records` expects that `buffer` has enough bytes to serialize
+    /// the contained records (as obtained from `records_bytes_len`, otherwise
+    /// it's considered a violation of the API contract and the call will panic.
+    fn serialize_records(self, buffer: &mut [u8]) {
+        let mut b = &mut &mut buffer[..];
+        for r in self.records {
+            // SECURITY: Take a zeroed buffer from b to prevent leaking
+            // information from packets previously stored in this buffer.
+            S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
+        }
+    }
+}
+
+impl<'a, S, R: 'a, I> InnerPacketBuilder for RecordsSerializer<'a, S, R, I>
+where
+    S: RecordsSerializerImpl<'a, Record = R>,
+    I: Iterator<Item = &'a R> + Clone,
+{
+    fn bytes_len(&self) -> usize {
+        self.records_bytes_len()
+    }
+
+    fn serialize(self, buffer: &mut [u8]) {
+        self.serialize_records(buffer)
+    }
 }
 
 impl<B, R> Records<B, R>
@@ -443,6 +535,12 @@ pub(crate) mod options {
     /// [`Records`]: crate::wire::util::records::Records
     pub(crate) type Options<B, O> = Records<B, O>;
 
+    /// An instance of options serialization.
+    ///
+    /// `OptionsSerializer` is instantiated with an `Iterator` that provides
+    /// items to be serialized by an [`OptionsSerializerImpl`].
+    pub(crate) type OptionsSerializer<'a, S, O, I> = RecordsSerializer<'a, S, O, I>;
+
     impl<'a, O> RecordsImplErr for O
     where
         O: OptionsImpl<'a>,
@@ -470,6 +568,42 @@ pub(crate) mod options {
         }
     }
 
+    impl<'a, O> RecordsSerializerImpl<'a> for O
+    where
+        O: OptionsSerializerImpl,
+    {
+        type Record = O::Option;
+
+        fn record_length(record: &Self::Record) -> usize {
+            let base = 2 + O::get_option_length(record);
+            // Pad up to option_len_multiplier:
+            (base + O::OPTION_LEN_MULTIPLIER - 1) / O::OPTION_LEN_MULTIPLIER
+                * O::OPTION_LEN_MULTIPLIER
+        }
+
+        fn serialize(data: &mut [u8], record: &Self::Record) {
+            // NOTE(brunodalbo) we don't currently support serializing the two
+            //  single-byte options used in tcp and ip: NOP and END_OF_OPTIONS.
+            //  If it is necessary to support those as part of TLV options
+            //  serialization, some changes will be required here.
+
+            // data not having enough space is a contract violation, so we
+            // panic in that case.
+            data[0] = O::get_option_kind(record);
+            let length = (Self::record_length(record) / O::OPTION_LEN_MULTIPLIER);
+            // option length not fitting in u8 is a contract violation. Without
+            // debug assertions on, this will cause the packet to be malformed.
+            debug_assert!(length <= std::u8::MAX.into());
+            data[1] = length as u8;
+            // because padding may have occurred, we zero-fill data before
+            // passing it along
+            for b in data[2..].iter_mut() {
+                *b = 0;
+            }
+            O::serialize(&mut data[2..], record)
+        }
+    }
+
     /// Errors returned from parsing options.
     ///
     /// `OptionParseErr` is either `Internal`, which indicates that this module
@@ -490,9 +624,9 @@ pub(crate) mod options {
 
     /// Common traits of option parsing and serialization.
     ///
-    /// This is split from `OptionsImpl` so that the associated types do not
-    /// depend on the lifetime parameter to `OptionsImpl` and provide common
-    /// behavior to parsers and serializers.
+    /// This is split from `OptionsImpl` and `OptionsSerializerImpl` so that
+    /// the associated types do not depend on the lifetime parameter to
+    /// `OptionsImpl` and provide common behavior to parsers and serializers.
     pub(crate) trait OptionsImplLayout {
         /// The error type that can be returned in Options parsing.
         type Error;
@@ -537,6 +671,42 @@ pub(crate) mod options {
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error>;
     }
 
+    /// An implementation of an options serializer.
+    ///
+    /// `OptionsSerializerImpl` provides to functions to serialize fixed- and
+    /// variable-length options. It is required in order to construct an
+    /// `OptionsSerializer`.
+    pub(crate) trait OptionsSerializerImpl: OptionsImplLayout {
+        /// The input type to this serializer.
+        ///
+        /// This is the analogous serializing version of `Option` in
+        /// [`OptionsImpl`]. Options serialization expects an `Iterator` of
+        /// objects of type `Option`.
+        type Option;
+
+        /// Returns the serialized length, in bytes, of the given `option`.
+        ///
+        ///
+        /// Implementers must return the length, in bytes, of the **data***
+        /// portion of the option field (not counting the type and length
+        /// bytes). The internal machinery of options serialization takes care
+        /// of aligning options to their `OPTION_LEN_MULTIPLIER` boundaries,
+        /// adding padding bytes if necessary.
+        fn get_option_length(option: &Self::Option) -> usize;
+
+        /// Returns the wire value for this option kind.
+        fn get_option_kind(option: &Self::Option) -> u8;
+
+        /// Serializes `option` into `data`.
+        ///
+        /// Implementers must write the **data** portion of `option` into
+        /// `data` (not the type or length octets, those are extracted through
+        /// calls to `get_option_kind` and `get_option_length`, respectively).
+        /// `data` is guaranteed to be long enough to fit `option` based on the
+        /// value returned by `get_option_length`.
+        fn serialize(data: &mut [u8], option: &Self::Option);
+    }
+
     fn next<'a, BV, O>(bytes: &mut BV) -> Result<Option<O::Option>, OptionParseErr<O::Error>>
     where
         BV: BufferView<&'a [u8]>,
@@ -579,6 +749,7 @@ pub(crate) mod options {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use packet::Serializer;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;
@@ -594,6 +765,22 @@ pub(crate) mod options {
                 let mut v = Vec::new();
                 v.extend_from_slice(data);
                 Ok(Some((kind, v)))
+            }
+        }
+
+        impl OptionsSerializerImpl for DummyOptionsImpl {
+            type Option = (u8, Vec<u8>);
+
+            fn get_option_length(option: &Self::Option) -> usize {
+                option.1.len()
+            }
+
+            fn get_option_kind(option: &Self::Option) -> u8 {
+                option.0
+            }
+
+            fn serialize(data: &mut [u8], option: &Self::Option) {
+                data.copy_from_slice(&option.1);
             }
         }
 
@@ -632,6 +819,22 @@ pub(crate) mod options {
                 let mut v = Vec::with_capacity(data.len());
                 v.extend_from_slice(data);
                 Ok(Some((kind, v)))
+            }
+        }
+
+        impl OptionsSerializerImpl for DummyNdpOptionsImpl {
+            type Option = (u8, Vec<u8>);
+
+            fn get_option_length(option: &Self::Option) -> usize {
+                option.1.len()
+            }
+
+            fn get_option_kind(option: &Self::Option) -> u8 {
+                option.0
+            }
+
+            fn serialize(data: &mut [u8], option: &Self::Option) {
+                data.copy_from_slice(&option.1)
             }
         }
 
@@ -756,6 +959,54 @@ pub(crate) mod options {
             // trying to access the length byte, which was a DoS vulnerability.
             Options::<_, DummyOptionsImpl>::parse(&[0x03, 0x03, 0x01, 0x03][..])
                 .expect_err("Can detect malformed length bytes");
+        }
+
+        #[test]
+        fn test_parse_and_serialize() {
+            // Construct byte sequences in the pattern [3, 2], [4, 3, 2], [5, 4,
+            // 3, 2], etc. The second byte is the length byte, so these are all
+            // valid options (with data [], [2], [3, 2], etc).
+            let mut bytes = Vec::new();
+            for i in 4..16 {
+                // from the user's perspective, these NOPs should be transparent
+                for j in (2..i).rev() {
+                    bytes.push(j);
+                }
+            }
+
+            let options = Options::<_, DummyOptionsImpl>::parse(bytes.as_slice()).unwrap();
+
+            let collected = options
+                .iter()
+                .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl>::Option>>();
+            let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
+
+            let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
+
+            assert_eq!(serialized, bytes);
+        }
+
+        #[test]
+        fn test_parse_and_serialize_ndp() {
+            let mut bytes = Vec::new();
+            for i in 0..16 {
+                bytes.push(i);
+                // NDP uses len*8 for the actual length.
+                bytes.push(i + 1);
+                // Write remaining 6 bytes.
+                for j in 2..((i + 1) * 8) {
+                    bytes.push(j)
+                }
+            }
+            let options = Options::<_, DummyNdpOptionsImpl>::parse(bytes.as_slice()).unwrap();
+            let collected = options
+                .iter()
+                .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl>::Option>>();
+            let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
+
+            let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
+
+            assert_eq!(serialized, bytes);
         }
     }
 }
