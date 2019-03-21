@@ -71,9 +71,7 @@ declare_args() {
 
 assert(
     meta_package_labels != [],
-    "Missing meta_package_labels. Are you using a supported product configuration? " +
-    "Check your args.gn file for an import of a product configuration, and consider " +
-    "using one of the products in the `//products` or `//vendor/*/products` directories.")
+    "Missing meta_package_labels. Are you using a supported product configuration? " + "Check your args.gn file for an import of a product configuration, and consider " + "using one of the products in the `//products` or `//vendor/*/products` directories.")
 
 # This will collect a list of scopes describing each image exported.
 # See json.gni.
@@ -602,17 +600,28 @@ action("devmgr_config.txt") {
   ]
 }
 
+component_manager_label =
+    "//garnet/bin/sys/component_manager:component_manager.bootfs"
+component_manager_target_dir =
+    get_label_info(component_manager_label, "target_out_dir")
+component_manager_target_name = get_label_info(component_manager_label, "name")
+component_manager_manifest =
+    component_manager_target_dir + "/" + component_manager_target_name
+
 # The main bootable image, which requires `blob.blk` to appear on some
 # attached storage device at runtime.
 zbi("fuchsia") {
   testonly = true
+
   deps = [
     ":devmgr_config.txt",
     ":system_image.manifest",
+    component_manager_label,
   ]
   inputs = [
-    zircon_kernel_zbi,
+    component_manager_manifest,
     boot_manifest,
+    zircon_kernel_zbi,
   ]
   manifest = [
     {

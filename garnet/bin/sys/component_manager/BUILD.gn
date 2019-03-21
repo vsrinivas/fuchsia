@@ -42,6 +42,16 @@ rustc_binary("bin") {
   ]
 }
 
+# This manifest is consumed by the ZBI rule in //build/images to add component_manager to bootfs.
+generate_manifest("component_manager.bootfs") {
+  deps = [
+    ":bin",
+  ]
+
+  args = [ "--entry=bin/component_manager=" +
+           rebase_path("$root_build_dir/component_manager", root_build_dir) ]
+}
+
 package("component_manager") {
   deps = [
     ":bin",
