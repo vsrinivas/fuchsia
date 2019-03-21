@@ -23,15 +23,22 @@ class Sl4f {
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
   static const _sl4fComponentName = 'sl4f.cmx';
 
-  /// Hostname of the device under test.
-  String host;
+  /// Authority (IP, hostname, etc.) of the device under test.
+  String target;
 
-  Sl4f(this.host) {
-    print('Target host: $host');
+  /// Path to an SSH key file. For in-tree Fuchsia development, this can be
+  /// the resolved path of `//.ssh/pkey`.
+  String sshKeyPath;
+
+  Sl4f(this.target, this.sshKeyPath) {
+    print('Target device: $target');
   }
 
-  /// Constructs an SL4F client from the FUCHSIA_IPV4_ADDR environment variable.
-  Sl4f.fromEnvironment() : this(Platform.environment['FUCHSIA_IPV4_ADDR']);
+  /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
+  /// `FUCHSIA_SSH_KEY` environment variables.
+  Sl4f.fromEnvironment()
+      : this(Platform.environment['FUCHSIA_IPV4_ADDR'],
+            Platform.environment['FUCHSIA_SSH_KEY']);
 
   /// Closes the underlying HTTP client.
   ///
@@ -46,7 +53,7 @@ class Sl4f {
     // omitted. This is actually required by our SL4F server (although it is
     // not required in JSON RPC:
     // https://www.jsonrpc.org/specification#request_object).
-    final httpRequest = http.Request('GET', Uri.http(host, ''))
+    final httpRequest = http.Request('GET', Uri.http(target, ''))
       ..body = jsonEncode({'id': '', 'method': method, 'params': params});
 
     final httpResponse =
@@ -60,16 +67,13 @@ class Sl4f {
     return response['result'];
   }
 
-  /// Starts the SL4F server on the host using ssh.
+  /// Starts the SL4F server on the target using ssh.
   ///
-  /// If no [sshKeyPath] is given, it's taken from the FUCHSIA_SSH_KEY env var.
   /// It will attempt to connect [tries] times, waiting at least [delay]
   /// between each attempt.
   /// Throws a StateError if after this is ran SL4F has not started.
   Future<void> startServer(
-      {String sshKeyPath,
-      int tries = 5,
-      Duration delay = const Duration(seconds: 30)}) async {
+      {int tries = 150, Duration delay = const Duration(seconds: 1)}) async {
     if (tries <= 0) {
       throw ArgumentError.value(tries, 'tries', 'Must be a positive integer');
     }
@@ -93,7 +97,7 @@ class Sl4f {
       // command will be waiting for sl4f to exit. So we rely only on
       // [_isRunning] to tell whether sl4f has started successfully.
       // ignore: unawaited_futures
-      _runSshCommand('run $_sl4fComponentUrl', sshKeyPath: sshKeyPath);
+      ssh('run $_sl4fComponentUrl');
 
       if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
         print('SL4F has started.');
@@ -107,16 +111,13 @@ class Sl4f {
   ///
   /// If no ssh key path is given, it's taken from the FUCHSIA_SSH_KEY env var.
   Future<void> stopServer({String sshKeyPath}) async {
-    if (!await _runSshCommand('killall $_sl4fComponentName',
-        sshKeyPath: sshKeyPath)) {
+    if (!await ssh('killall $_sl4fComponentName')) {
       print('Could not stop sl4f. Continuing.');
     }
   }
 
-  /// Runs the command given by [cmd] on the host using ssh.
-  Future<bool> _runSshCommand(String cmd, {String sshKeyPath}) async {
-    sshKeyPath ??= Platform.environment['FUCHSIA_SSH_KEY'];
-
+  /// Runs the command given by [cmd] on the target using ssh.
+  Future<bool> ssh(String cmd) async {
     print('Running over ssh: $cmd');
     final result = await Process.run(
         'ssh',
@@ -127,7 +128,7 @@ class Sl4f {
           'UserKnownHostsFile=/dev/null',
           '-o',
           'StrictHostKeyChecking=no',
-          '$_sshUser@$host',
+          '$_sshUser@$target',
           cmd
         ],
         // If not run in a shell it doesn't seem like the PATH is searched.
@@ -162,7 +163,7 @@ class Sl4f {
       }
 
       try {
-        await http.get(Uri.http(host, '/')).timeout(timeout);
+        await http.get(Uri.http(target, '/')).timeout(timeout);
       } on SocketException {
         continue;
       } on TimeoutException {
