@@ -192,7 +192,7 @@ if (current_toolchain == dart_toolchain) {
     # Warn if there are dart sources included in the build directory that are
     # not explicitly part of sources. This may cause a failure when syncing to
     # google3, as they will be exluded from the resulting BUILD file.
-    sources_required = false
+    sources_required = true
     if (defined(invoker.sources_required)) {
       sources_required = invoker.sources_required
     }
