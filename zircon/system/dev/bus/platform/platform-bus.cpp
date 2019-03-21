@@ -107,6 +107,21 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
         iommu_ = ddk::IommuProtocolClient(static_cast<const iommu_protocol_t*>(protocol));
         break;
     }
+    case ZX_PROTOCOL_SYSMEM: {
+        if (proxy_cb->callback != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        sysmem_ = ddk::SysmemProtocolClient(static_cast<const sysmem_protocol_t*>(protocol));
+        break;
+    }
+    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
+        if (proxy_cb->callback != nullptr) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        canvas_ = ddk::AmlogicCanvasProtocolClient(
+                                        static_cast<const amlogic_canvas_protocol_t*>(protocol));
+        break;
+    }
     default: {
         if (proxy_cb->callback == nullptr) {
             return ZX_ERR_NOT_SUPPORTED;
@@ -250,6 +265,18 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_CLOCK:
         if (clk_) {
             clk_->GetProto(static_cast<clock_protocol_t*>(out));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_SYSMEM:
+        if (sysmem_) {
+            sysmem_->GetProto(static_cast<sysmem_protocol_t*>(out));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_AMLOGIC_CANVAS:
+        if (canvas_) {
+            canvas_->GetProto(static_cast<amlogic_canvas_protocol_t*>(out));
             return ZX_OK;
         }
         break;

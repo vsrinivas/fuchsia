@@ -287,6 +287,47 @@ zx_status_t ProxyPower::PowerGetPowerDomainStatus(power_domain_status_t* out_sta
     return status;
 }
 
+zx_status_t ProxySysmem::SysmemConnect(zx::channel allocator2_request) {
+    platform_proxy_req_t req = {};
+    platform_proxy_rsp_t resp = {};
+    req.proto_id = ZX_PROTOCOL_SYSMEM;
+    req.op = SYSMEM_CONNECT;
+    zx_handle_t handle = allocator2_request.release();
+
+    return proxy_->Rpc(device_id_, &req, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0,
+                       nullptr);
+}
+
+zx_status_t ProxyAmlogicCanvas::AmlogicCanvasConfig(zx::vmo vmo, size_t offset,
+                                                    const canvas_info_t* info,
+                                                    uint8_t* out_canvas_idx) {
+    rpc_amlogic_canvas_req_t req = {};
+    rpc_amlogic_canvas_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS;
+    req.header.op = AMLOGIC_CANVAS_CONFIG;
+    req.offset = offset;
+    req.info = *info;
+    zx_handle_t handle = vmo.release();
+
+    auto status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp),
+                              &handle, 1, nullptr, 0, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_canvas_idx = resp.canvas_idx;
+    return ZX_OK;
+}
+
+zx_status_t ProxyAmlogicCanvas::AmlogicCanvasFree(uint8_t canvas_idx) {
+    rpc_amlogic_canvas_req_t req = {};
+    rpc_amlogic_canvas_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS;
+    req.header.op = AMLOGIC_CANVAS_FREE;
+    req.canvas_idx = canvas_idx;
+
+    return proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
 zx_status_t ProxyDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     if (index >= mmios_.size()) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -701,6 +742,16 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_CLOCK: {
         auto* proto = static_cast<clock_protocol_t*>(out);
         clk_.GetProtocol(proto);
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_SYSMEM: {
+        auto* proto = static_cast<sysmem_protocol_t*>(out);
+        sysmem_.GetProtocol(proto);
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
+        auto* proto = static_cast<amlogic_canvas_protocol_t*>(out);
+        canvas_.GetProtocol(proto);
         return ZX_OK;
     }
     default:

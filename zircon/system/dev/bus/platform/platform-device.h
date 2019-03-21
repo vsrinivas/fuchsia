@@ -7,6 +7,7 @@
 #include <ddktl/device.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/zx/channel.h>
 
 #include "device-resources.h"
 #include "proxy-protocol.h"
@@ -87,6 +88,10 @@ private:
                                          size_t* out_size);
     zx_status_t RpcClockEnable(const DeviceResources* dr, uint32_t index);
     zx_status_t RpcClockDisable(const DeviceResources* dr, uint32_t index);
+    zx_status_t RpcSysmemConnect(zx::channel allocator2_request);
+    zx_status_t RpcCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
+                                uint8_t* out_canvas_idx);
+    zx_status_t RpcCanvasFree(uint8_t canvas_index);
 
     zx_status_t RpcPowerDomainEnable(const DeviceResources* dr, uint32_t index);
     zx_status_t RpcPowerDomainDisable(const DeviceResources* dr, uint32_t index);

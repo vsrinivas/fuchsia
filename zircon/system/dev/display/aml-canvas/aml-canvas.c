@@ -165,55 +165,6 @@ static amlogic_canvas_protocol_ops_t canvas_ops = {
     .free = aml_canvas_free,
 };
 
-static void aml_canvas_proxy_cb(void* cookie, const void* req_buffer, size_t req_size,
-                                const zx_handle_t* req_handle_list, size_t req_handle_count,
-                                void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
-                                zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
-                                size_t* out_resp_handle_actual) {
-    const rpc_canvas_req_t* req = (rpc_canvas_req_t*)req_buffer;
-    rpc_canvas_rsp_t* resp = (rpc_canvas_rsp_t*)out_resp_buffer;
-
-    if (req_size < sizeof(*req) || resp_size < sizeof(*resp)) {
-        resp->header.status = ZX_ERR_BUFFER_TOO_SMALL;
-        return;
-    }
-
-    if (req->header.proto_id != ZX_PROTOCOL_AMLOGIC_CANVAS) {
-        resp->header.status = ZX_ERR_NOT_SUPPORTED;
-        return;
-    }
-    *out_resp_actual = sizeof(*resp);
-    *out_resp_handle_actual = 0;
-    uint32_t handles_consumed = 0;
-
-    switch (req->header.op) {
-    case CANVAS_CONFIG: {
-        if (req_handle_count < 1) {
-            resp->header.status = ZX_ERR_BUFFER_TOO_SMALL;
-            return;
-        }
-        resp->header.status = aml_canvas_config(cookie, req_handle_list[0], req->offset,
-                                                &req->info, &resp->idx);
-        handles_consumed = 1;
-        break;
-    }
-    case CANVAS_FREE: {
-        resp->header.status = aml_canvas_free(cookie, req->idx);
-        break;
-    }
-    default:
-        for (uint32_t i = 0; i < req_handle_count; i++) {
-            zx_handle_close(req_handle_list[i]);
-        }
-        resp->header.status = ZX_ERR_NOT_SUPPORTED;
-        return;
-    }
-    for (uint32_t i = handles_consumed; i < req_handle_count; i++) {
-        zx_handle_close(req_handle_list[i]);
-    }
-    resp->header.status = ZX_OK;
-}
-
 static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = ZX_OK;
 
@@ -258,7 +209,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
         .name = "aml-canvas",
         .ctx = canvas,
         .ops = &aml_canvas_device_protocol,
-        .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
+        .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     status = device_add(parent, &args, &canvas->zxdev);
@@ -270,7 +221,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     canvas->canvas.ctx = canvas;
 
     // Register the canvas protocol with the platform bus
-    const platform_proxy_cb_t callback = {aml_canvas_proxy_cb, canvas};
+    const platform_proxy_cb_t callback = {NULL, NULL};
     pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas,
                            sizeof(canvas->canvas), &callback);
     return ZX_OK;

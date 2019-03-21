@@ -19,6 +19,7 @@ driver("platform-bus") {
     "platform-protocol-device.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-amlogiccanvas",
     "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
@@ -29,6 +30,7 @@ driver("platform-bus") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -47,6 +49,7 @@ driver("platform-bus.proxy") {
     "platform-proxy.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-amlogiccanvas",
     "$zx/system/banjo/ddk-protocol-clock",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
@@ -56,6 +59,7 @@ driver("platform-bus.proxy") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

@@ -8,7 +8,6 @@
 #include "amlogic_memory_allocator.h"
 #include "buffer_collection_token.h"
 #include "macros.h"
-#include "sysmem-proxy.h"
 
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -58,55 +57,6 @@ zx_status_t in_proc_sysmem_Connect(void* ctx,
 sysmem_protocol_ops_t in_proc_sysmem_protocol_ops = {
     .connect = in_proc_sysmem_Connect,
 };
-
-// This function is used as a platform_proxy_cb.callback.
-void sysmem_proxy_cb(void* ctx, const void* req_buffer, size_t req_size,
-                     const zx_handle_t* req_handle_list,
-                     size_t req_handle_count, void* out_resp_buffer,
-                     size_t resp_size, size_t* out_resp_actual,
-                     zx_handle_t* out_resp_handle_list,
-                     size_t resp_handle_count, size_t* out_resp_handle_actual) {
-    // Consume or close all the incoming handles, regardless of how far we get.
-    // If we consume the first few handles (or first handle), don't close those.
-    uint32_t handles_consumed = 0;
-    auto close_extra_handles = fit::defer(
-        [req_handle_list, req_handle_count, &handles_consumed]{
-        for (uint32_t i = handles_consumed; i < req_handle_count; i++) {
-            zx_handle_close(req_handle_list[i]);
-        }
-    });
-
-    const rpc_sysmem_req_t* req = (rpc_sysmem_req_t*)req_buffer;
-    rpc_sysmem_rsp_t* resp = (rpc_sysmem_rsp_t*)out_resp_buffer;
-
-    if (req_size < sizeof(*req) || resp_size < sizeof(*resp)) {
-        resp->header.status = ZX_ERR_BUFFER_TOO_SMALL;
-        return;
-    }
-
-    if (req->header.proto_id != ZX_PROTOCOL_SYSMEM) {
-        resp->header.status = ZX_ERR_NOT_SUPPORTED;
-        return;
-    }
-
-    *out_resp_actual = sizeof(*resp);
-    *out_resp_handle_actual = 0;
-
-    switch (req->header.op) {
-    case SYSMEM_CONNECT: {
-        if (req_handle_count < 1) {
-            resp->header.status = ZX_ERR_BUFFER_TOO_SMALL;
-            return;
-        }
-        resp->header.status = in_proc_sysmem_Connect(ctx, req_handle_list[0]);
-        handles_consumed = 1;
-        break;
-    }
-    default:
-        resp->header.status = ZX_ERR_NOT_SUPPORTED;
-        return;
-    }
-}
 
 } // namespace
 
@@ -200,7 +150,7 @@ zx_status_t Device::Bind() {
     // We should only pbus_register_protocol() if device_add() succeeded, but if
     // pbus_register_protocol() fails, we should remove the device without it
     // ever being visible.
-    const platform_proxy_cb_t callback = {sysmem_proxy_cb, this};
+    const platform_proxy_cb_t callback = {nullptr, nullptr};
     status = pbus_register_protocol(
         &pbus, ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
         sizeof(in_proc_sysmem_protocol_), &callback);

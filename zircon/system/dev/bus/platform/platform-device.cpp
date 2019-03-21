@@ -431,6 +431,30 @@ zx_status_t PlatformDevice::RpcPowerDomainGetStatus(const DeviceResources* dr, u
     return bus_->power()->GetPowerDomainStatus(dr->power_domain(index).power_domain, status);
 }
 
+zx_status_t PlatformDevice::RpcSysmemConnect(zx::channel allocator2_request) {
+    if (bus_->sysmem() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return bus_->sysmem()->Connect(std::move(allocator2_request));
+}
+
+zx_status_t PlatformDevice::RpcCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
+                                            uint8_t* out_canvas_idx) {
+    if (bus_->canvas() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return bus_->canvas()->Config(std::move(vmo), offset, info, out_canvas_idx);
+}
+
+zx_status_t PlatformDevice::RpcCanvasFree(uint8_t canvas_index) {
+    if (bus_->canvas() == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return bus_->canvas()->Free(canvas_index);
+}
+
 zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     if (channel == ZX_HANDLE_INVALID) {
         // proxy device has connected
@@ -467,7 +491,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     case ZX_PROTOCOL_PDEV: {
         auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, actual, sizeof(*req));
             return ZX_ERR_INTERNAL;
         }
         auto resp = reinterpret_cast<rpc_pdev_rsp_t*>(&resp_buf);
@@ -521,7 +545,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     case ZX_PROTOCOL_GPIO: {
         auto req = reinterpret_cast<rpc_gpio_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, actual, sizeof(*req));
             return ZX_ERR_INTERNAL;
         }
         auto resp = reinterpret_cast<rpc_gpio_rsp_t*>(&resp_buf);
@@ -587,7 +611,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     case ZX_PROTOCOL_I2C: {
         auto req = reinterpret_cast<rpc_i2c_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, actual, sizeof(*req));
             return ZX_ERR_INTERNAL;
         }
         auto resp = reinterpret_cast<rpc_i2c_rsp_t*>(&resp_buf);
@@ -615,7 +639,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     case ZX_PROTOCOL_CLOCK: {
         auto req = reinterpret_cast<rpc_clk_req_t*>(&req_buf);
         if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, actual, sizeof(*req));
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, actual, sizeof(*req));
             return ZX_ERR_INTERNAL;
         }
         resp_len = sizeof(*resp_header);
@@ -626,6 +650,54 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         case CLK_DISABLE:
             status = RpcClockDisable(dr, req->index);
+            break;
+        default:
+            zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
+        break;
+    }
+    case ZX_PROTOCOL_SYSMEM: {
+        auto req = reinterpret_cast<platform_proxy_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        if (req_handle_count != 1) {
+            zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+            return ZX_ERR_INTERNAL;
+        }
+        resp_len = sizeof(*resp_header);
+
+        switch (req_header->op) {
+        case SYSMEM_CONNECT:
+            status = RpcSysmemConnect(zx::channel(req_handles[0]));
+            break;
+        default:
+            zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);
+            return ZX_ERR_INTERNAL;
+        }
+        break;
+    }
+    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
+        auto req = reinterpret_cast<rpc_amlogic_canvas_req_t*>(&req_buf);
+        if (actual < sizeof(*req)) {
+            zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, actual, sizeof(*req));
+            return ZX_ERR_INTERNAL;
+        }
+        if (req_handle_count != 1) {
+            zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+            return ZX_ERR_INTERNAL;
+        }
+        auto resp = reinterpret_cast<rpc_amlogic_canvas_rsp_t*>(&resp_buf);
+        resp_len = sizeof(*resp);
+
+        switch (req_header->op) {
+        case AMLOGIC_CANVAS_CONFIG:
+            status = RpcCanvasConfig(zx::vmo(req_handles[0]), req->offset, &req->info, &resp->canvas_idx);
+            break;
+        case AMLOGIC_CANVAS_FREE:
+            status = RpcCanvasFree(req->canvas_idx);
             break;
         default:
             zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);

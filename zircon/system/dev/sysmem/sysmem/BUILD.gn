@@ -38,23 +38,6 @@ driver("sysmem") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
-  data_deps = [
-    ":sysmem.proxy",
-  ]
-}
-
-driver("sysmem.proxy") {
-  sources = [
-    "sysmem-proxy-client.c",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-platform-proxy",
-    "$zx/system/banjo/ddk-protocol-sysmem",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/zircon",
-  ]
 }
 
 test("sysmem-unittest") {

@@ -7,11 +7,13 @@
 #include "platform-proxy-device.h"
 
 #include <ddktl/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -111,6 +113,44 @@ private:
     fbl::RefPtr<PlatformProxy> proxy_;
 };
 
+class ProxySysmem : public ddk::SysmemProtocol<ProxySysmem> {
+public:
+    explicit ProxySysmem(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), proxy_(proxy) {}
+
+    // Sysmem protocol implementation.
+    zx_status_t SysmemConnect(zx::channel allocator2_request);
+
+    void GetProtocol(sysmem_protocol_t* proto) {
+        proto->ops = &sysmem_protocol_ops_;
+        proto->ctx = this;
+    }
+
+private:
+    uint32_t device_id_;
+    fbl::RefPtr<PlatformProxy> proxy_;
+};
+
+class ProxyAmlogicCanvas : public ddk::AmlogicCanvasProtocol<ProxyAmlogicCanvas> {
+public:
+    explicit ProxyAmlogicCanvas(uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
+        : device_id_(device_id), proxy_(proxy) {}
+
+    // Amlogic Canvas protocol implementation.
+    zx_status_t AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
+                                    uint8_t* out_canvas_idx);
+    zx_status_t AmlogicCanvasFree(uint8_t canvas_idx);
+
+    void GetProtocol(amlogic_canvas_protocol_t* proto) {
+        proto->ops = &amlogic_canvas_protocol_ops_;
+        proto->ctx = this;
+    }
+
+private:
+    uint32_t device_id_;
+    fbl::RefPtr<PlatformProxy> proxy_;
+};
+
 class ProxyDevice;
 using ProxyDeviceType = ddk::FullDevice<ProxyDevice>;
 
@@ -118,7 +158,8 @@ class ProxyDevice : public ProxyDeviceType,
                     public ddk::PDevProtocol<ProxyDevice, ddk::base_protocol> {
 public:
     explicit ProxyDevice(zx_device_t* parent, uint32_t device_id, fbl::RefPtr<PlatformProxy> proxy)
-        : ProxyDeviceType(parent), device_id_(device_id), proxy_(proxy), clk_(device_id, proxy) {}
+        : ProxyDeviceType(parent), device_id_(device_id), proxy_(proxy), clk_(device_id, proxy),
+          sysmem_(device_id, proxy), canvas_(device_id, proxy) {}
 
     // Creates a ProxyDevice to be the root platform device.
     static zx_status_t CreateRoot(zx_device_t* parent, fbl::RefPtr<PlatformProxy> proxy);
@@ -183,6 +224,8 @@ private:
     fbl::Vector<ProxyPower> power_domains_;
     fbl::Vector<ProxyI2c> i2cs_;
     ProxyClock clk_;
+    ProxySysmem sysmem_;
+    ProxyAmlogicCanvas canvas_;
 
     char name_[ZX_MAX_NAME_LEN];
     uint32_t metadata_count_;

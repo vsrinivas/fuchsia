@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform/proxy.h>
@@ -143,5 +144,28 @@ typedef struct {
     platform_proxy_rsp_t header;
     power_domain_status_t status;
 } rpc_power_rsp_t;
+
+// ZX_PROTOCOL_SYSMEM proxy support.
+enum {
+    SYSMEM_CONNECT,
+};
+
+// ZX_PROTOCOL_AMLOGIC_CANVAS proxy support.
+enum {
+    AMLOGIC_CANVAS_CONFIG,
+    AMLOGIC_CANVAS_FREE,
+};
+
+typedef struct {
+    platform_proxy_req_t header;
+    size_t offset;
+    canvas_info_t info;
+    uint8_t canvas_idx;
+} rpc_amlogic_canvas_req_t;
+
+typedef struct {
+    platform_proxy_rsp_t header;
+    uint8_t canvas_idx;
+} rpc_amlogic_canvas_rsp_t;
 
 } // namespace platform_bus
