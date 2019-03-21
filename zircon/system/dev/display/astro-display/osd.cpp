@@ -8,6 +8,7 @@
 #include "rdma-regs.h"
 #include <ddk/debug.h>
 #include <ddktl/device.h>
+#include <fbl/auto_lock.h>
 
 namespace astro_display {
 
@@ -51,6 +52,7 @@ int Osd::RdmaThread() {
         // RDMA completed. Remove source for all finished DMA channels
         for (int i = 0; i < kMaxRdmaChannels; i++) {
             if (vpu_mmio_->Read32(VPU_RDMA_STATUS) & RDMA_STATUS_DONE(i)) {
+                fbl::AutoLock lock(&rdma_lock_);
                 uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
                 regVal &= ~RDMA_ACCESS_AUTO_INT_EN(i); // VSYNC interrupt source
                 vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
@@ -147,7 +149,7 @@ void Osd::FlipOnVsync(uint8_t idx) {
     int rdma_channel = GetNextAvailableRdmaChannel();
     uint8_t retry_count = 0;
     while (rdma_channel == -1 && retry_count++ < kMaxRetries) {
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(8)));
         rdma_channel = GetNextAvailableRdmaChannel();
     }
 
@@ -179,6 +181,7 @@ void Osd::FlipOnVsync(uint8_t idx) {
                        VPU_RDMA_AHB_END_ADDR(rdma_channel));
 
     // Enable Auto mode: Non-Increment, VSync Interrupt Driven, Write
+    fbl::AutoLock lock(&rdma_lock_);
     uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
     regVal |= RDMA_ACCESS_AUTO_INT_EN(rdma_channel); // VSYNC interrupt source
     regVal |= RDMA_ACCESS_AUTO_WRITE(rdma_channel); // Write

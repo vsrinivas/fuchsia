@@ -13,6 +13,7 @@
 #include <threads.h>
 #include "common.h"
 #include <optional>
+#include <fbl/mutex.h>
 
 namespace astro_display {
 
@@ -76,6 +77,8 @@ private:
     // RDMA IRQ handle and thread
     zx::interrupt                       rdma_irq_;
     thrd_t                              rdma_thread_;
+
+    fbl::Mutex                          rdma_lock_;
 
     // use a single vmo for all channels
     zx::vmo                             rdma_vmo_;
