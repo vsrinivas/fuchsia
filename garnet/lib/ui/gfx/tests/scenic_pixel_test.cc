@@ -12,9 +12,9 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fsl/vmo/vector.h>
 #include <lib/fxl/logging.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
@@ -54,10 +54,10 @@ const std::map<std::string, std::string> kServices = {
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and
 // RootPresenter, and their dependencies.
-class ScenicPixelTest : public component::testing::TestWithEnvironment {
+class ScenicPixelTest : public sys::testing::TestWithEnvironment {
  protected:
   ScenicPixelTest() {
-    std::unique_ptr<component::testing::EnvironmentServices> services =
+    std::unique_ptr<sys::testing::EnvironmentServices> services =
         CreateServices();
 
     for (const auto& entry : kServices) {
@@ -147,7 +147,7 @@ class ScenicPixelTest : public component::testing::TestWithEnvironment {
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
  private:
-  std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
 TEST_F(ScenicPixelTest, SolidColor) {

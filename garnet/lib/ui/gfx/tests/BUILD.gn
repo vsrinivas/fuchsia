@@ -128,7 +128,6 @@ executable("pixeltests") {
     "//third_party/glm",
   ]
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
@@ -138,6 +137,7 @@ executable("pixeltests") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-cpp",
@@ -156,7 +156,6 @@ executable("viewstate_apptests") {
     "//third_party/glm",
   ]
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
@@ -165,6 +164,7 @@ executable("viewstate_apptests") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
   ]

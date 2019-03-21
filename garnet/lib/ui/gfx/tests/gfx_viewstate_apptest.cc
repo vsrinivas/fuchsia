@@ -12,9 +12,9 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/component/cpp/testing/test_with_environment.h>
 #include <lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -38,10 +38,10 @@ const std::map<std::string, std::string> kServices = {
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and
 // RootPresenter, and their dependencies.
-class ViewEmbedderTest : public component::testing::TestWithEnvironment {
+class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
  protected:
   ViewEmbedderTest() {
-    std::unique_ptr<component::testing::EnvironmentServices> services =
+    std::unique_ptr<sys::testing::EnvironmentServices> services =
         CreateServices();
 
     for (const auto& [service_name, url] : kServices) {
@@ -79,7 +79,7 @@ class ViewEmbedderTest : public component::testing::TestWithEnvironment {
   }
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
 TEST_F(ViewEmbedderTest, BouncingBall) {

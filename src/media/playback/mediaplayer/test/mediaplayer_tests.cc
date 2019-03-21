@@ -6,9 +6,8 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <queue>
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -32,7 +31,7 @@ static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
 constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 
 // Base class for mediaplayer tests.
-class MediaPlayerTests : public component::testing::TestWithEnvironment {
+class MediaPlayerTests : public sys::testing::TestWithEnvironment {
  protected:
   void SetUp() override {
     auto services = CreateServices();
@@ -96,7 +95,7 @@ class MediaPlayerTests : public component::testing::TestWithEnvironment {
   FakeAudio fake_audio_;
   FakeScenic fake_scenic_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<component::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
   CommandQueue commands_;
