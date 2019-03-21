@@ -4141,23 +4141,28 @@ void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
 void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
     struct net_device* ndev = ctx;
     struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
     wlanif_auth_confirm_t response;
 
     brcmf_dbg(TRACE, "Enter");
     response.result_code = WLAN_AUTH_RESULT_SUCCESS;
     response.auth_type = req->auth_type;
-    // At this point, the firmware should already have fully connected, and filled in
-    // profile->bssid.
-    if (memcmp(req->peer_sta_address, profile->bssid, ETH_ALEN)) {
-        const uint8_t* old_mac = profile->bssid;
+    // Ensure that join bssid matches auth bssid
+    if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
+        const uint8_t* old_mac = ifp->bss.bssid;
         const uint8_t* new_mac = req->peer_sta_address;
-        brcmf_err("Requested MAC (%02x:%02x:%02x:%02x:%02x:%02x) != "
-                  "connected MAC (%02x:%02x:%02x:%02x:%02x:%02x)\n",
+        brcmf_err("Auth MAC (%02x:%02x:%02x:%02x:%02x:%02x) != "
+                  "join MAC (%02x:%02x:%02x:%02x:%02x:%02x).\n",
                   new_mac[0], new_mac[1], new_mac[2], new_mac[3], new_mac[4], new_mac[5],
                   old_mac[0], old_mac[1], old_mac[2], old_mac[3], old_mac[4], old_mac[5]);
+
+        // In debug builds, we should investigate why the MLME is giving us inconsitent
+        // requests.
+        ZX_DEBUG_ASSERT(0);
+
+        // In release builds, ignore and continue.
+        brcmf_err("Ignoring mismatch and using join MAC address\n");
     }
-    memcpy(&response.peer_sta_address, profile->bssid, ETH_ALEN);
+    memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
     ndev->if_callbacks->auth_conf(ndev->if_callback_cookie, &response);
 }
 
