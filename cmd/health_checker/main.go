@@ -108,7 +108,7 @@ func init() {
 	// First set the flags ...
 	flag.StringVar(&configFile, "config", "/etc/botanist/config.json",
 		"The path of the json config file that contains the nodename of the device. Format is defined in https://fuchsia.googlesource.com/tools/+/master/botanist/common.go")
-	flag.DurationVar(&timeout, "timeout", 3*time.Second,
+	flag.DurationVar(&timeout, "timeout", 10*time.Second,
 		"The timeout for checking each device. The format should be a value acceptable to time.ParseDuration.")
 	flag.BoolVar(&rebootIfUnhealthy, "reboot", false, "If true, attempt to reboot the device if unhealthy.")
 }
