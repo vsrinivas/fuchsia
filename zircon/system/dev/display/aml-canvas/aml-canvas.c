@@ -17,7 +17,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform/proxy.h>
 #include <zircon/pixelformat.h>
 
 #include "aml-canvas.h"
@@ -221,9 +220,8 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     canvas->canvas.ctx = canvas;
 
     // Register the canvas protocol with the platform bus
-    const platform_proxy_cb_t callback = {NULL, NULL};
     pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas,
-                           sizeof(canvas->canvas), &callback);
+                           sizeof(canvas->canvas));
     return ZX_OK;
 fail:
     aml_canvas_release(canvas);

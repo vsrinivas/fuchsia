@@ -64,10 +64,6 @@ static const pbus_irq_t vim_video_irqs[] = {
     },
 };
 
-static const uint32_t vim_video_protocols[] = {
-    ZX_PROTOCOL_AMLOGIC_CANVAS,
-};
-
 zx_status_t Vim::VideoInit() {
     pbus_dev_t video_dev = {};
     video_dev.name = "video";
@@ -80,8 +76,6 @@ zx_status_t Vim::VideoInit() {
     video_dev.irq_count = countof(vim_video_irqs);
     video_dev.bti_list = vim_video_btis;
     video_dev.bti_count = countof(vim_video_btis);
-    video_dev.protocol_list = vim_video_protocols;
-    video_dev.protocol_count = countof(vim_video_protocols);
 
     zx_status_t status;
 

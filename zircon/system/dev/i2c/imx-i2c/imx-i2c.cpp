@@ -284,8 +284,7 @@ zx_status_t ImxI2cDevice::Bind(int id) {
         .ops = &i2c_impl_protocol_ops_,
         .ctx = this,
     };
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto), &kCallback);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto));
 
     cleanup.cancel();
     return ZX_OK;

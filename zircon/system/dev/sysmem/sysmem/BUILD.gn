@@ -19,7 +19,6 @@ driver("sysmem") {
   deps = [
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async:async-cpp",
@@ -50,7 +49,6 @@ test("sysmem-unittest") {
   deps = [
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/fidl/fuchsia-sysmem:c",

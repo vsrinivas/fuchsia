@@ -57,10 +57,6 @@ static const pbus_bti_t display_btis[] = {
     },
 };
 
-static const uint32_t display_protocols[] = {
-    ZX_PROTOCOL_SYSMEM,
-};
-
 static const pbus_mmio_t ufs_mmios[] = {
     {
         .base = MMIO_UFS_CFG_BASE,
@@ -209,8 +205,6 @@ static const pbus_dev_t hi_display_dev = {
     .gpio_count = countof(display_gpios),
     .bti_list = display_btis,
     .bti_count = countof(display_btis),
-    .protocol_list = display_protocols,
-    .protocol_count = countof(display_protocols),
 };
 
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {

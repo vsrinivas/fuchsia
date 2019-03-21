@@ -155,9 +155,7 @@ zx_status_t HisiClock::RegisterClockProtocol() {
         .ctx = this,
     };
 
-    const platform_proxy_cb_t kCallback = {nullptr, nullptr};
-    st = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK, &clk_proto,
-                               sizeof(clk_proto), &kCallback);
+    st = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto));
     if (st != ZX_OK) {
         zxlogf(ERROR, "HisiClock::RegisterClockProtocol: pbus_register_protocol"
                       " failed with st = %d\n",

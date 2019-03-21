@@ -78,7 +78,6 @@ sdk("ddk") {
     "//zircon/public/banjo/ddk-protocol-pciroot:ddk-protocol-pciroot_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-platform-bus:ddk-protocol-platform-bus_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-platform-device:ddk-protocol-platform-device_sdk($banjo_toolchain)",
-    "//zircon/public/banjo/ddk-protocol-platform-proxy:ddk-protocol-platform-proxy_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-rawnand:ddk-protocol-rawnand_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-scpi:ddk-protocol-scpi_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-sdhci:ddk-protocol-sdhci_sdk($banjo_toolchain)",

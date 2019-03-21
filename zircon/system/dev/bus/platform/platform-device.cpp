@@ -242,14 +242,6 @@ zx_status_t PlatformDevice::RpcGetMetadata(const DeviceResources* dr, uint32_t i
     }
 }
 
-zx_status_t PlatformDevice::RpcGetProtocols(const DeviceResources* dr, uint32_t* out_protocols,
-                                            uint32_t* out_protocol_count) {
-    auto count = dr->protocol_count();
-    memcpy(out_protocols, dr->protocols(), count * sizeof(*out_protocols));
-    *out_protocol_count = static_cast<uint32_t>(count);
-    return ZX_OK;
-}
-
 zx_status_t PlatformDevice::RpcGpioConfigIn(const DeviceResources* dr, uint32_t index, uint32_t flags) {
     if (bus_->gpio() == nullptr) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -530,12 +522,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             resp_len += resp->pdev.metadata_length;
             break;
         }
-        case PDEV_GET_PROTOCOLS: {
-            auto protos = reinterpret_cast<uint32_t*>(&resp[1]);
-            status = RpcGetProtocols(dr, protos, &resp->protocol_count);
-            resp_len += static_cast<uint32_t>(resp->protocol_count * sizeof(*protos));
-            break;
-        }
         default:
             zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
@@ -705,16 +691,9 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         }
         break;
     }
-    default: {
-        size_t resp_actual = 0;
-        size_t resp_handle_actual = 0;
-        status = bus_->Proxy(req_header, actual, req_handles, req_handle_count, resp_header,
-                             sizeof(resp_buf), &resp_actual, resp_handles,
-                             fbl::count_of(resp_handles), &resp_handle_actual);
-        resp_len = static_cast<uint32_t>(resp_actual);
-        resp_handle_count = static_cast<uint32_t>(resp_handle_actual);
-        break;
-    }
+    default:
+        zxlogf(ERROR, "%s: unknown protocol %u\n", __func__, req_header->proto_id);
+        return ZX_ERR_INTERNAL;
     }
 
     // set op to match request so zx_channel_write will return our response
@@ -753,20 +732,13 @@ zx_status_t PlatformDevice::Start() {
     }
 
     zx_status_t status;
-    if (dr->protocol_count() > 0) {
-        // PlatformDevice::Start with protocols
-        status = DdkAdd(name, device_add_flags, nullptr, 0, ZX_PROTOCOL_PLATFORM_PROXY, argstr);
-    } else {
     zx_device_prop_t props[] = {
-            {BIND_PLATFORM_DEV_VID, 0, vid_},
-            {BIND_PLATFORM_DEV_PID, 0, pid_},
-            {BIND_PLATFORM_DEV_DID, 0, did_},
-        };
+        {BIND_PLATFORM_DEV_VID, 0, vid_},
+        {BIND_PLATFORM_DEV_PID, 0, pid_},
+        {BIND_PLATFORM_DEV_DID, 0, did_},
+    };
 
-        status = DdkAdd(name, device_add_flags, props, fbl::count_of(props),
-                        ZX_PROTOCOL_PDEV, argstr);
-    }
-
+    status = DdkAdd(name, device_add_flags, props, fbl::count_of(props), ZX_PROTOCOL_PDEV, argstr);
     if (status != ZX_OK) {
         return status;
     }

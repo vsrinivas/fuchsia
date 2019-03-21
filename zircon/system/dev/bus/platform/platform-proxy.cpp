@@ -17,7 +17,6 @@
 
 #include <utility>
 
-#include "platform-proxy-client.h"
 #include "platform-proxy-device.h"
 
 namespace platform_bus {
@@ -149,26 +148,6 @@ void PlatformProxy::UnregisterProtocol(uint32_t proto_id) {
     protocols_.erase(proto_id);
 }
 
-zx_status_t PlatformProxy::Proxy(
-    const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
-    size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
-    zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
-    size_t* out_resp_handle_actual) {
-
-    auto* req = static_cast<const platform_proxy_req*>(req_buffer);
-    auto* resp = static_cast<platform_proxy_rsp*>(out_resp_buffer);
-    if (req->device_id != ROOT_DEVICE_ID) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (req_size > PLATFORM_PROXY_MAX_DATA) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return Rpc(ROOT_DEVICE_ID, req, req_size, resp, resp_size,
-               req_handle_list, req_handle_count, out_resp_handle_list,
-               resp_handle_count, out_resp_actual);
-}
-
 zx_status_t PlatformProxy::Create(void* ctx, zx_device_t* parent, const char* name,
                                   const char* args, zx_handle_t rpc_channel) {
     fbl::AllocChecker ac;
@@ -182,45 +161,7 @@ zx_status_t PlatformProxy::Create(void* ctx, zx_device_t* parent, const char* na
 }
 
 zx_status_t PlatformProxy::Init(zx_device_t* parent) {
-    // Get list of extra protocols to proxy.
-    rpc_pdev_req_t req = {};
-    struct {
-        rpc_pdev_rsp_t pdev;
-        uint32_t protocols[PROXY_MAX_PROTOCOLS];
-    } resp = {};
-    req.header.device_id = ROOT_DEVICE_ID;
-    req.header.proto_id = ZX_PROTOCOL_PDEV;
-    req.header.op = PDEV_GET_PROTOCOLS;
-
-    auto status = Rpc(ROOT_DEVICE_ID, &req.header, sizeof(req), &resp.pdev.header, sizeof(resp));
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    if (resp.pdev.protocol_count > 0) {
-        status = DdkAdd("PlatformProxy");
-        if (status != ZX_OK) {
-            return status;
-        }
-        // Increment our reference count so we aren't destroyed while the devmgr
-        // has a reference to us. We will decrement it in DdkRelease();
-        AddRef();
-
-        // Create device hosts for all the protocols.
-        protocol_count_ = resp.pdev.protocol_count;
-
-        for (uint32_t i = 0; i < protocol_count_; i++) {
-            status = ProxyClient::Create(resp.protocols[i], zxdev(),
-                                         fbl::RefPtr<PlatformProxy>(this));
-        }
-    } else {
-        status = ProxyDevice::CreateRoot(parent, fbl::RefPtr<PlatformProxy>(this));
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-
-    return ZX_OK;
+    return ProxyDevice::CreateRoot(parent, fbl::RefPtr<PlatformProxy>(this));
 }
 
 static zx_driver_ops_t proxy_driver_ops = [](){

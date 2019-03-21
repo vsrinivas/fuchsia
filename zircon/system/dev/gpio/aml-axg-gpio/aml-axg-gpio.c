@@ -531,9 +531,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     gpio->gpio_interrupt->irq_status = 0;
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio),
-                           &kCallback);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio));
     gpio->gpio_interrupt->irq_info = calloc(gpio->gpio_interrupt->irq_count,
                                      sizeof(uint16_t));
     if (!gpio->gpio_interrupt->irq_info) {

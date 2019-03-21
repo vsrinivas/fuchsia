@@ -50,9 +50,8 @@ static int hikey960_start_thread(void* arg) {
     if (status != ZX_OK) {
         goto fail;
     }
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
     status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio,
-                                    sizeof(hikey->gpio), &kCallback);
+                                    sizeof(hikey->gpio));
     if (status != ZX_OK) {
         goto fail;
     }

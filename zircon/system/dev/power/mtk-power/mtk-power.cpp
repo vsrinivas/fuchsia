@@ -180,11 +180,9 @@ zx_status_t MtkPower::Bind() {
         .ctx = this,
     };
 
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
     status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL,
                                     &power_proto,
-                                    sizeof(power_proto),
-                                    &kCallback);
+                                    sizeof(power_proto));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
         return status;

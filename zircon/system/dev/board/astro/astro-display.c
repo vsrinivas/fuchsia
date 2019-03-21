@@ -104,11 +104,6 @@ static const pbus_i2c_channel_t display_i2c_channels[] = {
     },
 };
 
-static const uint32_t display_protocols[] = {
-    ZX_PROTOCOL_SYSMEM,
-    ZX_PROTOCOL_AMLOGIC_CANVAS,
-};
-
 static const pbus_mmio_t dsi_mmios[] = {
     {
         // DSI Host Controller
@@ -144,8 +139,6 @@ static pbus_dev_t dsi_dev = {
     .mmio_count =countof(dsi_mmios),
     .child_list = display_dev,
     .child_count = countof(display_dev),
-    .protocol_list = display_protocols,
-    .protocol_count = countof(display_protocols),
 };
 
 zx_status_t aml_display_init(aml_bus_t* bus) {

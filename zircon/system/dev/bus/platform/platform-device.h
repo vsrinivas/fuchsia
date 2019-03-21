@@ -71,8 +71,6 @@ private:
     zx_status_t RpcDeviceAdd(const DeviceResources* dr, uint32_t index, uint32_t* out_device_id);
     zx_status_t RpcGetMetadata(const DeviceResources* dr, uint32_t index, uint32_t* out_type,
                                uint8_t* buf, uint32_t buf_size, uint32_t* actual);
-    zx_status_t RpcGetProtocols(const DeviceResources* dr, uint32_t* out_protocols,
-                                uint32_t* out_protocol_count);
     zx_status_t RpcGpioConfigIn(const DeviceResources* dr, uint32_t index, uint32_t flags);
     zx_status_t RpcGpioConfigOut(const DeviceResources* dr, uint32_t index, uint8_t initial_value);
     zx_status_t RpcGpioSetAltFunction(const DeviceResources* dr, uint32_t index, uint64_t function);

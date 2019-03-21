@@ -15,7 +15,6 @@
 #include <ddktl/protocol/platform/bus.h>
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -46,12 +45,6 @@ class PlatformBus : public PlatformBusType,
 public:
     static zx_status_t Create(zx_device_t* parent, const char* name, zx::vmo zbi);
 
-    zx_status_t Proxy(
-         const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
-         size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
-         zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
-         size_t* out_resp_handle_actual);
-
     // Device protocol implementation.
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     void DdkRelease();
@@ -59,8 +52,7 @@ public:
     // Platform bus protocol implementation.
     zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);
     zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
-    zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size,
-                                     const platform_proxy_cb_t* proxy_cb);
+    zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size);
     zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
 
@@ -93,36 +85,6 @@ public:
 
 private:
     pbus_sys_suspend_t suspend_cb_ = {};
-
-    // This class is a wrapper for a platform_proxy_cb_t added via pbus_register_protocol().
-    // It also is the element type for the proto_proxys_ WAVL tree.
-    class ProtoProxy : public fbl::WAVLTreeContainable<fbl::unique_ptr<ProtoProxy>> {
-    public:
-        ProtoProxy(uint32_t proto_id, const ddk::AnyProtocol* protocol,
-                   const platform_proxy_cb_t& proxy_cb)
-            : proto_id_(proto_id), protocol_(*protocol), proxy_cb_(proxy_cb) {}
-
-        inline uint32_t GetKey() const { return proto_id_; }
-        inline void GetProtocol(void* out) const { memcpy(out, &protocol_, sizeof(protocol_)); }
-
-        inline void Proxy(const void* req_buffer, size_t req_size,
-                          const zx_handle_t* req_handle_list, size_t req_handle_count,
-                          void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
-                          zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
-                          size_t* out_resp_handle_actual) {
-            proxy_cb_.callback(proxy_cb_.ctx, req_buffer, req_size,
-                               req_handle_list, req_handle_count,
-                               out_resp_buffer, resp_size, out_resp_actual,
-                               out_resp_handle_list, resp_handle_count,
-                               out_resp_handle_actual);
-        }
-
-    private:
-        const uint32_t proto_id_;
-        const ddk::AnyProtocol protocol_;
-        platform_proxy_cb_t proxy_cb_;
-    };
-
 
     explicit PlatformBus(zx_device_t* parent);
 
@@ -159,11 +121,6 @@ private:
 
     // Dummy IOMMU.
     zx::iommu iommu_handle_;
-
-    fbl::WAVLTree<uint32_t, fbl::unique_ptr<ProtoProxy>> proto_proxys_
-                                                __TA_GUARDED(proto_proxys_mutex_);
-    // Protects proto_proxys_.
-    fbl::Mutex proto_proxys_mutex_;
 };
 
 } // namespace platform_bus

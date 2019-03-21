@@ -179,9 +179,7 @@ static zx_status_t imx8m_mini_gpio_bind(void* ctx, zx_device_t* parent) {
 
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
-    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio),
-                           &kCallback);
+    pbus_register_protocol(&gpio->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio->gpio, sizeof(gpio->gpio));
 
     return ZX_OK;
 

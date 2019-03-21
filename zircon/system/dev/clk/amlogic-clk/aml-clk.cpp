@@ -160,9 +160,7 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         .ctx = this,
     };
 
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto),
-                                    &kCallback);
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto));
     if (status != ZX_OK) {
         zxlogf(ERROR, "meson_clk_bind: pbus_register_protocol failed, st = %d\n", status);
         return status;

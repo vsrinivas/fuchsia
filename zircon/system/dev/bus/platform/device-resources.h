@@ -45,7 +45,6 @@ public:
     inline const pbus_smc_t& smc(size_t i) const { return smcs_[i]; }
     inline const pbus_metadata_t& metadata(size_t i) const { return metadata_[i]; }
     inline const pbus_boot_metadata_t& boot_metadata(size_t i) const { return boot_metadata_[i]; }
-    inline const uint32_t* protocols() const { return protocols_.begin(); }
 
     // Counts for the above resource lists.
     inline size_t mmio_count() const { return mmios_.size(); }
@@ -59,7 +58,6 @@ public:
     inline size_t metadata_count() const { return metadata_.size(); }
     inline size_t boot_metadata_count() const { return boot_metadata_.size(); }
     inline size_t child_count() const { return children_.size(); }
-    inline size_t protocol_count() const { return protocols_.size(); }
 
 private:
     // Index of this DeviceResources instance in PlatformDevice::device_index_.
@@ -76,7 +74,6 @@ private:
     fbl::Array<pbus_smc_t> smcs_;
     fbl::Array<pbus_metadata_t> metadata_;
     fbl::Array<pbus_boot_metadata_t> boot_metadata_;
-    fbl::Array<uint32_t> protocols_;
 
     // Resources for children of this device.
     fbl::Vector<DeviceResources> children_;

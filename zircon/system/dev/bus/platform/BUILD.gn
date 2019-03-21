@@ -28,7 +28,6 @@ driver("platform-bus") {
     "$zx/system/banjo/ddk-protocol-iommu",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/banjo/ddk-protocol-powerimpl",
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/fidl/fuchsia-sysinfo:c",
@@ -44,7 +43,6 @@ driver("platform-bus") {
 
 driver("platform-bus.proxy") {
   sources = [
-    "platform-proxy-client.cpp",
     "platform-proxy-device.cpp",
     "platform-proxy.cpp",
   ]
@@ -57,7 +55,6 @@ driver("platform-bus.proxy") {
     "$zx/system/banjo/ddk-protocol-i2cimpl",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/banjo/ddk-protocol-powerimpl",
     "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/ulib/ddk",

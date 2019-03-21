@@ -75,9 +75,6 @@ constexpr pbus_irq_t display_irqs[] = {
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
-constexpr uint32_t display_protocols[] = {
-    ZX_PROTOCOL_SYSMEM,
-};
 
 static pbus_dev_t display_dev = []() {
     pbus_dev_t dev = {};
@@ -106,8 +103,6 @@ static pbus_dev_t dsi_dev = []() {
     dev.mmio_count =countof(dsi_mmios);
     dev.child_list = &display_dev;
     dev.child_count = 1;
-    dev.protocol_list = display_protocols;
-    dev.protocol_count = countof(display_protocols);
     return dev;
 }();
 } // namespace

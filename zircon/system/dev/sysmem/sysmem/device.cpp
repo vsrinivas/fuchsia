@@ -150,10 +150,9 @@ zx_status_t Device::Bind() {
     // We should only pbus_register_protocol() if device_add() succeeded, but if
     // pbus_register_protocol() fails, we should remove the device without it
     // ever being visible.
-    const platform_proxy_cb_t callback = {nullptr, nullptr};
     status = pbus_register_protocol(
         &pbus, ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
-        sizeof(in_proc_sysmem_protocol_), &callback);
+        sizeof(in_proc_sysmem_protocol_));
     if (status != ZX_OK) {
         zx_status_t remove_status = device_remove(device_);
         // If this failed, we're potentially leaving the device invisible in a

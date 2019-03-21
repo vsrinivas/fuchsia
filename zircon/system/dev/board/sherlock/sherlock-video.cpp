@@ -65,10 +65,6 @@ static const pbus_irq_t sherlock_video_irqs[] = {
     },
 };
 
-static const uint32_t sherlock_video_protocols[] = {
-    ZX_PROTOCOL_AMLOGIC_CANVAS,
-};
-
 static pbus_dev_t video_dev = []() {
     pbus_dev_t dev;
     dev.name = "aml-video";
@@ -81,8 +77,6 @@ static pbus_dev_t video_dev = []() {
     dev.bti_count = countof(sherlock_video_btis);
     dev.irq_list = sherlock_video_irqs;
     dev.irq_count = countof(sherlock_video_irqs);
-    dev.protocol_list = sherlock_video_protocols;
-    dev.protocol_count = countof(sherlock_video_protocols);
     return dev;
 }();
 

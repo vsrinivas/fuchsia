@@ -132,9 +132,7 @@ zx_status_t MtkClk::Bind() {
         .ctx = this,
     };
 
-    const platform_proxy_cb_t kCallback = {nullptr, nullptr};
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto),
-                                    &kCallback);
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto));
     if (status != ZX_OK) {
         zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d\n", status);
         return status;

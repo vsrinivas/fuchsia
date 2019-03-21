@@ -31,25 +31,6 @@
 
 namespace platform_bus {
 
-zx_status_t PlatformBus::Proxy(
-    const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
-    size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
-    zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
-    size_t* out_resp_handle_actual) {
-
-    auto* req = static_cast<const platform_proxy_req*>(req_buffer);
-    fbl::AutoLock lock(&proto_proxys_mutex_);
-    auto proto_proxy = proto_proxys_.find(req->proto_id);
-    if (!proto_proxy.IsValid()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    proto_proxy->Proxy(req_buffer, req_size, req_handle_list, req_handle_count,
-                       out_resp_buffer, resp_size, out_resp_actual, out_resp_handle_list,
-                       resp_handle_count, out_resp_handle_actual);
-    return ZX_OK;
-}
-
 zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id,
                                      zx::bti* out_bti) {
     if (iommu_index != 0) {
@@ -59,24 +40,17 @@ zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id,
 }
 
 zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* protocol,
-                                              size_t protocol_size,
-                                              const platform_proxy_cb_t* proxy_cb) {
+                                              size_t protocol_size) {
     if (!protocol || protocol_size < sizeof(ddk::AnyProtocol)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     switch (proto_id) {
     case ZX_PROTOCOL_GPIO_IMPL: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         gpio_ = ddk::GpioImplProtocolClient(static_cast<const gpio_impl_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_I2C_IMPL: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         auto proto = static_cast<const i2c_impl_protocol_t*>(protocol);
         auto status = I2cInit(proto);
         if (status != ZX_OK) {
@@ -87,64 +61,28 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
         break;
     }
     case ZX_PROTOCOL_CLOCK: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         clk_ = ddk::ClockProtocolClient(static_cast<const clock_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_POWER_IMPL: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         power_ = ddk::PowerImplProtocolClient(static_cast<const power_impl_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_IOMMU: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         iommu_ = ddk::IommuProtocolClient(static_cast<const iommu_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_SYSMEM: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         sysmem_ = ddk::SysmemProtocolClient(static_cast<const sysmem_protocol_t*>(protocol));
         break;
     }
     case ZX_PROTOCOL_AMLOGIC_CANVAS: {
-        if (proxy_cb->callback != nullptr) {
-            return ZX_ERR_INVALID_ARGS;
-        }
         canvas_ = ddk::AmlogicCanvasProtocolClient(
                                         static_cast<const amlogic_canvas_protocol_t*>(protocol));
         break;
     }
-    default: {
-        if (proxy_cb->callback == nullptr) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-
-        fbl::AutoLock lock(&proto_proxys_mutex_);
-        if (proto_proxys_.find(proto_id).IsValid()) {
-            zxlogf(ERROR, "%s: protocol %08x has already been registered\n", __func__, proto_id);
-            return ZX_ERR_BAD_STATE;
-        }
-
-        fbl::AllocChecker ac;
-        auto proxy = fbl::make_unique_checked<ProtoProxy>(&ac, proto_id,
-                                                          static_cast<const ddk::AnyProtocol*>(protocol),
-                                                          *proxy_cb);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        proto_proxys_.insert(std::move(proxy));
-        sync_completion_signal(&proto_completion_);
-        return ZX_OK;
-    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     fbl::AutoLock lock(&proto_completion_mutex_);
@@ -291,15 +229,6 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
             return ZX_OK;
         }
         break;
-    default: {
-        fbl::AutoLock lock(&proto_proxys_mutex_);
-        auto proto_proxy = proto_proxys_.find(proto_id);
-        if (!proto_proxy.IsValid()) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        proto_proxy->GetProtocol(out);
-        return ZX_OK;
-    }
     }
 
     return ZX_ERR_NOT_SUPPORTED;

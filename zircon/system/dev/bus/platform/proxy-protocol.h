@@ -7,7 +7,6 @@
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform/proxy.h>
 #include <ddktl/protocol/powerimpl.h>
 
 namespace platform_bus {
@@ -28,16 +27,29 @@ enum {
     PDEV_GET_BOARD_INFO,
     PDEV_DEVICE_ADD,
     PDEV_GET_METADATA,
-    PDEV_GET_PROTOCOLS,
 };
 
-typedef struct {
+/// Header for RPC requests.
+struct platform_proxy_req_t {
+    uint32_t txid;
+    uint32_t device_id;
+    uint32_t proto_id;
+    uint32_t op;
+};
+
+/// Header for RPC responses.
+struct platform_proxy_rsp_t {
+    uint32_t txid;
+    zx_status_t status;
+};
+
+struct rpc_pdev_req_t {
     platform_proxy_req_t header;
     uint32_t index;
     uint32_t flags;
-} rpc_pdev_req_t;
+};
 
-typedef struct {
+struct rpc_pdev_rsp_t {
     platform_proxy_rsp_t header;
     zx_paddr_t paddr;
     size_t length;
@@ -48,21 +60,16 @@ typedef struct {
     uint32_t device_id;
     uint32_t metadata_type;
     uint32_t metadata_length;
-    uint32_t protocol_count;
-} rpc_pdev_rsp_t;
+};
 
 // Maximum metadata size that can be returned via PDEV_DEVICE_GET_METADATA.
 static constexpr uint32_t PROXY_MAX_METADATA_SIZE =
     (PROXY_MAX_TRANSFER_SIZE - sizeof(rpc_pdev_rsp_t));
 
-typedef struct {
+struct rpc_pdev_metadata_rsp_t {
     rpc_pdev_rsp_t pdev;
     uint8_t metadata[PROXY_MAX_METADATA_SIZE];
-} rpc_pdev_metadata_rsp_t;
-
-// Maximum number of protocols that can be returned via PDEV_GET_PROTOCOLS.
-static constexpr size_t PROXY_MAX_PROTOCOLS =
-    ((PLATFORM_PROXY_MAX_DATA - sizeof(rpc_pdev_rsp_t)) / sizeof(uint32_t));
+};
 
 // Maximum I2C transfer is I2C_MAX_TRANSFER_SIZE minus size of largest header.
 static constexpr uint32_t I2C_MAX_TRANSFER_SIZE =
@@ -82,19 +89,19 @@ enum {
     GPIO_SET_POLARITY,
 };
 
-typedef struct {
+struct rpc_gpio_req_t {
     platform_proxy_req_t header;
     uint32_t index;
     uint32_t flags;
     uint32_t polarity;
     uint64_t alt_function;
     uint8_t value;
-} rpc_gpio_req_t;
+};
 
-typedef struct {
+struct rpc_gpio_rsp_t {
     platform_proxy_rsp_t header;
     uint8_t value;
-} rpc_gpio_rsp_t;
+};
 
 // ZX_PROTOCOL_I2C proxy support.
 enum {
@@ -102,20 +109,20 @@ enum {
     I2C_TRANSACT,
 };
 
-typedef struct {
+struct rpc_i2c_req_t {
     platform_proxy_req_t header;
     uint32_t index;
     i2c_transact_callback transact_cb;
     void* cookie;
     size_t cnt;
-} rpc_i2c_req_t;
+};
 
-typedef struct {
+struct rpc_i2c_rsp_t {
     platform_proxy_rsp_t header;
     size_t max_transfer;
     i2c_transact_callback transact_cb;
     void* cookie;
-} rpc_i2c_rsp_t;
+};
 
 // ZX_PROTOCOL_CLOCK proxy support.
 enum {
@@ -123,10 +130,10 @@ enum {
     CLK_DISABLE,
 };
 
-typedef struct {
+struct rpc_clk_req_t {
     platform_proxy_req_t header;
     uint32_t index;
-} rpc_clk_req_t;
+};
 
 // ZX_PROTOCOL_POWER proxy support.
 enum {
@@ -135,15 +142,15 @@ enum {
     POWER_GET_STATUS,
 };
 
-typedef struct {
+struct rpc_power_req_t {
     platform_proxy_req_t header;
     uint32_t index;
-} rpc_power_req_t;
+};
 
-typedef struct {
+struct rpc_power_rsp_t {
     platform_proxy_rsp_t header;
     power_domain_status_t status;
-} rpc_power_rsp_t;
+};
 
 // ZX_PROTOCOL_SYSMEM proxy support.
 enum {
@@ -156,16 +163,16 @@ enum {
     AMLOGIC_CANVAS_FREE,
 };
 
-typedef struct {
+struct rpc_amlogic_canvas_req_t {
     platform_proxy_req_t header;
     size_t offset;
     canvas_info_t info;
     uint8_t canvas_idx;
-} rpc_amlogic_canvas_req_t;
+};
 
-typedef struct {
+struct rpc_amlogic_canvas_rsp_t {
     platform_proxy_rsp_t header;
     uint8_t canvas_idx;
-} rpc_amlogic_canvas_rsp_t;
+};
 
 } // namespace platform_bus

@@ -90,21 +90,12 @@ struct PbusDev {
     /// This is only used in cases where children of a platform device also need to access
     /// platform bus resources.
     vector<PbusDev> child;
-    /// Extra protocols to be provided to this platform device and its children.
-    /// These fields are only used for the top level `pbus_dev_t`.
-    vector<uint32> protocol;
 };
 
 /// Subset of pdev_board_info_t to be set by the board driver.
 struct PbusBoardInfo {
     /// Board specific revision number.
     uint32 board_revision;
-};
-
-[Layout = "ddk-callback"]
-interface PlatformProxyCb {
-    Callback(vector<voidptr> req, vector<handle> req_handle) -> (vector<voidptr> resp,
-                                                                 vector<handle> resp_handle);
 };
 
 [Layout = "ddk-callback"]
@@ -127,7 +118,7 @@ interface PBus {
     ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
-    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol, PlatformProxyCb proxy_cb)
+    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol)
 -> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.

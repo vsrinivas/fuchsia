@@ -285,9 +285,7 @@ zx_status_t Mt8167I2c::Init() {
         .ops = &i2c_impl_protocol_ops_,
         .ctx = this,
     };
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
-    auto status = pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto),
-                                         &kCallback);
+    auto status = pbus_register_protocol(&pbus, ZX_PROTOCOL_I2C_IMPL, &i2c_proto, sizeof(i2c_proto));
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
         return status;

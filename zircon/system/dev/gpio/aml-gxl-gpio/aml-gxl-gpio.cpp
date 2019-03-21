@@ -170,9 +170,7 @@ void AmlGxlGpio::Bind(const pbus_protocol_t& pbus) {
         .ctx = this
     };
 
-    const platform_proxy_cb_t kCallback = {NULL, NULL};
-    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto),
-                           &kCallback);
+    pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto));
 }
 
 zx_status_t AmlGxlGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,

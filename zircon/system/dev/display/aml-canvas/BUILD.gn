@@ -10,7 +10,6 @@ driver("aml-canvas") {
     "$zx/system/banjo/ddk-protocol-amlogiccanvas",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/banjo/ddk-protocol-platform-proxy",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

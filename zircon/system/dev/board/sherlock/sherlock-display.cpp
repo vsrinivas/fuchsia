@@ -102,11 +102,6 @@ static const pbus_i2c_channel_t display_i2c_channels[] = {
     },
 };
 
-static const uint32_t display_protocols[] = {
-    ZX_PROTOCOL_SYSMEM,
-    ZX_PROTOCOL_AMLOGIC_CANVAS,
-};
-
 constexpr pbus_mmio_t dsi_mmios[] = {
     {
         // DSI Host Controller
@@ -143,8 +138,6 @@ static pbus_dev_t dsi_dev = []() {
     dev.mmio_count =countof(dsi_mmios);
     dev.child_list = &display_dev;
     dev.child_count = 1;
-    dev.protocol_list = display_protocols;
-    dev.protocol_count = countof(display_protocols);
     return dev;
 }();
 

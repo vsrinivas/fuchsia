@@ -76,11 +76,6 @@ static const pbus_bti_t vim_display_btis[] = {
     },
 };
 
-static const uint32_t vim_display_protocols[] = {
-    ZX_PROTOCOL_SYSMEM,
-    ZX_PROTOCOL_AMLOGIC_CANVAS,
-};
-
 zx_status_t Vim::DisplayInit() {
     zx_status_t status;
     pbus_dev_t display_dev = {};
@@ -96,8 +91,6 @@ zx_status_t Vim::DisplayInit() {
     display_dev.gpio_count = countof(vim_display_gpios);
     display_dev.bti_list = vim_display_btis;
     display_dev.bti_count = countof(vim_display_btis);
-    display_dev.protocol_list = vim_display_protocols;
-    display_dev.protocol_count = countof(vim_display_protocols);
 
     // enable this #if 0 in order to enable the SPDIF out pin for VIM2 (GPIO H4, pad M22)
 #if 0

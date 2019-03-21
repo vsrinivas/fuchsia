@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/protocol/platform/proxy.h>
 #include <ddktl/device.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
@@ -49,11 +48,6 @@ public:
     zx_status_t GetProtocol(uint32_t proto_id, void* out);
     zx_status_t RegisterProtocol(uint32_t proto_id, const void* protocol);
     void UnregisterProtocol(uint32_t proto_id);
-    zx_status_t Proxy(
-         const void* req_buffer, size_t req_size, const zx_handle_t* req_handle_list,
-         size_t req_handle_count, void* out_resp_buffer, size_t resp_size, size_t* out_resp_actual,
-         zx_handle_t* out_resp_handle_list, size_t resp_handle_count,
-         size_t* out_resp_handle_actual);
 
 private:
     // This class is a wrapper for a protocol added via platform_proxy_register_protocol().
