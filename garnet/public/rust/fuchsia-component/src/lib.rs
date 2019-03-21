@@ -826,6 +826,13 @@ pub mod server {
                     let node = self.nodes.get(position)
                         .expect("ServiceFs client connected at missing node");
 
+                    if path == "." {
+                        if let Err(e) = self.serve_connection_at(channel, position, flags) {
+                            eprintln!("ServiceFS failed to open '.': {:?}", e);
+                        }
+                        return Ok(None);
+                    }
+
                     let children = if let ServiceFsNode::Directory { children } = node {
                         children
                     } else {
@@ -854,8 +861,16 @@ pub mod server {
                     responder.send(&mut info)?;
                 }
                 DirectoryRequest::GetAttr { responder, } => {
-                    let mut attrs = NodeAttributes::new_empty();
-                    unsupported!(responder, &mut attrs)?
+                    let mut attrs = NodeAttributes {
+                        mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY | 0o400, /* mode R_USR */
+                        id: fidl_fuchsia_io::INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    };
+                    responder.send(zx::sys::ZX_OK, &mut attrs)?
                 }
                 DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::Ioctl { responder, .. } => {
