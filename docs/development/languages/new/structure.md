@@ -164,7 +164,7 @@ on channels. The generated code can then be restricted to serialzation,
 deserialization, and dispatch.
 
  * [C](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl)
- * [C++](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/fidl/cpp/)
+ * [C++](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/fidl/cpp/)
  * [Rust](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/fidl/rust/fidl)
  * [Dart](https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/)
  * [Go](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)

@@ -20,7 +20,7 @@
 
 namespace fidlcat {
 
-// Stolen from //garnet/public/lib/fidl/cpp/test/async_loop_for_test.{h,cc}; cc
+// Stolen from //sdk/lib/fidl/cpp/test/async_loop_for_test.{h,cc}; cc
 // is not public
 
 class AsyncLoopForTestImpl;
@@ -485,7 +485,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   InterceptRequest<test::fidlcat::examples::this_is_an_interface>(
       message,
       [](fidl::InterfacePtr<test::fidlcat::examples::this_is_an_interface>&
-         ptr) { ptr->Int32(0xdeadbeef); });
+             ptr) { ptr->Int32(0xdeadbeef); });
 
   fidl_message_header_t header = message.header();
 
