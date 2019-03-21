@@ -35,6 +35,8 @@ class LedgerStoryModelStorageTest : public testing::TestWithLedger {
   LedgerStoryModelStorageTest() : executor(dispatcher()) {}
 
   // Creates a new LedgerStoryModelStorage instance and returns:
+  // If |ledger_client| is not specified the default client is used, otherwise
+  // use the given client.
   //
   // 1) A unique_ptr to the new instance.
   // 2) A ptr to a vector of lists of StoryModelMutations observed from that
@@ -42,9 +44,16 @@ class LedgerStoryModelStorageTest : public testing::TestWithLedger {
   // 3) A ptr to a StoryModel updated with the observed commands.
   std::tuple<std::unique_ptr<StoryModelStorage>,
              std::vector<std::vector<StoryModelMutation>>*, StoryModel*>
-  Create(std::string page_id, std::string device_id) {
+  Create(std::string page_id, std::string device_id,
+         LedgerClient* ledger_client = nullptr) {
+
+    // If not client is specified, use the default client.
+    if (!ledger_client) {
+      ledger_client = this->ledger_client();
+    }
+
     auto storage = std::make_unique<LedgerStoryModelStorage>(
-        ledger_client(), MakePageId(page_id), device_id);
+        ledger_client, MakePageId(page_id), device_id);
 
     auto observed_commands =
         observed_mutations_.emplace(observed_mutations_.end());
@@ -127,8 +136,9 @@ TEST_F(LedgerStoryModelStorageTest, DeviceLocal_RoundTrip) {
 TEST_F(LedgerStoryModelStorageTest, DeviceLocal_DeviceIsolation) {
   auto [storage1, observed_mutations1, observed_model1] =
       Create("page1", "device1");
+  auto second_ledger_connection = NewLedgerClient();
   auto [storage2, observed_mutations2, observed_model2] =
-      Create("page1", "device2");
+      Create("page1", "device2", second_ledger_connection.get());
 
   // Set runtime state to RUNNING on device1, and set visibility state to
   // IMMERSIVE on device2.

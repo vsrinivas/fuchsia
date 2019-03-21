@@ -23,6 +23,8 @@ namespace testing {
 //
 // The ledger client is available to the test case and its fixture through the
 // ledger_client() getter, the ledger repository through ledger_repository().
+// If multiple connection to the same ledger is necessary, and new connection
+// can be created with |NewLedgerClient|.
 class TestWithLedger : public gtest::RealLoopFixture {
  public:
   TestWithLedger();
@@ -33,6 +35,10 @@ class TestWithLedger : public gtest::RealLoopFixture {
     return ledger_app_->ledger_repository();
   }
   LedgerClient* ledger_client() { return ledger_client_.get(); }
+
+  // Build a new LedgerClient connecting to the same underlying ledger.
+  // This class must outlive the resulting client.
+  std::unique_ptr<LedgerClient> NewLedgerClient();
 
   // Increases default timeout over plain test with message loop, because
   // methods executing on the message loop are real fidl calls.

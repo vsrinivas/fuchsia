@@ -15,9 +15,7 @@ namespace testing {
 TestWithLedger::TestWithLedger() {
   ledger_app_ = std::make_unique<testing::LedgerRepositoryForTesting>();
 
-  ledger_client_ = std::make_unique<LedgerClient>(
-      ledger_app_->ledger_repository(), __FILE__,
-      [](zx_status_t status) { ASSERT_TRUE(false) << "Status: " << status; });
+  ledger_client_ = NewLedgerClient();
 };
 
 TestWithLedger::~TestWithLedger() {
@@ -31,6 +29,12 @@ TestWithLedger::~TestWithLedger() {
 
   ledger_app_.reset();
 };
+
+std::unique_ptr<LedgerClient> TestWithLedger::NewLedgerClient() {
+  return std::make_unique<LedgerClient>(
+      ledger_app_->ledger_repository(), __FILE__,
+      [](zx_status_t status) { ASSERT_TRUE(false) << "Status: " << status; });
+}
 
 bool TestWithLedger::RunLoopWithTimeout(zx::duration timeout) {
   return RealLoopFixture::RunLoopWithTimeout(timeout);
