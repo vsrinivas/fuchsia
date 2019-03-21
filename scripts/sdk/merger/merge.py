@@ -241,18 +241,18 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
 def main():
     parser = argparse.ArgumentParser(
             description=('Merges the contents of two SDKs'))
-    alpha_group = parser.add_mutually_exclusive_group(required=True)
-    alpha_group.add_argument('--alpha-archive', '--first-archive',
+    first_group = parser.add_mutually_exclusive_group(required=True)
+    first_group.add_argument('--first-archive',
                              help='Path to the first SDK - as an archive',
                              default='')
-    alpha_group.add_argument('--alpha-directory', '--first-directory',
+    first_group.add_argument('--first-directory',
                              help='Path to the first SDK - as a directory',
                              default='')
-    beta_group = parser.add_mutually_exclusive_group(required=True)
-    beta_group.add_argument('--beta-archive', '--second-archive',
+    second_group = parser.add_mutually_exclusive_group(required=True)
+    second_group.add_argument('--second-archive',
                             help='Path to the second SDK - as an archive',
                             default='')
-    beta_group.add_argument('--beta-directory', '--second-directory',
+    second_group.add_argument('--second-directory',
                             help='Path to the second SDK - as a directory',
                             default='')
     output_group = parser.add_mutually_exclusive_group(required=True)
@@ -266,55 +266,55 @@ def main():
 
     has_errors = False
 
-    with _open_archive(args.alpha_archive, args.alpha_directory) as alpha_dir, \
-         _open_archive(args.beta_archive, args.beta_directory) as beta_dir, \
+    with _open_archive(args.first_archive, args.first_directory) as first_dir, \
+         _open_archive(args.second_archive, args.second_directory) as second_dir, \
          _open_output(args.output_archive, args.output_directory) as out_dir:
 
-        alpha_elements = set(_get_manifest(alpha_dir)['parts'])
-        beta_elements = set(_get_manifest(beta_dir)['parts'])
-        common_elements = alpha_elements & beta_elements
+        first_elements = set(_get_manifest(first_dir)['parts'])
+        second_elements = set(_get_manifest(second_dir)['parts'])
+        common_elements = first_elements & second_elements
 
         # Copy elements that appear in a single SDK.
-        for element in sorted(alpha_elements - common_elements):
-            _copy_element(element, alpha_dir, out_dir)
-        for element in (beta_elements - common_elements):
-            _copy_element(element, beta_dir, out_dir)
+        for element in sorted(first_elements - common_elements):
+            _copy_element(element, first_dir, out_dir)
+        for element in (second_elements - common_elements):
+            _copy_element(element, second_dir, out_dir)
 
         # Verify and merge elements which are common to both SDKs.
         for element in sorted(common_elements):
-            alpha_meta = _get_meta(element, alpha_dir)
-            beta_meta = _get_meta(element, beta_dir)
-            alpha_common, alpha_arch = _get_files(alpha_meta)
-            beta_common, beta_arch = _get_files(beta_meta)
+            first_meta = _get_meta(element, first_dir)
+            second_meta = _get_meta(element, second_dir)
+            first_common, first_arch = _get_files(first_meta)
+            second_common, second_arch = _get_files(second_meta)
 
             # Common files should not vary.
-            if not _copy_identical_files(alpha_common, alpha_dir, beta_common,
-                                         beta_dir, out_dir):
+            if not _copy_identical_files(first_common, first_dir, second_common,
+                                         second_dir, out_dir):
                 print('Error: different common files for ' + element)
                 has_errors = True
                 continue
 
             # Arch-dependent files need to be merged in the metadata.
-            all_arches = set(alpha_arch.keys()) | set(beta_arch.keys())
+            all_arches = set(first_arch.keys()) | set(second_arch.keys())
             for arch in all_arches:
-                if arch in alpha_arch and arch in beta_arch:
-                    if not _copy_identical_files(alpha_arch[arch], alpha_dir,
-                                                 beta_arch[arch], beta_dir,
+                if arch in first_arch and arch in second_arch:
+                    if not _copy_identical_files(first_arch[arch], first_dir,
+                                                 second_arch[arch], second_dir,
                                                  out_dir):
                         print('Error: different %s files for %s' % (arch,
                                                                    element))
                         has_errors = True
                         continue
-                elif arch in alpha_arch:
-                    _copy_files(alpha_arch[arch], alpha_dir, out_dir)
-                elif arch in beta_arch:
-                    _copy_files(beta_arch[arch], beta_dir, out_dir)
+                elif arch in first_arch:
+                    _copy_files(first_arch[arch], first_dir, out_dir)
+                elif arch in second_arch:
+                    _copy_files(second_arch[arch], second_dir, out_dir)
 
-            if not _write_meta(element, alpha_dir, beta_dir, out_dir):
+            if not _write_meta(element, first_dir, second_dir, out_dir):
                 print('Error: unable to merge meta for ' + element)
                 has_errors = True
 
-        if not _write_manifest(alpha_dir, beta_dir, out_dir):
+        if not _write_manifest(first_dir, second_dir, out_dir):
             print('Error: could not write manifest file')
             has_errors = True
 
