@@ -3,109 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
-import("//build/package.gni")
-import("//build/toolchain/goma.gni")
-
-# Permit dependencies on testonly targets from packages.
-testonly = true
-
-group("default") {
-  deps = [
-    ":copy_host_tests",
-    "//build/images:packages",
-  ]
-  if (preinstall_package_labels != [] || monolith_package_labels != []) {
-    deps += [ "//build/images" ]
-  }
-  if (available_package_labels != []) {
-    deps += [ "//build/images:updates" ]
-  }
-}
 
 group("host_tests") {
-  visibility = [
-    ":*",
-    "//:host_tests",
-  ]
+  visibility = [ "//:host_tests" ]
   public_deps = []
   foreach(label, package_host_tests) {
     public_deps += [ "$label($host_toolchain)" ]
   }
-  deps = [
-    # Currently host tests dependencies wind up as dependencies of the packages.
-    # TODO: We should more cleanly separate host targets (including tests) from
-    # packages.
-    "//build/images:packages",
-  ]
-}
-
-# TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module.
-#
-# Aggregates metadata about all tests within the build graph to create a
-# top-level manifest.
-generated_file("tests") {
-  outputs = [
-    "$root_build_dir/tests.json",
-  ]
-  data_keys = [ "test_spec" ]
-  output_conversion = "json"
-  deps = [
-    ":host_tests",
-    "//build/images:packages",
-  ]
-}
-
-# TODO(IN-819): Provides supplementary metadata for tests no yet contributing
-# test spec metadata (e.g., flutter_test).
-generated_file("pseudo_tests") {
-  outputs = [
-    "$root_build_dir/pseudo_tests.json",
-  ]
-  data_keys = [ "pseudo_test_spec" ]
-  output_conversion = "json"
-  deps = [
-    ":host_tests",
-  ]
-}
-
-# Copy host test binaries to $root_build_dir/host_tests.
-# TODO(IN-819): Delete this copy target once host tests are no longer run out
-# of a single directory.
-action("copy_host_tests") {
-  script = "copy_host_tests.py"
-
-  inputs = [
-    "$root_build_dir/tests.json",
-    "$root_build_dir/pseudo_tests.json",
-  ]
-
-  outputs = [
-    "$target_gen_dir/copy_host_tests.stamp",
-  ]
-
-  depfile = "$target_gen_dir/copy_host_tests.d"
-
-  args = [
-    "--json",
-    rebase_path(inputs[0]),
-    "--json",
-    rebase_path(inputs[1]),
-    "--dest-dir",
-    rebase_path("$root_build_dir/host_tests"),
-    "--stamp",
-    rebase_path(outputs[0]),
-    "--depfile",
-    rebase_path(depfile),
-  ]
-
-  deps = [
-    ":host_tests",
-    ":pseudo_tests",
-    ":tests",
-    "//build/images:packages",
-  ]
 }
 
 # Generates breakpad symbol data for unstripped binaries.

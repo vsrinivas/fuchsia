@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon.gni")
+import("//build/gn/packages.gni")
 import("//build/testing/platforms.gni")
 
 # Collect the source files that are dependencies of the create_gn_rules.py
@@ -49,41 +50,93 @@ _fx_config_lines = [
 ]
 write_file("$root_build_dir/fx.config", _fx_config_lines)
 
-# Forwarding targets to things defined in //build/gn that are referred to by
-# infrastructure.
-# TODO(jamesr): Move definition from //build/gn to here after updating infra.
-
 # Permit dependencies on testonly targets from packages.
 testonly = true
 
 group("default") {
-  public_deps = [
-    "//build/gn:default",
+  deps = [
+    ":copy_host_tests",
+    "//build/images:packages",
   ]
+  if (preinstall_package_labels != [] || monolith_package_labels != []) {
+    deps += [ "//build/images" ]
+  }
+  if (available_package_labels != []) {
+    deps += [ "//build/images:updates" ]
+  }
 }
 
 group("host_tests") {
-  visibility = []
+  visibility = [ ":*" ]
   public_deps = [
     "//build/gn:host_tests",
   ]
 }
 
-group("tests") {
-  public_deps = [
-    "//build/gn:tests",
+# TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module.
+#
+# Aggregates metadata about all tests within the build graph to create a
+# top-level manifest.
+generated_file("tests") {
+  outputs = [
+    "$root_build_dir/tests.json",
+  ]
+  data_keys = [ "test_spec" ]
+  output_conversion = "json"
+  deps = [
+    ":host_tests",
+    "//build/images:packages",
   ]
 }
 
-group("pseudo_tests") {
-  public_deps = [
-    "//build/gn:pseudo_tests",
+# TODO(IN-819): Provides supplementary metadata for tests no yet contributing
+# test spec metadata (e.g., flutter_test).
+generated_file("pseudo_tests") {
+  outputs = [
+    "$root_build_dir/pseudo_tests.json",
+  ]
+  data_keys = [ "pseudo_test_spec" ]
+  output_conversion = "json"
+  deps = [
+    ":host_tests",
   ]
 }
 
-group("copy_host_tests") {
-  public_deps = [
-    "//build/gn:copy_host_tests",
+# Copy host test binaries to $root_build_dir/host_tests.
+# TODO(IN-819): Delete this copy target once host tests are no longer run out
+# of a single directory.
+action("copy_host_tests") {
+  script = "build/gn/copy_host_tests.py"
+
+  inputs = [
+    "$root_build_dir/tests.json",
+    "$root_build_dir/pseudo_tests.json",
+  ]
+
+  outputs = [
+    "$target_gen_dir/copy_host_tests.stamp",
+  ]
+
+  depfile = "$target_gen_dir/copy_host_tests.d"
+
+  args = [
+    "--json",
+    rebase_path(inputs[0]),
+    "--json",
+    rebase_path(inputs[1]),
+    "--dest-dir",
+    rebase_path("$root_build_dir/host_tests"),
+    "--stamp",
+    rebase_path(outputs[0]),
+    "--depfile",
+    rebase_path(depfile),
+  ]
+
+  deps = [
+    ":host_tests",
+    ":pseudo_tests",
+    ":tests",
+    "//build/images:packages",
   ]
 }
 

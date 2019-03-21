@@ -30,7 +30,7 @@ toolchain("fidling") {
 generated_file("all_fidl_json") {
   testonly = true
   deps = [
-    "//build/gn:default",
+    "//:default",
   ]
 
   outputs = [
