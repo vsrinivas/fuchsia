@@ -10,9 +10,9 @@
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/type_converter.h"
 
 namespace mdns {
 namespace {
@@ -310,7 +310,7 @@ MdnsServiceImpl::SimplePublisher::SimplePublisher(
     inet::IpPort port, fidl::VectorPtr<std::string> text,
     PublishServiceInstanceCallback callback)
     : port_(port),
-      text_(fxl::To<std::vector<std::string>>(text)),
+      text_(fidl::To<std::vector<std::string>>(text)),
       callback_(std::move(callback)) {}
 
 void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {

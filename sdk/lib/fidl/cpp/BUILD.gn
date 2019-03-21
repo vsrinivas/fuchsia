@@ -39,6 +39,7 @@ sdk_source_set("cpp") {
     "internal/weak_stub_controller.h",
     "optional.h",
     "thread_safe_binding_set.h",
+    "type_converter.h",
   ]
 
   include_base = "//sdk"

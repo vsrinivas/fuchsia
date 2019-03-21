@@ -5,7 +5,6 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/type_converter.h>
 
 namespace modular {
 

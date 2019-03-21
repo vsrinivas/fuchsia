@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/type_converter.h>
 
 #include <lib/gtest/test_loop_fixture.h>
 

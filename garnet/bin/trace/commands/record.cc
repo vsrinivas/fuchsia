@@ -738,7 +738,7 @@ void Record::DoneTrace() {
 void Record::LaunchApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
-  launch_info.arguments = fxl::To<fidl::VectorPtr<std::string>>(options_.args);
+  launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(options_.args);
 
   if (FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Launching: " << launch_info.url << " "

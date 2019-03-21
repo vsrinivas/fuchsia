@@ -15,5 +15,6 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub_controller.h": "c487e95bad9b50525df74f9ca6ab30f4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/weak_stub_controller.h": "ccd9a42c8979c6cf8ae97e1c7c085c86",
   "pkg/fidl_cpp/include/lib/fidl/cpp/optional.h": "6749907c07e72a7826342b5cc341bff8",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/thread_safe_binding_set.h": "6eecc955e61cb3f54187a84f9742802f"
+  "pkg/fidl_cpp/include/lib/fidl/cpp/thread_safe_binding_set.h": "6eecc955e61cb3f54187a84f9742802f",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h": "81ea87e9526f104ff4bbebd502c6a7ec"
 }

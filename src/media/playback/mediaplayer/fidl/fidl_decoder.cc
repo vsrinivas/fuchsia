@@ -467,7 +467,7 @@ void FidlDecoder::OnOutputConfig(fuchsia::media::StreamOutputConfig config) {
   }
 
   auto stream_type =
-      fxl::To<std::unique_ptr<StreamType>>(config.format_details());
+      fidl::To<std::unique_ptr<StreamType>>(config.format_details());
   if (!stream_type) {
     FXL_LOG(ERROR) << "Can't comprehend format details.";
     InitFailed();
@@ -562,8 +562,7 @@ void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet,
     return;
   }
 
-  uint64_t buffer_lifetime_ordinal =
-      packet.header().buffer_lifetime_ordinal();
+  uint64_t buffer_lifetime_ordinal = packet.header().buffer_lifetime_ordinal();
   uint32_t packet_index = packet.header().packet_index();
   uint32_t buffer_index = packet.buffer_index();
   FXL_DCHECK(buffer_index != 0x80000000);

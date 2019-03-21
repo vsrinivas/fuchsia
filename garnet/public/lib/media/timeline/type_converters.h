@@ -6,9 +6,29 @@
 #define LIB_MEDIA_TIMELINE_TYPE_CONVERTERS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fxl/type_converter.h"
 #include "lib/media/timeline/timeline_function.h"
 
+namespace fidl {
+
+template <>
+struct TypeConverter<fuchsia::media::TimelineFunction,
+                     media::TimelineFunction> {
+  static fuchsia::media::TimelineFunction Convert(
+      const media::TimelineFunction& value);
+};
+
+template <>
+struct TypeConverter<media::TimelineFunction,
+                     fuchsia::media::TimelineFunction> {
+  static media::TimelineFunction Convert(
+      const fuchsia::media::TimelineFunction& value);
+};
+
+}  // namespace fidl
+
+// TODO(dalesat): Remove the fxl versions once topaz no longer depends on them.
 namespace fxl {
 
 template <>

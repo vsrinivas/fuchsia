@@ -11,7 +11,6 @@
 #include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fxl/macros.h>
-#include <lib/fxl/type_converter.h>
 
 namespace modular {
 
@@ -35,7 +34,7 @@ class ParameterTypeInferenceHelper::GetParameterTypesCall
   void Run() {
     entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
     entity_->GetTypes([this](const fidl::VectorPtr<fidl::StringPtr>& types) {
-      Done(fxl::To<std::vector<std::string>>(types));
+      Done(fidl::To<std::vector<std::string>>(types));
     });
   }
 

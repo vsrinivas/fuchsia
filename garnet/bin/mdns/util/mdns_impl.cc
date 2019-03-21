@@ -13,9 +13,9 @@
 
 #include "garnet/bin/mdns/util/formatting.h"
 #include "garnet/bin/mdns/util/mdns_params.h"
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/type_converter.h"
 
 namespace mdns {
 
@@ -143,7 +143,7 @@ void MdnsImpl::Publish(const std::string& service_name,
             << service_name << "\n";
   controller_->PublishServiceInstance(
       service_name, instance_name, port,
-      fxl::To<fidl::VectorPtr<std::string>>(text),
+      fidl::To<fidl::VectorPtr<std::string>>(text),
       [this](fuchsia::mdns::Result result) {
         UpdateStatus(result);
         quit_callback_();
@@ -183,7 +183,7 @@ void MdnsImpl::Respond(const std::string& service_name,
 
   if (!announce.empty()) {
     controller_->SetSubtypes(service_name, instance_name,
-                             fxl::To<fidl::VectorPtr<std::string>>(announce));
+                             fidl::To<fidl::VectorPtr<std::string>>(announce));
   }
 
   WaitForKeystroke();
@@ -225,7 +225,7 @@ void MdnsImpl::GetPublication(bool query, fidl::StringPtr subtype,
 
   auto publication = fuchsia::mdns::Publication::New();
   publication->port = publication_port_;
-  publication->text = fxl::To<fidl::VectorPtr<std::string>>(publication_text_);
+  publication->text = fidl::To<fidl::VectorPtr<std::string>>(publication_text_);
 
   callback(std::move(publication));
 }

@@ -10,7 +10,6 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/types/type_converters.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/log_settings.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/join_strings.h>
@@ -20,14 +19,16 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+#include "src/lib/files/file.h"
 
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
 // The "path" of the trace program from outside the trace package.
-const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
+const char kTraceProgramUrl[] =
+    "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program from within the trace package.
-//const char kTracePackageProgramPath[] = "/pkg/bin/trace";
+// const char kTracePackageProgramPath[] = "/pkg/bin/trace";
 
 // Package path to use for spawned processes.
 const char kSystemPackageTestPrefix[] = "/pkgfs/packages/trace_tests/0/";
@@ -100,7 +101,8 @@ static void BuildTraceProgramArgv(const std::string& relative_tspec_path,
   argv->push_back(fxl::StringPrintf(
       "--append-args=run,%s",
       ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
-       relative_tspec_path).c_str()));
+       relative_tspec_path)
+          .c_str()));
 }
 
 static void BuildVerificationProgramArgv(const std::string& program_path,
@@ -139,8 +141,8 @@ zx_status_t SpawnProgram(const zx::job& job,
                      nullptr, action_count, &spawn_actions[0],
                      out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg
-                   << ", " << status;
+    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg << ", "
+                   << status;
     return status;
   }
 
@@ -201,7 +203,7 @@ static bool LaunchApp(component::StartupContext* context,
                       const std::vector<std::string>& args) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = std::string(app);
-  launch_info.arguments = fxl::To<fidl::VectorPtr<std::string>>(args);
+  launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(args);
 
   if (FXL_VLOG_IS_ON(1)) {
     FXL_VLOG(1) << "Launching: " << launch_info.url << " "
@@ -283,13 +285,13 @@ bool VerifyTspec(component::StartupContext* context,
 
   std::vector<std::string> argv;
   BuildVerificationProgramArgv(
-    program_path,
-    ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
-     relative_tspec_path),
-    output_file_path, &argv);
+      program_path,
+      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
+       relative_tspec_path),
+      output_file_path, &argv);
 
-  FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path
-                << ", output file " << output_file_path;
+  FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
+                << output_file_path;
 
   // For consistency we do the exact same thing that the trace program does.
   // We also use the same function names for easier comparison.

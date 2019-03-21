@@ -28,7 +28,7 @@ FidlReader::FidlReader(
   seeking_reader_->Describe(
       [this](fuchsia::mediaplayer::SeekingReaderResult result, uint64_t size,
              bool can_seek) {
-        result_ = fxl::To<Result>(result);
+        result_ = fidl::To<Result>(result);
         if (result_ == Result::kOk) {
           size_ = size;
           can_seek_ = can_seek;
@@ -102,7 +102,7 @@ void FidlReader::ContinueReadAt() {
         read_at_position_,
         [this](fuchsia::mediaplayer::SeekingReaderResult result,
                zx::socket socket) {
-          result_ = fxl::To<Result>(result);
+          result_ = fidl::To<Result>(result);
           if (result_ != Result::kOk) {
             CompleteReadAt(result_);
             return;

@@ -41,7 +41,7 @@ void CommandQueue::NotifyStatusChanged(
 
   if (status.timeline_function) {
     timeline_function_ =
-        fxl::To<media::TimelineFunction>(*status.timeline_function);
+        fidl::To<media::TimelineFunction>(*status.timeline_function);
     MaybeScheduleWaitForPositionTask();
     MaybeFinishWaitingForSeekCompletion();
   }

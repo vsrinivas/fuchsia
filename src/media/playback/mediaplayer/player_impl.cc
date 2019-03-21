@@ -16,8 +16,8 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/type_converter.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/ui/base_view/cpp/base_view.h"
@@ -659,7 +659,7 @@ void PlayerImpl::SendStatusUpdates() {
 
 void PlayerImpl::UpdateStatus() {
   status_.timeline_function = fidl::MakeOptional(
-      fxl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
+      fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
   status_.end_of_stream = core_.end_of_stream();
   status_.has_audio = core_.content_has_medium(StreamType::Medium::kAudio);
   status_.has_video = core_.content_has_medium(StreamType::Medium::kVideo);
@@ -673,7 +673,7 @@ void PlayerImpl::UpdateStatus() {
   auto metadata = core_.metadata();
   status_.metadata =
       metadata
-          ? fidl::MakeOptional(fxl::To<fuchsia::media::Metadata>(*metadata))
+          ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata))
           : nullptr;
 
   if (video_renderer_) {

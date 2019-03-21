@@ -12,7 +12,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/join_strings.h>
-#include <lib/fxl/type_converter.h>
 
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"

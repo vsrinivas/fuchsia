@@ -10,15 +10,15 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
-#include "lib/fxl/type_converter.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
 #include "src/media/playback/mediaplayer/graph/result.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 
-namespace fxl {
+namespace fidl {
 
 template <>
 struct TypeConverter<media_player::Result,
@@ -81,7 +81,7 @@ struct TypeConverter<fuchsia::media::StreamType,
   static fuchsia::media::StreamType Convert(
       const std::unique_ptr<media_player::StreamType>& input) {
     FXL_DCHECK(input);
-    return fxl::To<fuchsia::media::StreamType>(*input);
+    return To<fuchsia::media::StreamType>(*input);
   }
 };
 
@@ -103,17 +103,15 @@ struct TypeConverter<media_player::Metadata, fuchsia::media::Metadata> {
 };
 
 template <>
-struct TypeConverter<fidl::VectorPtr<uint8_t>,
-                     std::unique_ptr<media_player::Bytes>> {
-  static fidl::VectorPtr<uint8_t> Convert(
+struct TypeConverter<VectorPtr<uint8_t>, std::unique_ptr<media_player::Bytes>> {
+  static VectorPtr<uint8_t> Convert(
       const std::unique_ptr<media_player::Bytes>& input);
 };
 
 template <>
-struct TypeConverter<std::unique_ptr<media_player::Bytes>,
-                     fidl::VectorPtr<uint8_t>> {
+struct TypeConverter<std::unique_ptr<media_player::Bytes>, VectorPtr<uint8_t>> {
   static std::unique_ptr<media_player::Bytes> Convert(
-      const fidl::VectorPtr<uint8_t>& input);
+      const VectorPtr<uint8_t>& input);
 };
 
 template <>
@@ -138,10 +136,10 @@ struct TypeConverter<std::unique_ptr<T>, std::unique_ptr<U>> {
       return nullptr;
     }
 
-    return fidl::MakeOptional(fxl::To<T>(*input));
+    return MakeOptional(To<T>(*input));
   }
 };
 
-}  // namespace fxl
+}  // namespace fidl
 
 #endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_TYPE_CONVERSIONS_H_

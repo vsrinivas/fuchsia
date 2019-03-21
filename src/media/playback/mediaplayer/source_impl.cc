@@ -10,8 +10,8 @@
 #include <lib/fit/function.h>
 #include <sstream>
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/type_converter.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"
@@ -125,7 +125,7 @@ void SourceImpl::UpdateStatus() {
   auto metadata = source_segment_->metadata();
   status_.metadata =
       metadata
-          ? fidl::MakeOptional(fxl::To<fuchsia::media::Metadata>(*metadata))
+          ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata))
           : nullptr;
 
   status_.problem = SafeClone(source_segment_->problem());
@@ -203,7 +203,7 @@ StreamSourceImpl::StreamSourceImpl(
     : SourceImpl(graph, std::move(connection_failure_callback)),
       stream_source_segment_(StreamSourceSegment::Create(
           duration_ns, can_pause, can_seek,
-          fxl::To<std::unique_ptr<media_player::Metadata>>(metadata))) {
+          fidl::To<std::unique_ptr<media_player::Metadata>>(metadata))) {
   SourceImpl::CompleteConstruction(stream_source_segment_.get());
 
   // We keep a raw pointer around and use that, because we still want to be
@@ -244,7 +244,7 @@ void StreamSourceImpl::AddStream(
   FXL_DCHECK(stream_source_segment_raw_ptr_);
 
   auto output_stream_type =
-      fxl::To<std::unique_ptr<media_player::StreamType>>(type);
+      fidl::To<std::unique_ptr<media_player::StreamType>>(type);
   FXL_DCHECK(output_stream_type);
 
   stream_source_segment_raw_ptr_->AddStream(

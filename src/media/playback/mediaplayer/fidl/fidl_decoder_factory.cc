@@ -31,7 +31,7 @@ void FidlDecoderFactory::CreateDecoder(
     fit::function<void(std::shared_ptr<Decoder>)> callback) {
   FXL_DCHECK(callback);
 
-  auto format_details = fxl::To<fuchsia::media::FormatDetailsPtr>(stream_type);
+  auto format_details = fidl::To<fuchsia::media::FormatDetailsPtr>(stream_type);
   if (!format_details || !codec_factory_) {
     // If we don't know how to build |CodecFormatDetails| or we don't have a
     // codec factory, we don't know how to make a decoder.

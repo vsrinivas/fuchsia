@@ -9,7 +9,7 @@
 #include "src/media/playback/mediaplayer/graph/types/text_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 
-namespace fxl {
+namespace fidl {
 
 namespace {
 
@@ -412,7 +412,7 @@ fuchsia::media::FormatDetailsPtr TypeConverter<
   result->set_mime_type(mime_type);
   if (input.encoding_parameters()) {
     result->set_oob_bytes(
-        fxl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()));
+        fidl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()));
   }
 
   return result;
@@ -490,4 +490,4 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
   return nullptr;
 }
 
-}  // namespace fxl
+}  // namespace fidl

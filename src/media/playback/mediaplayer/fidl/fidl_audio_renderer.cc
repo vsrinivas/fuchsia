@@ -260,7 +260,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   FXL_DCHECK(stream_type.audio());
 
   fuchsia::media::AudioStreamType audio_stream_type;
-  audio_stream_type.sample_format = fxl::To<fuchsia::media::AudioSampleFormat>(
+  audio_stream_type.sample_format = fidl::To<fuchsia::media::AudioSampleFormat>(
       stream_type.audio()->sample_format());
   audio_stream_type.channels = stream_type.audio()->channels();
   audio_stream_type.frames_per_second =

@@ -41,11 +41,11 @@
 
 #include <lib/async/default.h>
 
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/type_converter.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -181,7 +181,7 @@ TestRunContext::TestRunContext(
 
   fuchsia::sys::LaunchInfo info;
   info.url = url;
-  info.arguments = fxl::To<fidl::VectorPtr<std::string>>(args);
+  info.arguments = fidl::To<fidl::VectorPtr<std::string>>(args);
   launcher->CreateComponent(std::move(info), child_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.
