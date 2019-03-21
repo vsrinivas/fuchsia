@@ -136,7 +136,7 @@ group("auth") {
 group("bindc") {
   testonly = true
   public_deps = [
-    "//garnet/bin/bindc",
+    "//tools/bindc",
   ]
 }
 

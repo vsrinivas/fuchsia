@@ -9,7 +9,6 @@ group("bin") {
     "a11y",
     "appmgr",
     "auth",
-    "bindc",
     "catapult_converter",
     "chrealm",
     "cmc",
