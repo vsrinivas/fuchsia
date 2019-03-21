@@ -56,7 +56,8 @@ static fidl_union_tag_t device_or_tty(const fbl::RefPtr<zx_device_t>& dev) {
     // only a couple of special cases for now
     const char *libname = dev->driver->libname().c_str();
     if ((strcmp(libname, "/boot/driver/pty.so") == 0) ||
-        (strcmp(libname, "/boot/driver/console.so") == 0)) {
+        (strcmp(libname, "/boot/driver/console.so") == 0) ||
+        (strcmp(libname, "/boot/driver/virtio.so") == 0)) {
         return fuchsia_io_NodeInfoTag_tty;
     } else {
         return fuchsia_io_NodeInfoTag_device;
