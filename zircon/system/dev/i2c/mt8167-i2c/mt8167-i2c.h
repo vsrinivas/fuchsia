@@ -32,7 +32,7 @@ public:
         : DeviceType(parent) {}
     zx_status_t Bind();
     zx_status_t Init();
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Methods required by the ddk mixins.
     void DdkUnbind();

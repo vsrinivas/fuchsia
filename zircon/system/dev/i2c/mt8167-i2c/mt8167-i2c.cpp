@@ -304,7 +304,7 @@ zx_status_t Mt8167I2c::Init() {
     return ZX_OK;
 }
 
-zx_status_t Mt8167I2c::Create(zx_device_t* parent) {
+zx_status_t Mt8167I2c::Create(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<Mt8167I2c>(&ac, parent);
     if (!ac.check()) {
@@ -323,8 +323,19 @@ zx_status_t Mt8167I2c::Create(zx_device_t* parent) {
     return ptr->Init();
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = Mt8167I2c::Create;
+    return ops;
+}();
+
 } // namespace mt8167_i2c
 
-extern "C" zx_status_t mt8167_i2c_bind(void* ctx, zx_device_t* parent) {
-    return mt8167_i2c::Mt8167I2c::Create(parent);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(mt8167_i2c, mt8167_i2c::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_I2C),
+ZIRCON_DRIVER_END(mt8167_i2c)
+// clang-format on
