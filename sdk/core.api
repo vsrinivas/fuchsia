@@ -42,6 +42,7 @@ sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.service
 sdk://fidl/fuchsia.wlan.stats
 sdk://pkg/async
+sdk://pkg/async-cpp
 sdk://pkg/async-default
 sdk://pkg/async-loop
 sdk://pkg/async-loop-cpp

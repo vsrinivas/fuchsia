@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_CPP_EXCEPTION_H_
+#define LIB_ASYNC_CPP_EXCEPTION_H_
 
 #include <lib/async/exception.h>
 #include <lib/fit/function.h>
@@ -112,7 +113,7 @@ template <class Class,
 class ExceptionMethod final : public ExceptionBase {
 public:
     ExceptionMethod(Class* instance,
-                            zx_handle_t task, uint32_t options)
+                    zx_handle_t task, uint32_t options)
         : ExceptionBase(task, options, &ExceptionMethod::CallHandler),
           instance_(instance) {}
 
@@ -128,3 +129,5 @@ private:
 };
 
 } // namespace async
+
+#endif  // LIB_ASYNC_CPP_EXCEPTION_H_

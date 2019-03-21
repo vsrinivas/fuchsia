@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_CPP_TIME_H_
+#define LIB_ASYNC_CPP_TIME_H_
 
 #include <lib/async/time.h>
 #include <lib/zx/time.h>
@@ -17,3 +18,5 @@ inline zx::time Now(async_dispatcher_t* dispatcher) {
 }
 
 } // namespace async
+
+#endif  // LIB_ASYNC_CPP_TIME_H_

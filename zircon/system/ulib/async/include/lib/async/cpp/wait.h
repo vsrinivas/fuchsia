@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_CPP_WAIT_H_
+#define LIB_ASYNC_CPP_WAIT_H_
 
 #include <lib/async/wait.h>
 #include <lib/fit/function.h>
@@ -149,3 +150,5 @@ private:
 };
 
 } // namespace async
+
+#endif  // LIB_ASYNC_CPP_WAIT_H_
