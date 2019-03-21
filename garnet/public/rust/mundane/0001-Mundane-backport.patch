@@ -15,7 +15,7 @@ index d422c91..07d098b 100644
  //! Macros and functions that abort instead of unwinding.
  //!
 diff --git a/src/boringssl/mod.rs b/src/boringssl/mod.rs
-index 70b6d12..08dc19b 100644
+index 4ae02f6..566edcf 100644
 --- a/src/boringssl/mod.rs
 +++ b/src/boringssl/mod.rs
 @@ -1,8 +1,6 @@
@@ -54,7 +54,7 @@ index 70b6d12..08dc19b 100644
      NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, NID_sha1, NID_sha256, NID_sha384,
      NID_sha512, ED25519_PRIVATE_KEY_LEN, ED25519_PUBLIC_KEY_LEN, ED25519_SIGNATURE_LEN,
      SHA256_DIGEST_LENGTH, SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH, SHA_DIGEST_LENGTH,
-@@ -583,12 +579,7 @@ impl CHeapWrapper<RSA> {
+@@ -585,12 +581,7 @@ impl CHeapWrapper<RSA> {
          bits: c_int,
          e: &CRef<BIGNUM>,
      ) -> Result<(), BoringError> {
@@ -68,7 +68,7 @@ index 70b6d12..08dc19b 100644
      }
  
      /// The `RSA_marshal_private_key` function.
-@@ -700,9 +691,9 @@ macro_rules! impl_hash {
+@@ -760,9 +751,9 @@ macro_rules! impl_hash {
              #[must_use]
              pub fn $final(
                  &mut self,
@@ -81,7 +81,7 @@ index 70b6d12..08dc19b 100644
                      // SHA384_Final, and SHA512_Final all document that they
                      // only fail due to programmer error. The only input to the
 diff --git a/src/boringssl/raw.rs b/src/boringssl/raw.rs
-index eb0ac02..6ca1e9f 100644
+index 9ac8fd7..dcd8873 100644
 --- a/src/boringssl/raw.rs
 +++ b/src/boringssl/raw.rs
 @@ -1,8 +1,6 @@
@@ -383,8 +383,17 @@ index eb0ac02..6ca1e9f 100644
 +    ptr_or_err("RSA_parse_private_key", boringssl_sys::RSA_parse_private_key(cbs))
  }
  
+ #[cfg(feature = "rsa-pkcs1v15")]
+@@ -403,7 +412,7 @@ pub unsafe fn RSA_sign(
+     out_len: *mut c_uint,
+     key: *mut RSA,
+ ) -> Result<(), BoringError> {
+-    one_or_err("RSA_sign", ffi::RSA_sign(hash_nid, in_, in_len, out, out_len, key))
++    one_or_err("RSA_sign", boringssl_sys::RSA_sign(hash_nid, in_, in_len, out, out_len, key))
+ }
+ 
  #[allow(non_snake_case)]
-@@ -407,14 +416,16 @@ pub unsafe fn RSA_sign_pss_mgf1(
+@@ -421,14 +430,16 @@ pub unsafe fn RSA_sign_pss_mgf1(
  ) -> Result<(), BoringError> {
      one_or_err(
          "RSA_sign_pss_mgf1",
@@ -403,7 +412,16 @@ index eb0ac02..6ca1e9f 100644
          .ok_or_else(|| BoringError::consume_stack("RSA_size"))
  }
  
-@@ -430,7 +441,8 @@ pub unsafe fn RSA_verify_pss_mgf1(
+@@ -443,7 +454,7 @@ pub unsafe fn RSA_verify(
+     sig_len: usize,
+     rsa: *mut RSA,
+ ) -> bool {
+-    match ffi::RSA_verify(hash_nid, msg, msg_len, sig, sig_len, rsa) {
++    match boringssl_sys::RSA_verify(hash_nid, msg, msg_len, sig, sig_len, rsa) {
+         0 => false,
+         1 => true,
+         // RSA_verify promises to only return 0 or 1
+@@ -463,7 +474,8 @@ pub unsafe fn RSA_verify_pss_mgf1(
      sig: *const u8,
      sig_len: usize,
  ) -> bool {
@@ -413,7 +431,7 @@ index eb0ac02..6ca1e9f 100644
          0 => false,
          1 => true,
          // RSA_verify_pss_mgf1 promises to only return 0 or 1
-@@ -443,27 +455,27 @@ pub unsafe fn RSA_verify_pss_mgf1(
+@@ -476,27 +488,27 @@ pub unsafe fn RSA_verify_pss_mgf1(
  #[allow(non_snake_case)]
  pub unsafe fn SHA384_Init(ctx: *mut SHA512_CTX) {
      // SHA384_Init promises to return 1.
@@ -448,7 +466,7 @@ index eb0ac02..6ca1e9f 100644
      }
  }
  
-@@ -475,13 +487,16 @@ impl_traits!(SHA512_CTX, CDestruct => _);
+@@ -508,13 +520,16 @@ impl_traits!(SHA512_CTX, CDestruct => _);
  macro_rules! sha {
      ($ctx:ident, $update:ident, $final:ident) => {
          #[allow(non_snake_case)]
@@ -599,7 +617,7 @@ index 7db7949..2ba0a97 100644
  //! Hash-based Message Authentication Codes (HMACs).
  
 diff --git a/src/insecure.rs b/src/insecure.rs
-index ef255b3..e1530db 100644
+index e4384ef..d0ccfc3 100644
 --- a/src/insecure.rs
 +++ b/src/insecure.rs
 @@ -1,8 +1,6 @@
@@ -631,7 +649,7 @@ index 3ed0fb3..0c8be22 100644
  //! Key Derivation Functions (KDFs).
  //!
 diff --git a/src/lib.rs b/src/lib.rs
-index de94f73..4380d94 100644
+index 62583f4..a2e5fdb 100644
 --- a/src/lib.rs
 +++ b/src/lib.rs
 @@ -1,8 +1,6 @@
@@ -646,7 +664,7 @@ index de94f73..4380d94 100644
  
  //! Cryptography in Rust.
  //!
-@@ -53,6 +51,9 @@ extern crate lazy_static;
+@@ -54,6 +52,9 @@ extern crate lazy_static;
  #[macro_use]
  mod macros;
  
@@ -763,7 +781,7 @@ index e0a8d7c..6950636 100644
  use std::fmt::{self, Debug, Display, Formatter};
  
 diff --git a/src/public/rsa/mod.rs b/src/public/rsa/mod.rs
-index 991db95..b40982b 100644
+index e32d0c2..0f6d123 100644
 --- a/src/public/rsa/mod.rs
 +++ b/src/public/rsa/mod.rs
 @@ -1,8 +1,6 @@

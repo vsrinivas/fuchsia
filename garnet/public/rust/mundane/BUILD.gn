@@ -19,5 +19,6 @@ rustc_library("mundane") {
   features = [
     "insecure",
     "rand-bytes",
+    "rsa-pkcs1v15",
   ]
 }
