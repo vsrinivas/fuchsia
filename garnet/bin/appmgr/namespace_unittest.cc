@@ -5,26 +5,26 @@
 #include "garnet/bin/appmgr/namespace.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <fbl/ref_ptr.h>
-#include <fs/pseudo-dir.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/component/cpp/service_provider_impl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/service.h>
 #include <lib/zx/channel.h>
-#include <zircon/status.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/service_provider_impl.h"
-#include "lib/component/cpp/testing/test_util.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/gtest/real_loop_fixture.h"
 
 using fuchsia::sys::ServiceList;
 using fuchsia::sys::ServiceListPtr;
@@ -46,7 +46,8 @@ class NamespaceTest : public ::gtest::RealLoopFixture {
   zx_status_t ConnectToService(zx_handle_t svc_dir, const std::string& name) {
     zx::channel h1, h2;
     zx_status_t r = zx::channel::create(0, &h1, &h2);
-    if (r != ZX_OK) return r;
+    if (r != ZX_OK)
+      return r;
     fdio_service_connect_at(svc_dir, name.c_str(), h2.release());
     return ZX_OK;
   }
@@ -54,24 +55,22 @@ class NamespaceTest : public ::gtest::RealLoopFixture {
 
 class NamespaceHostDirectoryTest : public NamespaceTest {
  protected:
-  NamespaceHostDirectoryTest()
-      : vfs_(dispatcher()),
-        directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
-
   zx::channel OpenAsDirectory() {
-    return testing::OpenAsDirectory(&vfs_, directory_);
+    fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+    directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+                     dir.NewRequest().TakeChannel(), dispatcher());
+    return dir.TakeChannel();
   }
 
   zx_status_t AddService(const std::string& name) {
-    auto cb = [this, name](zx::channel channel) {
+    auto cb = [this, name](zx::channel channel,
+                           async_dispatcher_t* dispatcher) {
       ++connection_ctr_[name];
-      return ZX_OK;
     };
-    return directory_->AddEntry(name, fbl::AdoptRef(new fs::Service(cb)));
+    return directory_.AddEntry(name, std::make_unique<vfs::Service>(cb));
   }
 
-  fs::SynchronousVfs vfs_;
-  fbl::RefPtr<fs::PseudoDir> directory_;
+  vfs::PseudoDir directory_;
   std::map<std::string, int> connection_ctr_;
 };
 
@@ -87,9 +86,7 @@ class NamespaceProviderTest : public NamespaceTest {
   }
 
   zx_status_t AddService(const std::string& name) {
-    auto cb = [this, name](zx::channel channel) {
-      ++connection_ctr_[name];
-    };
+    auto cb = [this, name](zx::channel channel) { ++connection_ctr_[name]; };
     provider_.AddServiceForName(cb, name);
     return ZX_OK;
   }
@@ -125,8 +122,9 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices) {
   for (const auto& e : connection_ctr_) {
     connection_ctr_vec.push_back(e);
   }
-  EXPECT_THAT(connection_ctr_vec, ::testing::ElementsAre(
-      StringIntPair(kService1, 1), StringIntPair(kService2, 2)));
+  EXPECT_THAT(connection_ctr_vec,
+              ::testing::ElementsAre(StringIntPair(kService1, 1),
+                                     StringIntPair(kService2, 2)));
 }
 
 TEST_F(NamespaceHostDirectoryTest, AdditionalServices_InheritParent) {
@@ -153,8 +151,9 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices_InheritParent) {
   for (const auto& e : connection_ctr_) {
     connection_ctr_vec.push_back(e);
   }
-  EXPECT_THAT(connection_ctr_vec, ::testing::ElementsAre(
-      StringIntPair(kService1, 1), StringIntPair(kService2, 1)));
+  EXPECT_THAT(connection_ctr_vec,
+              ::testing::ElementsAre(StringIntPair(kService1, 1),
+                                     StringIntPair(kService2, 1)));
 }
 
 TEST_F(NamespaceProviderTest, AdditionalServices) {
@@ -181,8 +180,9 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
   for (const auto& e : connection_ctr_) {
     connection_ctr_vec.push_back(e);
   }
-  EXPECT_THAT(connection_ctr_vec, ::testing::ElementsAre(
-      StringIntPair(kService1, 1), StringIntPair(kService2, 2)));
+  EXPECT_THAT(connection_ctr_vec,
+              ::testing::ElementsAre(StringIntPair(kService1, 1),
+                                     StringIntPair(kService2, 2)));
 }
 
 }  // namespace

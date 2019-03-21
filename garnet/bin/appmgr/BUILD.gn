@@ -128,9 +128,9 @@ executable("tests") {
     ":appmgr_for_test",
     ":lib",
     "//garnet/examples/fidl/services:echo",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/vfs/cpp",
     "//third_party/googletest:gmock",
   ]
 }
