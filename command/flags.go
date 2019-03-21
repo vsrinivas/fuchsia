@@ -7,20 +7,19 @@ import (
 	"strings"
 )
 
-
 // StringsFlag implements flag.Value so it may be treated as a flag type.
 type StringsFlag []string
 
 // Set implements flag.Value.Set.
 func (s *StringsFlag) Set(val string) error {
-        *s = append(*s, val)
-        return nil
+	*s = append(*s, val)
+	return nil
 }
 
 // Strings implements flag.Value.String.
 func (s *StringsFlag) String() string {
-        if s == nil {
-                return ""
-        }
-        return strings.Join([]string(*s), ", ")
+	if s == nil {
+		return ""
+	}
+	return strings.Join([]string(*s), ", ")
 }

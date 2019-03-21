@@ -5,8 +5,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 

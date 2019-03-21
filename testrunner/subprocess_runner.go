@@ -26,12 +26,12 @@ type SubprocessRunner struct {
 // Run executes the given command.
 func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
 	cmd := exec.Cmd{
-		Path:        command[0],
-		Args:        command,
-		Stdout:      stdout,
-		Stderr:      stderr,
-		Dir:         r.WD,
-		Env:         r.Env,
+		Path:   command[0],
+		Args:   command,
+		Stdout: stdout,
+		Stderr: stderr,
+		Dir:    r.WD,
+		Env:    r.Env,
 	}
 	return botanist.Run(ctx, cmd)
 }

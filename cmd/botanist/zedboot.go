@@ -386,7 +386,6 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		}
 	}
 
-
 	imgs, err := build.LoadImages(cmd.imageManifests...)
 	if err != nil {
 		return err

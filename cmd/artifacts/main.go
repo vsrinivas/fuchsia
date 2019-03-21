@@ -16,8 +16,8 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
 	"github.com/google/subcommands"
+	"os"
 )
 
 func main() {
