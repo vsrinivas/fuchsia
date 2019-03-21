@@ -349,7 +349,13 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
 // queues.  Since the CPU running this thread is now shutdown, we can just
 // erase the thread's existence.
 cleanup_thread:
-    thread_forget(t);
+    // ZX-2232: workaround race in thread cleanup by leaking the thread
+    // and stack structure. Since we're only using this while turning off
+    // the system currently, it's not a big problem leaking the thread structure
+    // and stack.
+    // thread_forget(t);
+    TRACEF("WARNING: leaking thread for cpu %u\n", cpu_id);
+
     return status;
 }
 
