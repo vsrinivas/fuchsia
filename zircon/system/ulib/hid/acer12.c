@@ -332,6 +332,11 @@ static const uint8_t acer12_touch_report_desc[] = {
     // 660 bytes
 };
 
+const uint8_t* get_acer12_touch_report_desc(size_t* len) {
+    *len = sizeof(acer12_touch_report_desc);
+    return acer12_touch_report_desc;
+}
+
 bool is_acer12_touch_report_desc(const uint8_t* data, size_t len) {
     if (!data)
         return false;

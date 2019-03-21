@@ -60,6 +60,7 @@ typedef struct acer12_stylus {
     uint16_t pressure;
 } __attribute__((packed)) acer12_stylus_t;
 
+const uint8_t* get_acer12_touch_report_desc(size_t* len);
 bool is_acer12_touch_report_desc(const uint8_t* data, size_t len);
 zx_status_t setup_acer12_touch(int fd);
 
