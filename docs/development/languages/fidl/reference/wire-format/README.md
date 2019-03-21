@@ -1,87 +1,61 @@
 # Wire Format Specification
 
 This document is a specification of the Fuchsia Interface Definition Language
-(**FIDL**) data structure encoding.
+(**FIDL**) message format.
 
 See [Overview](../README.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 [TOC]
 
-## Design
+## Concepts
 
-### Goals
+This section provides requisite background information for the concepts
+used throughout the description.
 
-*   Efficiently transfer messages between processes. You only pay for what you
-    use.
-*   General purpose, for use with device drivers, high-level services, and
-    applications.
-*   Optimized for Zircon IPC only; portability is not a goal.
-*   Optimized for direct memory access; inter-machine transport is not a goal.
-*   Optimized for 64-bit only; no accommodation for 32-bit environments.
-*   Uses uncompressed native data types with little-endianness and correct
-    alignment to support in-place access of message contents.
-*   Compatible with C structure in-memory layout (with suitable field ordering
-    and packing annotations).
-*   Structures are fixed size and inlined; variable-sized data is stored
-    out-of-line.
-*   Structures are not self-described; FIDL files describe their contents.
-*   No versioning of structures, but interfaces can be extended with new methods
-    for protocol evolution.
-*   No offset calculations required, very little arithmetic which may overflow.
-*   Support fast single-pass encoding and validation (as a combined operation).
-*   Support fast single-pass decoding and validation (as a combined operation).
+### Message
 
-### Messages
+A FIDL **message** is a collection of data.
 
-A **message** is a contiguous data structure represented using the FIDL Wire
-Format, consisting of a single **in-line primary object** followed by a sequence
-of zero or more **out-of-line secondary objects** stored in **traversal order**.
+The message is a contiguous structure consisting of a single
+**in-line primary object** followed by zero or more
+**out-of-line secondary objects**.
 
-#### Objects
+Objects are stored in **traversal order**, and are subject to **padding**.
 
-Messages are aggregates of **objects**.
+![drawing](objorder.png)
 
-The **primary object** of a message is simply the first object it contains. It
-is always a **struct** of fixed size whose type (and size) is known from the
-context (such as by examining the **method ordinal** in the **message header**).
+### Primary and Secondary Objects
 
-To store variable-size or optional data, the primary object may refer to
-**secondary objects**, such as string content, vector content, structs, and
-unions. Secondary objects are stored **out-of-line** sequentially in traversal
-order following the object which references them. In encoded messages, the
-presence of secondary objects is marked by a flag. In decoded messages, the
-flags are substituted with pointers to their location in memory (or null
-pointers when absent).
+The first object is called the **primary object**.
+It is a structure of fixed size whose type and size are known from the
+context.
 
-Primary and secondary objects are 8-byte aligned and stored sequentially in
-traversal order without gaps (other than the minimum required padding to maintain
-object alignment).
+The primary object may refer to **secondary objects** (such as in the
+case of strings, vectors, unions, and so on) if additional variable-sized
+or optional data is required.
 
-Objects may also contain **in-line objects** which are aggregated within the
-body of the containing object, such as embedded structs and fixed-size arrays of
-structs. The alignment factor of in-line objects is determined by the alignment
-factor of their most restrictive member.
+Secondary objects are stored **out-of-line** in traversal order.
 
-In the following example, each `Rect` structure contains two `Point` objects which
-are stored in-line, whereas each `Region` structure contains a vector with a
-variable number of `Rect` objects which are stored sequentially out-of-line. In
-this case, the secondary object is the vector's content (as a unit).
+Both primary and secondary objects are 8-byte aligned, and are stored
+without gaps (other than those required for alignment).
 
-```fidl
-struct Region {
-    vector<Rect> rects;
-};
-struct Rect {
-    Point top_left;
-    Point bottom_right;
-};
-struct Point { uint32 x, y; };
-```
+Together, a primary object and its secondary objects are called a
+**message**.
 
-![drawing](objects.png)
+#### Messages for transactions
 
-#### Traversal Order
+A transactional FIDL message (**transactional message**) is used to
+send data from one application to another.
+
+> The roles of the applications (e.g. **client** vs **server**) are not
+> relevant to the formatting of the data.
+
+As we will see in the [transactional messages](#transactional-messages) section
+below, a transactional message is composed of a header message optionally followed
+by a body message.
+
+### Traversal Order
 
 The **traversal order** of a message is determined by a recursive depth-first
 walk of all of the **objects** it contains, as obtained by following the chain
@@ -119,17 +93,18 @@ visit Cart:
         visit Item.quantity
 ```
 
-#### Dual Forms
+### Dual Forms: Encoded vs Decoded
 
-The same message content can be expressed in two forms: **encoded** and **decoded**.
+The same message content can be expressed in one of two forms:
+**encoded** and **decoded**.
 These have the same size and overall layout, but differ in terms of their
 representation of pointers (memory addresses) or handles (capabilities).
 
 FIDL is designed such that **encoding** and **decoding** of messages can occur
-in place in memory, assuming that objects have been stored in traversal order.
+in place in memory.
 
-The representation of encoded messages is unambiguous. There is exactly one
-possible encoding for all messages of the same type with the same content.
+Message encoding is canonical &mdash; there is exactly one encoding for
+a given message.
 
 ![drawing](dual-forms.png)
 
@@ -141,13 +116,26 @@ does not contain pointers (memory addresses) or handles (capabilities).
 During **encoding**...
 
 *   all pointers to sub-objects within the message are replaced with flags which
-    indicate whether their referent is present or not-present in traversal order,
+    indicate whether their referent is present or not-present,
 *   all handles within the message are extracted to an associated **handle
     vector** and replaced with flags which indicate whether their referent is
-    present or not-present in traversal order.
+    present or not-present.
 
 The resulting **encoded message** and **handle vector** can then be sent to
-another process using [**zx_channel_call()**][channel call] or a similar IPC mechanism.
+another process using [**zx_channel_write()**][channel write] or a similar IPC
+mechanism.
+There are additional constraints on this kind of IPC; see [transactional
+messages](#transactional-messages).
+
+> Note that the handle vector is *not* stored as part of the message, it's
+> sent separately (also known as "**out-of-band**, not to be confused with
+> **out-of-line**).
+> For example, the [**zx_channel_write()**][channel write] function
+> takes two sets of data pointers; one for the message, and one for the
+> handle vector.
+> The message data pointer will contain all of the **in-line** and
+> **out-of-line** data, and the handle vector pointer will contain the
+> handles.
 
 #### Decoded Messages
 
@@ -157,17 +145,59 @@ space: it may contain pointers (memory addresses) or handles (capabilities).
 During **decoding**...
 
 *   all pointers to sub-objects within the message are reconstructed using the
-    encoded present / not-present flags in traversal order,
+    encoded present / not-present flags,
 *   all handles within the message are restored from the associated **handle
-    vector** using the encoded present / not-present flags in traversal order.
+    vector** using the encoded present / not-present flags.
 
 The resulting **decoded message** is ready to be consumed directly from memory.
 
-## Data Types
+### Inlined Objects
 
-### Primitives
+Objects may also contain **inlined objects** which are aggregated within the
+body of the containing object, such as embedded structs and fixed-size arrays of
+structs.
 
-*   Value stored in native machine format.
+### Example
+
+In the following example, the `Region` structure contains a vector of
+`Rect` structures, with each `Rect` consisting of two `Point`s.
+Each `Point` consists of an `x` and `y` value.
+
+```fidl
+struct Region {
+    vector<Rect> rects;
+};
+struct Rect {
+    Point top_left;
+    Point bottom_right;
+};
+struct Point { uint32 x, y; };
+```
+
+Examining the objects in traversal order means that we start with the
+`Region` structure &mdash; it's the **primary object**.
+
+The `rects` member is a `vector`, so its contents are stored **out-of-line**.
+This means that the `vector` content immediately follows the `Region` object.
+
+Each `Rect` struct contains two `Point`s, which are stored **in-line**
+(because there are a fixed number of them), and each of the `Point`s'
+primitive data types (`x` and `y`) are also stored **in-line**.
+The reason is the same; there is a fixed number of the member types.
+
+![drawing](objects.png)
+
+We use **in-line** storage when the size of the subordinate
+object is fixed, and **out-of-line** when it's variable (including
+optional).
+
+# Type Details
+
+In this section, we illustrate the encodings for all FIDL objects.
+
+## Primitives
+
+*   Value stored in [little-endian format][ftp-030].
 *   Packed with natural alignment.
     *   Each _m_-byte primitive is stored on an _m_-byte boundary.
 *   Not nullable.
@@ -177,25 +207,49 @@ The following primitive types are supported:
 Category                | Types
 ----------------------- | ----------------------------
 Boolean                 | `bool`
-Signed integer          | `int8 int16 int32 int64`
-Unsigned integer        | `uint8 uint16 uint32 uint64`
-IEEE 754 Floating-point | `float32 float64`
+Signed integer          | `int8`, `int16`, `int32`, `int64`
+Unsigned integer        | `uint8`, `uint16`, `uint32`, `uint64`
+IEEE 754 floating-point | `float32`, `float64`
+strings                 | (not a primitive, see [Strings](#strings) below)
 
-Number types are suffixed with their size in bits, `bool` is 1 byte.
+Number types are suffixed with their size in bits.
 
-### Enums
+The Boolean type, `bool`, is stored as a single byte, and has only the
+value **0** or **1**.
 
-*   Primitive value representing a proper enumerated type; bit fields are not
-    valid enums.
-*   Stored directly using their underlying primitive type.
-*   Not nullable.
+All floating point values represent valid IEEE 754 bit patterns.
 
-From the perspective of the wire format, enums are just fancy names for
-primitive types.
+![drawing](primitive-int.png)
 
-For example, an enum whose underlying type is
-`int32` is stored in exactly the same way as any
-ordinary C `int32_t` would be.
+![drawing](primitive-fp.png)
+
+## Enums and Bits
+
+Bit fields and enumerations are stored as their underlying primitive
+type (e.g., `uint32`).
+
+## Handles
+
+A handle is a 32-bit integer, but with special treatment.
+When encoded for transfer, the handle's on-wire representation is replaced with
+a present / not-present indication, and the handle itself is stored in a separate
+handle vector.
+When decoded, the handle presence indication is replaced with zero (if not
+present) or a valid handle (if present).
+
+The handle *value* itself is **not** transferred from one application to another.
+In this respect, handles are like pointers; they reference a context that's
+unique to each application.
+Handles are moved from one application's context to the other's.
+
+![drawing](handlexlate.png)
+
+The value zero can be used to indicate a nullable handle is null[[1]](#Footnote-1).
+
+## Aggregate objects
+
+Aggregate objects serve as containers of other objects.
+They may store that data in-line or out-of-line, depending on their type.
 
 ### Arrays
 
@@ -249,96 +303,74 @@ Vectors are denoted as follows:
 
 ### Strings
 
-Strings are simply a special case of a vector.
-A string is effectively a `vector<uint8>` with the constraint that the bytes
-MUST be valid UTF8 (encoders and decoders should enforce and validate that).
+Strings are implemented as a vector of `uint8` bytes, with the constraint
+that the bytes MUST be valid UTF-8.
 
-### Handles
+### Structures
 
-*   Transfers a Zircon capability by handle value.
-*   Stored as a 32-bit unsigned integer.
-*   Nullable by encoding as a zero-valued [[2]](#Footnote-2) handle (equivalent to
-    `ZX_HANDLE_INVALID`).
+A structure contains a sequence of typed fields.
 
-*   When encoded for transfer, the stored integer indicates presence of handle:
+Internally, the structure is padded so that all members are aligned to the largest
+alignment requirement of all members.
+Externally, the structure is aligned on an 8-byte boundary, and may therefore contain
+final padding to meet that requirement.
 
-    *   `0`: handle is null
-    *   `UINT32_MAX`: handle is non-null, handle
-        value is the next entry in handle table
+Here are some examples.
 
-*   When decoded for consumption, the stored integer is the handle value itself:
+A struct with an **int32** and an **int8** field has an alignment of 4 bytes (due to
+the **int32**), and a size of 8 bytes (3 bytes of padding after the **int8**):
 
-    *   `0`: handle is null
-    *   `<valid handle>`: handle is non-null,
-        handle value is provided in-line
+![drawing](struct1.png)
 
-Handles are denoted:
+A struct with a **bool** and a **string** field has an alignment of 8 bytes (due to
+the **string**) and a size of 24 bytes (7 bytes of padding after the **bool**):
+![drawing](struct2.png)
 
-*   `handle`: non-nullable Zircon handle of unspecified type
-*   `handle?`: nullable Zircon handle of unspecified type
-*   `handle<H>`: non-nullable Zircon handle of type **H**
-*   `handle<H>?`: nullable Zircon handle of type **H**
-*   `Protocol`: non-nullable FIDL protocol (client endpoint of channel)
-*   `Protocol?`: nullable FIDL protocol (client endpoint of channel)
-*   `request<Protocol>`: non-nullable FIDL protocol request (server endpoint of channel)
-*   `request<Protocol>?`: nullable FIDL protocol request (server endpoint of channel)
+> Keep in mind that a **string** is really just a special
+> case of `vector<uint8>`.
 
-**H** can be one of [[3]](#Footnote-3): `bti`, `channel`, `debuglog`, `event`, `eventpair`,
-`fifo`, `guest`, `interrupt`, `job`, `port`, `process`, `profile`, `resource`, `socket`,
-`thread`, `timer`, `vmar`, or `vmo`.
+A struct with a **bool** and two **uint8** fields has an alignment of 1 byte and a
+size of 3 bytes (no padding!):
 
-### Structs
+![drawing](struct3.png)
 
-*   Record type consisting of a sequence of typed fields.
-
-*   Alignment factor of structure is defined by maximal alignment factor of all
-    fields.
-
-*   Structure is padded with zeros so that its size is a multiple of its
-    alignment factor. For example:
-
-    1. a struct with an **int32** and an **int8** field has an alignment of 4 bytes (due to
-       the **int32**), and a size of 8 bytes (3 bytes of padding after the **int8**)
-    2. a struct with a **bool** and a **string** field has an alignment of 8 bytes (due to
-       the **string**) and a size of 24 bytes (7 bytes of padding after the **bool**)
-    3. a struct with a **bool** and a **uint8[2]** field has an alignment of 1 byte and a
-       size of 3 bytes (no padding!)
-
-*   In general, changing the definition of a struct will break binary
-    compatibility; instead prefer to extend interfaces by adding new methods
-    which use new structs.
-
-*   A struct with no fields (an "empty" struct) has a size of 1 and an alignment of 1.
-
-    *   An empty struct is exactly equivalent to a struct with a single
-        **uint8** field that contains a value of zero.
+Note that a structure can be:
+* empty &mdash; it has no fields. Such a structure is 1 byte in size, with an
+  alignment of 1 byte, and is exactly equivalent to a structure containing a
+  `uint8` with the value zero.
+* non-nullable &mdash; the structure's contents are stored in-line.
+* nullable &mdash; the structure's contents are stored out-of-line and
+  accessed through an indirect reference.
 
 Storage of a structure depends on whether it is nullable at point of reference.
 
-*   Non-nullable structures:
-    *   Contents are stored in-line within their containing type, enabling very
-        efficient aggregate structures to be constructed.
-    *   The structure layout does not change when inlined; its fields are not
-        repacked to fill gaps in its container.
-*   Nullable structures:
-    *   Contents are stored out-of-line and accessed through an indirect
-        reference.
-    *   When encoded for transfer, stored reference indicates presence of
-        structure:
-        *   `0`: reference is null
-        *   `UINTPTR_MAX`: reference is non-null, structure content
-            is the next out-of-line object
-    *   When decoded for consumption, stored reference is a pointer:
-        *   `0`: reference is null
-        *   `<valid pointer>`: reference is non-null, structure content is at
-            indicated memory address
+* Non-nullable structures:
+  * Contents are stored in-line within their containing type, enabling very
+    efficient aggregate structures to be constructed.
+  * The structure layout does not change when inlined; its fields are not
+    repacked to fill gaps in its container.
+* Nullable structures:
+  * Contents are stored out-of-line and accessed through an indirect
+    reference.
+  * When encoded for transfer, stored reference indicates presence of
+    structure:
+    * `0`: reference is null
+    * `UINTPTR_MAX`: reference is non-null, structure content
+      is the next out-of-line object
+  * When decoded for consumption, stored reference is a pointer:
+    * `0`: reference is null
+    * `<valid pointer>`: reference is non-null, structure content is at
+      indicated memory address
 
 Structs are denoted by their declared name (e.g. `Circle`) and nullability:
 
-*   `Circle`: non-nullable `Circle`
-*   `Circle?`: nullable `Circle`
+*   `Point`: non-nullable `Point`
+*   `Color?`: nullable `Color`
 
-The following example shows how structs are laid out according to their fields.
+The following example illustrates:
+  * structure layout (order, packing, and alignment),
+  * a non-nullable structure (`Point`),
+  * a nullable structure (`Color`)
 
 ```fidl
 struct Circle {
@@ -353,32 +385,52 @@ struct Color { float32 r, g, b; };
 ```
 
 The `Color` content is padded to the 8 byte secondary object alignment boundary.
+Going through the layout in detail:
 
 ![drawing](structs.png)
 
-### Tables
+1. The first member, `bool filled`, occupies one byte, but requires three bytes
+   of padding because of the next member, which has a 4-byte alignment requirement.
+2. The `Point center` member is an example of a non-nullable struct. As such,
+   its content (the `x` and `y` 32-bit floats) are inlined, and the entire thing
+   consumes 8 bytes.
+3. `radius` is a 32-bit item, requiring 4 byte alignment. Since the next available
+   location is already on a 4 byte alignment boundary, no padding is required.
+4. The `Color? color` member is an example of a nullable structure. Since the
+   `color` data may or may not be present, the most efficient way of handling this
+   is to keep a pointer to the structure as the in-line data. That way, if the
+   `color` member is indeed present, the pointer points to its data (or, in the
+   case of the encoded format, indicates "is present"), and the data itself is
+   stored out-of-line (after the data for the `Circle` structure). If the
+   `color` member is not present, the pointer is `NULL` (or, in the encoded
+   format, indicates "is not present" by storing a zero).
+5. The `bool dashed` doesn't require any special alignment, so it goes next.
+   Now, however, we've reached the end of the object, and *all objects must be
+   8-byte aligned*. That means we need an additional 7 bytes of padding.
+6. The out-of-line data for `color` follows the `Circle` data structure, and
+   contains three 32-bit `float` values (`r`, `g`, and `b`); they require 4
+   byte alignment and so can follow each other without padding. But, just as
+   in the case of the `Circle` object, we require the object itself to be
+   8-byte aligned, so 4 bytes of padding are required.
 
-*   Record type consisting of the number of elements and a pointer.
-*   Pointer points to an array of envelopes, each of which contains one element.
-*   Each element is associated with an ordinal.
-*   Ordinals are sequential, gaps are discouraged.
+Overall, this structure takes 48 bytes.
 
-Tables are denoted by their declared name (e.g., **Value**) and nullability:
+By moving the `bool dashed` to be immediately after the `bool filled`, though,
+you can realize significant space savings [[2]](#Footnote-2):
 
-*   `Value`: non-nullable `Value`
-*   `Value?`: nullable `Value`
+![drawing](struct-reorg.png)
 
-The following example shows how tables are laid out according to their fields.
+1. The two `bool` values are "packed" together within what would have been
+   wasted space.
+2. The padding is reduced to two bytes &mdash; this would be a good place to
+   add a 16-bit value, or some more `bool`s or 8-bit integers.
+3. Notice how there's no padding required after the `color` pointer; everything
+   is perfectly aligned on an 8 byte boundary.
 
-```fidl
-table Value {
-    1: int16 command;
-    2: Circle data;
-    3: float64 offset;
-};
-```
+The structure now takes 40 bytes.
 
-![drawing](tables.png)
+> While `fidlc` could automatically pack structs, like Rust, we chose not to do
+> that in order to simplify [ABI compatibility changes](../abi-compat.md).
 
 ### Unions
 
@@ -442,6 +494,47 @@ to the selected option.
 
 ![drawing](unions.png)
 
+### Envelopes
+
+An envelope is a container for out-of-line data, used internally by tables
+and extensible unions.
+It is not exposed to the FIDL lanuage.
+
+It has a fixed, 24 byte format, and is not nullable:
+
+![drawing](envelope.png)
+
+An envelope can, however, point to empty content.
+In that case, `num_bytes`, `num_handles`, and the pointer will all be zero.
+
+Furthermore, because `num_bytes` represents the size of an object, it's
+always a multiple of 8, regardless of the actual amount of data that it points to.
+
+Having `num_bytes` and `num_handles` allows us to skip unknown envelope content.
+
+### Tables
+
+*   Record type consisting of the number of elements and a pointer.
+*   Pointer points to an array of envelopes, each of which contains one element.
+*   Each element is associated with an ordinal.
+*   Ordinals are sequential, gaps incur an empty envelope cost and hence are discouraged.
+
+Tables are denoted by their declared name (e.g., **Value**), and are not nullable:
+
+*   `Value`: non-nullable `Value`
+
+The following example shows how tables are laid out according to their fields.
+
+```fidl
+table Value {
+    1: int16 command;
+    2: Circle data;
+    3: float64 offset;
+};
+```
+
+![drawing](tables.png)
+
 ### Extensible Unions (xunions)
 
 *   Record type consisting of an ordinal and an envelope.
@@ -449,7 +542,7 @@ to the selected option.
 *   Ordinals are calculated by hashing the concatenated library name, xunion
     name, and member name, and retaining 31 bits.
     See [ordinal hashing] for further details.
-*   Nullable xunions are represented with a `0` ordinal, and a null envelope.
+*   Nullable xunions are represented with a `0` ordinal, and an empty envelope.
 *   Empty xunions are not allowed.
 
 xunions are denoted by their declared name (e.g. `Value`) and nullability:
@@ -471,150 +564,125 @@ xunion Value {
 
 ### Transactional Messages
 
-*   Transactions consist of sequences of correlated messages sent between the
-    client and implementation of an interface over a Zircon channel.
-*   Each message is prefixed with a simple 16 byte header, the body immediately
-    follows header.
-    *   `zx_txid_t txid`, transaction ID (32 bits)
-        * txids with the high bit set are reserved for use by [**zx_channel_call()**][channel call]
-        * txids with the high bit unset are reserved for use by userspace
-        * See [**zx_channel_call()**][channel call] for more details on txid allocation
-    *   `uint32 reserved0`, reserved for future use.
-    *   `uint32 flags`, all unused bits must be set to zero
-    *   `uint32 ordinal`
-        *   The zero ordinal is invalid.
-        *   Ordinals with the most significant bit set are reserved.
-*   A non-zero transaction ID is used to correlate sequences of messages which
-    involve a request and a response, e.g. in a two-way method call. The
-    initiator of the request is responsible for assigning a unique transaction
-    ID to the request. The handler of the request is responsible for echoing the
-    transaction ID it received back into the response which it sends. The
-    initiator can reuse transaction IDs once it receives their corresponding
-    responses.
-*   A zero transaction ID is reserved for messages which do not require a
-    response from the other side, e.g. one-way calls or system messages.
-*   There are three kinds of messages: method calls, method results, and control
-    messages.
-*   Ordinals indicate the purpose of the message.
-    *   Ordinals with the most significant bit set are reserved for control
-        messages and future expansion.
-    *   Ordinals without the most significant bit set indicate method calls and
-        responses.
-*   Flags control the interpretation of the message. All unused bits must be set
-    to zero.
-    *   Currently there are no flags, so all bits must be zero.
+In a transactional message, there is always a **header**, followed by
+an optional **body**.
 
-Messages which are sent directly through Zircon channels have a maximum total
-size (header + body) which is defined by the kernel (*currently 64 kB,
-eventual intent may be 16 kB*).
+Both the header and body are FIDL messages, as defined above; that is,
+a collection of data.
 
-It is possible to extend interfaces by declaring additional methods. The
-language also supports creating derived interfaces provided the method ordinals
-remain unique down the hierarchy. Interface derivation is purely syntactic; it
-does not affect the wire format).
+The header has the following form:
+
+![drawing](transaction-header.png)
+
+*   `zx_txid_t txid`, transaction ID (32 bits)
+    * `txid`s with the high bit set are reserved for use by
+      [**zx_channel_write()**][channel write]
+    * `txid`s with the high bit unset are reserved for use by userspace
+    * a value of `0` for `txid` is reserved for messages which do not
+      require a response from the other side.
+    * See [**zx_channel_call()**][channel call] for more details on
+      `txid` allocation
+*   `uint32 reserved0`, reserved for future use, must be zero
+*   `uint32 flags`, all unused bits must be set to zero
+*   `uint32 ordinal`
+    *   The zero ordinal is invalid.
+    *   Ordinals with the most significant bit set are reserved for
+        control messages and future expansion.
+    *   Ordinals without the most significant bit set indicate method calls
+        and responses.
+
+There are three kinds of transactional messages:
+* method requests,
+* method responses, and
+* event requests.
 
 We'll use the following interface for the next few examples:
 
 ```fidl
 protocol Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
-    Divide(int32 dividend, int32 divisor)
-        -> (int32 quotient, int32 remainder);
+    Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
     Clear();
+    -> OnError(uint32 status_code);
 };
 ```
 
-_FIDL does not provide a mechanism to determine the "version" of an interface;
-interface capabilities must be determined out-of-band, such as by querying a
-**ServiceProvider** for an interface "version" by name or by other means._
+The **Add()** and **Divide()** methods illustrate both the method request
+(sent from the client to the server), and a method reponse
+(sent from the server back to the client).
 
-#### Method Call Messages
+The **Clear()** method is an example of a method request that does not
+have a body.
 
-The client of an interface sends method call messages to the implementor of the
-interface to invoke methods of that interface.
+> It's not correct to say it has an "empty" body: that would imply that
+> there's a **body** following the **header**. In the case of **Clear()**,
+> there is no **body**, there is only a **header**.
 
-If a server receives an unknown, unsupported, or unexpected method call message,
-it must close the channel.
+#### Method Request Messages
 
-The message indicates the method to invoke by means of its (automatically
-computed) ordinal index. The body of the message contains the method arguments
-as if they were packed in a **struct**.
+The client of an interface sends method request messages to the server
+in order to invoke the method.
 
-![drawing](method-call-messages.png)
+#### Method Response Messages
 
-#### Method Result Messages
+The server sends method reponse messages to the client to indicate completion
+of a method invocation and to provide a (possibly empty) result.
 
-The implementor of an interface sends method result messages to the client of
-the interface to indicate completion of a method invocation and to provide a
-(possibly empty) result.
+Only two-way method requests which are defined to provide a (possibly empty) result
+in the protocol declaration will elicit a method response.
+One-way method requests must not produce a method response.
 
-If a client receives an unknown, unsupported, or unexpected method call message,
-it must close the channel.
-
-Only two-way method calls which are defined to provide a (possibly empty) result
-in the FIDL interface declaration will elicit a method result message. One-way
-method calls must not produce a method result message.
-
-A method result message provides the result associated with a prior method call.
+A method response message provides the result associated with a prior method request.
 The body of the message contains the method results as if they were packed in a
 **struct**.
 
-The message result header consists of 4 unsigned 32-bit values:
+Here we see that the answer to 912 / 43 is 21 with a remainder of 9.
+Note the `txid` value of `1` &mdash; this identifies the transaction.
+The `ordinal` value of `2` indicates the method &mdash; in this case, the
+**Divide()** method.
 
-Value      | Meaning
------------|-------------------------------------------------------------------------------------------------
-`txid`     | This `txid` must be equal to the `txid` of the method call to which this message is a response.
-`reserved` | (not used, must be zero)
-`flags`    | No flags currently defined, must be zero.
-`ordinal`  | This `ordinal` must be equal to the `ordinal` of the method call to which this message is a response.
+![drawing](transaction-division.png)
 
-![drawing](method-result-messages.png)
+Below, we see that `123 + 456` is `579`.
+Here, the `txid` value is now `2` &mdash; this is simply the next transaction
+number assigned to the transaction.
+The `ordinal` is `1`, indicating **Add()**, and note that the result requires
+4 bytes of padding in order to make the **body** object have a size that's
+a multiple of 8 bytes.
 
-#### Event Messages
+![drawing](transaction-addition.png)
 
-These support sending unsolicited messages from the server back to the client.
-Here we've added an `Error` method to our `Calculator` example:
+And finally, the **Clear()** method is different than the **Add()** and
+**Divide()** in two important ways:
+* it does not have a **body** (that is, it consists solely of the **header**), and
+* it does not solicit a response from the interface (`txid` is zero).
 
-```fidl
-protocol Calculator {
-    Add(int32 a, int32 b) -> (int32 sum);
-    Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
-    Clear();
-    -> Error(uint32 status_code);
-};
-```
+![drawing](method-clear.png)
 
-The implementor of an interface sends unsolicited event messages to the client
-of the interface to indicate that an asynchronous event occurred, as specified by
-the interface declaration.
+#### Event Requests
 
-Events may be used to let the client observe significant state changes, without
-having to create an additional channel to receive the response.
+An example of an event is the **OnError()** event in our `Calculator`.
+
+The server sends an unsolicited event request to the client
+to indicate that an asynchronous event occurred, as specified by
+the protocol declaration.
 
 In the `Calculator` example, we can imagine that an attempt to divide by zero
-would cause the **Error()** event to be sent with a "divide by zero" status code
+would cause the **OnError()** event to be sent with a "divide by zero" status code
 prior to the connection being closed. This allows the client to distinguish
 between the connection being closed due to an error, as opposed to for other
 reasons (such as the calculator process terminating abnormally).
 
-The body of the message contains the event arguments as if they were packed in a
-**struct**, just as with method result messages.
-
 ![drawing](events.png)
 
-#### Control Messages
+Notice how the `txid` is zero (indicating this is not part of a transaction),
+and `ordinal` is `4` (indicating the **OnError()** method).
 
-Control messages support in-band signaling of events other than method calls and
-responses.
+The **body** contains the event arguments as if they were packed in a
+**struct**, just as with method result messages.
+Note that the body is padded to maintain 8-byte alignment.
 
-If a client or server receives an unknown, unsupported, or unexpected control
-message, it must _discard it_. This allows for future expansion of control
-messages in the protocol.
-
-The maximum size of a valid control message is **512 bytes**, including the
-header.
-
-##### Epitaph (Control Message Ordinal 0xFFFFFFFF)
+#### Epitaph (Control Message Ordinal 0xFFFFFFFF)
 
 An epitaph is a message with ordinal **0xFFFFFFFF**. A server may send an
 epitaph as the last message prior to closing the connection, to provide an
@@ -661,56 +729,54 @@ FIDL in-line objects (complex types embedded within primary or secondary
 objects) are aligned according to their type. They are not forced to 8 byte
 alignment.
 
-##### Primitive types
+##### Types
 
-Type(s)           | bytes                   | alignment
-------------------|-------------------------|-------------------------
-`bool`            | 1                       | 1
-`int8`, `uint8`   | 1                       | 1
-`int16`, `uint16` | 2                       | 2
-`int32`, `uint32` | 4                       | 4
-`float32`         | 4                       | 4
-`int64`, `uint64` | 8                       | 8
-`float64`         | 8                       | 8
-`enum`            | sizeof(underlying type) | alignof(underlying type)
+Notes:
+1. **N** indicates the number of elements, whether stated explicity (as in
+   `array<T>:N`, an array with **N** elements of type **T**) or implictly (a `table`
+   consisting of 7 elements would have `N=7`).
+2. The out-of-line size is always padded to 8 bytes; we indicate the content size
+   below, excluding the padding.
+3. `sizeof(T)` in the `vector` entry below is `in_line_sizeof(T) + out_of_line_sizeof(T)`.
+4. **M** in the `table` entry below is the maximum ordinal of present field.
+5. In the `struct` entry below, the padding refers to the required padding to make the
+   `struct` aligned to the widest element. For example, `struct{uint32;uint8}`
+   has 3 bytes of padding, which is different than the padding to align to 8 bytes
+   boundaries.
 
-##### Complex types
+Type(s)                      | Size (in-line)                    | Size (out-of-line)                                              | Alignment
+-----------------------------|-----------------------------------|-----------------------------------------------------------------|--------------------------------
+`bool`                       | 1                                 | 0                                                               | 1
+`int8`, `uint8`              | 1                                 | 0                                                               | 1
+`int16`, `uint16`            | 2                                 | 0                                                               | 2
+`int32`, `uint32`, `float32` | 4                                 | 0                                                               | 4
+`int64`, `uint64`, `float64` | 8                                 | 0                                                               | 8
+`enum`, `bits`               | (underlying type)                 | 0                                                               | (underlying type)
+`handle`, et al.             | 4                                 | 0                                                               | 4
+`array<T>:N`                 | sizeof(T) * N                     | 0                                                               | alignof(T)
+`vector`, et al.             | 16                                | N * sizeof(T)                                                   | 8
+`struct`                     | sum(sizeof(fields)) + padding     | 0                                                               | 8
+`struct?`                    | 8                                 | sum(sizeof(fields)) + padding                                   | 8
+`union`                      | 4 + max(sizeof(fields)) + padding |  0                                                              | max(all fields)
+`union?`                     | 8                                 | 4 + max(sizeof(fields)) + padding                               | 8
+`envelope`                   | 16                                | sizeof(field)                                                   | 8
+`table`                      | 16                                | M * sizeof(envelope) + sum(aligned_to_8(sizeof(present fields)) | 8
+`xunion`, `xunion?`          | 24                                | sizeof(selected variant)                                        | 8
 
-> Note that **N** indicates the number of elements, whether stated explicity (as in
-> `array<T>:N`, an array with **N** elements of type **T**) or implictly (a `table`
-> consisting of 7 elements would have `N=7`).
+The `handle` entry above refers to all flavors of handles, specifically
+`handle`, `handle?`, `handle<H>`, `handle<H>?`, `Protocol`, `Protocol?`,
+`request<Protocol>`, and `request<Protocol>?`.
 
-Type(s)                                                  | bytes         | alignment
----------------------------------------------------------|---------------|-----------
-`array<T>:N`                                             | sizeof(T) * N | alignof(T)
-`string`, `string?`, `string:N`, `string:N?`             | 16            | 8
-`vector<T>`, `vector<T>?`, `vector<T>:N`, `vector<T>:N?` | 16            | 8
-`handle`, `handle?`, `handle<H>`, `handle<H>?`           | 4             | 4
-`Interface`, `Interface?`                                | 4             | 4
-`request<Interface>`, `request<Interface>?`              | 4             | 4
-
-##### Aggregate types
-
-Type(s)        | bytes                                | alignment
----------------|--------------------------------------|----------------
-`struct`       | sum(field sizes) + pad               | max(all fields)
-`struct?`      | 8                                    | 8
-`table`        | 16 + 16 * N + sum(field sizes) + pad | 8
-`table?`       | 16                                   | 8
-`union`        | 4 + pad + max(field sizes) + pad     | max(all fields)
-`union?`       | 8                                    | 8
-`xunion`       | 24 + max(field sizes)                | 8
-`xunion?`      | 8                                    | 8
-message header | 16                                   | 16
-envelope       | 24 + content                         | 8
+Similarly, the `vector` entry above refers to all flavors of vectors,
+specifically `vector<T>`, `vector<T>?`, `vector<T>:N`, `vector<T>:N?`,
+`string`, `string?`, `string:N`, and `string:N?`.
 
 #### Padding
 
 The creator of a message must fill all alignment padding gaps with zeros.
 
-The consumer of a message may verify that padding contains zeros (and generate
-an error if not) but it is not required to check as long as it does not actually
-read the padding bytes.
+The consumer of a message must verify that padding contains zeros (and generate
+an error if not).
 
 #### Maximum Recursion Depth
 
@@ -782,33 +848,20 @@ Conformant FIDL bindings must check all of the following integrity constraints:
     *   All present / not-present flags for referenced handles hold the value
         **0** or **UINT32_MAX** only.
 
-Stricter FIDL bindings may perform some or all of the following additional
-safety checks:
-
-*   All padding is filled with zeros.
-*   All floating point values represent valid IEEE 754 bit patterns.
-*   All bools have the value **0** or **1**.
-
 --------------------------------------------------------------------------------------------------
 
 #### Footnote 1
 
-Justification for unterminated strings. Since strings can contain embedded null characters, it is
-safer to encode the size explicitly and to make no guarantees about null-termination, thereby
-defeating incorrect assumptions that clients might make.
-Modern APIs generally use sized strings as a security precaution.
-It's important that data always have one unambiguous interpretation.
-
-#### Footnote 2
-
-Defining the zero handle to mean "there is no handle" makes it is safe to default-initialize
+Defining the zero handle to mean "there is no handle" means it is safe to default-initialize
 wire format structures to all zeros.
 Zero is also the value of the `ZX_HANDLE_INVALID` constant.
 
-#### Footnote 3
+#### Footnote 2
 
-New handle types can easily be added to the language without affecting the wire format
-since all handles are transferred the same way.
+Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on the subject.
 
 [channel call]: /zircon/docs/syscalls/channel_call.md
+[channel write]: /zircon/docs/syscalls/channel_write.md
+[ftp-030]: /docs/development/languages/fidl/reference/ftp/ftp-030.md
 [ordinal hashing]: /docs/development/languages/fidl/reference/ftp/ftp-020.md
+[lostart]: http://www.catb.org/esr/structure-packing/
