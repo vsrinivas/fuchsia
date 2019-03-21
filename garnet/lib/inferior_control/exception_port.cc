@@ -125,6 +125,7 @@ bool ExceptionPort::Bind(zx_handle_t process, Key key) {
 }
 
 bool ExceptionPort::Unbind(zx_handle_t process, Key key) {
+  FXL_DCHECK(process != ZX_HANDLE_INVALID);
   zx_status_t status =
     zx_task_bind_exception_port(process, ZX_HANDLE_INVALID, key,
                                 ZX_EXCEPTION_PORT_DEBUGGER);

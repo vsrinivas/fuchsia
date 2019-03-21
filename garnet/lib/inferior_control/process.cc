@@ -221,11 +221,13 @@ bool Process::Initialize() {
   return true;
 
 fail:
-  if (handle_ != ZX_HANDLE_INVALID) {
-    CloseDebugHandle();
-  }
+  // Unbind the eport before closing our process handle so that we have a
+  // handle to unbind with.
   if (eport_bound_) {
     UnbindExceptionPort();
+  }
+  if (handle_ != ZX_HANDLE_INVALID) {
+    CloseDebugHandle();
   }
   id_ = ZX_KOID_INVALID;
   builder_.reset();
@@ -350,11 +352,10 @@ bool Process::BindExceptionPort() {
 
 void Process::UnbindExceptionPort() {
   FXL_DCHECK(eport_bound_);
-  if (!server_->exception_port().Unbind(handle_, id_)) {
-    FXL_LOG(WARNING) << "Failed to unbind exception port for process " << id_;
-  } else {
-    eport_bound_ = false;
-  }
+  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
+  bool success = server_->exception_port().Unbind(handle_, id_);
+  FXL_DCHECK(success);
+  eport_bound_ = false;
 }
 
 void Process::RawDetach() {
