@@ -826,7 +826,7 @@ pub struct Msdu<B> {
 }
 
 pub enum MsduIterator<B> {
-    Llc { dst_addr: MacAddr, src_addr: MacAddr, buffer_reader: BufferReader<B> },
+    Llc { dst_addr: MacAddr, src_addr: MacAddr, body: Option<B> },
     Amsdu(BufferReader<B>),
 }
 
@@ -834,8 +834,8 @@ impl<B: ByteSlice> Iterator for MsduIterator<B> {
     type Item = Msdu<B>;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            MsduIterator::Llc { dst_addr, src_addr, buffer_reader } => {
-                let body = buffer_reader.read_bytes(buffer_reader.bytes_remaining())?;
+            MsduIterator::Llc { dst_addr, src_addr, body } => {
+                let body = body.take()?;
                 let llc_frame = LlcFrame::parse(body)?;
                 Some(Msdu { dst_addr: *dst_addr, src_addr: *src_addr, llc_frame })
             }
@@ -888,7 +888,7 @@ impl<B: ByteSlice> MsduIterator<B> {
                             dst_addr: data_dst_addr(&data_hdr),
                             // Safe to unwrap because data frame parsing has been successful.
                             src_addr: data_src_addr(&data_hdr, addr4.map(|a| *a)).unwrap(),
-                            buffer_reader: BufferReader::new(llc_frame),
+                            body: Some(llc_frame),
                         })
                     }
                     DataSubtype::Data(DataFrameBody::Amsdu { amsdu }) => {
