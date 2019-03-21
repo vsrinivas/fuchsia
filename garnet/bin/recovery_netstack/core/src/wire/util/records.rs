@@ -570,7 +570,7 @@ pub(crate) mod options {
 
     impl<'a, O> RecordsSerializerImpl<'a> for O
     where
-        O: OptionsSerializerImpl,
+        O: OptionsSerializerImpl<'a>,
     {
         type Record = O::Option;
 
@@ -676,7 +676,7 @@ pub(crate) mod options {
     /// `OptionsSerializerImpl` provides to functions to serialize fixed- and
     /// variable-length options. It is required in order to construct an
     /// `OptionsSerializer`.
-    pub(crate) trait OptionsSerializerImpl: OptionsImplLayout {
+    pub(crate) trait OptionsSerializerImpl<'a>: OptionsImplLayout {
         /// The input type to this serializer.
         ///
         /// This is the analogous serializing version of `Option` in
@@ -768,7 +768,7 @@ pub(crate) mod options {
             }
         }
 
-        impl OptionsSerializerImpl for DummyOptionsImpl {
+        impl<'a> OptionsSerializerImpl<'a> for DummyOptionsImpl {
             type Option = (u8, Vec<u8>);
 
             fn get_option_length(option: &Self::Option) -> usize {
@@ -822,7 +822,7 @@ pub(crate) mod options {
             }
         }
 
-        impl OptionsSerializerImpl for DummyNdpOptionsImpl {
+        impl<'a> OptionsSerializerImpl<'a> for DummyNdpOptionsImpl {
             type Option = (u8, Vec<u8>);
 
             fn get_option_length(option: &Self::Option) -> usize {

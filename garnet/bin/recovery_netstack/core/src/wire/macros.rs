@@ -30,9 +30,9 @@ pub(crate)enum $t {
         }
       }
 
-      impl Into<u8> for $t {
-          fn into(self) -> u8 {
-              self as u8
+      impl From<$t> for u8 {
+          fn from(v : $t) -> u8 {
+             v as u8
           }
       }
 

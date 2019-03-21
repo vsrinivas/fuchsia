@@ -19,6 +19,12 @@ use super::{IcmpIpExt, IcmpUnusedCode};
 
 pub(crate) type Options<B> =
     crate::wire::util::records::options::Options<B, options::NdpOptionsImpl>;
+pub(crate) type OptionsSerializer<'a, I> = crate::wire::util::records::options::OptionsSerializer<
+    'a,
+    options::NdpOptionsImpl,
+    options::NdpOption<'a>,
+    I,
+>;
 
 /// An NDP Router Solicitation.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
@@ -66,6 +72,14 @@ pub(crate) struct NeighborSolicitation {
 
 impl_icmp_message!(Ipv6, NeighborSolicitation, NeighborSolicitation, IcmpUnusedCode, Options<B>);
 
+impl NeighborSolicitation {
+    /// Creates a new neighbor solicitation message with the provided
+    /// `target_address`.
+    pub(crate) fn new(target_address: Ipv6Addr) -> Self {
+        Self { _reserved: [0; 4], target_address }
+    }
+}
+
 /// An NDP Neighbor Advertisment.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -90,10 +104,12 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 
 pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian};
-    use zerocopy::LayoutVerified;
+    use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::ip::Ipv6Addr;
-    use crate::wire::util::records::options::{OptionsImpl, OptionsImplLayout};
+    use crate::wire::util::records::options::{
+        OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
+    };
 
     create_net_enum! {
         NdpOptionType,
@@ -104,16 +120,18 @@ pub(crate) mod options {
         Mtu: MTU = 5,
     }
 
-    #[derive(Debug)]
-    pub(crate) struct PrefixInformation<'a> {
+    #[derive(Debug, FromBytes, AsBytes, Unaligned)]
+    #[repr(C)]
+    pub(crate) struct PrefixInformation {
         prefix_length: u8,
         flags_la: u8,
-        valid_lifetime: &'a [u8],
-        preferred_lifetime: &'a [u8],
-        prefix: LayoutVerified<&'a [u8], Ipv6Addr>,
+        valid_lifetime: [u8; 4],
+        preferred_lifetime: [u8; 4],
+        _reserved: [u8; 4],
+        prefix: Ipv6Addr,
     }
 
-    impl<'a> PrefixInformation<'a> {
+    impl PrefixInformation {
         pub(crate) fn valid_lifetime(&self) -> u32 {
             NetworkEndian::read_u32(&self.valid_lifetime)
         }
@@ -132,11 +150,23 @@ pub(crate) mod options {
     pub(crate) enum NdpOption<'a> {
         SourceLinkLayerAddress(&'a [u8]),
         TargetLinkLayerAddress(&'a [u8]),
-        PrefixInformation(PrefixInformation<'a>),
+        PrefixInformation(LayoutVerified<&'a [u8], PrefixInformation>),
 
         RedirectedHeader { original_packet: &'a [u8] },
 
         MTU { mtu: &'a [u8] },
+    }
+
+    impl<'a> From<&NdpOption<'a>> for NdpOptionType {
+        fn from(v: &NdpOption<'a>) -> Self {
+            match v {
+                NdpOption::SourceLinkLayerAddress(_) => NdpOptionType::SourceLinkLayerAddress,
+                NdpOption::TargetLinkLayerAddress(_) => NdpOptionType::TargetLinkLayerAddress,
+                NdpOption::PrefixInformation(_) => NdpOptionType::PrefixInformation,
+                NdpOption::RedirectedHeader { .. } => NdpOptionType::RedirectedHeader,
+                NdpOption::MTU { .. } => NdpOptionType::Mtu,
+            }
+        }
     }
 
     #[derive(Debug)]
@@ -164,27 +194,45 @@ pub(crate) mod options {
                 Some(NdpOptionType::TargetLinkLayerAddress) => {
                     NdpOption::TargetLinkLayerAddress(data)
                 }
-                Some(NdpOptionType::PrefixInformation) => {
-                    if data.len() < 14 {
-                        // Data should always be 14 octets long
-                        return Err("BadData".to_string());
-                    }
-                    let (prefix, _) = LayoutVerified::<_, Ipv6Addr>::new_from_prefix(&data[14..])
-                        .ok_or_else(|| "No parse data".to_string())?;
-                    NdpOption::PrefixInformation(PrefixInformation {
-                        prefix_length: data[0],
-                        flags_la: data[1],
-                        valid_lifetime: &data[2..6],
-                        preferred_lifetime: &data[6..10],
-                        prefix,
-                    })
-                }
+                Some(NdpOptionType::PrefixInformation) => NdpOption::PrefixInformation(
+                    LayoutVerified::<_, PrefixInformation>::new(data)
+                        .ok_or_else(|| "No parse data".to_string())?,
+                ),
                 Some(NdpOptionType::RedirectedHeader) => {
                     NdpOption::RedirectedHeader { original_packet: &data[6..] }
                 }
                 Some(NdpOptionType::Mtu) => NdpOption::MTU { mtu: &data[2..] },
                 None => return Ok(None),
             }))
+        }
+    }
+
+    impl<'a> OptionsSerializerImpl<'a> for NdpOptionsImpl {
+        type Option = NdpOption<'a>;
+
+        fn get_option_length(option: &Self::Option) -> usize {
+            match option {
+                NdpOption::SourceLinkLayerAddress(data)
+                | NdpOption::TargetLinkLayerAddress(data)
+                | NdpOption::RedirectedHeader { original_packet: data }
+                | NdpOption::MTU { mtu: data } => data.len(),
+                NdpOption::PrefixInformation(pfx_info) => pfx_info.bytes().len(),
+            }
+        }
+
+        fn get_option_kind(option: &Self::Option) -> u8 {
+            NdpOptionType::from(option).into()
+        }
+
+        fn serialize(buffer: &mut [u8], option: &Self::Option) {
+            let bytes = match option {
+                NdpOption::SourceLinkLayerAddress(data)
+                | NdpOption::TargetLinkLayerAddress(data)
+                | NdpOption::RedirectedHeader { original_packet: data }
+                | NdpOption::MTU { mtu: data } => data,
+                NdpOption::PrefixInformation(pfx_info) => pfx_info.bytes(),
+            };
+            buffer.copy_from_slice(bytes);
         }
     }
 }
@@ -194,14 +242,17 @@ mod tests {
     use packet::{ParsablePacket, ParseBuffer};
 
     use super::*;
-    use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
+    use crate::ip;
+    use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+    use packet::serialize::Serializer;
 
     #[test]
     fn parse_neighbor_solicitation() {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
         let mut buf = &SOLICITATION_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let ip_builder = ip.builder();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, NeighborSolicitation>>(IcmpParseArgs::new(
@@ -210,14 +261,28 @@ mod tests {
             .unwrap();
 
         assert_eq!(icmp.message().target_address.ipv6_bytes(), TARGET_ADDRESS);
-        for option in icmp.ndp_options().iter() {
+        let collected = icmp.ndp_options().iter().collect::<Vec<options::NdpOption>>();
+        for option in collected.iter() {
             match option {
                 options::NdpOption::SourceLinkLayerAddress(address) => {
-                    assert_eq!(address, SOURCE_LINK_LAYER_ADDRESS);
+                    assert_eq!(address, &SOURCE_LINK_LAYER_ADDRESS);
                 }
                 o => panic!("Found unexpected option: {:?}", o),
             }
         }
+        let serialized = OptionsSerializer::<_>::new(collected.iter())
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                *icmp.message(),
+            ))
+            .encapsulate(ip_builder)
+            .serialize_outer()
+            .unwrap()
+            .as_ref()
+            .to_vec();
+        assert_eq!(&serialized, &SOLICITATION_IP_PACKET_BYTES)
     }
 
     #[test]
@@ -225,6 +290,7 @@ mod tests {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
         let mut buf = &ADVERTISMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let ip_builder = ip.builder();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, NeighborAdvertisment>>(IcmpParseArgs::new(
@@ -233,6 +299,20 @@ mod tests {
             .unwrap();
         assert_eq!(icmp.message().target_address.ipv6_bytes(), TARGET_ADDRESS);
         assert_eq!(icmp.ndp_options().iter().count(), 0);
+
+        let serialized = []
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                *icmp.message(),
+            ))
+            .encapsulate(ip_builder)
+            .serialize_outer()
+            .unwrap()
+            .as_ref()
+            .to_vec();
+        assert_eq!(&serialized, &ADVERTISMENT_IP_PACKET_BYTES);
     }
 
     #[test]
@@ -240,6 +320,7 @@ mod tests {
         use crate::wire::icmp::testdata::ndp_router::*;
         let mut buf = &ADVERTISMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let ip_builder = ip.builder();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         let icmp = buf
             .parse_with::<_, IcmpPacket<_, _, RouterAdvertisment>>(IcmpParseArgs::new(
@@ -252,10 +333,12 @@ mod tests {
         assert_eq!(icmp.message().retransmit_timer(), RETRANS_TIMER);
 
         assert_eq!(icmp.ndp_options().iter().count(), 2);
-        for option in icmp.ndp_options().iter() {
+
+        let collected = icmp.ndp_options().iter().collect::<Vec<options::NdpOption>>();
+        for option in collected.iter() {
             match option {
                 options::NdpOption::SourceLinkLayerAddress(address) => {
-                    assert_eq!(address, SOURCE_LINK_LAYER_ADDRESS);
+                    assert_eq!(address, &SOURCE_LINK_LAYER_ADDRESS);
                 }
                 options::NdpOption::PrefixInformation(info) => {
                     assert_eq!(info.valid_lifetime(), PREFIX_INFO_VALID_LIFETIME);
@@ -265,5 +348,19 @@ mod tests {
                 o => panic!("Found unexpected option: {:?}", o),
             }
         }
+
+        let serialized = OptionsSerializer::<_>::new(collected.iter())
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                *icmp.message(),
+            ))
+            .encapsulate(ip_builder)
+            .serialize_outer()
+            .unwrap()
+            .as_ref()
+            .to_vec();
+        assert_eq!(&serialized, &ADVERTISMENT_IP_PACKET_BYTES);
     }
 }
