@@ -381,8 +381,7 @@ storage::Status PageEvictionManagerImpl::SynchronousTryEvictPage(
   return status;
 }
 
-PageEvictionManagerImpl::ExpiringToken
-PageEvictionManagerImpl::NewExpiringToken() {
+ExpiringToken PageEvictionManagerImpl::NewExpiringToken() {
   ++pending_operations_;
   return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
     --pending_operations_;

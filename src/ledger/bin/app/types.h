@@ -7,11 +7,16 @@
 
 #include <string>
 
+#include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
 #include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
+
+// A token that performs a given action on destruction.
+using ExpiringToken = fit::deferred_action<fit::closure>;
 
 // The result of a predicate, meant to be checked on a closed page. The result
 // is |YES| or |NO| depending on whether the predicate is satisfied or not. If

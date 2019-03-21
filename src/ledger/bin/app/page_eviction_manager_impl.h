@@ -16,6 +16,7 @@
 
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -59,10 +60,6 @@ class PageEvictionManagerImpl : public PageEvictionManager,
       fit::function<void(storage::Status, PageWasEvicted)> callback) override;
 
  private:
-  // A token that performs a given action on destruction. ExpiringToken objects
-  // are used to keep track of pending operations.
-  using ExpiringToken = fit::deferred_action<fit::closure>;
-
   // A Completer allowing waiting until the target operation is completed.
   class Completer {
    public:

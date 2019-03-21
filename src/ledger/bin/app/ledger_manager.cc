@@ -19,17 +19,13 @@
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 
 namespace ledger {
 namespace {
-
-// A token that performs a given action on destruction.
-// ExpiringToken objects are used with internal page requests to notify the
-// PageManagerContainer that the requested PageManager is no longer used.
-using ExpiringToken = fit::deferred_action<fit::closure>;
 
 // A notifier for |PageUsageListener|.
 //
