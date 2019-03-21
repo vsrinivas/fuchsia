@@ -15,7 +15,7 @@ group("all") {
 group("environment_delegating_runner") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/component/cpp/testing/environment_delegating_runner",
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner",
   ]
 }
 

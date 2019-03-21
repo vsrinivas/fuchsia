@@ -60,6 +60,7 @@ source_set("enclosing_environment") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner:bin",
     "//third_party/rapidjson",
   ]
 

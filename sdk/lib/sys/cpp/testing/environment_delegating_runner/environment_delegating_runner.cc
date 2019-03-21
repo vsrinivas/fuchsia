@@ -3,20 +3,18 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
 
 int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_ctx = component::StartupContext::CreateFromStartupInfo();
-  auto env_runner =
-      startup_ctx->ConnectToEnvironmentService<fuchsia::sys::Runner>();
+  auto startup_ctx = sys::ComponentContext::CreateFromStartupInfo();
+  auto env_runner = startup_ctx->svc()->Connect<fuchsia::sys::Runner>();
   env_runner.set_error_handler([](zx_status_t) {
     // This program dies here to prevent proxying any further calls from our
     // own environment runner implementation.
-    FXL_CHECK(false)
-        << "Lost connection to the environment's fuchsia.sys.Runner";
+    fprintf(stderr, "Lost connection to the environment's fuchsia.sys.Runner");
+    exit(1);
   });
 
   fidl::BindingSet<fuchsia::sys::Runner> runner_bindings;
