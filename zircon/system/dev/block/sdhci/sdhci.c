@@ -23,6 +23,7 @@
 #include <ddk/device.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/sdmmc.h>
@@ -79,7 +80,8 @@ typedef struct sdhci_device {
     zx_handle_t irq_handle;
     thrd_t irq_thread;
 
-    zx_handle_t regs_handle;
+    mmio_buffer_t regs_mmio_buffer;
+
     volatile sdhci_regs_t* regs;
 
     sdhci_protocol_t sdhci;
@@ -928,8 +930,7 @@ static void sdhci_unbind(void* ctx) {
 
 static void sdhci_release(void* ctx) {
     sdhci_device_t* dev = ctx;
-    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)dev->regs, sizeof(dev->regs));
-    zx_handle_close(dev->regs_handle);
+    mmio_buffer_release(&dev->regs_mmio_buffer);
     zx_handle_close(dev->irq_handle);
     zx_handle_close(dev->bti_handle);
     zx_handle_close(dev->iobuf.vmo_handle);
@@ -1064,18 +1065,20 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map the Device Registers so that we can perform MMIO against the device.
-    status = dev->sdhci.ops->get_mmio(dev->sdhci.ctx, &dev->regs_handle);
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx_off_t vmo_offset = 0;
+    status = dev->sdhci.ops->get_mmio(dev->sdhci.ctx, &vmo, &vmo_offset);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d in get_mmio\n", status);
         goto fail;
     }
-    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                         dev->regs_handle, 0, ROUNDUP(sizeof(dev->regs), PAGE_SIZE),
-                         (uintptr_t*)&dev->regs);
+    status = mmio_buffer_init(&dev->regs_mmio_buffer, vmo_offset, sizeof(dev->regs), vmo,
+                              ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "sdhci: error %d in zx_vmar_map\n", status);
+        zxlogf(ERROR, "sdhci: error %d in mmio_buffer_init\n", status);
         goto fail;
     }
+    dev->regs = dev->regs_mmio_buffer.vaddr;
     status = dev->sdhci.ops->get_bti(dev->sdhci.ctx, 0, &dev->bti_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d in get_bti\n", status);
