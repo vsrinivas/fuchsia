@@ -10,16 +10,16 @@ use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::device::DeviceId;
+use crate::device::{DeviceId, FrameDestination};
 use crate::ip::{
     send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
-    IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode,
-    Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode,
-    Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode,
-    Icmpv6TimeExceededCode,
+    peek_message_type, IcmpDestUnreachable, IcmpMessageType, IcmpPacketBuilder, IcmpParseArgs,
+    IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType, Icmpv4Packet,
+    Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet,
+    Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
 };
 use crate::{Context, EventDispatcher};
 
@@ -131,12 +131,23 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
+    frame_dst: FrameDestination,
     src_ip: A,
     dst_ip: A,
+    proto: IpProto,
     original_packet: B,
     header_len: usize,
 ) {
     increment_counter!(ctx, "send_icmp_protocol_unreachable");
+
+    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
+    // whether we MUST NOT send an ICMP error message. Unlike other
+    // send_icmp_xxx functions, we do not check to see whether the inbound
+    // packet is an ICMP error message - we already know it's not since its
+    // protocol was unsupported.
+    if !should_send_icmp_error(frame_dst, src_ip, dst_ip) {
+        return;
+    }
 
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
@@ -201,12 +212,22 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
 pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
+    frame_dst: FrameDestination,
     src_ip: A,
     dst_ip: A,
     original_packet: B,
     ipv4_header_len: usize,
 ) {
     increment_counter!(ctx, "send_icmp_port_unreachable");
+
+    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
+    // whether we MUST NOT send an ICMP error message. Unlike other
+    // send_icmp_xxx functions, we do not check to see whether the inbound
+    // packet is an ICMP error message - we already know it's not since ICMP is
+    // not one of the protocols that can generate "port unreachable" errors.
+    if !should_send_icmp_error(frame_dst, src_ip, dst_ip) {
+        return;
+    }
 
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
@@ -245,12 +266,24 @@ pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: Bu
 pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
+    frame_dst: FrameDestination,
     src_ip: A,
     dst_ip: A,
+    proto: IpProto,
     original_packet: B,
-    ipv4_header_len: usize,
+    header_len: usize,
 ) {
     increment_counter!(ctx, "send_icmp_net_unreachable");
+
+    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
+    // whether we MUST NOT send an ICMP error message. should_send_icmp_error
+    // does not handle the "ICMP error message" case, so we check that
+    // separately with a call to is_icmp_error_message.
+    if !should_send_icmp_error(frame_dst, src_ip, dst_ip)
+        || is_icmp_error_message(proto, &original_packet.as_ref()[header_len..])
+    {
+        return;
+    }
 
     #[ipv4addr]
     send_icmpv4_dest_unreachable(
@@ -260,7 +293,7 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
         dst_ip,
         Icmpv4DestUnreachableCode::DestNetworkUnreachable,
         original_packet,
-        ipv4_header_len,
+        header_len,
     );
 
     #[ipv6addr]
@@ -291,19 +324,31 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
 pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
+    frame_dst: FrameDestination,
     src_ip: A,
     dst_ip: A,
+    proto: IpProto,
     original_packet: B,
-    ipv4_header_len: usize,
+    header_len: usize,
 ) {
     increment_counter!(ctx, "send_icmp_ttl_expired");
+
+    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
+    // whether we MUST NOT send an ICMP error message. should_send_icmp_error
+    // does not handle the "ICMP error message" case, so we check that
+    // separately with a call to is_icmp_error_message.
+    if !should_send_icmp_error(frame_dst, src_ip, dst_ip)
+        || is_icmp_error_message(proto, &original_packet.as_ref()[header_len..])
+    {
+        return;
+    }
 
     #[ipv4addr]
     {
         // Per RFC 792, body contains entire IPv4 header + 64 bytes of
         // original body.
         let mut original_packet = original_packet;
-        original_packet.shrink_back_to(ipv4_header_len + 64);
+        original_packet.shrink_back_to(header_len + 64);
         // TODO(joshlf): Do something if send_icmp_response returns an error?
         send_icmp_response(ctx, device, src_ip, dst_ip, IpProto::Icmp, |local_ip| {
             BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
@@ -352,12 +397,25 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
 pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
+    frame_dst: FrameDestination,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
+    proto: IpProto,
     mtu: u32,
     mut original_packet: B,
+    header_len: usize,
 ) {
     increment_counter!(ctx, "send_icmpv6_packet_too_big");
+
+    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
+    // whether we MUST NOT send an ICMP error message. should_send_icmp_error
+    // does not handle the "ICMP error message" case, so we check that
+    // separately with a call to is_icmp_error_message.
+    if !should_send_icmp_error(frame_dst, src_ip, dst_ip)
+        || is_icmp_error_message(proto, &original_packet.as_ref()[header_len..])
+    {
+        return;
+    }
 
     // Per RFC 4443, body contains as much of the original body as possible
     // without exceeding IPv6 minimum MTU.
@@ -423,6 +481,58 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
             ),
         )
     });
+}
+
+/// Should we send an ICMP response?
+///
+/// `should_send_icmp_error` implements the logic described in RFC 1122 section
+/// 3.2.2. It decides whether, upon receiving an incoming packet with the given
+/// parameters, we should send an ICMP response or not. In particular, we do not
+/// send an ICMP response if we've received:
+/// - a packet destined to a broadcast or multicast address
+/// - a packet sent in a link-layer broadcast
+/// - a non-initial fragment
+/// - a packet whose source address does not define a single host (a
+///   zero/unspecified address, a loopback address, a broadcast address, a
+///   multicast address, or a Class E address)
+///
+/// Note that `should_send_icmp_error` does NOT check whether the incoming
+/// packet contained an ICMP error message. This is because that check is
+/// unnecessary for some ICMP error conditions. The ICMP error message check can
+/// be performed separately with `is_icmp_error_message`.
+fn should_send_icmp_error<A: IpAddress>(frame_dst: FrameDestination, src_ip: A, dst_ip: A) -> bool {
+    // TODO(joshlf): Implement the rest of the rules:
+    // - a packet destined to a subnet broadcast address
+    // - a non-initial fragment
+    // - a packet whose source address is a subnet broadcast address
+    !(dst_ip.is_multicast()
+        || dst_ip.with_v4(Ipv4Addr::is_global_broadcast, false)
+        || frame_dst.is_broadcast()
+        || src_ip.is_unspecified()
+        || src_ip.is_loopback()
+        || src_ip.with_v4(Ipv4Addr::is_global_broadcast, false)
+        || src_ip.is_multicast()
+        || src_ip.with_v4(Ipv4Addr::is_class_e, false))
+}
+
+/// Determine whether or not an IP packet body contains an ICMP error message
+/// for the purposes of determining whether or not to send an ICMP response.
+///
+/// `is_icmp_error_message` determines whether `proto` is ICMP or ICMPv6, and if
+/// so, attempts to parse `buf` as an ICMP packet in order to determine whether
+/// it is an error message or not. If parsing fails, it conservatively assumes
+/// that it is an error packet in order to avoid violating RFC 1122 section
+/// 3.2.2's MUST NOT directive.
+fn is_icmp_error_message(proto: IpProto, buf: &[u8]) -> bool {
+    match proto {
+        IpProto::Icmp => {
+            peek_message_type::<Icmpv4MessageType>(buf).map(IcmpMessageType::is_err).unwrap_or(true)
+        }
+        IpProto::Icmpv6 => {
+            peek_message_type::<Icmpv6MessageType>(buf).map(IcmpMessageType::is_err).unwrap_or(true)
+        }
+        _ => false,
+    }
 }
 
 #[cfg(test)]

@@ -93,9 +93,9 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
 pub(crate) trait IcmpIpExt: Ip {
     /// The type of ICMP messages.
     ///
-    /// For `Ipv4`, this is `icmpv4::MessageType`, and for `Ipv6`, this is
-    /// `icmpv6::MessageType`.
-    type IcmpMessageType: Into<u8> + Copy;
+    /// For `Ipv4`, this is `Icmpv4MessageType`, and for `Ipv6`, this is
+    /// `Icmpv6MessageType`.
+    type IcmpMessageType: IcmpMessageType;
 
     const IP_PROTO: IpProto;
 
@@ -130,7 +130,7 @@ impl<I: Ip> IcmpIpExt for I {
 }
 
 impl IcmpIpExt for Ipv4 {
-    type IcmpMessageType = icmpv4::MessageType;
+    type IcmpMessageType = Icmpv4MessageType;
     const IP_PROTO: IpProto = IpProto::Icmp;
 
     fn header_len(bytes: &[u8]) -> usize {
@@ -144,7 +144,7 @@ impl IcmpIpExt for Ipv4 {
 }
 
 impl IcmpIpExt for Ipv6 {
-    type IcmpMessageType = icmpv6::MessageType;
+    type IcmpMessageType = Icmpv6MessageType;
     const IP_PROTO: IpProto = IpProto::Icmpv6;
 
     fn header_len(bytes: &[u8]) -> usize {
@@ -292,6 +292,20 @@ pub(crate) trait IcmpMessage<I: IcmpIpExt, B>:
     /// values for this field are valid. If an invalid value is passed,
     /// `code_from_u8` returns `None`.
     fn code_from_u8(code: u8) -> Option<Self::Code>;
+}
+
+/// The type of an ICMP message.
+///
+/// `IcmpMessageType` is implemented by `Icmpv4MessageType` and
+/// `Icmpv6MessageType`.
+pub trait IcmpMessageType: Into<u8> + Copy {
+    /// Is this an error message?
+    ///
+    /// For ICMP, this is true for the Destination Unreachable, Redirect, Source
+    /// Quench, Time Exceeded, and Parameter Problem message types. For ICMPv6,
+    /// this is true for the Destination Unreachable, Packet Too Big, Time
+    /// Exceeded, and Parameter Problem message types.
+    fn is_err(self) -> bool;
 }
 
 /// An ICMP packet.

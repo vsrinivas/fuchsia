@@ -176,6 +176,11 @@ mod internal {
         /// `V4` for IPv4 and `V6` for IPv6.
         const VERSION: IpVersion;
 
+        /// The unspecified address.
+        ///
+        /// This is 0.0.0.0 for IPv4 and :: for IPv6.
+        const UNSPECIFIED_ADDRESS: Self::Addr;
+
         /// The default loopback address.
         ///
         /// When sending packets to a loopback interface, this address is used
@@ -187,6 +192,9 @@ mod internal {
         /// Addresses in this subnet must not appear outside a host, and may
         /// only be used for loopback interfaces.
         const LOOPBACK_SUBNET: Subnet<Self::Addr>;
+
+        /// The subnet of multicast addresses.
+        const MULTICAST_SUBNET: Subnet<Self::Addr>;
 
         /// The address type for this IP version.
         ///
@@ -202,11 +210,13 @@ mod internal {
 
     impl Ip for Ipv4 {
         const VERSION: IpVersion = IpVersion::V4;
-
+        const UNSPECIFIED_ADDRESS: Ipv4Addr = Ipv4Addr::new([0, 0, 0, 0]);
         // https://tools.ietf.org/html/rfc5735#section-3
         const LOOPBACK_ADDRESS: Ipv4Addr = Ipv4Addr::new([127, 0, 0, 1]);
         const LOOPBACK_SUBNET: Subnet<Ipv4Addr> =
             Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
+        const MULTICAST_SUBNET: Subnet<Ipv4Addr> =
+            Subnet { network: Ipv4Addr::new([224, 0, 0, 0]), prefix: 4 };
         type Addr = Ipv4Addr;
     }
 
@@ -217,7 +227,14 @@ mod internal {
         /// regardless of subnet address. This is distinct from the
         /// subnet-specific broadcast address (e.g., 192.168.255.255 on the
         /// subnet 192.168.0.0/16).
-        pub(crate) const BROADCAST_ADDRESS: Ipv4Addr = Ipv4Addr::new([255, 255, 255, 255]);
+        pub const GLOBAL_BROADCAST_ADDRESS: Ipv4Addr = Ipv4Addr::new([255, 255, 255, 255]);
+
+        /// The Class E subnet.
+        ///
+        /// The Class E subnet is meant for experimental purposes. We should
+        /// never receive or emit packets with Class E addresses.
+        pub const CLASS_E_SUBNET: Subnet<Ipv4Addr> =
+            Subnet { network: Ipv4Addr::new([240, 0, 0, 0]), prefix: 4 };
     }
 
     /// IPv6.
@@ -228,11 +245,16 @@ mod internal {
 
     impl Ip for Ipv6 {
         const VERSION: IpVersion = IpVersion::V6;
+        const UNSPECIFIED_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 16]);
         const LOOPBACK_ADDRESS: Ipv6Addr =
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
         const LOOPBACK_SUBNET: Subnet<Ipv6Addr> = Subnet {
             network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             prefix: 128,
+        };
+        const MULTICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
+            network: Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            prefix: 8,
         };
         type Addr = Ipv6Addr;
     }
@@ -286,6 +308,40 @@ mod internal {
 
         /// Convert a statically-typed IP address into a dynamically-typed one.
         fn into_ip_addr(self) -> IpAddr;
+
+        /// Is this the unspecified address?
+        ///
+        /// `is_unspecified` returns `true` if this address is equal to
+        /// `Self::Version::UNSPECIFIED_ADDRESS`.
+        fn is_unspecified(&self) -> bool {
+            *self == Self::Version::UNSPECIFIED_ADDRESS
+        }
+
+        /// Is this a loopback address?
+        ///
+        /// `is_loopback` returns `true` if this address is a member of the
+        /// loopback subnet.
+        fn is_loopback(&self) -> bool {
+            Self::Version::LOOPBACK_SUBNET.contains(*self)
+        }
+
+        /// Is this a multicast address?
+        ///
+        /// `is_multicast` returns `true` if this address is a member of the
+        /// multicast subnet.
+        fn is_multicast(&self) -> bool {
+            Self::Version::MULTICAST_SUBNET.contains(*self)
+        }
+
+        // TODO(joshlf): Is this the right naming convention?
+
+        /// Invoke a function on this address if it is an `Ipv4Address` or
+        /// return `default` if it is an `Ipv6Address`.
+        fn with_v4<O, F: Fn(Ipv4Addr) -> O>(&self, f: F, default: O) -> O;
+
+        /// Invoke a function on this address if it is an `Ipv6Address` or
+        /// return `default` if it is an `Ipv4Address`.
+        fn with_v6<O, F: Fn(Ipv6Addr) -> O>(&self, f: F, default: O) -> O;
     }
 
     /// An IPv4 address.
@@ -302,6 +358,22 @@ mod internal {
         /// Get the bytes of the IPv4 address.
         pub const fn ipv4_bytes(self) -> [u8; 4] {
             self.0
+        }
+
+        /// Is this the global broadcast address?
+        ///
+        /// `is_global_broadcast` is a shorthand for comparing against
+        /// `Ipv4::GLOBAL_BROADCAST_ADDRESS`.
+        pub(crate) fn is_global_broadcast(self) -> bool {
+            self == Ipv4::GLOBAL_BROADCAST_ADDRESS
+        }
+
+        /// Is this a Class E address?
+        ///
+        /// `is_class_e` is a shorthand for checking membership in
+        /// `Ipv4::CLASS_E_SUBNET`.
+        pub(crate) fn is_class_e(self) -> bool {
+            Ipv4::CLASS_E_SUBNET.contains(self)
         }
     }
 
@@ -330,6 +402,14 @@ mod internal {
 
         fn into_ip_addr(self) -> IpAddr {
             IpAddr::V4(self)
+        }
+
+        fn with_v4<O, F: Fn(Ipv4Addr) -> O>(&self, f: F, default: O) -> O {
+            f(*self)
+        }
+
+        fn with_v6<O, F: Fn(Ipv6Addr) -> O>(&self, f: F, default: O) -> O {
+            default
         }
     }
 
@@ -393,6 +473,14 @@ mod internal {
 
         fn into_ip_addr(self) -> IpAddr {
             IpAddr::V6(self)
+        }
+
+        fn with_v4<O, F: Fn(Ipv4Addr) -> O>(&self, f: F, default: O) -> O {
+            default
+        }
+
+        fn with_v6<O, F: Fn(Ipv6Addr) -> O>(&self, f: F, default: O) -> O {
+            f(*self)
         }
     }
 

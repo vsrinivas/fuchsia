@@ -15,8 +15,8 @@ use crate::ip::{Ipv4, Ipv4Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{
-    peek_message_type, IcmpIpExt, IcmpPacket, IcmpParseArgs, IcmpUnusedCode, IdAndSeq,
-    OriginalPacket,
+    peek_message_type, IcmpIpExt, IcmpMessageType, IcmpPacket, IcmpParseArgs, IcmpUnusedCode,
+    IdAndSeq, OriginalPacket,
 };
 
 /// An ICMPv4 packet with a dynamic message type.
@@ -78,7 +78,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
                 match peek_message_type($buffer.as_ref())? {
-                    $(MessageType::$variant => {
+                    $(Icmpv4MessageType::$variant => {
                         let packet = <IcmpPacket<Ipv4, B, $type> as ParsablePacket<_, _>>::parse($buffer, $args)?;
                         Icmpv4Packet::$variant(packet)
                     })*
@@ -102,7 +102,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
 }
 
 create_net_enum! {
-    MessageType,
+    Icmpv4MessageType,
     EchoReply: ECHO_REPLY = 0,
     DestUnreachable: DEST_UNREACHABLE = 3,
     Redirect: REDIRECT = 5,
@@ -111,6 +111,13 @@ create_net_enum! {
     ParameterProblem: PARAMETER_PROBLEM = 12,
     TimestampRequest: TIMESTAMP_REQUEST = 13,
     TimestampReply: TIMESTAMP_REPLY = 14,
+}
+
+impl IcmpMessageType for Icmpv4MessageType {
+    fn is_err(self) -> bool {
+        use Icmpv4MessageType::*;
+        [DestUnreachable, Redirect, TimeExceeded, ParameterProblem].contains(&self)
+    }
 }
 
 create_net_enum! {

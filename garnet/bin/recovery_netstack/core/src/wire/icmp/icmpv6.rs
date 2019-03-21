@@ -15,7 +15,8 @@ use crate::ip::{Ipv6, Ipv6Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{
-    ndp, peek_message_type, IcmpIpExt, IcmpPacket, IcmpParseArgs, IcmpUnusedCode, OriginalPacket,
+    ndp, peek_message_type, IcmpIpExt, IcmpMessageType, IcmpPacket, IcmpParseArgs, IcmpUnusedCode,
+    OriginalPacket,
 };
 
 /// An ICMPv6 packet with a dynamic message type.
@@ -86,7 +87,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
                 match peek_message_type($buffer.as_ref())? {
-                    $(MessageType::$variant => {
+                    $(Icmpv6MessageType::$variant => {
                         let packet = <IcmpPacket<Ipv6, B, $type> as ParsablePacket<_, _>>::parse($buffer, $args)?;
                         Icmpv6Packet::$variant(packet)
                     })*
@@ -113,7 +114,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
 }
 
 create_net_enum! {
-    MessageType,
+    Icmpv6MessageType,
     DestUnreachable: DEST_UNREACHABLE = 1,
     PacketTooBig: PACKET_TOO_BIG = 2,
     TimeExceeded: TIME_EXCEEDED = 3,
@@ -127,6 +128,13 @@ create_net_enum! {
     NeighborSolicitation: NEIGHBOR_SOLICITATION = 135,
     NeighborAdvertisment: NEIGHBOR_ADVERTISMENT = 136,
     Redirect: REDIRECT = 137,
+}
+
+impl IcmpMessageType for Icmpv6MessageType {
+    fn is_err(self) -> bool {
+        use Icmpv6MessageType::*;
+        [DestUnreachable, PacketTooBig, TimeExceeded, ParameterProblem].contains(&self)
+    }
 }
 
 impl_icmp_message!(Ipv6, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, OriginalPacket<B>);

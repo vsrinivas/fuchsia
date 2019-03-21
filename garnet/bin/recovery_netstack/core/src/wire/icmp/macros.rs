@@ -38,10 +38,10 @@ macro_rules! impl_icmp_message {
 
 macro_rules! impl_icmp_message_inner_message_type {
     (Ipv4, $msg_variant:ident) => {
-        crate::wire::icmp::icmpv4::MessageType::$msg_variant
+        crate::wire::icmp::icmpv4::Icmpv4MessageType::$msg_variant
     };
     (Ipv6, $msg_variant:ident) => {
-        crate::wire::icmp::icmpv6::MessageType::$msg_variant
+        crate::wire::icmp::icmpv6::Icmpv6MessageType::$msg_variant
     };
 }
 

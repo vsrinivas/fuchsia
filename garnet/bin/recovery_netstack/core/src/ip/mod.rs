@@ -67,6 +67,7 @@ struct IpLayerStateInner<I: Ip> {
 fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: Option<DeviceId>,
+    frame_dst: FrameDestination,
     src_ip: I,
     dst_ip: I,
     proto: IpProto,
@@ -93,8 +94,10 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
             icmp::send_icmp_protocol_unreachable(
                 ctx,
                 device.unwrap(),
+                frame_dst,
                 src_ip,
                 dst_ip,
+                proto,
                 buffer,
                 meta.header_len(),
             );
@@ -118,6 +121,7 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
         icmp::send_icmp_port_unreachable(
             ctx,
             device.unwrap(),
+            frame_dst,
             src_ip,
             dst_ip,
             buffer,
@@ -191,13 +195,22 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // - Do something with ICMP if we don't have a handler for that protocol?
         // - Check for already-expired TTL?
         let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
-        dispatch_receive_ip_packet(ctx, Some(device), src_ip, dst_ip, proto, buffer, Some(meta));
+        dispatch_receive_ip_packet(
+            ctx,
+            Some(device),
+            frame_dst,
+            src_ip,
+            dst_ip,
+            proto,
+            buffer,
+            Some(meta),
+        );
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
             packet.set_ttl(ttl - 1);
-            let (src_ip, dst_ip, _, _) = drop_packet_and_undo_parse!(packet, buffer);
+            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
             if let Err((err, ser)) = crate::device::send_ip_frame(
                 ctx,
                 dest.device,
@@ -208,19 +221,25 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                 fn send_packet_too_big<D: EventDispatcher, A: IpAddress, B: BufferMut>(
                     ctx: &mut Context<D>,
                     device: DeviceId,
+                    frame_dst: FrameDestination,
                     src_ip: A,
                     dst_ip: A,
+                    proto: IpProto,
                     mtu: u32,
                     original_packet: B,
+                    header_len: usize,
                 ) {
                     #[ipv6addr]
                     crate::ip::icmp::send_icmpv6_packet_too_big(
                         ctx,
                         device,
+                        frame_dst,
                         src_ip,
                         dst_ip,
+                        proto,
                         mtu,
                         original_packet,
+                        header_len,
                     );
                 }
 
@@ -236,19 +255,47 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                     // out the minimum path MTU. This may break other logic,
                     // though, so we should still fix it eventually.
                     let mtu = crate::device::get_mtu(ctx, device);
-                    send_packet_too_big(ctx, device, src_ip, dst_ip, mtu, ser.into_buffer());
+                    send_packet_too_big(
+                        ctx,
+                        device,
+                        frame_dst,
+                        src_ip,
+                        dst_ip,
+                        proto,
+                        mtu,
+                        ser.into_buffer(),
+                        meta.header_len(),
+                    );
                 }
             }
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
-            let (src_ip, dst_ip, _, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            icmp::send_icmp_ttl_expired(ctx, device, src_ip, dst_ip, buffer, meta.header_len());
+            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+            icmp::send_icmp_ttl_expired(
+                ctx,
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                proto,
+                buffer,
+                meta.header_len(),
+            );
             debug!("received IP packet dropped due to expired TTL");
         }
     } else {
-        let (src_ip, dst_ip, _, meta) = drop_packet_and_undo_parse!(packet, buffer);
-        icmp::send_icmp_net_unreachable(ctx, device, src_ip, dst_ip, buffer, meta.header_len());
+        let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+        icmp::send_icmp_net_unreachable(
+            ctx,
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            proto,
+            buffer,
+            meta.header_len(),
+        );
         debug!("received IP packet with no known route to destination {}", dst_ip);
     }
 }
@@ -287,7 +334,7 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
     return crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
-        .unwrap_or(dst_ip == Ipv4::BROADCAST_ADDRESS);
+        .unwrap_or(dst_ip.is_global_broadcast());
     #[ipv6addr]
     return log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted");
 }
@@ -421,6 +468,7 @@ where
         dispatch_receive_ip_packet(
             ctx,
             None,
+            FrameDestination::Unicast,
             A::Version::LOOPBACK_ADDRESS,
             dst_ip,
             proto,
