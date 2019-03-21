@@ -42,8 +42,7 @@ AudioCoreImpl::AudioCoreImpl(
       [](zx_status_t fidl_status, zx::profile profile) {
         FXL_DCHECK(fidl_status == ZX_OK);
         if (fidl_status == ZX_OK) {
-          zx_status_t status =
-              zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+          zx_status_t status = zx::thread::self()->set_profile(profile, 0);
           FXL_DCHECK(status == ZX_OK);
         }
       });

@@ -72,6 +72,7 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(
   return link;
 }
 
+// static
 void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
   FXL_DCHECK(link != nullptr);
 

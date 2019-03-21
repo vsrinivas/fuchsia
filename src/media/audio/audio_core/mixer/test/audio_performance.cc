@@ -169,10 +169,8 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
   uint32_t source_frames = source_buffer_size + 1;
 
-  std::unique_ptr<SampleType[]> source =
-      std::make_unique<SampleType[]>(source_frames * num_input_chans);
-  std::unique_ptr<float[]> accum =
-      std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
+  auto source = std::make_unique<SampleType[]>(source_frames * num_input_chans);
+  auto accum = std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
   int32_t frac_src_offset;
   uint32_t dest_offset, previous_dest_offset;

@@ -92,7 +92,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // destinations that this object is sending to).  The target of each of these
   // links must be a either an Output or a AudioCapturer.
   typename AudioLink::Set<AudioLink::Dest> dest_links_
-    FXL_GUARDED_BY(links_lock_);
+      FXL_GUARDED_BY(links_lock_);
 
   // The set of links which this audio device is acting as a destination for
   // (eg; the sources that that the object is receiving from).  The target of
@@ -105,7 +105,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // Right now, we have no priorities, so this is just a set of
   // AudioRenderer/output links.
   typename AudioLink::Set<AudioLink::Source> source_links_
-    FXL_GUARDED_BY(links_lock_);
+      FXL_GUARDED_BY(links_lock_);
 
   // The following iterator functions accept a function (see below) and call it
   // sequentially with each destination link as a parameter. As described below,

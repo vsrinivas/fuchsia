@@ -139,9 +139,9 @@ class AudioDriver {
       kDriverInfoHasGainState | kDriverInfoHasFormats;
 
   // Dispatchers for messages received over stream and ring buffer channels.
-  zx_status_t ReadMessage(const fbl::RefPtr<::dispatcher::Channel>& channel,
-                          void* buf, uint32_t buf_size,
-                          uint32_t* bytes_read_out, zx::handle* handle_out)
+  zx_status_t ReadMessage(::dispatcher::Channel* channel, void* buf,
+                          uint32_t buf_size, uint32_t* bytes_read_out,
+                          zx::handle* handle_out)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStreamChannelMessage()
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());

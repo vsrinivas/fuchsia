@@ -198,7 +198,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   // Update a device gain to the "system" gain exposed by the top-level service.
   //
   // TODO(johngro): Remove this when we remove system gain entirely.
-  void UpdateDeviceToSystemGain(AudioDevice* device);
+  void UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>& device);
 
   // Commit any dirty settings to storage, (re)scheduling the timer as needed.
   void CommitDirtySettings();

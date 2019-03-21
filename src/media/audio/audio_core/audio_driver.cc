@@ -37,8 +37,8 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   // as our device's device token.
   zx_status_t res;
   zx_info_handle_basic_t sc_info;
-  res = zx_object_get_info(stream_channel.get(), ZX_INFO_HANDLE_BASIC, &sc_info,
-                           sizeof(sc_info), nullptr, nullptr);
+  res = stream_channel.get_info(ZX_INFO_HANDLE_BASIC, &sc_info, sizeof(sc_info),
+                                nullptr, nullptr);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to to fetch stream channel KOID (res " << res
                    << ")";
@@ -433,9 +433,10 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ReadMessage(
-    const fbl::RefPtr<::dispatcher::Channel>& channel, void* buf,
-    uint32_t buf_size, uint32_t* bytes_read_out, zx::handle* handle_out) {
+zx_status_t AudioDriver::ReadMessage(::dispatcher::Channel* channel, void* buf,
+                                     uint32_t buf_size,
+                                     uint32_t* bytes_read_out,
+                                     zx::handle* handle_out) {
   FXL_DCHECK(buf != nullptr);
   FXL_DCHECK(bytes_read_out != nullptr);
   FXL_DCHECK(handle_out != nullptr);
@@ -500,7 +501,7 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
   static_assert(sizeof(msg) <= 256,
                 "Message buffer is becoming too large to hold on the stack!");
 
-  res = ReadMessage(stream_channel_, &msg, sizeof(msg), &bytes_read,
+  res = ReadMessage(stream_channel_.get(), &msg, sizeof(msg), &bytes_read,
                     &rxed_handle);
   if (res != ZX_OK) {
     return res;
@@ -593,7 +594,8 @@ zx_status_t AudioDriver::ProcessRingBufferChannelMessage() {
   static_assert(sizeof(msg) <= 256,
                 "Message buffer is becoming too large to hold on the stack!");
 
-  res = ReadMessage(rb_channel_, &msg, sizeof(msg), &bytes_read, &rxed_handle);
+  res = ReadMessage(rb_channel_.get(), &msg, sizeof(msg), &bytes_read,
+                    &rxed_handle);
   if (res != ZX_OK) {
     return res;
   }

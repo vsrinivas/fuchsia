@@ -170,7 +170,8 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 
 void AudioRendererImpl::UnlinkThrottle() {
   if (throttle_output_link_ != nullptr) {
-    RemoveLink(std::move(throttle_output_link_));
+    RemoveLink(throttle_output_link_);
+    throttle_output_link_.reset();
   }
 }
 

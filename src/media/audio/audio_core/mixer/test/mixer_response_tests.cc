@@ -31,22 +31,22 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   std::unique_ptr<Mixer> mixer;
   double amplitude, expected_amplitude;
 
-  if (std::is_same<T, uint8_t>::value) {
+  if constexpr (std::is_same_v<T, uint8_t>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
     amplitude = kFullScaleInt8InputAmplitude;
     expected_amplitude = kFullScaleInt8AccumAmplitude;
-  } else if (std::is_same<T, int16_t>::value) {
+  } else if constexpr (std::is_same_v<T, int16_t>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000,
                         1, 48000, Resampler::SampleAndHold);
     amplitude = kFullScaleInt16InputAmplitude;
     expected_amplitude = kFullScaleInt16AccumAmplitude;
-  } else if (std::is_same<T, int32_t>::value) {
+  } else if constexpr (std::is_same_v<T, int32_t>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1,
                         48000, 1, 48000, Resampler::SampleAndHold);
     amplitude = kFullScaleInt24In32InputAmplitude;
     expected_amplitude = kFullScaleInt24In32AccumAmplitude;
-  } else if (std::is_same<T, float>::value) {
+  } else if constexpr (std::is_same_v<T, float>) {
     mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1,
                         48000, Resampler::SampleAndHold);
     amplitude = kFullScaleFloatInputAmplitude;
@@ -752,7 +752,7 @@ TEST(Sinad, Linear_MicroSRC) {
 // interleave mono[] into one of the channels of the N-channel source.
 void PopulateNxNSourceBuffer(float* source, uint32_t num_frames,
                              uint32_t num_chans) {
-  std::unique_ptr<float[]> mono = std::make_unique<float[]>(num_frames);
+  auto mono = std::make_unique<float[]>(num_frames);
 
   // For each summary frequency, populate a sinusoid into mono, and copy-
   // interleave mono into one of the channels of the N-channel source.
@@ -807,8 +807,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
   // Populate different frequencies into each channel of N-channel source[].
   // source[] has an additional element because depending on resampling ratio,
   // some resamplers need it in order to produce the final dest value.
-  std::unique_ptr<float[]> source =
-      std::make_unique<float[]>(num_chans * (num_source_frames + 1));
+  auto source = std::make_unique<float[]>(num_chans * (num_source_frames + 1));
   PopulateNxNSourceBuffer(source.get(), num_source_frames, num_chans);
 
   // Mix the N-channel source[] into the N-channel accum[].
@@ -826,8 +825,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
 
   // Resample the source into the accumulation buffer, in pieces. (Why in
   // pieces? See description of kResamplerTestNumPackets in frequency_set.h.)
-  std::unique_ptr<float[]> accum =
-      std::make_unique<float[]>(num_chans * num_dest_frames);
+  auto accum = std::make_unique<float[]>(num_chans * num_dest_frames);
 
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     uint32_t dest_frames =
@@ -843,7 +841,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* freq_resp_results,
   }
 
   // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.
-  std::unique_ptr<float[]> mono = std::make_unique<float[]>(num_dest_frames);
+  auto mono = std::make_unique<float[]>(num_dest_frames);
   for (uint32_t idx = 0; idx < num_chans; ++idx) {
     uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
 

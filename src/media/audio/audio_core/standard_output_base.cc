@@ -96,7 +96,7 @@ void StandardOutputBase::Process() {
         // Fill the intermediate buffer with silence.
         size_t bytes_to_zero = sizeof(mix_buf_[0]) * cur_mix_job_.buf_frames *
                                output_producer_->channels();
-        ::memset(mix_buf_.get(), 0, bytes_to_zero);
+        std::memset(mix_buf_.get(), 0, bytes_to_zero);
 
         // Mix each renderer into the intermediate accumulator buffer, then
         // reformat (and clip) into the final output buffer.
@@ -153,7 +153,7 @@ zx_status_t StandardOutputBase::InitializeSourceLink(
 
   // If we have an output, pick a mixer based on the input and output formats.
   // Otherwise, we only need a NoOp mixer (for the time being).
-  auto& packet_link = *fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
+  auto& packet_link = static_cast<AudioLinkPacketSource&>(*link);
   if (output_producer_) {
     mix_bookkeeping->mixer = Mixer::Select(packet_link.format_info().format(),
                                            *(output_producer_->format()));
@@ -238,11 +238,11 @@ void StandardOutputBase::ForEachLink(TaskType task_type) {
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
-    auto* info = packet_link->bookkeeping().get();
-    FXL_DCHECK(info);
+    FXL_DCHECK(packet_link->bookkeeping() != nullptr);
+    auto& info = *packet_link->bookkeeping();
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
-    UpdateSourceTrans(audio_renderer, info);
+    UpdateSourceTrans(audio_renderer, &info);
 
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
@@ -255,7 +255,7 @@ void StandardOutputBase::ForEachLink(TaskType task_type) {
       bool was_flushed;
       pkt_ref = packet_link->LockPendingQueueFront(&was_flushed);
       if (was_flushed) {
-        info->mixer->Reset();
+        info.mixer->Reset();
       }
 
       // If the queue is empty, then we are done.
@@ -267,8 +267,8 @@ void StandardOutputBase::ForEachLink(TaskType task_type) {
       // fails for any reason, stop processing packets for this renderer.
       if (!setup_done) {
         setup_done = (task_type == TaskType::Mix)
-                         ? SetupMix(audio_renderer, info)
-                         : SetupTrim(audio_renderer, info);
+                         ? SetupMix(audio_renderer, &info)
+                         : SetupTrim(audio_renderer, &info);
         if (!setup_done) {
           // Clear our ramps, if we exit with error?
           break;
@@ -280,8 +280,8 @@ void StandardOutputBase::ForEachLink(TaskType task_type) {
       // proceed to the next one. Otherwise, we are finished.
       release_audio_renderer_packet =
           (task_type == TaskType::Mix)
-              ? ProcessMix(audio_renderer, info, pkt_ref)
-              : ProcessTrim(audio_renderer, info, pkt_ref);
+              ? ProcessMix(audio_renderer, &info, pkt_ref)
+              : ProcessTrim(audio_renderer, &info, pkt_ref);
 
       // If we have mixed enough output frames, we are done with this mix,
       // regardless of what we should now do with the renderer packet.

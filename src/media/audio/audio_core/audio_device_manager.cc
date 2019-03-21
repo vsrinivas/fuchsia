@@ -142,7 +142,7 @@ void AudioDeviceManager::ActivateDevice(
   // TODO(johngro): remove this when system gain is fully deprecated.
   // For now, set each output "device" gain to the "system" gain value.
   if (device->is_output()) {
-    UpdateDeviceToSystemGain(device.get());
+    UpdateDeviceToSystemGain(device);
   }
 
   // Determine whether this device's persistent settings are actually unique,
@@ -295,7 +295,7 @@ void AudioDeviceManager::HandlePlugStateChange(
 void AudioDeviceManager::OnSystemGain(bool changed) {
   for (auto& device : devices_) {
     if (device.is_output() && (changed || device.system_gain_dirty)) {
-      UpdateDeviceToSystemGain(&device);
+      UpdateDeviceToSystemGain(fbl::WrapRefPtr(&device));
       NotifyDeviceGainChanged(device);
       device.system_gain_dirty = false;
     }
@@ -383,11 +383,10 @@ void AudioDeviceManager::SelectOutputsForAudioRenderer(
 
   switch (routing_policy_) {
     case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS: {
-      for (auto& obj : devices_) {
-        FXL_DCHECK(obj.is_input() || obj.is_output());
-        auto device = static_cast<AudioDevice*>(&obj);
-        if (device->is_output() && device->plugged()) {
-          LinkOutputToAudioRenderer(static_cast<AudioOutput*>(device),
+      for (auto& device : devices_) {
+        FXL_DCHECK(device.is_input() || device.is_output());
+        if (device.is_output() && device.plugged()) {
+          LinkOutputToAudioRenderer(static_cast<AudioOutput*>(&device),
                                     audio_renderer);
         }
       }
@@ -476,16 +475,16 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
   // this operation becomes O(1). N is pretty low right now, so the benefits do
   // not currently outweigh the complexity of maintaining this index.
   for (auto& obj : devices_) {
-    auto device = static_cast<AudioDevice*>(&obj);
-    if ((device->type() != type) ||
-        device->device_settings()->disallow_auto_routing()) {
+    auto& device = static_cast<AudioDevice&>(obj);
+    if ((device.type() != type) ||
+        device.device_settings()->disallow_auto_routing()) {
       continue;
     }
 
-    if ((best == nullptr) || (!best->plugged() && device->plugged()) ||
-        ((best->plugged() == device->plugged()) &&
-         (best->plug_time() < device->plug_time()))) {
-      best = device;
+    if ((best == nullptr) || (!best->plugged() && device.plugged()) ||
+        ((best->plugged() == device.plugged()) &&
+         (best->plug_time() < device.plug_time()))) {
+      best = &device;
     }
   }
 
@@ -524,15 +523,15 @@ void AudioDeviceManager::SetRoutingPolicy(
     }
 
     // Only plugged-in (output) devices are affected by output-routing.
-    auto output = static_cast<AudioOutput*>(&dev_obj);
-    if (!output->plugged()) {
+    auto& output = static_cast<AudioOutput&>(dev_obj);
+    if (!output.plugged()) {
       continue;
     }
 
     // If device is most-recently plugged, it is unaffected by this policy
     // change. Either way, it will continue to be attached to every renderer.
-    FXL_DCHECK(output != throttle_output_.get());
-    if (output == last_plugged_output.get()) {
+    FXL_DCHECK(&output != throttle_output_.get());
+    if (&output == last_plugged_output.get()) {
       continue;
     }
 
@@ -547,8 +546,8 @@ void AudioDeviceManager::SetRoutingPolicy(
       // ...attach it (i.e. link each AudioRenderer to all output devices).
       for (auto& obj : audio_renderers_) {
         FXL_DCHECK(obj.is_audio_renderer());
-        auto audio_renderer = static_cast<AudioRendererImpl*>(&obj);
-        LinkOutputToAudioRenderer(output, audio_renderer);
+        auto& audio_renderer = static_cast<AudioRendererImpl&>(obj);
+        LinkOutputToAudioRenderer(&output, &audio_renderer);
       }
     }
   }
@@ -556,8 +555,8 @@ void AudioDeviceManager::SetRoutingPolicy(
   // After a route change, recalculate minimum clock lead time requirements.
   for (auto& obj : audio_renderers_) {
     FXL_DCHECK(obj.is_audio_renderer());
-    auto audio_renderer = static_cast<AudioRendererImpl*>(&obj);
-    audio_renderer->RecomputeMinClockLeadTime();
+    auto& audio_renderer = static_cast<AudioRendererImpl&>(obj);
+    audio_renderer.RecomputeMinClockLeadTime();
   }
 }
 
@@ -682,10 +681,10 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
     FXL_DCHECK(device->is_input());
 
     fbl::RefPtr<AudioInput> last_plugged = FindLastPluggedInput();
-    auto input = static_cast<AudioInput*>(device.get());
+    auto& input = static_cast<AudioInput&>(*device);
 
     // non-'loopback' AudioCapturers should listen to this input now
-    if (input == last_plugged.get()) {
+    if (&input == last_plugged.get()) {
       LinkToAudioCapturers(std::move(device));
     }
   }
@@ -743,7 +742,8 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
   }
 }
 
-void AudioDeviceManager::UpdateDeviceToSystemGain(AudioDevice* device) {
+void AudioDeviceManager::UpdateDeviceToSystemGain(
+    const fbl::RefPtr<AudioDevice>& device) {
   constexpr uint32_t set_flags = ::fuchsia::media::SetAudioGainFlag_GainValid |
                                  ::fuchsia::media::SetAudioGainFlag_MuteValid;
   ::fuchsia::media::AudioGainInfo set_cmd = {

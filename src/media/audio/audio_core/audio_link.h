@@ -29,19 +29,21 @@ struct AudioLinkDestTag {};
 //
 // TODO(mpuryear): Finish docs.
 //
-class AudioLink : public fbl::RefCounted<AudioLink>,
-                  public fbl::ContainableBaseClasses<
-                           fbl::WAVLTreeContainable<fbl::RefPtr<AudioLink>, AudioLinkSourceTag>,
-                           fbl::WAVLTreeContainable<fbl::RefPtr<AudioLink>, AudioLinkDestTag>> {
+class AudioLink
+    : public fbl::RefCounted<AudioLink>,
+      public fbl::ContainableBaseClasses<
+          fbl::WAVLTreeContainable<fbl::RefPtr<AudioLink>, AudioLinkSourceTag>,
+          fbl::WAVLTreeContainable<fbl::RefPtr<AudioLink>, AudioLinkDestTag>> {
  protected:
-   struct KeyTraits;
+  struct KeyTraits;
 
  public:
   using Source = AudioLinkSourceTag;
   using Dest = AudioLinkDestTag;
 
   template <typename TagType>
-  using Set = fbl::TaggedWAVLTree<const AudioLink*, fbl::RefPtr<AudioLink>, TagType>;
+  using Set =
+      fbl::TaggedWAVLTree<const AudioLink*, fbl::RefPtr<AudioLink>, TagType>;
 
   enum class SourceType {
     Packet,
