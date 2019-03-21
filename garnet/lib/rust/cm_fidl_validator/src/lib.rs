@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_sys2::{
-    ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation, RelativeId,
+use {
+    fidl_fuchsia_sys2::{
+        ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation, RelativeId,
+    },
+    lazy_static::lazy_static,
+    regex::Regex,
+    std::collections::{HashMap, HashSet},
+    std::error,
+    std::fmt,
 };
-// TODO: rustc generates a false positive?
-#[allow(unused_imports)]
-use fidl_fuchsia_sys2::StartupMode;
-use lazy_static::lazy_static;
-use regex::Regex;
-use std::collections::{HashMap, HashSet};
-use std::error;
-use std::fmt;
 
 lazy_static! {
     static ref PATH_RE: Regex = Regex::new(r"^/.+$").unwrap();
@@ -97,6 +96,27 @@ impl fmt::Display for Error {
     }
 }
 
+/// Represents a list of errors encountered during validation.
+#[derive(Debug)]
+pub struct ErrorList {
+    errs: Vec<Error>,
+}
+
+impl ErrorList {
+    fn new(errs: Vec<Error>) -> ErrorList {
+        ErrorList { errs }
+    }
+}
+
+impl error::Error for ErrorList {}
+
+impl fmt::Display for ErrorList {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let strs: Vec<String> = self.errs.iter().map(|e| format!("{}", e)).collect();
+        write!(f, "{}", strs.join(", "))
+    }
+}
+
 /// Validates a ComponentDecl.
 /// The ComponentDecl may ultimately originate from a CM file, or be directly constructed by the
 /// caller. Either way, a ComponentDecl should always be validated before it's used. Examples
@@ -104,9 +124,9 @@ impl fmt::Display for Error {
 /// - That all semantically required fields are present
 /// - That a child_name referenced in a RelativeId actually exists in the list of children
 /// - That there are no duplicate target ptahs
-pub fn validate(decl: &ComponentDecl) -> Result<(), Vec<Error>> {
+pub fn validate(decl: &ComponentDecl) -> Result<(), ErrorList> {
     let ctx = ValidationContext { decl, all_children: HashSet::new(), errors: vec![] };
-    ctx.validate()
+    ctx.validate().map_err(|errs| ErrorList::new(errs))
 }
 
 struct ValidationContext<'a> {
@@ -368,13 +388,15 @@ impl<'a> ValidationContext<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_sys2::{
-        CapabilityType, ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation,
-        RelativeId, UseDecl,
+    use {
+        super::*,
+        fidl_fuchsia_sys2::{
+            CapabilityType, ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation,
+            RelativeId, StartupMode, UseDecl,
+        },
     };
 
-    fn validate_test(input: ComponentDecl, expected_res: Result<(), Vec<Error>>) {
+    fn validate_test(input: ComponentDecl, expected_res: Result<(), ErrorList>) {
         let res = validate(&input);
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     }
@@ -450,11 +472,11 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::missing_field("UseDecl", "type"),
                 Error::missing_field("UseDecl", "source_path"),
                 Error::missing_field("UseDecl", "target_path"),
-            ]),
+            ])),
         },
         test_validate_uses_invalid_identifiers => {
             input = {
@@ -466,10 +488,10 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_field("UseDecl", "source_path"),
                 Error::invalid_field("UseDecl", "target_path"),
-            ]),
+            ])),
         },
         test_validate_uses_long_identifiers => {
             input = {
@@ -481,10 +503,10 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::field_too_long("UseDecl", "source_path"),
                 Error::field_too_long("UseDecl", "target_path"),
-            ]),
+            ])),
         },
 
         // exposes
@@ -499,12 +521,12 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::missing_field("ExposeDecl", "type"),
                 Error::missing_field("ExposeDecl", "source_path"),
                 Error::missing_field("ExposeDecl", "source"),
                 Error::missing_field("ExposeDecl", "target_path"),
-            ]),
+            ])),
         },
         test_validate_exposes_invalid_identifiers => {
             input = {
@@ -520,11 +542,11 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_field("ExposeDecl", "source_path"),
                 Error::invalid_field("RelativeId", "child_name"),
                 Error::invalid_field("ExposeDecl", "target_path"),
-            ]),
+            ])),
         },
         test_validate_exposes_long_identifiers => {
             input = {
@@ -540,11 +562,11 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::field_too_long("ExposeDecl", "source_path"),
                 Error::field_too_long("RelativeId", "child_name"),
                 Error::field_too_long("ExposeDecl", "target_path"),
-            ]),
+            ])),
         },
         test_validate_exposes_invalid_relation => {
             input = {
@@ -562,9 +584,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_field("ExposeDecl source", "relative_id"),
-            ]),
+            ])),
         },
         test_validate_exposes_invalid_child => {
             input = {
@@ -582,9 +604,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_child("ExposeDecl source", "netstack"),
-            ]),
+            ])),
         },
         test_validate_exposes_duplicate_target => {
             input = {
@@ -611,9 +633,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::duplicate_field("ExposeDecl", "target_path", "/svc/fuchsia.logger.Log"),
-            ]),
+            ])),
         },
 
         // offers
@@ -628,12 +650,12 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::missing_field("OfferDecl", "type"),
                 Error::missing_field("OfferDecl", "source_path"),
                 Error::missing_field("OfferDecl", "source"),
                 Error::missing_field("OfferDecl", "targets"),
-            ]),
+            ])),
         },
         test_validate_offers_long_identifiers => {
             input = {
@@ -654,12 +676,12 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::field_too_long("OfferDecl", "source_path"),
                 Error::field_too_long("RelativeId", "child_name"),
                 Error::field_too_long("OfferTarget", "target_path"),
                 Error::field_too_long("OfferTarget", "child_name"),
-            ]),
+            ])),
         },
         test_validate_offers_invalid_child => {
             input = {
@@ -689,9 +711,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_child("OfferDecl source", "logger"),
-            ]),
+            ])),
         },
         test_validate_offer_target_empty => {
             input = {
@@ -707,10 +729,10 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::missing_field("OfferTarget", "target_path"),
                 Error::missing_field("OfferTarget", "child_name"),
-            ]),
+            ])),
         },
         test_validate_offer_targets_empty => {
             input = {
@@ -726,9 +748,9 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::empty_field("OfferDecl", "targets"),
-            ]),
+            ])),
         },
         test_validate_offer_target_duplicate_path => {
             input = {
@@ -760,9 +782,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::duplicate_field("OfferDecl", "target_path", "/svc/fuchsia.logger.Log"),
-            ]),
+            ])),
         },
         test_validate_offer_target_invalid_child => {
             input = {
@@ -783,9 +805,9 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_child("OfferTarget", "netstack"),
-            ]),
+            ])),
         },
         test_validate_relative_id_relation_empty => {
             input = {
@@ -803,9 +825,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::missing_field("RelativeId", "relation"),
-            ]),
+            ])),
         },
         test_validate_relative_id_child_name_empty => {
             input = {
@@ -823,9 +845,9 @@ mod tests {
                 ]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::relative_id_missing_child(),
-            ]),
+            ])),
         },
 
         // children
@@ -839,11 +861,11 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::missing_field("ChildDecl", "name"),
                 Error::missing_field("ChildDecl", "uri"),
                 Error::missing_field("ChildDecl", "startup"),
-            ]),
+            ])),
         },
         test_validate_children_invalid_identifiers => {
             input = {
@@ -855,10 +877,10 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::invalid_field("ChildDecl", "name"),
                 Error::invalid_field("ChildDecl", "uri"),
-            ]),
+            ])),
         },
         test_validate_children_long_identifiers => {
             input = {
@@ -870,10 +892,10 @@ mod tests {
                 }]);
                 decl
             },
-            result = Err(vec![
+            result = Err(ErrorList::new(vec![
                 Error::field_too_long("ChildDecl", "name"),
                 Error::field_too_long("ChildDecl", "uri"),
-            ]),
+            ])),
         },
 
         // valid patterns

@@ -4,17 +4,18 @@
 
 #![deny(warnings)]
 
-use json5;
-use serde_json;
-use serde_json::Value;
-use std::borrow::Cow;
-use std::error;
-use std::fmt;
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::Path;
-use std::str::Utf8Error;
-use valico::json_schema;
+use {
+    failure, json5, serde_json,
+    serde_json::Value,
+    std::borrow::Cow,
+    std::error,
+    std::fmt,
+    std::fs::File,
+    std::io::{self, Read},
+    std::path::Path,
+    std::str::Utf8Error,
+    valico::json_schema,
+};
 
 pub mod cm;
 
@@ -56,6 +57,7 @@ pub enum Error {
     Io(io::Error),
     Parse(String),
     Validate { schema_name: Option<String>, err: String },
+    ValidateFidl(failure::Error),
     Internal(String),
     Utf8(Utf8Error),
 }
@@ -79,6 +81,10 @@ impl Error {
         Error::Validate { schema_name: Some(schema.name.to_string()), err: err.into() }
     }
 
+    pub fn validate_fidl(err: impl Into<failure::Error>) -> Self {
+        Error::ValidateFidl(err.into())
+    }
+
     pub fn internal(err: impl Into<String>) -> Self {
         Error::Internal(err.into())
     }
@@ -97,6 +103,7 @@ impl fmt::Display for Error {
                     .unwrap_or("".to_string());
                 write!(f, "Validate error: {}{}", schema_str, err)
             }
+            Error::ValidateFidl(err) => write!(f, "FIDL validation failed: {}", err),
             Error::Internal(err) => write!(f, "Internal error: {}", err),
             Error::Utf8(err) => write!(f, "UTF8 error: {}", err),
         }

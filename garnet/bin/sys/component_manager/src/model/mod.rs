@@ -10,7 +10,8 @@ pub use self::{moniker::*, resolver::*, runner::*};
 use {
     crate::ns_util::PKG_PATH,
     crate::{data, directory_broker, io_util},
-    failure::{format_err, Error, Fail},
+    cm_rust::{self, ComponentDecl, UseDecl},
+    failure::{Error, Fail},
     fidl::endpoints::{create_endpoints, ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
@@ -20,7 +21,8 @@ use {
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable},
     futures::lock::Mutex,
-    std::{collections::HashMap, iter, path::PathBuf, sync::Arc},
+    std::convert::TryInto,
+    std::{collections::HashMap, iter, sync::Arc},
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -111,7 +113,7 @@ impl Instance {
 // TODO: Hold the component instance's controller.
 struct Execution {
     resolved_uri: String,
-    decl: fsys::ComponentDecl,
+    decl: ComponentDecl,
     package_dir: Option<DirectoryProxy>,
     outgoing_dir: DirectoryProxy,
     dir_abort_handles: Vec<AbortHandle>,
@@ -147,9 +149,15 @@ impl Execution {
             }
             None => None,
         };
+        let uri = component.resolved_uri.unwrap();
+        let decl = component
+            .decl
+            .unwrap()
+            .try_into()
+            .map_err(|e| ModelError::manifest_invalid(uri.clone(), e))?;
         Ok(Execution {
-            resolved_uri: component.resolved_uri.unwrap(),
-            decl: component.decl.unwrap(),
+            resolved_uri: uri,
+            decl,
             package_dir,
             outgoing_dir,
             dir_abort_handles: vec![],
@@ -158,34 +166,20 @@ impl Execution {
 }
 
 impl Execution {
-    fn extract_dirname_and_basename(path: &str) -> Result<(String, String), ModelError> {
-        let err = || {
-            ModelError::namespace_creation_failed(format_err!("invalid path in use decl: {}", path))
-        };
-
-        let path = PathBuf::from(path);
-        // TODO check that this path validation happens in the fidl validation, and then remove
-        // this check
-        let dirname = path.parent().ok_or(err())?.to_str().unwrap().to_string();
-        let basename = path.file_name().ok_or(err())?.to_str().unwrap().to_string();
-        Ok((dirname, basename))
-    }
-
     /// add_directory_use will open the source_path in componentmgr's namespace and add it under
     /// target_path into the namespace.
     fn add_directory_use(
         ns: &mut fsys::ComponentNamespace,
-        use_: &fsys::UseDecl,
+        use_: &UseDecl,
     ) -> Result<(), ModelError> {
         // TODO: directly mapping the directory like this won't work in the future. We should do
         // something like what add_service_use does where the ServerEnd of the item in the
         // namespace is held by componentmgr. For directories, it can pass along the ServerEnd on
         // first open.
-        let source_path = use_.source_path.as_ref().unwrap();
-        let dir_proxy = io_util::open_directory_in_namespace(&source_path)
+        let dir_proxy = io_util::open_directory_in_namespace(&use_.source_path.to_string())
             .map_err(|e| ModelError::namespace_creation_failed(e))?;
         let dir = ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel());
-        ns.paths.push(use_.target_path.as_ref().unwrap().to_string());
+        ns.paths.push(use_.target_path.to_string());
         ns.directories.push(dir);
         Ok(())
     }
@@ -195,33 +189,27 @@ impl Execution {
     /// pseudo directory in mediated_dirs, creating a new pseudo directory if necessary.
     fn add_service_use(
         mediated_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
-        use_: &fsys::UseDecl,
+        use_: &UseDecl,
     ) -> Result<(), ModelError> {
         // TODO: Asking for "/svc/1" and "/svc/in/2" will result in two pseudo dirs, "/svc" and
         // "/svc/in" being installed in the namespace, and the comments in component_namespace.fidl
         // specifically call this out as being invalid
-        let (service_dir_path, service_name) =
-            Execution::extract_dirname_and_basename(use_.source_path.as_ref().unwrap())?;
-
-        let realm_service_dir = io_util::open_directory_in_namespace(&service_dir_path)
+        let realm_service_dir = io_util::open_directory_in_namespace(&use_.source_path.dirname)
             .map_err(|e| ModelError::namespace_creation_failed(e))?;
-
-        let (target_dir_path, target_name) =
-            Execution::extract_dirname_and_basename(use_.target_path.as_ref().unwrap())?;
-
+        let source_basename = use_.source_path.basename.clone();
         let route_service_fn = Box::new(move |server_end: ServerEnd<NodeMarker>| {
             let flags = OPEN_RIGHT_READABLE;
             let mode = MODE_TYPE_SERVICE;
             let server_end = ServerEnd::new(server_end.into_channel());
-
-            realm_service_dir.open(flags, mode, &service_name, server_end).unwrap();
+            realm_service_dir.open(flags, mode, &source_basename, server_end).unwrap();
         });
 
-        let service_dir =
-            mediated_dirs.entry(target_dir_path).or_insert(fvfs::directory::simple::empty());
+        let service_dir = mediated_dirs
+            .entry(use_.target_path.dirname.clone())
+            .or_insert(fvfs::directory::simple::empty());
         service_dir
             .add_entry(
-                &target_name,
+                &use_.target_path.basename,
                 directory_broker::DirectoryBroker::new_service_broker(route_service_fn),
             )
             .map_err(|(status, _)| status)
@@ -288,26 +276,23 @@ impl Execution {
         let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
 
         // Populate the namespace from uses, using the component manager's namespace.
-        if let Some(uses) = &self.decl.uses {
-            // mediated_dirs will hold (path,directory) pairs. Each pair holds a path in the
-            // component's namespace and a directory that ComponentMgr will host for the component.
-            let mut mediated_dirs = HashMap::new();
+        // mediated_dirs will hold (path,directory) pairs. Each pair holds a path in the
+        // component's namespace and a directory that ComponentMgr will host for the component.
+        let mut mediated_dirs = HashMap::new();
 
-            for use_ in uses {
-                match use_.type_ {
-                    Some(fsys::CapabilityType::Directory) => {
-                        Execution::add_directory_use(&mut ns, &use_)?;
-                    }
-                    Some(fsys::CapabilityType::Service) => {
-                        Execution::add_service_use(&mut mediated_dirs, &use_)?;
-                    }
-                    None => panic!("a use block is missing the capability type"),
+        for use_ in &self.decl.uses {
+            match use_.type_ {
+                fsys::CapabilityType::Directory => {
+                    Execution::add_directory_use(&mut ns, &use_)?;
+                }
+                fsys::CapabilityType::Service => {
+                    Execution::add_service_use(&mut mediated_dirs, &use_)?;
                 }
             }
-
-            // Start hosting the services directories and add them to the namespace
-            self.serve_and_install_mediated_dirs(&mut ns, mediated_dirs)?;
         }
+
+        // Start hosting the services directories and add them to the namespace
+        self.serve_and_install_mediated_dirs(&mut ns, mediated_dirs)?;
 
         // Populate the /pkg namespace.
         if let Some(package_dir) = self.package_dir.as_ref() {
@@ -449,6 +434,12 @@ pub enum ModelError {
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[fail(display = "component declaration invalid")]
     ComponentInvalid,
+    #[fail(display = "component manifest invalid")]
+    ManifestInvalid {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
     #[fail(display = "namespace creation failed: {}", err)]
     NamespaceCreationFailed {
         #[fail(cause)]
@@ -474,6 +465,10 @@ impl ModelError {
     fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {
         ModelError::NamespaceCreationFailed { err: err.into() }
     }
+
+    fn manifest_invalid(uri: impl Into<String>, err: impl Into<Error>) -> ModelError {
+        ModelError::ManifestInvalid { uri: uri.into(), err: err.into() }
+    }
 }
 
 impl From<ResolverError> for ModelError {
@@ -490,15 +485,18 @@ impl From<RunnerError> for ModelError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fidl_examples_echo as echo;
-    use fidl_fuchsia_io::DirectoryMarker;
-    use fidl_fuchsia_io::MODE_TYPE_SERVICE;
-    use fidl_fuchsia_sys2::{CapabilityType, ComponentNamespace, UseDecl};
-    use futures::future::FutureObj;
-    use lazy_static::lazy_static;
-    use regex::Regex;
-    use std::collections::HashSet;
+    use {
+        super::*,
+        fidl_fidl_examples_echo as echo,
+        fidl_fuchsia_io::DirectoryMarker,
+        fidl_fuchsia_io::MODE_TYPE_SERVICE,
+        fidl_fuchsia_sys2::{self, ComponentNamespace},
+        futures::future::FutureObj,
+        lazy_static::lazy_static,
+        regex::Regex,
+        std::collections::HashSet,
+        std::path::PathBuf,
+    };
 
     struct ChildInfo {
         name: String,
@@ -509,7 +507,7 @@ mod tests {
         // Map of parent component instance to its children component instances.
         children: Arc<Mutex<HashMap<String, Vec<ChildInfo>>>>,
         // Map of component instance to vec of UseDecls of the component instance.
-        uses: Arc<Mutex<HashMap<String, Option<Vec<UseDecl>>>>>,
+        uses: Arc<Mutex<HashMap<String, Option<Vec<fsys::UseDecl>>>>>,
     }
     lazy_static! {
         static ref NAME_RE: Regex = Regex::new(r"test:///([0-9a-z\-\._]+)$").unwrap();
@@ -959,18 +957,18 @@ mod tests {
         await!(uses.lock()).insert(
             "system".to_string(),
             Some(vec![
-                UseDecl {
-                    type_: Some(CapabilityType::Directory),
+                fsys::UseDecl {
+                    type_: Some(fsys::CapabilityType::Directory),
                     source_path: Some("/pkg".to_string()),
                     target_path: Some("/root_pkg".to_string()),
                 },
-                UseDecl {
-                    type_: Some(CapabilityType::Directory),
+                fsys::UseDecl {
+                    type_: Some(fsys::CapabilityType::Directory),
                     source_path: Some("/pkg".to_string()),
                     target_path: Some("/foo/bar".to_string()),
                 },
-                UseDecl {
-                    type_: Some(CapabilityType::Service),
+                fsys::UseDecl {
+                    type_: Some(fsys::CapabilityType::Service),
                     source_path: Some("/svc/fidl.examples.echo.Echo".to_string()),
                     target_path: Some("/svc/fidl.examples.echo.Echo".to_string()),
                 },

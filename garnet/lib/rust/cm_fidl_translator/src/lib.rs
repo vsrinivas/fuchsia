@@ -19,10 +19,7 @@ pub fn translate(buffer: &str) -> Result<fsys::ComponentDecl, Error> {
     let document: cm::Document = serde_json::from_str(&buffer)
         .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
     let decl = document.cm_into()?;
-    cm_fidl_validator::validate(&decl).map_err(|errs| {
-        let errs_str: Vec<String> = errs.iter().map(|e| format!("{}", e)).collect();
-        Error::parse(errs_str.join(","))
-    })?;
+    cm_fidl_validator::validate(&decl).map_err(|e| Error::validate_fidl(e))?;
     Ok(decl)
 }
 

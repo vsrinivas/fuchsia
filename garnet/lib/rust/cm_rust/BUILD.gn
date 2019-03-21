@@ -13,6 +13,7 @@ rustc_library("cm_rust") {
     "//garnet/lib/rust/cm_fidl_validator",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust_crates:failure",
   ]
 }
 
