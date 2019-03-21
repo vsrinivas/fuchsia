@@ -120,7 +120,7 @@ template("test_spec") {
     platform_dims += [ empty_dim ]
     platform_dims -= [ empty_dim ]
 
-    if (!defined(platform.cpu) || platform.cpu == current_cpu) {
+    if (!defined(platform.cpu) || platform.cpu == target_cpu) {
       target_platform_dims += [ platform_dims ]
     } else {
       other_platform_dims += [ platform_dims ]
