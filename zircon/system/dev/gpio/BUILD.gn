@@ -9,7 +9,6 @@ group("gpio") {
     "gpio-test",
     "imx8",
     "mt-8167",
-    "pl061",
     "qcom-gpio",
   ]
 }

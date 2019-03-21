@@ -5,6 +5,5 @@
 group("pci") {
   deps = [
     "amlogic-pcie",
-    "designware",
   ]
 }
