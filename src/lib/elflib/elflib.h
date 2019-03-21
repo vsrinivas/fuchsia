@@ -48,6 +48,13 @@ class ElfLib {
   // section by that name.
   MemoryRegion GetSectionData(const std::string& name);
 
+  // Get a list of all segement headers.
+  const std::vector<Elf64_Phdr>& GetSegmentHeaders();
+
+  // Get the contents of a segment by its index. Return nullptr if the index is
+  // invalid.
+  MemoryRegion GetSegmentData(size_t segment);
+
   // Get a note from the notes section.
   std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
                                               uint64_t type);
@@ -140,10 +147,6 @@ class ElfLib {
   // Get the contents of a section by its index. Return nullptr if the index is
   // invalid.
   MemoryRegion GetSectionData(size_t section);
-
-  // Get the contents of a segment by its index. Return nullptr if the index is
-  // invalid.
-  MemoryRegion GetSegmentData(size_t segment);
 
   const AddressMode address_mode_;
 

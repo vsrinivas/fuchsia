@@ -311,6 +311,11 @@ bool ElfLib::LoadProgramHeaders() {
   return true;
 }
 
+const std::vector<Elf64_Phdr>& ElfLib::GetSegmentHeaders() {
+  LoadProgramHeaders();
+  return segments_;
+}
+
 ElfLib::MemoryRegion ElfLib::GetSegmentData(size_t segment) {
   LoadProgramHeaders();
 
