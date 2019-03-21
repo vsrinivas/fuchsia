@@ -15,11 +15,11 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/substitute.h"
+#include "src/lib/files/file.h"
 
 namespace benchmarking {
 
@@ -120,10 +120,13 @@ void BenchmarksRunner::AddCustomBenchmark(
   tasks_.push_back([=]() {
     RemoveRecursive(results_file);
     Touch(results_file);
-    FXL_LOG(INFO) << "Running \"" << fxl::JoinStrings(command, " ") << '"';
+    auto command_as_string = fxl::JoinStrings(command, " ");
+    FXL_LOG(INFO) << "Running \"" << command_as_string << '"';
 
     int command_status = Spawn(command);
-    FXL_CHECK(command_status == 0);
+    FXL_CHECK(command_status == 0)
+        << "Non-zero exit status " << command_status << " from running \""
+        << command_as_string << '"';
 
     if (!files::IsFile(results_file)) {
       FXL_LOG(ERROR) << "Expected file " << results_file
