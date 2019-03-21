@@ -13,9 +13,7 @@
 namespace {
 
 TEST(ViewTokenPairTest, ViewTokensAreRelated) {
-  fuchsia::ui::views::ViewToken view_token;
-  fuchsia::ui::views::ViewHolderToken view_holder_token;
-  std::tie(view_token, view_holder_token) = scenic::NewViewTokenPair();
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   // Get info about the |view_token|.
   zx_info_handle_basic_t view_info;

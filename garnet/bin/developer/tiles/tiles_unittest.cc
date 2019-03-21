@@ -39,10 +39,11 @@ class TilesTest : public gtest::TestLoopFixture {
   TilesTest() : context_(sys::testing::ComponentContextForTest::Create()) {}
 
   void SetUp() final {
-    auto [view_token, view_holder_token_] = scenic::NewViewTokenPair();
+    auto tokens = scenic::NewViewTokenPair();
+    view_holder_token_ = std::move(tokens.second);
 
     tiles_impl_ = std::make_unique<tiles::Tiles>(
-        context_.get(), std::move(view_token), std::vector<std::string>(), 10);
+        context_.get(), std::move(tokens.first), std::vector<std::string>(), 10);
     tiles_ = tiles_impl_.get();
   }
 

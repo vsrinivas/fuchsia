@@ -84,8 +84,9 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
 
   // Creates a view.
   void CreateView() {
-    auto [view_token, view_holder_token_] = scenic::NewViewTokenPair();
-    player_->CreateView2(std::move(view_token.value));
+    auto tokens = scenic::NewViewTokenPair();
+    view_holder_token_ = std::move(tokens.second);
+    player_->CreateView2(std::move(tokens.first.value));
   }
 
   fuchsia::mediaplayer::PlayerPtr player_;
