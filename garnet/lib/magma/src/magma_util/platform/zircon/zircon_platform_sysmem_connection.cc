@@ -42,6 +42,10 @@ public:
         // definition depending on the system).
         constraints_.buffer_memory_constraints.secure_required = constraints->secure_permitted;
         constraints_.buffer_memory_constraints.secure_permitted = constraints->secure_required;
+        constraints_.buffer_memory_constraints.ram_domain_supported =
+            constraints->ram_domain_supported;
+        constraints_.buffer_memory_constraints.cpu_domain_supported =
+            constraints->cpu_domain_supported;
     }
 
     Status
