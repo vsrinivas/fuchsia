@@ -516,8 +516,8 @@ Three valid plug-detect notification flags (PDNF) are currently defined:
  * `AUDIO_PDNF_CAN_NOTIFY` is set when the stream hardware is capable of both
    asynchronously detecting that a device's plug state has changed, and sending
    a notification message if the client has requested these notifications.
- * `AUDIO_PDNF_PLUGGED` is set when the stream hardware considers the stream to be
-   currently in the "plugged-in" state.
+ * `AUDIO_PDNF_PLUGGED` is set when the stream hardware considers the stream to
+   be currently in the "plugged-in" state.
 
 When responding to the `PLUG_DETECT` message, drivers for "hardwired" streams
 **must not** set the `CAN_NOTIFY` flag, and **must** set the `PLUGGED` flag.
@@ -664,13 +664,13 @@ buffer is now gone.
 Upon succeeding, the driver **must** return a handle to a
 [VMO](../objects/vm_object.md) with permissions which allow applications to map
 the VMO into their address space using [zx_vmar_map](../syscalls/vmar_map.md),
-and to read/write data in the buffer in the case of readback, or simply read the
-data in the buffer in the case of capture.  Additionally, the driver **must**
-report the actual number of frames of audio it will use in the buffer via the
-`num_ring_buffer_frames` field of the `audio_rb_cmd_get_buffer_resp_t` message.
-This number **may** be larger than the `min_ring_buffer_frames` request from the
-client but **must not** be either smaller than this number, nor larger than the
-size (when converted to bytes) of the VMO as reported by
+and to read/write data in the buffer in the case of playback, or simply to read
+the data in the buffer in the case of capture.  Additionally, the driver
+**must** report the actual number of frames of audio it will use in the buffer
+via the `num_ring_buffer_frames` field of the `audio_rb_cmd_get_buffer_resp_t`
+message.  This number **may** be larger than the `min_ring_buffer_frames`
+request from the client but **must not** be either smaller than this number,
+nor larger than the size (when converted to bytes) of the VMO as reported by
 [zx_vmo_get_size()](../syscalls/vmo_get_size.md).
 
 ### Starting and Stopping the ring-buffer

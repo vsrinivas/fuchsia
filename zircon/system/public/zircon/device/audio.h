@@ -51,7 +51,9 @@ typedef struct audio_cmd_hdr {
 } audio_cmd_hdr_t;
 
 static_assert(sizeof(audio_cmd_hdr_t) == 8,
-              "audio_cmd_hdr_t should be 12 bytes!");
+              "audio_cmd_hdr_t should be 8 bytes! "
+              "If sizeof(zx_txid_t has changed from 4 to 8, "
+              "consider repacking the structs in audio.h");
 
 // audio_sample_format_t
 //
@@ -125,7 +127,7 @@ typedef uint32_t audio_pd_notify_flags_t;
 
 // AUDIO_STREAM_CMD_GET_FORMATS
 //
-// May not be used with the NO_ACK flag.
+// Must not be used with the NO_ACK flag.
 #define AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE (15u)
 typedef struct audio_stream_cmd_get_formats_req {
     audio_cmd_hdr_t hdr;
@@ -148,7 +150,7 @@ static_assert(sizeof(audio_stream_cmd_get_formats_resp_t) == 256,
 
 // AUDIO_STREAM_CMD_SET_FORMAT
 //
-// May not be used with the NO_ACK flag.
+// Must not be used with the NO_ACK flag.
 typedef struct audio_stream_cmd_set_format_req {
     audio_cmd_hdr_t hdr;
     uint32_t frames_per_second;
@@ -170,7 +172,7 @@ typedef struct audio_stream_cmd_set_format_resp {
 // Request that a gain notification be sent with the current details of the
 // streams current gain settings as well as gain setting capabilities.
 //
-// May not be used with the NO_ACK flag.
+// Must not be used with the NO_ACK flag.
 typedef struct audio_stream_cmd_get_gain_req {
     audio_cmd_hdr_t hdr;
 } audio_stream_cmd_get_gain_req_t;
@@ -234,6 +236,7 @@ typedef struct audio_stream_cmd_set_gain_resp {
 // Trigger a plug detect operation and/or enable/disable asynchronous plug
 // detect notifications.
 //
+// May be used with the NO_ACK flag.
 typedef struct audio_stream_cmd_plug_detect_req {
     audio_cmd_hdr_t hdr;
     audio_pd_flags_t flags; // Options used to enable or disable notifications
