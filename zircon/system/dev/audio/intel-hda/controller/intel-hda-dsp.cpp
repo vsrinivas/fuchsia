@@ -466,8 +466,8 @@ zx_status_t IntelHDADSP::ProcessReleaseStream(dispatcher::Channel* channel,
         stream = active_streams_.erase(req.stream_id);
     }
 
-    // If the stream was not active, our codec driver is crazy.  Hang up the
-    // phone on it.
+    // If the stream was not active, our codec driver has some sort of internal
+    // inconsistency.  Hang up the phone on it.
     if (stream == nullptr)
         return ZX_ERR_BAD_STATE;
 
@@ -508,8 +508,8 @@ zx_status_t IntelHDADSP::ProcessSetStreamFmt(dispatcher::Channel* channel,
             stream = iter.CopyPointer();
     }
 
-    // If the stream was not active, our codec driver is crazy.  Hang up the
-    // phone on it.
+    // If the stream was not active, our codec driver has some sort of internal
+    // inconsistency.  Hang up the phone on it.
     if (stream == nullptr)
         return ZX_ERR_BAD_STATE;
 

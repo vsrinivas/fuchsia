@@ -125,8 +125,8 @@ zx_status_t ResizeableVmoMapper::Grow(size_t size) {
             // If we could not extend the old mapping, and we cannot create a
             // new mapping, then we are done.  Attempt to shrink the VMO back to
             // its original size.  This operation should *never* fail.  If it
-            // does, something has gone insanely wrong and it is time to
-            // terminate this process.
+            // does, something has gone very wrong and it is time to terminate
+            // this process.
             zx_status_t stat2 = vmo().set_size(size_);
             ZX_ASSERT_MSG(stat2 == ZX_OK,
                           "Failed to shrink to original size (0x%zx -> 0x%lx : res %d)\n",
