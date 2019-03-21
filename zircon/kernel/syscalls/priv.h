@@ -32,6 +32,14 @@ public:
         return h_ ? ZX_OK : ZX_ERR_NO_MEMORY;
     }
 
+    // Note that if this call fails to allocate the Handle, the underlying
+    // Dispatcher's on_zero_handles() will be called when the KernelHandle
+    // goes out of scope on return.
+    zx_status_t make(KernelHandle<Dispatcher> handle, zx_rights_t rights) {
+        h_ = handle.UpgradeToHandleOwner(rights);
+        return h_ ? ZX_OK : ZX_ERR_NO_MEMORY;
+    }
+
     zx_status_t dup(Handle* source, zx_rights_t rights) {
         h_ = Handle::Dup(source, rights);
         return h_ ? ZX_OK : ZX_ERR_NO_MEMORY;

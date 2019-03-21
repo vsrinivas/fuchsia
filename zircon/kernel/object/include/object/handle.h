@@ -14,6 +14,7 @@
 #include <kernel/brwlock.h>
 #include <kernel/lockdep.h>
 #include <ktl/atomic.h>
+#include <ktl/move.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -189,3 +190,78 @@ inline void HandleOwner::Destroy() {
     if (h_)
         h_->Delete();
 }
+
+// A minimal wrapper around a Dispatcher which is owned by the kernel.
+//
+// Intended usage when creating new a Dispatcher object is:
+//   1. Create a KernelHandle on the stack (cannot fail)
+//   2. Move the RefPtr<Dispatcher> into the KernelHandle (cannot fail)
+//   3. When ready to give the handle to a process, upgrade the KernelHandle
+//      to a full HandleOwner via UpgradeToHandleOwner() or
+//      user_out_handle::make() (can fail)
+//
+// This sequence ensures that the Dispatcher's on_zero_handles() method is
+// called even if errors occur during or before HandleOwner creation, which
+// is necessary to break circular references for some Dispatcher types.
+//
+// This class is thread-unsafe and must be externally synchronized if used
+// across multiple threads.
+template <typename T>
+class KernelHandle {
+public:
+    KernelHandle() = default;
+
+    explicit KernelHandle(fbl::RefPtr<T> dispatcher)
+        : dispatcher_(ktl::move(dispatcher)) {}
+
+    ~KernelHandle() {
+        reset();
+    }
+
+    // Movable but not copyable since we own the underlying Dispatcher.
+    KernelHandle(const KernelHandle&) = delete;
+    KernelHandle& operator=(const KernelHandle&) = delete;
+
+    template <typename U>
+    KernelHandle(KernelHandle<U>&& other)
+        : dispatcher_(ktl::move(other.dispatcher_)) {}
+
+    template <typename U>
+    KernelHandle& operator=(KernelHandle<U>&& other) {
+        reset(ktl::move(other.dispatcher_));
+        return *this;
+    }
+
+    void reset() {
+        reset(fbl::RefPtr<T>());
+    }
+
+    template <typename U>
+    void reset(fbl::RefPtr<U> dispatcher) {
+        if (dispatcher_) {
+            dispatcher_->on_zero_handles();
+        }
+        dispatcher_ = ktl::move(dispatcher);
+    }
+
+    const fbl::RefPtr<T>& dispatcher() const { return dispatcher_; }
+
+    // Moves the dispatcher into a full process-owned Handle.
+    //
+    // On success, the underlying dispatcher will be cleared.
+    // If the Handle creation fails, this is a no-op and an empty HandleOwner
+    // will be returned.
+    HandleOwner UpgradeToHandleOwner(zx_rights_t rights) {
+        HandleOwner owner = Handle::Make(dispatcher_, rights);
+        if (owner) {
+            dispatcher_.reset();
+        }
+        return owner;
+    }
+
+private:
+    template <typename U>
+    friend class KernelHandle;
+
+    fbl::RefPtr<T> dispatcher_;
+};

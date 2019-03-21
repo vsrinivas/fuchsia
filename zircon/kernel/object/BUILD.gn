@@ -86,6 +86,7 @@ source_set("tests") {
   # TODO: testonly = true
   sources = [
     "buffer_chain_tests.cpp",
+    "handle_tests.cpp",
     "job_policy_tests.cpp",
     "mbuf_tests.cpp",
     "message_packet_tests.cpp",
