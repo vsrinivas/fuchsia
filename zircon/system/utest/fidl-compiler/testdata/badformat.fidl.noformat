@@ -127,6 +127,12 @@ NoOrdinal(int64 i) -> (string s);
 MethodWithAnError()   -> (    int32    a ) error             uint32
 ;
 
+                // and now, for something completely different.
+		// the error syntax.
+    MethodWithAZxError() -> (      int32 a        ) error        zx.status;
+
+    MethodWithAZxErrorNoReturn() -> (             ) error        zx.status;
+
      }
 
 

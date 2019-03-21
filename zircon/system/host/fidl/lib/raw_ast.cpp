@@ -179,6 +179,9 @@ void InterfaceMethod::Accept(TreeVisitor& visitor) {
     if (maybe_response != nullptr) {
         visitor.OnParameterList(maybe_response);
     }
+    if (maybe_error_ctor != nullptr) {
+        visitor.OnTypeConstructor(maybe_error_ctor);
+    }
 }
 
 void ComposeProtocol::Accept(TreeVisitor& visitor) {

@@ -113,7 +113,7 @@ bool golden_file_test() {
     std::string formatted_bad_output;
 
     for (auto element : Examples::map()) {
-        if (element.first.find("testdata/goodformat.fidl") != std::string::npos) {
+        if (element.first.find("testdata/goodformat.test.fidl") != std::string::npos) {
             good_output = Examples::map()[element.first];
         } else if (element.first.find("testdata/badformat.fidl") != std::string::npos) {
             formatted_bad_output = formatted_output_[element.first];

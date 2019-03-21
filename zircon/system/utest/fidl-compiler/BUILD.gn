@@ -37,7 +37,7 @@ if (current_toolchain == default_toolchain) {
       "$examples_dir/types.fidl",
       "testdata/badformat.fidl.noformat",
       "testdata/doc_comments.fidl",
-      "testdata/goodformat.fidl",
+      "testdata/goodformat.test.fidl",
     ]
     script = "gen-examples.sh"
     args = rebase_path(outputs, root_build_dir) +
