@@ -68,14 +68,14 @@ private:
     static int RunServer(void* arg);
 
     ThreadState GetState() const {
-        return static_cast<ThreadState>(state_.load());
+        return state_.load();
     }
 
     void SetState(ThreadState state) {
-        state_.store(static_cast<uint32_t>(state));
+        state_.store(state);
     }
 
     thrd_t thread_;
-    std::atomic<uint32_t> state_;
+    std::atomic<ThreadState> state_ = ThreadState::None;
     BlockServer* server_ = nullptr;
 };
