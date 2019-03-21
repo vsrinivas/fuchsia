@@ -18,6 +18,7 @@ mod account_event_emitter;
 mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
+mod stored_account_list;
 
 use crate::account_manager::AccountManager;
 use failure::{Error, ResultExt};
@@ -31,6 +32,9 @@ use std::sync::Arc;
 // Default accounts directory
 const ACCOUNT_DIR_PARENT: &str = "/data/account";
 
+// Default account list directory
+const ACCOUNT_LIST_DIR: &str = "/data/accounts";
+
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
@@ -38,10 +42,11 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     // TODO(dnorsdtrom): Add CLI arg for making the path configurable, to support test isolation
-    let account_manager = AccountManager::new(ACCOUNT_DIR_PARENT).map_err(|e| {
-        error!("Error initializing AccountManager {:?}", e);
-        e
-    })?;
+    let account_manager =
+        AccountManager::new(ACCOUNT_DIR_PARENT, ACCOUNT_LIST_DIR).map_err(|e| {
+            error!("Error initializing AccountManager {:?}", e);
+            e
+        })?;
     let account_manager = Arc::new(account_manager);
 
     let fut = ServicesServer::new()

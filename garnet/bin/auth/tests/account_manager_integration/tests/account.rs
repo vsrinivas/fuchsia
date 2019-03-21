@@ -46,11 +46,7 @@ async fn test_account_functionality() -> Result<(), Error> {
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        await!(account_manager.get_account(
-            &mut account_1,
-            acp_client_end,
-            account_server_end
-        ))?,
+        await!(account_manager.get_account(&mut account_1, acp_client_end, account_server_end))?,
         Status::Ok
     );
     let account_proxy = account_client_end.into_proxy()?;
