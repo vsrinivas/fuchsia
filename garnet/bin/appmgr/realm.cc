@@ -39,11 +39,11 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/json/json_parser.h"
-#include "lib/pkg_url/url_resolver.h"
 #include "lib/svc/cpp/services.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/pkg_url/url_resolver.h"
 
 namespace component {
 namespace {

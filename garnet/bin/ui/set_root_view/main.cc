@@ -10,9 +10,9 @@
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/substitute.h>
-#include <lib/pkg_url/fuchsia_pkg_url.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <trace-provider/provider.h>
 
 static void Usage() {

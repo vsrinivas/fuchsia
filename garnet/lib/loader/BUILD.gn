@@ -9,10 +9,10 @@ source_set("loader") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/pkg_url",
+    "//sdk/fidl/fuchsia.sys",
+    "//src/lib/pkg_url",
     "//zircon/public/lib/trace",
   ]
 }

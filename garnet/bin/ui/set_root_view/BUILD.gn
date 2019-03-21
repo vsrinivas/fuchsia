@@ -10,12 +10,12 @@ executable("set_root_view") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/pkg_url",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/pkg_url",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

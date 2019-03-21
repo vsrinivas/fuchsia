@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 #include "gtest/gtest.h"
 
@@ -62,8 +62,8 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("", fp.hash());
   EXPECT_EQ("stuff", fp.resource_path());
 
-  EXPECT_TRUE(
-      fp.Parse("fuchsia-pkg://example.com/data-package/variant123?hash=1234#stuff"));
+  EXPECT_TRUE(fp.Parse(
+      "fuchsia-pkg://example.com/data-package/variant123?hash=1234#stuff"));
   EXPECT_EQ("example.com", fp.host_name());
   EXPECT_EQ("data-package", fp.package_name());
   EXPECT_EQ("variant123", fp.variant());

@@ -8,10 +8,10 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/json/json_parser.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
-#include "lib/pkg_url/url_resolver.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/module_manifest/module_manifest_xdr.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/lib/pkg_url/url_resolver.h"
 
 namespace modular {
 namespace {

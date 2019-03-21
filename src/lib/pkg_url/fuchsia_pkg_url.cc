@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
+
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/substitute.h"
 
@@ -19,8 +20,9 @@ static const std::string kFuchsiaPkgPrefix = "fuchsia-pkg://";
 // 3: package variant
 // 4: package merkle-root hash
 // 5: resource path
-static const std::regex* const kFuchsiaPkgRexp =
-    new std::regex("^fuchsia-pkg://([^/]+)/([^/#?]+)(?:/([^/#?]+))?(?:\\?hash=([^&#]+))?(?:#(.+))?$");
+static const std::regex* const kFuchsiaPkgRexp = new std::regex(
+    "^fuchsia-pkg://([^/]+)/([^/#?]+)(?:/([^/"
+    "#?]+))?(?:\\?hash=([^&#]+))?(?:#(.+))?$");
 
 // static
 bool FuchsiaPkgUrl::IsFuchsiaPkgScheme(const std::string& url) {

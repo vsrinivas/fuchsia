@@ -17,11 +17,11 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
-#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/substitute.h"
-#include "lib/pkg_url/url_resolver.h"
 #include "lib/svc/cpp/services.h"
+#include "src/lib/files/unique_fd.h"
+#include "src/lib/pkg_url/url_resolver.h"
 
 namespace sysmgr {
 

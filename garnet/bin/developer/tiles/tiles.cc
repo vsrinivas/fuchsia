@@ -8,10 +8,10 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/substitute.h>
-#include <lib/pkg_url/fuchsia_pkg_url.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
+#include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <cmath>
 
 constexpr float kTileElevation = 5.f;

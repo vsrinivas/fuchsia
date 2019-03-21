@@ -548,7 +548,7 @@ group("go_benchmarking_tests") {
 group("pkg_url") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/pkg_url:pkg_url_unittests",
+    "//src/lib/pkg_url:pkg_url_unittests",
   ]
 }
 

@@ -21,7 +21,7 @@ source_set("cmx") {
     "//garnet/public/lib/cmx_facet_parser",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
-    "//garnet/public/lib/pkg_url",
+    "//src/lib/pkg_url",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace",
@@ -45,7 +45,7 @@ executable("tests") {
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
-    "//garnet/public/lib/pkg_url",
+    "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]

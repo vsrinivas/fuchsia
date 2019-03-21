@@ -11,8 +11,8 @@
 #include <string>
 
 #include "lib/fxl/strings/substitute.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "rapidjson/document.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 

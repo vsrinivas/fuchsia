@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "launch_app.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace netemul {
 namespace config {

@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 

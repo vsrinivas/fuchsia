@@ -15,7 +15,7 @@
 #include "lib/fsl/vmo/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/substitute.h"
-#include "lib/pkg_url/url_resolver.h"
+#include "src/lib/pkg_url/url_resolver.h"
 
 namespace component {
 

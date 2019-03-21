@@ -31,8 +31,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 
