@@ -6,7 +6,10 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+use chrono::offset::Utc;
+use chrono::DateTime;
 use failure::{format_err, Error, Fail};
+use log::warn;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -166,12 +169,31 @@ pub struct TokenCache {
     // TODO(jsankey): Define and enforce a max size on the number of cache
     // entries
     map: HashMap<CacheKey, TokenSet>,
+    last_time: SystemTime,
 }
 
 impl TokenCache {
     /// Creates a new `TokenCache` with the specified initial size.
     pub fn new(size: usize) -> TokenCache {
-        TokenCache { map: HashMap::with_capacity(size) }
+        TokenCache { map: HashMap::with_capacity(size), last_time: SystemTime::now() }
+    }
+
+    /// Sanity check that system time has not jumped backwards since last time this method was
+    /// called. If time jumped backwards, a warning is logged and the entire cache is cleared.
+    /// If time is normal, this method does nothing.
+    /// TODO(dnordstrom): Long term solution involving time service or monotonic clocks.
+    fn validate_time_progression(&mut self) {
+        let current_time = SystemTime::now();
+        if current_time < self.last_time {
+            warn!(
+                "time jumped backwards from {:?} to {:?}, clearing {:?} token cache entries",
+                <DateTime<Utc>>::from(current_time),
+                <DateTime<Utc>>::from(self.last_time),
+                self.map.len()
+            );
+            self.map.clear();
+        }
+        self.last_time = current_time;
     }
 
     /// Returns the OAuth ID token for the specified `cache_key` and `audience` if present and
@@ -213,6 +235,7 @@ impl TokenCache {
     /// Returns the set of unexpired tokens stored in the cache for the given
     /// `cache_key`. Any expired tokens are also purged from the underlying cache.
     fn get_token_set(&mut self, cache_key: &CacheKey) -> Option<&TokenSet> {
+        self.validate_time_progression();
         // First remove any expired tokens from the value if it exists then
         // delete the entire entry if this now means it is invalid.
         let mut expired_token_set = false;
@@ -268,6 +291,7 @@ impl TokenCache {
     where
         F: FnOnce(&mut TokenSet),
     {
+        self.validate_time_progression();
         if let Some(token_set) = self.map.get_mut(&cache_key) {
             update_fn(token_set);
             return;
@@ -280,6 +304,7 @@ impl TokenCache {
     /// Removes all tokens associated with the supplied `cache_key`, returning an error
     /// if none exist.
     pub fn delete(&mut self, cache_key: &CacheKey) -> Result<(), AuthCacheError> {
+        self.validate_time_progression();
         if !self.map.contains_key(cache_key) {
             Err(AuthCacheError::KeyNotFound)
         } else {
