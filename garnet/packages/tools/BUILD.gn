@@ -58,7 +58,6 @@ group("all") {
     "//garnet/packages/tools:netstack",
     "//garnet/packages/tools:runmany",
     "//garnet/packages/tools:scenic",
-    "//garnet/packages/tools:scenic",
     "//garnet/packages/tools:sl4f",
     "//garnet/packages/tools:tiles",
     "//garnet/packages/tools:wlan",
