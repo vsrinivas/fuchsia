@@ -48,10 +48,9 @@ lazy_static! {
     };
     static ref ROOTS: Vec<webpki::TrustAnchor<'static>> = {
         CERT_DERS.iter().map(|cert_bytes| {
-            untrusted::Input::from(&cert_bytes)
-                .cert_der_as_trust_anchor(cert_der)
+            cert_der_as_trust_anchor(untrusted::Input::from(&cert_bytes))
                 .expect("Parsing root certificate failed")
-        })
+        }).collect()
     };
 
     pub static ref TLS_SERVER_ROOTS: webpki::TLSServerTrustAnchors<'static> =

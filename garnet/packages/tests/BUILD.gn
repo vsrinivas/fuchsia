@@ -371,6 +371,7 @@ group("all") {
     "//garnet/packages/tests:virtual_audio_util",
     "//garnet/packages/tests:vulkan",
     "//garnet/packages/tests:wayland",
+    "//garnet/packages/tests:webpki_roots_fuchsia",
     "//garnet/packages/tests:wlan",
     "//garnet/packages/tests:wlan-hw-sim",
     "//garnet/packages/tests:zircon",
