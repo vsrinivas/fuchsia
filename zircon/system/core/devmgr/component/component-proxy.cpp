@@ -2,35 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddktl/device.h>
-#include <lib/zx/channel.h>
+#include "component-proxy.h"
+
 #include <memory>
 
-namespace {
-
-class ComponentProxy;
-// TODO(teisenbe): Add support for get_protocol and proxy it through
-using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::Unbindable>;
-
-class ComponentProxy : public ComponentProxyBase {
-public:
-    ComponentProxy(zx_device_t* parent, zx::channel rpc);
-
-    static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
-                              const char* args, zx_handle_t raw_rpc);
-
-    zx_status_t DdkRxrpc(zx_handle_t channel);
-    void DdkUnbind();
-    void DdkRelease();
-private:
-    zx::channel rpc_;
-};
-
-ComponentProxy::ComponentProxy(zx_device_t* parent, zx::channel rpc)
-    : ComponentProxyBase(parent), rpc_(std::move(rpc)) {}
+namespace component {
 
 zx_status_t ComponentProxy::Create(void* ctx, zx_device_t* parent, const char* name,
                                    const char* args, zx_handle_t raw_rpc) {
@@ -52,16 +28,16 @@ void ComponentProxy::DdkRelease() {
     delete this;
 }
 
-const zx_driver_ops_t component_proxy_driver_ops = []() {
+const zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.create = ComponentProxy::Create;
     return ops;
 }();
 
-} // namespace
+} // namespace component
 
-ZIRCON_DRIVER_BEGIN(component_proxy, component_proxy_driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(component_proxy, component::driver_ops, "zircon", "0.1", 1)
 // Unmatchable.  This is loaded via the proxy driver mechanism instead of the binding process
 BI_ABORT()
 ZIRCON_DRIVER_END(component_proxy)

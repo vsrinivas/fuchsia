@@ -2,30 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddktl/device.h>
-#include <lib/zx/channel.h>
+#include "component.h"
+
 #include <memory>
 
-namespace {
-
-class Component;
-using ComponentBase = ddk::Device<Component, ddk::Rxrpcable, ddk::Unbindable>;
-
-class Component : public ComponentBase {
-public:
-    explicit Component(zx_device_t* parent);
-
-    static zx_status_t Bind(void* ctx, zx_device_t* parent);
-
-    zx_status_t DdkRxrpc(zx_handle_t channel);
-    void DdkUnbind();
-    void DdkRelease();
-};
-
-Component::Component(zx_device_t* parent) : ComponentBase(parent) {}
+namespace component {
 
 zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
     auto dev = std::make_unique<Component>(parent);
@@ -60,15 +41,15 @@ void Component::DdkRelease() {
     delete this;
 }
 
-const zx_driver_ops_t component_driver_ops = []() {
+const zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = Component::Bind;
     return ops;
 }();
 
-} // namespace
+} // namespace component
 
-ZIRCON_DRIVER_BEGIN(component, component_driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(component, component::driver_ops, "zircon", "0.1", 1)
 BI_MATCH() // This driver is excluded from the normal matching process, so this is fine.
 ZIRCON_DRIVER_END(component)

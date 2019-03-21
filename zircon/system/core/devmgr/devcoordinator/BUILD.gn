@@ -28,7 +28,7 @@ executable("devcoordinator") {
 
 source_set("internal-drivers") {
   deps = [
-    "$zx/system/core/devmgr/composite-impl-drivers/component",
+    "$zx/system/core/devmgr/component",
     "$zx/system/core/devmgr/dmctl",
   ]
 }
