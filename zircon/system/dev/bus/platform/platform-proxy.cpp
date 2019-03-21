@@ -173,7 +173,6 @@ static zx_driver_ops_t proxy_driver_ops = [](){
 
 } // namespace platform_bus
 
-ZIRCON_DRIVER_BEGIN(platform_bus_proxy, platform_bus::proxy_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PLATFORM_PROTO, 0),
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_PROXY),
+ZIRCON_DRIVER_BEGIN(platform_bus_proxy, platform_bus::proxy_driver_ops, "zircon", "0.1", 1)
+    BI_ABORT_IF_AUTOBIND,
 ZIRCON_DRIVER_END(platform_bus_proxy)
