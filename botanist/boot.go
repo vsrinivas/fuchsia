@@ -117,7 +117,7 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 		}
 	}
 
-	if len(signers) > 0 {
+	if bootMode == ModePave && len(signers) > 0 {
 		var authorizedKeys []byte
 		for _, s := range signers {
 			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
