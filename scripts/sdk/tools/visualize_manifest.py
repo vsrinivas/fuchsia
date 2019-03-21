@@ -7,16 +7,24 @@ import argparse
 import json
 import os
 import sys
+import urlparse
 
 
 def sanitize_name(name):
     '''Makes a given string usable in a label.'''
-    return name.replace('-', '_')
+    return name.replace('-', '_').replace('.', '_')
+
+
+def get_atom_domain(id):
+    return urlparse.urlparse(id).netloc
+
+
+def get_atom_name(id):
+    return urlparse.urlparse(id).path[1:]
 
 
 def get_atom_id(id):
-    '''Returns a string representing a sanitized version of the given id.'''
-    return '%s__%s' % (sanitize_name(id['domain']), sanitize_name(id['name']))
+    return sanitize_name(get_atom_name(id))
 
 
 def main():
@@ -35,7 +43,7 @@ def main():
         manifest = json.load(manifest_file)
 
     all_atoms = manifest['atoms']
-    domains = set([a['id']['domain'] for a in all_atoms])
+    domains = set([get_atom_domain(a['id']) for a in all_atoms])
 
     if args.output is not None:
         output = args.output
@@ -47,10 +55,10 @@ def main():
         for index, domain in enumerate(domains):
             out.write('subgraph cluster_%s {\n' % index)
             out.write('label="%s";\n' % domain)
-            atoms = [a for a in all_atoms if a['id']['domain'] == domain]
+            atoms = [a for a in all_atoms if get_atom_domain(a['id']) == domain]
             for atom in atoms:
                 out.write('%s [label="%s"];\n' % (get_atom_id(atom['id']),
-                                                  atom['id']['name']))
+                                                  get_atom_name(atom['id'])))
             out.write('}\n')
         for atom in all_atoms:
             if not atom['deps']:
