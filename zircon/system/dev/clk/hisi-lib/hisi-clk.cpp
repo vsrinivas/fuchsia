@@ -19,7 +19,7 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/clock.h>
+#include <ddk/protocol/clockimpl.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 
@@ -118,11 +118,11 @@ zx_status_t HisiClock::Toggle(uint32_t clock, bool enable) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HisiClock::ClockEnable(uint32_t clock) {
+zx_status_t HisiClock::ClockImplEnable(uint32_t clock) {
     return Toggle(clock, true);
 }
 
-zx_status_t HisiClock::ClockDisable(uint32_t clock) {
+zx_status_t HisiClock::ClockImplDisable(uint32_t clock) {
     return Toggle(clock, false);
 }
 
@@ -150,12 +150,12 @@ zx_status_t HisiClock::RegisterClockProtocol() {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    clock_protocol_t clk_proto = {
-        .ops = &clock_protocol_ops_,
+    clock_impl_protocol_t clk_proto = {
+        .ops = &clock_impl_protocol_ops_,
         .ctx = this,
     };
 
-    st = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto));
+    st = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
     if (st != ZX_OK) {
         zxlogf(ERROR, "HisiClock::RegisterClockProtocol: pbus_register_protocol"
                       " failed with st = %d\n",

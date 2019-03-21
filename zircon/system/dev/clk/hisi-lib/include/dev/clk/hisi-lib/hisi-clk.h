@@ -8,7 +8,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/clockimpl.h>
 
 namespace hisi_clock {
 
@@ -20,7 +20,7 @@ using DeviceType = ddk::Device<HisiClock,
                                ddk::Unbindable>;
 
 class HisiClock : public DeviceType,
-                  public ddk::ClockProtocol<HisiClock, ddk::base_protocol> {
+                  public ddk::ClockImplProtocol<HisiClock, ddk::base_protocol> {
 public:
     HisiClock(const HisiClock&) = delete;            // No Copies.
     HisiClock& operator=(const HisiClock&) = delete; // No Moves.
@@ -29,8 +29,8 @@ public:
                               const size_t gate_count, zx_device_t* parent);
 
     // Implement the Clock Protocol
-    zx_status_t ClockEnable(uint32_t clock);
-    zx_status_t ClockDisable(uint32_t clock);
+    zx_status_t ClockImplEnable(uint32_t clock);
+    zx_status_t ClockImplDisable(uint32_t clock);
 
     // Device Protocol Implementation.
     void DdkUnbind();

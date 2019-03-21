@@ -36,7 +36,7 @@ static pbus_dev_t clk_dev = []() {
 }();
 
 zx_status_t Sherlock::ClkInit() {
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK, &clk_dev);
+    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
         return status;

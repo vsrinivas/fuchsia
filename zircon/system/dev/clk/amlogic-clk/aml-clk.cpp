@@ -155,12 +155,12 @@ zx_status_t AmlClock::InitPdev(zx_device_t* parent) {
         return status;
     }
 
-    clock_protocol_t clk_proto = {
-        .ops = &clock_protocol_ops_,
+    clock_impl_protocol_t clk_proto = {
+        .ops = &clock_impl_protocol_ops_,
         .ctx = this,
     };
 
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto));
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
     if (status != ZX_OK) {
         zxlogf(ERROR, "meson_clk_bind: pbus_register_protocol failed, st = %d\n", status);
         return status;
@@ -205,7 +205,7 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
     return ZX_OK;
 }
 
-zx_status_t AmlClock::ClockEnable(uint32_t clk) {
+zx_status_t AmlClock::ClockImplEnable(uint32_t clk) {
     if (clk_gates_) {
         return ClkToggle(clk, true);
     } else {
@@ -213,7 +213,7 @@ zx_status_t AmlClock::ClockEnable(uint32_t clk) {
     }
 }
 
-zx_status_t AmlClock::ClockDisable(uint32_t clk) {
+zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
     if (clk_gates_) {
         return ClkToggle(clk, false);
     } else {

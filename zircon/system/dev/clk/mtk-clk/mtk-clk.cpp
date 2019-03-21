@@ -127,12 +127,12 @@ zx_status_t MtkClk::Bind() {
         return status;
     }
 
-    clock_protocol_t clk_proto = {
-        .ops = &clock_protocol_ops_,
+    clock_impl_protocol_t clk_proto = {
+        .ops = &clock_impl_protocol_ops_,
         .ctx = this,
     };
 
-    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK, &clk_proto, sizeof(clk_proto));
+    status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
     if (status != ZX_OK) {
         zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d\n", status);
         return status;
@@ -174,7 +174,7 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
     return ZX_OK;
 }
 
-zx_status_t MtkClk::ClockEnable(uint32_t index) {
+zx_status_t MtkClk::ClockImplEnable(uint32_t index) {
     if (index >= fbl::count_of(kMtkClkGates)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -184,7 +184,7 @@ zx_status_t MtkClk::ClockEnable(uint32_t index) {
     return ZX_OK;
 }
 
-zx_status_t MtkClk::ClockDisable(uint32_t index) {
+zx_status_t MtkClk::ClockImplDisable(uint32_t index) {
     if (index >= fbl::count_of(kMtkClkGates)) {
         return ZX_ERR_INVALID_ARGS;
     }

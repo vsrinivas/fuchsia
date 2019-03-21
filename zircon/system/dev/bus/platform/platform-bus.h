@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/i2cimpl.h>
@@ -76,7 +76,7 @@ public:
 
     // Protocol accessors for PlatformDevice.
     inline ddk::AmlogicCanvasProtocolClient* canvas() { return &*canvas_; }
-    inline ddk::ClockProtocolClient* clk() { return &*clk_; }
+    inline ddk::ClockImplProtocolClient* clk() { return &*clk_; }
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
     inline ddk::I2cImplProtocolClient* i2c() { return &*i2c_; }
     inline ddk::PowerImplProtocolClient* power() { return &*power_; }
@@ -100,7 +100,7 @@ private:
 
     // Protocols that are optionally provided by the board driver.
     std::optional<ddk::AmlogicCanvasProtocolClient> canvas_;
-    std::optional<ddk::ClockProtocolClient> clk_;
+    std::optional<ddk::ClockImplProtocolClient> clk_;
     std::optional<ddk::GpioImplProtocolClient> gpio_;
     std::optional<ddk::IommuProtocolClient> iommu_;
     std::optional<ddk::I2cImplProtocolClient> i2c_;
