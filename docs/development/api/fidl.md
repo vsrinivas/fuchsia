@@ -617,6 +617,14 @@ grapheme cluster might be safer. In any case, your input validation UI should
 show clear visual feedback so that users aren't surprised if they run out of
 room.
 
+### Integer types
+
+Select an integer type appropriate for your use case and be consistent about how
+you use them.  If your value is best thought of as a byte of data, use `byte`.
+If a negative value has no meaning, use an unsigned type.  As a rule of thumb if
+you're unsure, use 32-bit values for small quantities and 64-bit values for
+large ones.
+
 ### Errors
 
 Select the appropriate error type for your use case and be consistent about how
