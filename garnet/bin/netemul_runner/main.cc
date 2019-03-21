@@ -4,10 +4,10 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <iostream>
 #include "sandbox.h"
@@ -74,7 +74,7 @@ int main(int argc, const char** argv) {
   } else {
     FXL_LOG(INFO) << "Exposing fuchsia.netemul.sandbox.Sandbox service";
     SandboxService service(loop.dispatcher());
-    auto context = component::StartupContext::CreateFromStartupInfo();
+    auto context = sys::ComponentContext::CreateFromStartupInfo();
     context->outgoing().AddPublicService(service.GetHandler());
     loop.Run();
   }

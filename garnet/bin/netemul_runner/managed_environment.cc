@@ -8,8 +8,8 @@
 
 namespace netemul {
 
-using component::testing::EnclosingEnvironment;
-using component::testing::EnvironmentServices;
+using sys::testing::EnclosingEnvironment;
+using sys::testing::EnvironmentServices;
 
 ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(
     const fuchsia::sys::EnvironmentPtr& parent,
@@ -21,7 +21,7 @@ ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(
 
 ManagedEnvironment::ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env)
     : sandbox_env_(sandbox_env) {}
-component::testing::EnclosingEnvironment& ManagedEnvironment::environment() {
+sys::testing::EnclosingEnvironment& ManagedEnvironment::environment() {
   return *env_;
 }
 

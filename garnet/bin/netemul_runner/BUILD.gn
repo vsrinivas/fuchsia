@@ -28,8 +28,6 @@ source_set("src") {
     "//garnet/bin/netemul_runner/model",
     "//garnet/lib/cmx:cmx",
     "//garnet/lib/process",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
@@ -42,6 +40,7 @@ source_set("src") {
     "//garnet/public/lib/netemul/sync:sync_service",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -61,7 +60,8 @@ executable("bin") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//sdk/lib/sys/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/memfs-cpp",
@@ -76,7 +76,6 @@ executable("sandbox_unittest") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

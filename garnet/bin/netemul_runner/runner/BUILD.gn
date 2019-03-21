@@ -15,11 +15,11 @@ executable("bin") {
 
   deps = [
     "//garnet/lib/cmx:cmx",
-    "//sdk/fidl/fuchsia.sys",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/pkg_url",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

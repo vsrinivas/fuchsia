@@ -12,7 +12,6 @@
 #include "garnet/lib/cmx/cmx.h"
 
 namespace netemul {
-using component::StartupContext;
 static const char* kSandbox =
     "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";
 static const char* kDefinitionArg = "--definition=";
@@ -24,12 +23,10 @@ Runner::Runner(async_dispatcher_t* dispatcher) {
   }
   dispatcher_ = dispatcher;
 
-  startup_context_ = StartupContext::CreateFromStartupInfo();
-  startup_context_->ConnectToEnvironmentService(
-      launcher_.NewRequest(dispatcher_));
-  startup_context_->ConnectToEnvironmentService(
-      loader_.NewRequest(dispatcher_));
-  startup_context_->outgoing().AddPublicService(
+  component_context_ = sys::ComponentContext::CreateFromStartupInfo();
+  component_context_->svc()->Connect(launcher_.NewRequest(dispatcher_));
+  component_context_->svc()->Connect(loader_.NewRequest(dispatcher_));
+  component_context_->outgoing().AddPublicService(
       bindings_.GetHandler(this, dispatcher_));
 }
 

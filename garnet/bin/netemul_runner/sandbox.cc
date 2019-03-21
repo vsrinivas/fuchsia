@@ -6,13 +6,12 @@
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/testing/test_util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/pkg_url/fuchsia_pkg_url.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/status.h>
 #include "garnet/lib/cmx/cmx.h"
@@ -47,9 +46,9 @@ STATIC_MSG_STRUCT(kMsgTest, "test");
 #define ASSERT_HELPER_DISPATCHER ASSERT_DISPATCHER(helper_loop_->dispatcher())
 
 Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
-  startup_context->ConnectToEnvironmentService(parent_env_.NewRequest());
-  startup_context->ConnectToEnvironmentService(loader_.NewRequest());
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
+  services->Connect(parent_env_.NewRequest());
+  services->Connect(loader_.NewRequest());
   parent_env_.set_error_handler([](zx_status_t err) {
     FXL_LOG(ERROR) << "Lost connection to parent environment";
   });

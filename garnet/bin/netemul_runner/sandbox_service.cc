@@ -4,7 +4,7 @@
 
 #include "sandbox_service.h"
 #include <lib/async/task.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/service_directory.h>
 
 namespace netemul {
 
@@ -24,9 +24,8 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
       parent_->BindingClosed(this);
     });
 
-    auto startup_context = component::StartupContext::CreateFromStartupInfo();
-    startup_context->ConnectToEnvironmentService(
-        parent_env_.NewRequest(loop_->dispatcher()));
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
+    services->Connect(parent_env_.NewRequest(loop_->dispatcher()));
     parent_env_.set_error_handler([this](zx_status_t err) {
       FXL_LOG(ERROR) << "Lost connection to parent environment";
     });

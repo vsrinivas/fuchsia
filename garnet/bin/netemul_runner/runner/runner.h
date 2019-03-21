@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_RUNNER_RUNNER_H_
 #define GARNET_BIN_NETEMUL_RUNNER_RUNNER_RUNNER_H_
 
-#include <lib/component/cpp/startup_context.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include "fuchsia/sys/cpp/fidl.h"
+#include <lib/sys/cpp/component_context.h>
 
 namespace netemul {
 class Runner : public fuchsia::sys::Runner {
@@ -26,7 +26,7 @@ class Runner : public fuchsia::sys::Runner {
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller);
 
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fidl::BindingSet<FRunner> bindings_;
   fuchsia::sys::LauncherPtr launcher_;
   fuchsia::sys::LoaderPtr loader_;

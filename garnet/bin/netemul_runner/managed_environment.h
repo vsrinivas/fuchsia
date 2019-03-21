@@ -6,9 +6,8 @@
 #define GARNET_BIN_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 
 #include <fuchsia/netemul/environment/cpp/fidl.h>
-#include <lib/component/cpp/testing/enclosing_environment.h>
 #include <lib/fxl/macros.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <memory>
 #include "managed_launcher.h"
 #include "managed_logger.h"
@@ -30,13 +29,6 @@ class ManagedEnvironment
                         const SandboxEnv::Ptr& sandbox_env, Options options);
 
   const SandboxEnv::Ptr& sandbox_env() const { return sandbox_env_; }
-
-  const std::shared_ptr<component::Services>& services() {
-    if (!services_) {
-      services_ = std::make_shared<component::Services>();
-    }
-    return services_;
-  }
 
   void GetLauncher(
       ::fidl::InterfaceRequest<::fuchsia::sys::Launcher> launcher) override;
@@ -60,7 +52,7 @@ class ManagedEnvironment
  protected:
   friend ManagedLauncher;
 
-  component::testing::EnclosingEnvironment& environment();
+  sys::testing::EnclosingEnvironment& environment();
   ManagedLoggerCollection& loggers();
   zx::channel OpenVdevDirectory();
   zx::channel OpenVdataDirectory();
@@ -71,10 +63,9 @@ class ManagedEnvironment
               const ManagedEnvironment* managed_parent = nullptr);
 
   SandboxEnv::Ptr sandbox_env_;
-  std::unique_ptr<component::testing::EnclosingEnvironment> env_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   std::unique_ptr<ManagedLoggerCollection> loggers_;
   std::unique_ptr<ManagedLauncher> launcher_;
-  std::shared_ptr<component::Services> services_;
   EnvironmentRunningCallback running_callback_;
   fidl::BindingSet<FManagedEnvironment> bindings_;
   std::vector<ManagedEnvironment::Ptr> children_;
