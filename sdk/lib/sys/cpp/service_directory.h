@@ -56,12 +56,18 @@ class ServiceDirectory {
   // returned directory of services.
   static std::shared_ptr<ServiceDirectory> CreateFromNamespace();
 
+  // Use CreateWithRequest2 till this function is migrated.
+  static ServiceDirectory CreateWithRequest(zx::channel* out_request);
+  static ServiceDirectory CreateWithRequest(
+      fidl::InterfaceRequest<fuchsia::io::Directory>* out_request);
+
   // Create a directory of services and return a request for an implementation
   // of the underlying directory in |out_request|.
   //
   // Useful when creating components.
-  static ServiceDirectory CreateWithRequest(zx::channel* out_request);
-  static ServiceDirectory CreateWithRequest(
+  static std::shared_ptr<ServiceDirectory> CreateWithRequest2(
+      zx::channel* out_request);
+  static std::shared_ptr<ServiceDirectory> CreateWithRequest2(
       fidl::InterfaceRequest<fuchsia::io::Directory>* out_request);
 
   // Connect to an interface in the directory.

@@ -53,6 +53,25 @@ ServiceDirectory ServiceDirectory::CreateWithRequest(
   return directory;
 }
 
+std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
+    zx::channel* out_request) {
+  zx::channel directory;
+  zx_status_t status = zx::channel::create(0, &directory, out_request);
+  if (status != ZX_OK) {
+    return std::make_shared<ServiceDirectory>(ServiceDirectory());
+  }
+  return std::make_shared<ServiceDirectory>(
+      ServiceDirectory(std::move(directory)));
+}
+
+std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
+    fidl::InterfaceRequest<fuchsia::io::Directory>* out_request) {
+  zx::channel request;
+  auto directory = CreateWithRequest2(&request);
+  out_request->set_channel(std::move(request));
+  return directory;
+}
+
 zx_status_t ServiceDirectory::Connect(const std::string& interface_name,
                                       zx::channel channel) const {
   return fdio_service_connect_at(directory_.get(), interface_name.c_str(),
