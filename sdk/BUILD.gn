@@ -95,6 +95,23 @@ sdk("ddk") {
   ]
 }
 
+sdk("images") {
+  category = "partner"
+
+  testonly = true
+
+  deps = [
+    "//build/images:images_sdk",
+  ]
+  if (target_cpu != "arm64") {
+    deps += [
+      "//build/images:fvm.sparse.blk_sdk",
+      "//build/images:local.esp.blk_sdk",
+      "//build/images:zircon.vboot_sdk",
+    ]
+  }
+}
+
 sdk("core") {
   id = sdk_id
 
@@ -105,11 +122,11 @@ sdk("core") {
   testonly = true
 
   deps = [
+    ":images_molecule",
     ":open_source",
     "docs",
     "tools:dev_finder_sdk($host_toolchain)",
     "tools:symbolize_sdk($host_toolchain)",
-    "//build/images:images_sdk",
     "//garnet/bin/cmc:cmc_sdk($host_toolchain)",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/bin/zxdb:zxdb_sdk($host_toolchain)",
@@ -169,12 +186,4 @@ sdk("core") {
     "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
     "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
-
-  if (target_cpu != "arm64") {
-    deps += [
-      "//build/images:fvm.sparse.blk_sdk",
-      "//build/images:local.esp.blk_sdk",
-      "//build/images:zircon.vboot_sdk",
-    ]
-  }
 }
