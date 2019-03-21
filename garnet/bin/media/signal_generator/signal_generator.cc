@@ -121,11 +121,11 @@ bool MediaApp::ParameterRangeChecks() {
   }
 
   stream_gain_db_ =
-      fbl::clamp<float>(stream_gain_db_, fuchsia::media::MUTED_GAIN_DB,
-                        fuchsia::media::MAX_GAIN_DB);
+      fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
+                        fuchsia::media::audio::MAX_GAIN_DB);
 
-  system_gain_db_ =
-      fbl::clamp<float>(system_gain_db_, fuchsia::media::MUTED_GAIN_DB, 0.0f);
+  system_gain_db_ = fbl::clamp<float>(
+      system_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, 0.0f);
 
   return ret_val;
 }
@@ -276,8 +276,9 @@ void MediaApp::SetStreamType() {
     gain_control_->SetGain(stream_gain_db_);
   }
   if (ramp_stream_gain_) {
-    gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
-                                   fuchsia::media::AudioRamp::SCALE_LINEAR);
+    gain_control_->SetGainWithRamp(
+        ramp_target_gain_db_, ramp_duration_nsec_,
+        fuchsia::media::audio::AudioRamp::SCALE_LINEAR);
   }
 }
 
@@ -413,8 +414,7 @@ void MediaApp::SendPacket(uint64_t payload_num) {
   }
 
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(packet,
-                              [this]() { OnSendPacketComplete(); });
+  audio_renderer_->SendPacket(packet, [this]() { OnSendPacketComplete(); });
 }
 
 void MediaApp::OnSendPacketComplete() {

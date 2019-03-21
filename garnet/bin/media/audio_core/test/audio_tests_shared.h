@@ -36,8 +36,8 @@ constexpr char kTimeoutErr[] = "Timeout -- no callback received!\n";
 constexpr char kNoTimeoutErr[] = "Unexpected callback received!\n";
 
 constexpr float kUnityGainDb = 0.0f;
-constexpr float kTooLowGainDb = fuchsia::media::MUTED_GAIN_DB - 0.1f;
-constexpr float kTooHighGainDb = fuchsia::media::MAX_GAIN_DB + 0.1f;
+constexpr float kTooLowGainDb = fuchsia::media::audio::MUTED_GAIN_DB - 0.1f;
+constexpr float kTooHighGainDb = fuchsia::media::audio::MAX_GAIN_DB + 0.1f;
 
 }  // namespace media::audio::test
 

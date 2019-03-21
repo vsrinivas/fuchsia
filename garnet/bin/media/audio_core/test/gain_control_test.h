@@ -65,7 +65,7 @@ class GainControlTestBase : public gtest::RealLoopFixture {
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
-  fuchsia::media::GainControlPtr gain_control_;
+  fuchsia::media::audio::GainControlPtr gain_control_;
 
   bool error_occurred_ = false;
   bool received_gain_callback_ = false;
@@ -75,7 +75,7 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   // Member variables for tests that use multiple interface bindings
   fuchsia::media::AudioRendererPtr audio_renderer_2_;
   fuchsia::media::AudioCapturerPtr audio_capturer_2_;
-  fuchsia::media::GainControlPtr gain_control_2_;
+  fuchsia::media::audio::GainControlPtr gain_control_2_;
 
   bool error_occurred_2_ = false;
   bool received_gain_callback_2_ = false;

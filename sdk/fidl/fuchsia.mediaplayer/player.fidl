@@ -6,6 +6,7 @@ library fuchsia.mediaplayer;
 
 using fuchsia.math;
 using fuchsia.media;
+using fuchsia.media.audio;
 using fuchsia.net.oldhttp;
 using fuchsia.ui.viewsv1;
 using fuchsia.ui.viewsv1token;
@@ -51,7 +52,7 @@ protocol Player {
 
     // Binds to the gain control for this player.
     BindGainControl(
-        request<fuchsia.media.GainControl> gain_control_request);
+        request<fuchsia.media.audio.GainControl> gain_control_request);
 
     // Adds a new binding to this player.
     AddBinding(request<Player> player_request);

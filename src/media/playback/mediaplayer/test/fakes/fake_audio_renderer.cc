@@ -158,7 +158,7 @@ void FakeAudioRenderer::PauseNoReply() {
 }
 
 void FakeAudioRenderer::BindGainControl(
-    ::fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
+    ::fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
   FXL_NOTIMPLEMENTED();
 }
 

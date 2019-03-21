@@ -9,5 +9,6 @@ fostr_fidl("fuchsia.media") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
+    "//garnet/public/lib/fostr/fidl/fuchsia.media.audio",
   ]
 }

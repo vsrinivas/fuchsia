@@ -30,9 +30,9 @@ class Gain {
   //
   // Playback example: source (renderer) gain + dest (device) gain = total gain.
   // Capture example: source (device) gain + dest (capturer) gain = total gain.
-  static constexpr float kMaxGainDb = fuchsia::media::MAX_GAIN_DB;
+  static constexpr float kMaxGainDb = fuchsia::media::audio::MAX_GAIN_DB;
   static constexpr float kUnityGainDb = 0.0f;
-  static constexpr float kMinGainDb = fuchsia::media::MUTED_GAIN_DB;
+  static constexpr float kMinGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
 
   // constructor
   Gain()
@@ -105,9 +105,10 @@ class Gain {
   }
 
   // Smoothly change the source gain over the specified period of playback time.
-  void SetSourceGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                             fuchsia::media::AudioRamp rampType =
-                                 fuchsia::media::AudioRamp::SCALE_LINEAR);
+  void SetSourceGainWithRamp(
+      float gain_db, zx_duration_t duration_ns,
+      fuchsia::media::audio::AudioRamp rampType =
+          fuchsia::media::audio::AudioRamp::SCALE_LINEAR);
 
   void ClearSourceRamp() { source_ramp_duration_ns_ = 0; }
 

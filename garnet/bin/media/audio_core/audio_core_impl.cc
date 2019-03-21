@@ -66,16 +66,15 @@ AudioCoreImpl::~AudioCoreImpl() {
 void AudioCoreImpl::PublishServices() {
   ctx_->outgoing().AddPublicService<fuchsia::media::AudioCore>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
-        bindings_.AddBinding(
-            this,
-            std::move(request));
+        bindings_.AddBinding(this, std::move(request));
         bindings_.bindings().back()->events().SystemGainMuteChanged(
             system_gain_db_, system_muted_);
       });
   // TODO(dalesat): Load the gain/mute values.
 
   ctx_->outgoing().AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
-      [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
+      [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator>
+                 request) {
         device_manager_.AddDeviceEnumeratorClient(std::move(request));
       });
 }
@@ -108,7 +107,7 @@ void AudioCoreImpl::SetSystemGain(float gain_db) {
     return;
   }
   gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
-                     fuchsia::media::MUTED_GAIN_DB);
+                     fuchsia::media::audio::MUTED_GAIN_DB);
 
   if (system_gain_db_ == gain_db) {
     // This system gain is the same as the last one we broadcast.

@@ -4,6 +4,8 @@
 
 library fuchsia.media;
 
+using fuchsia.media.audio;
+
 //
 // AudioRenderers can be in one of two states at any point in time, either
 // the configurable state or the operational state. A renderer is considered
@@ -275,7 +277,7 @@ protocol AudioRenderer {
     GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
     // Binds to the gain control for this AudioRenderer.
-    BindGainControl(request<GainControl> gain_control_request);
+    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
 
     ///////////////////////////////////////////////////////////////////////////
     // StreamBufferSet methods

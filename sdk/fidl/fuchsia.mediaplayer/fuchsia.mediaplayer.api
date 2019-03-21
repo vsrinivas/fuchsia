@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.mediaplayer/player.fidl": "f231a2092c6301222a976b00ecc71f4d",
+  "fidl/fuchsia.mediaplayer/player.fidl": "c7141413a103207a45b467b4809e2e52",
   "fidl/fuchsia.mediaplayer/problem.fidl": "321c3ee60eaa6a74a079610a17b4b395",
   "fidl/fuchsia.mediaplayer/seeking_reader.fidl": "c77b67438f0b182584eded53737d4b81",
   "fidl/fuchsia.mediaplayer/sink_manager.fidl": "8b5244eaef2a1679093e0ee433e9878b",

@@ -327,7 +327,8 @@ void FidlAudioRenderer::SetTimelineFunction(
 }
 
 void FidlAudioRenderer::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::GainControl> gain_control_request) {
+    fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
+        gain_control_request) {
   audio_renderer_->BindGainControl(std::move(gain_control_request));
 }
 
