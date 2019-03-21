@@ -1,7 +1,7 @@
 # Fuchsia product definitions
 
 This directory contains definitions for a variety of product configurations. The
-products are organized into tracks that build on one another to product a fully
+products are organized into tracks that build on one another to produce a fully
 featured system.
 
 ## Baseline track
