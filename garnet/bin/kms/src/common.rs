@@ -83,10 +83,10 @@ pub const ASYMMETRIC_KEY_ALGORITHMS: &[AsymmetricKeyAlgorithm] = &[
     AsymmetricKeyAlgorithm::EcdsaSha512P521,
     AsymmetricKeyAlgorithm::RsaSsaPssSha2562048,
     AsymmetricKeyAlgorithm::RsaSsaPssSha2563072,
-    AsymmetricKeyAlgorithm::RsaSsaPssSha2564096,
+    AsymmetricKeyAlgorithm::RsaSsaPssSha5124096,
     AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha2562048,
     AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha2563072,
-    AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha2564096,
+    AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha5124096,
 ];
 
 /// The key attributes structure to be stored as attribute file.
