@@ -9,7 +9,7 @@
 
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
 use {
-    failure::{Error, ResultExt, Fail, format_err},
+    failure::{Error, ResultExt, Fail, bail, format_err},
     fdio::fdio_sys,
     fuchsia_async as fasync,
     futures::{
@@ -19,7 +19,7 @@ use {
         task::Waker,
     },
     fidl::{
-        encoding::Decodable,
+        encoding::{Decodable, OutOfLine},
         endpoints::{RequestStream, ServiceMarker, Proxy},
     },
     fidl_fuchsia_io::{
@@ -28,6 +28,11 @@ use {
         DirectoryObject,
         NodeAttributes,
         NodeInfo,
+        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_POSIX,
     },
     fidl_fuchsia_sys::{
         ComponentControllerProxy,
@@ -369,6 +374,12 @@ pub mod server {
     }
 
     const ROOT_NODE: usize = 0;
+    const NO_FLAGS: u32 = 0;
+    const CLONE_REQ_SUPPORTED_FLAGS: u32 =
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+    const OPEN_REQ_SUPPORTED_FLAGS: u32 =
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX |
+        OPEN_FLAG_DIRECTORY;
 
     impl<Output: 'static> ServiceFs<ServiceObjLocal<Output>> {
         /// Create a new `ServiceFs` that is singlethreaded-only and does not
@@ -743,11 +754,11 @@ pub mod server {
 
         /// Add an additional connection to the `FdioServer` to provide services to.
         pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
-            self.serve_connection_at(chan, ROOT_NODE)?;
+            self.serve_connection_at(chan, ROOT_NODE, NO_FLAGS)?;
             Ok(self)
         }
 
-        fn serve_connection_at(&mut self, chan: zx::Channel, position: usize)
+        fn serve_connection_at(&mut self, chan: zx::Channel, position: usize, flags: u32)
             -> Result<(), Error>
         {
             chan
@@ -757,9 +768,15 @@ pub mod server {
             let chan = fasync::Channel::from_channel(chan)
                 .context("failure to convert to async channel")?;
 
-            let stream = Some(DirectoryRequestStream::from_channel(chan));
+            let stream = DirectoryRequestStream::from_channel(chan);
+            if (flags & OPEN_FLAG_DESCRIBE) != 0 {
+                let mut info = NodeInfo::Directory(DirectoryObject);
+                stream.control_handle().send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
+                    .context("fail sending OnOpen event")?;
+            }
+
             self.client_connections.push(ClientConnection {
-                stream,
+                stream: Some(stream),
                 position,
             });
             Ok(())
@@ -778,14 +795,33 @@ pub mod server {
                 }
             }
 
+            macro_rules! handle_potentially_unsupported_flags {
+                ($object:ident, $flags:expr, $supported_flags_bitmask:expr) => {
+                    if has_unsupported_flags($flags, $supported_flags_bitmask) {
+                        if ($flags & OPEN_FLAG_DESCRIBE) != 0 {
+                            let (_stream, control_handle) = $object.into_stream_and_control_handle()
+                                .context("fail to convert to stream and control handle")?;
+                            control_handle.send_on_open_(zx::sys::ZX_ERR_NOT_SUPPORTED, None)
+                                .context("fail sending OnOpenEvent")?;
+                        }
+                        bail!("flags contains unsupported flags: {}", $flags);
+                    }
+                }
+            }
+
             match request {
-                DirectoryRequest::Clone { flags: _, object, control_handle: _ } => {
-                    if let Err(e) = self.serve_connection_at(object.into_channel(), position) {
+                DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+                    handle_potentially_unsupported_flags!(object, flags, CLONE_REQ_SUPPORTED_FLAGS);
+
+                    if let Err(e) = self.serve_connection_at(object.into_channel(), position, flags)
+                    {
                         eprintln!("ServiceFs failed to clone: {:?}", e);
                     }
                 }
                 DirectoryRequest::Close { responder, } => responder.send(zx::sys::ZX_OK)?,
-                DirectoryRequest::Open { flags: _, mode: _, path, object, control_handle: _, } => {
+                DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _, } => {
+                    handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
+
                     let channel = object.into_channel();
                     let node = self.nodes.get(position)
                         .expect("ServiceFs client connected at missing node");
@@ -801,7 +837,9 @@ pub mod server {
                             .expect("Missing child node")
                         {
                             ServiceFsNode::Directory { .. } => {
-                                if let Err(e) = self.serve_connection_at(channel, target_node_position) {
+                                if let Err(e) =
+                                    self.serve_connection_at(channel, target_node_position, flags)
+                                {
                                     eprintln!("ServiceFs failed to open directory: {:?}", e);
                                 }
                             }
@@ -838,6 +876,10 @@ pub mod server {
             }
             Ok(None)
         }
+    }
+
+    fn has_unsupported_flags(flags: u32, supported_flags_bitmask: u32) -> bool {
+        (flags & !supported_flags_bitmask) != 0
     }
 
     impl<ServiceObjTy: ServiceObjTrait> Unpin for ServiceFs<ServiceObjTy> {}
