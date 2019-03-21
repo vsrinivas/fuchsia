@@ -761,8 +761,17 @@ pub mod server {
         fn serve_connection_at(&mut self, chan: zx::Channel, position: usize, flags: u32)
             -> Result<(), Error>
         {
-            chan
-                .signal_peer(Signals::NONE, Signals::USER_0)
+            // It is not an error if the other end of the channel is already
+            // closed: the client may call Directory::Open, send a channel chan,
+            // then write a request on their local end of chan. If the request
+            // does not expect a response (eg. Directory::Open in a subdirectory),
+            // the client may close chan immediately afterwards. We should keep
+            // our end of the channel until we have processed all incoming requests.
+            chan.signal_peer(Signals::NONE, Signals::USER_0)
+                .or_else(|e| match e {
+                    zx::Status::PEER_CLOSED => Ok(()),
+                    e => Err(e),
+                })
                 .context("ServiceFs signal_peer failed")?;
 
             let chan = fasync::Channel::from_channel(chan)
