@@ -1,0 +1,4 @@
+[package]
+name = "cmake"
+version = "0.1.99"
+authors = ["The Fuchsia Authors <rust-fuchsia@fuchsia.com>"]

@@ -28,9 +28,11 @@ euclid = "0.19"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 failure = "0.1.1"
 font-rs = "0.1.3"
+freetype = { version = "0.4", default-features = false }
 futures-preview = { version = "=0.3.0-alpha.13", features = ["io-compat"] }
 getopts = "0.2"
 glob = "0.3.0"
+harfbuzz = { version = "0.3.1", default-features = false }
 heck = "0.3.1"
 hex = "0.3.2"
 http = "0.1"
@@ -107,15 +109,20 @@ proc-macro2 = "0.4.24"
 quote = "0.6.10"
 syn = { version = "0.15.25", features = ["full", "visit-mut"] }
 
+# For crates that we don't want to vendor, create a dummy package in tiny_mirrors/ (see existing
+# examples.
 [patch.crates-io]
+# Keep this sorted alphabetically, please.
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
+cmake = { path = "tiny_mirrors/cmake"}
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
+pkg-config = { path = "tiny_mirrors/pkg-config" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
+winapi = { path = "tiny_mirrors/winapi" }
+winapi-util = { path = "tiny_mirrors/winapi-util" }
 xi-core-lib = { path = "../rust-mirrors/xi-editor/rust/core-lib" }
 xi-rope = { path = "../rust-mirrors/xi-editor/rust/rope" }
 xi-rpc = { path = "../rust-mirrors/xi-editor/rust/rpc" }
 xi-trace = { path = "..//rust-mirrors/xi-editor/rust/trace" }
 xi-trace-dump = { path = "../rust-mirrors/xi-editor/rust/trace-dump" }
 xi-unicode = { path = "../rust-mirrors/xi-editor/rust/unicode" }
-winapi = { path = "tiny_mirrors/winapi" }
-winapi-util = { path = "tiny_mirrors/winapi-util" }

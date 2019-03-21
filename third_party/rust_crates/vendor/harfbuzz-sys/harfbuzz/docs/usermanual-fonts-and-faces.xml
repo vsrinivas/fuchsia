@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+               "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd" [
+  <!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
+  <!ENTITY version SYSTEM "version.xml">
+]>
+<chapter id="fonts-and-faces">
+  <title>Fonts and faces</title>
+  <section id="using-freetype">
+    <title>Using FreeType</title>
+    <para>
+    </para>
+  </section>
+  <section id="using-harfbuzzs-native-opentype-implementation">
+    <title>Using HarfBuzz's native OpenType implementation</title>
+    <para>
+    </para>
+  </section>
+  <section id="using-your-own-font-functions">
+    <title>Using your own font functions</title>
+    <para>
+    </para>
+  </section>
+</chapter>
