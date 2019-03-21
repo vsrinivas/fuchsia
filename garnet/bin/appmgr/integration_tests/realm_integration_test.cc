@@ -301,7 +301,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
       enclosing_environment.get(),
       "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx",
       std::move(request));
-  services.Connect(util.NewRequest());
+  services->Connect(util.NewRequest());
 
   // Write some arbitrary file content into the test util's "/data" dir, and
   // verify that we can read it back.
@@ -322,7 +322,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
       enclosing_environment.get(),
       "fuchsia-pkg://fuchsia.com/persistent_storage_test_util#meta/util.cmx",
       std::move(request));
-  services.Connect(util.NewRequest());
+  services->Connect(util.NewRequest());
 
   // Verify that the file no longer exists.
   EXPECT_TRUE(ReadFileSync(util, kTestFileName).is_null());

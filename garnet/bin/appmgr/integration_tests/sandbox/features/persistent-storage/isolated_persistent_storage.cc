@@ -56,11 +56,11 @@ class IsolatedPersistentStorageTest
 
   // Verify that a file written in one component's /data dir is not accessible
   // by the other component.
-  void VerifyIsolated(const sys::ServiceDirectory& services1,
-                      const sys::ServiceDirectory& services2) {
+  void VerifyIsolated(const std::shared_ptr<sys::ServiceDirectory>& services1,
+                      const std::shared_ptr<sys::ServiceDirectory>& services2) {
     DataFileReaderWriterPtr util1, util2;
-    services1.Connect(util1.NewRequest());
-    services2.Connect(util2.NewRequest());
+    services1->Connect(util1.NewRequest());
+    services2->Connect(util2.NewRequest());
 
     // Can't use ASSERT_TRUE/ASSERT_EQ macros here since this isn't the test
     // body, and ASSERT_* macros just 'return;' to exit the test.
@@ -140,7 +140,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   fuchsia::sys::LaunchInfo launch_info{.url = kTestUtilURL,
                                        .directory_request = std::move(request)};
   env1_->CreateComponent(std::move(launch_info), ctrl.NewRequest());
-  services.Connect(util.NewRequest());
+  services->Connect(util.NewRequest());
 
   EXPECT_EQ(WriteFileSync(util, kTestFileName, test_file_content_), ZX_OK);
   EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);
@@ -151,7 +151,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   launch_info = fuchsia::sys::LaunchInfo{
       .url = kTestUtilURL, .directory_request = std::move(request)};
   env1_->CreateComponent(std::move(launch_info), ctrl.NewRequest());
-  services.Connect(util.NewRequest());
+  services->Connect(util.NewRequest());
 
   // File should still exist.
   EXPECT_EQ(ReadFileSync(util, kTestFileName).get(), test_file_content_);

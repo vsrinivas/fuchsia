@@ -105,7 +105,7 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
               singleton_services_.emplace(singleton_id, std::move(services));
         }
 
-        it->second.Connect(service_name, std::move(client_handle));
+        it->second->Connect(service_name, std::move(client_handle));
       });
   svc_names_.push_back(service_name);
   return svc_.AddEntry(service_name, std::move(child));
@@ -119,7 +119,7 @@ zx_status_t EnvironmentServices::AllowParentService(
       std::make_unique<vfs::Service>(
           [this, service_name](zx::channel channel,
                                async_dispatcher_t* dispatcher) {
-            parent_svc_.Connect(service_name, std::move(channel));
+            parent_svc_->Connect(service_name, std::move(channel));
           }));
 }
 
@@ -200,7 +200,7 @@ std::unique_ptr<EnclosingEnvironment>
 EnclosingEnvironment::CreateNestedEnclosingEnvironment(
     const std::string& label) {
   fuchsia::sys::EnvironmentPtr env;
-  service_provider_.Connect(env.NewRequest());
+  service_provider_->Connect(env.NewRequest());
   return Create(label, env, EnvironmentServices::Create(env));
 }
 

@@ -13,7 +13,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <memory>
 #include <string>
-#include <lib/zx/process.h>
 
 namespace fidl {
 namespace test {
@@ -32,7 +31,7 @@ class EchoClientApp {
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
   std::unique_ptr<sys::ComponentContext> context_;
-  sys::ServiceDirectory echo_provider_;
+  std::shared_ptr<sys::ServiceDirectory> echo_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;
   EchoPtr echo_;
 };

@@ -31,7 +31,7 @@ class VirtioGpuTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.Connect(gpu_.NewRequest());
+    services_->Connect(gpu_.NewRequest());
     status = gpu_->Start(std::move(start_info), nullptr);
     ASSERT_EQ(ZX_OK, status);
 

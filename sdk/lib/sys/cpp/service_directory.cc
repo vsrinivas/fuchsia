@@ -36,24 +36,7 @@ std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateFromNamespace() {
   return std::make_shared<ServiceDirectory>(OpenServiceRoot());
 }
 
-ServiceDirectory ServiceDirectory::CreateWithRequest(zx::channel* out_request) {
-  zx::channel directory;
-  zx_status_t status = zx::channel::create(0, &directory, out_request);
-  if (status != ZX_OK) {
-    return ServiceDirectory();
-  }
-  return ServiceDirectory(std::move(directory));
-}
-
-ServiceDirectory ServiceDirectory::CreateWithRequest(
-    fidl::InterfaceRequest<fuchsia::io::Directory>* out_request) {
-  zx::channel request;
-  ServiceDirectory directory = CreateWithRequest(&request);
-  out_request->set_channel(std::move(request));
-  return directory;
-}
-
-std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
+std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest(
     zx::channel* out_request) {
   zx::channel directory;
   zx_status_t status = zx::channel::create(0, &directory, out_request);
@@ -64,12 +47,22 @@ std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
       ServiceDirectory(std::move(directory)));
 }
 
-std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
+std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest(
     fidl::InterfaceRequest<fuchsia::io::Directory>* out_request) {
   zx::channel request;
-  auto directory = CreateWithRequest2(&request);
+  auto directory = CreateWithRequest(&request);
   out_request->set_channel(std::move(request));
   return directory;
+}
+
+std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
+    zx::channel* out_request) {
+  return CreateWithRequest(out_request);
+}
+
+std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
+    fidl::InterfaceRequest<fuchsia::io::Directory>* out_request) {
+  return CreateWithRequest(out_request);
 }
 
 zx_status_t ServiceDirectory::Connect(const std::string& interface_name,

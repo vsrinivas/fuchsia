@@ -20,7 +20,7 @@ class VirtioRngTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.Connect(rng_.NewRequest());
+    services_->Connect(rng_.NewRequest());
     status = rng_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 

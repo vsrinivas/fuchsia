@@ -19,7 +19,7 @@ class TestWithDevice : public sys::testing::TestWithEnvironment {
   zx_status_t WaitOnInterrupt();
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
-  sys::ServiceDirectory services;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
 
   zx::event event_;

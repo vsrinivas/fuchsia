@@ -53,7 +53,7 @@ class VirtioBlockTest : public TestWithDevice {
     ASSERT_TRUE(fd_);
 
     // Start device execution.
-    services.Connect(block_.NewRequest());
+    services_->Connect(block_.NewRequest());
     uint64_t size;
     status =
         block_->Start(std::move(start_info), kVirtioBlockId,

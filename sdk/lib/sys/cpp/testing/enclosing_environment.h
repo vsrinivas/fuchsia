@@ -136,13 +136,14 @@ class EnvironmentServices {
 
   vfs::PseudoDir svc_;
   fidl::VectorPtr<std::string> svc_names_;
-  sys::ServiceDirectory parent_svc_;
+  std::shared_ptr<sys::ServiceDirectory> parent_svc_;
   // Pointer to containing environment. Not owned.
   EnclosingEnvironment* enclosing_env_ = nullptr;
   async_dispatcher_t* dispatcher_;
 
   // Keep track of all singleton services, indexed by url.
-  std::unordered_map<std::string, sys::ServiceDirectory> singleton_services_;
+  std::unordered_map<std::string, std::shared_ptr<sys::ServiceDirectory>>
+      singleton_services_;
 };
 
 // EnclosingEnvironment wraps a new isolated environment for test |parent_env|
@@ -218,7 +219,7 @@ class EnclosingEnvironment {
 
   // Connects to service provided by this environment.
   void ConnectToService(fidl::StringPtr service_name, zx::channel channel) {
-    service_provider_.Connect(service_name, std::move(channel));
+    service_provider_->Connect(service_name, std::move(channel));
   }
 
   // Connects to service provided by this environment.
@@ -253,7 +254,7 @@ class EnclosingEnvironment {
   bool running_ = false;
   const std::string label_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  sys::ServiceDirectory service_provider_;
+  std::shared_ptr<sys::ServiceDirectory> service_provider_;
   LauncherImpl launcher_;
   std::unique_ptr<EnvironmentServices> services_;
   fit::function<void(bool)> running_changed_callback_;

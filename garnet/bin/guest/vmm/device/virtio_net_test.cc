@@ -89,7 +89,7 @@ class VirtioNetTest : public TestWithDevice,
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.Connect(net_.NewRequest());
+    services_->Connect(net_.NewRequest());
     status = net_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 

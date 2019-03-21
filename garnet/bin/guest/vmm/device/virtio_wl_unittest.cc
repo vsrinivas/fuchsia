@@ -68,7 +68,7 @@ class VirtioWlTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services.Connect(wl_.NewRequest());
+    services_->Connect(wl_.NewRequest());
     wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind());
     ASSERT_EQ(ZX_OK, status);
 

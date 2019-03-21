@@ -34,7 +34,7 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   auto directory = sys::ServiceDirectory::CreateWithRequest(&svc_server);
 
   fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
-  EXPECT_EQ(ZX_OK, directory.Connect(echo.NewRequest()));
+  EXPECT_EQ(ZX_OK, directory->Connect(echo.NewRequest()));
 
   fidl::MessageBuffer buffer;
   auto message = buffer.CreateEmptyMessage();

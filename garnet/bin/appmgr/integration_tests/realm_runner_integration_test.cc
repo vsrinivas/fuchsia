@@ -327,7 +327,7 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
 
   // try to connect to fake service
   fidl::examples::echo::EchoPtr echo;
-  services.Connect(echo.NewRequest(), dummy_service_name);
+  services->Connect(echo.NewRequest(), dummy_service_name);
   ASSERT_TRUE(RunLoopUntil([&] { return connect_called; }));
 }
 

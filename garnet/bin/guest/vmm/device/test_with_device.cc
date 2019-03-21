@@ -33,7 +33,7 @@ zx_status_t TestWithDevice::LaunchDevice(
   }
 
   zx::channel request;
-  services = sys::ServiceDirectory::CreateWithRequest(&request);
+  services_ = sys::ServiceDirectory::CreateWithRequest(&request);
 
   // Create device process.
   fuchsia::sys::LaunchInfo launch_info{.url = url,
