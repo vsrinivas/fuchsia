@@ -35,8 +35,8 @@ executable("get_message_client_bin") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp/",
     "fidl/fuchsia.testing.chrealm",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.sys",
     "//zircon/public/lib/async-loop-cpp",

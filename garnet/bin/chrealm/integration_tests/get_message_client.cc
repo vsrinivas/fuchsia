@@ -7,12 +7,10 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <lib/zx/channel.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/svc/cpp/services.h"
 
 int main(int argc, const char** argv) {
   if (argc != 1) {
@@ -21,9 +19,9 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
   fuchsia::testing::chrealm::TestServicePtr test_svc;
-  startup_context->ConnectToEnvironmentService(test_svc.NewRequest());
+  startup_context->svc()->Connect(test_svc.NewRequest());
 
   test_svc->GetMessage([&loop](fidl::StringPtr msg) {
     printf("%s", msg->c_str());
