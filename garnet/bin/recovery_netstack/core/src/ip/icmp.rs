@@ -434,7 +434,7 @@ mod tests {
     use std::num::NonZeroU16;
 
     use super::*;
-    use crate::device::DeviceId;
+    use crate::device::{DeviceId, FrameDestination};
     use crate::ip::{receive_ip_packet, IpExt, Ipv4, Ipv4Addr};
     use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG};
     use crate::wire::icmp::{
@@ -482,7 +482,12 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG).build();
         // currently only used by test_ttl_exceeded
         ctx.state_mut().ip.v4.forward = true;
-        receive_ip_packet::<_, _, Ipv4>(&mut ctx, DeviceId::new_ethernet(1), buffer);
+        receive_ip_packet::<_, _, Ipv4>(
+            &mut ctx,
+            DeviceId::new_ethernet(1),
+            FrameDestination::Unicast,
+            buffer,
+        );
 
         for counter in assert_counters {
             assert!(*ctx.state().test_counters.get(counter) > 0, "counter at zero: {}", counter);

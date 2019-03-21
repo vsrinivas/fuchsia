@@ -65,6 +65,24 @@ impl Display for DeviceProtocol {
     }
 }
 
+// TODO(joshlf): Does the IP layer ever need to distinguish between broadcast
+// and multicast frames?
+
+/// The type of address used as the source address in a device-layer frame:
+/// unicast or broadcast.
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub(crate) enum FrameDestination {
+    Unicast,
+    Broadcast,
+}
+
+impl FrameDestination {
+    /// Is this `FrameDestination::Broadcast`?
+    pub(crate) fn is_broadcast(&self) -> bool {
+        *self == FrameDestination::Broadcast
+    }
+}
+
 /// The state associated with the device layer.
 pub(crate) struct DeviceLayerState {
     // Invariant: even though each protocol has its own hash map, IDs (used as

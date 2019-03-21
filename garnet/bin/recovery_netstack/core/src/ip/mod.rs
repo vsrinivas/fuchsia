@@ -23,7 +23,7 @@ use packet::{
 };
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::device::DeviceId;
+use crate::device::{DeviceId, FrameDestination};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::{Context, EventDispatcher};
 
@@ -160,9 +160,13 @@ macro_rules! drop_packet_and_undo_parse {
 }
 
 /// Receive an IP packet from a device.
+///
+/// `frame_dst` specifies whether this packet was received in a broadcast or
+/// unicast link-layer frame.
 pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
+    frame_dst: FrameDestination,
     mut buffer: B,
 ) {
     trace!("receive_ip_packet({})", device);

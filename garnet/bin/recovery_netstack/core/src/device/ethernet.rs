@@ -12,7 +12,7 @@ use specialize_ip_macro::specialize_ip_address;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
-use crate::device::DeviceId;
+use crate::device::{DeviceId, FrameDestination};
 use crate::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
@@ -263,6 +263,14 @@ pub(crate) fn receive_frame<D: EventDispatcher>(
 
     let (src, dst) = (frame.src_mac(), frame.dst_mac());
     let device = DeviceId::new_ethernet(device_id);
+    let frame_dst = if dst == get_device_state(ctx, device_id).mac {
+        FrameDestination::Unicast
+    } else if dst.is_broadcast() {
+        FrameDestination::Broadcast
+    } else {
+        return;
+    };
+
     match frame.ethertype() {
         Some(EtherType::Arp) => {
             let types = if let Ok(types) = peek_arp_types(buffer.as_ref()) {
@@ -280,8 +288,12 @@ pub(crate) fn receive_frame<D: EventDispatcher>(
                 types => debug!("got ARP packet for unsupported types: {:?}", types),
             }
         }
-        Some(EtherType::Ipv4) => crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, buffer),
-        Some(EtherType::Ipv6) => crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, buffer),
+        Some(EtherType::Ipv4) => {
+            crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, frame_dst, buffer)
+        }
+        Some(EtherType::Ipv6) => {
+            crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, frame_dst, buffer)
+        }
         Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
 }
