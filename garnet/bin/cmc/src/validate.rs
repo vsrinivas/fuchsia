@@ -46,7 +46,10 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
 ///
 /// Internal single manifest file validation function, used to implement the two public validate
 /// functions.
-fn validate_file<P: AsRef<Path>>(file: &Path, extra_schemas: &[(P, Option<String>)]) -> Result<(), Error> {
+fn validate_file<P: AsRef<Path>>(
+    file: &Path,
+    extra_schemas: &[(P, Option<String>)],
+) -> Result<(), Error> {
     const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
                                  (.cm, .cml, or .cmx)";
     let mut buffer = String::new();
@@ -818,12 +821,48 @@ mod tests {
             }),
             result = Ok(()),
         },
-        test_cm_path_invalid => {
+        test_cm_path_invalid_empty => {
             input = json!({
                 "uses": [
                     {
                         "type": "directory",
-                        "source_path": "foo/",
+                        "source_path": "",
+                        "target_path": "/bar"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MinLength condition is not met at /uses/0/source_path, Pattern condition is not met at /uses/0/source_path")),
+        },
+        test_cm_path_invalid_root => {
+            input = json!({
+                "uses": [
+                    {
+                        "type": "directory",
+                        "source_path": "/",
+                        "target_path": "/bar"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/source_path")),
+        },
+        test_cm_path_invalid_relative => {
+            input = json!({
+                "uses": [
+                    {
+                        "type": "directory",
+                        "source_path": "foo/bar",
+                        "target_path": "/bar"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/source_path")),
+        },
+        test_cm_path_invalid_trailing => {
+            input = json!({
+                "uses": [
+                    {
+                        "type": "directory",
+                        "source_path": "/foo/bar/",
                         "target_path": "/bar"
                     }
                 ]
@@ -835,7 +874,7 @@ mod tests {
                 "uses": [
                     {
                         "type": "directory",
-                        "source_path": "/".repeat(1025),
+                        "source_path": format!("/{}", "a".repeat(1024)),
                         "target_path": "/bar"
                     }
                 ]
@@ -1303,10 +1342,34 @@ mod tests {
             }),
             result = Ok(()),
         },
-        test_cml_path_invalid => {
+        test_cml_path_invalid_empty => {
             input = json!({
                 "use": [
-                  { "service": "foo/" },
+                  { "service": "" },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MinLength condition is not met at /use/0/service, Pattern condition is not met at /use/0/service")),
+        },
+        test_cml_path_invalid_root => {
+            input = json!({
+                "use": [
+                  { "service": "/" },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+        },
+        test_cml_path_invalid_relative => {
+            input = json!({
+                "use": [
+                  { "service": "foo/bar" },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
+        },
+        test_cml_path_invalid_trailing => {
+            input = json!({
+                "use": [
+                  { "service": "/foo/bar/" },
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
@@ -1314,7 +1377,7 @@ mod tests {
         test_cml_path_too_long => {
             input = json!({
                 "use": [
-                  { "service": "/".repeat(1025) },
+                  { "service": format!("/{}", "a".repeat(1024)) },
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/service")),

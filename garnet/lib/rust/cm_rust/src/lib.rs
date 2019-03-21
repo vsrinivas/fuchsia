@@ -532,6 +532,10 @@ mod tests {
             input = "foo/bar",
             result = Err(Error::InvalidCapabilityPath{raw: "foo/bar".to_string()}),
         },
+        capability_path_invalid_trailing => {
+            input = "/foo/bar/",
+            result = Err(Error::InvalidCapabilityPath{raw: "/foo/bar/".to_string()}),
+        },
     }
 
     test_fidl_into! {

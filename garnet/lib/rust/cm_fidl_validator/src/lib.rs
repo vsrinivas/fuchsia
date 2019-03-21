@@ -14,13 +14,10 @@ use {
 };
 
 lazy_static! {
-    static ref PATH_RE: Regex = Regex::new(r"^/.+$").unwrap();
-    static ref NAME_RE: Regex = Regex::new(r"^[0-9a-z_\-\.]+$").unwrap();
-    static ref URI_RE: Regex = Regex::new(r"^[0-9a-z\+\-\.]+://.+$").unwrap();
+    static ref PATH: Identifier = Identifier::new(r"^(/[^/]+)+$", 1024);
+    static ref NAME: Identifier = Identifier::new(r"^[0-9a-z_\-\.]+$", 100);
+    static ref URI: Identifier = Identifier::new(r"^[0-9a-z\+\-\.]+://.+$", 4096);
 }
-const PATH_MAX_LEN: usize = 1024;
-const NAME_MAX_LEN: usize = 100;
-const URI_MAX_LEN: usize = 4096;
 
 /// Enum type that can represent any error encountered during validation.
 #[derive(Debug)]
@@ -152,20 +149,8 @@ impl<'a> ValidationContext<'a> {
                 if use_.type_.is_none() {
                     self.errors.push(Error::missing_field("UseDecl", "type"));
                 }
-                self.check_identifier(
-                    &PATH_RE,
-                    PATH_MAX_LEN,
-                    use_.source_path.as_ref(),
-                    "UseDecl",
-                    "source_path",
-                );
-                self.check_identifier(
-                    &PATH_RE,
-                    PATH_MAX_LEN,
-                    use_.target_path.as_ref(),
-                    "UseDecl",
-                    "target_path",
-                );
+                PATH.check(use_.source_path.as_ref(), "UseDecl", "source_path", &mut self.errors);
+                PATH.check(use_.target_path.as_ref(), "UseDecl", "target_path", &mut self.errors);
             }
         }
 
@@ -194,13 +179,13 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_child(&mut self, child: &'a ChildDecl) {
         let name = child.name.as_ref();
-        if self.check_identifier(&NAME_RE, NAME_MAX_LEN, name, "ChildDecl", "name") {
+        if NAME.check(name, "ChildDecl", "name", &mut self.errors) {
             let name: &str = name.unwrap();
             if !self.all_children.insert(name) {
                 self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
             }
         }
-        self.check_identifier(&URI_RE, URI_MAX_LEN, child.uri.as_ref(), "ChildDecl", "uri");
+        URI.check(child.uri.as_ref(), "ChildDecl", "uri", &mut self.errors);
         if child.startup.is_none() {
             self.errors.push(Error::missing_field("ChildDecl", "startup"));
         }
@@ -214,13 +199,7 @@ impl<'a> ValidationContext<'a> {
         if expose.type_.is_none() {
             self.errors.push(Error::missing_field("ExposeDecl", "type"));
         }
-        self.check_identifier(
-            &PATH_RE,
-            PATH_MAX_LEN,
-            expose.source_path.as_ref(),
-            "ExposeDecl",
-            "source_path",
-        );
+        PATH.check(expose.source_path.as_ref(), "ExposeDecl", "source_path", &mut self.errors);
         if expose.source.is_none() {
             self.errors.push(Error::missing_field("ExposeDecl", "source"));
         } else if let Ok((relation, child_name)) =
@@ -241,7 +220,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
         let target_path = expose.target_path.as_ref();
-        if self.check_identifier(&PATH_RE, PATH_MAX_LEN, target_path, "ExposeDecl", "target_path") {
+        if PATH.check(target_path, "ExposeDecl", "target_path", &mut self.errors) {
             let target_path: &str = target_path.unwrap();
             if !prev_target_paths.insert(target_path) {
                 self.errors.push(Error::duplicate_field("ExposeDecl", "target_path", target_path));
@@ -253,13 +232,7 @@ impl<'a> ValidationContext<'a> {
         if offer.type_.is_none() {
             self.errors.push(Error::missing_field("OfferDecl", "type"));
         }
-        self.check_identifier(
-            &PATH_RE,
-            PATH_MAX_LEN,
-            offer.source_path.as_ref(),
-            "OfferDecl",
-            "source_path",
-        );
+        PATH.check(offer.source_path.as_ref(), "OfferDecl", "source_path", &mut self.errors);
         if offer.source.is_none() {
             self.errors.push(Error::missing_field("OfferDecl", "source"));
         } else if let Ok((_, child_name)) = self.extract_relative_id(offer.source.as_ref().unwrap())
@@ -289,19 +262,17 @@ impl<'a> ValidationContext<'a> {
         }
         for target in targets.iter() {
             let mut valid = true;
-            valid &= self.check_identifier(
-                &PATH_RE,
-                PATH_MAX_LEN,
+            valid &= PATH.check(
                 target.target_path.as_ref(),
                 "OfferTarget",
                 "target_path",
+                &mut self.errors,
             );
-            valid &= self.check_identifier(
-                &NAME_RE,
-                NAME_MAX_LEN,
+            valid &= NAME.check(
                 target.child_name.as_ref(),
                 "OfferTarget",
                 "child_name",
+                &mut self.errors,
             );
             if valid {
                 let target_path: &str = target.target_path.as_ref().unwrap();
@@ -337,12 +308,11 @@ impl<'a> ValidationContext<'a> {
                     self.errors.push(Error::relative_id_missing_child());
                     return Err(());
                 } else {
-                    if !self.check_identifier(
-                        &NAME_RE,
-                        NAME_MAX_LEN,
+                    if !NAME.check(
                         relative_id.child_name.as_ref(),
                         "RelativeId",
                         "child_name",
+                        &mut self.errors,
                     ) {
                         return Err(());
                     }
@@ -359,26 +329,36 @@ impl<'a> ValidationContext<'a> {
             }
         }
     }
+}
 
-    fn check_identifier(
-        &mut self,
-        re: &Regex,
-        max_len: usize,
+struct Identifier {
+    re: Regex,
+    max_len: usize,
+}
+
+impl Identifier {
+    fn new(regex: &str, max_len: usize) -> Identifier {
+        Identifier { re: Regex::new(regex).unwrap(), max_len }
+    }
+
+    fn check(
+        &self,
         prop: Option<&String>,
         decl_type: &str,
         keyword: &str,
+        errors: &mut Vec<Error>,
     ) -> bool {
         let mut valid = true;
         if prop.is_none() {
-            self.errors.push(Error::missing_field(decl_type, keyword));
+            errors.push(Error::missing_field(decl_type, keyword));
             valid = false;
         } else {
-            if !re.is_match(prop.unwrap()) {
-                self.errors.push(Error::invalid_field(decl_type, keyword));
+            if !self.re.is_match(prop.unwrap()) {
+                errors.push(Error::invalid_field(decl_type, keyword));
                 valid = false;
             }
-            if prop.unwrap().len() > max_len {
-                self.errors.push(Error::field_too_long(decl_type, keyword));
+            if prop.unwrap().len() > self.max_len {
+                errors.push(Error::field_too_long(decl_type, keyword));
                 valid = false;
             }
         }
@@ -398,6 +378,16 @@ mod tests {
 
     fn validate_test(input: ComponentDecl, expected_res: Result<(), ErrorList>) {
         let res = validate(&input);
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+    }
+
+    fn identifier_test(identifier: &Identifier, input: &str, expected_res: Result<(), ErrorList>) {
+        let mut errors = vec![];
+        let res: Result<(), ErrorList> =
+            match identifier.check(Some(&input.to_string()), "FooDecl", "foo", &mut errors) {
+                true => Ok(()),
+                false => Err(ErrorList::new(errors)),
+            };
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     }
 
@@ -460,6 +450,93 @@ mod tests {
         }
     }
 
+    macro_rules! test_identifier {
+        (
+            $(
+                $test_name:ident => {
+                    identifier = $identifier:expr,
+                    input = $input:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    identifier_test($identifier, $input, $result);
+                }
+            )+
+        }
+    }
+
+    test_identifier! {
+        // path
+        test_identifier_path_valid => {
+            identifier = &PATH,
+            input = "/foo/bar",
+            result = Ok(()),
+        },
+        test_identifier_path_invalid_empty => {
+            identifier = &PATH,
+            input = "",
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+        },
+        test_identifier_path_invalid_root => {
+            identifier = &PATH,
+            input = "/",
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+        },
+        test_identifier_path_invalid_relative => {
+            identifier = &PATH,
+            input = "foo/bar",
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+        },
+        test_identifier_path_invalid_trailing => {
+            identifier = &PATH,
+            input = "/foo/bar/",
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+        },
+        test_identifier_path_too_long => {
+            identifier = &PATH,
+            input = &format!("/{}", "a".repeat(1024)),
+            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+        },
+
+        // name
+        test_identifier_name_valid => {
+            identifier = &NAME,
+            input = "abcdefghijklmnopqrstuvwxyz0123456789_-.",
+            result = Ok(()),
+        },
+        test_identifier_name_invalid => {
+            identifier = &NAME,
+            input = "^bad",
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+        },
+        test_identifier_name_too_long => {
+            identifier = &NAME,
+            input = &format!("{}", "a".repeat(101)),
+            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+        },
+
+        // uri
+        test_identifier_uri_valid => {
+            identifier = &URI,
+            input = "my+awesome-scheme.2://abc123!@#$%.com",
+            result = Ok(()),
+        },
+        test_identifier_uri_invalid => {
+            identifier = &URI,
+            input = "fuchsia-pkg://",
+            result = Err(ErrorList::new(vec![Error::invalid_field("FooDecl", "foo")])),
+        },
+        test_identifier_uri_too_long => {
+            identifier = &URI,
+            input = &format!("fuchsia-pkg://{}", "a".repeat(4083)),
+            result = Err(ErrorList::new(vec![Error::field_too_long("FooDecl", "foo")])),
+        },
+    }
+
     test_validate! {
         // uses
         test_validate_uses_empty => {
@@ -498,8 +575,8 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![UseDecl{
                     type_: Some(CapabilityType::Service),
-                    source_path: Some("/".repeat(1025)),
-                    target_path: Some("/".repeat(1025)),
+                    source_path: Some(format!("/{}", "a".repeat(1024))),
+                    target_path: Some(format!("/{}", "b".repeat(1024))),
                 }]);
                 decl
             },
@@ -553,12 +630,12 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.exposes = Some(vec![ExposeDecl{
                     type_: Some(CapabilityType::Service),
-                    source_path: Some("/".repeat(1025)),
+                    source_path: Some(format!("/{}", "a".repeat(1024))),
                     source: Some(RelativeId{
                         relation: Some(Relation::Child),
                         child_name: Some("b".repeat(101)),
                     }),
-                    target_path: Some("/".repeat(1025)),
+                    target_path: Some(format!("/{}", "b".repeat(1024))),
                 }]);
                 decl
             },
@@ -662,14 +739,14 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![OfferDecl{
                     type_: Some(CapabilityType::Service),
-                    source_path: Some("/".repeat(1025)),
+                    source_path: Some(format!("/{}", "a".repeat(1024))),
                     source: Some(RelativeId{
                         relation: Some(Relation::Child),
                         child_name: Some("a".repeat(101)),
                     }),
                     targets: Some(vec![
                         OfferTarget{
-                            target_path: Some("/".repeat(1025)),
+                            target_path: Some(format!("/{}", "b".repeat(1024))),
                             child_name: Some("b".repeat(101)),
                         },
                     ]),
@@ -896,50 +973,6 @@ mod tests {
                 Error::field_too_long("ChildDecl", "name"),
                 Error::field_too_long("ChildDecl", "uri"),
             ])),
-        },
-
-        // valid patterns
-        test_validate_patterns => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.uses = Some(vec![
-                    UseDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/foo/?!@#$%/Bar".to_string()),
-                        target_path: Some("/bar".to_string()),
-                    },
-                ]);
-                decl.children = Some(vec![
-                     ChildDecl{
-                        name: Some("abcdefghijklmnopqrstuvwxyz0123456789_-.".to_string()),
-                        uri: Some("my+awesome-scheme.2://abc123!@#$%.com".to_string()),
-                        startup: Some(StartupMode::Eager),
-                    },
-                ]);
-                decl
-            },
-            result = Ok(()),
-        },
-        test_validate_pattern_lengths => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.uses = Some(vec![
-                    UseDecl{
-                        type_: Some(CapabilityType::Service),
-                        source_path: Some("/".repeat(1024)),
-                        target_path: Some("/".repeat(1024)),
-                    },
-                ]);
-                decl.children = Some(vec![
-                     ChildDecl{
-                        name: Some("a".repeat(100)),
-                        uri: Some(format!("fuchsia-pkg://{}", "b".repeat(4082))),
-                        startup: Some(StartupMode::Lazy),
-                    },
-                ]);
-                decl
-            },
-            result = Ok(()),
         },
     }
 }

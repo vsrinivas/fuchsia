@@ -9,7 +9,7 @@
     },
     "path-clause": {
       "type": "string",
-      "pattern": "^/.+$",
+      "pattern": "^(/[^/]+)+$",
       "minLength": 1,
       "maxLength": 1024
     },
