@@ -10,7 +10,6 @@ source_set("unit") {
     "component_context_for_test.h",
     "service_directory_for_test.cc",
     "service_directory_for_test.h",
-    "startup_context_for_test.h",
     "test_with_context.cc",
     "test_with_context.h",
   ]

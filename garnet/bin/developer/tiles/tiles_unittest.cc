@@ -13,7 +13,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/startup_context_for_test.h>
+#include <lib/sys/cpp/testing/component_context_for_test.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace {
@@ -36,7 +36,7 @@ class FakeViewManager
 
 class TilesTest : public gtest::TestLoopFixture {
  public:
-  TilesTest() : context_(sys::testing::StartupContextForTest::Create()) {}
+  TilesTest() : context_(sys::testing::ComponentContextForTest::Create()) {}
 
   void SetUp() final {
     auto [view_token, view_holder_token_] = scenic::NewViewTokenPair();
@@ -56,7 +56,7 @@ class TilesTest : public gtest::TestLoopFixture {
  private:
   FakeViewManager view_manager_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<sys::testing::StartupContextForTest> context_;
+  std::unique_ptr<sys::testing::ComponentContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Controller* tiles_;
 };
