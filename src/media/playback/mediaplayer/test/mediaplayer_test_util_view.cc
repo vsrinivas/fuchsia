@@ -13,7 +13,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
-#include "lib/url/gurl.h"
+#include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 

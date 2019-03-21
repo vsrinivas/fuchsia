@@ -11,7 +11,7 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/type_converters.h"
-#include "lib/url/gurl.h"
+#include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
