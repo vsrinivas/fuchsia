@@ -8,6 +8,12 @@
 #[macro_use]
 mod test_utils;
 
+#[macro_use]
+mod common;
+mod connection;
+mod traversal_position;
+mod watchers;
+
 use libc::S_IRUSR;
 
 pub mod controllable;
@@ -17,7 +23,3 @@ pub mod simple;
 
 /// POSIX emulation layer access attributes set by default for directories created with empty().
 pub const DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
-
-mod connection;
-mod traversal_position;
-mod watchers;

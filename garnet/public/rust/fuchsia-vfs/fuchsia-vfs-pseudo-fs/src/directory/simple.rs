@@ -7,6 +7,7 @@
 use {
     crate::common::send_on_open_with_error,
     crate::directory::{
+        common::encode_dirent,
         connection::DirectoryConnection,
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
@@ -14,7 +15,6 @@ use {
         watchers::{Watchers, WatchersAddError, WatchersSendError},
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
     },
-    byteorder::{LittleEndian, WriteBytesExt},
     fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -38,8 +38,7 @@ use {
         Future, Poll,
     },
     std::{
-        collections::BTreeMap, io::Write, iter, iter::ExactSizeIterator, marker::Unpin,
-        mem::size_of, ops::Bound, pin::Pin,
+        collections::BTreeMap, iter, iter::ExactSizeIterator, marker::Unpin, ops::Bound, pin::Pin,
     },
     void::Void,
 };
@@ -321,42 +320,6 @@ impl<'entries> Simple<'entries> {
         Ok(())
     }
 
-    fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name: &str) -> bool {
-        let header_size = size_of::<u64>() + size_of::<u8>() + size_of::<u8>();
-
-        assert_eq_size!(u64, usize);
-
-        if buf.len() + header_size + name.len() > max_bytes as usize {
-            return false;
-        }
-
-        assert!(
-            name.len() < MAX_FILENAME as usize,
-            "Entry names are expected to be shorter than MAX_FILENAME ({}) bytes.\n\
-             Got entry: '{}'\n\
-             Length: {} bytes",
-            MAX_FILENAME,
-            name,
-            name.len()
-        );
-
-        assert!(
-            MAX_FILENAME <= u8::max_value() as u64,
-            "Expecting to be able to store MAX_FILENAME ({}) in one byte.",
-            MAX_FILENAME
-        );
-
-        buf.write_u64::<LittleEndian>(entry.inode())
-            .expect("out should be an in memory buffer that grows as needed");
-        buf.write_u8(name.len() as u8)
-            .expect("out should be an in memory buffer that grows as needed");
-        buf.write_u8(entry.type_())
-            .expect("out should be an in memory buffer that grows as needed");
-        buf.write(name.as_ref()).expect("out should be an in memory buffer that grows as needed");
-
-        true
-    }
-
     fn handle_read_dirents<R>(
         &mut self,
         connection: &mut SimpleDirectoryConnection,
@@ -371,7 +334,7 @@ impl<'entries> Simple<'entries> {
 
         let (entries_iter, mut last_returned) = match &connection.seek {
             AlphabeticalTraversal::Start => {
-                if !Simple::encode_dirent(
+                if !encode_dirent(
                     &mut buf,
                     max_bytes,
                     &EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
@@ -413,7 +376,7 @@ impl<'entries> Simple<'entries> {
         };
 
         for (name, entry) in entries_iter {
-            if !Simple::encode_dirent(&mut buf, max_bytes, &entry.entry_info(), name) {
+            if !encode_dirent(&mut buf, max_bytes, &entry.entry_info(), name) {
                 connection.seek = last_returned;
                 return responder(
                     if fit_one { Status::OK } else { Status::BUFFER_TOO_SMALL },
