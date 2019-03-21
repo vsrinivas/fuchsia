@@ -39,13 +39,15 @@ void Server::SetCurrentThread(Thread* thread) {
 }
 
 void Server::QuitMessageLoop(bool status) {
+  FXL_VLOG(2) << "QuitMessageLoop: status: " << status;
   run_status_ = status;
   message_loop_.Quit();
 }
 
 void Server::PostQuitMessageLoop(bool status) {
-  run_status_ = status;
-  async::PostTask(message_loop_.dispatcher(), [this] { message_loop_.Quit(); });
+  async::PostTask(message_loop_.dispatcher(), [this, status] {
+      QuitMessageLoop(status);
+  });
 }
 
 void Server::WaitAsync(Thread* thread) {

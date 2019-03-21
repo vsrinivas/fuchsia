@@ -175,7 +175,7 @@ void TestServer::OnProcessTermination(Process* process) {
          process->return_code());
 
   // Process is gone, exit main loop.
-  QuitMessageLoop(true);
+  PostQuitMessageLoop(true);
 }
 
 void TestServer::OnArchitecturalException(
@@ -184,7 +184,7 @@ void TestServer::OnArchitecturalException(
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  QuitMessageLoop(true);
+  PostQuitMessageLoop(true);
 }
 
 void TestServer::OnSyntheticException(
@@ -193,7 +193,7 @@ void TestServer::OnSyntheticException(
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  QuitMessageLoop(true);
+  PostQuitMessageLoop(true);
 }
 
 }  // namespace inferior_control
