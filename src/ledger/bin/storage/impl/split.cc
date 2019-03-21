@@ -64,7 +64,7 @@ class SplitContext {
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
       fit::function<void(IterationStatus, ObjectIdentifier,
-                         const ObjectReferencesAndPriority& references,
+                         ObjectReferencesAndPriority references,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback,
       ObjectType object_type)
@@ -148,9 +148,9 @@ class SplitContext {
                                   ObjectReferencesAndPriority references,
                                   std::unique_ptr<DataSource::DataChunk> data) {
     if (latest_piece_.ready()) {
-      callback_(IterationStatus::IN_PROGRESS,
-                std::move(latest_piece_.identifier), latest_piece_.references,
-                std::move(latest_piece_.data));
+      callback_(
+          IterationStatus::IN_PROGRESS, std::move(latest_piece_.identifier),
+          std::move(latest_piece_.references), std::move(latest_piece_.data));
     }
     auto data_view = data->Get();
     // object_type for inner (IN_PROGRESS) pieces is always BLOB, regardless of
@@ -181,7 +181,8 @@ class SplitContext {
     latest_piece_.identifier =
         make_object_identifier_(std::move(object_digest));
     callback_(IterationStatus::DONE, std::move(latest_piece_.identifier),
-              latest_piece_.references, std::move(latest_piece_.data));
+              std::move(latest_piece_.references),
+              std::move(latest_piece_.data));
   }
 
   std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(
@@ -337,7 +338,7 @@ class SplitContext {
 
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
   fit::function<void(IterationStatus, ObjectIdentifier,
-                     const ObjectReferencesAndPriority& references,
+                     ObjectReferencesAndPriority references,
                      std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   // The object encoded by DataSource.
@@ -419,7 +420,7 @@ void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
     fit::function<void(IterationStatus, ObjectIdentifier,
-                       const ObjectReferencesAndPriority&,
+                       ObjectReferencesAndPriority,
                        std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(make_object_identifier), std::move(callback),

@@ -100,7 +100,7 @@ void DoSplit(DataSource* source, ObjectType object_type,
       },
       [result = std::move(result), callback = std::move(callback)](
           IterationStatus status, ObjectIdentifier identifier,
-          const ObjectReferencesAndPriority& references,
+          ObjectReferencesAndPriority references,
           std::unique_ptr<DataSource::DataChunk> data) mutable {
         EXPECT_TRUE(result);
         const auto& digest = identifier.object_digest();

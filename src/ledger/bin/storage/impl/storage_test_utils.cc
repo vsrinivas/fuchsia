@@ -53,7 +53,7 @@ ObjectIdentifier GetObjectIdentifier(std::string value,
             std::move(object_digest));
       },
       [&result](IterationStatus status, ObjectIdentifier object_identifier,
-                const ObjectReferencesAndPriority& references,
+                ObjectReferencesAndPriority references,
                 std::unique_ptr<DataSource::DataChunk> chunk) {
         if (status == IterationStatus::DONE) {
           result = object_identifier.object_digest();
@@ -121,7 +121,7 @@ ObjectIdentifier MakeSplitMap(
       },
       [&result, callback = std::move(callback)](
           IterationStatus status, ObjectIdentifier object_identifier,
-          const ObjectReferencesAndPriority& references,
+          ObjectReferencesAndPriority references,
           std::unique_ptr<DataSource::DataChunk> chunk) {
         callback(object_identifier, chunk->Get().ToString());
         if (status == IterationStatus::DONE) {

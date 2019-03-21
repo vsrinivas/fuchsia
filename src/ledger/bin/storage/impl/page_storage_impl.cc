@@ -413,7 +413,7 @@ void PageStorageImpl::AddObjectFromLocal(
       [this, waiter, managed_data_source = std::move(managed_data_source),
        callback = std::move(traced_callback)](
           IterationStatus status, ObjectIdentifier identifier,
-          const ObjectReferencesAndPriority& references,
+          ObjectReferencesAndPriority references,
           std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, ObjectIdentifier());
