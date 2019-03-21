@@ -66,14 +66,16 @@ if [[ -z "$BUILDDIR" ]]; then
     BUILDDIR="build-$VARIANT$BUILDDIR_SUFFIX"
 fi
 
-if [[ -r "$BUILDDIR/args.gn" && -r "$BUILDDIR/build.ninja" && $# -eq 0 ]]; then
-    echo >&2 "Reusing existing $BUILDDIR/args.gn"
-    echo >&2 "If Ninja fails confusingly, try: rm -rf $BUILDDIR"
+# Generate args.gn, but only touch it if the contents have changed to avoid
+# unnecessarily regenerating on no-op builds.
+mkdir -p $BUILDDIR
+echo "variants = [ \"$VARIANT\" ] $GN_ARGS $*" | "$DIR/gn" format --stdin > "$BUILDDIR/args.gn.tmp"
+
+if cmp -s "$BUILDDIR/args.gn" "$BUILDDIR/args.gn.tmp"; then
+  rm -f "$BUILDDIR/args.gn.tmp"
 else
-    "$DIR/gn" gen "${GN_SWITCHES[@]}" "$BUILDDIR" --args="
-variants = [ \"$VARIANT\" ]
-$GN_ARGS
-$*"
+  mv -f "$BUILDDIR/args.gn.tmp" "$BUILDDIR/args.gn"
+  "$DIR/gn" gen "${GN_SWITCHES[@]}" "$BUILDDIR"
 fi
 
 exec "$DIR/ninja" -C "$BUILDDIR" "${NINJA_ARGS[@]}"
