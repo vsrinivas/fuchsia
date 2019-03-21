@@ -13,6 +13,21 @@ class ExprValue;
 class Type;
 class ExprValueSource;
 
+enum class CastType {
+  kImplicit,  // Things like double d = (float)f;
+  kC,         // C-style cast: (int)foo;
+  kReinterpret,
+  kStatic
+  // We don't bother implementing const_cast and dynamic_cast yet because
+  // they're less useful in a debugger.
+};
+
+const char* CastTypeToString(CastType);
+
+// TODO(brettw) replace the other cast calls with calls to this one:
+Err CastExprValue(CastType cast_type, const ExprValue& source,
+                  const fxl::RefPtr<Type>& dest_type, ExprValue* result);
+
 // Attempts to convert the "source" value to the given type. This attempts
 // to be as permissive as possible. In a debugger context, people want to be
 // able to make arbitrary binary assignments without being told to do an
@@ -26,6 +41,13 @@ class ExprValueSource;
 //
 // This does not implement static-cast-like conversions of derived classes
 // where the cast involves adjusting the value of the pointer.
+//
+// The dest_source will be set as the "source" of the result ExprValue. When
+// generating temporaries, this should be a default-constructed
+// ExprValueSource, but this is useful when doing implicit casts for assignment
+// where the destination location is given.
+//
+// TODO(brettw) this should be renamed "ImplicitCast".
 Err CoerceValueTo(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                   const ExprValueSource& dest_source, ExprValue* result);
 

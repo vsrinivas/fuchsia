@@ -596,6 +596,18 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
     Consume(ExprToken::kRightParen, token, "Expected ')' to match.");
   if (has_error())
     return nullptr;
+
+  if (const TypeExprNode* type_expr = expr->AsType()) {
+    // Convert "(TypeName)..." into a cast.
+    auto cast_expr = ParseExpression(kPrecedenceCallAccess);
+    if (has_error())
+      return nullptr;
+
+    fxl::RefPtr<TypeExprNode> type_ref(const_cast<TypeExprNode*>(type_expr));
+    return fxl::MakeRefCounted<CastExprNode>(CastType::kC, std::move(type_ref),
+                                             std::move(cast_expr));
+  }
+
   return expr;
 }
 

@@ -260,6 +260,54 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
 
 }  // namespace
 
+const char* CastTypeToString(CastType type) {
+  switch (type) {
+    case CastType::kImplicit:
+      return "implicit";
+    case CastType::kC:
+      return "C";
+    case CastType::kReinterpret:
+      return "reinterpret_cast";
+    case CastType::kStatic:
+      return "static_cast";
+  }
+  return "<invalid>";
+}
+
+Err CastExprValue(CastType cast_type, const ExprValue& source,
+                  const fxl::RefPtr<Type>& dest_type, ExprValue* result) {
+  switch (cast_type) {
+    case CastType::kImplicit:
+      return CoerceValueTo(source, dest_type, ExprValueSource(), result);
+    case CastType::kC: {
+      // A C-style cast can do the following things.
+      //  - const_cast
+      //  - static_cast
+      //  - static_cast followed by a const_cast
+      //  - reinterpret_cast
+      //  - reinterpret_cast followed by a const_cast
+      //
+      // Since the debugger ignores const in debugging, this ends up being
+      // a static cast falling back to a reinterpret cast.
+      //
+      // TODO(DX-1178) this should be a static cast when it exists. Currently
+      // "coerce" implements the things we're willing to implicitly cast
+      // and doesn't handle things like derived type conversions.
+      if (!CoerceValueTo(source, dest_type, ExprValueSource(), result)
+               .has_error())
+        return Err();
+      return ReinterpretCast(source, dest_type, result);
+    }
+    case CastType::kReinterpret:
+      return ReinterpretCast(source, dest_type, result);
+    case CastType::kStatic:
+      // TODO(DX-1178) write a real static cast.
+      return CoerceValueTo(source, dest_type, ExprValueSource(), result);
+  }
+  FXL_NOTREACHED();
+  return Err("Internal error.");
+}
+
 Err CoerceValueTo(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                   const ExprValueSource& dest_source, ExprValue* result) {
   // There are several fundamental types of things that can be casted:

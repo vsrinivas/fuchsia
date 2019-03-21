@@ -558,4 +558,26 @@ TEST_F(ExprParserTest, Types) {
       GetParseString("sizeof(foo)", &TestLookupName));
 }
 
+TEST_F(ExprParserTest, Casts) {
+  EXPECT_EQ(
+      "CAST(C)\n"
+      " TYPE(Type)\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("(Type)(a)", &TestLookupName));
+
+  EXPECT_EQ(
+      "BINARY_OP(&&)\n"
+      " CAST(C)\n"
+      "  TYPE(Type*)\n"
+      "  IDENTIFIER(\"a\")\n"
+      " IDENTIFIER(\"b\")\n",
+      GetParseString("(Type*)a && b", &TestLookupName));
+
+  // Looks like a cast but it's not a type.
+  auto result = Parse("(NotType)a", &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected input, did you forget an operator?",
+            parser().err().msg());
+}
+
 }  // namespace zxdb

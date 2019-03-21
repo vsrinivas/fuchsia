@@ -228,6 +228,29 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
   right_->Print(out, indent + 1);
 }
 
+void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+                        EvalCallback cb) const {
+  from_->Eval(context, [cast_type = cast_type_, to_type = to_type_->type(),
+                        cb = std::move(cb)](const Err& err, ExprValue value) {
+    if (err.has_error()) {
+      cb(err, value);
+    } else {
+      ExprValue cast_result;
+      Err cast_err = CastExprValue(cast_type, value, to_type, &cast_result);
+      if (cast_err.has_error())
+        cb(cast_err, ExprValue());
+      else
+        cb(Err(), std::move(cast_result));
+    }
+  });
+}
+
+void CastExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "CAST(" << CastTypeToString(cast_type_) << ")\n";
+  to_type_->Print(out, indent + 1);
+  from_->Print(out, indent + 1);
+}
+
 void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                EvalCallback cb) const {
   expr_->EvalFollowReferences(
@@ -243,6 +266,8 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 
 void FunctionCallExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
+  // TODO(brettw) parse reinterpret_cast as a cast instead.
+
   // Handle reinterpret_cast calls since this is currently the only function
   // that can be called (this will need to be enhanced significantly when we
   // add more).

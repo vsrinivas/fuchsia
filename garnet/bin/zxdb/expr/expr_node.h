@@ -8,6 +8,7 @@
 #include <iosfwd>
 #include <memory>
 
+#include "garnet/bin/zxdb/expr/cast.h"
 #include "garnet/bin/zxdb/expr/expr_token.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
@@ -24,6 +25,7 @@ class Type;
 class AddressOfExprNode;
 class ArrayAccessExprNode;
 class BinaryOpExprNode;
+class CastExprNode;
 class DereferenceExprNode;
 class FunctionCallExprNode;
 class IdentifierExprNode;
@@ -43,6 +45,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const AddressOfExprNode* AsAddressOf() const { return nullptr; }
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
+  virtual const CastExprNode* AsCast() const { return nullptr; }
   virtual const DereferenceExprNode* AsDereference() const { return nullptr; }
   virtual const FunctionCallExprNode* AsFunctionCall() const { return nullptr; }
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
@@ -165,6 +168,31 @@ class BinaryOpExprNode : public ExprNode {
   fxl::RefPtr<ExprNode> left_;
   ExprToken op_;
   fxl::RefPtr<ExprNode> right_;
+};
+
+// Implements all types of casts.
+class CastExprNode : public ExprNode {
+ public:
+  const CastExprNode* AsCast() const override { return this; }
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(CastExprNode);
+  FRIEND_MAKE_REF_COUNTED(CastExprNode);
+
+  CastExprNode();
+  CastExprNode(CastType cast_type, fxl::RefPtr<TypeExprNode> to_type,
+               fxl::RefPtr<ExprNode> from)
+      : cast_type_(cast_type),
+        to_type_(std::move(to_type)),
+        from_(std::move(from)) {}
+  ~CastExprNode() override = default;
+
+  CastType cast_type_;
+  fxl::RefPtr<TypeExprNode> to_type_;
+  fxl::RefPtr<ExprNode> from_;
 };
 
 // Implements dereferencing a pointer ("*" in C).
