@@ -114,6 +114,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> MinusPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> CastPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
   bool LookAhead(ExprTokenType type) const;
@@ -124,10 +125,12 @@ class ExprParser {
 
   // Consumes a token of the given type, returning it if there was one
   // available and the type matches. Otherwise, sets the error condition using
-  // the given error_token and message, and returns a reference to an invalid
-  // token. It will advance to the next token.
-  const ExprToken& Consume(ExprTokenType type, const ExprToken& error_token,
-                           const char* error_msg);
+  // the given message and returns a reference to an invalid token.
+  //
+  // If the error_token is provided (it's not kInvalid type) it will be used
+  // to blame the error on. Otherwise, the next token checked will be blamed.
+  const ExprToken& Consume(ExprTokenType type, const char* error_msg,
+                           const ExprToken& error_token = ExprToken());
 
   // Reads a sequence of cv-qualifiers (plus "restrict" for C) and appends to
   // the vector in order. Only matching tokens are consumed, it stops consuming

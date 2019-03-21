@@ -33,7 +33,8 @@ void DoAssignment(fxl::RefPtr<ExprEvalContext> context,
   // The coerced value will be the result. It should have the "source" of the
   // left-hand-side since the location being assigned to doesn't change.
   ExprValue coerced;
-  Err err = CoerceValueTo(right_value, left_value.type_ref(), dest, &coerced);
+  Err err = CastExprValue(CastType::kImplicit, right_value,
+                          left_value.type_ref(), &coerced, dest);
   if (err.has_error()) {
     cb(err, ExprValue());
     return;

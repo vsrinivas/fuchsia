@@ -351,35 +351,6 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   EXPECT_EQ(kExpectedAddr, out_value.source().address());
 }
 
-TEST_F(ExprNodeTest, FunctionCall) {
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
-
-  auto ptr_to_void_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
-
-  auto [err, reinterpret] = Identifier::FromString("reinterpret_cast<void*>");
-  ASSERT_FALSE(err.has_error());
-
-  // Parameter for the call.
-  std::vector<fxl::RefPtr<ExprNode>> args;
-  args.push_back(fxl::MakeRefCounted<LiteralExprNode>(
-      ExprToken(ExprTokenType::kInteger, "255", 0)));
-
-  auto call_node =
-      fxl::MakeRefCounted<FunctionCallExprNode>(reinterpret, std::move(args));
-
-  bool complete = false;
-  call_node->Eval(context, [&complete](const Err& err, ExprValue result) {
-    EXPECT_FALSE(err.has_error());
-
-    EXPECT_EQ("void*", result.type()->GetFullName());
-    EXPECT_EQ(0xffu, result.GetAs<uint64_t>());
-
-    complete = true;
-  });
-  EXPECT_TRUE(complete);  // Should have synchronously completed.
-}
-
 // This is more of an integration smoke test for "." and "->". The details are
 // tested in resolve_collection_unittest.cc.
 TEST_F(ExprNodeTest, MemberAccess) {

@@ -266,53 +266,7 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
 
 void FunctionCallExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                                 EvalCallback cb) const {
-  // TODO(brettw) parse reinterpret_cast as a cast instead.
-
-  // Handle reinterpret_cast calls since this is currently the only function
-  // that can be called (this will need to be enhanced significantly when we
-  // add more).
-  //
-  // This has a single name component (no namespaces), a single template
-  // parameter, and a single argument.
-  if (name_.components().size() != 1) {
-    cb(Err("Unknown function call '%s'.", name_.GetFullName().c_str()),
-       ExprValue());
-    return;
-  }
-
-  const std::string& single_name = name_.components()[0].name().value();
-  if (single_name != "reinterpret_cast") {
-    cb(Err("Unknown function call '%s'.", single_name.c_str()), ExprValue());
-    return;
-  }
-
-  if (name_.components()[0].template_contents().size() != 1u) {
-    cb(Err("Expecting one template parameter for '%s', got %zu.",
-           single_name.c_str(),
-           name_.components()[0].template_contents().size()),
-       ExprValue());
-    return;
-  }
-  const std::string& dest_type = name_.components()[0].template_contents()[0];
-
-  if (args_.size() != 1u) {
-    cb(Err("Expecting one parameter for '%s', got %zu.", single_name.c_str(),
-           args_.size()),
-       ExprValue());
-    return;
-  }
-
-  args_[0]->EvalFollowReferences(
-      std::move(context),
-      [cb = std::move(cb), dest_type](const Err& err, ExprValue value) {
-        if (err.has_error()) {
-          cb(err, ExprValue());
-        } else {
-          ExprValue result;
-          Err cast_err = ReinterpretCast(value, dest_type, &result);
-          cb(cast_err, result);
-        }
-      });
+  cb(Err("Sorry, function calls are not supported."), ExprValue());
 }
 
 void FunctionCallExprNode::Print(std::ostream& out, int indent) const {

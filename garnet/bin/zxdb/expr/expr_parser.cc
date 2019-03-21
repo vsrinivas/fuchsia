@@ -89,6 +89,7 @@ struct ExprParser::DispatchInfo {
 // The table is more clear without line wrapping.
 // clang-format off
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
+    // Prefix handler              Infix handler                 Precedence for infix
     {nullptr,                      nullptr,                      -1},                     // kInvalid
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kName
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kInteger
@@ -116,6 +117,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kConst
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kVolatile
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kRestrict
+    {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kReinterpretCast
 };
 // clang-format on
 
@@ -274,7 +276,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         // Ending ">".
         const ExprToken& template_end =
-            Consume(ExprTokenType::kGreater, token, "Expected '>' to match.");
+            Consume(ExprTokenType::kGreater, "Expected '>' to match.");
         if (has_error())
           return ParseNameResult();
 
@@ -594,7 +596,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
   if (!has_error() && !expr)
     SetError(token, "Expected expression inside '('.");
   if (!has_error())
-    Consume(ExprTokenType::kRightParen, token, "Expected ')' to match.");
+    Consume(ExprTokenType::kRightParen, "Expected ')' to match.", token);
   if (has_error())
     return nullptr;
 
@@ -631,7 +633,9 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenInfix(fxl::RefPtr<ExprNode> left,
       ParseExpressionList(ExprTokenType::kRightParen);
   if (has_error())
     return nullptr;
-  Consume(ExprTokenType::kRightParen, token, "Expected ')' to match.");
+  Consume(ExprTokenType::kRightParen, "Expected ')' to match.", token);
+  if (has_error())
+    return nullptr;
 
   return fxl::MakeRefCounted<FunctionCallExprNode>(std::move(name),
                                                    std::move(args));
@@ -643,7 +647,7 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
   if (!has_error() && !inner)
     SetError(token, "Expected expression inside '['.");
   if (!has_error())
-    Consume(ExprTokenType::kRightSquare, token, "Expected ']' to match.");
+    Consume(ExprTokenType::kRightSquare, "Expected ']' to match.", token);
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<ArrayAccessExprNode>(std::move(left),
@@ -716,6 +720,47 @@ fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
   return fxl::MakeRefCounted<DereferenceExprNode>(std::move(right));
 }
 
+fxl::RefPtr<ExprNode> ExprParser::CastPrefix(const ExprToken& token) {
+  FXL_DCHECK(token.type() == ExprTokenType::kReinterpretCast);
+  CastType cast_type = CastType::kReinterpret;
+
+  // "<" after reinterpret_cast.
+  ExprToken left_angle =
+      Consume(ExprTokenType::kLess, "Expected '< >' after cast.");
+  if (has_error())
+    return nullptr;
+
+  // Type name.
+  fxl::RefPtr<Type> dest_type = ParseType(fxl::RefPtr<Type>());
+  if (has_error())
+    return nullptr;
+
+  // ">" after type name.
+  Consume(ExprTokenType::kGreater, "Expected '>' to match.", left_angle);
+  if (has_error())
+    return nullptr;
+
+  // "(" containing expression.
+  ExprToken left_paren =
+      Consume(ExprTokenType::kLeftParen, "Expected '(' for cast.");
+  if (has_error())
+    return nullptr;
+
+  // Expression to be casted.
+  fxl::RefPtr<ExprNode> expr = ParseExpression(0);
+  if (has_error())
+    return nullptr;
+
+  // ")" at end.
+  Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<CastExprNode>(
+      cast_type, fxl::MakeRefCounted<TypeExprNode>(std::move(dest_type)),
+      std::move(expr));
+}
+
 bool ExprParser::LookAhead(ExprTokenType type) const {
   if (at_end())
     return false;
@@ -728,9 +773,8 @@ const ExprToken& ExprParser::Consume() {
   return tokens_[cur_++];
 }
 
-const ExprToken& ExprParser::Consume(ExprTokenType type,
-                                     const ExprToken& error_token,
-                                     const char* error_msg) {
+const ExprToken& ExprParser::Consume(ExprTokenType type, const char* error_msg,
+                                     const ExprToken& error_token) {
   FXL_DCHECK(!has_error());  // Should have error-checked before calling.
   if (at_end()) {
     SetError(error_token,
@@ -741,7 +785,9 @@ const ExprToken& ExprParser::Consume(ExprTokenType type,
   if (cur_token().type() == type)
     return Consume();
 
-  SetError(error_token, error_msg);
+  SetError(
+      error_token.type() == ExprTokenType::kInvalid ? cur_token() : error_token,
+      error_msg);
   return kInvalidToken;
 }
 

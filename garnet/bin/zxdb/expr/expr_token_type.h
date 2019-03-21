@@ -35,11 +35,12 @@ enum class ExprTokenType : size_t {
   kColonColon,   // ::
 
   // Special keywords.
-  kTrue,      // true
-  kFalse,     // false
-  kConst,     // const
-  kVolatile,  // volatile
-  kRestrict,  // restrict
+  kTrue,             // true
+  kFalse,            // false
+  kConst,            // const
+  kVolatile,         // volatile
+  kRestrict,         // restrict
+  kReinterpretCast,  // reinterpret_cast
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes

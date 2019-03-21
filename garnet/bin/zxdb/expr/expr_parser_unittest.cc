@@ -558,7 +558,7 @@ TEST_F(ExprParserTest, Types) {
       GetParseString("sizeof(foo)", &TestLookupName));
 }
 
-TEST_F(ExprParserTest, Casts) {
+TEST_F(ExprParserTest, C_Cast) {
   EXPECT_EQ(
       "CAST(C)\n"
       " TYPE(Type)\n"
@@ -577,6 +577,27 @@ TEST_F(ExprParserTest, Casts) {
   auto result = Parse("(NotType)a", &TestLookupName);
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected input, did you forget an operator?",
+            parser().err().msg());
+}
+
+TEST_F(ExprParserTest, ReinterpretCast) {
+  EXPECT_EQ(
+      "CAST(reinterpret_cast)\n"
+      " TYPE(Type*)\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("reinterpret_cast<Type*>(a)", &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(reinterpret_cast)\n"
+      " TYPE(const Type&&)\n"
+      " BINARY_OP(&&)\n"
+      "  IDENTIFIER(\"x\")\n"
+      "  IDENTIFIER(\"y\")\n",
+      GetParseString("reinterpret_cast<  const Type&& >( x && y)", &TestLookupName));
+
+  auto result = Parse("reinterpret_cast<", &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected type name before end of input.",
             parser().err().msg());
 }
 
