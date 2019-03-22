@@ -59,8 +59,8 @@ source_set("url_unittests_main") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//src/lib/icu_data/cpp",
     "//third_party/googletest:gtest",
     "//third_party/icu",
   ]
