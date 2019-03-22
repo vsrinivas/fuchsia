@@ -53,9 +53,10 @@ class PageDbImpl : public PageDb {
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus* object_status) override;
-  Status GetObjectReferences(coroutine::CoroutineHandler* handler,
-                             const ObjectIdentifier& object_identifier,
-                             ObjectReferencesAndPriority* references) override;
+  Status GetInboundObjectReferences(
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
+      ObjectReferencesAndPriority* references) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, std::string* value) override;
   Status IsPageOnline(coroutine::CoroutineHandler* handler,

@@ -220,7 +220,7 @@ TEST_F(PageDbTest, ObjectStorage) {
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
     ObjectReferencesAndPriority references;
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, child_identifier, &references));
     EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
                                              KeyPriority::LAZY)));
@@ -239,7 +239,7 @@ TEST_F(PageDbTest, ObjectStorage) {
     EXPECT_EQ(Status::OK, object->GetData(&object_content));
     EXPECT_EQ(content, object_content);
     EXPECT_NE(new_content, object_content);
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, child_identifier, &references));
     EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
                                              KeyPriority::LAZY)));
@@ -261,7 +261,7 @@ TEST_F(PageDbTest, LazyAndEagerReferences) {
                    {child_identifier.object_digest(), KeyPriority::EAGER}}));
 
     ObjectReferencesAndPriority references;
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, child_identifier, &references));
     EXPECT_THAT(
         references,
@@ -376,11 +376,11 @@ TEST_F(PageDbTest, Batch) {
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_THAT(object_identifiers, IsEmpty());
     ObjectReferencesAndPriority references;
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, eager_identifier, &references));
     EXPECT_THAT(references, IsEmpty());
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(handler, lazy_identifier,
-                                                       &references));
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
+                              handler, lazy_identifier, &references));
     EXPECT_THAT(references, IsEmpty());
 
     // Execute the batch write.
@@ -391,13 +391,13 @@ TEST_F(PageDbTest, Batch) {
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_THAT(object_identifiers, ElementsAre(object_identifier));
     // Check the eager reference.
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
                               handler, eager_identifier, &references));
     EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
                                              KeyPriority::EAGER)));
     // Check the lazy reference.
-    EXPECT_EQ(Status::OK, page_db_.GetObjectReferences(handler, lazy_identifier,
-                                                       &references));
+    EXPECT_EQ(Status::OK, page_db_.GetInboundObjectReferences(
+                              handler, lazy_identifier, &references));
     EXPECT_THAT(references, ElementsAre(Pair(object_identifier.object_digest(),
                                              KeyPriority::LAZY)));
   });

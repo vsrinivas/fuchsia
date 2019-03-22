@@ -185,8 +185,8 @@ class PageDb : public PageDbMutator {
       const ObjectIdentifier& object_identifier,
       PageDbObjectStatus* object_status) = 0;
 
-  // Returns the references of the object with the given id.
-  FXL_WARN_UNUSED_RESULT virtual Status GetObjectReferences(
+  // Returns inbound references towards the object with the given id.
+  FXL_WARN_UNUSED_RESULT virtual Status GetInboundObjectReferences(
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
       ObjectReferencesAndPriority* references) = 0;

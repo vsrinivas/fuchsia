@@ -45,7 +45,7 @@ Status PageDbEmptyImpl::GetObjectStatus(
     PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetObjectReferences(
+Status PageDbEmptyImpl::GetInboundObjectReferences(
     coroutine::CoroutineHandler* /*handler*/,
     const ObjectIdentifier& /*object_identifier*/,
     ObjectReferencesAndPriority* /*references*/) {

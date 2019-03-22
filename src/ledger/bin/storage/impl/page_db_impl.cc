@@ -138,7 +138,7 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::GetObjectReferences(
+Status PageDbImpl::GetInboundObjectReferences(
     coroutine::CoroutineHandler* handler,
     const ObjectIdentifier& object_identifier,
     ObjectReferencesAndPriority* references) {
