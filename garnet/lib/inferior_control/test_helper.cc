@@ -9,6 +9,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings.h>
 #include <lib/fxl/log_settings_command_line.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <zircon/process.h>
@@ -51,30 +52,31 @@ static void ExceptionHandlerThreadFunc(
   }
 }
 
-static void SendSelfThread(zx_handle_t channel) {
+static void SendSelfThread(const zx::channel& channel) {
   // Send the parent a packet so that it knows we've started.
   zx_handle_t self_copy;
   zx_status_t status = zx_handle_duplicate(
       zx_thread_self(), ZX_RIGHT_SAME_RIGHTS, &self_copy);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
-  status = zx_channel_write(channel, 0, nullptr, 0, &self_copy, 1);
+  status = channel.write(0, nullptr, 0, &self_copy, 1);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 }
 
-static void WaitPeerClosed(zx_handle_t channel) {
-  zx_status_t status = zx_object_wait_one(channel, ZX_CHANNEL_PEER_CLOSED,
-                                          ZX_TIME_INFINITE, nullptr);
+static void WaitPeerClosed(const zx::channel& channel) {
+  zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                        zx::time::infinite(), nullptr);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 }
 
-static int PerformWaitPeerClosed(zx_handle_t channel) {
+static int PerformWaitPeerClosed(const zx::channel& channel) {
   SendSelfThread(channel);
   WaitPeerClosed(channel);
   printf("wait-peer-closed complete\n");
   return 0;
 }
 
-static int TriggerSoftwareBreakpoint(zx_handle_t channel, bool with_handler) {
+static int TriggerSoftwareBreakpoint(const zx::channel& channel,
+                                     bool with_handler) {
   zx::port eport;
   zx_status_t status = zx::port::create(0, &eport);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
@@ -124,9 +126,9 @@ int main(int argc, char* argv[]) {
   const std::vector<std::string>& args = cl.positional_args();
 
   if (!args.empty()) {
-    zx_handle_t channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
     // If no channel was passed we're running standalone.
-    if (channel == ZX_HANDLE_INVALID) {
+    if (!channel.is_valid()) {
       FXL_LOG(WARNING) << "No handle provided";
     }
 
