@@ -128,11 +128,11 @@ func main() {
 			log.Fatal("Failed to retrieve nodename from config file")
 		}
 		checkResult := checkHealth(client, nodename)
-		// if checkResult.State == unhealthyState && rebootIfUnhealthy {
-		// 	if rebootErr := reboot(deviceProperties); rebootErr != nil {
-		//		checkResult.ErrorMsg += "; " + rebootErr.Error()
-		//	}
-		// }
+		if checkResult.State == unhealthyState && rebootIfUnhealthy {
+			if rebootErr := reboot(deviceProperties); rebootErr != nil {
+				checkResult.ErrorMsg += "; " + rebootErr.Error()
+			}
+		}
 		checkResultSlice = append(checkResultSlice, checkResult)
 	}
 	if err = printHealthCheckResults(checkResultSlice); err != nil {
