@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/spawn.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/zx/channel.h>
-#include <zircon/processargs.h>
+#include <gtest/gtest.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/test_helper.h"
+#include "garnet/lib/debugger_utils/test_helper_fixture.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "gtest/gtest.h"
 
 namespace debugger_utils {
 namespace {
@@ -130,84 +127,48 @@ static void TestDepth(const zx::job& search_job, zx_handle_t target_job,
   EXPECT_EQ(process_depth + 1, thread_depth);
 }
 
-static void BuildTestProcess(const zx::job& parent_job, zx::job* job,
-                             zx::process* process, zx::thread* thread,
-                             zx::channel* channel) {
-  ASSERT_EQ(zx::job::create(parent_job, 0, job), ZX_OK);
+TEST_F(TestWithHelper, JobsTestChildJob) {
+  auto parent_job = GetDefaultJob();
+  zx::job child_job;
+  zx::thread thread;
 
-  const char* argv[] = {
-    kTestHelperPath,
-    nullptr,
-  };
+  ASSERT_EQ(zx::job::create(parent_job, 0, &child_job), ZX_OK);
+  ASSERT_EQ(RunHelperProgram(child_job, kWaitPeerClosedArgv), ZX_OK);
 
   // We need the handle of the main thread of the process for test purposes.
   // Technically, we only need its koid. HOWEVER, we do not obtain the koid
   // via, say, ZX_INFO_PROCESS_THREADS, because that is used by the routine
   // we are testing: |WalkJobTree()|. Try to KISS and just get the thread's
   // handle. Alas it's not that simple.
-  zx::channel their_channel;
-  ASSERT_EQ(zx::channel::create(0, channel, &their_channel), ZX_OK);
-  fdio_spawn_action actions[1];
-  actions[0].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-  actions[0].h.id = PA_HND(PA_USER0, 0);
-  actions[0].h.handle = their_channel.release();
-  uint32_t flags = FDIO_SPAWN_CLONE_ALL;
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  ASSERT_EQ(GetHelperThread(&thread), ZX_OK);
 
-  zx_status_t status = fdio_spawn_etc(job->get(), flags, kTestHelperPath, argv,
-                                      nullptr, arraysize(actions), actions,
-                                      process->reset_and_get_address(),
-                                      err_msg);
-  ASSERT_EQ(status, ZX_OK) << err_msg;
-
-  zx_signals_t pending;
-  ASSERT_EQ(channel->wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                              &pending), ZX_OK);
-
-  uint32_t actual_bytes, actual_handles;
-  ASSERT_EQ(channel->read(0u, nullptr, 0u, 
-                          &actual_bytes, thread->reset_and_get_address(),
-                          1u, &actual_handles), ZX_OK);
-  EXPECT_EQ(actual_bytes, 0u);
-  EXPECT_EQ(actual_handles, 1u);
-
-  // At this point the inferior is waiting for us to close the channel.
-}
-
-TEST(JobsTest, ChildJob) {
-  auto parent_job = GetDefaultJob();
-  zx::job child_job;
-  zx::process process;
-  zx::thread thread;
-  zx::channel channel;
-
-  BuildTestProcess(parent_job, &child_job, &process, &thread, &channel);
   ASSERT_TRUE(child_job.is_valid());
-  ASSERT_TRUE(process.is_valid());
+  ASSERT_TRUE(process().is_valid());
   ASSERT_TRUE(thread.is_valid());
-  ASSERT_TRUE(channel.is_valid());
-  
-  TestDepth(parent_job, child_job.get(), process.get(), thread.get());
+  ASSERT_TRUE(channel().is_valid());
+
+  TestDepth(parent_job, child_job.get(), process().get(), thread.get());
 }
 
-TEST(JobsTest, RootJob) {
+TEST_F(TestWithHelper, JobsTestRootJob) {
   // Make sure we can find ourselves from the root job.
   // This will likely evolve or be replaced, but it's useful to test
   // current functionality.
   auto search_job = GetRootJob();
   auto parent_job = GetDefaultJob();
   zx::job child_job;
-  zx::process process;
   zx::thread thread;
-  zx::channel channel;
 
-  BuildTestProcess(parent_job, &child_job, &process, &thread, &channel);
+  ASSERT_EQ(zx::job::create(parent_job, 0, &child_job), ZX_OK);
+  ASSERT_EQ(RunHelperProgram(child_job, kWaitPeerClosedArgv), ZX_OK);
+  ASSERT_EQ(GetHelperThread(&thread), ZX_OK);
+
   ASSERT_TRUE(child_job.is_valid());
-  ASSERT_TRUE(process.is_valid());
+  ASSERT_TRUE(process().is_valid());
   ASSERT_TRUE(thread.is_valid());
-  ASSERT_TRUE(channel.is_valid());
+  ASSERT_TRUE(channel().is_valid());
 
-  TestDepth(search_job, child_job.get(), process.get(), thread.get());
+  TestDepth(search_job, child_job.get(), process().get(), thread.get());
 }
 
 TEST(JobsTest, FindProcess) {

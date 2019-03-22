@@ -32,7 +32,7 @@ TEST(UtilZx, GetRelatedKoid) {
   zx::process process;
   zx::job job{GetDefaultJob()};
 
-  const char* argv[] = {
+  static const char* const argv[] = {
     kTestHelperPath,
     nullptr,
   };

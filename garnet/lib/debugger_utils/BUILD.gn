@@ -86,6 +86,8 @@ executable("tests") {
     "run_all_unittests.cc",
     "sysinfo.cc",
     "sysinfo.h",
+    "test_helper_fixture.cc",
+    "test_helper_fixture.h",
     "threads.cc",
     "threads.h",
     "threads_unittest.cc",
