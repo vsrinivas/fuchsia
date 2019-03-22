@@ -72,7 +72,7 @@ class EnclosingEnvTest : public TestWithEnvironment {
     // this is the safest way to do this and prevent flakiness.
     // Because EnvironmentServices is listening on a ComponentController channel
     // to restart the service, we can't control that it'll actually recreate the
-    // service in 100% deterministic order based on the waits above.
+    // service in 100% deterministic order.
     echo::EchoPtr echo;
     for (int tries = 0; tries < kNumberOfTries; tries++) {
       // reset flag again and communicate with the service,
@@ -82,12 +82,17 @@ class EnclosingEnvTest : public TestWithEnvironment {
 
       // connect again
       env->ConnectToService(echo.NewRequest());
+
+      bool channel_closed = false;
+      echo.set_error_handler(
+          [&](zx_status_t status) { channel_closed = true; });
       // talk with the service once and assert it's ok
       echo->EchoString("hello", [&req_done](::fidl::StringPtr rsp) {
         EXPECT_EQ(rsp, "hello");
         req_done = true;
       });
-      if (RunLoopUntil([&req_done]() { return req_done; })) {
+      RunLoopUntil([&]() { return req_done || channel_closed; });
+      if (req_done) {
         return true;
       } else {
         std::cerr << "Didn't receive echo response in attempt number "
