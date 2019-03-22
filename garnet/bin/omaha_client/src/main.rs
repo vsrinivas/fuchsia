@@ -2,4 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-fn main() {}
+use log::info;
+
+fn main() {
+    fuchsia_syslog::init().expect("Can't init logger");
+    info!("Starting omaha client...");
+}
