@@ -1124,10 +1124,10 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     if (caps0 & SDHCI_CORECFG_8_BIT_SUPPORT) {
         dev->info.caps |= SDMMC_HOST_CAP_BUS_WIDTH_8;
     }
-    if (caps0 & SDHCI_CORECFG_ADMA2_SUPPORT) {
+    if (caps0 & SDHCI_CORECFG_ADMA2_SUPPORT && !(dev->quirks & SDHCI_QUIRK_NO_DMA)) {
         dev->info.caps |= SDMMC_HOST_CAP_ADMA2;
     }
-    if (caps0 & SDHCI_CORECFG_64BIT_SUPPORT) {
+    if (caps0 & SDHCI_CORECFG_64BIT_SUPPORT && !(dev->quirks & SDHCI_QUIRK_NO_DMA)) {
         dev->info.caps |= SDMMC_HOST_CAP_SIXTY_FOUR_BIT;
     }
     if (caps0 & SDHCI_CORECFG_3P3_VOLT_SUPPORT) {
