@@ -7,6 +7,72 @@
 #include "platform_buffer.h"
 #include "gtest/gtest.h"
 
+namespace {
+
+class TestMsd {
+public:
+    ~TestMsd()
+    {
+        if (connection_) {
+            msd_connection_close(connection_);
+        }
+        if (device_) {
+            msd_device_destroy(device_);
+        }
+        if (driver_) {
+            msd_driver_destroy(driver_);
+        }
+    }
+
+    bool Init()
+    {
+        driver_ = msd_driver_create();
+        if (!driver_)
+            return DRETF(false, "msd_driver_create failed");
+
+        device_ = msd_driver_create_device(driver_, GetTestDeviceHandle());
+        if (!device_)
+            return DRETF(false, "msd_driver_create_device failed");
+
+        return true;
+    }
+
+    bool Connect()
+    {
+        connection_ = msd_device_open(device_, 0);
+        if (!connection_)
+            return DRETF(false, "msd_device_open failed");
+        return true;
+    }
+
+    bool CreateBuffer(uint32_t size_in_pages, msd_buffer_t** buffer_out)
+    {
+        auto platform_buf = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
+        if (!platform_buf)
+            return DRETF(false, "couldn't create platform buffer size_in_pages %u", size_in_pages);
+
+        uint32_t duplicate_handle;
+        if (!platform_buf->duplicate_handle(&duplicate_handle))
+            return DRETF(false, "couldn't duplicate handle");
+
+        msd_buffer_t* buffer = msd_buffer_import(duplicate_handle);
+        if (!buffer)
+            return DRETF(false, "msd_buffer_import failed");
+
+        *buffer_out = buffer;
+        return true;
+    }
+
+    msd_connection_t* connection() { return connection_; }
+
+private:
+    msd_driver_t* driver_ = nullptr;
+    msd_device_t* device_ = nullptr;
+    msd_connection_t* connection_ = nullptr;
+};
+
+} // namespace
+
 TEST(MsdBuffer, ImportAndDestroy)
 {
     auto platform_buf = magma::PlatformBuffer::Create(4096, "test");
@@ -221,4 +287,27 @@ TEST(MsdBuffer, Commit)
     msd_connection_close(connection);
     msd_device_destroy(device);
     msd_driver_destroy(driver);
+}
+
+TEST(MsdBuffer, MapDoesntFit)
+{
+    TestMsd test;
+    ASSERT_TRUE(test.Init());
+    ASSERT_TRUE(test.Connect());
+
+    constexpr uint32_t kBufferSizeInPages = 2;
+
+    msd_buffer_t* buffer;
+    ASSERT_TRUE(test.CreateBuffer(kBufferSizeInPages, &buffer));
+
+    constexpr uint64_t kGpuAddressSpaceSize = 1ull << 48;
+    magma_status_t status = msd_connection_map_buffer_gpu(
+        test.connection(), buffer,
+        kGpuAddressSpaceSize - kBufferSizeInPages / 2 * PAGE_SIZE, // gpu addr
+        0,                                                         // page offset
+        kBufferSizeInPages,                                        // page count
+        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE);
+    EXPECT_TRUE(status == MAGMA_STATUS_INVALID_ARGS || status == MAGMA_STATUS_INTERNAL_ERROR);
+
+    msd_buffer_destroy(buffer);
 }
