@@ -4,6 +4,8 @@
 
 library fuchsia.media;
 
+using fuchsia.media.audio;
+
 // AudioCapturer
 //
 // An AudioCapturer is an interface returned from an fuchsia.media.Audio's
@@ -283,7 +285,7 @@ protocol AudioCapturer {
     StopAsyncCaptureNoReply();
 
     // Binds to the gain control for this AudioCapturer.
-    BindGainControl(request<GainControl> gain_control_request);
+    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
 
     //////////////////////////////////////////////////////////////////////////
     // StreamBufferSet methods

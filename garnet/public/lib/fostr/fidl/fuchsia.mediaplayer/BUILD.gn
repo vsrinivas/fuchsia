@@ -10,6 +10,7 @@ fostr_fidl("fuchsia.mediaplayer") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.media",
+    "//garnet/public/lib/fostr/fidl/fuchsia.media.audio",
     "//garnet/public/lib/fostr/fidl/fuchsia.net.oldhttp",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",

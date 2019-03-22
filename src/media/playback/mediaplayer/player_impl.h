@@ -59,8 +59,9 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   void CreateView2(zx::eventpair view_token) override;
 
-  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
-                           gain_control_request) override;
+  void BindGainControl(
+      fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
+          gain_control_request) override;
 
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) override;

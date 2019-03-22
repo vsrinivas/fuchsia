@@ -14,7 +14,6 @@ fidl("fuchsia.media") {
     "audio_device_enumerator.fidl",
     "audio_renderer.fidl",
     "content_decryption.fidl",
-    "gain_control.fidl",
     "metadata.fidl",
     "stream.fidl",
     "stream_common.fidl",
@@ -25,6 +24,7 @@ fidl("fuchsia.media") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.media.audio",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/fidl/fuchsia-mem",
   ]

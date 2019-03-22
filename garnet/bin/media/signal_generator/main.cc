@@ -112,8 +112,9 @@ void usage(const char* prog_name) {
   printf(
       "\t--%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, %.1f]; %s if only "
       "'--%s' is provided)\n",
-      kStreamGainSwitch, fuchsia::media::MUTED_GAIN_DB,
-      fuchsia::media::MAX_GAIN_DB, kStreamGainDefaultDb, kStreamGainSwitch);
+      kStreamGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB,
+      fuchsia::media::audio::MAX_GAIN_DB, kStreamGainDefaultDb,
+      kStreamGainSwitch);
   printf(
       "\t--%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only "
       "'--%s' is provided)\n",
@@ -137,8 +138,8 @@ void usage(const char* prog_name) {
   printf(
       "\t--%s[=<GAIN_DB>]\tSet System Gain (dB in [%.1f, 0.0]; %s if only "
       "'--%s' is provided)\n",
-      kSystemGainSwitch, fuchsia::media::MUTED_GAIN_DB, kSystemGainDefaultDb,
-      kSystemGainSwitch);
+      kSystemGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB,
+      kSystemGainDefaultDb, kSystemGainSwitch);
   printf(
       "\t--%s[=<0|1>]\t\tSet System Mute (0=Unmute or 1=Mute; Mute if only "
       "'--%s' is provided)\n",

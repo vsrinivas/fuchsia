@@ -823,7 +823,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   ::memset(mix_buf_.get(), 0u, job_bytes);
 
   // If our capturer is mute, we have nothing to do after filling with silence.
-  if (mute_ || (stream_gain_db_.load() <= fuchsia::media::MUTED_GAIN_DB)) {
+  if (mute_ ||
+      (stream_gain_db_.load() <= fuchsia::media::audio::MUTED_GAIN_DB)) {
     return true;
   }
 
@@ -1389,14 +1390,14 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
 }
 
 void AudioCapturerImpl::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
+    fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
   gain_control_bindings_.AddBinding(this, std::move(request));
 }
 
 void AudioCapturerImpl::SetGain(float gain_db) {
   // Before setting stream_gain_db_, we should always perform this range check.
-  if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
-      (gain_db > fuchsia::media::MAX_GAIN_DB) || isnan(gain_db)) {
+  if ((gain_db < fuchsia::media::audio::MUTED_GAIN_DB) ||
+      (gain_db > fuchsia::media::audio::MAX_GAIN_DB) || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
     Shutdown();
     return;

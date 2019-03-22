@@ -21,7 +21,7 @@ namespace test {
 
 // Implements AudioRenderer for testing.
 class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
-                          public fuchsia::media::GainControl {
+                          public fuchsia::media::audio::GainControl {
  public:
   FakeAudioRenderer();
 
@@ -84,7 +84,8 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   void PauseNoReply() override;
 
   void BindGainControl(
-      ::fidl::InterfaceRequest<fuchsia::media::GainControl> request) override;
+      ::fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request)
+      override;
 
   void EnableMinLeadTimeEvents(bool enabled) override;
 
@@ -93,7 +94,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   // GainControl interface.
   void SetGain(float gain_db) override;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                       fuchsia::media::AudioRamp rampType) final {
+                       fuchsia::media::audio::AudioRamp rampType) final {
     FXL_NOTIMPLEMENTED();
   };
   void SetMute(bool muted) override;
@@ -108,7 +109,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::media::AudioRenderer> binding_;
-  fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
+  fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
 
   fuchsia::media::AudioStreamType format_;
   fzl::VmoMapper vmo_mapper_;

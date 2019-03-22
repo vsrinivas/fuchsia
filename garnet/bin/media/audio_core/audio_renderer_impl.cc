@@ -644,8 +644,8 @@ void AudioRendererImpl::PauseNoReply() { Pause(nullptr); }
 // "source" gain; the Output device (or master) gain is "dest" gain.
 void AudioRendererImpl::SetGain(float gain_db) {
   // Anywhere we set stream_gain_db_, we should perform this range check.
-  if (gain_db > fuchsia::media::MAX_GAIN_DB ||
-      gain_db < fuchsia::media::MUTED_GAIN_DB || isnan(gain_db)) {
+  if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
+      gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
     Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
     return;
@@ -670,11 +670,11 @@ void AudioRendererImpl::SetGain(float gain_db) {
 
 // Set a stream gain ramp, in each Renderer -> Output audio path. Renderer gain
 // is pre-mix and hence is the Source component in the Gain object.
-void AudioRendererImpl::SetGainWithRamp(float gain_db,
-                                        zx_duration_t duration_ns,
-                                        fuchsia::media::AudioRamp rampType) {
-  if (gain_db > fuchsia::media::MAX_GAIN_DB ||
-      gain_db < fuchsia::media::MUTED_GAIN_DB || isnan(gain_db)) {
+void AudioRendererImpl::SetGainWithRamp(
+    float gain_db, zx_duration_t duration_ns,
+    fuchsia::media::audio::AudioRamp rampType) {
+  if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
+      gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
     Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
     return;
@@ -714,7 +714,7 @@ void AudioRendererImpl::SetMute(bool mute) {
 }
 
 void AudioRendererImpl::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::GainControl> request) {
+    fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
   gain_control_bindings_.AddBinding(GainControlBinding::Create(this),
                                     std::move(request));
 }
@@ -750,7 +750,7 @@ void AudioRendererImpl::GainControlBinding::SetGain(float gain_db) {
 
 void AudioRendererImpl::GainControlBinding::SetGainWithRamp(
     float gain_db, zx_duration_t duration_ns,
-    fuchsia::media::AudioRamp rampType) {
+    fuchsia::media::audio::AudioRamp rampType) {
   owner_->SetGainWithRamp(gain_db, duration_ns, rampType);
 }
 

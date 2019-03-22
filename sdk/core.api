@@ -18,6 +18,7 @@ sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media
+sdk://fidl/fuchsia.media.audio
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mediaplayer
 sdk://fidl/fuchsia.mem

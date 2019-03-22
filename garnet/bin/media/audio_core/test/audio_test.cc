@@ -453,17 +453,17 @@ TEST_F(SystemGainMuteTest, SystemMuteDoesntAffectSystemGain) {
 // Test independence of systemwide Gain/Mute. System Gain should not affect
 // systemwide Mute (Mute should not become true when Gain is MUTED_GAIN_DB).
 TEST_F(SystemGainMuteTest, SystemGainDoesntAffectSystemMute) {
-  SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+  SetSystemGain(fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, false));
 
   SetSystemMute(true);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, true));
 
   SetSystemMute(false);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, false));
 
   SetSystemMute(true);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, true));
 
   constexpr float expected_gain_db = -42.0f;
   SetSystemGain(expected_gain_db);
@@ -482,11 +482,11 @@ TEST_F(SystemGainMuteTest, SystemMuteNoChangeEmitsNoCallback) {
   SetSystemMute(true);
   EXPECT_TRUE(ReceiveNoGainCallback());
 
-  SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
+  SetSystemGain(fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, true));
 
   SetSystemMute(false);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, false));
 
   SetSystemMute(false);
   EXPECT_TRUE(ReceiveNoGainCallback());
@@ -504,21 +504,21 @@ TEST_F(SystemGainMuteTest, SystemGainNoChangeEmitsNoCallback) {
   SetSystemGain(kUnityGainDb);
   EXPECT_TRUE(ReceiveNoGainCallback());
 
-  SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
+  SetSystemGain(fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, true));
 
   SetSystemMute(false);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, false));
 
-  SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
+  SetSystemGain(fuchsia::media::audio::MUTED_GAIN_DB);
   EXPECT_TRUE(ReceiveNoGainCallback());
 }
 
 // Set System Gain above allowed range, after setting to low value.
 // Initial state of system gain is unity, which is the maximum value.
 TEST_F(SystemGainMuteTest, SystemGainTooHighIsClampedToMaximum) {
-  SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+  SetSystemGain(fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, false));
 
   SetSystemGain(kTooHighGainDb);
   EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, false));
@@ -527,7 +527,7 @@ TEST_F(SystemGainMuteTest, SystemGainTooHighIsClampedToMaximum) {
 // Set System Gain below allowed range. Should clamp "up" to the minimum val.
 TEST_F(SystemGainMuteTest, SystemGainTooLowIsClampedToMinimum) {
   SetSystemGain(kTooLowGainDb);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::audio::MUTED_GAIN_DB, false));
 }
 
 // Set System Gain to malformed float. Should cause no change, nor disconnect.

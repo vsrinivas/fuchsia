@@ -30,7 +30,7 @@ class AudioCoreImpl;
 class AudioCapturerImpl
     : public AudioObject,
       public fuchsia::media::AudioCapturer,
-      public fuchsia::media::GainControl,
+      public fuchsia::media::audio::GainControl,
       public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
@@ -153,12 +153,12 @@ class AudioCapturerImpl
   void StopAsyncCapture(StopAsyncCaptureCallback cbk) final;
   void StopAsyncCaptureNoReply() final;
   void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::GainControl> request) final;
+      fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
 
   // GainControl interface.
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                       fuchsia::media::AudioRamp rampType) final {
+                       fuchsia::media::audio::AudioRamp rampType) final {
     FXL_NOTIMPLEMENTED();
   }
   void SetMute(bool mute) final;
@@ -197,7 +197,7 @@ class AudioCapturerImpl
   zx_status_t ChooseMixer(const std::shared_ptr<AudioLink>& link);
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
-  fidl::BindingSet<fuchsia::media::GainControl> gain_control_bindings_;
+  fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
   AudioCoreImpl* owner_ = nullptr;
   std::atomic<State> state_;
   const bool loopback_;

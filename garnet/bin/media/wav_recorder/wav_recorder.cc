@@ -122,8 +122,8 @@ void WavRecorder::Usage() {
   printf(
       " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; 0.0 if only "
       "'--%s' is provided)\n",
-      kGainOption.c_str(), fuchsia::media::MUTED_GAIN_DB,
-      fuchsia::media::MAX_GAIN_DB, kGainOption.c_str());
+      kGainOption.c_str(), fuchsia::media::audio::MUTED_GAIN_DB,
+      fuchsia::media::audio::MAX_GAIN_DB, kGainOption.c_str());
   printf(
       " --%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only "
       "'--%s' is provided)\n",
@@ -281,11 +281,11 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
         return;
       }
 
-      if ((stream_gain_db_ < fuchsia::media::MUTED_GAIN_DB) ||
-          (stream_gain_db_ > fuchsia::media::MAX_GAIN_DB)) {
+      if ((stream_gain_db_ < fuchsia::media::audio::MUTED_GAIN_DB) ||
+          (stream_gain_db_ > fuchsia::media::audio::MAX_GAIN_DB)) {
         printf("Gain (%.3f dB) must be within range [%.1f, %.1f]\n",
-               stream_gain_db_, fuchsia::media::MUTED_GAIN_DB,
-               fuchsia::media::MAX_GAIN_DB);
+               stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
+               fuchsia::media::audio::MAX_GAIN_DB);
         return;
       }
     }
@@ -388,9 +388,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     FXL_DCHECK(capture_frames_per_chunk_);
     FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
     audio_capturer_.events().OnPacketProduced =
-        [this](fuchsia::media::StreamPacket pkt) {
-          OnPacketProduced(pkt);
-        };
+        [this](fuchsia::media::StreamPacket pkt) { OnPacketProduced(pkt); };
     audio_capturer_->StartAsyncCapture(capture_frames_per_chunk_);
   }
 

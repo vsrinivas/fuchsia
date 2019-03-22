@@ -25,7 +25,7 @@ class AudioRendererTest : public gtest::RealLoopFixture {
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioRendererPtr audio_renderer_;
-  fuchsia::media::GainControlPtr gain_control_;
+  fuchsia::media::audio::GainControlPtr gain_control_;
 
   bool error_occurred_ = false;
   bool expect_error_ = false;
@@ -267,7 +267,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
   };
   audio_renderer_2.set_error_handler(ar2_err_handler);
 
-  fuchsia::media::GainControlPtr gain_control_2;
+  fuchsia::media::audio::GainControlPtr gain_control_2;
   audio_renderer_2->BindGainControl(gain_control_2.NewRequest());
   bool gc2_error_occurred = false;
   auto gc2_err_handler = [&gc2_error_occurred](zx_status_t error) {

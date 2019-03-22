@@ -6,6 +6,7 @@ library fuchsia.mediasession;
 
 using zx;
 using fuchsia.media;
+using fuchsia.media.audio;
 
 /// `ReadOnlySession` is a handle for media playback, allowing clients to observe
 /// a playback session.
@@ -61,7 +62,7 @@ protocol Session {
     /// Sets shuffle mode.
     SetShuffleMode(bool shuffle_on);
     /// Binds to the session's gain control for control and notifications.
-    BindGainControl(request<fuchsia.media.GainControl> gain_control_request);
+    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
 
     // Connects a channel to a custom extension. This is for clients
     // privy to the underlying implementation.

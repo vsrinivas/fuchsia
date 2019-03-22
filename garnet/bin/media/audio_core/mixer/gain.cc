@@ -20,9 +20,9 @@ constexpr float Gain::kMaxGainDb;
 
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.
-void Gain::SetSourceGainWithRamp(float source_gain_db,
-                                 zx_duration_t duration_ns,
-                                 __UNUSED fuchsia::media::AudioRamp rampType) {
+void Gain::SetSourceGainWithRamp(
+    float source_gain_db, zx_duration_t duration_ns,
+    __UNUSED fuchsia::media::audio::AudioRamp rampType) {
   FXL_DCHECK(source_gain_db <= kMaxGainDb);
   FXL_DCHECK(duration_ns >= 0) << "Ramp duration cannot be negative";
 

@@ -109,7 +109,7 @@ class MediaApp {
   fit::closure quit_callback_;
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
-  fuchsia::media::GainControlPtr gain_control_;
+  fuchsia::media::audio::GainControlPtr gain_control_;
 
   fzl::VmoMapper payload_buffer_;
 

@@ -25,7 +25,7 @@ class AudioRendererImpl
     : public AudioObject,
       public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
       public fuchsia::media::AudioRenderer,
-      public fuchsia::media::GainControl {
+      public fuchsia::media::audio::GainControl {
  public:
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
@@ -77,14 +77,14 @@ class AudioRendererImpl
   void Pause(PauseCallback callback) final;
   void PauseNoReply() final;
   void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::GainControl> request) final;
+      fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
   // GainControl interface.
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                       fuchsia::media::AudioRamp rampType) final;
+                       fuchsia::media::audio::AudioRamp rampType) final;
   void SetMute(bool muted) final;
   void NotifyGainMuteChanged();
   // TODO(mpuryear): Notify on SetGainWithRamp.
@@ -103,7 +103,7 @@ class AudioRendererImpl
   int64_t min_clock_lead_nsec_ = 0;
 
  private:
-  class GainControlBinding : public fuchsia::media::GainControl {
+  class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:
     static fbl::unique_ptr<GainControlBinding> Create(
         AudioRendererImpl* owner) {
@@ -113,7 +113,7 @@ class AudioRendererImpl
     // GainControl interface.
     void SetGain(float gain_db) final;
     void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                         fuchsia::media::AudioRamp rampType) final;
+                         fuchsia::media::audio::AudioRamp rampType) final;
     void SetMute(bool muted) final;
 
    private:
@@ -141,7 +141,7 @@ class AudioRendererImpl
 
   AudioCoreImpl* owner_ = nullptr;
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
-  fidl::BindingSet<fuchsia::media::GainControl,
+  fidl::BindingSet<fuchsia::media::audio::GainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;

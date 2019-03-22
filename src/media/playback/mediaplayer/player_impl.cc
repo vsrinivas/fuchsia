@@ -516,7 +516,8 @@ void PlayerImpl::CreateView2(zx::eventpair view_token) {
 }
 
 void PlayerImpl::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::GainControl> gain_control_request) {
+    fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
+        gain_control_request) {
   if (!audio_renderer_) {
     MaybeCreateRenderer(StreamType::Medium::kAudio);
   }

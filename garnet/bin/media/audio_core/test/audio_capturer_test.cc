@@ -27,7 +27,7 @@ class AudioCapturerTest : public gtest::RealLoopFixture {
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
-  fuchsia::media::GainControlPtr gain_control_;
+  fuchsia::media::audio::GainControlPtr gain_control_;
 
   bool error_occurred_ = false;
   bool expect_error_ = false;
@@ -234,7 +234,7 @@ TEST_F(AudioCapturerTest, BindGainControl) {
   };
   audio_capturer_2.set_error_handler(ac2_err_handler);
 
-  fuchsia::media::GainControlPtr gain_control_2;
+  fuchsia::media::audio::GainControlPtr gain_control_2;
   audio_capturer_2->BindGainControl(gain_control_2.NewRequest());
   bool gc2_error_occurred = false;
   auto gc2_err_handler = [&gc2_error_occurred](zx_status_t error) {
@@ -279,7 +279,7 @@ TEST_F(AudioCapturerTest, BindGainControlNull) {
   audio_->CreateAudioCapturer(audio_capturer_2.NewRequest(), false);
   audio_capturer_2.set_error_handler(err_handler);
 
-  fidl::InterfaceRequest<fuchsia::media::GainControl> bad_request;
+  fidl::InterfaceRequest<fuchsia::media::audio::GainControl> bad_request;
   auto bad_request_void_ptr = static_cast<void*>(&bad_request);
   auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
   *bad_request_dword_ptr = 0x0BADCAFE;
