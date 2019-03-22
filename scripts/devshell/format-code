@@ -138,7 +138,7 @@ declare DART_CMD="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/
 declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
 declare FIDL_CMD="${FIDL_BIN} -i"
 declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"
-declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -w"
+declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -s -w"
 declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
 declare RUST_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 declare RUST_ENTRY_POINT_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
