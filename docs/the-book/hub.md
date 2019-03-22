@@ -85,7 +85,7 @@ The hub is organized as follows:
 > their own, which are not reflected here.
 
 **\<component instance id\>/system\_objects**: system-level component inspection
-> A directory tree exposing objects conforming to the [Inspect API](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/inspect/README.md).
+> A directory tree exposing objects conforming to the [Inspect API](/garnet/docs/inspect/README.md).
 > This directory tree is managed by the system to expose system-level
 > information about the components.
 
@@ -118,7 +118,7 @@ The hub is organized as follows:
 > objects.
 
 **\<component instance id\>/out/objects**: component’s exported structured objects
-> A directory tree exposing objects conforming to the [Inspect API](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/inspect/README.md).
+> A directory tree exposing objects conforming to the [Inspect API](/garnet/docs/inspect/README.md).
 > This directory tree is exposed by the component itself to allow inspection
 > of component-specific data.
 
