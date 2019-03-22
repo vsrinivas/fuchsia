@@ -37,6 +37,7 @@ App::App(Config config)
   // closure of dependencies required for auto-updates that must not be resolved
   // via the update service.
   const auto update_dependencies = config.TakeUpdateDependencies();
+  const auto optional_services = config.TakeOptionalServices();
   std::unordered_set<std::string> update_dependency_urls;
 
   // Register services.
@@ -45,7 +46,10 @@ App::App(Config config)
                   pair.first) != std::end(update_dependencies)) {
       update_dependency_urls.insert(pair.second->url);
     }
-    RegisterSingleton(pair.first, std::move(pair.second));
+    const bool optional =
+        std::find(optional_services.begin(), optional_services.end(),
+                  pair.first) != std::end(optional_services);
+    RegisterSingleton(pair.first, std::move(pair.second), optional);
   }
 
   auto env_request = env_.NewRequest();
@@ -143,11 +147,12 @@ void App::ConnectToService(const std::string& service_name,
 }
 
 void App::RegisterSingleton(std::string service_name,
-                            fuchsia::sys::LaunchInfoPtr launch_info) {
-  auto child = fbl::AdoptRef(
-      new fs::Service([this, service_name, launch_info = std::move(launch_info),
-                       controller = fuchsia::sys::ComponentControllerPtr()](
-                          zx::channel client_handle) mutable {
+                            fuchsia::sys::LaunchInfoPtr launch_info,
+                            bool optional) {
+  auto child = fbl::AdoptRef(new fs::Service(
+      [this, optional, service_name, launch_info = std::move(launch_info),
+       controller = fuchsia::sys::ComponentControllerPtr()](
+          zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
         auto it = services_.find(launch_info->url);
@@ -159,14 +164,26 @@ void App::RegisterSingleton(std::string service_name,
           dup_launch_info.url = launch_info->url;
           fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
           dup_launch_info.directory_request = services.NewRequest();
+          controller.events().OnTerminated =
+              [service_name, url = launch_info->url, optional](
+                  int64_t return_code, fuchsia::sys::TerminationReason reason) {
+                if (!optional &&
+                    reason ==
+                        fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND) {
+                  FXL_LOG(ERROR) << "Could not load package for service "
+                                 << service_name << " at " << url;
+                }
+              };
+          controller.set_error_handler([this, optional, url = launch_info->url,
+                                        &controller](zx_status_t error) {
+            if (!optional) {
+              FXL_LOG(ERROR) << "Singleton " << url << " died";
+            }
+            controller.Unbind();  // kills the singleton application
+            services_.erase(url);
+          });
           env_launcher_->CreateComponent(std::move(dup_launch_info),
                                          controller.NewRequest());
-          controller.set_error_handler(
-              [this, url = launch_info->url, &controller](zx_status_t error) {
-                FXL_LOG(ERROR) << "Singleton " << url << " died";
-                controller.Unbind();  // kills the singleton application
-                services_.erase(url);
-              });
 
           std::tie(it, std::ignore) =
               services_.emplace(launch_info->url, std::move(services));

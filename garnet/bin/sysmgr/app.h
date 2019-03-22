@@ -38,7 +38,8 @@ class App {
   void ConnectToService(const std::string& service_name, zx::channel channel);
 
   void RegisterSingleton(std::string service_name,
-                         fuchsia::sys::LaunchInfoPtr launch_info);
+                         fuchsia::sys::LaunchInfoPtr launch_info,
+                         bool optional);
   void RegisterLoader();
   void RegisterDefaultServiceConnector();
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);

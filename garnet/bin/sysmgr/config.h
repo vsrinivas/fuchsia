@@ -23,8 +23,9 @@ class Config {
  public:
   using ServiceMap =
       std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>;
-  using StartupServiceVector = std::vector<std::string>;
+  using StartupServices = std::vector<std::string>;
   using UpdateDependencies = std::vector<std::string>;
+  using OptionalServices = std::vector<std::string>;
   using AppVector = std::vector<fuchsia::sys::LaunchInfoPtr>;
 
   Config() = default;
@@ -44,12 +45,16 @@ class Config {
 
   ServiceMap TakeServices() { return std::move(services_); }
 
-  StartupServiceVector TakeStartupServices() {
+  StartupServices TakeStartupServices() {
     return std::move(startup_services_);
   }
 
   UpdateDependencies TakeUpdateDependencies() {
     return std::move(update_dependencies_);
+  }
+
+  OptionalServices TakeOptionalServices() {
+    return std::move(optional_services_);
   }
 
   AppVector TakeApps() { return std::move(apps_); }
@@ -58,12 +63,16 @@ class Config {
   void ParseDocument(rapidjson::Document document);
   bool ParseServiceMap(const rapidjson::Document& document,
                        const std::string& key, Config::ServiceMap* services);
+  void ReadJsonStringArray(
+      const rapidjson::Document& document, const char* member,
+      std::vector<std::string>* out);
   fuchsia::sys::LaunchInfoPtr GetLaunchInfo(
       const rapidjson::Document::ValueType& value, const std::string& name);
 
   ServiceMap services_;
-  StartupServiceVector startup_services_;
+  StartupServices startup_services_;
   UpdateDependencies update_dependencies_;
+  OptionalServices optional_services_;
   AppVector apps_;
   json::JSONParser json_parser_;
 

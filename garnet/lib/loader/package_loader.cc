@@ -52,8 +52,8 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   fxl::UniqueFD package_dir(
       open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
   if (!package_dir.is_valid()) {
-    FXL_LOG(ERROR) << "Could not open directory "
-                   << fuchsia_url.pkgfs_dir_path() << " " << strerror(errno);
+    FXL_VLOG(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path()
+                << " " << strerror(errno);
     callback(nullptr);
     return;
   }

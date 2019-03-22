@@ -6,6 +6,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "src/lib/files/file.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -13,14 +14,13 @@
 
 namespace sysmgr {
 namespace {
-
 using fxl::StringPrintf;
 
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
+constexpr char kOptionalServices[] = "optional_services";
 constexpr char kUpdateDependencies[] = "update_dependencies";
-
 }  // namespace
 
 bool Config::ParseFromDirectory(const std::string& dir) {
@@ -39,6 +39,26 @@ bool Config::ParseFromString(const std::string& data,
     ParseDocument(std::move(document));
   }
   return !json_parser_.HasError();
+}
+
+void Config::ReadJsonStringArray(
+    const rapidjson::Document& document, const char* member,
+    std::vector<std::string>* out) {
+  auto it = document.FindMember(member);
+  if (it != document.MemberEnd()) {
+    const auto& value = it->value;
+    if (value.IsArray() &&
+        std::all_of(
+            value.GetArray().begin(), value.GetArray().end(),
+            [](const rapidjson::Value& val) { return val.IsString(); })) {
+      for (const auto& service : value.GetArray()) {
+        out->push_back(service.GetString());
+      }
+    } else {
+      json_parser_.ReportError(
+          StringPrintf("'%s' is not an array of strings.", member));
+    }
+  }
 }
 
 bool Config::HasError() const { return json_parser_.HasError(); }
@@ -71,39 +91,9 @@ void Config::ParseDocument(rapidjson::Document document) {
     }
   }
 
-  auto startup_services_it = document.FindMember(kStartupServices);
-  if (startup_services_it != document.MemberEnd()) {
-    const auto& value = startup_services_it->value;
-    const auto* name = startup_services_it->name.GetString();
-    if (value.IsArray() &&
-        std::all_of(
-            value.GetArray().begin(), value.GetArray().end(),
-            [](const rapidjson::Value& val) { return val.IsString(); })) {
-      for (const auto& service : value.GetArray()) {
-        startup_services_.push_back(service.GetString());
-      }
-    } else {
-      json_parser_.ReportError(
-          StringPrintf("'%s' is not an array of strings.", name));
-    }
-  }
-
-  auto update_dependencies_it = document.FindMember(kUpdateDependencies);
-  if (update_dependencies_it != document.MemberEnd()) {
-    const auto& value = update_dependencies_it->value;
-    const auto* name = update_dependencies_it->name.GetString();
-    if (value.IsArray() &&
-        std::all_of(
-            value.GetArray().begin(), value.GetArray().end(),
-            [](const rapidjson::Value& val) { return val.IsString(); })) {
-      for (const auto& service : value.GetArray()) {
-        update_dependencies_.push_back(service.GetString());
-      }
-    } else {
-      json_parser_.ReportError(
-          StringPrintf("'%s' is not an array of strings.", name));
-    }
-  }
+  ReadJsonStringArray(document, kStartupServices, &startup_services_);
+  ReadJsonStringArray(document, kUpdateDependencies, &update_dependencies_);
+  ReadJsonStringArray(document, kOptionalServices, &optional_services_);
 }
 
 bool Config::ParseServiceMap(const rapidjson::Document& document,
