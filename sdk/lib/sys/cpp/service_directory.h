@@ -65,12 +65,6 @@ class ServiceDirectory {
   static std::shared_ptr<ServiceDirectory> CreateWithRequest(
       fidl::InterfaceRequest<fuchsia::io::Directory>* out_request);
 
-  // Use CreateWithRequest. This was for soft transition.
-  static std::shared_ptr<ServiceDirectory> CreateWithRequest2(
-      zx::channel* out_request);
-  static std::shared_ptr<ServiceDirectory> CreateWithRequest2(
-      fidl::InterfaceRequest<fuchsia::io::Directory>* out_request);
-
   // Connect to an interface in the directory.
   //
   // The discovery name of the interface is inferred from the C++ type of the

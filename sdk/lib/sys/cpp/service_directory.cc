@@ -55,16 +55,6 @@ std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest(
   return directory;
 }
 
-std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
-    zx::channel* out_request) {
-  return CreateWithRequest(out_request);
-}
-
-std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest2(
-    fidl::InterfaceRequest<fuchsia::io::Directory>* out_request) {
-  return CreateWithRequest(out_request);
-}
-
 zx_status_t ServiceDirectory::Connect(const std::string& interface_name,
                                       zx::channel channel) const {
   return fdio_service_connect_at(directory_.get(), interface_name.c_str(),
