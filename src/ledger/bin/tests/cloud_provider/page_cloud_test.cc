@@ -200,9 +200,8 @@ TEST_F(PageCloudTest, GetCommitsByPositionToken) {
   ASSERT_TRUE(result);
   ASSERT_TRUE(DecodeCommitPack(*result, &entries));
 
-  // As per the API contract, the response must include `id1` and everything
-  // newer than it. It may or may not include `id0`.
-  EXPECT_TRUE(CheckThatCommitsContain(entries, "id1", "data1"));
+  // As per the API contract, the response must include `id2` and everything
+  // newer than it. It may or may not include `id0` and `id1`.
   EXPECT_TRUE(CheckThatCommitsContain(entries, "id2", "data2"));
 }
 
@@ -333,13 +332,6 @@ TEST_F(PageCloudTest, WatchWithPositionToken) {
                                           &status));
   EXPECT_EQ(Status::OK, status);
 
-  // As per the API contract, the commits delivered in notifications must
-  // include `id1`. They may or may not include `id0`.
-  while (!CheckThatCommitsContain(on_new_commits_commits_, "id1", "data1")) {
-    ASSERT_EQ(ZX_OK, binding.WaitForMessage());
-    on_new_commits_commits_callback_();
-  }
-
   // Add one more commit.
   std::vector<CommitPackEntry> more_entries{{"id2", "data2"}};
   ASSERT_TRUE(EncodeCommitPack(more_entries, &commit_pack));
@@ -350,6 +342,56 @@ TEST_F(PageCloudTest, WatchWithPositionToken) {
     ASSERT_EQ(ZX_OK, binding.WaitForMessage());
     on_new_commits_commits_callback_();
   }
+
+  // Add one more commit.
+  more_entries = {{"id3", "data3"}};
+  ASSERT_TRUE(EncodeCommitPack(more_entries, &commit_pack));
+  ASSERT_EQ(ZX_OK, page_cloud->AddCommits(std::move(commit_pack), &status));
+  EXPECT_EQ(Status::OK, status);
+
+  while (!CheckThatCommitsContain(on_new_commits_commits_, "id3", "data3")) {
+    ASSERT_EQ(ZX_OK, binding.WaitForMessage());
+    on_new_commits_commits_callback_();
+  }
+}
+
+TEST_F(PageCloudTest, WatchWithPositionTokenBatch) {
+  PageCloudSyncPtr page_cloud;
+  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+
+  // Add two commits.
+  std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
+  CommitPack commit_pack;
+  ASSERT_TRUE(EncodeCommitPack(entries, &commit_pack));
+  Status status = Status::INTERNAL_ERROR;
+  ASSERT_EQ(ZX_OK, page_cloud->AddCommits(std::move(commit_pack), &status));
+  EXPECT_EQ(Status::OK, status);
+
+  // Retrieve the position token of the newest of the two (`id1`).
+  std::unique_ptr<cloud_provider::Token> token;
+  ASSERT_TRUE(GetLatestPositionToken(&page_cloud, &token));
+  EXPECT_TRUE(token);
+
+  // Set the watcher with the position token of `id1`.
+  fidl::Binding<PageCloudWatcher> binding(this);
+  PageCloudWatcherPtr watcher;
+  binding.Bind(watcher.NewRequest());
+  ASSERT_EQ(ZX_OK, page_cloud->SetWatcher(std::move(token), std::move(watcher),
+                                          &status));
+  EXPECT_EQ(Status::OK, status);
+
+  // Add two commits at once.
+  std::vector<CommitPackEntry> more_entries{{"id2", "data2"}, {"id3", "data3"}};
+  ASSERT_TRUE(EncodeCommitPack(more_entries, &commit_pack));
+  ASSERT_EQ(ZX_OK, page_cloud->AddCommits(std::move(commit_pack), &status));
+  EXPECT_EQ(Status::OK, status);
+
+  while (!CheckThatCommitsContain(on_new_commits_commits_, "id2", "data2")) {
+    ASSERT_EQ(ZX_OK, binding.WaitForMessage());
+    on_new_commits_commits_callback_();
+  }
+  // The two commits must be delivered at the same time.
+  EXPECT_TRUE(CheckThatCommitsContain(on_new_commits_commits_, "id3", "data3"));
 }
 
 }  // namespace
