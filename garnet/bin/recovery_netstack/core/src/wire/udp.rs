@@ -16,10 +16,12 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto};
-use crate::wire::util::checksum::Checksum;
-use crate::wire::util::{fits_in_u16, fits_in_u32};
+use crate::wire::util::checksum::compute_transport_checksum;
+use crate::wire::util::fits_in_u16;
 
 pub(crate) const HEADER_BYTES: usize = 8;
+const LENGTH_OFFSET: usize = 4;
+const CHECKSUM_OFFSET: usize = 6;
 
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -92,85 +94,73 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacke
     fn parse<BV: BufferView<B>>(mut buffer: BV, args: UdpParseArgs<A>) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
-        let buf_len = buffer.len();
-        let header = buffer
-            .take_obj_front::<Header>()
-            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-        let packet = UdpPacket { header, body: buffer.into_rest() };
-        let len = if packet.header.length() == 0 && A::Version::VERSION.is_v6() {
+        let buf_len = buffer.as_ref().len();
+        if buf_len < HEADER_BYTES {
+            return debug_err!(Err(ParseError::Format), "too few bytes for header");
+        }
+
+        // We first read a few fields directly (rather than by doing
+        // buffer.take_obj_front) since we need to compute the checksum over the
+        // entire buffer, and so need to feed the buffer unmodified to
+        // compute_transport_checksum.
+        let length_field = NetworkEndian::read_u16(&buffer.as_ref()[LENGTH_OFFSET..]);
+        let checksum = NetworkEndian::read_u16(&buffer.as_ref()[CHECKSUM_OFFSET..]);
+        let real_length = if length_field == 0 && A::Version::VERSION.is_v6() {
             // IPv6 supports jumbograms, so a UDP packet may be greater than
             // 2^16 bytes in size. In this case, the size doesn't fit in the
             // 16-bit length field in the header, and so the length field is set
             // to zero to indicate this.
             buf_len
         } else {
-            packet.header.length() as usize
+            length_field.into()
         };
-        if len != buf_len {
+        if real_length > buf_len || real_length < HEADER_BYTES {
             return debug_err!(
                 Err(ParseError::Format),
-                "length in header ({}) does not match packet length ({})",
-                len,
-                buf_len,
+                "length field shorter than header or longer than buffer"
             );
-        }
-        if packet.header.dst_port() == 0 {
-            return debug_err!(Err(ParseError::Format), "zero destination port");
         }
 
         // A 0 checksum indicates that the checksum wasn't computed. In IPv4,
         // this means that it shouldn't be validated. In IPv6, the checksum is
         // mandatory, so this is an error.
-        if packet.header.checksum != [0, 0] {
+        if checksum != 0 {
             // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
-            let target = if packet.header.checksum == [0xFF, 0xFF] {
-                0
-            } else {
-                NetworkEndian::read_u16(&packet.header.checksum)
-            };
-            if packet
-                .compute_checksum(args.src_ip, args.dst_ip)
-                .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?
-                != target
-            {
+            // Since we normally expect the sum of all bytes including the
+            // checksum to be 0, but we've added an extra factor of (0xFFFF - 0)
+            // = 0xFFFF, we expect the sum to be 0xFFFF.
+            let target = if checksum == 0xFFFF { 0xFFFF } else { 0 };
+            let checksum = compute_transport_checksum(
+                args.src_ip,
+                args.dst_ip,
+                IpProto::Udp,
+                &buffer.as_ref()[..real_length],
+            )
+            .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
+            if target != checksum {
                 return debug_err!(Err(ParseError::Checksum), "invalid checksum");
             }
         } else if A::Version::VERSION.is_v6() {
             return debug_err!(Err(ParseError::Format), "missing checksum");
         }
+
+        let header = buffer.take_obj_front::<Header>().expect("header length already validated");
+        // Discard any padding left by the previous layer. The unwrap is safe
+        // because we've already validated that real_length <= buf_len and that
+        // real_length >= HEADER_BYTES. Thus, even though we've already consumed
+        // HEADER_BYTES bytes from the buffer, we know that there are at least
+        // buf_len - real_length bytes left.
+        buffer.take_back(buf_len - real_length).unwrap();
+        let packet = UdpPacket { header, body: buffer.into_rest() };
+        if packet.header.dst_port() == 0 {
+            return debug_err!(Err(ParseError::Format), "zero destination port");
+        }
+
         Ok(packet)
     }
 }
 
 impl<B: ByteSlice> UdpPacket<B> {
-    // Compute the UDP checksum, skipping the checksum field itself. Returns
-    // None if the packet size is too large.
-    fn compute_checksum<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> Option<u16> {
-        // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Checksum_computation
-        let mut c = Checksum::new();
-        c.add_bytes(src_ip.bytes());
-        c.add_bytes(dst_ip.bytes());
-        if A::Version::VERSION.is_v4() {
-            c.add_bytes(&[0, IpProto::Udp.into()]);
-            c.add_bytes(&self.header.length);
-        } else {
-            let len = self.total_packet_len();
-            // For IPv6, the "UDP length" field in the pseudo-header is 32 bits.
-            if !fits_in_u32(len) {
-                return None;
-            }
-            let mut len_bytes = [0; 4];
-            NetworkEndian::write_u32(&mut len_bytes, len as u32);
-            c.add_bytes(&len_bytes);
-            c.add_bytes(&[0, 0, 0, IpProto::Udp.into()]);
-        }
-        c.add_bytes(&self.header.src_port);
-        c.add_bytes(&self.header.dst_port);
-        c.add_bytes(&self.header.length);
-        c.add_bytes(&self.body);
-        Some(c.checksum())
-    }
-
     /// The packet body.
     pub(crate) fn body(&self) -> &[u8] {
         self.body.deref()
@@ -226,7 +216,7 @@ impl<B: ByteSlice> UdpPacket<B> {
 // has a valid checksum.
 
 /// A builder for UDP packets.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct UdpPacketBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
@@ -279,8 +269,9 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
 
-        // SECURITY: Use _zero constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
+        // SECURITY: Use _zero constructor to ensure we zero memory to
+        // prevent leaking information from packets previously stored in
+        // this buffer.
         let header = header.take_obj_front_zero::<Header>().expect("too few bytes for UDP header");
         let mut packet = UdpPacket { header, body };
 
@@ -299,22 +290,28 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
             );
         };
         NetworkEndian::write_u16(&mut packet.header.length, len_field);
+        // Initialize the checksum to 0 so that we will get the correct
+        // value when we compute it below.
+        NetworkEndian::write_u16(&mut packet.header.checksum, 0);
 
-        // This ignores the checksum field in the header, so it's fine that we
-        // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let c = packet.compute_checksum(self.src_ip, self.dst_ip).unwrap_or_else(|| {
-            panic!(
-                "total UDP packet length of {} bytes overflow 32-bit length field of pseudo-header",
-                total_len
-            )
-        });
+        // NOTE: We stop using packet at this point so that it no longer borrows
+        // the buffer, and we can use the buffer directly.
+        let packet_len = buffer.as_ref().len();
+        let checksum =
+            compute_transport_checksum(self.src_ip, self.dst_ip, IpProto::Udp, buffer.as_ref())
+                .unwrap_or_else(|| {
+                    panic!(
+                    "total UDP packet length of {} bytes overflows length field of pseudo-header",
+                    packet_len
+                )
+                });
         NetworkEndian::write_u16(
-            &mut packet.header.checksum,
-            if c == 0 {
+            &mut buffer.as_mut()[CHECKSUM_OFFSET..],
+            if checksum == 0 {
                 // When computing the checksum, a checksum of 0 is sent as 0xFFFF.
                 0xFFFF
             } else {
-                c
+                checksum
             },
         );
     }
@@ -555,4 +552,48 @@ mod tests {
     //         .serialize_outer()
     //         .unwrap();
     // }
+}
+
+#[cfg(all(test, feature = "benchmark"))]
+mod benchmarks {
+    use std::num::NonZeroU16;
+
+    use packet::{ParseBuffer, Serializer};
+    use test::{black_box, Bencher};
+
+    use super::*;
+    use crate::ip::Ipv4;
+    use crate::testutil::parse_ip_packet_in_ethernet_frame;
+
+    #[bench]
+    fn bench_parse(b: &mut Bencher) {
+        use crate::wire::testdata::dns_request::*;
+        let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap().0;
+
+        b.iter(|| {
+            let mut buf = bytes;
+            black_box(
+                black_box(buf)
+                    .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(IP_SRC_IP, IP_DST_IP))
+                    .unwrap(),
+            );
+        })
+    }
+
+    #[bench]
+    fn bench_serialize(b: &mut Bencher) {
+        use crate::wire::testdata::dns_request::*;
+        let builder = UdpPacketBuilder::new(
+            IP_SRC_IP,
+            IP_DST_IP,
+            None,
+            NonZeroU16::new(UDP_DST_PORT).unwrap(),
+        );
+        let mut buf = vec![0; builder.header_len() + UDP_BODY.len()];
+        buf[builder.header_len()..].copy_from_slice(UDP_BODY);
+
+        b.iter(|| {
+            black_box(black_box((&mut buf[..]).encapsulate(builder.clone())).serialize_outer());
+        })
+    }
 }
