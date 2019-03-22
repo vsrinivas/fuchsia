@@ -14,7 +14,7 @@
 
 void Usage() {
   printf(
-      "Usage: tiles [--border=...] [initial_urls]\n"
+      "Usage: tiles [--border=...]\n"
       "\n"
       "Tiles displays a set of views as tiles. Add or remove tiles with\n"
       "the 'tiles_ctl' command line utility or connecting to the\n"
@@ -22,13 +22,7 @@ void Usage() {
       "\n"
       "Options:\n"
       "  --border=<integer>  Border (in pixels) around each tile\n"
-      "  --input_path=<string>  DEPRECATED - Flag to be removed\n"
-      "\n"
-      "url's in initial_urls should either be a full component URL, like:\n"
-      "\"fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx\"\n"
-      "or the short name of a package (just <package>), in which case:\n"
-      "\"fuchsia-pkg://fuchsia.com/<package>#meta/<package>.cmx\"\n"
-      "will be launched.\n");
+      "  --input_path=<string>  DEPRECATED - Flag to be removed\n");
 }
 
 int main(int argc, const char** argv) {

@@ -66,9 +66,6 @@ void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
 }
 
 void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
-  FXL_LOG(INFO) << "RootPesenter -- Presentation #"
-                << presentations_.size()
-                << " added.  Use Ctrl+Atl+[] to cycle between presentations.";
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());
   }

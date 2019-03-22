@@ -10,17 +10,17 @@
 
 #include <string>
 
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 
 #include "fuchsia/developer/tiles/cpp/fidl.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/command_line.h"
+#include "src/lib/files/unique_fd.h"
 #include "lib/fxl/memory/unique_object.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/sys/cpp/service_directory.h"
-#include "src/lib/files/unique_fd.h"
 
 using ControllerPtr = fuchsia::developer::tiles::ControllerSyncPtr;
 
@@ -40,13 +40,7 @@ void Usage() {
       "    add [--disable-focus] <url> [<args>...]\n"
       "    remove <key>\n"
       "    list\n"
-      "    quit\n"
-      "\n"
-      "url's should either be a full component URL, like:\n"
-      "\"fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx\"\n"
-      "or the short name of a package (just <package>), in which case:\n"
-      "\"fuchsia-pkg://fuchsia.com/<package>#meta/<package>.cmx\"\n"
-      "will be launched.\n");
+      "    quit\n");
 }
 
 std::string FirstNumericEntryInDir(const UniqueDIR& dir) {

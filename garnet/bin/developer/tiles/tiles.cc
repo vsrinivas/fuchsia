@@ -7,7 +7,6 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/strings/substitute.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
@@ -70,23 +69,10 @@ void Tiles::AddTileFromURL(std::string url, bool allow_focus,
                            fidl::VectorPtr<std::string> args,
                            AddTileFromURLCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
-
-  component::FuchsiaPkgUrl pkg_url;
-  if (!pkg_url.Parse(url)) {
-    std::string converted =
-        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx", url, url);
-    if (!pkg_url.Parse(converted)) {
-      FXL_LOG(ERROR) << "Unable to launch " << url << ".  "
-                     << "It is not a valid full package name or a valid "
-                        "short package name.";
-      return;
-    }
-  }
-
   component::Services services;
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = pkg_url.ToString();
+  launch_info.url = url;
   launch_info.arguments = std::move(args);
   launch_info.directory_request = services.NewRequest();
 

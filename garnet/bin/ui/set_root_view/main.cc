@@ -9,47 +9,37 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/strings/substitute.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <trace-provider/provider.h>
 
-static void Usage() {
-  printf(
-      "Usage: set_root_view url\n"
-      "\n"
-      "set_root_view displays a view in full-screen.  The view is connected "
-      "to root_presenter and given its own Presentation.\n"
-      "\n"
-      "url should either be a full component URL, like:\n"
-      "\"fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx\"\n"
-      "or the short name of a package (just <package>), in which case:\n"
-      "\"fuchsia-pkg://fuchsia.com/<package>#meta/<package>.cmx\"\n"
-      "will be launched.\n");
-}
-
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
 
   FXL_LOG(WARNING) << "NOTE: This tool is deprecated and WILL BE DELETED "
-                   << "04/20/2019.  Use present_view instead.\n";
-
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (command_line.HasOption("h") || command_line.HasOption("help")) {
-    Usage();
-    return 0;
-  }
-
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
-    Usage();
-    return 1;
-  }
+                   << "04/20/2019.  Use present_view instead.";
+  FXL_LOG(WARNING) << "BE ADVISED: The set_root_view tool takes the URL to an "
+                      "app that provided the ViewProvider interface and makes "
+                      "it's view the root view.";
+  FXL_LOG(WARNING)
+      << "This tool is intended for testing and debugging purposes "
+         "only and may cause problems if invoked incorrectly.";
+  FXL_LOG(WARNING)
+      << "Do not invoke set_root_view if a view tree already exists "
+         "(i.e. if any process that creates a view is already "
+         "running).";
+  FXL_LOG(WARNING)
+      << "If scenic is already running on your system you "
+         "will probably want to kill it before invoking this tool.";
 
   const auto& positional_args = command_line.positional_args();
   if (positional_args.empty()) {
-    Usage();
+    FXL_LOG(ERROR)
+        << "set_root_view requires the url of a view provider application "
+           "to set_root_view.";
     return 1;
   }
 
@@ -59,26 +49,13 @@ int main(int argc, const char** argv) {
         << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
-  component::FuchsiaPkgUrl pkg_url;
-  if (!pkg_url.Parse(positional_args[0])) {
-    std::string converted =
-        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx",
-                        positional_args[0], positional_args[0]);
-    if (!pkg_url.Parse(converted)) {
-      FXL_LOG(ERROR) << "Unable to launch " << positional_args[0] << ".  "
-                     << "It is not a valid full package name or a valid "
-                        "short package name.";
-      Usage();
-      return 1;
-    }
-  }
-
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Launch the component.
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = pkg_url.ToString();
+  launch_info.url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info.arguments.push_back(positional_args[i]);
   launch_info.directory_request = services.NewRequest();

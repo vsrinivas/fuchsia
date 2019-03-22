@@ -27,7 +27,6 @@ source_set("tiles_lib") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//src/lib/pkg_url",
   ]
 }
 
