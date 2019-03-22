@@ -5,7 +5,7 @@
 use {
     crate::{
         appendable::Appendable,
-        mac::{self, Addr4, DataHdr, FrameControl, HtControl, QosControl, SequenceControl},
+        mac::{self, FixedDataHdrFields, FrameControl, OptionalDataHdrFields, SequenceControl},
     },
     failure::{ensure, Error},
 };
@@ -17,10 +17,10 @@ pub fn data_hdr_client_to_ap(
     bssid: MacAddr,
     client_addr: MacAddr,
     seq_ctrl: SequenceControl,
-) -> DataHdr {
+) -> FixedDataHdrFields {
     frame_ctrl.set_to_ds(true);
     frame_ctrl.set_from_ds(false);
-    DataHdr {
+    FixedDataHdrFields {
         frame_ctrl,
         duration: 0,
         addr1: bssid.clone(),
@@ -30,20 +30,9 @@ pub fn data_hdr_client_to_ap(
     }
 }
 
-pub struct OptionalFields {
-    pub addr4: Option<Addr4>,
-    pub qos_ctrl: Option<QosControl>,
-    pub ht_ctrl: Option<HtControl>,
-}
-impl OptionalFields {
-    pub fn none() -> OptionalFields {
-        OptionalFields { addr4: None, qos_ctrl: None, ht_ctrl: None }
-    }
-}
-
 fn make_new_frame_ctrl(
     mut fc: FrameControl,
-    optional: &OptionalFields,
+    optional: &OptionalDataHdrFields,
 ) -> Result<FrameControl, Error> {
     fc.set_frame_type(mac::FRAME_TYPE_DATA);
     if optional.addr4.is_some() {
@@ -73,8 +62,8 @@ fn make_new_frame_ctrl(
 
 pub fn write_data_hdr<B: Appendable>(
     w: &mut B,
-    mut fixed: DataHdr,
-    optional: OptionalFields,
+    mut fixed: FixedDataHdrFields,
+    optional: OptionalDataHdrFields,
 ) -> Result<(), Error> {
     fixed.frame_ctrl = make_new_frame_ctrl(fixed.frame_ctrl, &optional)?;
     w.append_value(&fixed)?;
@@ -102,7 +91,10 @@ pub fn write_snap_llc_hdr<B: Appendable>(w: &mut B, protocol_id: u16) -> Result<
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::buffer_writer::BufferWriter};
+    use {
+        super::*,
+        crate::{buffer_writer::BufferWriter, mac::HtControl, mac::QosControl},
+    };
 
     #[test]
     fn client_to_ap() {
@@ -112,7 +104,7 @@ mod tests {
             [2; 6],
             SequenceControl(4321),
         );
-        let expected = DataHdr {
+        let expected = FixedDataHdrFields {
             frame_ctrl: FrameControl(0b00110001_00110000),
             duration: 0,
             addr1: [1; 6],
@@ -128,7 +120,7 @@ mod tests {
         let mut bytes = vec![0u8; 20];
         let result = write_data_hdr(
             &mut BufferWriter::new(&mut bytes[..]),
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b00110001_00110000),
                 duration: 0,
                 addr1: [1; 6],
@@ -136,7 +128,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields::none(),
+            OptionalDataHdrFields::none(),
         );
         assert!(result.is_err(), "expected failure when writing into too small buffer");
     }
@@ -145,7 +137,7 @@ mod tests {
     fn invalid_ht_configuration() {
         let result = write_data_hdr(
             &mut vec![],
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b10110001_00110000),
                 duration: 0,
                 addr1: [1; 6],
@@ -153,7 +145,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields::none(),
+            OptionalDataHdrFields::none(),
         );
         assert!(result.is_err(), "expected failure due to invalid ht configuration");
     }
@@ -162,7 +154,7 @@ mod tests {
     fn invalid_addr4_configuration() {
         let result = write_data_hdr(
             &mut vec![],
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b00110011_00110000),
                 duration: 0,
                 addr1: [1; 6],
@@ -170,7 +162,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields::none(),
+            OptionalDataHdrFields::none(),
         );
         assert!(result.is_err(), "expected failure due to invalid addr4 configuration");
     }
@@ -179,7 +171,7 @@ mod tests {
     fn invalid_qos_configuration() {
         let result = write_data_hdr(
             &mut vec![],
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b00110000_10110000),
                 duration: 0,
                 addr1: [1; 6],
@@ -187,7 +179,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields::none(),
+            OptionalDataHdrFields::none(),
         );
         assert!(result.is_err(), "expected failure due to invalid qos configuration");
     }
@@ -197,7 +189,7 @@ mod tests {
         let mut bytes = vec![];
         write_data_hdr(
             &mut bytes,
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b00110001_0011_00_00),
                 duration: 0,
                 addr1: [1; 6],
@@ -205,7 +197,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields::none(),
+            OptionalDataHdrFields::none(),
         )
         .expect("Failed writing data frame");
 
@@ -229,7 +221,7 @@ mod tests {
         let mut bytes = vec![];
         write_data_hdr(
             &mut bytes,
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b00110001_00111000),
                 duration: 0,
                 addr1: [1; 6],
@@ -237,7 +229,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields {
+            OptionalDataHdrFields {
                 addr4: Some([4u8; 6]),
                 qos_ctrl: None,
                 ht_ctrl: Some(HtControl(0b10101111_11000011_11110000_10101010)),
@@ -269,7 +261,7 @@ mod tests {
         let mut bytes = vec![];
         write_data_hdr(
             &mut bytes,
-            DataHdr {
+            FixedDataHdrFields {
                 frame_ctrl: FrameControl(0b00110001_00111000),
                 duration: 0,
                 addr1: [1; 6],
@@ -277,7 +269,7 @@ mod tests {
                 addr3: [3; 6],
                 seq_ctrl: SequenceControl(0b11000000_10010000),
             },
-            OptionalFields {
+            OptionalDataHdrFields {
                 addr4: None,
                 qos_ctrl: Some(QosControl(0b11110000_10101010)),
                 ht_ctrl: None,

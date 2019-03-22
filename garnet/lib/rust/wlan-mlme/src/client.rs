@@ -77,7 +77,7 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     data_writer::write_data_hdr(
         buf,
         data_writer::data_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
-        data_writer::OptionalFields::none(),
+        mac::OptionalDataHdrFields::none(),
     )?;
     Ok(())
 }
@@ -146,7 +146,7 @@ pub fn write_eapol_data_frame<B: Appendable>(
     data_writer::write_data_hdr(
         buf,
         data_writer::data_hdr_client_to_ap(frame_ctrl, dest, src, seq_ctrl),
-        data_writer::OptionalFields::none(),
+        mac::OptionalDataHdrFields::none(),
     )?;
 
     data_writer::write_snap_llc_hdr(buf, mac::ETHER_TYPE_EAPOL)?;

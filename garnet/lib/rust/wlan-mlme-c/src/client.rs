@@ -65,7 +65,7 @@ pub extern "C" fn mlme_write_keep_alive_resp_frame(
     client_addr: &[u8; 6],
     out_buf: &mut OutBuf,
 ) -> i32 {
-    let frame_len = frame_len!(mac::DataHdr);
+    let frame_len = frame_len!(mac::FixedDataHdrFields);
     let mut buf = unwrap_or_bail!(provider.get_buffer(frame_len), zx::ZX_ERR_NO_RESOURCES);
     let mut writer = BufferWriter::new(&mut buf[..]);
     let write_result =
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn mlme_write_eapol_data_frame(
     eapol_frame_len: usize,
     out_buf: &mut OutBuf,
 ) -> i32 {
-    let frame_len = frame_len!(mac::DataHdr, mac::LlcHdr) + eapol_frame_len;
+    let frame_len = frame_len!(mac::FixedDataHdrFields, mac::LlcHdr) + eapol_frame_len;
     let buf_result = provider.get_buffer(frame_len);
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let mut writer = BufferWriter::new(&mut buf[..]);
