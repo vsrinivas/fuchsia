@@ -1,0 +1,14 @@
+{
+  "program": {
+    "binary": "test/inferior_control_tests"
+  },
+  "sandbox": {
+    "dev": [
+      "misc"
+    ],
+    "services": [
+      "fuchsia.process.Launcher",
+      "fuchsia.process.Resolver"
+    ]
+  }
+}

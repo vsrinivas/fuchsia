@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "garnet/lib/inferior_control/process.h"
+#include "garnet/lib/inferior_control/test_helper.h"
 #include "garnet/lib/inferior_control/test_server.h"
 
 #include "gtest/gtest.h"
@@ -14,16 +15,11 @@
 namespace inferior_control {
 namespace {
 
-// TODO(dje): Obtain path more cleanly.
-const char helper_program[] =
-    "/pkgfs/packages/inferior_control_tests/0/bin/"
-    "inferior_control_test_helper";
-
 using ProcessTest = TestServer;
 
 TEST_F(ProcessTest, Launch) {
   std::vector<std::string> argv{
-      helper_program,
+      kTestHelperPath,
   };
   ASSERT_TRUE(SetupInferior(argv));
 
@@ -98,7 +94,7 @@ class AttachTest : public TestServer {
 
 TEST_F(AttachTest, Attach) {
   std::vector<std::string> argv{
-      helper_program,
+      kTestHelperPath,
       "wait-peer-closed",
   };
   ASSERT_TRUE(SetupInferior(argv));
@@ -138,7 +134,7 @@ class FindThreadByIdTest : public TestServer {
 
 TEST_F(FindThreadByIdTest, FindThreadById) {
   std::vector<std::string> argv{
-      helper_program,
+      kTestHelperPath,
   };
   ASSERT_TRUE(SetupInferior(argv));
 
@@ -177,7 +173,7 @@ class LdsoBreakpointTest : public TestServer {
           // a potentially clipped version of the path in which case
           // "inferior_control_tests" should still be present.
           if (strcmp(dso->name, "") == 0 ||
-              strstr(dso->name, "inferior_control_tests") != nullptr) {
+              strstr(dso->name, kTestHelperDsoName) != nullptr) {
             exec_present_ = true;
           } else if (strcmp(dso->name, "libc.so") == 0) {
             libc_present_ = true;
@@ -205,7 +201,7 @@ class LdsoBreakpointTest : public TestServer {
 
 TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
   std::vector<std::string> argv{
-    helper_program,
+    kTestHelperPath,
     "trigger-sw-bkpt",
   };
   ASSERT_TRUE(SetupInferior(argv));
@@ -246,7 +242,7 @@ class KillTest : public TestServer {
 
 TEST_F(KillTest, Kill) {
   std::vector<std::string> argv{
-      helper_program,
+      kTestHelperPath,
       "wait-peer-closed",
   };
   ASSERT_TRUE(SetupInferior(argv));

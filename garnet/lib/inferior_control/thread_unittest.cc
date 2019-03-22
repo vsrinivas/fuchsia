@@ -7,17 +7,13 @@
 
 #include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/inferior_control/process.h"
+#include "garnet/lib/inferior_control/test_helper.h"
 #include "garnet/lib/inferior_control/test_server.h"
 
 #include "gtest/gtest.h"
 
 namespace inferior_control {
 namespace {
-
-// TODO(dje): Obtain path more cleanly.
-const char helper_program[] =
-    "/pkgfs/packages/inferior_control_tests/0/bin/"
-    "inferior_control_test_helper";
 
 // Test resume from exception and try-next.
 // Note: Exceptions are handled in the same thread as server.Run().
@@ -52,7 +48,7 @@ class TryNextThreadTest : public TestServer {
 
 TEST_F(TryNextThreadTest, ResumeTryNextTest) {
   std::vector<std::string> argv{
-    helper_program,
+    kTestHelperPath,
     "trigger-sw-bkpt-with-handler",
   };
   ASSERT_TRUE(SetupInferior(argv));
@@ -159,7 +155,7 @@ class SuspendResumeThreadTest : public TestServer {
 
 TEST_F(SuspendResumeThreadTest, SuspendResumeTest) {
   std::vector<std::string> argv{
-    helper_program,
+    kTestHelperPath,
     "trigger-sw-bkpt-with-handler",
   };
   ASSERT_TRUE(SetupInferior(argv));
@@ -213,7 +209,7 @@ class ResumeAfterSwBreakThreadTest : public TestServer {
 
 TEST_F(ResumeAfterSwBreakThreadTest, ResumeAfterSwBreakTest) {
   std::vector<std::string> argv{
-    helper_program,
+    kTestHelperPath,
     "trigger-sw-bkpt",
   };
   ASSERT_TRUE(SetupInferior(argv));
