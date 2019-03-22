@@ -20,10 +20,10 @@ rustc_binary("sine_player_bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//sdk/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
-    "//third_party/rust-crates/rustc_deps:byteorder",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
   ]
 }
 
