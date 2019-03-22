@@ -7,7 +7,7 @@ declare_args() {
   # default (DNO-442)
   # Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
   # memory allocator.
-  use_scudo = false
+  use_scudo = true
 
   # Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
   # options (before the `SCUDO_OPTIONS` environment variable is read at
