@@ -322,7 +322,6 @@ group("all") {
     "//garnet/packages/tests:mediaplayer",
     "//garnet/packages/tests:mediasession",
     "//garnet/packages/tests:memory_monitor",
-    "//garnet/packages/tests:mime_sniffer",
     "//garnet/packages/tests:netcfg_tests",
     "//garnet/packages/tests:netemul",
     "//garnet/packages/tests:netfilter",
@@ -769,13 +768,6 @@ group("camera_client") {
   public_deps = [
     "//garnet/examples/camera/camera_client:example_camera_client",
     "//garnet/lib/media/camera/simple_camera_lib:camera_tests",
-  ]
-}
-
-group("mime_sniffer") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/mime_sniffer:mime_sniffer_unittests",
   ]
 }
 
