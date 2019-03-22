@@ -124,19 +124,13 @@ void RunGrpcServer(const char* listen_at, Dockyard* dockyard) {
   server->Wait();
 }
 
-// The stride is how much time is in each sample.
-constexpr SampleTimeNs CalcStride(SampleTimeNs start, SampleTimeNs finish,
-                                  size_t count) {
-  SampleTimeNs stride = (finish - start);
-  if (count) {
-    stride /= count;
-  }
-  return stride;
-}
-
-constexpr SampleTimeNs CalcStride(const StreamSetsRequest& request) {
-  return CalcStride(request.start_time_ns, request.end_time_ns,
-                    request.sample_count);
+// Calculates the (edge) time for each column of the result data.
+SampleTimeNs CalcTimeForStride(const StreamSetsRequest& request,
+                               ssize_t index) {
+  // These need to be signed to support a signed |index|.
+  int64_t delta = (request.end_time_ns - request.start_time_ns);
+  int64_t count = int64_t(request.sample_count);
+  return request.start_time_ns + (delta * index / count);
 }
 
 }  // namespace
@@ -363,16 +357,14 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
 void Dockyard::ComputeAveragePerColumn(
     SampleStreamId stream_id, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
-  // The stride is how much time is in each sample.
-  SampleTimeNs stride = (request.end_time_ns - request.start_time_ns);
-  if (request.sample_count) {
-    stride /= request.sample_count;
-  }
-  SampleTimeNs prior_time = request.start_time_ns;
+  SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
+
   for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
-    auto start_time = request.start_time_ns + sample_n * stride;
+    SampleTimeNs start_time = CalcTimeForStride(request, sample_n);
+    SampleTimeNs end_time = CalcTimeForStride(request, sample_n + 1);
+
     auto begin = sample_stream.lower_bound(start_time);
     if (begin == sample_stream.end()) {
       if (sample_n >= 0) {
@@ -380,7 +372,7 @@ void Dockyard::ComputeAveragePerColumn(
       }
       continue;
     }
-    auto end = sample_stream.lower_bound(start_time + stride);
+    auto end = sample_stream.lower_bound(end_time);
     SampleValue accumulator = 0ULL;
     uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
@@ -405,12 +397,14 @@ void Dockyard::ComputeAveragePerColumn(
 void Dockyard::ComputeHighestPerColumn(
     SampleStreamId stream_id, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
-  const SampleTimeNs stride = CalcStride(request);
-  SampleTimeNs prior_time = request.start_time_ns;
+  // const SampleTimeNs stride = CalcStride(request);
+  SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
   for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
-    auto start_time = request.start_time_ns + sample_n * stride;
+    SampleTimeNs start_time = CalcTimeForStride(request, sample_n);
+    SampleTimeNs end_time = CalcTimeForStride(request, sample_n + 1);
+
     auto begin = sample_stream.lower_bound(start_time);
     if (begin == sample_stream.end()) {
       if (sample_n >= 0) {
@@ -418,7 +412,7 @@ void Dockyard::ComputeHighestPerColumn(
       }
       continue;
     }
-    auto end = sample_stream.lower_bound(start_time + stride);
+    auto end = sample_stream.lower_bound(end_time);
     SampleTimeNs high_time = request.start_time_ns;
     SampleValue highest = 0ULL;
     uint_fast32_t count = 0ULL;
@@ -447,12 +441,11 @@ void Dockyard::ComputeLowestPerColumn(SampleStreamId stream_id,
                                       const SampleStream& sample_stream,
                                       const StreamSetsRequest& request,
                                       std::vector<SampleValue>* samples) const {
-  const SampleTimeNs stride = CalcStride(request);
-  SampleTimeNs prior_time = request.start_time_ns;
+  SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
   for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
-    auto start_time = request.start_time_ns + sample_n * stride;
+    SampleTimeNs start_time = CalcTimeForStride(request, sample_n);
     auto begin = sample_stream.lower_bound(start_time);
     if (begin == sample_stream.end()) {
       if (sample_n >= 0) {
@@ -460,7 +453,8 @@ void Dockyard::ComputeLowestPerColumn(SampleStreamId stream_id,
       }
       continue;
     }
-    auto end = sample_stream.lower_bound(start_time + stride);
+    SampleTimeNs end_time = CalcTimeForStride(request, sample_n + 1);
+    auto end = sample_stream.lower_bound(end_time);
     SampleTimeNs low_time = request.start_time_ns;
     SampleValue lowest = SAMPLE_MAX_VALUE;
     uint_fast32_t count = 0ULL;
@@ -510,13 +504,12 @@ void Dockyard::ComputeSculpted(SampleStreamId stream_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const {
-  const SampleTimeNs stride = CalcStride(request);
-  SampleTimeNs prior_time = request.start_time_ns;
+  SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   auto overall_average = OverallAverageForStream(stream_id);
   const int64_t limit = request.sample_count;
   for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
-    auto start_time = request.start_time_ns + sample_n * stride;
+    SampleTimeNs start_time = CalcTimeForStride(request, sample_n);
     auto begin = sample_stream.lower_bound(start_time);
     if (begin == sample_stream.end()) {
       if (sample_n >= 0) {
@@ -524,7 +517,8 @@ void Dockyard::ComputeSculpted(SampleStreamId stream_id,
       }
       continue;
     }
-    auto end = sample_stream.lower_bound(start_time + stride);
+    SampleTimeNs end_time = CalcTimeForStride(request, sample_n + 1);
+    auto end = sample_stream.lower_bound(end_time);
     SampleValue accumulator = 0ULL;
     SampleValue highest = 0ULL;
     SampleValue lowest = SAMPLE_MAX_VALUE;
@@ -545,8 +539,7 @@ void Dockyard::ComputeSculpted(SampleStreamId stream_id,
       auto average = accumulator / count;
       auto final = average >= overall_average ? highest : lowest;
       if (request.HasFlag(StreamSetsRequest::SLOPE)) {
-        result = calculate_slope(final, &prior_value, start_time + stride,
-                                 &prior_time);
+        result = calculate_slope(final, &prior_value, end_time, &prior_time);
       } else {
         result = final;
       }
@@ -561,20 +554,20 @@ void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const {
-  const SampleTimeNs stride = CalcStride(request);
-  SampleTimeNs prior_time = request.start_time_ns;
+  SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
   const int64_t limit = request.sample_count;
   for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
-    auto start_time = request.start_time_ns + sample_n * stride;
-    auto begin = sample_stream.lower_bound(start_time - stride);
+    SampleTimeNs start_time = CalcTimeForStride(request, sample_n - 1);
+    auto begin = sample_stream.lower_bound(start_time);
     if (begin == sample_stream.end()) {
       if (sample_n >= 0) {
         samples->push_back(NO_DATA);
       }
       continue;
     }
-    auto end = sample_stream.lower_bound(start_time + stride * 2);
+    SampleTimeNs end_time = CalcTimeForStride(request, sample_n + 2);
+    auto end = sample_stream.lower_bound(end_time);
     SampleValue accumulator = 0ULL;
     uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
@@ -585,8 +578,7 @@ void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
     if (count) {
       result = accumulator / count;
       if (request.HasFlag(StreamSetsRequest::SLOPE)) {
-        result = calculate_slope(result, &prior_value, start_time + stride,
-                                 &prior_time);
+        result = calculate_slope(result, &prior_value, end_time, &prior_time);
       }
     }
     if (sample_n >= 0) {
