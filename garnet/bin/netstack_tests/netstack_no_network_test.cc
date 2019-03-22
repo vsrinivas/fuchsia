@@ -85,7 +85,7 @@ TEST_F(NetstackNoNetworkTest, DisableEthernetInterface) {
       [&net_status] { return net_status == fuchsia::netstack::Status::OK; },
       zx::sec(10)));
 
-  netstack->SetInterfaceStatus(eth_id, false);  // do not enable the interface.
+  // Run the client without enabling the interface.
 
   fuchsia::sys::LaunchInfo client_launch_info;
   client_launch_info.url = kTestNoNetworkClientUrl;

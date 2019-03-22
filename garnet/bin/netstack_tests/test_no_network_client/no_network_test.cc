@@ -10,8 +10,7 @@
 
 namespace {
 
-// TODO https://fuchsia.atlassian.net/browse/FLK-104
-TEST(NoNetworkTest, DISABLED_NonBlockingConnectHostV4) {
+TEST(NoNetworkTest, NonBlockingConnectHostV4) {
   int connfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
   ASSERT_GE(connfd, 0) << "socket failed: " << strerror(errno);
 
@@ -27,8 +26,7 @@ TEST(NoNetworkTest, DISABLED_NonBlockingConnectHostV4) {
   ASSERT_EQ(0, close(connfd)) << "close failed: " << strerror(errno);
 }
 
-// TODO https://fuchsia.atlassian.net/browse/FLK-104
-TEST(NoNetworkTest, DISABLED_NonBlockingConnectHostV6) {
+TEST(NoNetworkTest, NonBlockingConnectHostV6) {
   int connfd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
   ASSERT_GE(connfd, 0) << "socket failed: " << strerror(errno);
 
@@ -44,8 +42,7 @@ TEST(NoNetworkTest, DISABLED_NonBlockingConnectHostV6) {
   ASSERT_EQ(0, close(connfd)) << "close failed: " << strerror(errno);
 }
 
-// TODO https://fuchsia.atlassian.net/browse/FLK-104
-TEST(NoNetworkTest, DISABLED_NonBlockingConnectNetV4) {
+TEST(NoNetworkTest, NonBlockingConnectNetV4) {
   int connfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
   ASSERT_GE(connfd, 0) << "socket failed: " << strerror(errno);
 
@@ -61,8 +58,7 @@ TEST(NoNetworkTest, DISABLED_NonBlockingConnectNetV4) {
   ASSERT_EQ(0, close(connfd)) << "close failed: " << strerror(errno);
 }
 
-// TODO https://fuchsia.atlassian.net/browse/FLK-104
-TEST(NoNetworkTest, DISABLED_NonBlockingConnectNetV6) {
+TEST(NoNetworkTest, NonBlockingConnectNetV6) {
   int connfd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
   ASSERT_GE(connfd, 0) << "socket failed: " << strerror(errno);
 
