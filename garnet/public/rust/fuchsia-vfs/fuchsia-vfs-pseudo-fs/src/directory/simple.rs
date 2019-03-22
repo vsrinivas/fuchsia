@@ -682,7 +682,7 @@ mod tests {
             run_server_client, run_server_client_with_open_requests_channel,
             DirentsSameInodeBuilder,
         },
-        crate::file::{read_only, read_write, write_only},
+        crate::file::simple::{read_only, read_write, write_only},
         crate::test_utils::open_get_proxy,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{

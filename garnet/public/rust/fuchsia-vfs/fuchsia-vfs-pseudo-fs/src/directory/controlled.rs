@@ -562,7 +562,7 @@ mod tests {
 
     use {
         crate::directory::{simple, test_utils},
-        crate::file::read_only,
+        crate::file::simple::read_only,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker, FileObject,

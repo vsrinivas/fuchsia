@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -35,15 +35,17 @@
 use {
     crate::common::send_on_open_with_error,
     crate::directory::entry::{DirectoryEntry, EntryInfo},
+    crate::file::{
+        connection::FileConnection, PseudoFile, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
+        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
+    },
     failure::Error,
-    fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, SeekOrigin, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        FileObject, FileRequest, NodeAttributes, NodeInfo, NodeMarker, SeekOrigin,
+        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -51,25 +53,17 @@ use {
     },
     futures::{
         future::FusedFuture,
-        stream::{FuturesUnordered, Stream, StreamExt, StreamFuture},
+        stream::{FuturesUnordered, StreamExt, StreamFuture},
         task::Waker,
         Future, Poll,
     },
-    libc::{S_IRUSR, S_IWUSR},
     std::{io::Write, iter, iter::ExactSizeIterator, marker::Unpin, mem, pin::Pin},
     void::Void,
 };
 
-/// A base trait for all the pseudo files.  Most clients will probably just use the DirectoryEntry
-/// trait to deal with the pseudo files uniformly.
-pub trait PseudoFile: DirectoryEntry {}
-
 // TODO: When trait aliases are implemented (rust-lang/rfcs#1733)
 // trait OnReadHandler = FnMut() -> Result<Vec<u8>, Status>;
 // trait OnWriteHandler = FnMut(Vec<u8>) -> Result<(), Status>;
-
-/// POSIX emulation layer access attributes set by default for files created with read_only().
-pub const DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
 
 /// Creates a new read-only `PseudoFile` backed by the specified read handler.
 ///
@@ -112,9 +106,6 @@ where
         None,
     )
 }
-
-/// POSIX emulation layer access attributes set by default for files created with write_only().
-pub const DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IWUSR;
 
 /// Creates a new write-only `PseudoFile` backed by the specified write handler.
 ///
@@ -165,10 +156,6 @@ where
         Some(on_write),
     )
 }
-
-/// POSIX emulation layer access attributes set by default for files created with read_write().
-pub const DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
-    DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES | DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES;
 
 /// Creates new `PseudoFile` backed by the specified read and write handlers.
 ///
@@ -237,54 +224,6 @@ where
         capacity,
         Some(on_write),
     )
-}
-
-struct FileConnection {
-    requests: FileRequestStream,
-    /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
-    /// passed into FileRequest::Clone().
-    flags: u32,
-    /// Seek position.  Next byte to be read or written within the buffer.  This might be beyond
-    /// the current size of buffer, matching POSIX:
-    ///
-    ///     http://pubs.opengroup.org/onlinepubs/9699919799/functions/lseek.html
-    ///
-    /// It will cause the buffern to be extended with zeroes (if necessary) when write() is called.
-    // While the content in the buffer vector uses usize for the size, it is easier to use u64 to
-    // match the FIDL bindings API.  Pseudo files are not expected to cross the 2^64 bytes size
-    // limit.  And all the code is much simpler when we just assume that usize is the same as u64.
-    // Should we need to port to a 128 bit platform, there are static assertions in the code that
-    // would fail.
-    seek: u64,
-    /// Per connection buffer.  See module documentation for details.
-    buffer: Vec<u8>,
-    /// Starts as false, and causes the [`on_write()`] to be called when the connection is closed
-    /// if set to true during the lifetime of the connection.
-    was_written: bool,
-}
-
-impl FileConnection {
-    /// Creates a new [`FileConnection`] instance, immediately wrapping it in a [`StreamFuture`].
-    /// This is how [`FileConnection`]s are used in the pseudo file implementation.
-    fn as_stream_future(
-        requests: FileRequestStream,
-        flags: u32,
-        buffer: Vec<u8>,
-        was_written: bool,
-    ) -> StreamFuture<FileConnection> {
-        (FileConnection { requests, flags, seek: 0, buffer, was_written }).into_future()
-    }
-}
-
-/// Allow [`FileConnection`] to be wrapped in a [`StreamFuture`], to be further contained inside
-/// [`FuturesUnordered`].
-impl Stream for FileConnection {
-    // We are just proxying the FileRequestStream requests.
-    type Item = <FileRequestStream as Stream>::Item;
-
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
-        self.requests.poll_next_unpin(lw)
-    }
 }
 
 struct PseudoFileImpl<OnRead, OnWrite>
@@ -424,19 +363,8 @@ where
 
         match self.init_buffer(flags) {
             Ok((buffer, was_written)) => {
-                let (request_stream, control_handle) =
-                    ServerEnd::<FileMarker>::new(server_end.into_channel())
-                        .into_stream_and_control_handle()?;
-
-                let conn =
-                    FileConnection::as_stream_future(request_stream, flags, buffer, was_written);
+                let conn = FileConnection::connect(flags, server_end, buffer, was_written)?;
                 self.connections.push(conn);
-
-                if flags & OPEN_FLAG_DESCRIBE != 0 {
-                    let mut info = NodeInfo::File(FileObject { event: None });
-                    control_handle
-                        .send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)))?;
-                }
 
                 Ok(())
             }
@@ -794,11 +722,10 @@ where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
     fn is_terminated(&self) -> bool {
-        // The `PseudoFileImpl` never completes, but once there are no
-        // more connections, it is blocked until more connections are
-        // added. If the object currently polling a `PseudoFile` with
-        // an empty set of connections is blocked on the `PseudoFile`
-        // completing, it will never terminate.
+        // The `PseudoFileImpl` never completes, but once there are no more connections, it is
+        // blocked until more connections are added. If the object currently polling a `PseudoFile`
+        // with an empty set of connections is blocked on the `PseudoFile` completing, it will never
+        // terminate.
         self.connections.len() == 0
     }
 }
