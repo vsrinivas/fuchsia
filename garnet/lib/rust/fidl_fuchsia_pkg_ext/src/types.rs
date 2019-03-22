@@ -68,9 +68,7 @@ impl From<fidl::BlobId> for BlobId {
 
 impl Into<fidl::BlobId> for BlobId {
     fn into(self: Self) -> fidl::BlobId {
-        fidl::BlobId {
-            merkle_root: self.0,
-        }
+        fidl::BlobId { merkle_root: self.0 }
     }
 }
 

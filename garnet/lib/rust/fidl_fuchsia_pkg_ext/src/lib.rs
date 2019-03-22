@@ -12,5 +12,8 @@ extern crate proptest;
 mod types;
 pub use crate::types::BlobId;
 
+mod repo;
+pub use crate::repo::{MirrorConfig, RepositoryBlobKey, RepositoryConfig, RepositoryKey};
+
 mod errors;
-pub use crate::errors::BlobIdParseError;
+pub use crate::errors::{BlobIdParseError, RepositoryParseError};

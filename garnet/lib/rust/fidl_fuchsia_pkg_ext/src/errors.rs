@@ -23,3 +23,18 @@ impl From<hex::FromHexError> for BlobIdParseError {
         BlobIdParseError::FromHexError(err)
     }
 }
+
+#[derive(Fail, Debug, PartialEq)]
+pub enum RepositoryParseError {
+    #[fail(display = "unsupported key type")]
+    UnsupportedKeyType,
+
+    #[fail(display = "missing required field repo_url")]
+    RepoUrlMissing,
+
+    #[fail(display = "missing required field mirror_url")]
+    MirrorUrlMissing,
+
+    #[fail(display = "missing required field subscribe")]
+    SubscribeMissing,
+}
