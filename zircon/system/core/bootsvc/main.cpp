@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <utility>
 
-#include <bootdata/decompress.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -182,33 +181,6 @@ void StartLaunchNextProcessThread(const fbl::RefPtr<bootsvc::BootfsService>& boo
     ZX_ASSERT(status == thrd_success);
 }
 
-// Add ZBI_TYPE_STORAGE_BOOTFS boot item to the |bootfs| service.
-zx_status_t ExtractBootfs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
-                          const zx::vmo& image_vmo, bootsvc::ItemMap* item_map) {
-    auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_STORAGE_BOOTFS, 0});
-    if (it == item_map->end()) {
-        return ZX_OK;
-    }
-
-    zx::vmo bootfs_vmo;
-    const char* errmsg;
-    zx_status_t status = decompress_bootdata(zx_vmar_root_self(), image_vmo.get(),
-                                             it->second.offset, it->second.length,
-                                             bootfs_vmo.reset_and_get_address(), &errmsg);
-    if (status != ZX_OK) {
-        printf("bootsvc: failed to decompress bootfs: %s\n", zx_status_get_string(status));
-        return status;
-    }
-    status = bootfs->AddBootfs(std::move(bootfs_vmo));
-    if (status != ZX_OK) {
-        printf("bootsvc: failed to add bootfs: %s\n", errmsg);
-        return status;
-    }
-
-    item_map->erase(it);
-    return ZX_OK;
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
@@ -239,9 +211,6 @@ int main(int argc, char** argv) {
     bootsvc::ItemMap item_map;
     status = bootsvc::RetrieveBootImage(&image_vmo, &item_map);
     ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot image failed: %s\n",
-                  zx_status_get_string(status));
-    status = ExtractBootfs(bootfs_svc, image_vmo, &item_map);
-    ZX_ASSERT_MSG(status == ZX_OK, "Extracting BOOTFS from ZBI items failed: %s\n",
                   zx_status_get_string(status));
 
     // Load boot arguments into VMO
