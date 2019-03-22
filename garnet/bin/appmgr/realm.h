@@ -14,6 +14,13 @@
 #include <unordered_map>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/function.h>
+#include <lib/fsl/vmo/file.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/fxl/strings/string_view.h>
+#include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
@@ -25,26 +32,18 @@
 #include "garnet/bin/appmgr/scheme_map.h"
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/loader/package_loader.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fit/function.h"
-#include "lib/fsl/vmo/file.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
-#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 
 struct RealmArgs {
   static RealmArgs Make(
       Realm* parent, std::string label, std::string data_path,
-      const std::shared_ptr<component::Services>& env_services,
+      const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::EnvironmentOptions options);
 
   static RealmArgs MakeWithAdditionalServices(
       Realm* parent, std::string label, std::string data_path,
-      const std::shared_ptr<component::Services>& env_services,
+      const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console,
       fuchsia::sys::ServiceListPtr additional_services,
       fuchsia::sys::EnvironmentOptions options);
@@ -52,7 +51,7 @@ struct RealmArgs {
   Realm* parent;
   std::string label;
   std::string data_path;
-  std::shared_ptr<component::Services> environment_services;
+  std::shared_ptr<sys::ServiceDirectory> environment_services;
   bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
   fuchsia::sys::EnvironmentOptions options;
@@ -70,7 +69,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
 
-  std::shared_ptr<component::Services> environment_services() const {
+  std::shared_ptr<sys::ServiceDirectory> environment_services() const {
     return environment_services_;
   }
 
@@ -177,7 +176,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   SchemeMap scheme_map_;
 
-  const std::shared_ptr<component::Services> environment_services_;
+  const std::shared_ptr<sys::ServiceDirectory> environment_services_;
 
   bool allow_parent_runners_ = false;
   bool delete_storage_on_death_ = false;

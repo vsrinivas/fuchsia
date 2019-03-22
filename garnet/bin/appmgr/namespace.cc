@@ -5,9 +5,9 @@
 #include "garnet/bin/appmgr/namespace.h"
 
 #include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -47,7 +47,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_->AddService(
       fuchsia::process::Launcher::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->ConnectToService(
+        realm_->environment_services()->Connect(
             fidl::InterfaceRequest<fuchsia::process::Launcher>(
                 std::move(channel)));
         return ZX_OK;
@@ -63,7 +63,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_->AddService(
       fuchsia::scheduler::ProfileProvider::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->ConnectToService(
+        realm_->environment_services()->Connect(
             fidl::InterfaceRequest<fuchsia::scheduler::ProfileProvider>(
                 std::move(channel)));
         return ZX_OK;
@@ -71,7 +71,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_->AddService(
       fuchsia::kernel::DebugBroker::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->ConnectToService(
+        realm_->environment_services()->Connect(
             fidl::InterfaceRequest<fuchsia::kernel::DebugBroker>(
                 std::move(channel)));
         return ZX_OK;
@@ -79,7 +79,7 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_->AddService(
       fuchsia::device::manager::DebugDumper::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->ConnectToService(
+        realm_->environment_services()->Connect(
             fidl::InterfaceRequest<fuchsia::device::manager::DebugDumper>(
                 std::move(channel)));
         return ZX_OK;
@@ -87,12 +87,11 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_->AddService(
       fuchsia::device::manager::Administrator::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->ConnectToService(
+        realm_->environment_services()->Connect(
             fidl::InterfaceRequest<fuchsia::device::manager::Administrator>(
                 std::move(channel)));
         return ZX_OK;
       })));
-
 
   if (additional_services) {
     auto& names = additional_services->names;

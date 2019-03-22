@@ -20,7 +20,7 @@ using fuchsia::sys::TerminationReason;
 
 namespace component {
 
-RunnerHolder::RunnerHolder(Services services,
+RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
                            fuchsia::sys::ComponentControllerPtr controller,
                            fuchsia::sys::LaunchInfo launch_info, Realm* realm,
                            fit::function<void()> error_handler)
@@ -47,7 +47,7 @@ RunnerHolder::RunnerHolder(Services services,
         }
       };
 
-  services_.ConnectToService(runner_.NewRequest());
+  services_->Connect(runner_.NewRequest());
 }
 
 RunnerHolder::~RunnerHolder() = default;

@@ -47,15 +47,15 @@ source_set("lib") {
     "//garnet/lib/cmx",
     "//garnet/lib/loader",
     "//garnet/public/lib/backoff",
-    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp:deprecated_inspect",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-inspect",
     "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/lib/async-loop-cpp",
@@ -85,9 +85,9 @@ source_set("appmgr_for_test") {
 
   public_deps = [
     ":lib",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
@@ -104,7 +104,7 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/component/cpp:environment_services",
+    "//sdk/lib/sys/cpp",
   ]
 }
 
@@ -130,6 +130,8 @@ executable("tests") {
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//third_party/googletest:gmock",
   ]

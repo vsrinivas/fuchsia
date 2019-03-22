@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
-#include "lib/component/cpp/environment_services_helper.h"
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
-  auto environment_services = component::GetEnvironmentServices();
+  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
 
   trace::TraceProvider trace_provider(loop.dispatcher());
 

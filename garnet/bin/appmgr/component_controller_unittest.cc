@@ -19,7 +19,6 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/gtest/real_loop_fixture.h"
-#include "lib/svc/cpp/services.h"
 
 #include <zircon/syscalls/object.h>
 

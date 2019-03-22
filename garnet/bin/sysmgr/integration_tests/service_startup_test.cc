@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
 #include <test/sysmgr/cpp/fidl.h>
+
 #include "garnet/bin/appmgr/appmgr.h"
 #include "gtest/gtest.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fxl/logging.h"
 
 namespace sysmgr {
 namespace test {
@@ -42,11 +43,11 @@ TEST_F(TestSysmgr, ServiceStartup) {
 })";
   sysmgr_args.push_back(kSysmgrConfig);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::CreateFromStartupInfo();
 
   component::AppmgrArgs args{
       .pa_directory_request = h2.release(),
-      .environment_services = context->incoming_services(),
+      .environment_services = context->svc(),
       .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
       .sysmgr_args = std::move(sysmgr_args),
       .run_virtual_console = false,

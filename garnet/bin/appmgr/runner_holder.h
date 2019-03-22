@@ -9,13 +9,13 @@
 #include <lib/zx/vmo.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
+#include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/svc/cpp/services.h"
 
 namespace component {
 
@@ -23,7 +23,7 @@ class Realm;
 
 class RunnerHolder : public ComponentContainer<ComponentBridge> {
  public:
-  RunnerHolder(Services services,
+  RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
                fuchsia::sys::ComponentControllerPtr controller,
                fuchsia::sys::LaunchInfo launch_info, Realm* realm,
                fit::function<void()> error_handler = nullptr);
@@ -42,7 +42,7 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   void CreateComponentCallback(ComponentControllerImpl* component);
   void Cleanup();
 
-  Services services_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::sys::RunnerPtr runner_;
   ComponentControllerImpl* impl_object_;

@@ -8,18 +8,18 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
+#include <lib/fxl/macros.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/util.h"
 #include "garnet/lib/loader/package_loader.h"
-#include "lib/fxl/macros.h"
-#include "lib/svc/cpp/services.h"
 
 namespace component {
 
 struct AppmgrArgs {
   zx_handle_t pa_directory_request;
-  const std::shared_ptr<component::Services> environment_services;
+  const std::shared_ptr<sys::ServiceDirectory> environment_services;
   std::string sysmgr_url;
   fidl::VectorPtr<std::string> sysmgr_args;
   bool run_virtual_console;

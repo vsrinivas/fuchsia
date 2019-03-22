@@ -12,11 +12,11 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/service_directory_for_test.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/zx/channel.h>
@@ -25,6 +25,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/interface_handle.h"
+#include "lib/fidl/cpp/interface_request.h"
 
 using fuchsia::sys::ServiceList;
 using fuchsia::sys::ServiceListPtr;
@@ -76,22 +78,23 @@ class NamespaceHostDirectoryTest : public NamespaceTest {
 
 class NamespaceProviderTest : public NamespaceTest {
  protected:
+  NamespaceProviderTest()
+      : provider_(sys::testing::ServiceDirectoryForTest::Create()) {}
   fxl::RefPtr<Namespace> MakeNamespace(ServiceListPtr additional_services) {
     return fxl::MakeRefCounted<Namespace>(
         nullptr, nullptr, std::move(additional_services), nullptr);
   }
 
-  void BindServiceProvider(fidl::InterfaceRequest<ServiceProvider> request) {
-    provider_.AddBinding(std::move(request));
-  }
-
   zx_status_t AddService(const std::string& name) {
-    auto cb = [this, name](zx::channel channel) { ++connection_ctr_[name]; };
-    provider_.AddServiceForName(cb, name);
+    fidl::InterfaceRequestHandler<fuchsia::io::Node> cb =
+        [this, name](fidl::InterfaceRequest<fuchsia::io::Node> request) {
+          ++connection_ctr_[name];
+        };
+    provider_->AddService(std::move(cb), name);
     return ZX_OK;
   }
 
-  ServiceProviderImpl provider_;
+  std::shared_ptr<sys::testing::ServiceDirectoryForTest> provider_;
   std::map<std::string, int> connection_ctr_;
 };
 
@@ -161,12 +164,12 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
   static constexpr char kService2[] = "fuchsia.test.TestService2";
   ServiceListPtr service_list(new ServiceList);
   ServiceProviderPtr service_provider;
-  BindServiceProvider(service_provider.NewRequest());
   service_list->names.push_back(kService1);
   service_list->names.push_back(kService2);
   EXPECT_EQ(ZX_OK, AddService(kService1));
   EXPECT_EQ(ZX_OK, AddService(kService2));
-  service_list->provider = std::move(service_provider);
+
+  service_list->host_directory = provider_->CloneChannel().TakeChannel();
   auto ns = MakeNamespace(std::move(service_list));
 
   zx::channel svc_dir = ns->OpenServicesAsDirectory();

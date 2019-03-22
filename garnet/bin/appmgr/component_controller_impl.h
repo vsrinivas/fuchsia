@@ -6,6 +6,7 @@
 #define GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 
 #include <fs/pseudo-dir.h>
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>

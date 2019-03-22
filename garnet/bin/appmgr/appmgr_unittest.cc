@@ -7,9 +7,9 @@
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
 #include <lib/async/cpp/task.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
-
-#include "lib/gtest/real_loop_fixture.h"
 
 namespace component {
 namespace {
@@ -17,7 +17,7 @@ namespace {
 using AppmgrTest = ::gtest::RealLoopFixture;
 
 TEST_F(AppmgrTest, RunUntilIdle) {
-  auto services = std::make_shared<component::Services>();
+  auto services = std::make_shared<sys::ServiceDirectory>();
   AppmgrArgs args{
       .pa_directory_request = ZX_HANDLE_INVALID,
       .environment_services = services,

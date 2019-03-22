@@ -21,6 +21,15 @@
 #include <algorithm>
 #include <utility>
 
+#include <lib/fsl/handles/object_info.h>
+#include <lib/fsl/io/fd.h>
+#include <lib/fsl/vmo/file.h>
+#include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/strings/concatenate.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fxl/strings/substitute.h>
+#include <lib/json/json_parser.h>
+#include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
@@ -30,16 +39,6 @@
 #include "garnet/lib/cmx/program.h"
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/cmx/sandbox.h"
-#include "lib/component/cpp/connect.h"
-#include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/io/fd.h"
-#include "lib/fsl/vmo/file.h"
-#include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/strings/substitute.h"
-#include "lib/json/json_parser.h"
-#include "lib/svc/cpp/services.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -206,7 +205,7 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
 // static
 RealmArgs RealmArgs::Make(
     Realm* parent, std::string label, std::string data_path,
-    const std::shared_ptr<component::Services>& env_services,
+    const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
           .label = label,
@@ -219,7 +218,7 @@ RealmArgs RealmArgs::Make(
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     Realm* parent, std::string label, std::string data_path,
-    const std::shared_ptr<component::Services>& env_services,
+    const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
@@ -300,8 +299,8 @@ Realm::Realm(RealmArgs args)
 
   fuchsia::sys::ServiceProviderPtr service_provider;
   default_namespace_->services()->AddBinding(service_provider.NewRequest());
-  loader_ =
-      component::ConnectToService<fuchsia::sys::Loader>(service_provider.get());
+  service_provider->ConnectToService(fuchsia::sys::Loader::Name_,
+                                     loader_.NewRequest().TakeChannel());
 
   std::string error;
   if (!files::IsDirectory(SchemeMap::kConfigDirPath)) {
@@ -951,11 +950,12 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   }
   auto result = runners_.emplace(runner, nullptr);
   if (result.second) {
-    Services runner_services;
+    zx::channel request;
+    auto runner_services = sys::ServiceDirectory::CreateWithRequest(&request);
     fuchsia::sys::ComponentControllerPtr runner_controller;
     fuchsia::sys::LaunchInfo runner_launch_info;
     runner_launch_info.url = runner;
-    runner_launch_info.directory_request = runner_services.NewRequest();
+    runner_launch_info.directory_request = std::move(request);
     result.first->second = std::make_unique<RunnerHolder>(
         std::move(runner_services), std::move(runner_controller),
         std::move(runner_launch_info), this,

@@ -5,12 +5,6 @@
 source_set("cpp") {
   sources = [
     "connect.h",
-    "expose.cc",
-    "expose.h",
-    "exposed_object.cc",
-    "exposed_object.h",
-    "object_dir.cc",
-    "object_dir.h",
     "outgoing.cc",
     "outgoing.h",
     "service_provider_impl.cc",
@@ -26,6 +20,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
+    ":deprecated_inspect",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
@@ -61,6 +56,39 @@ source_set("cpp") {
     "//topaz/runtime/flutter_runner:*",
     "//topaz/tests/web_runner_tests:*",
     "//vendor/*",
+  ]
+}
+
+source_set("deprecated_inspect") {
+  sources = [
+    "expose.cc",
+    "expose.h",
+    "exposed_object.cc",
+    "exposed_object.h",
+    "object_dir.cc",
+    "object_dir.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/fidl/fuchsia-inspect",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+
+  # This library is deprecated.
+  #
+  # Use //garnet/public/lib/inspect instead.
+  #
+  # DO NOT ADD MORE ENTRIES TO THIS LIST.
+  visibility = [
+    ":cpp",
+    "//garnet/bin/appmgr:lib",
   ]
 }
 
