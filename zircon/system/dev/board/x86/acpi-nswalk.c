@@ -193,12 +193,36 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
         }
         zxlogf(SPEW, "irqs:\n");
         for (size_t i = 0; i < dev->irq_count; i++) {
+            const char* trigger;
+            switch (dev->irqs[i].trigger) {
+            case ACPI_IRQ_TRIGGER_EDGE:
+                trigger = "edge";
+                break;
+            case ACPI_IRQ_TRIGGER_LEVEL:
+                trigger = "level";
+                break;
+            default:
+                trigger = "bad_trigger";
+                break;
+            }
+            const char* polarity;
+            switch (dev->irqs[i].polarity) {
+            case ACPI_IRQ_ACTIVE_BOTH:
+                polarity = "both";
+                break;
+            case ACPI_IRQ_ACTIVE_LOW:
+                polarity = "low";
+                break;
+            case ACPI_IRQ_ACTIVE_HIGH:
+                polarity = "high";
+                break;
+            default:
+                polarity = "bad_polarity";
+                break;
+            }
             zxlogf(SPEW, "  %02zd: pin=%u %s %s %s %s\n", i,
-                    dev->irqs[i].pin,
-                    dev->irqs[i].trigger ? "edge" : "level",
-                    (dev->irqs[i].polarity == 2) ? "both" :
-                        (dev->irqs[i].polarity ? "low" : "high"),
-                    dev->irqs[i].sharable ? "shared" : "exclusive",
+                    dev->irqs[i].pin, trigger, polarity,
+                    (dev->irqs[i].sharable == ACPI_IRQ_SHARED) ? "shared" : "exclusive",
                     dev->irqs[i].wake_capable ? "wake" : "nowake");
         }
     }
@@ -276,8 +300,47 @@ static zx_status_t acpi_op_map_interrupt(void* ctx, int64_t which_irq, zx_handle
     }
 
     acpi_device_irq_t* irq = dev->irqs + which_irq;
+    uint32_t mode = ZX_INTERRUPT_MODE_DEFAULT;
+    st = ZX_OK;
+    switch (irq->trigger) {
+    case ACPI_IRQ_TRIGGER_EDGE:
+        switch (irq->polarity) {
+        case ACPI_IRQ_ACTIVE_BOTH:
+            mode = ZX_INTERRUPT_MODE_EDGE_BOTH;
+            break;
+        case ACPI_IRQ_ACTIVE_LOW:
+            mode = ZX_INTERRUPT_MODE_EDGE_LOW;
+            break;
+        case ACPI_IRQ_ACTIVE_HIGH:
+            mode = ZX_INTERRUPT_MODE_EDGE_HIGH;
+            break;
+        default:
+            st = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        break;
+    case ACPI_IRQ_TRIGGER_LEVEL:
+        switch (irq->polarity) {
+        case ACPI_IRQ_ACTIVE_LOW:
+            mode = ZX_INTERRUPT_MODE_LEVEL_LOW;
+            break;
+        case ACPI_IRQ_ACTIVE_HIGH:
+            mode = ZX_INTERRUPT_MODE_LEVEL_HIGH;
+            break;
+        default:
+            st = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        break;
+    default:
+        st = ZX_ERR_INVALID_ARGS;
+        break;
+    }
+    if (st != ZX_OK) {
+        goto unlock;
+    }
     zx_handle_t handle;
-    st = zx_interrupt_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ, &handle);
+    st = zx_interrupt_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ | mode, &handle);
     if (st != ZX_OK) {
         goto unlock;
     }
