@@ -22,7 +22,7 @@
         "url": {
           "type": "string",
           "pattern": "^fuchsia-pkg://([^/]+)/([^/#]+)(/([^/#]+))?(#(.+))?$",
-          "default": "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx"
+          "default": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx"
         },
         "keep_alive_after_login": { "type": "boolean", "default": false }
       },

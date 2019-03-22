@@ -16,8 +16,8 @@ namespace modular {
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   base_shell.url = command_line.GetOptionValueWithDefault(
       "base_shell",
-      "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/"
-      "userpicker_base_shell.cmx");
+      "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
+      "dev_base_shell.cmx");
   story_shell.url = command_line.GetOptionValueWithDefault(
       "story_shell", "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx");
   sessionmgr.url = command_line.GetOptionValueWithDefault(
@@ -87,7 +87,7 @@ std::string BasemgrSettings::GetUsage() {
       --enable_presenter
     DEVICE_NAME: Name which session shell uses to identify this device.
     BASE_SHELL:  URL of the base shell to run.
-                Defaults to "userpicker_base_shell".
+                Defaults to "dev_base_shell".
                 For integration testing use "dev_base_shell".
     SESSIONMGR: URL of the sessionmgr to run.
                 Defaults to "sessionmgr".

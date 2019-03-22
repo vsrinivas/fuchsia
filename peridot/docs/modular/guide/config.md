@@ -14,7 +14,7 @@ modular_config() target in the product's monolith packages.
   "basemgr": {
     "disable_statistics": "true",
     "base_shell_launch_configs": {
-        url: "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx",
+        url: "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
     },
     "session_shell_launch_configs": {
       "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
