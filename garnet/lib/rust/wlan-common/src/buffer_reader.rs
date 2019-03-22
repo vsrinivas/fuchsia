@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::unaligned_view::UnalignedView,
     core::mem::size_of,
     zerocopy::{ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned},
 };
@@ -10,13 +11,6 @@ use {
 pub struct BufferReader<B> {
     buffer: Option<B>,
     bytes_read: usize,
-}
-
-// A helper for unaligned reads of types that require alignment
-#[repr(C, packed)]
-#[derive(FromBytes, Unaligned)]
-struct UnalignedWrapper<T> {
-    value: T,
 }
 
 impl<B: ByteSlice> BufferReader<B> {
@@ -31,11 +25,25 @@ impl<B: ByteSlice> BufferReader<B> {
         self.read_bytes(size_of::<T>()).map(|bytes| LayoutVerified::new_unaligned(bytes).unwrap())
     }
 
+    pub fn read_unaligned<T>(&mut self) -> Option<UnalignedView<B, T>>
+    where
+        T: FromBytes,
+    {
+        self.read_bytes(size_of::<T>()).map(|bytes| UnalignedView::new(bytes).unwrap())
+    }
+
     pub fn peek<T>(&self) -> Option<LayoutVerified<&[u8], T>>
     where
         T: Unaligned + FromBytes,
     {
         self.peek_bytes(size_of::<T>()).map(|bytes| LayoutVerified::new_unaligned(bytes).unwrap())
+    }
+
+    pub fn peek_unaligned<T>(&self) -> Option<UnalignedView<&[u8], T>>
+    where
+        T: FromBytes,
+    {
+        self.peek_bytes(size_of::<T>()).map(|bytes| UnalignedView::new(bytes).unwrap())
     }
 
     pub fn read_array<T>(&mut self, num_elems: usize) -> Option<LayoutVerified<B, [T]>>
@@ -74,14 +82,14 @@ impl<B: ByteSlice> BufferReader<B> {
     where
         T: FromBytes + Copy,
     {
-        self.read::<UnalignedWrapper<T>>().map(|wrapper| wrapper.value)
+        self.read_unaligned::<T>().map(|view| view.get())
     }
 
     pub fn peek_value<T>(&self) -> Option<T>
     where
         T: FromBytes + Copy,
     {
-        self.peek::<UnalignedWrapper<T>>().map(|wrapper| wrapper.value)
+        self.peek_unaligned::<T>().map(|view| view.get())
     }
 
     pub fn read_bytes(&mut self, len: usize) -> Option<B> {
@@ -128,6 +136,13 @@ impl<B: ByteSliceMut> BufferReader<B> {
     {
         self.peek_bytes_mut(size_of::<T>())
             .map(|bytes| LayoutVerified::new_unaligned(bytes).unwrap())
+    }
+
+    pub fn peek_mut_unaligned<T>(&mut self) -> Option<UnalignedView<&mut [u8], T>>
+    where
+        T: FromBytes,
+    {
+        self.peek_bytes_mut(size_of::<T>()).map(|bytes| UnalignedView::new(bytes).unwrap())
     }
 
     pub fn peek_array_mut<T>(&mut self, num_elems: usize) -> Option<LayoutVerified<&mut [u8], [T]>>
@@ -308,5 +323,29 @@ mod tests {
         assert_eq!(0xaabb, y);
         assert_eq!(0xbb, data[1]);
         assert_eq!(0xaa, data[2]);
+    }
+
+    #[test]
+    pub fn unaligned_access() {
+        let mut data = vec![1u8, 2, 3, 4, 5, 6];
+        let mut reader = BufferReader::new(&mut data[..]);
+
+        reader.read_byte().expect("expected read_byte to return Ok");
+
+        let mut number =
+            reader.peek_mut_unaligned::<u32>().expect("expected peek_mut_unaligned to return Ok");
+        assert_eq!(0x05040302, number.get());
+        number.set(0x0a090807);
+        assert_eq!(1, reader.bytes_read());
+
+        let number = reader.peek_unaligned::<u32>().expect("expected peek_unaligned to return Ok");
+        assert_eq!(0x0a090807, number.get());
+        assert_eq!(1, reader.bytes_read());
+
+        let number = reader.read_unaligned::<u32>().expect("expected read_unaligned to return Ok");
+        assert_eq!(0x0a090807, number.get());
+        assert_eq!(5, reader.bytes_read());
+
+        assert_eq!(&[1, 7, 8, 9, 10, 6], &data[..]);
     }
 }

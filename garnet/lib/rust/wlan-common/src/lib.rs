@@ -20,6 +20,7 @@ pub mod mgmt_writer;
 pub mod sequence;
 pub mod test_utils;
 pub mod tim;
+pub mod unaligned_view;
 
 use {
     channel::{Cbw, Phy},
