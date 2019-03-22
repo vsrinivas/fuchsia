@@ -44,7 +44,7 @@ function main {
     fx-command-run build-zircon "-v"
   else
     host_test_dir="${FUCHSIA_BUILD_DIR}/host_tests"
-    fx-command-run build build/gn:copy_host_tests
+    fx-command-run build :copy_host_tests
   fi
 
   runtests_cmd=("${ZIRCON_TOOLS_DIR}/runtests" "${ARGS[@]}")
