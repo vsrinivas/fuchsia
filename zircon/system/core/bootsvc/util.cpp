@@ -6,9 +6,11 @@
 
 #include <ctype.h>
 
+#include <fbl/algorithm.h>
 #include <fs/connection.h>
 #include <safemath/checked_math.h>
 #include <zircon/boot/image.h>
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -21,7 +23,6 @@ bool StoreItem(uint32_t type) {
     case ZBI_TYPE_CRASHLOG:
     case ZBI_TYPE_KERNEL_DRIVER:
     case ZBI_TYPE_PLATFORM_ID:
-    case ZBI_TYPE_STORAGE_BOOTFS:
     case ZBI_TYPE_STORAGE_RAMDISK:
         return true;
     default:
@@ -29,11 +30,21 @@ bool StoreItem(uint32_t type) {
     }
 }
 
+// Discards the boot item from the boot image VMO.
+void DiscardItem(zx::vmo* vmo, uint32_t begin_in, uint32_t end_in) {
+    uint64_t begin = fbl::round_up(begin_in, static_cast<uint32_t>(PAGE_SIZE));
+    uint64_t end = fbl::round_down(end_in, static_cast<uint32_t>(PAGE_SIZE));
+    if (begin < end) {
+        zx_status_t status = vmo->op_range(ZX_VMO_OP_DECOMMIT, begin, end - begin, nullptr, 0);
+        ZX_ASSERT_MSG(status == ZX_OK, "Discarding boot item failed: %s\n",
+                    zx_status_get_string(status));
+    }
+}
+
 bootsvc::ItemKey CreateItemKey(uint32_t type, uint32_t extra) {
     switch (type) {
-    case ZBI_TYPE_STORAGE_BOOTFS:
     case ZBI_TYPE_STORAGE_RAMDISK:
-        // If this is for storage, set the extra value to zero.
+        // If this is for a ramdisk, set the extra value to zero.
         return bootsvc::ItemKey{.type = type, .extra = 0};
     default:
         // Otherwise, store the extra value.
@@ -43,9 +54,8 @@ bootsvc::ItemKey CreateItemKey(uint32_t type, uint32_t extra) {
 
 bootsvc::ItemValue CreateItemValue(uint32_t type, uint32_t off, uint32_t len) {
     switch (type) {
-    case ZBI_TYPE_STORAGE_BOOTFS:
     case ZBI_TYPE_STORAGE_RAMDISK:
-        // If this is for storage, capture the ZBI header.
+        // If this is for a ramdisk, capture the ZBI header.
         len = safemath::CheckAdd(len, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
         break;
     default:
@@ -62,20 +72,24 @@ namespace bootsvc {
 const char* const kLastPanicFilePath = "log/last-panic.txt";
 
 zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
-    // Validate boot container provided by startup handle.
+    // Validate boot image VMO provided by startup handle.
     zx::vmo vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
     zbi_header_t header;
     zx_status_t status = vmo.read(&header, 0, sizeof(header));
     if (status != ZX_OK) {
-        printf("bootsvc: Failed to read ZBI container header: %s\n", zx_status_get_string(status));
+        printf("bootsvc: Failed to read ZBI image header: %s\n", zx_status_get_string(status));
         return status;
     } else if (header.type != ZBI_TYPE_CONTAINER || header.extra != ZBI_CONTAINER_MAGIC ||
                header.magic != ZBI_ITEM_MAGIC || !(header.flags & ZBI_FLAG_VERSION)) {
-        printf("bootsvc: Invalid ZBI container header\n");
+        printf("bootsvc: Invalid ZBI image header\n");
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    // Read boot items from boot container.
+    // Used to discard pages from the boot image VMO.
+    uint32_t discard_begin = 0;
+    uint32_t discard_end = 0;
+
+    // Read boot items from the boot image VMO.
     ItemMap map;
     uint32_t off = sizeof(header);
     uint32_t len = header.length;
@@ -89,17 +103,23 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
             return ZX_ERR_IO_DATA_INTEGRITY;
         }
         uint32_t item_len = ZBI_ALIGN(header.length + static_cast<uint32_t>(sizeof(zbi_header_t)));
+        uint32_t next_off = safemath::CheckAdd(off, item_len).ValueOrDie();
         if (item_len > len) {
             printf("bootsvc: ZBI item too large (%u > %u)\n", item_len, len);
             return ZX_ERR_IO_DATA_INTEGRITY;
         } else if (StoreItem(header.type)) {
             map.emplace(CreateItemKey(header.type, header.extra),
                         CreateItemValue(header.type, off, header.length));
+            DiscardItem(&vmo, discard_begin, discard_end);
+            discard_begin = next_off;
+        } else {
+            discard_end = next_off;
         }
-        off = safemath::CheckAdd(off, item_len).ValueOrDie();
+        off = next_off;
         len = safemath::CheckSub(len, item_len).ValueOrDie();
     }
 
+    DiscardItem(&vmo, discard_begin, discard_end);
     *out_vmo = std::move(vmo);
     *out_map = std::move(map);
     return ZX_OK;

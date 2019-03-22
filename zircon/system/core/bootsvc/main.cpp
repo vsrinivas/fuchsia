@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
     status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
     ZX_ASSERT_MSG(status == ZX_OK, "bootfs add failed: %s\n", zx_status_get_string(status));
 
-    // Process the ZBI containers to get additional bootfs parts
+    // Process the ZBI boot image
     printf("bootsvc: Retrieving boot image...\n");
     zx::vmo image_vmo;
     bootsvc::ItemMap item_map;
