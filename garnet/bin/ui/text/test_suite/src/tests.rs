@@ -87,3 +87,25 @@ pub async fn test_multiple_edit_moves_points(
     await!(text_field.validate_distance(doc, 15))?;
     Ok(())
 }
+
+pub async fn test_invalid_delete_off_end_of_field(
+    text_field: &mut TextFieldWrapper,
+) -> Result<(), Error> {
+    await!(text_field.simple_insert("meow1 meow2 meow3"))?;
+
+    text_field.proxy().begin_edit(text_field.state().revision)?;
+    // delete from the end of the doc to one character *past* the end of the doc
+    {
+        let mut doc_end = text_field.state().document.end;
+        let end_point = await!(text_field.point_offset(&mut doc_end, 1))?;
+        let mut range = txt::TextRange { start: doc_end, end: end_point };
+        text_field.proxy().replace(&mut range, "")?;
+    }
+    await!(text_field.proxy().commit_edit())?;
+    await!(text_field.wait_for_update())?;
+    let doc = &mut text_field.state().document;
+    // contents should be unchanged
+    await!(text_field.validate_contents(doc, "meow1 meow2 meow3"))?;
+    await!(text_field.validate_distance(doc, 17))?;
+    Ok(())
+}

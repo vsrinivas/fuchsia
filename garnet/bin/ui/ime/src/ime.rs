@@ -191,7 +191,8 @@ impl Ime {
                         .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
                 };
                 let new_char_index =
-                    (old_char_index as i64 + offset).max(0).min(char_to_byte.len() as i64) as usize;
+                    (old_char_index as i64 + offset).max(0).min(char_to_byte.len() as i64 - 1)
+                        as usize;
                 let new_byte_index = char_to_byte[new_char_index];
                 let mut new_point = ime_state.new_point(new_byte_index);
                 return responder.send(&mut new_point, txt::TextError::Ok);

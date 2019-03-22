@@ -39,7 +39,8 @@ text_field_tests! {
     test_noop_causes_state_update,
     test_simple_content_request,
     test_multibyte_unicode_content_request,
-    test_multiple_edit_moves_points
+    test_multiple_edit_moves_points,
+    test_invalid_delete_off_end_of_field
 }
 
 fn main() -> Result<(), Error> {
