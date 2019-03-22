@@ -31,6 +31,7 @@
 // SO_REUSEADDR: default = off... setsockopt success = on
 // SO_REUSEPORT: default = off... setsockopt success = on
 // SO_TYPE: default = 1... setsockopt error (92)
+// SO_DOMAIN: initial = 2... setsockopt error (92)
 // IP_TOS: default = 0... setsockopt unchanged
 // IP_TTL: default = 64... setsockopt success = 106
 // IPV6_UNICAST_HOPS: default = 64... setsockopt success = 106
@@ -122,6 +123,7 @@ struct sock_opts {
     {"SO_REUSEADDR", SOL_SOCKET, SO_REUSEADDR, sock_str_flag},
     {"SO_REUSEPORT", SOL_SOCKET, SO_REUSEPORT, sock_str_flag},
     {"SO_TYPE", SOL_SOCKET, SO_TYPE, sock_str_int},
+    {"SO_DOMAIN", SOL_SOCKET, SO_DOMAIN, sock_str_int},
     {"IP_TOS", IPPROTO_IP, IP_TOS, sock_str_int},
     {"IP_TTL", IPPROTO_IP, IP_TTL, sock_str_int},
     {"IP_MULTICAST_TTL", IPPROTO_IP, IP_MULTICAST_TTL, sock_str_int},

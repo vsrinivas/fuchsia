@@ -694,7 +694,7 @@ func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
 		ios.mu.Unlock()
 	} else {
 		var err *tcpip.Error
-		val, err = GetSockOpt(ios.ep, ios.transProto, level, optName)
+		val, err = GetSockOpt(ios.ep, ios.netProto, ios.transProto, level, optName)
 		if err != nil {
 			return tcpipErrorToCode(err), nil, nil
 		}

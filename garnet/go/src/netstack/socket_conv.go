@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -40,10 +41,10 @@ import "C"
 
 const sizeOfInt32 int = 4
 
-func GetSockOpt(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
+func GetSockOpt(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
 	switch level {
 	case C.SOL_SOCKET:
-		return getSockOptSocket(ep, transProto, name)
+		return getSockOptSocket(ep, netProto, transProto, name)
 
 	case C.SOL_TCP:
 		return getSockOptTCP(ep, name)
@@ -67,7 +68,7 @@ func GetSockOpt(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, lev
 	return nil, tcpip.ErrUnknownProtocol
 }
 
-func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, *tcpip.Error) {
+func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, *tcpip.Error) {
 	switch name {
 	case C.SO_TYPE:
 		switch transProto {
@@ -81,8 +82,19 @@ func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumbe
 			return 0, tcpip.ErrNotSupported
 		}
 
-	case C.SO_ERROR:
+	case C.SO_DOMAIN:
+		switch netProto {
+		case ipv4.ProtocolNumber:
+			return int32(C.AF_INET), nil
 
+		case ipv6.ProtocolNumber:
+			return int32(C.AF_INET6), nil
+
+		default:
+			return 0, tcpip.ErrNotSupported
+		}
+
+	case C.SO_ERROR:
 		// Get the last error and convert it.
 		err := ep.GetSockOpt(tcpip.ErrorOption{})
 		if err == nil {
