@@ -7,6 +7,14 @@ group("telephony") {
   public_deps = [
     "//src/connectivity/telephony/config",
     "//src/connectivity/telephony/modem-mgr",
+    "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/tools/ril-ctl",
+  ]
+}
+
+group("drivers") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/telephony/drivers/qmi-usb-transport",
   ]
 }
