@@ -180,7 +180,7 @@ impl TextFieldWrapper {
         let length = await!(self.distance(&mut new_range))?;
         if length != expected_result {
             bail!(format!(
-                "Expected length request to return {:?}, instead got {:?}",
+                "Expected distance request to return {:?}, instead got {:?}",
                 expected_result, length
             ))
         };
@@ -193,7 +193,7 @@ impl TextFieldWrapper {
         let length = await!(self.distance(&mut new_range))?;
         if length != inverted_expected_result {
             bail!(format!(
-                "Expected length request to return {:?}, instead got {:?}",
+                "Expected distance request to return {:?}, instead got {:?}",
                 inverted_expected_result, length
             ))
         };

@@ -37,7 +37,9 @@ macro_rules! text_field_tests {
 text_field_tests! {
     TEST_FNS:
     test_noop_causes_state_update,
-    test_simple_content_request
+    test_simple_content_request,
+    test_multibyte_unicode_content_request,
+    test_multiple_edit_moves_points
 }
 
 fn main() -> Result<(), Error> {

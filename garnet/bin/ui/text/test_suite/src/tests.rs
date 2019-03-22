@@ -38,15 +38,52 @@ pub async fn test_simple_content_request(text_field: &mut TextFieldWrapper) -> R
     // check length and contents of last two meows
     let mut doc_end = text_field.state().document.end;
     let start_point = await!(text_field.point_offset(&mut doc_end, -11))?;
-    let mut range = txt::TextRange { start: start_point, end: doc_end };
+    let range = txt::TextRange { start: start_point, end: doc_end };
     await!(text_field.validate_distance(&range, 11))?;
-    await!(text_field.validate_contents(&range, "meow2 meow3"))?;
-    let (meows, _true_start) = await!(text_field.contents(&mut range))?;
-    if meows != "meow2 meow3" {
-        bail!(format!(
-            "Expected contents request to return \"meow2 meow3\", instead got {:?}",
-            meows
-        ))
+    Ok(())
+}
+
+pub async fn test_multibyte_unicode_content_request(
+    text_field: &mut TextFieldWrapper,
+) -> Result<(), Error> {
+    await!(text_field.simple_insert("meow1 🐱 meow3"))?;
+
+    // check length and contents of last two meows
+    let mut doc_end = text_field.state().document.end;
+    let start_point = await!(text_field.point_offset(&mut doc_end, -7))?;
+    let range = txt::TextRange { start: start_point, end: doc_end };
+    await!(text_field.validate_distance(&range, 7))?;
+    await!(text_field.validate_contents(&range, "🐱 meow3"))?;
+    Ok(())
+}
+
+// TextField::CommitEdit() tests
+// #######################################################
+
+pub async fn test_multiple_edit_moves_points(
+    text_field: &mut TextFieldWrapper,
+) -> Result<(), Error> {
+    await!(text_field.simple_insert("meow1 meow2 meow3 meow4"))?;
+
+    text_field.proxy().begin_edit(text_field.state().revision)?;
+    // replace "meow1" => "5" and "meow3" => "6" in a single transaction
+    {
+        let mut doc_start = text_field.state().document.start;
+        let end_point = await!(text_field.point_offset(&mut doc_start, 5))?;
+        let mut range = txt::TextRange { start: doc_start, end: end_point };
+        text_field.proxy().replace(&mut range, "5")?;
     }
+    {
+        let mut doc_start = text_field.state().document.start;
+        let start_point = await!(text_field.point_offset(&mut doc_start, 12))?;
+        let end_point = await!(text_field.point_offset(&mut doc_start, 17))?;
+        let mut range = txt::TextRange { start: start_point, end: end_point };
+        text_field.proxy().replace(&mut range, "6")?;
+    }
+    await!(text_field.proxy().commit_edit())?;
+    await!(text_field.wait_for_update())?;
+    let doc = &mut text_field.state().document;
+    await!(text_field.validate_contents(doc, "5 meow2 6 meow4"))?;
+    await!(text_field.validate_distance(doc, 15))?;
     Ok(())
 }

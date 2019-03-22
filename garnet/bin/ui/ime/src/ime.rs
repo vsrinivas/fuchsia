@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::fidl_helpers::clone_state;
 use crate::ime_service::ImeService;
 use failure::ResultExt;
 use fidl::encoding::OutOfLine;
@@ -63,6 +64,15 @@ pub struct ImeState {
     /// `text_state.text`. When a new revision is created, all preexisting TextPoints
     /// are deleted, which means we clear this out.
     text_points: HashMap<u64, usize>,
+
+    /// We don't actually apply any edits in a transaction until CommitEdit() is called.
+    /// This is a queue of edit requests that will get applied on commit.
+    transaction_changes: Vec<txt::TextFieldRequest>,
+
+    /// If there is an inflight transaction started with `TextField.BeginEdit()`, this
+    /// contains the revision number specified in the `BeginEdit` call. If there is no
+    /// inflight transaction, this is `None`.
+    transaction_revision: Option<u64>,
 }
 
 /// A service that talks to a text field, providing it edits and cursor state updates
@@ -88,6 +98,8 @@ impl Ime {
             next_text_point_id: 0,
             text_points: HashMap::new(),
             input_method: None,
+            transaction_changes: Vec::new(),
+            transaction_revision: None,
         };
         Ime(Arc::new(Mutex::new(state)))
     }
@@ -111,14 +123,14 @@ impl Ime {
                 state.input_method = Some(control_handle);
             }
         }
-        let self_clone = self.clone();
+        let mut self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
                 while let Some(msg) = await!(stream.try_next())
                     .context("error reading value from text field request stream")?
                 {
                     if let Err(e) = self_clone.handle_text_field_msg(msg) {
-                        fx_log_err!("Error when replying to TextFieldRequest: {}", e);
+                        fx_log_err!("error when replying to TextFieldRequest: {}", e);
                     }
                 }
                 Ok(())
@@ -151,28 +163,144 @@ impl Ime {
     }
 
     /// Handles a TextFieldRequest, returning a FIDL error if one occurred when sending a reply.
-    // TODO(lard): finish implementation
-    fn handle_text_field_msg(&self, msg: txt::TextFieldRequest) -> Result<(), fidl::Error> {
+    fn handle_text_field_msg(&mut self, msg: txt::TextFieldRequest) -> Result<(), fidl::Error> {
+        let mut ime_state = self.0.lock();
         match msg {
-            txt::TextFieldRequest::PointOffset { responder, .. } => {
-                return responder.send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
+            txt::TextFieldRequest::PointOffset { old_point, offset, revision, responder } => {
+                if revision != ime_state.revision {
+                    return responder
+                        .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRevision);
+                }
+                let old_byte_index =
+                    if let Some(old_byte_index) = get_point(&ime_state.text_points, &old_point) {
+                        old_byte_index
+                    } else {
+                        return responder
+                            .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
+                    };
+                let char_to_byte = ime_state.char_to_byte();
+                let old_char_index = if let Ok(v) = char_to_byte.binary_search(&old_byte_index) {
+                    v
+                } else {
+                    fx_log_err!(
+                        "was unable to find char index for byte index {:?} from {:?}",
+                        &old_byte_index,
+                        &old_point
+                    );
+                    return responder
+                        .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
+                };
+                let new_char_index =
+                    (old_char_index as i64 + offset).max(0).min(char_to_byte.len() as i64) as usize;
+                let new_byte_index = char_to_byte[new_char_index];
+                let mut new_point = ime_state.new_point(new_byte_index);
+                return responder.send(&mut new_point, txt::TextError::Ok);
             }
-            txt::TextFieldRequest::Distance { responder, .. } => {
-                return responder.send(0, txt::TextError::BadRequest);
+            txt::TextFieldRequest::Distance { range, revision, responder } => {
+                if revision != ime_state.revision {
+                    return responder.send(0, txt::TextError::BadRevision);
+                }
+                match get_range(&ime_state.text_points, &range, false) {
+                    Some((byte_start, byte_end)) => {
+                        let char_to_byte = ime_state.char_to_byte();
+                        let char_start = if let Ok(v) = char_to_byte.binary_search(&byte_start) {
+                            v
+                        } else {
+                            fx_log_err!(
+                                "was unable to find char index for byte index {:?} in range {:?}",
+                                &byte_start,
+                                &range
+                            );
+                            return responder.send(0, txt::TextError::BadRequest);
+                        };
+                        let char_end = if let Ok(v) = char_to_byte.binary_search(&byte_end) {
+                            v
+                        } else {
+                            fx_log_err!(
+                                "was unable to find char index for byte index {:?} in range {:?}",
+                                &byte_end,
+                                &range
+                            );
+                            return responder.send(0, txt::TextError::BadRequest);
+                        };
+                        return responder
+                            .send(char_end as i64 - char_start as i64, txt::TextError::Ok);
+                    }
+                    None => {
+                        return responder.send(0, txt::TextError::BadRequest);
+                    }
+                }
             }
-            txt::TextFieldRequest::Contents { responder, .. } => {
-                return responder.send(
-                    "",
-                    &mut txt::TextPoint { id: 0 },
-                    txt::TextError::BadRequest,
-                );
+            txt::TextFieldRequest::Contents { range, revision, responder } => {
+                if revision != ime_state.revision {
+                    return responder.send(
+                        "",
+                        &mut txt::TextPoint { id: 0 },
+                        txt::TextError::BadRevision,
+                    );
+                }
+                match get_range(&ime_state.text_points, &range, true) {
+                    Some((start, end)) => {
+                        let mut start_point = ime_state.new_point(start);
+                        match ime_state.text_state.text.get(start..end) {
+                            Some(contents) => {
+                                return responder.send(
+                                    contents,
+                                    &mut start_point,
+                                    txt::TextError::Ok,
+                                );
+                            }
+                            None => {
+                                return responder.send(
+                                    "",
+                                    &mut txt::TextPoint { id: 0 },
+                                    txt::TextError::BadRequest,
+                                );
+                            }
+                        }
+                    }
+                    None => {
+                        return responder.send(
+                            "",
+                            &mut txt::TextPoint { id: 0 },
+                            txt::TextError::BadRequest,
+                        );
+                    }
+                }
+            }
+            txt::TextFieldRequest::BeginEdit { revision, .. } => {
+                ime_state.transaction_changes = Vec::new();
+                ime_state.transaction_revision = Some(revision);
+                return Ok(());
             }
             txt::TextFieldRequest::CommitEdit { responder, .. } => {
-                return responder.send(txt::TextError::BadRequest);
+                if ime_state.transaction_revision != Some(ime_state.revision) {
+                    return responder.send(txt::TextError::BadRevision);
+                }
+                let res = if ime_state.apply_transaction() {
+                    ime_state.increment_revision(None, true);
+                    responder.send(txt::TextError::Ok)
+                } else {
+                    responder.send(txt::TextError::BadRequest)
+                };
+                ime_state.transaction_changes = Vec::new();
+                ime_state.transaction_revision = None;
+                return res;
             }
-            // other cases don't have a responder, so we can just ignore in this temporary code
-            // instead of replying with an error.
-            _ => {
+            txt::TextFieldRequest::AbortEdit { .. } => {
+                ime_state.transaction_changes = Vec::new();
+                ime_state.transaction_revision = None;
+                return Ok(());
+            }
+            req @ txt::TextFieldRequest::Replace { .. }
+            | req @ txt::TextFieldRequest::SetSelection { .. }
+            | req @ txt::TextFieldRequest::SetComposition { .. }
+            | req @ txt::TextFieldRequest::ClearComposition { .. }
+            | req @ txt::TextFieldRequest::SetDeadKeyHighlight { .. }
+            | req @ txt::TextFieldRequest::ClearDeadKeyHighlight { .. } => {
+                if ime_state.transaction_revision.is_some() {
+                    ime_state.transaction_changes.push(req)
+                }
                 return Ok(());
             }
         }
@@ -286,6 +414,30 @@ enum GraphemeTraversal {
     CombiningCharacters,
 }
 
+/// Looks up a TextPoint's byte index from a list of points. Usually this list will be
+/// `ImeState.text_points`, but in the middle of a transaction, we clone it to a temporary list
+/// so that we can mutate them without mutating the original list. That way, if the transaction
+/// gets rejected, the original list is left intact.
+fn get_point(point_list: &HashMap<u64, usize>, point: &txt::TextPoint) -> Option<usize> {
+    point_list.get(&point.id).cloned()
+}
+
+/// Looks up a TextRange's byte indices from a list of points. If `fix_inversion` is true, we
+/// also will sort the result so that start <= end. You almost always want to sort the result,
+/// although sometimes you want to know if the range was inverted. The Distance function, for
+/// instance, returns a negative result if the range given was inverted.
+fn get_range(
+    point_list: &HashMap<u64, usize>,
+    range: &txt::TextRange,
+    fix_inversion: bool,
+) -> Option<(usize, usize)> {
+    match (get_point(point_list, &range.start), get_point(point_list, &range.end)) {
+        (Some(a), Some(b)) if a >= b && fix_inversion => Some((b, a)),
+        (Some(a), Some(b)) => Some((a, b)),
+        _ => None,
+    }
+}
+
 impl ImeState {
     /// Any time the state is updated, this method is called, which allows ImeState to inform any
     /// listening clients (either TextField or InputMethodEditorClientProxy) that state has updated.
@@ -323,37 +475,67 @@ impl ImeState {
         }
     }
 
+    /// Generates a map of char indices to byte indices for the current text. Definitely would not be ~very performant
+    /// on large strings, but this is on legacy state objects, which crash if they get larger than the max FIDL message
+    /// size anyway.
+    fn char_to_byte(&self) -> Vec<usize> {
+        let mut char_to_byte: Vec<usize> =
+            self.text_state.text.char_indices().map(|(i, _)| i).collect();
+        char_to_byte.push(self.text_state.text.len()); // Add final valid code point position at end of string
+        char_to_byte
+    }
+
     /// Converts the current self.text_state (the IME API v1 representation of the text field's state)
     /// into the v2 representation txt::TextFieldState.
     fn as_text_field_state(&mut self) -> txt::TextFieldState {
         let anchor_first = self.text_state.selection.base < self.text_state.selection.extent;
+        let composition = if self.text_state.composing.start < 0
+            || self.text_state.composing.end < 0
+        {
+            None
+        } else {
+            let start = self.new_point(self.text_state.composing.start as usize);
+            let end = self.new_point(self.text_state.composing.end as usize);
+            let text_range = if self.text_state.composing.start < self.text_state.composing.end {
+                txt::TextRange { start, end }
+            } else {
+                txt::TextRange { start: end, end: start }
+            };
+            Some(Box::new(text_range))
+        };
+        let selection =
+            if self.text_state.selection.base < 0 || self.text_state.selection.extent < 0 {
+                None
+            } else {
+                Some(Box::new(txt::TextSelection {
+                    range: txt::TextRange {
+                        start: self.new_point(if anchor_first {
+                            self.text_state.selection.base as usize
+                        } else {
+                            self.text_state.selection.extent as usize
+                        }),
+                        end: self.new_point(if anchor_first {
+                            self.text_state.selection.extent as usize
+                        } else {
+                            self.text_state.selection.base as usize
+                        }),
+                    },
+                    anchor: if anchor_first {
+                        txt::TextSelectionAnchor::AnchoredAtStart
+                    } else {
+                        txt::TextSelectionAnchor::AnchoredAtEnd
+                    },
+                    affinity: txt::TextAffinity::Upstream,
+                }))
+            };
         txt::TextFieldState {
             document: txt::TextRange {
                 start: self.new_point(0),
                 end: self.new_point(self.text_state.text.len()),
             },
-            selection: Some(Box::new(txt::TextSelection {
-                range: txt::TextRange {
-                    start: self.new_point(if anchor_first {
-                        self.text_state.selection.base as usize
-                    } else {
-                        self.text_state.selection.extent as usize
-                    }),
-                    end: self.new_point(if anchor_first {
-                        self.text_state.selection.extent as usize
-                    } else {
-                        self.text_state.selection.base as usize
-                    }),
-                },
-                anchor: if anchor_first {
-                    txt::TextSelectionAnchor::AnchoredAtStart
-                } else {
-                    txt::TextSelectionAnchor::AnchoredAtEnd
-                },
-                affinity: txt::TextAffinity::Upstream,
-            })),
-            // TODO(lard): these three regions should be correctly populated from text_state.
-            composition: None,
+            selection,
+            composition,
+            // unfortunately, since the old API doesn't support these, we have to set highlights to None.
             composition_highlight: None,
             dead_key_highlight: None,
             revision: self.revision,
@@ -376,6 +558,105 @@ impl ImeState {
         let start = s.base.min(s.extent) as usize;
         let end = s.base.max(s.extent) as usize;
         (start..end)
+    }
+
+    /// Return bool indicates if transaction was successful and valid
+    fn apply_transaction(&mut self) -> bool {
+        let mut moved_points = self.text_points.clone();
+        let mut new_state = clone_state(&self.text_state);
+        for edit in &self.transaction_changes {
+            match edit {
+                txt::TextFieldRequest::Replace { range, new_text, .. } => {
+                    let (start, end) = match get_range(&moved_points, &range, true) {
+                        Some(v) => v,
+                        None => return false,
+                    };
+                    let first_half = if let Some(v) = new_state.text.get(..start) {
+                        v
+                    } else {
+                        fx_log_err!(
+                            "IME: out of bounds string request for range (..{}) on string {:?}",
+                            start,
+                            new_state.text
+                        );
+                        return false;
+                    };
+                    let second_half = if let Some(v) = new_state.text.get(end..) {
+                        v
+                    } else {
+                        fx_log_err!(
+                            "IME: out of bounds string request for range ({}..) on string {:?}",
+                            end,
+                            new_state.text
+                        );
+                        return false;
+                    };
+                    new_state.text = format!("{}{}{}", first_half, new_text, second_half);
+
+                    // adjust char index of points after the insert
+                    let delete_len = end as i64 - start as i64;
+                    let insert_len = new_text.len() as i64;
+                    for (_, byte_index) in moved_points.iter_mut() {
+                        if start < *byte_index && *byte_index <= end {
+                            *byte_index = start + insert_len as usize;
+                        } else if end < *byte_index {
+                            *byte_index = (*byte_index as i64 - delete_len as i64
+                                + insert_len as i64)
+                                as usize;
+                        }
+                    }
+
+                    adjust_range(
+                        start as i64,
+                        end as i64,
+                        new_text.len() as i64,
+                        &mut new_state.selection.extent,
+                        &mut new_state.selection.base,
+                    );
+                    if new_state.composing.start >= 0 && new_state.composing.end >= 0 {
+                        adjust_range(
+                            start as i64,
+                            end as i64,
+                            new_text.len() as i64,
+                            &mut new_state.composing.start,
+                            &mut new_state.composing.end,
+                        );
+                    }
+                }
+                txt::TextFieldRequest::SetSelection { selection, .. } => {
+                    let (start, end) = match get_range(&moved_points, &selection.range, false) {
+                        Some(v) => v,
+                        None => return false,
+                    };
+
+                    if selection.anchor == txt::TextSelectionAnchor::AnchoredAtStart {
+                        new_state.selection.base = start as i64;
+                        new_state.selection.extent = end as i64;
+                    } else {
+                        new_state.selection.extent = start as i64;
+                        new_state.selection.base = end as i64;
+                    }
+                }
+                txt::TextFieldRequest::SetComposition { composition_range, .. } => {
+                    let (start, end) = match get_range(&moved_points, &composition_range, true) {
+                        Some(v) => v,
+                        None => return false,
+                    };
+                    new_state.composing.start = start as i64;
+                    new_state.composing.end = end as i64;
+                }
+                txt::TextFieldRequest::ClearComposition { .. } => {
+                    new_state.composing.start = -1;
+                    new_state.composing.end = -1;
+                }
+                _ => {
+                    fx_log_warn!("the input method tried to an unsupported TextFieldRequest on this proxy to InputMethodEditorClient");
+                }
+            }
+        }
+
+        self.text_state = new_state;
+        true
     }
 
     pub fn type_keycode(&mut self, code_point: u32) {
@@ -597,10 +878,31 @@ impl ImeState {
     }
 }
 
+/// This function modifies a range in response to an edit.
+fn adjust_range(
+    edit_start: i64,
+    edit_end: i64,
+    insert_len: i64,
+    range_a: &mut i64,
+    range_b: &mut i64,
+) {
+    let (range_start, range_end) =
+        if *range_a < *range_b { (*range_a, *range_b) } else { (*range_b, *range_a) };
+    if edit_end <= range_start {
+        // if replace happened strictly before selection, push selection forwards
+        *range_b += insert_len + edit_start - edit_end;
+        *range_a += insert_len + edit_start - edit_end;
+    } else if edit_start < range_end {
+        // if our replace intersected with the selection at all, set the selection to the end of the insert
+        *range_b = edit_start + insert_len;
+        *range_a = edit_start + insert_len;
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_helpers::{clone_state, default_state};
+    use crate::fidl_helpers::default_state;
     use fidl;
     use fuchsia_zircon as zx;
     use std::sync::mpsc::{channel, Receiver, Sender};

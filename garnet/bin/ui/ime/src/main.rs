@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro, futures_api)]
-
+mod fidl_helpers;
 mod ime;
 mod ime_service;
-#[cfg(test)]
-mod test_helpers;
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
@@ -52,8 +50,6 @@ mod test {
     use futures::prelude::*;
 
     #[test]
-    // implementation is not complete, so we're ignoring this test for now.
-    #[ignore]
     fn test_external_text_field_implementation() {
         fuchsia_syslog::init_with_tags(&["ime_service"]).expect("ime syslog init should not fail");
         let mut executor = fuchsia_async::Executor::new()
@@ -106,7 +102,7 @@ mod test {
         ime_service.get_input_method_editor(
             uii::KeyboardType::Text,
             uii::InputMethodAction::Done,
-            crate::test_helpers::default_state(),
+            crate::fidl_helpers::default_state(),
             imec_client,
             ime_server,
         );

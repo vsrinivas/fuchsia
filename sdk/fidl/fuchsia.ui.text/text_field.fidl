@@ -83,15 +83,15 @@ protocol TextField {
 
   // READ METHODS
 
-  /// Returns a new point that is `offset` grapheme clusters away from `oldPoint`
+  /// Returns a new point that is `offset` unicode code points away from `oldPoint`
   PointOffset(TextPoint old_point, int64 offset, uint64 revision) -> (TextPoint new_point, TextError error);
 
-  /// Returns number of grapheme clusters between two points. If the point range.start is after
+  /// Returns number of unicode code points between two points. If the point range.start is after
   /// range.end, then the range is considered `inverted` and distance will be negative.
   /// For all points A and B, pointOffset(A, distance(A, B)) == B
   Distance(TextRange range, uint64 revision) -> (int64 distance, TextError error);
 
-  /// Returns string of grapheme clusters between two points
+  /// Returns string of unicode code points between two points
   Contents(TextRange range, uint64 revision) -> (string contents, TextPoint start, TextError error);
 
   // TRANSACTION METHODS

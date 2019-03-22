@@ -1,14 +1,11 @@
 use fidl_fuchsia_ui_input as uii;
 
+#[cfg(test)]
 pub fn default_state() -> uii::TextInputState {
     uii::TextInputState {
         revision: 1,
         text: "".to_string(),
-        selection: uii::TextSelection {
-            base: -1,
-            extent: -1,
-            affinity: uii::TextAffinity::Upstream,
-        },
+        selection: uii::TextSelection { base: 0, extent: 0, affinity: uii::TextAffinity::Upstream },
         composing: uii::TextRange { start: -1, end: -1 },
     }
 }

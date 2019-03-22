@@ -245,8 +245,8 @@ pub fn bind_new_text_field(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::fidl_helpers::default_state;
     use crate::ime::{HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT};
-    use crate::test_helpers::default_state;
     use fidl;
     use fidl_fuchsia_ui_input as uii;
     use fuchsia_async as fasync;
