@@ -1,0 +1,14 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "servo-freetype-sys"
+version = "4.0.5"
+authors = ["The Fuchsia Authors <rust-fuchsia@fuchsia.com>"]
+links = "freetype"
+build = "build.rs"
+description = "Dummy crate that exists solely to declare that it links the native freetype library."
+
+[lib]
+name = "freetype_sys"

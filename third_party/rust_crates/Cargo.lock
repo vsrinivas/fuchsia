@@ -554,6 +554,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)",
+ "servo-freetype-sys 4.0.5",
 ]
 
 [[package]]
@@ -1753,6 +1754,10 @@ dependencies = [
  "ryu 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.87 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "servo-freetype-sys"
+version = "4.0.5"
 
 [[package]]
 name = "sha-1"
