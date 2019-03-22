@@ -59,6 +59,10 @@ int Msm8x53::Thread() {
         zxlogf(ERROR, "GpioInit() failed\n");
         return -1;
     }
+    if (Sdc1Init() != ZX_OK) {
+        zxlogf(ERROR, "Sdc1Init() failed\n");
+        return -1;
+    }
 
     if (PilInit() != ZX_OK) {
         zxlogf(ERROR, "PilInit() failed\n");

@@ -7,6 +7,9 @@
 namespace msm8x53 {
 
 // IRQ Table.
+
+constexpr uint32_t kIrqSdc1 = 155;
+
 // kIrqCombined is called "summary" in the docs (as opposed to the 8 dedicted "direct" interrupts).
 constexpr uint32_t kIrqCombined = 240;
 constexpr uint32_t kIrqDirect7 = 241;

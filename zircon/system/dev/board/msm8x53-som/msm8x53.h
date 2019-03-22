@@ -11,6 +11,11 @@
 
 namespace board_msm8x53 {
 
+// BTI IDs
+enum {
+    BTI_SDC1,
+};
+
 class Msm8x53;
 using Msm8x53Type = ddk::Device<Msm8x53>;
 
@@ -31,6 +36,7 @@ private:
     zx_status_t Start();
     zx_status_t GpioInit();
     zx_status_t PilInit();
+    zx_status_t Sdc1Init();
     int Thread();
 
     ddk::PBusProtocolClient pbus_;

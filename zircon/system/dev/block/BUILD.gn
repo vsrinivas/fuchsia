@@ -14,6 +14,7 @@ group("block") {
     "hisi-ufs",
     "imx-sdhci",
     "mbr",
+    "msm8x53-sdhci",
     "mtk-sdmmc",
     "nvme",
     "pci-sdhci",
