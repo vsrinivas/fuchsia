@@ -363,8 +363,99 @@ zx_status_t pty_client_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handl
     return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, status);
 }
 
+#define fuchsia_hardware_pty_FEATURE_BAD (~fuchsia_hardware_pty_FEATURE_RAW)
+
+zx_status_t pty_client_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set, fidl_txn_t* txn) {
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
+    zx_status_t status = ZX_OK;
+
+    zxlogf(TRACE, "PTY Client %p (id=%u) message: clear and/or set feature\n", pc, pc->id);
+    if ((clr & fuchsia_hardware_pty_FEATURE_BAD) ||
+        (set & fuchsia_hardware_pty_FEATURE_BAD)) {
+        status = ZX_ERR_NOT_SUPPORTED;
+    } else {
+        fbl::AutoLock(&ps->lock);
+        pc->flags = (pc->flags & ~clr) | set;
+    }
+    return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, status, pc->flags);
+}
+
+zx_status_t pty_client_GetWindowSize(void* ctx, fidl_txn_t* txn) {
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
+
+    zxlogf(TRACE, "PTY Client %p (id=%u) message: get window size\n", pc, pc->id);
+    mtx_lock(&ps->lock);
+    fuchsia_hardware_pty_WindowSize wsz;
+    wsz.width = ps->width;
+    wsz.height = ps->height;
+    mtx_unlock(&ps->lock);
+
+    return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_OK, &wsz);
+}
+
+zx_status_t pty_client_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
+
+    zxlogf(TRACE, "PTY Client %p (id=%u) message: make active\n", pc, pc->id);
+
+    if (!(pc->flags & PTY_CLI_CONTROL)) {
+        return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_ACCESS_DENIED);
+    }
+    mtx_lock(&ps->lock);
+    pty_client_t* c;
+    list_for_every_entry (&ps->clients, c, pty_client_t, node) {
+        if (c->id == client_pty_id) {
+            pty_make_active_locked(ps, c);
+            mtx_unlock(&ps->lock);
+            return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_OK);
+        }
+    }
+    mtx_unlock(&ps->lock);
+    return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_FOUND);
+}
+
+zx_status_t pty_client_ReadEvents(void* ctx, fidl_txn_t* txn) {
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
+    uint32_t events = 0;
+
+    zxlogf(TRACE, "PTY Client %p (id=%u) message: read events\n", pc, pc->id);
+    if (!(pc->flags & PTY_CLI_CONTROL)) {
+        return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_ACCESS_DENIED, events);
+    }
+    mtx_lock(&ps->lock);
+    events = ps->events;
+    ps->events = 0;
+    if (ps->active == NULL) {
+        events |= PTY_EVENT_HANGUP;
+    }
+    device_state_clr(pc->zxdev, PTY_SIGNAL_EVENT);
+    mtx_unlock(&ps->lock);
+    return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_OK, events);
+}
+
+zx_status_t pty_client_SetWindowSize(void* ctx, const fuchsia_hardware_pty_WindowSize* size,
+                                     fidl_txn_t* txn) {
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
+
+    if (ps->set_window_size != NULL) {
+        return ps->set_window_size(ps, size, txn);
+    } else {
+        return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    }
+}
+
 static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
     .OpenClient = pty_client_fidl_OpenClient,
+    .ClrSetFeature = pty_client_ClrSetFeature,
+    .GetWindowSize = pty_client_GetWindowSize,
+    .MakeActive = pty_client_MakeActive,
+    .ReadEvents = pty_client_ReadEvents,
+    .SetWindowSize = pty_client_SetWindowSize
 };
 
 zx_status_t pty_client_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {

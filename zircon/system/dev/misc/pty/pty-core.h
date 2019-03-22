@@ -13,6 +13,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
 
 typedef struct pty_server pty_server_t;
 typedef struct pty_client pty_client_t;
@@ -43,10 +44,13 @@ struct pty_server {
     // (it is not legal to call back into any pty_server_*() functions)
     zx_status_t (*recv)(pty_server_t* ps, const void* data, size_t len, size_t* actual);
 
-    // if non-null, called for unhandled client ioctl ops
+    // if non-null, called for unhandled client ioctl/message ops
     // no lock is held across this call
     zx_status_t (*ioctl)(pty_server_t* ps, uint32_t op, const void* cmd, size_t cmdlen, void* out,
                          size_t outlen, size_t* out_actual);
+
+    zx_status_t (*set_window_size)(void* ctx, const fuchsia_hardware_pty_WindowSize* size,
+                                   fidl_txn_t* txn);
 
     // called when pty_server_t should be deleted
     // if NULL, free(ps) is called instead

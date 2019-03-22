@@ -116,15 +116,51 @@ static zx_status_t psd_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
     }
 }
 
-static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
+zx_status_t psd_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+zx_status_t psd_GetWindowSize(void* ctx, fidl_txn_t* txn) {
+    fuchsia_hardware_pty_WindowSize wsz = {
+        .width = 0,
+        .height = 0
+    };
+    return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED, &wsz);
+}
+
+zx_status_t psd_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+zx_status_t psd_ReadEvents(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+zx_status_t psd_SetWindowSize(void* ctx, const fuchsia_hardware_pty_WindowSize* size,
+                              fidl_txn_t* txn) {
+    auto psd = static_cast<pty_server_dev_t*>(ctx);
+    zxlogf(TRACE, "PTY Server Device %p message: set window size\n", psd);
+    pty_server_set_window_size(&psd->srv, size->width, size->height);
+    return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_OK);
+}
+
+
+static fuchsia_hardware_pty_Device_ops_t psd_fidl_ops = {
     .OpenClient = pty_server_fidl_OpenClient,
+    .ClrSetFeature = psd_ClrSetFeature,
+    .GetWindowSize = psd_GetWindowSize,
+    .MakeActive = psd_MakeActive,
+    .ReadEvents = psd_ReadEvents,
+    .SetWindowSize = psd_SetWindowSize
 };
 
 zx_status_t psd_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
+    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &psd_fidl_ops);
 }
 
-// Since we have no special functionality, we just use the implementations from pty-core directly.
+// Since we have no special functionality,
+// we just use the implementations from pty-core
+// directly.
 static zx_protocol_device_t psd_ops = []() {
     zx_protocol_device_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
@@ -150,6 +186,7 @@ static zx_status_t ptmx_open(void* ctx, zx_device_t** out, uint32_t flags) {
 
     pty_server_init(&psd->srv);
     psd->srv.recv = psd_recv;
+    psd->srv.set_window_size = psd_SetWindowSize;
     mtx_init(&psd->lock, mtx_plain);
     psd->fifo.head = 0;
     psd->fifo.tail = 0;

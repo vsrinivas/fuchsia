@@ -6,16 +6,73 @@ library fuchsia.hardware.pty;
 
 using zx;
 
+/// A PTY (pseudoterminal) emulates terminal devices, with a
+/// "server" side (which represents the keyboard+monitor side
+/// of the terminal and is obtained by opening /dev/misc/ptmx)
+/// and a number of "client" sides which are obtained by doing
+/// an open_at(server_pty_fd, "0", O_RDWR) or
+/// open_at(client_0_fd, "#", O_RDWR).
+///
+/// Client PTYs are identified by the unsigned number used in
+/// the open_at().  The first Client PTY *must* be 0, and it is
+/// the only Client PTY that is allowed to create additional
+/// Client PTYs, receive Events, etc.  It is the Controlling PTY.
+
+/// When Feature Raw is enabled, OOB Events like ^c, ^z, etc
+/// are not generated.  Instead the character is read from the
+/// read() input path.
+const uint32 FEATURE_RAW = 1;
+
+struct WindowSize {
+    uint32 width;
+    uint32 height;
+};
+
+/// The terminal has no active client.
+const uint32 EVENT_HANGUP    = 1;
+/// The terminal received a ^C control character.
+const uint32 EVENT_INTERRUPT = 2;
+/// The terminal received a ^Z control character.
+const uint32 EVENT_SUSPEND   = 4;
+/// All events
+const uint32 EVENT_MASK      = 7;
+
+/// When an event is pending, this signal is asserted
+/// on the Controlling Client PTY
+const uint32 SIGNAL_EVENT = 0x02000000; // DEVICE_SIGNAL_OOB
+
 [Layout = "Simple"]
 protocol Device {
-    // Open a client PTY device with a unique |id|. |client| should be a handle
-    // to one endpoint of a channel that (on success) will become an open
-    // connection to the newly created device. On failure, the channel will be
-    // closed. Closing the channel will close the connection and release the
-    // device. If the provided |id| is 0, then the new client is a controlling
-    // client and has the capability to open additional clients. If the
-    // current device is not a controlling client, ZX_ERR_ACCESS_DENIED will be
-    // returned. If |id| is not unique, ZX_ERR_INVALID_ARGS will be returned.
-    // Otherwise the status code from |device_add| is passed on.
+    /// Open a client PTY device with a unique |id|. |client| should be a handle
+    /// to one endpoint of a channel that (on success) will become an open
+    /// connection to the newly created device. On failure, the channel will be
+    /// closed. Closing the channel will close the connection and release the
+    /// device. If the provided |id| is 0, then the new client is a controlling
+    /// client and has the capability to open additional clients. If the
+    /// current device is not a controlling client, ZX_ERR_ACCESS_DENIED will be
+    /// returned. If |id| is not unique, ZX_ERR_INVALID_ARGS will be returned.
+    /// Otherwise the status code from |device_add| is passed on.
     OpenClient(uint32 id, handle<channel> client) -> (zx.status s);
+
+    /// allowed on Client PTYs
+    /// -----------------------------
+    /// Clear and/or Set PTY Features
+    ClrSetFeature(uint32 clr, uint32 set) -> (zx.status status, uint32 features);
+
+    /// Obtain the window size (in character cells)
+    GetWindowSize() -> (zx.status status, WindowSize size);
+
+    /// allowed on the Controlling PTY
+    /// -------------------------------------
+    /// Select which Client PTY receives input.
+    /// Reads will simply block on non-active PTYs.
+    MakeActive(uint32 client_pty_id) -> (zx.status status);
+
+    /// Returns pending OOB events, simultaneously clearing them
+    ReadEvents() -> (zx.status status, uint32 events);
+
+    /// allowed on the Server PTY
+    /// --------------------------------
+    /// Sets the window size
+    SetWindowSize(WindowSize size) -> (zx.status status);
 };
