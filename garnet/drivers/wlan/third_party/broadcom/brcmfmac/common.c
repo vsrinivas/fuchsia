@@ -253,6 +253,8 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
         // Fallback to a random mac address.
         brcmf_err("Failed to get mac address from bootloader. Fallback to random mac address\n");
         brcmf_gen_random_mac_addr(mac_addr);
+        brcmf_dbg(INFO, "random mac address to be assigned: %02x:%02x:%02x:%02x:%02x:%02x\n",
+                  mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     }
 
     err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN);
