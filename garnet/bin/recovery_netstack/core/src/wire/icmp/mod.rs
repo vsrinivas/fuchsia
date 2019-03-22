@@ -9,7 +9,7 @@ mod macros;
 mod common;
 mod icmpv4;
 mod icmpv6;
-mod ndp;
+pub(crate) mod ndp;
 
 #[cfg(test)]
 mod testdata;

@@ -13,7 +13,8 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::{DeviceId, FrameDestination};
-use crate::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use crate::ip::ndp::NdpState;
+use crate::ip::{ndp, AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
@@ -97,6 +98,8 @@ impl Mac {
     }
 }
 
+impl ndp::LinkLayerAddress for Mac {}
+
 /// An EtherType number.
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
@@ -163,6 +166,7 @@ pub(crate) struct EthernetDeviceState {
     ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
     ipv6_addr_sub: Option<AddrSubnet<Ipv6Addr>>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
+    ndp: ndp::NdpState<EthernetNdpDevice>,
 }
 
 impl EthernetDeviceState {
@@ -182,6 +186,7 @@ impl EthernetDeviceState {
             ipv4_addr_sub: None,
             ipv6_addr_sub: None,
             ipv4_arp: ArpState::default(),
+            ndp: NdpState::default(),
         }
     }
 }
@@ -233,7 +238,25 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     };
 
     #[ipv6addr]
-    let dst_mac = log_unimplemented!(None, "device::ethernet::send_ip_frame: IPv6 unimplemented");
+    let dst_mac = {
+        if let Some(dst_mac) =
+            crate::ip::ndp::lookup::<_, EthernetNdpDevice>(ctx, device_id, local_addr)
+        {
+            Some(dst_mac)
+        } else {
+            // TODO(brunodalbo) On cache misses, packets need to be held
+            //  and retransmitted once the link layer address is resolved.
+            //  per RFC 4861 section 7.2.2 the buffer should be limited to the N
+            //  most *recent* entries where N must be at least 1.
+            //  Also, in case the link layer address CAN'T be resolved, we MUST
+            //  send an ICMP destination unreachable for each packet queued
+            //  awaiting address resolution.
+            log_unimplemented!(
+                None,
+                "device::ethernet::send_ip_frame: unimplemented on ndp cache miss"
+            )
+        }
+    };
 
     if let Some(dst_mac) = dst_mac {
         let buffer = body
@@ -319,9 +342,9 @@ pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
     device_id: u64,
 ) -> Ipv6Addr {
     // TODO(brunodalbo) the link local address is subject to the same collision
-    // verifications as prefix global addresses, we should keep a state machine
-    // about that check and cache the adopted address. For now, we just compose
-    // the link-local from the ethernet MAC.
+    //  verifications as prefix global addresses, we should keep a state machine
+    //  about that check and cache the adopted address. For now, we just compose
+    //  the link-local from the ethernet MAC.
     get_device_state(ctx, device_id).mac.to_ipv6_link_local(None)
 }
 
@@ -367,8 +390,8 @@ fn get_device_state<D: EventDispatcher>(
         .unwrap_or_else(|| panic!("no such Ethernet device: {}", device_id))
 }
 
-// Dummy type used to implement ArpDevice.
-pub(crate) struct EthernetArpDevice;
+/// Dummy type used to implement ArpDevice.
+pub(super) struct EthernetArpDevice;
 
 impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
@@ -404,6 +427,28 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     }
 
     fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Mac {
+        get_device_state(ctx, device_id).mac
+    }
+}
+
+/// Dummy type used to implement NdpDevice
+pub(crate) struct EthernetNdpDevice;
+
+impl ndp::NdpDevice for EthernetNdpDevice {
+    type LinkAddress = Mac;
+    const BROADCAST: Mac = Mac::BROADCAST;
+
+    fn get_ndp_state<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+    ) -> &mut ndp::NdpState<Self> {
+        &mut get_device_state(ctx, device_id).ndp
+    }
+
+    fn get_link_layer_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+    ) -> Self::LinkAddress {
         get_device_state(ctx, device_id).mac
     }
 }

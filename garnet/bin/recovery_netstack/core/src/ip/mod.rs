@@ -7,6 +7,7 @@
 mod forwarding;
 mod icmp;
 mod igmp;
+pub(crate) mod ndp;
 mod types;
 
 // It's ok to `pub use` rather `pub(crate) use` here because the items in
