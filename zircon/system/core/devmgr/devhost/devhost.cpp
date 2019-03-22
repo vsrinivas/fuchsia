@@ -46,6 +46,7 @@
 #include "../shared/log.h"
 #include "composite-device.h"
 #include "main.h"
+#include "scheduler_profile.h"
 #include "tracing.h"
 
 zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
@@ -1348,6 +1349,12 @@ __EXPORT int device_host_main(int argc, char** argv) {
             log(INFO, "devhost: error registering as trace provider: %d\n", r);
             // This is not a fatal error.
         }
+    }
+
+    r = devhost_connect_scheduler_profile_provider();
+    if (r != ZX_OK) {
+        log(INFO, "devhost: error connecting to profile provider: %d\n", r);
+        return -1;
     }
 
     if ((r = SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {

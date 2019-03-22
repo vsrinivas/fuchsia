@@ -142,6 +142,17 @@ zx_status_t device_remove(zx_device_t* device);
 zx_status_t device_rebind(zx_device_t* device);
 void device_make_visible(zx_device_t* device);
 
+// Retrieves a profile handle into |out_profile| from the scheduler for the
+// given |priority| and |name|. Ownership of |out_profile| is given to the
+// caller. See fuchsia.scheduler.ProfileProvider for more detail.
+//
+// The profile handle can be used with zx_object_set_profile() to control thread
+// priority.
+//
+// The current arguments are transitional, and will likely change in the future.
+zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const char* name,
+                               zx_handle_t* out_profile);
+
 // A description of a part of a device component.  It provides a bind program
 // that will match a device on the path from the root of the device tree to the
 // target device.

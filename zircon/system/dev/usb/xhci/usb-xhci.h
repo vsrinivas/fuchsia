@@ -58,7 +58,7 @@ private:
     struct Completer {
         xhci_t *xhci;
         uint32_t interrupter;
-        uint32_t priority;
+        bool high_priority;
     };
 
     int StartThread();

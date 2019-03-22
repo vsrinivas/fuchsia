@@ -14,6 +14,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
+#include <lib/zx/profile.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
@@ -209,6 +210,7 @@ struct xhci_t {
     ddk::IoBuffer scratch_pad_index_buffer;
 
     zx::bti bti_handle;
+    zx::profile profile_handle;
 
     // pool of control requests that can be reused
     usb_request_pool_t free_reqs = {};

@@ -5,6 +5,7 @@
 #include <zircon/compiler.h>
 
 #include "devhost.h"
+#include "scheduler_profile.h"
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <zircon/device/vfs.h>
@@ -138,6 +139,11 @@ __EXPORT void device_make_visible(zx_device_t* dev) {
     ApiAutoLock lock;
     fbl::RefPtr<zx_device_t> dev_ref(dev);
     devhost_make_visible(dev_ref);
+}
+
+__EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, const char* name,
+                                        zx_handle_t* out_profile) {
+    return devhost_get_scheduler_profile(priority, name, out_profile);
 }
 
 __EXPORT const char* device_get_name(zx_device_t* dev) {

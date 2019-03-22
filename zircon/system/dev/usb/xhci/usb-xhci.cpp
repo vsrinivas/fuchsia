@@ -36,9 +36,6 @@ namespace usb_xhci {
 
 #define MAX_SLOTS 255
 
-#define DEFAULT_PRIORITY 16
-#define HIGH_PRIORITY    24
-
 #define PDEV_MMIO_INDEX  0
 #define PDEV_IRQ_INDEX   0
 
@@ -217,7 +214,9 @@ int UsbXhci::CompleterThread(void* arg) {
     // TODO(johngro): See ZX-940.  Get rid of this.  For now we need thread
     // priorities so that realtime transactions use the completer which ends
     // up getting realtime latency guarantees.
-    zx_thread_set_priority(completer->priority);
+    if (completer->high_priority) {
+        zx_object_set_profile(zx_thread_self(), xhci->profile_handle.get(), 0);
+    }
 
     while (1) {
         zx_status_t wait_res;
@@ -252,7 +251,7 @@ int UsbXhci::StartThread() {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    
+
     for (uint32_t i = 0; i < xhci_->num_interrupts; i++) {
         auto* completer = &completers_[i];
         completer->xhci = xhci_.get();
@@ -260,8 +259,7 @@ int UsbXhci::StartThread() {
         // We need a high priority thread for isochronous transfers.
         // If there is only one interrupt available, that thread will need
         // to be high priority.
-        completer->priority = (i == ISOCH_INTERRUPTER || xhci_->num_interrupts == 1) ?
-                              HIGH_PRIORITY : DEFAULT_PRIORITY;
+        completer->high_priority = i == ISOCH_INTERRUPTER || xhci_->num_interrupts == 1;
     }
 
     // xhci_start will block, so do this part here instead of in usb_xhci_bind
@@ -293,6 +291,12 @@ int UsbXhci::StartThread() {
 
 zx_status_t UsbXhci::FinishBind() {
     auto status = DdkAdd("xhci", DEVICE_ADD_INVISIBLE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 24, "zircon/system/dev/usb/xhci/usb-xhci",
+                                xhci_->profile_handle.reset_and_get_address());
     if (status != ZX_OK) {
         return status;
     }

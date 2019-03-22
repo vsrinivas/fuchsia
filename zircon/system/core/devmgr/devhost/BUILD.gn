@@ -23,6 +23,7 @@ library("driver") {
     "core.cpp",
     "devhost.cpp",
     "rpc-server.cpp",
+    "scheduler_profile.cpp",
     "tracing.cpp",
     "zx-device.cpp",
   ]
@@ -32,6 +33,7 @@ library("driver") {
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/async:async-cpp.static",
     "$zx/system/ulib/async:async-default.static",
     "$zx/system/ulib/async:static",
