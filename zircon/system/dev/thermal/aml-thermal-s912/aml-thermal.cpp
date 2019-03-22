@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #include "aml-thermal.h"
+#include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
@@ -18,7 +21,7 @@ constexpr int kDeadline = 5;
 
 } // namespace
 
-zx_status_t AmlThermal::Create(zx_device_t* device) {
+zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "aml_thermal: driver begin...\n");
     zx_status_t status;
 
@@ -359,6 +362,16 @@ int AmlThermal::Worker() {
 
 } // namespace thermal
 
-extern "C" zx_status_t aml_thermal_bind(void* ctx, zx_device_t* device) {
-    return thermal::AmlThermal::Create(device);
-}
+static zx_driver_ops_t aml_thermal_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = thermal::AmlThermal::Create;
+    return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(aml_thermal, aml_thermal_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SCPI),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),
+ZIRCON_DRIVER_END(aml_thermal)

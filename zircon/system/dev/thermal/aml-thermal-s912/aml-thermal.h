@@ -49,7 +49,7 @@ public:
           port_(std::move(port)) {}
 
     // Create and bind a driver instance.
-    static zx_status_t Create(zx_device_t* device);
+    static zx_status_t Create(void* ctx, zx_device_t* device);
 
     // Perform post-construction runtime initialization.
     zx_status_t Init();

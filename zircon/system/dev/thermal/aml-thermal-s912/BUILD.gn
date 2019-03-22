@@ -4,7 +4,6 @@
 
 driver("aml-thermal-s912") {
   sources = [
-    "aml-thermal.c",
     "aml-thermal.cpp",
   ]
   deps = [
