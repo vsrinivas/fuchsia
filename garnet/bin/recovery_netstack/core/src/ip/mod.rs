@@ -48,6 +48,20 @@ struct IpLayerStateInner<I: Ip> {
     table: ForwardingTable<I>,
 }
 
+/// The identifier for timer events in the IP layer.
+#[derive(Copy, Clone, PartialEq)]
+pub(crate) enum IpLayerTimerId {
+    /// A timer event in the IP layer relating to NDP operations.
+    Ndp(ndp::NdpTimerId),
+}
+
+/// Handle a timer event firing in the IP layer.
+pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLayerTimerId) {
+    match id {
+        IpLayerTimerId::Ndp(inner_id) => ndp::handle_timeout(ctx, inner_id),
+    }
+}
+
 // TODO(joshlf): Once we support multiple extension headers in IPv6, we will
 // need to verify that the callers of this function are still sound. In
 // particular, they may accidentally pass a parse_metadata argument which

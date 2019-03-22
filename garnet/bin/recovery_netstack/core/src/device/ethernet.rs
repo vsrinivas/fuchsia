@@ -98,7 +98,11 @@ impl Mac {
     }
 }
 
-impl ndp::LinkLayerAddress for Mac {}
+impl ndp::LinkLayerAddress for Mac {
+    fn bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
 
 /// An EtherType number.
 #[allow(missing_docs)]
@@ -450,6 +454,32 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         device_id: u64,
     ) -> Self::LinkAddress {
         get_device_state(ctx, device_id).mac
+    }
+
+    fn get_ipv6_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<Ipv6Addr> {
+        let state = get_device_state(ctx, device_id);
+        // TODO(brunodalbo) just returning either the configured or EUI
+        //  link_local address for now, we need a better structure to keep
+        //  a list of IPv6 addresses.
+        match state.ipv6_addr_sub {
+            Some(addr_sub) => Some(addr_sub.into_addr()),
+            None => Some(state.mac.to_ipv6_link_local(None)),
+        }
+    }
+
+    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        dst: Mac,
+        body: S,
+    ) -> Result<(), MtuError<S::InnerError>> {
+        let src = get_device_state(ctx, device_id).mac;
+        let buffer = body
+            .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Ipv6))
+            .serialize_outer()
+            .map_err(|(err, _)| err)?;
+        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        Ok(())
     }
 }
 

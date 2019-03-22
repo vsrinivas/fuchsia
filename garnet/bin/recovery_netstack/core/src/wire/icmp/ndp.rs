@@ -10,12 +10,14 @@ use std::marker::PhantomData;
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use packet::{EncapsulatingSerializer, Serializer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
 
-use super::{IcmpIpExt, IcmpUnusedCode};
+use super::{IcmpIpExt, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
+use crate::wire::igmp::IgmpMessage;
 
 pub(crate) type Options<B> =
     crate::wire::util::records::options::Options<B, options::NdpOptionsImpl>;

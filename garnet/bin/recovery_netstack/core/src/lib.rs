@@ -42,7 +42,7 @@ pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId};
-use crate::ip::IpLayerState;
+use crate::ip::{IpLayerState, IpLayerTimerId};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of an address.
@@ -153,6 +153,8 @@ pub struct TimerId(TimerIdInner);
 enum TimerIdInner {
     /// A timer event in the device layer.
     DeviceLayer(DeviceLayerTimerId),
+    /// A timer event in the IP layer.
+    IpLayer(IpLayerTimerId),
     /// A timer event in the transport layer.
     TransportLayer(TransportLayerTimerId),
 }
@@ -162,6 +164,9 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
     match id {
         TimerId(TimerIdInner::DeviceLayer(x)) => {
             device::handle_timeout(ctx, x);
+        }
+        TimerId(TimerIdInner::IpLayer(x)) => {
+            ip::handle_timeout(ctx, x);
         }
         TimerId(TimerIdInner::TransportLayer(x)) => {
             transport::handle_timeout(ctx, x);
