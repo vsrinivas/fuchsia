@@ -477,6 +477,9 @@ async fn main() -> Result<(), Error> {
     while let Some(evt) = await!(evt_stream.next()) {
         match evt {
             Err(e) => return Err(e.into()),
+            Ok(ProfileEvent::OnServiceFound { peer_id, .. }) => {
+                fx_log_info!("OnServiceFound on {}, ignoring.", peer_id);
+            }
             Ok(ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol }) => {
                 fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
                 match remotes.write().entry(device_id.clone()) {

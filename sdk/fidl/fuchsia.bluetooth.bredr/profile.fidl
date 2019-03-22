@@ -16,35 +16,56 @@ enum SecurityLevel {
     HIGH_STRENGTH = 4; // 128-bit or equivalent key required using FIPS algorithms
 };
 
+/// Profile provides Bluetooth services a way to register a service definition,
+/// making that service discoverable by remote peers.  Registered services will receive
+/// L2CAP connections made to the services advertised in the definition, and can open
+/// connections to remote connected devices.  To discover possible connected
+/// devices, devices should use |AddSearch| to search any remote devices.
 [Discoverable]
 protocol Profile {
-    // Register a service. This service will be registered and discoverable with
-    // the Service Discovery Protocol server.
-    // The |security_level| provided here will be required before a connection is
-    // established.
-    // If |devices| is true, connections to the service's channels will create a
-    // device instead of producing an OnConnected event.
-    // Returns |status| for success or error.
-    // If successful, a unique |service_id| is returned to identify this service.
+    /// Register a service. This service will be registered and discoverable with
+    /// the Service Discovery Protocol server.
+    /// The |security_level| provided here will be required before a connection is
+    /// established.
+    /// If |devices| is true, connections to the service's channels will create a
+    /// device instead of producing an OnConnected event.
+    /// Returns |status| for success or error.
+    /// If successful, a unique |service_id| is returned to identify this service.
     AddService(ServiceDefinition definition, SecurityLevel sec_level, bool devices)
         -> (fuchsia.bluetooth.Status status, uint64 service_id);
 
-    // Removes a previously-registered service, disconnecting all clients.
+    /// Register a search for services on remote devices.  An |OnServiceFound|
+    /// event will be produced each time a device is connected that has a service
+    /// matching |service_uuid| with the additional attributes in |attr_ids|.
+    /// The ProtocolDescriptor should be requested to obtain information to connect to a service.
+    /// See the SDP Specification (Core Spec 5.0, Vol 3, Part B, Section 5) and the
+    /// relevant profile specification documents.
+    AddSearch(ServiceClassProfileIdentifier service_uuid, vector<uint16> attr_ids);
+
+    /// Removes a previously-registered service, disconnecting all clients.
     RemoveService(uint64 service_id);
 
-    // Connect a channel to the connected remote device |remote_id| using the
-    // protocol and channel listed. For L2CAP, dynamic PSMs can be specified.
-    // See the defined PSMs in `service.fidl`
-    // Returns the channel after it has been connected. |status| will indicate
-    // an error if the channel could not be connected.
-    ConnectL2cap(string remote_id, uint16 psm)
+    /// Connect a channel to the connected remote device |peer_id| using the
+    /// protocol and channel listed. For L2CAP, dynamic PSMs can be specified.
+    /// See the defined PSMs in `service.fidl`
+    /// Returns the channel after it has been connected. |status| will indicate
+    /// an error if the channel could not be connected.
+    ConnectL2cap(string peer_id, uint16 psm)
         -> (fuchsia.bluetooth.Status status, handle<socket> channel);
 
-    // Produced when a protocol channel is connected for this profile.
-    // |channel| contains the channel connected to, and information about the
-    // protocol is provided in |protocol|. All protocols supported internally will
-    // be handled, for example an RFCOMM socket will be provided instead of an
-    // L2CAP socket if the services protocol descriptor includes it.
+    /// Produced when a protocol channel is connected for this profile.
+    /// |channel| contains the channel connected to, and information about the
+    /// protocol is provided in |protocol|. All protocols supported internally will
+    /// be handled, for example an RFCOMM socket will be provided instead of an
+    /// L2CAP socket if the services protocol descriptor includes it.
     -> OnConnected(string device_id, uint64 service_id,
                    handle<socket> channel, ProtocolDescriptor protocol);
+
+    /// Produced when a search this client added finds a matching service on a remote
+    /// device.  |peer_id| is the device the service was found on, and |profile| includes the
+    /// Profile Descriptor which matches the |service_uuid|
+    /// searched for, with the major and minor version reported by the remote device.
+    /// |attributes| contains all attributes retrieved from the remote device.  It may
+    /// include attributes not requested in the search.
+    -> OnServiceFound(string peer_id, ProfileDescriptor profile, vector<Attribute> attributes);
 };

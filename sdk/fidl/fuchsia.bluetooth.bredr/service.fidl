@@ -163,6 +163,20 @@ struct Attribute {
     DataElement element;
 };
 
+// Universal attribute IDs.
+// From the Bluetooth Specification, Version 5, Vol 3, Part B
+const uint16 ATTR_SERVICE_RECORD_HANDLE = 0x0000;
+const uint16 ATTR_SERVICE_CLASS_ID_LIST = 0x0001;
+const uint16 ATTR_SERVICE_RECORD_STATE = 0x0002;
+const uint16 ATTR_SERVICE_ID = 0x0003;
+const uint16 ATTR_PROTOCOL_DESCRIPTOR_LIST = 0x0004;
+const uint16 ATTR_ADDIITONAL_PROTOCOL_DESCRIPTOR_LIST = 0x000D;
+const uint16 ATTR_BROWSE_GROUP_LIST = 0x0005;
+const uint16 ATTR_LANGUAGE_BASE_ATTRIBUTE_ID_LIST = 0x0006;
+const uint16 ATTR_SERVICE_INFO_TIME_TO_LIVE = 0x0007;
+const uint16 ATTR_SERVICE_AVAILABILITY = 0x0008;
+const uint16 ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST = 0x0009;
+
 struct ServiceDefinition {
     // UUIDs of service classes that this service record conforms to.
     vector<string> service_class_uuids;
