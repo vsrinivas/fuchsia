@@ -649,7 +649,7 @@ index 3ed0fb3..0c8be22 100644
  //! Key Derivation Functions (KDFs).
  //!
 diff --git a/src/lib.rs b/src/lib.rs
-index 62583f4..a2e5fdb 100644
+index 986b80d..644404b 100644
 --- a/src/lib.rs
 +++ b/src/lib.rs
 @@ -1,8 +1,6 @@
@@ -664,7 +664,7 @@ index 62583f4..a2e5fdb 100644
  
  //! Cryptography in Rust.
  //!
-@@ -54,6 +52,9 @@ extern crate lazy_static;
+@@ -51,6 +49,9 @@
  #[macro_use]
  mod macros;
  
@@ -781,7 +781,7 @@ index e0a8d7c..6950636 100644
  use std::fmt::{self, Debug, Display, Formatter};
  
 diff --git a/src/public/rsa/mod.rs b/src/public/rsa/mod.rs
-index e32d0c2..0f6d123 100644
+index bd4b50a..109623b 100644
 --- a/src/public/rsa/mod.rs
 +++ b/src/public/rsa/mod.rs
 @@ -1,8 +1,6 @@
