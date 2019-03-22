@@ -20,5 +20,6 @@ rustc_library("mundane") {
     "insecure",
     "rand-bytes",
     "rsa-pkcs1v15",
+    "experimental-sha512-ec",
   ]
 }

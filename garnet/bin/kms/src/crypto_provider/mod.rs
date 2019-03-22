@@ -4,6 +4,7 @@
 
 #[cfg(test)]
 pub mod mock_provider;
+pub mod mundane_provider;
 
 use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
 use std::error::Error;

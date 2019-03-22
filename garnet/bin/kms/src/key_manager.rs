@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::common::{DataRequest, KeyAttributes, KeyRequestType, KeyType, KmsKey};
-use crate::crypto_provider::CryptoProvider;
+use crate::crypto_provider::{mundane_provider::MundaneSoftwareProvider, CryptoProvider};
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
 use base64;
@@ -64,12 +64,17 @@ pub struct KeyManager {
 
 impl KeyManager {
     pub fn new() -> Self {
-        KeyManager {
+        let mut key_manager = KeyManager {
             user_key_map: Arc::new(Mutex::new(HashMap::new())),
             internal_key_map: Arc::new(Mutex::new(HashMap::new())),
             crypto_provider_map: RwLock::new(HashMap::new()),
             key_folder: KEY_FOLDER.to_string(),
-        }
+        };
+
+        // We now only register mundane software provider.
+        key_manager.add_provider(Box::new(MundaneSoftwareProvider {}));
+
+        key_manager
     }
 
     #[allow(dead_code)]
@@ -702,7 +707,6 @@ impl KeyManager {
         f(self.crypto_provider_map.read().unwrap().get(name).map(|provider| provider.as_ref()))
     }
 
-    #[cfg(test)]
     pub fn add_provider(&mut self, provider: Box<dyn CryptoProvider>) {
         let provider_map = &mut self.crypto_provider_map.write().unwrap();
         if provider_map.contains_key(provider.get_name()) {
@@ -1109,5 +1113,13 @@ mod tests {
         // The sealing key should be in a separate name space than user keys.
         let result = key_manager.delete_key(SEALING_KEY_NAME);
         assert_eq!(Status::KeyNotFound, result.unwrap_err());
+    }
+
+    #[test]
+    fn test_get_default_provider() {
+        let key_manager = KeyManager::new();
+        key_manager.with_provider(PROVIDER_NAME, |provider| {
+            assert_eq!(false, provider.is_none());
+        });
     }
 }
