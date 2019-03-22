@@ -6,6 +6,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include <fuchsia/hardware/pty/c/fidl.h>
+
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -122,11 +124,55 @@ static void console_release(void* ctx) {
     free(console);
 }
 
+static zx_status_t console_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
+                                      fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t console_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t console_GetWindowSize(void* ctx, fidl_txn_t* txn) {
+    fuchsia_hardware_pty_WindowSize wsz = {
+        .width = 0,
+        .height = 0
+    };
+    return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED, &wsz);
+}
+
+static zx_status_t console_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t console_ReadEvents(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t console_SetWindowSize(void* ctx, const fuchsia_hardware_pty_WindowSize* size,
+                                         fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
+    .OpenClient = console_OpenClient,
+    .ClrSetFeature = console_ClrSetFeature,
+    .GetWindowSize = console_GetWindowSize,
+    .MakeActive = console_MakeActive,
+    .ReadEvents = console_ReadEvents,
+    .SetWindowSize = console_SetWindowSize
+};
+
+static zx_status_t console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
+}
+
 static zx_protocol_device_t console_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = console_read,
     .write = console_write,
     .release = console_release,
+    .message = console_message
 };
 
 static zx_status_t console_bind(void* ctx, zx_device_t* parent) {

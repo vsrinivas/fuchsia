@@ -156,6 +156,50 @@ static const uint8_t kbd_hid_report_desc[] = {
 // clang-format on
 
 // DDK level ops
+static zx_status_t virtio_input_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
+                                           fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t virtio_input_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t virtio_input_GetWindowSize(void* ctx, fidl_txn_t* txn) {
+    fuchsia_hardware_pty_WindowSize wsz = {
+        .width = 0,
+        .height = 0
+    };
+    return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED, &wsz);
+}
+
+static zx_status_t virtio_input_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t virtio_input_ReadEvents(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t virtio_input_SetWindowSize(void* ctx,
+                                              const fuchsia_hardware_pty_WindowSize* size,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
+    .OpenClient = virtio_input_OpenClient,
+    .ClrSetFeature = virtio_input_ClrSetFeature,
+    .GetWindowSize = virtio_input_GetWindowSize,
+    .MakeActive = virtio_input_MakeActive,
+    .ReadEvents = virtio_input_ReadEvents,
+    .SetWindowSize = virtio_input_SetWindowSize
+};
+
+zx_status_t InputDevice::virtio_input_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
+}
 
 void InputDevice::virtio_input_release(void* ctx) {
     virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
@@ -303,6 +347,7 @@ zx_status_t InputDevice::Init() {
     StartIrqThread();
     DriverStatusOk();
 
+    device_ops_.message = virtio_input_message;
     device_ops_.release = virtio_input_release;
 
     hidbus_ops_.query = virtio_input_query;

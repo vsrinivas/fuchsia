@@ -7,6 +7,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/hidbus.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <hid/boot.h>
 #include <virtio/input.h>
 
@@ -29,6 +30,7 @@ public:
 
 private:
     // DDK driver hooks
+    static zx_status_t virtio_input_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
     static void virtio_input_release(void* ctx);
 
     static zx_status_t virtio_input_query(void* ctx, uint32_t options, hid_info_t* info);
