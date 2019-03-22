@@ -199,6 +199,9 @@ public:
     void* get() const {
         return mmio_.vaddr;
     }
+    zx_off_t get_offset() const {
+        return mmio_.offset;
+    }
     size_t get_size() const {
         return mmio_.size;
     }
