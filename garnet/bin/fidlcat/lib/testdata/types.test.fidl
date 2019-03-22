@@ -26,6 +26,11 @@ protocol this_is_an_interface {
     I16Enum(i16_enum ev);
 
     Complex(int32 real, int32 imaginary);
+    StringInt(string s, int32 i32);
+    TwoStringStructInt(two_string_struct s, int32 i32);
+    TwoStringArrayInt(array<string>:2 arr, int32 i32);
+    TwoStringVectorInt(vector<string> vec, int32 i32);
+    TwoStringNullableStructInt(two_string_struct? s, int32 i32);
 };
 
 struct primitive_types {
@@ -52,4 +57,9 @@ enum i8_enum : int8 {
 
 enum i16_enum : int16 {
     x = -23;
+};
+
+struct two_string_struct {
+    string value1;
+    string value2;
 };

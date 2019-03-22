@@ -6,6 +6,7 @@
 #define GARNET_BIN_FIDLCAT_LIB_LIBRARY_LOADER_H_
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/fit/function.h>
 
 #include <iostream>
 #include <map>
@@ -59,11 +60,61 @@ class InterfaceMethod;
 class Enum;
 class Struct;
 
+// A function that, given the location |bytes| of an object (in-line or
+// out-of-line), generates a JSON representation into |value| using |allocator|.
+//
+// Returns the out-of-line size, or 0 if it was in-line element.
+typedef fit::function<size_t(const uint8_t* bytes, rapidjson::Value& value,
+                             rapidjson::Document::AllocatorType& allocator)>
+    ValueGeneratingCallback;
+
+// Encapsulates state when parsing wire format encoded FIDL objects.
+//
+// For each element a print function encounters on its walk through a
+// fixed-length FIDL object, it enqueues a callback to be executed when the end
+// of that element is reached.  If the element is an out-of-line object, it will
+// parse the out-of-line object and return the value, or simply return the
+// (captured) in line value.
+class ObjectTracker {
+ public:
+  // Creates a tracker for the given array of bytes.
+  explicit ObjectTracker(const uint8_t* bytes) : bytes_(bytes) {}
+
+  // Executes all of the callbacks, starting at bytes (as passed to the
+  // constructor) + the given offset.
+  size_t RunCallbacksFrom(size_t offset);
+
+  // Enqueues a callback to be executed when running RunCallbacksFrom.
+  // |key| is the JSON key it will construct.
+  // |callback| is the callback to execute to construct the value.
+  // |target_object| is the place to put the key, value pair.
+  // |allocator| is the correct allocator for that object.
+  void ObjectEnqueue(const std::string& key, ValueGeneratingCallback&& callback,
+                     rapidjson::Value& target_object,
+                     rapidjson::Document::AllocatorType& allocator);
+
+  // Enqueues a callback to be executed when running RunCallbacksFrom.
+  // |callback| is the callback to execute to construct the value.
+  // |target_array| is the array in which to insert the value.
+  // |allocator| is the correct allocator for that object.
+  void ArrayEnqueue(ValueGeneratingCallback&& callback,
+                    rapidjson::Value& target_array,
+                    rapidjson::Document::AllocatorType& allocator);
+
+  ObjectTracker(const ObjectTracker&) = delete;
+  ObjectTracker& operator=(const ObjectTracker&) = delete;
+
+ private:
+  std::vector<fit::function<size_t(const uint8_t* bytes)>> callbacks_;
+  const uint8_t* bytes_;
+};
+
 // Takes a series of bytes pointed to by |bytes| and of length |length|, and
 // sets |value| to their representation for a particular type.  Uses |allocator|
-// to allocate in |value|.  Returns the length of data read.
+// to allocate in |value|.  Returns the in-line length of data read.
 typedef std::function<size_t(const uint8_t* bytes, size_t length,
-                             rapidjson::Value& value,
+                             ObjectTracker* tracker,
+                             ValueGeneratingCallback& callback,
                              rapidjson::Document::AllocatorType& allocator)>
     PrintFunction;
 
@@ -75,6 +126,11 @@ typedef std::function<bool(const uint8_t* bytes, size_t length,
     EqualityFunction;
 
 // A FIDL type.  Provides methods for generating instances of this type.
+//
+// TODO: This may be misnamed.  Right now, it's mostly only useful for
+// generating JSON values and comparing instances for equality.  Consider
+// removing it from this file or making it more generic (less tied to writing
+// out JSON).
 class Type {
   friend class InterfaceMethodParameter;
   friend class Library;
@@ -85,11 +141,12 @@ class Type {
       : printer_(printer), equals_(equals) {}
 
   // Takes a series of bytes pointed to by |bytes| and of length |length|, and
-  // sets |value| to their representation given this type.  Uses |allocator| to
-  // allocate in |value|
-  size_t MakeValue(const uint8_t* bytes, size_t length, rapidjson::Value& value,
-                   rapidjson::Document::AllocatorType& allocator) {
-    return printer_(bytes, length, value, allocator);
+  // tells |tracker| to invoke |callback| on to their representation given this
+  // type
+  size_t MakeValue(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+                   ValueGeneratingCallback& callback,
+                   rapidjson::Document::AllocatorType& allocator) const {
+    return printer_(bytes, length, tracker, callback, allocator);
   }
 
   // Takes a series of bytes pointed to by |bytes| and of length |length|, and
@@ -111,7 +168,7 @@ class Type {
   // "subtype" field that represents a scalar type (e.g., "float64", "uint32")
   static Type TypeFromPrimitive(const rapidjson::Value& type);
 
-  // Gets a Type object representing the |type_anme|.  |type| is a string that
+  // Gets a Type object representing the |type_name|.  |type| is a string that
   // represents a scalar type (e.g., "float64", "uint32").
   static Type ScalarTypeFromName(const std::string& type_name);
 
@@ -124,6 +181,16 @@ class Type {
 
   // Returns a reference to a singleton illegal type value.
   static const Type& get_illegal();
+
+  // The size of the given type when it is embedded in another object (struct,
+  // array, etc).
+  static size_t InlineSizeFromType(const LibraryLoader& loader,
+                                   const rapidjson::Value& type);
+
+  // The size of the given type when it is embedded in another object (struct,
+  // array, etc).
+  static size_t InlineSizeFromIdentifier(const LibraryLoader& loader,
+                                         const rapidjson::Value& type);
 
   Type& operator=(const Type& other) = default;
   Type(const Type& other) = default;
@@ -301,6 +368,8 @@ class Enum {
     return "(Unknown enum member)";
   }
 
+  uint32_t size() const;
+
  private:
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
@@ -352,6 +421,10 @@ class Struct {
 
   const std::vector<StructMember>& members() const { return members_; }
 
+  uint32_t size() const {
+    return std::strtoll(value_["size"].GetString(), nullptr, 10);
+  }
+
  private:
   const rapidjson::Value& schema() const { return value_; }
 
@@ -391,7 +464,11 @@ class Library {
 
   const LibraryLoader& enclosing_loader() const { return enclosing_loader_; }
 
-  Type TypeFromIdentifier(std::string& identifier) const;
+  Type TypeFromIdentifier(bool is_nullable, std::string& identifier) const;
+
+  // The size of the type with name |identifier| when it is inline (e.g.,
+  // embedded in an array)
+  size_t InlineSizeFromIdentifier(std::string& identifier) const;
 
   Library& operator=(const Library&) = delete;
   Library(const Library&) = delete;

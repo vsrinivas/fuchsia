@@ -4,6 +4,7 @@
 
 #include "wire_parser.h"
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <iostream>
@@ -165,7 +166,8 @@ TEST_F(WireParserTest, ParseSingleString) {
 //     an interface method parameter.
 // _value is the JSON value, which is going to be passed to the interface.  It
 //     is usually going to be a legal value for the corresponding key.
-#define TEST_WIRE_TO_JSON(_testname, _iface, _fn, _key, _value)             \
+// TODO: Change this to _testname, _iface, _value, _golden_json_value
+#define TEST_WIRE_TO_JSON(_testname, _iface, _fn, _key, _value)         \
   TEST_F(WireParserTest, Parse##_testname) {                                \
     fidl::MessageBuffer buffer;                                             \
     fidl::Message message = buffer.CreateEmptyMessage();                    \
@@ -200,6 +202,12 @@ TEST_F(WireParserTest, ParseSingleString) {
         << " and actual = " << actual_string.GetString();                   \
   }
 
+#define COMMA ,
+#define OPAREN (
+#define CPAREN )
+
+namespace {
+
 std::string RawPair(std::string key, std::string value) {
   std::string result = "{\"";
   result.append(key);
@@ -209,12 +217,18 @@ std::string RawPair(std::string key, std::string value) {
   return result;
 }
 
+}  // namespace
+
 // Scalar Tests
+
+namespace {
 
 template <class T>
 std::string SingleToJson(std::string key, T value) {
   return RawPair(key, "\"" + std::to_string(value) + "\"");
 }
+
+}  // namespace
 
 #define TEST_SINGLE(_iface, _value, _key) \
   TEST_WIRE_TO_JSON(_iface, _iface, SingleToJson, #_key, _value)
@@ -230,6 +244,8 @@ TEST_SINGLE(Uint16, std::numeric_limits<uint16_t>::max(), i16)
 TEST_SINGLE(Uint32, std::numeric_limits<uint32_t>::max(), i32)
 TEST_SINGLE(Uint64, std::numeric_limits<uint64_t>::max(), i64)
 
+namespace {
+
 std::string BoolToJson(std::string key, bool value) {
   std::string result = "{\"";
   result.append(key);
@@ -239,10 +255,15 @@ std::string BoolToJson(std::string key, bool value) {
   return result;
 }
 
+}  // namespace
+
 TEST_WIRE_TO_JSON(SingleBool, Bool, BoolToJson, "b", true)
 
-std::string ComplexToJson(std::string key1, std::string key2, int value1,
-                          int value2) {
+namespace {
+
+template <typename T1, typename T2>
+std::string PairToJson(std::string key1, std::string key2, T1 value1,
+                       T2 value2) {
   std::ostringstream ret;
   ret << "{\"";
   ret << key1;
@@ -256,10 +277,13 @@ std::string ComplexToJson(std::string key1, std::string key2, int value1,
   return ret.str();
 }
 
-#define COMMA ,
+}  // namespace
 
-TEST_WIRE_TO_JSON(TwoTuple, Complex, ComplexToJson, "real" COMMA "imaginary",
-                  1 COMMA 2)
+TEST_WIRE_TO_JSON(TwoTuple, Complex, PairToJson<int COMMA int>,
+                  "real" COMMA "imaginary", 1 COMMA 2)
+
+TEST_WIRE_TO_JSON(StringInt, StringInt, PairToJson<std::string COMMA int>,
+                  "s" COMMA "i32", "groucho" COMMA 4)
 
 // Vector / Array Tests
 
@@ -330,8 +354,6 @@ std::string VectorToJsonArray(std::string param, fidl::VectorPtr<T> ts) {
 
 }  // namespace
 
-#define COMMA ,
-
 TEST_WIRE_TO_JSON(Array1, Array1, ArrayToJsonArray<int32_t COMMA 1>, "b_1",
                   (ToArray<int32_t, 1>(one_param)));
 TEST_WIRE_TO_JSON(Array2, Array2, ArrayToJsonArray<int32_t COMMA 2>, "b_2",
@@ -342,6 +364,64 @@ TEST_WIRE_TO_JSON(VectorOneElt, Vector, VectorToJsonArray<int32_t>, "v_1",
 std::string NullPair(std::string key, void* v) { return RawPair(key, "null"); }
 
 TEST_WIRE_TO_JSON(NullVector, Vector, NullPair, "v_1", nullptr)
+
+namespace {
+
+fidl::Array<std::string, 2> TwoStringArrayFromVals(std::string v1,
+                                                   std::string v2) {
+  fidl::Array<std::string, 2> brother_array;
+  brother_array[0] = "chico";
+  brother_array[1] = "harpo";
+  return brother_array;
+}
+
+std::string TwoStringArrayIntToString(std::string arr_name,
+                                      std::string int_name,
+                                      fidl::Array<std::string, 2> arr,
+                                      int32_t i32) {
+  std::ostringstream es;
+  es << "{\"" << arr_name << "\":["
+     << "\"" << arr[0] << "\","
+     << "\"" << arr[1] << "\"],"
+     << "\"" << int_name << "\":\"" << i32 << "\"}";
+  return es.str();
+}
+
+}  // namespace
+
+TEST_WIRE_TO_JSON(TwoStringArrayInt, TwoStringArrayInt,
+                  TwoStringArrayIntToString, "arr" COMMA "i32",
+                  TwoStringArrayFromVals OPAREN "harpo" COMMA
+                                                "chico" CPAREN COMMA 1)
+
+namespace {
+
+fidl::VectorPtr<std::string> TwoStringVectorFromVals(std::string v1,
+                                                     std::string v2) {
+  std::vector<std::string> brother_vector;
+  brother_vector.push_back(v1);
+  brother_vector.push_back(v2);
+  return fidl::VectorPtr(brother_vector);
+}
+
+std::string TwoStringVectorIntToString(std::string vec_name,
+                                       std::string int_name,
+                                       fidl::VectorPtr<std::string> vec,
+                                       int32_t i32) {
+  std::ostringstream es;
+  es << "{\"" << vec_name << "\":["
+     << "\"" << vec.get()[0] << "\","
+     << "\"" << vec.get()[1] << "\"],"
+     << "\"" << int_name << "\":\"" << i32 << "\"}";
+  return es.str();
+}
+
+}  // namespace
+
+TEST_WIRE_TO_JSON(TwoStringVectorInt, TwoStringVectorInt,
+                  TwoStringVectorIntToString, "vec" COMMA "i32",
+                  TwoStringVectorFromVals OPAREN "harpo" COMMA
+                                                 "chico" CPAREN COMMA 1)
 
 // Struct Tests
 
@@ -372,6 +452,9 @@ TEST_F(WireParserTest, ParseSingleStruct) {
   ASSERT_STREQ("Struct", method->name().c_str());
   rapidjson::Document actual;
   fidlcat::RequestToJSON(method, message, actual);
+  rapidjson::StringBuffer actual_string;
+  rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);
+  actual.Accept(actual_w);
 
   rapidjson::Document expected;
   std::ostringstream es;
@@ -396,15 +479,82 @@ TEST_F(WireParserTest, ParseSingleStruct) {
      << R"JSON(", "f32":")JSON" << std::to_string(0.25)
      << R"JSON(", "f64":")JSON" << std::to_string(9007199254740992.0) << "\"}}";
   expected.Parse<rapidjson::kParseNumbersAsStringsFlag>(es.str().c_str());
-  ASSERT_TRUE(expected == actual);
+  ASSERT_TRUE(expected == actual) << "expected = " << es.str() << " and actual "
+                                  << actual_string.GetString();
 }
 
+namespace {
+
+test::fidlcat::examples::two_string_struct TwoStringStructFromVals(
+    std::string v1, std::string v2) {
+  test::fidlcat::examples::two_string_struct tss;
+  tss.value1 = v1;
+  tss.value2 = v2;
+  return tss;
+}
+
+std::string TwoStringStructIntToString(
+    std::string struct_name, std::string elt1_name, std::string elt2_name,
+    std::string int_name, test::fidlcat::examples::two_string_struct tss,
+    int32_t i32) {
+  std::ostringstream es;
+  es << R"JSON({"s":{)JSON"
+     << "\"" << elt1_name << "\": \"" << tss.value1 << "\","
+     << "\"" << elt2_name << "\": \"" << tss.value2 << "\"},"
+     << "\"" << int_name << "\":\"" << i32 << "\"}";
+  return es.str();
+}
+
+}  // namespace
+
+TEST_WIRE_TO_JSON(TwoStringStructInt, TwoStringStructInt,
+                  TwoStringStructIntToString,
+                  "s" COMMA "value1" COMMA "value2" COMMA "i32",
+                  TwoStringStructFromVals OPAREN "harpo" COMMA
+                                                 "chico" CPAREN COMMA 1)
+
+namespace {
+
+std::unique_ptr<test::fidlcat::examples::two_string_struct>
+TwoStringStructFromValsPtr(std::string v1, std::string v2) {
+  std::unique_ptr<test::fidlcat::examples::two_string_struct> ptr(
+      new test::fidlcat::examples::two_string_struct());
+  ptr->value1 = v1;
+  ptr->value2 = v2;
+  return ptr;
+}
+
+std::string TwoStringStructIntPtrToString(
+    std::string struct_name, std::string elt1_name, std::string elt2_name,
+    std::string int_name,
+    std::unique_ptr<test::fidlcat::examples::two_string_struct> tss,
+    int32_t i32) {
+  auto val = *tss;
+  return TwoStringStructIntToString(struct_name, elt1_name, elt2_name, int_name,
+                                    val, i32);
+}
+
+}  // namespace
+
+TEST_WIRE_TO_JSON(TwoStringNullableStructInt, TwoStringNullableStructInt,
+                  TwoStringStructIntPtrToString,
+                  "s" COMMA "value1" COMMA "value2" COMMA "i32",
+                  TwoStringStructFromValsPtr("harpo", "chico" ) COMMA 1)
+
+// TODO: Add the following struct tests:
+// struct{uint8 f1; uint32 f2;}
+// struct{struct{uint8 f1; uint32 f2;} inner; uint8 f3;}
+
 // Enum Tests
+
+namespace {
 
 template <class T>
 std::string XPair(std::string key, T v) {
   return RawPair(key, "\"x\"");
 }
+
+}  // namespace
 
 TEST_WIRE_TO_JSON(DefaultEnum, DefaultEnum,
                   XPair<test::fidlcat::examples::default_enum>, "ev",

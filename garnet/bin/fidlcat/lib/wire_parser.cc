@@ -40,49 +40,40 @@ namespace {
 // |message| is the FIDL wire format representation of those parameters.
 // |result| is where the resulting JSON is stored.
 // Returns true on success, false on failure.
-bool ParamsToJSON(
-    const std::optional<std::vector<InterfaceMethodParameter>>& params,
-    const std::optional<uint64_t>& size, const fidl::Message& message,
-    rapidjson::Document& result) {
+bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
+                  const fidl::Message& message, rapidjson::Document& result) {
+  // TODO: Deal with what happens if p is nullopt
   result.SetObject();
   const fidl::BytePart& bytes = message.bytes();
   uint64_t current_offset = sizeof(message.header());
 
-  // Iterate over the parameters in the order found in the wire format.
-  while (current_offset < size) {
-    const InterfaceMethodParameter* next;
-    uint64_t next_offset = *(size);
-
-    // Find the next parameter. Bad big-O value, but param lists are likely to
-    // be too short to bother doing anything more clever.
-    bool found_param = false;
-    for (size_t i = 0; i < params->size(); i++) {
-      if (params->at(i).get_offset() < next_offset &&
-          params->at(i).get_offset() >= current_offset) {
-        found_param = true;
-        next = &(*params)[i];
-        next_offset = next->get_offset();
-        break;
-      }
-    }
-    if (!found_param) {
-      break;
-    }
-    current_offset = next_offset;
-
-    rapidjson::Value key;
-    key.SetString(next->name().c_str(), result.GetAllocator());
-
-    rapidjson::Value value;
-    Type type = next->GetType();
-
-    type.MakeValue(bytes.data() + current_offset, next->get_size(), value,
-                   result.GetAllocator());
-
-    result.AddMember(key, value, result.GetAllocator());
-
-    current_offset += next->get_size();
+  // Go in order of offset.
+  std::vector<const InterfaceMethodParameter*> params;
+  for (size_t i = 0; i < p->size(); i++) {
+    params.push_back(&p->at(i));
   }
+  std::sort(
+      params.begin(), params.end(),
+      [](const InterfaceMethodParameter* l, const InterfaceMethodParameter* r) {
+        return l->get_offset() < r->get_offset();
+      });
+
+  ObjectTracker tracker(bytes.data());
+  for (const InterfaceMethodParameter* param : params) {
+    current_offset = param->get_offset();
+
+    Type type = param->GetType();
+    ValueGeneratingCallback value_callback;
+
+    type.MakeValue(bytes.data() + current_offset, param->get_size(), &tracker,
+                   value_callback, result.GetAllocator());
+
+    tracker.ObjectEnqueue(param->name(), std::move(value_callback), result,
+                          result.GetAllocator());
+
+    current_offset += param->get_size();
+  }
+  tracker.RunCallbacksFrom(current_offset);
   return true;
 }
 
@@ -96,9 +87,7 @@ bool RequestToJSON(const InterfaceMethod* method, const fidl::Message& message,
   const std::optional<std::vector<InterfaceMethodParameter>>& params =
       method->request_params();
 
-  const std::optional<uint64_t> request_size = method->request_size();
-
-  return ParamsToJSON(params, request_size, message, request);
+  return ParamsToJSON(params, message, request);
 }
 
 }  // namespace fidlcat
