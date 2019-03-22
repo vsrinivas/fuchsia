@@ -5,133 +5,93 @@
 package main
 
 import (
+	"log"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	"syscall/zx/io"
+
 	"app/context"
+
 	"fidl/fidl/test/compatibility"
 	"fidl/fuchsia/sys"
-	"fmt"
-	"log"
-	"svc/services"
-	"syscall/zx"
-	"syscall/zx/fidl"
 )
 
-type echoClientApp struct {
-	ctx          *context.Context
-	echoProvider *services.Provider
-	controller   *sys.ComponentControllerInterface
-	echo         *compatibility.EchoInterface
-}
-
-func (app *echoClientApp) startApplication(
-	serverURL string) (*sys.ComponentControllerInterface, error) {
-	directoryReq, err := app.echoProvider.NewRequest()
-	if err != nil {
-		return nil, fmt.Errorf("NewRequest failed: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			directoryReq.Close()
-		}
-	}()
-
-	launchInfo := sys.LaunchInfo{
-		Url:              serverURL,
-		DirectoryRequest: directoryReq,
-	}
-
-	req, pxy, err := sys.NewComponentControllerInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf(
-			"NewComponentControllerInterfaceRequest failed: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			req.Close()
-			pxy.Close()
-		}
-	}()
-
-	err = app.ctx.Launcher().CreateComponent(launchInfo, req)
-	if err != nil {
-		return nil, fmt.Errorf("CreateComponent failed: %v", err)
-	}
-	return pxy, nil
-}
-
-func (app *echoClientApp) getEchoInterface() (ei *compatibility.EchoInterface, err error) {
-	req, pxy, err := compatibility.NewEchoInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf("NewEchoInterfaceRequest failed: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			req.Close()
-			pxy.Close()
-		}
-	}()
-
-	err = app.echoProvider.ConnectToService(req)
-	if err != nil {
-		return nil, fmt.Errorf("ConnectToServiceAt failed: %v", err)
-	}
-	return pxy, nil
-}
+var _ compatibility.Echo = (*echoImpl)(nil)
 
 type echoImpl struct {
 	ctx *context.Context
 }
 
-func (echo *echoImpl) EchoStruct(
-	value compatibility.Struct, forward_to_server string) (compatibility.Struct, error) {
-	if forward_to_server != "" {
-		app := &echoClientApp{
-			ctx:          echo.ctx,
-			echoProvider: services.NewProvider(),
-		}
-		var err error
-		app.controller, err = app.startApplication(forward_to_server)
-		if err != nil {
-			log.Println(err)
-			return value, err
-		}
-		defer app.controller.Close()
-		app.echo, err = app.getEchoInterface()
-		if err != nil {
-			log.Println(err)
-			return value, err
-		}
-		defer app.echo.Close()
-		response, err := app.echo.EchoStruct(value, "")
-		if err != nil {
-			log.Println("EchoStruct failed: ", err)
-			return value, err
-		}
-		return response, nil
-	} else {
-		return value, nil
+func (echo *echoImpl) getServer(url string) (*compatibility.EchoInterface, error) {
+	directoryReq, directoryInterface, err := io.NewDirectoryInterfaceRequest()
+	if err != nil {
+		return nil, err
 	}
+	launchInfo := sys.LaunchInfo{
+		Url:              url,
+		DirectoryRequest: directoryReq.Channel,
+	}
+
+	componentControllerReq, _, err := sys.NewComponentControllerInterfaceRequest()
+	if err != nil {
+		return nil, err
+	}
+	if err := echo.ctx.Launcher().CreateComponent(launchInfo, componentControllerReq); err != nil {
+		return nil, err
+	}
+
+	echoReq, echoInterface, err := compatibility.NewEchoInterfaceRequest()
+	if err != nil {
+		return nil, err
+	}
+	if err := fdio.ServiceConnectAt(zx.Handle(directoryInterface.Channel), echoReq.Name(), zx.Handle(echoReq.Channel)); err != nil {
+		return nil, err
+	}
+	return echoInterface, nil
 }
 
-func (echo *echoImpl) EchoStructNoRetVal(
-	value compatibility.Struct, forward_to_server string) error {
-	if forward_to_server != "" {
-		app := &echoClientApp{
-			ctx:          echo.ctx,
-			echoProvider: services.NewProvider(),
-		}
-		var err error
-		app.controller, err = app.startApplication(forward_to_server)
+func (echo *echoImpl) EchoStruct(value compatibility.Struct, forwardURL string) (compatibility.Struct, error) {
+	if forwardURL != "" {
+		echoInterface, err := echo.getServer(forwardURL)
 		if err != nil {
-			log.Println(err)
+			log.Printf("Connecting to %s failed: %s", forwardURL, err)
+			return compatibility.Struct{}, err
+		}
+		response, err := echoInterface.EchoStruct(value, "")
+		if err != nil {
+			log.Printf("EchoStruct failed: %s", err)
+			return compatibility.Struct{}, err
+		}
+		return response, nil
+	}
+
+	return value, nil
+}
+
+func (echo *echoImpl) EchoStructNoRetVal(value compatibility.Struct, forwardURL string) error {
+	if forwardURL != "" {
+		echoInterface, err := echo.getServer(forwardURL)
+		if err != nil {
+			log.Printf("Connecting to %s failed: %s", forwardURL, err)
 			return err
 		}
-		app.echo, err = app.getEchoInterface()
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		go app.listen()
-		app.echo.EchoStructNoRetVal(value, "")
+		go func() {
+			for {
+				value, err := echoInterface.ExpectEchoEvent()
+				if err != nil {
+					log.Printf("ExpectEchoEvent failed: %s", err)
+					continue
+				}
+				for _, key := range echoService.BindingKeys() {
+					if pxy, ok := echoService.EventProxyFor(key); ok {
+						pxy.EchoEvent(value)
+					}
+				}
+				break
+			}
+		}()
+		echoInterface.EchoStructNoRetVal(value, "")
 	} else {
 		for _, key := range echoService.BindingKeys() {
 			if pxy, ok := echoService.EventProxyFor(key); ok {
@@ -142,34 +102,15 @@ func (echo *echoImpl) EchoStructNoRetVal(
 	return nil
 }
 
-func (app *echoClientApp) listen() {
-	defer app.controller.Close()
-	defer app.echo.Close()
-	for {
-		value, err := app.echo.ExpectEchoEvent()
-		if err != nil {
-			log.Println("ExpectEchoEvent failed: ", err)
-			continue
-		}
-		for _, key := range echoService.BindingKeys() {
-			if pxy, ok := echoService.EventProxyFor(key); ok {
-				pxy.EchoEvent(value)
-			}
-		}
-		break
-	}
-}
-
-var echoService *compatibility.EchoService
+var echoService compatibility.EchoService
 
 func main() {
-	echoService = &compatibility.EchoService{}
 	ctx := context.CreateFromStartupInfo()
+
 	ctx.OutgoingService.AddService(compatibility.EchoName,
 		func(c zx.Channel) error {
 			_, err := echoService.Add(&echoImpl{ctx: ctx}, c, nil)
 			return err
 		})
-	go fidl.Serve()
-	select {}
+	fidl.Serve()
 }

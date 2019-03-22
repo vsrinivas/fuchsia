@@ -13,13 +13,7 @@ fidl("echo") {
 }
 
 group("echo2") {
-  public_deps = [ ":echo" ]
-}
-
-fidl("heartbeat") {
-  name = "fidl.examples.heartbeat"
-
-  sources = [
-    "heartbeat.fidl",
+  public_deps = [
+    ":echo",
   ]
 }

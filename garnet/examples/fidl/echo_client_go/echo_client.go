@@ -7,73 +7,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/io"
 
 	"app/context"
-	"svc/services"
 
-	echo "fidl/fidl/examples/echo"
+	"fidl/fidl/examples/echo"
 	"fidl/fuchsia/sys"
 )
-
-type echoClientApp struct {
-	ctx          *context.Context
-	echoProvider *services.Provider
-	controller   *sys.ComponentControllerInterface
-	echo         *echo.EchoInterface
-}
-
-func (a *echoClientApp) startApplication(serverURL string) (li *sys.ComponentControllerInterface, err error) {
-	pr, err := a.echoProvider.NewRequest()
-	if err != nil {
-		return nil, fmt.Errorf("NewRequest failed: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			pr.Close()
-		}
-	}()
-
-	launchInfo := sys.LaunchInfo{
-		Url:              serverURL,
-		DirectoryRequest: pr,
-	}
-
-	cr, cp, err := sys.NewComponentControllerInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf("NewComponentControllerInterfaceRequest failed: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			cr.Close()
-			cp.Close()
-		}
-	}()
-
-	err = a.ctx.Launcher().CreateComponent(launchInfo, cr)
-	if err != nil {
-		return nil, fmt.Errorf("CreateComponent failed: %v", err)
-	}
-	return cp, nil
-}
-
-func (a *echoClientApp) getEchoInterface() (ei *echo.EchoInterface, err error) {
-	r, p, err := echo.NewEchoInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf("NewEchoInterfaceRequest failed: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			r.Close()
-			p.Close()
-		}
-	}()
-
-	err = a.echoProvider.ConnectToService(r)
-	if err != nil {
-		return nil, fmt.Errorf("ConnectToServiceAt failed: %v", err)
-	}
-	return p, nil
-}
 
 func main() {
 	serverURL := flag.String("server", "fuchsia-pkg://fuchsia.com/echo_server_go#meta/echo_server_go.cmx", "server URL")
@@ -81,31 +23,36 @@ func main() {
 
 	flag.Parse()
 
-	a := &echoClientApp{
-		ctx:          context.CreateFromStartupInfo(),
-		echoProvider: services.NewProvider(),
-	}
+	ctx := context.CreateFromStartupInfo()
 
-	var err error
-	a.controller, err = a.startApplication(*serverURL)
+	directoryReq, directoryInterface, err := io.NewDirectoryInterfaceRequest()
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
-	defer a.controller.Close()
+	launchInfo := sys.LaunchInfo{
+		Url:              *serverURL,
+		DirectoryRequest: directoryReq.Channel,
+	}
 
-	a.echo, err = a.getEchoInterface()
+	componentControllerReq, _, err := sys.NewComponentControllerInterfaceRequest()
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
-	defer a.echo.Close()
+	if err := ctx.Launcher().CreateComponent(launchInfo, componentControllerReq); err != nil {
+		panic(err)
+	}
 
-	response, err := a.echo.EchoString(msg)
+	echoReq, echoInterface, err := echo.NewEchoInterfaceRequest()
 	if err != nil {
-		fmt.Println("EchoString failed:", err)
-		return
+		panic(err)
+	}
+	if err := fdio.ServiceConnectAt(zx.Handle(directoryInterface.Channel), echoReq.Name(), zx.Handle(echoReq.Channel)); err != nil {
+		panic(err)
 	}
 
+	response, err := echoInterface.EchoString(msg)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("client:", *response)
 }
