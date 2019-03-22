@@ -19,6 +19,7 @@
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.wlan.device.service.DeviceService"
-        ]
+        ],
+        "features": [ "shell" ]
     }
 }

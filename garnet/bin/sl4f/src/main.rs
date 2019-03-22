@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::thread;
 
 mod audio;
+mod auth;
 mod bluetooth;
 mod netstack;
 mod scenic;

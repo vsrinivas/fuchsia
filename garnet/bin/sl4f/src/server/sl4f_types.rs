@@ -108,6 +108,7 @@ impl AsyncResponse {
 /// Make sure to update sl4f.rs:method_to_fidl() match statement
 pub enum FacadeType {
     AudioFacade,
+    AuthFacade,
     BleAdvertiseFacade,
     Bluetooth,
     GattClientFacade,
@@ -122,6 +123,7 @@ impl FacadeType {
     pub fn from_str(facade: &String) -> FacadeType {
         match facade.as_ref() {
             "audio_facade" => FacadeType::AudioFacade,
+            "auth_facade" => FacadeType::AuthFacade,
             "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
             "bluetooth" => FacadeType::Bluetooth,
             "gatt_client_facade" => FacadeType::GattClientFacade,
