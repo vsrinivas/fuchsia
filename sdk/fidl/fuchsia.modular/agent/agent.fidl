@@ -37,9 +37,26 @@ using fuchsia.sys;
 [Discoverable] // Created by each agent.
 protocol Agent {
     /// Called when some component tries to connect to this agent. |requestor_url|
-    /// is the identifier for the component which called
-    /// |ComponentContext.ConnectToAgent()|. The |services| are provided to that
-    /// component.
+    /// identifies the requesting client. Different client roles are identified differently:
+    ///    * For Module clients in the general case, |requestor_url| will be the name provided at
+    ///      Module create time (ie, in calls to StoryPuppetMaster's StoryCommand.AddMod/mod_name)
+    ///      with :'s escaped (see below for a complete explanation).
+    ///    * For all other clients (Agents and Shells), |requestor_url| is set to the requesting
+    ///      component's URL.
+    ///
+    /// |services| must be connected to an implementation of fuchsia.sys.ServiceProvider offering
+    /// services specific to the requesting client.
+    ///
+    /// Details on module naming: modules are named hierarchically based on what client created
+    /// them. This is called a module path. If created by 1) an agent or 2) an existing module, the
+    /// path is constructed differently.
+    ///
+    /// In the case of (2), the module path is the concatenation of the existing module's path with
+    /// the new module's name, as provided by the parent module. In the case of (1), the module
+    /// path is the concatenation of StoryCommand.AddMod/mod_name and
+    /// StoryCommand.AddMod/surface_relation_parent.
+    ///
+    /// The full path is encoded into |requestor_url| as escape_colons(module_path).join(':').
     Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
 
     /// Called when some task identified by |task_id| is scheduled to run. The task

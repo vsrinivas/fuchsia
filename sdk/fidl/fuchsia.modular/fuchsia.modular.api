@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.modular/agent/agent.fidl": "cbcfd668943ca93bf688c0972734662a",
+  "fidl/fuchsia.modular/agent/agent.fidl": "f89d4b6214f73ebfc121ea291d579229",
   "fidl/fuchsia.modular/agent/agent_context.fidl": "49955998e45cf6b9d70a18e5e7f6c8fa",
   "fidl/fuchsia.modular/agent/agent_controller/agent_controller.fidl": "23c070c56bd4a64655803875317afe3e",
   "fidl/fuchsia.modular/agent/agent_provider.fidl": "a918ee8d69961add5622a8ac6ac1095b",
