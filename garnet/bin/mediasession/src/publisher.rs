@@ -37,29 +37,42 @@ impl Publisher {
     async fn serve(mut self, channel: fasync::Channel) -> Result<()> {
         let mut request_stream = PublisherRequestStream::from_channel(channel);
         while let Some(request) =
-            await!(request_stream.try_next()).context("Publisher server request stream.")?
+            await!(request_stream.try_next()).context("Publisher server request stream")?
         {
-            let PublisherRequest::Publish { responder, controller } = request;
-            responder
-                .send(await!(self.publish(controller))?)
-                .context("Giving session id to client.")?;
+            match request {
+                PublisherRequest::Publish { responder, session } => {
+                    responder
+                        .send(await!(self.publish(session, /*is_local=*/ true))?)
+                        .context("Giving session id to client")?;
+                }
+                PublisherRequest::PublishRemote { responder, session } => {
+                    responder
+                        .send(await!(self.publish(session, /*is_local=*/ false))?)
+                        .context("Giving session id to client")?;
+                }
+            };
         }
         Ok(())
     }
 
-    async fn publish(&mut self, controller: ClientEnd<SessionMarker>) -> Result<zx::Event> {
-        let event = zx::Event::create()?;
-        let session_id: zx::Event = event.as_handle_ref().duplicate(session_id_rights())?.into();
-        let id = event.as_handle_ref().get_koid()?;
-        let registration = ServiceEvent::NewSession((
-            Session::new(
-                id,
+    async fn publish(
+        &mut self,
+        controller: ClientEnd<SessionMarker>,
+        is_local: bool,
+    ) -> Result<zx::Event> {
+        let session_id_handle = zx::Event::create()?;
+        await!(self.fidl_sink.send(ServiceEvent::NewSession {
+            session: Session::new(
+                session_id_handle.as_handle_ref().get_koid()?,
                 controller.into_proxy().context("Making controller client end into proxy.")?,
                 self.fidl_sink.clone(),
             )?,
-            event,
-        ));
-        await!(self.fidl_sink.send(registration))?;
-        Ok(session_id)
+            session_id_handle: session_id_handle
+                .as_handle_ref()
+                .duplicate(session_id_rights())?
+                .into(),
+            is_local,
+        }))?;
+        Ok(session_id_handle)
     }
 }

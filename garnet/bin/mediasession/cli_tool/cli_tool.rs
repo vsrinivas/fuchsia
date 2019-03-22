@@ -57,26 +57,34 @@ async fn control_active_session(
     loop {
         select! {
             event = event_stream.select_next_some() => {
-                let RegistryEvent::OnActiveSession {
-                    active_session: new_active_session
-                } = event?;
-                if let Some(session_id) = new_active_session.session_id {
-                    let (client_end, server_end) = create_endpoints()?;
-                    let koid = session_id.as_handle_ref().get_koid()?;
-                    registry_proxy.connect_to_session_by_id(session_id, server_end)?;
-                    let session_proxy = client_end.into_proxy()?;
-                    let mut session_events = session_proxy.take_event_stream();
-                    fasync::spawn(async move {
-                        while let Ok(Some(event)) = await!(session_events.try_next()) {
-                            println!("Active session event:");
-                            println!("{:#?}", event);
+                match event? {
+                    RegistryEvent::OnActiveSessionChanged {
+                        active_session: new_active_session
+                    } => {
+                        if let Some(session_id) = new_active_session.session_id {
+                            let (client_end, server_end) = create_endpoints()?;
+                            let koid = session_id.as_handle_ref().get_koid()?;
+                            registry_proxy.connect_to_session_by_id(session_id, server_end)?;
+                            let session_proxy = client_end.into_proxy()?;
+                            let mut session_events = session_proxy.take_event_stream();
+                            fasync::spawn(async move {
+                                while let Ok(Some(event)) = await!(session_events.try_next()) {
+                                    println!("Active session event:");
+                                    println!("{:#?}", event);
+                                }
+                            });
+                            active_session = Some(session_proxy);
+                            println!("Active session is now {:?}.", koid);
+                        } else {
+                            println!("There is no active session.");
+                            active_session = None;
                         }
-                    });
-                    active_session = Some(session_proxy);
-                    println!("Active session is now {:?}.", koid);
-                } else {
-                    println!("There is no active session.");
-                    active_session = None;
+                        registry_proxy.notify_active_session_change_handled()?;
+                    }
+                    RegistryEvent::OnSessionsChanged { sessions_change } => {
+                        println!("Sessions collection changed: {:?}", sessions_change);
+                        registry_proxy.notify_sessions_change_handled()?;
+                    }
                 }
             }
             new_state = control_receiver.select_next_some() => {

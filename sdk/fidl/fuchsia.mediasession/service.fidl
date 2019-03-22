@@ -13,7 +13,10 @@ using zx;
 protocol Publisher {
     /// Publishes a session. Returns `session_id` which can be used to
     /// to identify the session.
-    Publish(Session controller) -> (handle<event> session_id);
+    Publish(Session session) -> (handle<event> session_id);
+    /// Publishes a remote session, whose playback does not originate on this
+    /// device. Returns a `session_id` which can be used to identify the session.
+    PublishRemote(Session session) -> (handle<event> session_id);
 };
 
 /// Describes the session which is currently implementing the active session
@@ -22,14 +25,58 @@ table ActiveSession {
     1: handle<event> session_id;
 };
 
+/// A registered session in the Media Session registry.
+table SessionEntry {
+    /// The id of the registered session.
+    1: handle<event> session_id;
+    /// Whether the session takes place locally on this device.
+    2: bool local;
+};
+
+enum SessionDelta {
+    ADDED = 0;
+    REMOVED = 1;
+};
+
+/// A change to the set of registered sessions.
+struct SessionsChange {
+    SessionEntry session;
+    SessionDelta delta;
+};
+
 /// `Registry` observes the collection of published media sessions
 /// and vends control handles to them.
 [Discoverable]
 protocol Registry {
-    /// `OnActiveSession` is sent on connection and when the
+    /// `OnActiveSessionChanged` is sent on connection and when the
     /// underlying active session is changed.
-    -> OnActiveSession(ActiveSession active_session);
+    -> OnActiveSessionChanged(ActiveSession active_session);
+
+    /// Notifies the `Registry` that the active session change events was handled
+    /// and that the client is ready for more. If you want these events, send
+    /// this message on receipt of them. After some amount of events are sent
+    /// without receipts, the client will stop receiving events from the
+    /// `Registry`.
+    ///
+    /// Never sending this message has no effect other than unsubscribing from
+    /// these events.
+    NotifyActiveSessionChangeHandled();
+
+    /// When the set of registered sessions changes, this event is sent. On
+    /// connection the client is caught up to the state of the collection with
+    /// "ADD" events for each existing session.
+    -> OnSessionsChanged(SessionsChange sessions_change);
+
+    /// Notifies the `Registry` that the sessions change event was handled
+    /// and that the client is ready for more. If you want these events, send
+    /// this message on receipt of them. After some amount of events are sent
+    /// without receipts, the client will stop receiving events from the
+    /// `Registry`.
+    ///
+    /// Never sending this message has no effect other than unsubscribing from
+    /// these events.
+    NotifySessionsChangeHandled();
 
     /// Connects to a `Session` for `session_id` if present.
-    ConnectToSessionById(handle<event> session_id, request<Session> controller_request);
+    ConnectToSessionById(handle<event> session_id, request<Session> session_request);
 };

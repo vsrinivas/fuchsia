@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::service::ServiceEvent;
+use crate::{service::ServiceEvent, subscriber::Subscriber};
 use failure::ResultExt;
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_mediasession::{RegistryMarker, RegistryRequest};
@@ -30,20 +30,34 @@ impl Registry {
         let (mut request_stream, control_handle) =
             trylog!(ServerEnd::<RegistryMarker>::new(channel.into_zx_channel())
                 .into_stream_and_control_handle());
+        let subscriber = Subscriber::new(control_handle.clone());
+        let koid = trylog!(subscriber.koid());
+        trylog!(await!(self.fidl_sink.send(ServiceEvent::NewActiveSessionSubscriber(subscriber))));
         trylog!(await!(self
             .fidl_sink
-            .send(ServiceEvent::NewActiveSessionChangeListener(control_handle))));
+            .send(ServiceEvent::NewSessionsChangeSubscriber(Subscriber::new(control_handle)))));
         while let Some(request) =
             trylog!(await!(request_stream.try_next()).context("Registry server request stream."))
         {
-            let RegistryRequest::ConnectToSessionById { session_id, controller_request, .. } =
-                request;
-
-            let koid = trylog!(session_id.as_handle_ref().get_koid());
-            trylog!(await!(self.fidl_sink.send(ServiceEvent::NewSessionRequest {
-                session_id: koid,
-                request: controller_request
-            })));
+            match request {
+                RegistryRequest::ConnectToSessionById { session_id, session_request, .. } => {
+                    let koid = trylog!(session_id.as_handle_ref().get_koid());
+                    trylog!(await!(self.fidl_sink.send(ServiceEvent::NewSessionRequest {
+                        session_id: koid,
+                        request: session_request
+                    })));
+                }
+                RegistryRequest::NotifyActiveSessionChangeHandled { .. } => {
+                    trylog!(await!(self
+                        .fidl_sink
+                        .send(ServiceEvent::ActiveSessionSubscriberAck(koid))));
+                }
+                RegistryRequest::NotifySessionsChangeHandled { .. } => {
+                    trylog!(await!(self
+                        .fidl_sink
+                        .send(ServiceEvent::SessionsChangeSubscriberAck(koid))));
+                }
+            };
         }
     }
 }
