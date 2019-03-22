@@ -414,7 +414,13 @@ static size_t efi_stow_crashlog(void* log, size_t len) {
         len = MAX_EFI_CRASHLOG_LEN;
     }
 
-    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+    // We could be panicking whilst already holding the thread_lock. If so we must avoid calling
+    // functions that will grab it again.
+    if (spin_lock_held(&thread_lock)) {
+        vmm_set_active_aspace_locked(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+    } else {
+        vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+    }
 
     efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
     efi_runtime_services* rs = sys->RuntimeServices;

@@ -76,4 +76,8 @@ void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace);
 // NULL is a valid argument, which unmaps the current user address space
 void vmm_set_active_aspace(vmm_aspace_t* aspace);
 
+// specialized version of above function that must be called with the thread_lock already held.
+// This is only intended for use by panic handlers.
+void vmm_set_active_aspace_locked(vmm_aspace_t* aspace);
+
 __END_CDECLS

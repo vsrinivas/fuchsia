@@ -8,6 +8,7 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
+#include <fbl/null_lock.h>
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/thread_lock.h>
@@ -80,7 +81,8 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     return status;
 }
 
-void vmm_set_active_aspace(vmm_aspace_t* aspace) {
+template<typename GuardType, typename Lock>
+static void vmm_set_active_aspace_internal(vmm_aspace_t* aspace, Lock lock) {
     LTRACEF("aspace %p\n", aspace);
 
     thread_t* t = get_current_thread();
@@ -91,10 +93,19 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace) {
     }
 
     // grab the thread lock and switch to the new address space
-    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    GuardType __UNUSED lock_guard{lock};
+
     vmm_aspace_t* old = t->aspace;
     t->aspace = aspace;
     vmm_context_switch(old, t->aspace);
+}
+
+void vmm_set_active_aspace(vmm_aspace_t* aspace) {
+    vmm_set_active_aspace_internal<Guard<spin_lock_t, IrqSave>>(aspace, ThreadLock::Get());
+}
+
+void vmm_set_active_aspace_locked(vmm_aspace_t* aspace) {
+    vmm_set_active_aspace_internal<fbl::NullLock>(aspace, fbl::NullLock());
 }
 
 vmm_aspace_t* vmm_get_kernel_aspace(void) {
