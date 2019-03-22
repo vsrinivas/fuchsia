@@ -278,7 +278,7 @@ void MediaApp::SetStreamType() {
   if (ramp_stream_gain_) {
     gain_control_->SetGainWithRamp(
         ramp_target_gain_db_, ramp_duration_nsec_,
-        fuchsia::media::audio::AudioRamp::SCALE_LINEAR);
+        fuchsia::media::audio::RampType::SCALE_LINEAR);
   }
 }
 

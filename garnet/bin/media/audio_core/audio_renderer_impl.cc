@@ -672,7 +672,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
 // is pre-mix and hence is the Source component in the Gain object.
 void AudioRendererImpl::SetGainWithRamp(
     float gain_db, zx_duration_t duration_ns,
-    fuchsia::media::audio::AudioRamp rampType) {
+    fuchsia::media::audio::RampType ramp_type) {
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
@@ -681,10 +681,10 @@ void AudioRendererImpl::SetGainWithRamp(
   }
 
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), gain_db,
-                   duration_ns, rampType](auto& link) {
+                   duration_ns, ramp_type](auto& link) {
     if (link.get() != throttle_ptr) {
       link->bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
-                                                      rampType);
+                                                      ramp_type);
     }
   });
 
@@ -750,8 +750,8 @@ void AudioRendererImpl::GainControlBinding::SetGain(float gain_db) {
 
 void AudioRendererImpl::GainControlBinding::SetGainWithRamp(
     float gain_db, zx_duration_t duration_ns,
-    fuchsia::media::audio::AudioRamp rampType) {
-  owner_->SetGainWithRamp(gain_db, duration_ns, rampType);
+    fuchsia::media::audio::RampType ramp_type) {
+  owner_->SetGainWithRamp(gain_db, duration_ns, ramp_type);
 }
 
 void AudioRendererImpl::GainControlBinding::SetMute(bool mute) {

@@ -105,10 +105,9 @@ class Gain {
   }
 
   // Smoothly change the source gain over the specified period of playback time.
-  void SetSourceGainWithRamp(
-      float gain_db, zx_duration_t duration_ns,
-      fuchsia::media::audio::AudioRamp rampType =
-          fuchsia::media::audio::AudioRamp::SCALE_LINEAR);
+  void SetSourceGainWithRamp(float gain_db, zx_duration_t duration_ns,
+                             fuchsia::media::audio::RampType ramp_type =
+                                 fuchsia::media::audio::RampType::SCALE_LINEAR);
 
   void ClearSourceRamp() { source_ramp_duration_ns_ = 0; }
 

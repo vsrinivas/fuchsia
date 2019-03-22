@@ -335,7 +335,7 @@ TEST_F(RenderGainControlTest, SetMute) { TestSetMute(); }
 TEST_F(RenderGainControlTest, SetGainMute) { TestSetGainMute(); }
 
 // TODO(mpuryear): Ramp-related tests (render). Relevant FIDL signature is:
-//   SetGainWithRamp(float32 gain_db, int64 duration_ns, AudioRamp rampType);
+//   SetGainWithRamp(float32 gain_db, int64 duration_ns, RampType ramp_type);
 
 // TODO(mpuryear): Validate GainChange notifications of gainramps.
 

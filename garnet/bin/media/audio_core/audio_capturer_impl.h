@@ -158,7 +158,7 @@ class AudioCapturerImpl
   // GainControl interface.
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                       fuchsia::media::audio::AudioRamp rampType) final {
+                       fuchsia::media::audio::RampType ramp_type) final {
     FXL_NOTIMPLEMENTED();
   }
   void SetMute(bool mute) final;
