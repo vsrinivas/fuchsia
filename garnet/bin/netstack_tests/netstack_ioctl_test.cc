@@ -83,7 +83,7 @@ TEST_F(NetstackIoctlTest, RunIoctlClient) {
   config.name = kInterfaceName;
   config.ip_address_config.set_dhcp(true);
 
-  uint32_t eth_id;
+  uint32_t eth_id = 0;
   netstack->AddEthernetDevice(std::move(kTopoPath), std::move(config),
                               eth->device(),
                               [&eth_id](uint32_t id) { eth_id = id; });
