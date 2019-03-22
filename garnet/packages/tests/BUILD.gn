@@ -749,6 +749,7 @@ group("power_manager") {
 group("wlan-hw-sim") {
   testonly = true
   public_deps = [
+    "//garnet/bin/wlan/wlan-hw-sim:wlan-hw-sim-tests",
     "//garnet/packages/prod:wlan-hw-sim",
   ]
 }
