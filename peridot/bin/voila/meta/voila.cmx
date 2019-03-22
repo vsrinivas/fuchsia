@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-global-persistent-storage"
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.logger.LogSink",
