@@ -57,14 +57,12 @@ public:
     FairTaskState() = default;
 
     explicit FairTaskState(SchedWeight weight)
-        : base_weight_{weight} {}
+        : weight_{weight} {}
 
     FairTaskState(const FairTaskState&) = delete;
     FairTaskState& operator=(const FairTaskState&) = delete;
 
-    // TODO(eieio): Implement inheritance.
-    SchedWeight base_weight() const { return base_weight_; }
-    SchedWeight effective_weight() const { return base_weight_; }
+    SchedWeight weight() const { return weight_; }
 
     // Returns the key used to order the run queue.
     KeyType key() const { return {virtual_finish_time_, generation_}; }
@@ -103,8 +101,8 @@ private:
     // WAVLTree node state.
     fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
 
-    // The base weight of the thread.
-    SchedWeight base_weight_{0};
+    // The current weight of the thread.
+    SchedWeight weight_{0};
 
     // Flag indicating whether this thread is associated with a runqueue.
     bool active_{false};

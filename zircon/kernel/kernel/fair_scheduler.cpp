@@ -16,6 +16,7 @@
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
+#include <ktl/move.h>
 #include <lib/ktrace.h>
 #include <list.h>
 #include <platform.h>
@@ -66,6 +67,20 @@ namespace {
 constexpr SchedWeight kMinWeight = FromRatio(LOWEST_PRIORITY + 1, NUM_PRIORITIES);
 constexpr SchedWeight kReciprocalMinWeight = 1 / kMinWeight;
 
+constexpr SchedWeight PriorityToWeight(int priority) {
+    return FromRatio(priority, NUM_PRIORITIES);
+}
+constexpr int WeightToPriority(SchedWeight weight) {
+    return Round<int>(kReciprocalMinWeight * weight);
+}
+
+// Utility operator to make expressions more succinct that update thread times
+// and durations of basic types using the fixed-point counterparts.
+constexpr zx_time_t& operator+=(zx_time_t& value, SchedDuration delta) {
+    value += delta.raw_value();
+    return value;
+}
+
 // On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
 // after set_current_thread (we'd now see newthread's unsafe-sp instead!).
 // Hence this function and everything it calls between this point and the
@@ -114,7 +129,7 @@ void FairScheduler::Dump() {
         const FairTaskState* const state = &active_thread_->fair_task_state;
         printf("\t-> name=%s weight=%#x vstart=%ld vfinish=%ld time_slice_ns=%ld\n",
                active_thread_->name,
-               static_cast<uint32_t>(state->effective_weight().raw_value()),
+               static_cast<uint32_t>(state->weight_.raw_value()),
                state->virtual_start_time_.raw_value(),
                state->virtual_finish_time_.raw_value(),
                state->time_slice_ns_.raw_value());
@@ -124,7 +139,7 @@ void FairScheduler::Dump() {
         const FairTaskState* const state = &thread.fair_task_state;
         printf("\t   name=%s weight=%#x vstart=%ld vfinish=%ld time_slice_ns=%ld\n",
                thread.name,
-               static_cast<uint32_t>(state->effective_weight().raw_value()),
+               static_cast<uint32_t>(state->weight_.raw_value()),
                state->virtual_start_time_.raw_value(),
                state->virtual_finish_time_.raw_value(),
                state->time_slice_ns_.raw_value());
@@ -151,6 +166,10 @@ FairScheduler* FairScheduler::Get(cpu_num_t cpu) {
 
 void FairScheduler::InitializeThread(thread_t* thread, SchedWeight weight) {
     new (&thread->fair_task_state) FairTaskState{weight};
+    thread->base_priority = WeightToPriority(weight);
+    thread->effec_priority = WeightToPriority(weight);
+    thread->inherited_priority = -1;
+    thread->priority_boost = 0;
 }
 
 thread_t* FairScheduler::DequeueThread() {
@@ -182,8 +201,8 @@ thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thr
         // If the timeslice expired put the current thread back in the runqueue,
         // otherwise continue to run it.
         if (timeslice_expired) {
-            UpdateThreadTimeline(current_thread);
-            QueueThread(current_thread);
+            UpdateThreadTimeline(current_thread, Placement::Insertion);
+            QueueThread(current_thread, Placement::Insertion);
         } else {
             return current_thread;
         }
@@ -282,6 +301,8 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
     DEBUG_ASSERT_MSG(current_thread->state != THREAD_RUNNING, "state %d\n", current_thread->state);
     DEBUG_ASSERT(!arch_blocking_disallowed());
+    DEBUG_ASSERT_MSG(current_cpu == this_cpu(),
+                     "current_cpu=%u this_cpu=%u", current_cpu, this_cpu());
 
     CPU_STATS_INC(reschedules);
 
@@ -292,19 +313,21 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
     current_thread->last_started_running = now.raw_value();
 
     // Update the runtime accounting for the thread that just ran.
-    current_thread->runtime_ns += actual_runtime_ns.raw_value();
+    current_thread->runtime_ns += actual_runtime_ns;
 
-    // Adjust the rate of the current task when competition increases.
-    if (weight_total_ > 0 && weight_total_ > scheduled_weight_total_) {
+    // Adjust the rate of the current thread when demand changes. Changes in
+    // demand could be due to threads entering or leaving the run queue, or due
+    // to weights changing in the current or enqueued threads.
+    if (weight_total_ > 0 && weight_total_ != scheduled_weight_total_) {
         LOCAL_KTRACE_DURATION trace_adjust_rate{"adjust_rate"_stringref};
         scheduled_weight_total_ = weight_total_;
 
         const SchedDuration time_slice_ns = CalculateTimeslice(current_thread);
-        const bool timeslice_decreased = time_slice_ns < current_state->time_slice_ns_;
+        const bool timeslice_changed = time_slice_ns != current_state->time_slice_ns_;
         const bool timeslice_remaining = total_runtime_ns < time_slice_ns;
 
         // Update the preemption timer if necessary.
-        if (timeslice_decreased && timeslice_remaining) {
+        if (timeslice_changed && timeslice_remaining) {
             const SchedTime absolute_deadline_ns =
                 current_thread->last_started_running + time_slice_ns;
             timer_preempt_reset(absolute_deadline_ns.raw_value());
@@ -348,7 +371,7 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
     mp_set_cpu_non_realtime(current_cpu);
 
     if (thread_is_idle(current_thread)) {
-        percpu[current_cpu].stats.idle_time += actual_runtime_ns.raw_value();
+        percpu[current_cpu].stats.idle_time += actual_runtime_ns;
     }
 
     if (thread_is_idle(next_thread) /*|| runnable_task_count_ == 1*/) {
@@ -438,11 +461,11 @@ SchedDuration FairScheduler::CalculateTimeslice(thread_t* thread) {
 
     // Calculate the relative portion of the scheduling period.
     const Fixed<int64_t, 5> time_slice_grans = scheduling_period_grans_ *
-                                               state->effective_weight() / weight_total_;
+                                               state->weight_ / weight_total_;
     const SchedDuration time_slice_ns = time_slice_grans.Ceiling() *
                                         minimum_granularity_ns_;
 
-    trace.End(state->effective_weight().raw_value(), weight_total_.raw_value());
+    trace.End(state->weight_.raw_value(), weight_total_.raw_value());
     return time_slice_ns;
 }
 
@@ -460,14 +483,14 @@ void FairScheduler::NextThreadTimeslice(thread_t* thread) {
     SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%ld\n",
                   thread->name,
                   static_cast<uint32_t>(weight_total_.raw_value()),
-                  static_cast<uint32_t>(state->effective_weight().raw_value()),
+                  static_cast<uint32_t>(state->weight_.raw_value()),
                   state->time_slice_ns_.raw_value());
 
     trace.End(Round<uint64_t>(state->time_slice_ns_),
-              state->effective_weight().raw_value());
+              state->weight_.raw_value());
 }
 
-void FairScheduler::UpdateThreadTimeline(thread_t* thread) {
+void FairScheduler::UpdateThreadTimeline(thread_t* thread, Placement placement) {
     LOCAL_KTRACE_DURATION trace{"update_timeline: vs,vf"_stringref};
 
     if (thread_is_idle(thread) || thread->state == THREAD_DEATH) {
@@ -477,12 +500,14 @@ void FairScheduler::UpdateThreadTimeline(thread_t* thread) {
     FairTaskState* const state = &thread->fair_task_state;
 
     // Update virtual timeline.
-    state->virtual_start_time_ = std::max(state->virtual_finish_time_, virtual_time_);
+    if (placement == Placement::Insertion) {
+        state->virtual_start_time_ = std::max(state->virtual_finish_time_, virtual_time_);
+    }
 
     const SchedDuration scheduling_period_ns = scheduling_period_grans_ *
                                                minimum_granularity_ns_;
     const SchedDuration delta_norm = scheduling_period_ns /
-                                     (kReciprocalMinWeight * state->effective_weight());
+                                     (kReciprocalMinWeight * state->weight_);
     state->virtual_finish_time_ = state->virtual_start_time_ + delta_norm;
 
     DEBUG_ASSERT_MSG(state->virtual_start_time_ < state->virtual_finish_time_,
@@ -502,17 +527,26 @@ void FairScheduler::UpdateThreadTimeline(thread_t* thread) {
               Round<uint64_t>(state->virtual_finish_time_));
 }
 
-void FairScheduler::QueueThread(thread_t* thread) {
+void FairScheduler::QueueThread(thread_t* thread, Placement placement) {
     LOCAL_KTRACE_DURATION trace{"queue_thread"_stringref};
 
     DEBUG_ASSERT(thread->state == THREAD_READY);
     DEBUG_ASSERT(!thread_is_idle(thread));
     SCHED_LTRACEF("QueueThread: thread=%s\n", thread->name);
 
-    thread->fair_task_state.generation_ = ++generation_count_;
+    // Only update the generation and emit a flow event if this is an insertion.
+    // In constrast, an adjustment only changes the queue position due to a
+    // weight change and should not perform these actions.
+    if (placement == Placement::Insertion) {
+        thread->fair_task_state.generation_ = ++generation_count_;
+    }
+
     run_queue_.insert(thread);
     LOCAL_KTRACE("queue_thread");
-    LOCAL_KTRACE_FLOW_BEGIN("sched_latency", FlowIdFromThreadGeneration(thread));
+
+    if (placement == Placement::Insertion) {
+        LOCAL_KTRACE_FLOW_BEGIN("sched_latency", FlowIdFromThreadGeneration(thread));
+    }
 }
 
 void FairScheduler::Insert(SchedTime now, thread_t* thread) {
@@ -531,15 +565,17 @@ void FairScheduler::Insert(SchedTime now, thread_t* thread) {
         UpdateTimeline(now);
         UpdatePeriod();
 
-        thread->curr_cpu = arch_curr_cpu_num();
+        // Insertion can happen from a different CPU. Set the thread's current
+        // CPU to the one this scheduler instance services.
+        thread->curr_cpu = this_cpu();
 
         // Factor this task into the run queue.
-        weight_total_ += state->effective_weight();
+        weight_total_ += state->weight_;
         DEBUG_ASSERT(weight_total_ > SchedWeight{0});
         //virtual_time_ -= state->lag_time_ns_ / weight_total_;
 
-        UpdateThreadTimeline(thread);
-        QueueThread(thread);
+        UpdateThreadTimeline(thread, Placement::Insertion);
+        QueueThread(thread, Placement::Insertion);
     }
 }
 
@@ -565,13 +601,13 @@ void FairScheduler::Remove(thread_t* thread) {
 
         // Factor this task out of the run queue.
         //virtual_time_ += state->lag_time_ns_ / weight_total_;
-        weight_total_ -= state->effective_weight();
+        weight_total_ -= state->weight_;
         DEBUG_ASSERT(weight_total_ >= SchedWeight{0});
 
         SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x lag_time_ns=%ld\n",
                       thread->name,
                       static_cast<uint32_t>(weight_total_.raw_value()),
-                      static_cast<uint32_t>(state->effective_weight().raw_value()),
+                      static_cast<uint32_t>(state->weight_.raw_value()),
                       state->lag_time_ns_.raw_value());
     }
 }
@@ -758,8 +794,188 @@ void FairScheduler::Migrate(thread_t* thread) {
 
     const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
     if (cpus_to_reschedule_mask & current_cpu_mask) {
-        FairScheduler::Reschedule();
+        Reschedule();
     }
+}
+
+void FairScheduler::MigrateUnpinnedThreads(cpu_num_t current_cpu) {
+    LOCAL_KTRACE_DURATION trace{"sched_migrate_unpinned"_stringref};
+
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    DEBUG_ASSERT(current_cpu == arch_curr_cpu_num());
+
+    // Prevent this CPU from being selected as a target for scheduling threads.
+    mp_set_curr_cpu_active(false);
+
+    const SchedTime now = CurrentTime();
+    FairScheduler* const current = Get(current_cpu);
+    const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
+
+    RunQueue pinned_threads;
+    cpu_mask_t cpus_to_reschedule_mask = 0;
+    while (!current->run_queue_.is_empty()) {
+        thread_t* const thread = current->DequeueThread();
+
+        if (thread->cpu_affinity == current_cpu_mask) {
+            // Keep track of threads pinned to this CPU.
+            pinned_threads.insert(thread);
+        } else {
+            // Move unpinned threads to another available CPU.
+            current->Remove(thread);
+
+            const cpu_num_t target_cpu = FindTargetCpu(thread);
+            FairScheduler* const target = Get(target_cpu);
+            DEBUG_ASSERT(target != current);
+
+            target->Insert(now, thread);
+            cpus_to_reschedule_mask |= cpu_num_to_mask(target_cpu);
+        }
+    }
+
+    // Return the pinned threads to the run queue.
+    current->run_queue_ = ktl::move(pinned_threads);
+
+    if (cpus_to_reschedule_mask) {
+        mp_reschedule(cpus_to_reschedule_mask, 0);
+    }
+}
+
+void FairScheduler::UpdateWeightCommon(thread_t* thread,
+                                       int original_priority,
+                                       SchedWeight weight,
+                                       cpu_mask_t* cpus_to_reschedule_mask) {
+    FairTaskState* const state = &thread->fair_task_state;
+
+    switch (thread->state) {
+    case THREAD_INITIAL:
+    case THREAD_SLEEPING:
+    case THREAD_SUSPENDED:
+        // Adjust the weight of the thread so that the correct value is
+        // available when the thread enters the run queue.
+        state->weight_ = weight;
+        break;
+
+    case THREAD_RUNNING:
+    case THREAD_READY: {
+        DEBUG_ASSERT(is_valid_cpu_num(thread->curr_cpu));
+        FairScheduler* const current = Get(thread->curr_cpu);
+
+        // Adjust the weight of the thread and the run queue. The time slice
+        // of the running thread will be adjusted during reschedule due to
+        // the change in demand on the run queue.
+        current->weight_total_ -= state->weight_;
+        current->weight_total_ += weight;
+        state->weight_ = weight;
+
+        if (thread->state == THREAD_READY) {
+            DEBUG_ASSERT(state->InQueue());
+            DEBUG_ASSERT(state->active());
+
+            // Adjust the position of the thread in the run queue based on
+            // the new weight.
+            current->run_queue_.erase(*thread);
+            current->UpdateThreadTimeline(thread, Placement::Adjustment);
+            current->QueueThread(thread, Placement::Adjustment);
+        }
+
+        *cpus_to_reschedule_mask |= cpu_num_to_mask(thread->curr_cpu);
+        break;
+    }
+
+    case THREAD_BLOCKED:
+    case THREAD_BLOCKED_READ_LOCK:
+        // Update the weight of the thread blocked in a wait queue. Also
+        // handle the race where the thread is no longer in the wait queue
+        // but has not yet transitioned to ready.
+        state->weight_ = weight;
+        if (thread->blocking_wait_queue) {
+            wait_queue_priority_changed(thread, original_priority);
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
+void FairScheduler::ChangeWeight(thread_t* thread, SchedWeight weight,
+                                 cpu_mask_t* cpus_to_reschedule_mask) {
+    LOCAL_KTRACE_DURATION trace{"sched_change_weight"_stringref};
+
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d "
+                  "current_weight=%d new_weight=%d\n",
+                  thread->name, ToString(thread->state),
+                  thread->base_priority, thread->effec_priority,
+                  thread->inherited_priority,
+                  WeightToPriority(thread->fair_task_state.weight()),
+                  WeightToPriority(weight));
+
+    if (thread_is_idle(thread) || thread->state == THREAD_DEATH) {
+        return;
+    }
+
+    // TODO(eieio): The rest of the kernel still uses priority so we have to
+    // operate in those terms here. Abstract the notion of priority once the
+    // deadline scheduler is available and remove this conversion once the
+    // kernel uses the abstraction throughout.
+    const int original_priority = thread->effec_priority;
+    thread->base_priority = WeightToPriority(weight);
+    thread->priority_boost = 0;
+
+    // Adjust the effective priority for inheritance, if necessary.
+    if (thread->inherited_priority > thread->base_priority) {
+        thread->effec_priority = thread->inherited_priority;
+        weight = PriorityToWeight(thread->effec_priority);
+    } else {
+        thread->effec_priority = thread->base_priority;
+    }
+
+    // Perform the state-specific updates if the effective priority changed.
+    if (thread->effec_priority != original_priority) {
+        UpdateWeightCommon(thread, original_priority, weight,
+                           cpus_to_reschedule_mask);
+    }
+
+    trace.End(original_priority, thread->effec_priority);
+}
+
+void FairScheduler::InheritWeight(thread_t* thread, SchedWeight weight,
+                                  cpu_mask_t* cpus_to_reschedule_mask) {
+    LOCAL_KTRACE_DURATION trace{"sched_inherit_weight"_stringref};
+
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d "
+                  "current_weight=%d new_weight=%d\n",
+                  thread->name, ToString(thread->state),
+                  thread->base_priority, thread->effec_priority,
+                  thread->inherited_priority,
+                  WeightToPriority(thread->fair_task_state.weight()),
+                  WeightToPriority(weight));
+
+    const int priority = WeightToPriority(weight);
+    if (priority >= 0 && priority <= thread->inherited_priority) {
+        return;
+    }
+
+    const int original_priority = thread->effec_priority;
+    thread->inherited_priority = priority;
+    thread->priority_boost = 0;
+
+    if (thread->inherited_priority > thread->base_priority) {
+        thread->effec_priority = thread->inherited_priority;
+    } else {
+        thread->effec_priority = thread->base_priority;
+        weight = PriorityToWeight(thread->effec_priority);
+    }
+
+    // Perform the state-specific updates if the effective priority changed.
+    if (thread->effec_priority != original_priority) {
+        UpdateWeightCommon(thread, original_priority, weight,
+                           cpus_to_reschedule_mask);
+    }
+
+    trace.End(original_priority, thread->effec_priority);
 }
 
 void FairScheduler::TimerTick(SchedTime now) {
@@ -770,8 +986,7 @@ void FairScheduler::TimerTick(SchedTime now) {
 // Temporary compatibility with the thread layer.
 
 void sched_init_thread(thread_t* thread, int priority) {
-    FairScheduler::InitializeThread(thread, FromRatio(priority, NUM_PRIORITIES));
-    thread->base_priority = priority;
+    FairScheduler::InitializeThread(thread, PriorityToWeight(priority));
 }
 
 void sched_block() {
@@ -806,28 +1021,41 @@ void sched_resched_internal() {
     FairScheduler::RescheduleInternal();
 }
 
-void sched_transition_off_cpu(cpu_num_t old_cpu) {
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(old_cpu == arch_curr_cpu_num());
-
-    (void)old_cpu;
+void sched_transition_off_cpu(cpu_num_t current_cpu) {
+    FairScheduler::MigrateUnpinnedThreads(current_cpu);
 }
 
 void sched_migrate(thread_t* thread) {
     FairScheduler::Migrate(thread);
 }
 
-void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    (void)t;
-    (void)pri;
-    (void)local_resched;
+void sched_inherit_priority(thread_t* thread, int priority,
+                            bool* local_reschedule) {
+    cpu_mask_t cpus_to_reschedule_mask = 0;
+    FairScheduler::InheritWeight(thread, PriorityToWeight(priority),
+                                 &cpus_to_reschedule_mask);
+
+    const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
+    if (cpus_to_reschedule_mask & current_cpu_mask) {
+        *local_reschedule = true;
+    }
+    if (cpus_to_reschedule_mask & ~current_cpu_mask) {
+        mp_reschedule(cpus_to_reschedule_mask, 0);
+    }
 }
 
-void sched_change_priority(thread_t* t, int pri) {
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    (void)t;
-    (void)pri;
+void sched_change_priority(thread_t* thread, int priority) {
+    cpu_mask_t cpus_to_reschedule_mask = 0;
+    FairScheduler::ChangeWeight(thread, PriorityToWeight(priority),
+                                &cpus_to_reschedule_mask);
+
+    const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
+    if (cpus_to_reschedule_mask & current_cpu_mask) {
+        FairScheduler::Reschedule();
+    }
+    if (cpus_to_reschedule_mask & ~current_cpu_mask) {
+        mp_reschedule(cpus_to_reschedule_mask, 0);
+    }
 }
 
 void sched_preempt_timer_tick(zx_time_t now) {
@@ -835,4 +1063,7 @@ void sched_preempt_timer_tick(zx_time_t now) {
 }
 
 void sched_init_early() {
+    for (cpu_num_t cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
+        percpu[cpu].fair_runqueue.this_cpu_ = cpu;
+    }
 }

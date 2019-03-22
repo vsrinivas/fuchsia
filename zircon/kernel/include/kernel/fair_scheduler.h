@@ -50,6 +50,9 @@ public:
     // Dumps the state of the runqueue to the debug log.
     void Dump() TA_REQ(thread_lock);
 
+    // Returns the number of the CPU this scheduler instance is associated with.
+    cpu_num_t this_cpu() const { return this_cpu_; }
+
 private:
     // Befriend the sched API wrappers to enable calling the static methods
     // below.
@@ -68,6 +71,7 @@ private:
     friend bool sched_unblock_list(struct list_node* list);
     friend void sched_transition_off_cpu(cpu_num_t old_cpu);
     friend void sched_preempt_timer_tick(zx_time_t now);
+    friend void sched_init_early();
 
     // Static scheduler methods called by the wrapper API above.
     static void InitializeThread(thread_t* thread, SchedWeight weight);
@@ -80,7 +84,23 @@ private:
     static bool Unblock(list_node* thread_list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
     static void UnblockIdle(thread_t* idle_thread) TA_REQ(thread_lock);
     static void Migrate(thread_t* thread) TA_REQ(thread_lock);
+    static void MigrateUnpinnedThreads(cpu_num_t current_cpu) TA_REQ(thread_lock);
+    static void ChangeWeight(thread_t* thread, SchedWeight weight,
+                             cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
+    static void InheritWeight(thread_t* thread, SchedWeight weight,
+                              cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
     static void TimerTick(SchedTime now);
+
+    // Specifies how to place a thread in the virtual timeline and run queue.
+    enum class Placement {
+        // Selects a place in the queue based on the current insertion time and
+        // thread weight.
+        Insertion,
+
+        // Selects a place in the queue based on the original insertion time and
+        // the updated (inherited or changed) thread weight.
+        Adjustment,
+    };
 
     // Returns the current system time as a SchedTime value.
     static SchedTime CurrentTime() {
@@ -96,6 +116,12 @@ private:
     // Returns a CPU to run the given thread on.
     static cpu_num_t FindTargetCpu(thread_t* thread) TA_REQ(thread_lock);
 
+    // Updates the thread's weight and updates state-dependent bookkeeping.
+    static void UpdateWeightCommon(thread_t*,
+                                   int original_priority,
+                                   SchedWeight weight,
+                                   cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
+
     // Common logic for reschedule API.
     void RescheduleCommon(SchedTime now) TA_REQ(thread_lock);
 
@@ -106,7 +132,7 @@ private:
 
     // Adds a thread to the runqueue tree. The thread must be active on this
     // CPU.
-    void QueueThread(thread_t* thread) TA_REQ(thread_lock);
+    void QueueThread(thread_t* thread, Placement placement) TA_REQ(thread_lock);
 
     // Removes the thread at the head of the runqueue and returns it.
     thread_t* DequeueThread() TA_REQ(thread_lock);
@@ -119,7 +145,7 @@ private:
     void NextThreadTimeslice(thread_t* thread) TA_REQ(thread_lock);
 
     // Updates the thread virtual timeline based on the current runqueue state.
-    void UpdateThreadTimeline(thread_t* thread) TA_REQ(thread_lock);
+    void UpdateThreadTimeline(thread_t* thread, Placement placement) TA_REQ(thread_lock);
 
     // Updates the scheduling period based on the number of active threads.
     void UpdatePeriod() TA_REQ(thread_lock);
@@ -213,6 +239,15 @@ private:
     // oversubscribed.
     TA_GUARDED(thread_lock)
     SchedDuration peak_latency_ns_{kDefaultPeakLatency};
+
+    // The CPU this scheduler instance is associated with.
+    // NOTE: This member is not initialized to prevent clobbering the value set
+    // by sched_early_init(), which is called before the global ctors that
+    // initialize the rest of the members of this class.
+    // TODO(eieio): Figure out a better long-term solution to determine which
+    // CPU is associated with each instance of this class. This is needed by
+    // non-static methods that are called from arbitrary CPUs, namely Insert().
+    cpu_num_t this_cpu_;
 };
 
 #endif
