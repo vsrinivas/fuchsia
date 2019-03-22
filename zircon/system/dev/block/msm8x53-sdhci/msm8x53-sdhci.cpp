@@ -109,7 +109,8 @@ uint32_t Msm8x53Sdhci::SdhciGetBaseClock() {
 }
 
 uint64_t Msm8x53Sdhci::SdhciGetQuirks() {
-    return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
+    return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER | SDHCI_QUIRK_NO_DMA |
+           SDHCI_QUIRK_NON_STANDARD_TUNING;
 }
 
 void Msm8x53Sdhci::SdhciHwReset() {}

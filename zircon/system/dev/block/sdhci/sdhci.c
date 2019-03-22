@@ -1135,6 +1135,12 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     }
     dev->info.caps |= SDMMC_HOST_CAP_AUTO_CMD12;
 
+    // Set controller preferences
+    if (dev->quirks & SDHCI_QUIRK_NON_STANDARD_TUNING) {
+        // Disable HS200 and HS400 if tuning cannot be performed as per the spec.
+        dev->info.prefs |= SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400;
+    }
+
     // initialize the controller
     status = sdhci_controller_init(dev);
     if (status != ZX_OK) {

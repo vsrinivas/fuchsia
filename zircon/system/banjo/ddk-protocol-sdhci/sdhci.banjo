@@ -24,6 +24,8 @@ enum SdhciQuirk : uint64 {
     /// The higher level stack expects 136B responses to be packed in a certain way
     /// so we shift all the fields back to their proper offsets.
     STRIP_RESPONSE_CRC_PRESERVE_ORDER = 0x4;
+    /// The controller uses a tuning process that does not follow the SDHCI specification.
+    NON_STANDARD_TUNING = 0x8;
 };
 
 [Layout = "ddk-protocol"]
