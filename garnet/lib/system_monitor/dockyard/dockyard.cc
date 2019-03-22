@@ -22,8 +22,12 @@ constexpr char DEFAULT_SERVER_ADDRESS[] = "0.0.0.0:50051";
 
 SampleValue calculate_slope(SampleValue value, SampleValue* prior_value,
                             SampleTimeNs time, SampleTimeNs* prior_time) {
-  // Negative slope is not currently supported.
-  assert(value >= *prior_value);
+  if (value < *prior_value) {
+    // A lower value will produce a negative slope, which is not currently
+    // supported. As a workaround the value is pulled up to |prior_value| to
+    // create a convex surface.
+    value = *prior_value;
+  }
   assert(time >= *prior_time);
   SampleValue delta_value = value - *prior_value;
   SampleTimeNs delta_time = time - *prior_time;
