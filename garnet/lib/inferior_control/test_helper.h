@@ -15,6 +15,9 @@ constexpr const char kTestHelperPath[] = "/pkg/bin/test_helper";
 // A string that appears in the Dso name of the test helper executable.
 constexpr const char kTestHelperDsoName[] = "test_helper";
 
+// A special value to pass between processes as a sanity check.
+constexpr uint64_t kUint64MagicPacketValue = 0x0123456789abcdeful;
+
 }  // namespace inferior_control
 
 #endif // GARNET_LIB_INFERIOR_CONTROL_TEST_HELPER_H_

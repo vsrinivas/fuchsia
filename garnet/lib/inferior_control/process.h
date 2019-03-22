@@ -196,13 +196,8 @@ class Process final {
   Thread* PickOneThread();
 
   // If the thread map might be stale, refresh it.
-  // Returns true on success.
-  bool EnsureThreadMapFresh();
-
-  // Refreshes the complete Thread list for this process. Returns false if an
-  // error is returned from a syscall.
-  // Pointers to existing threads are maintained.
-  bool RefreshAllThreads();
+  // This may not be called while detached.
+  void EnsureThreadMapFresh();
 
   // Iterates through all cached threads and invokes |callback| for each of
   // them. |callback| is guaranteed to get called only before ForEachThread()
@@ -269,6 +264,22 @@ class Process final {
   zx_vaddr_t ldso_debug_map_addr() const { return ldso_debug_map_addr_; }
 
  private:
+  // When refreshing the thread list, new threads could be created.
+  // Add this to the number of existing threads to account for new ones.
+  // The number is large but the cost is only 8 bytes per extra thread for
+  // the thread's koid.
+  static constexpr size_t kNumExtraRefreshThreads = 20;
+
+  // When refreshing the thread list, if threads are being created faster than
+  // we can keep up, keep looking, but don't keep trying forever.
+  static constexpr size_t kRefreshThreadsTryCount = 4;
+
+  // Refreshes the complete Thread list for this process. Returns false if an
+  // error is returned from a syscall. Any threads that were accumulated up to
+  // that point are retained.
+  // Pointers to existing threads are maintained.
+  void RefreshAllThreads();
+
   // Wrapper on |zx_object_get_property()| to fetch the value of
   // ZX_PROP_PROCESS_DEBUG_ADDR.
   // Returns a boolean indicating success.
@@ -395,13 +406,13 @@ class Process final {
   // The collection of breakpoints that belong to this process.
   ProcessBreakpointSet breakpoints_;
 
-  // The threads owned by this process. This is map is populated lazily when
+  // The threads owned by this process. This map is populated lazily when
   // threads are requested through FindThreadById(). It can also be repopulated
   // from scratch, e.g., when attaching to an already running program.
   using ThreadMap = std::unordered_map<zx_koid_t, std::unique_ptr<Thread>>;
   ThreadMap threads_;
 
-  // If true then |threads_| needs to be recalculated from scratch.
+  // If true then |threads_| needs to be recalculated.
   bool thread_map_stale_ = false;
 
   // List of dsos loaded.

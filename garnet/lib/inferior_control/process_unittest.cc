@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 
@@ -68,11 +69,16 @@ class AttachTest : public TestServer {
                                     &pending),
                 ZX_OK);
     }
+
     EXPECT_TRUE(inferior->Detach());
+    EXPECT_FALSE(inferior->IsAttached());
+    EXPECT_EQ(inferior->handle(), ZX_HANDLE_INVALID);
+
     // Sleep a little to hopefully give the inferior a chance to run.
     // We want it to trip over the ld.so breakpoint if we forgot to remove it.
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
     EXPECT_TRUE(inferior->Attach(pid));
+    EXPECT_TRUE(inferior->IsAttached());
     // If attaching failed we'll hang since we won't see the inferior exiting.
     if (!inferior->IsAttached()) {
       QuitMessageLoop(true);
@@ -158,7 +164,8 @@ class LdsoBreakpointTest : public TestServer {
 
   void OnArchitecturalException(
       Process* process, Thread* thread, zx_handle_t eport,
-      const zx_excp_type_t type, const zx_exception_context_t& context) {
+      const zx_excp_type_t type, const zx_exception_context_t& context)
+      override {
     FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
     if (type == ZX_EXCP_SW_BREAKPOINT) {
       // The shared libraries should have been loaded by now.
@@ -190,6 +197,8 @@ class LdsoBreakpointTest : public TestServer {
       // Terminate the inferior, we don't want the exception propagating to
       // the system exception handler.
       zx_task_kill(process->handle());
+    } else {
+      EXPECT_TRUE(thread->TryNext(eport));
     }
   }
 
@@ -256,6 +265,92 @@ TEST_F(KillTest, Kill) {
   EXPECT_TRUE(Run());
   EXPECT_TRUE(TestFailureExit());
   EXPECT_TRUE(kill_requested());
+}
+
+// Test |RefreshThreads()| when a new thread is created while we're collecting
+// the list of threads. This is done by detaching and re-attaching with
+// successive number of new threads, and each time telling |RefreshThreads()|
+// there's only one thread.
+
+class RefreshTest : public TestServer {
+ public:
+  static constexpr size_t kNumIterations = 4;
+
+  RefreshTest() = default;
+
+  void OnThreadStarting(Process* process, Thread* thread, zx_handle_t eport,
+                        const zx_exception_context_t& context) override {
+    ++num_threads_;
+    FXL_LOG(INFO) << "Thread " << thread->id() << " starting, #threads: " << num_threads_;
+    // If this is the main thread then we don't want to do the test yet,
+    // we need to first proceed past the ld.so breakpoint.
+    // We can't currently catch the ld.so breakpoint, so just count started
+    // threads.
+    if (num_threads_ >= 2) {
+      PostQuitMessageLoop(true);
+    }
+
+    // Pass on to baseclass method to resume the thread.
+    TestServer::OnThreadStarting(process, thread, eport, context);
+  }
+
+ private:
+  int num_threads_ = 0;
+};
+
+TEST_F(RefreshTest, RefreshWithNewThreads) {
+  std::vector<std::string> argv{
+      kTestHelperPath,
+      "start-n-threads",
+      fxl::StringPrintf("%zu", kNumIterations),
+  };
+  ASSERT_TRUE(SetupInferior(argv));
+
+  zx::channel our_channel, their_channel;
+  auto status = zx::channel::create(0, &our_channel, &their_channel);
+  ASSERT_EQ(status, ZX_OK);
+
+  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+
+  Process* inferior = current_process();
+  zx_koid_t pid = inferior->id();
+
+  // This can't test new threads appearing while we're building the list,
+  // that is tested by the unittest for |GetProcessThreadKoids()|. But we
+  // can exercise |RefreshThreads()|.
+
+  for (size_t i = 0; i < kNumIterations; ++i) {
+    FXL_VLOG(1) << "Iteration " << i + 1;
+
+    // This won't return until the new thread is running.
+    EXPECT_TRUE(Run());
+
+    // Detaching and re-attaching will cause us to discard the previously
+    // collected set of threads.
+    EXPECT_TRUE(inferior->Detach());
+    EXPECT_TRUE(inferior->Attach(pid));
+
+    inferior->EnsureThreadMapFresh();
+    // There should be the main thread plus one new thread each iteration.
+    size_t count = 0;
+    inferior->ForEachThread([&count](Thread*) { ++count; });
+    EXPECT_EQ(count, i + 2);
+
+    // Reset the quit indicator for the next iteration. Do this before
+    // we allow the inferior to advance and create a new thread.
+    EXPECT_EQ(message_loop().ResetQuit(), ZX_OK);
+
+    // Send the inferior a packet so that it will continue with the next
+    // iteration.
+    FXL_VLOG(1) << "Advancing to next iteration";
+    uint64_t packet = kUint64MagicPacketValue;
+    EXPECT_EQ(our_channel.write(0, &packet, sizeof(packet), nullptr, 0), ZX_OK);
+  }
+
+  // Run the loop one more time to catch the inferior exiting.
+  EXPECT_TRUE(Run());
+
+  EXPECT_TRUE(TestSuccessfulExit());
 }
 
 }  // namespace

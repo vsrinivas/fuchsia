@@ -16,6 +16,7 @@
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/jobs.h"
+#include "garnet/lib/debugger_utils/processes.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "process.h"
@@ -553,11 +554,10 @@ bool Process::IsAttached() const {
   }
 }
 
-bool Process::EnsureThreadMapFresh() {
+void Process::EnsureThreadMapFresh() {
   if (thread_map_stale_) {
-    return RefreshAllThreads();
+    RefreshAllThreads();
   }
-  return true;
 }
 
 Thread* Process::FindThreadById(zx_koid_t thread_id) {
@@ -574,8 +574,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   }
 
   FXL_DCHECK(handle_);
-  bool fresh = EnsureThreadMapFresh();
-  FXL_DCHECK(fresh);
+  EnsureThreadMapFresh();
 
   const auto iter = threads_.find(thread_id);
   if (iter != threads_.end()) {
@@ -605,8 +604,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 }
 
 Thread* Process::PickOneThread() {
-  bool fresh = EnsureThreadMapFresh();
-  FXL_DCHECK(fresh);
+  EnsureThreadMapFresh();
 
   if (threads_.empty())
     return nullptr;
@@ -614,68 +612,53 @@ Thread* Process::PickOneThread() {
   return threads_.begin()->second.get();
 }
 
-bool Process::RefreshAllThreads() {
+void Process::RefreshAllThreads() {
   FXL_DCHECK(handle_);
 
-  // First get the thread count so that we can allocate an appropriately sized
-  // buffer. This is racy but unless the caller stops all threads that's just
-  // the way things are.
-  size_t num_threads;
-  zx_status_t status = zx_object_get_info(handle_, ZX_INFO_PROCESS_THREADS,
-                                          nullptr, 0, nullptr, &num_threads);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get process thread info (#threads): "
-                   << debugger_utils::ZxErrorString(status);
-    return false;
-  }
+  std::vector<zx_koid_t> threads;
+  size_t num_available_threads;
 
-  auto buffer_size = num_threads * sizeof(zx_koid_t);
-  auto koids = std::make_unique<zx_koid_t[]>(num_threads);
-  size_t records_read;
-  status = zx_object_get_info(handle_, ZX_INFO_PROCESS_THREADS, koids.get(),
-                              buffer_size, &records_read, nullptr);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get process thread info: "
-                   << debugger_utils::ZxErrorString(status);
-    return false;
-  }
+  __UNUSED zx_status_t status =
+      debugger_utils::GetProcessThreadKoids(handle_, kRefreshThreadsTryCount,
+          kNumExtraRefreshThreads, &threads, &num_available_threads);
+  // The only way this can fail is if we have a bug (or the kernel runs out
+  // of memory, but we don't try to cope with that case).
+  // TODO(dje): Verify the handle we are given has sufficient rights.
+  FXL_DCHECK(status == ZX_OK);
 
-  FXL_DCHECK(records_read == num_threads);
+  // The heuristic we use to collect all threads is sufficient that this
+  // will never fail in practice. If it does we need to adjust it.
+  FXL_DCHECK(threads.size() == num_available_threads);
 
-  ThreadMap new_threads;
-  for (size_t i = 0; i < num_threads; ++i) {
-    zx_koid_t thread_id = koids[i];
-    if (threads_.find(thread_id) != threads_.end()) {
+  for (auto tid : threads) {
+    if (threads_.find(tid) != threads_.end()) {
       // We already have this thread.
       continue;
     }
     zx_handle_t thread_handle = ZX_HANDLE_INVALID;
-    status = zx_object_get_child(handle_, thread_id, ZX_RIGHT_SAME_RIGHTS,
+    status = zx_object_get_child(handle_, tid, ZX_RIGHT_SAME_RIGHTS,
                                  &thread_handle);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
-                     << debugger_utils::ZxErrorString(status);
+    // The only way this can otherwise fail is if we have a bug.
+    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
+    if (status == ZX_ERR_NOT_FOUND) {
+      // Thread died in the interim.
       continue;
     }
-    __UNUSED Thread* thread = AddThread(thread_handle, thread_id);
+    __UNUSED Thread* thread = AddThread(thread_handle, tid);
   }
 
   thread_map_stale_ = false;
-
-  return true;
 }
 
 void Process::ForEachThread(const ThreadCallback& callback) {
-  bool fresh = EnsureThreadMapFresh();
-  FXL_DCHECK(fresh);
+  EnsureThreadMapFresh();
 
   for (const auto& iter : threads_)
     callback(iter.second.get());
 }
 
 void Process::ForEachLiveThread(const ThreadCallback& callback) {
-  bool fresh = EnsureThreadMapFresh();
-  FXL_DCHECK(fresh);
+  EnsureThreadMapFresh();
 
   for (const auto& iter : threads_) {
     Thread* thread = iter.second.get();
@@ -883,7 +866,7 @@ void Process::RecordReturnCode() {
 }
 
 void Process::Dump() {
-  FXL_CHECK(EnsureThreadMapFresh());
+  EnsureThreadMapFresh();
   FXL_LOG(INFO) << "Dump of threads for process " << id_;
 
   ForEachLiveThread([](Thread* thread) {

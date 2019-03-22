@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
 
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings.h>
 #include <lib/fxl/log_settings_command_line.h>
+#include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
@@ -19,6 +21,8 @@
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/util.h"
+
+#include "test_helper.h"
 
 using debugger_utils::ZxErrorString;
 
@@ -117,6 +121,58 @@ static int TriggerSoftwareBreakpoint(const zx::channel& channel,
   return 0;
 }
 
+void WaitChannelReadable(const zx::channel& channel) {
+  zx_signals_t pending;
+  FXL_CHECK(channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
+                             &pending) == ZX_OK);
+}
+
+static void ReadUint64Packet(const zx::channel& channel,
+                             uint64_t expected_value) {
+  uint64_t packet;
+  uint32_t packet_size;
+  FXL_CHECK(channel.read(0, &packet, sizeof(packet), &packet_size,
+                         nullptr, 0, nullptr) == ZX_OK);
+  FXL_CHECK(packet_size == sizeof(packet));
+  FXL_CHECK(packet == expected_value);
+}
+
+static void StartNThreadsThreadFunc(zx_handle_t done_event) {
+  zx_signals_t pending;
+  zx_status_t status = zx_object_wait_one(done_event, ZX_EVENT_SIGNALED,
+                                          ZX_TIME_INFINITE, &pending);
+  FXL_CHECK(status == ZX_ERR_CANCELED);
+}
+
+static int StartNThreads(const zx::channel& channel, int num_iterations) {
+  std::vector<std::thread> threads;
+
+  // When this is closed the threads will exit.
+  zx::event done_event;
+  FXL_CHECK(zx::event::create(0, &done_event) == ZX_OK);
+
+  // What we want to do here is start a new thread and then wait for the
+  // test to do its thing, and repeat.
+
+  for (int i = 0; i < num_iterations; ++i) {
+    FXL_VLOG(1) << "StartNThreads iteration " << i + 1;
+
+    threads.emplace_back(
+        std::thread{StartNThreadsThreadFunc, done_event.get()});
+
+    WaitChannelReadable(channel);
+    ReadUint64Packet(channel, inferior_control::kUint64MagicPacketValue);
+  }
+
+  // Terminate the threads;
+  done_event.reset();
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  return 0;
+}
+
 int main(int argc, char* argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(cl)) {
@@ -141,6 +197,19 @@ int main(int argc, char* argv[]) {
     }
     if (cmd == "trigger-sw-bkpt-with-handler") {
       return TriggerSoftwareBreakpoint(channel, true);
+    }
+    if (cmd == "start-n-threads") {
+      if (args.size() < 2) {
+        FXL_LOG(ERROR) << "Missing iteration count";
+        return 1;
+      }
+      int num_threads = 0;
+      if (!fxl::StringToNumberWithError(args[1], &num_threads) ||
+          num_threads < 1) {
+        FXL_LOG(ERROR) << "Error parsing number of threads";
+        return 1;
+      }
+      return StartNThreads(channel, num_threads);
     }
     FXL_LOG(ERROR) << "Unrecognized command: " << cmd;
     return 1;
