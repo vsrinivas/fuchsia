@@ -418,6 +418,38 @@ mod tests {
         );
     }
 
+    // validate if buf is an IPv4 Ethernet frame that encapsulates an ARP
+    // packet with the specific op, local_ipv4, remote_ipv4, local_mac and
+    // remote_mac.
+    fn validate_ipv4_arp_packet(
+        mut buf: &[u8],
+        op: ArpOp,
+        local_ipv4: Ipv4Addr,
+        remote_ipv4: Ipv4Addr,
+        local_mac: Mac,
+        remote_mac: Mac,
+    ) -> bool {
+        if let Ok(frame) = buf.parse::<EthernetFrame<_>>() {
+            if frame.ethertype() == Some(EtherType::Arp)
+                && frame.src_mac() == local_mac
+                && frame.dst_mac() == remote_mac
+            {
+                if let Ok((hw, proto)) = peek_arp_types(frame.body()) {
+                    if hw == ArpHardwareType::Ethernet && proto == EtherType::Ipv4 {
+                        if let Ok(arp) = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>() {
+                            return arp.operation() == op
+                                && arp.sender_hardware_address() == local_mac
+                                && arp.target_hardware_address() == remote_mac
+                                && arp.sender_protocol_address() == local_ipv4
+                                && arp.target_protocol_address() == remote_ipv4;
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+
     #[test]
     fn test_send_arp_request_on_cache_miss() {
         const NUM_ARP_REQUESTS: usize = 4;
@@ -439,29 +471,27 @@ mod tests {
 
         // Check that we send the original packet, then resend a few times if
         // we don't receive a response.
-        for packet_num in 1..NUM_ARP_REQUESTS {
-            assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num);
-
-            let mut buf = &ctx.dispatcher.frames_sent()[packet_num - 1].1[..];
-
-            let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-            assert_eq!(frame.ethertype(), Some(EtherType::Arp));
-            assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
-            assert_eq!(EthernetArpDevice::BROADCAST, frame.dst_mac());
-
-            let (hw, proto) = peek_arp_types(frame.body()).unwrap();
-            assert_eq!(hw, ArpHardwareType::Ethernet);
-            assert_eq!(proto, EtherType::Ipv4);
-
-            let arp = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
-            assert_eq!(arp.operation(), ArpOp::Request);
-            assert_eq!(arp.sender_hardware_address(), TEST_LOCAL_MAC);
-            assert_eq!(arp.target_hardware_address(), EthernetArpDevice::BROADCAST);
-            assert_eq!(arp.sender_protocol_address(), TEST_LOCAL_IPV4);
-            assert_eq!(arp.target_protocol_address(), TEST_REMOTE_IPV4);
-
-            testutil::trigger_timers_until(&mut ctx, |id| id == &arp_timer_id);
+        let mut cur_frame_num: usize = 0;
+        let mut arp_request_num = 0;
+        for _ in 1..NUM_ARP_REQUESTS {
+            for frame_num in cur_frame_num..ctx.dispatcher.frames_sent().len() {
+                let mut buf = &ctx.dispatcher.frames_sent()[frame_num].1[..];
+                if validate_ipv4_arp_packet(
+                    buf,
+                    ArpOp::Request,
+                    TEST_LOCAL_IPV4,
+                    TEST_REMOTE_IPV4,
+                    TEST_LOCAL_MAC,
+                    EthernetArpDevice::BROADCAST,
+                ) {
+                    cur_frame_num = frame_num + 1;
+                    arp_request_num = arp_request_num + 1;
+                    testutil::trigger_timers_until(&mut ctx, |id| id == &arp_timer_id);
+                    break;
+                }
+            }
         }
+        assert_eq!(arp_request_num, NUM_ARP_REQUESTS - 1);
 
         receive_arp_response(
             &mut ctx,
@@ -508,22 +538,14 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         let mut buf = &ctx.dispatcher.frames_sent()[0].1[..];
-
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.ethertype(), Some(EtherType::Arp));
-        assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
-        assert_eq!(frame.dst_mac(), TEST_REMOTE_MAC);
-
-        let (hw, proto) = peek_arp_types(frame.body()).unwrap();
-        assert_eq!(hw, ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
-
-        let arp = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
-        assert_eq!(arp.operation(), ArpOp::Response);
-        assert_eq!(arp.sender_hardware_address(), TEST_LOCAL_MAC);
-        assert_eq!(arp.target_hardware_address(), TEST_REMOTE_MAC);
-        assert_eq!(arp.sender_protocol_address(), TEST_LOCAL_IPV4);
-        assert_eq!(arp.target_protocol_address(), TEST_REMOTE_IPV4);
+        assert!(validate_ipv4_arp_packet(
+            buf,
+            ArpOp::Response,
+            TEST_LOCAL_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_MAC,
+        ));
     }
 
     #[test]
