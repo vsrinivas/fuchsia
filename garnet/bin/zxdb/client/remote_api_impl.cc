@@ -5,13 +5,13 @@
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
 
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/lib/debug_ipc/client_protocol.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/client_protocol.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace zxdb {
 

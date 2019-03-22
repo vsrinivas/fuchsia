@@ -14,11 +14,11 @@
 #include <lib/zx/thread.h>
 
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
-#include "garnet/lib/debug_ipc/helper/buffered_zx_socket.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
-#include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/lib/debug_ipc/records_utils.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/records_utils.h"
+#include "src/developer/debug/shared/buffered_zx_socket.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/lib/files/unique_fd.h"
 
 #include "lib/fxl/macros.h"

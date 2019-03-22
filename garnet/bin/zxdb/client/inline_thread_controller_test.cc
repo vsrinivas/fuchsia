@@ -6,7 +6,7 @@
 
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
-#include "garnet/lib/debug_ipc/records.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

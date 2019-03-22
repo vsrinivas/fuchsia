@@ -114,13 +114,13 @@ static_library("client") {
     "//garnet/bin/zxdb/common",
     "//garnet/bin/zxdb/expr",
     "//garnet/bin/zxdb/symbols",
-    "//garnet/lib/debug_ipc:client",
-    "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
     "//garnet/third_party/llvm:LLVMAArch64Desc",
     "//garnet/third_party/llvm:LLVMAArch64Disassembler",
     "//garnet/third_party/llvm:LLVMX86Desc",
     "//garnet/third_party/llvm:LLVMX86Disassembler",
+    "//src/developer/debug/ipc:client",
+    "//src/developer/debug/shared",
   ]
 
   deps = [

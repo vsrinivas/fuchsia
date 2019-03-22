@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "garnet/lib/debug_ipc/records.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

@@ -15,16 +15,16 @@
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/bin/debug_agent/unwind.h"
-#include "garnet/lib/debug_ipc/helper/buffered_fd.h"
-#include "garnet/lib/debug_ipc/debug/debug.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_async.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "src/lib/files/unique_fd.h"
 #include "lib/sys/cpp/service_directory.h"
+#include "src/developer/debug/ipc/debug/debug.h"
+#include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/message_loop_async.h"
+#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_zircon.h"
+#include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/files/unique_fd.h"
 
 using namespace debug_ipc;
 

@@ -10,8 +10,8 @@
 #include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/macros.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 

@@ -6,12 +6,12 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 #include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
+#include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 #include "garnet/bin/debug_agent/integration_tests/so_wrapper.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/lib/debug_ipc/register_test_support.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 #include "lib/fxl/logging.h"
 
@@ -152,8 +152,7 @@ TEST(WriteRegisterTest, BranchOnRAX) {
 
     // We should get a thread notification.
     ASSERT_EQ(stream_backend.thread_notifications().size(), 1u);
-    auto& thread_notification =
-        stream_backend.thread_notifications().back();
+    auto& thread_notification = stream_backend.thread_notifications().back();
     ASSERT_EQ(thread_notification.process_koid, launch_reply.process_koid);
 
     loop->Run();
@@ -235,8 +234,7 @@ TEST(WriteRegisterTest, JumpPC) {
 
     // We should get a thread notification.
     ASSERT_EQ(stream_backend.thread_notifications().size(), 1u);
-    auto& thread_notification =
-        stream_backend.thread_notifications().back();
+    auto& thread_notification = stream_backend.thread_notifications().back();
     ASSERT_EQ(thread_notification.process_koid, launch_reply.process_koid);
 
     loop->Run();

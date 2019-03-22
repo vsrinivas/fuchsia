@@ -13,11 +13,11 @@
 #include "garnet/bin/zxdb/console/command_line_options.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/lib/debug_ipc/helper/buffered_fd.h"
-#include "garnet/lib/debug_ipc/debug/debug.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_poll.h"
 #include "garnet/public/lib/fxl/command_line.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/debug/debug.h"
+#include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/message_loop_poll.h"
 
 namespace zxdb {
 
@@ -139,7 +139,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     session.system().settings().SetList(ClientSettings::System::kSymbolPaths,
                                         std::move(paths));
     session.system().settings().SetList(
-      ClientSettings::System::kSymbolRepoPaths, std::move(repo_paths));
+        ClientSettings::System::kSymbolRepoPaths, std::move(repo_paths));
 
     if (!actions.empty()) {
       ScheduleActions(session, console, std::move(actions));

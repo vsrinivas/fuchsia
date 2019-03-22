@@ -11,7 +11,7 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/debug_ipc/records.h"
+#include "src/developer/debug/ipc/records.h"
 
 struct zx_info_process;
 

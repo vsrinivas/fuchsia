@@ -11,7 +11,7 @@
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/watchpoint.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
@@ -69,8 +69,8 @@ zx_status_t ProcessWatchpoint::Init() { return Update(); }
 
 zx_status_t ProcessWatchpoint::Update() {
   std::set<zx_koid_t> watched_threads = {};
-  bool threads_present = watchpoint_->ThreadsToInstall(process_->koid(),
-                                                       &watched_threads);
+  bool threads_present =
+      watchpoint_->ThreadsToInstall(process_->koid(), &watched_threads);
   FXL_DCHECK(threads_present);
 
   std::vector<DebuggedThread*> threads_to_remove = {};
@@ -149,6 +149,5 @@ void ProcessWatchpoint::Uninstall() {
 
   UninstallWatchpoints(*this, &threads_to_remove);
 }
-
 
 }  // namespace debug_agent

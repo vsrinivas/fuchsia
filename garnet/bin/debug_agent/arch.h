@@ -8,7 +8,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
-#include "garnet/lib/debug_ipc/protocol.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 #if defined(__x86_64__)
 #include "garnet/bin/debug_agent/arch_x64.h"

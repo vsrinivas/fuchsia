@@ -7,9 +7,9 @@
 #include <cstring>
 
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/lib/debug_ipc/client_protocol.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/client_protocol.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 #include "third_party/crashpad/snapshot/memory_snapshot.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"

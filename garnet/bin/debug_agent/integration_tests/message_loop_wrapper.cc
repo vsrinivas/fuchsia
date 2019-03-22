@@ -4,7 +4,7 @@
 
 #include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
 
-#include "garnet/lib/debug_ipc/helper/message_loop_async.h"
+#include "src/developer/debug/shared/message_loop_async.h"
 
 namespace debug_agent {
 
@@ -13,8 +13,6 @@ MessageLoopWrapper::MessageLoopWrapper() {
   loop_->Init();
 }
 
-MessageLoopWrapper::~MessageLoopWrapper() {
-  loop_->Cleanup();
-}
+MessageLoopWrapper::~MessageLoopWrapper() { loop_->Cleanup(); }
 
 }  // namespace debug_agent

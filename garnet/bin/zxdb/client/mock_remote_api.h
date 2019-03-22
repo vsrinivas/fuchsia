@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/client/remote_api.h"
-#include "garnet/lib/debug_ipc/protocol.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

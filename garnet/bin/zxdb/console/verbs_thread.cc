@@ -31,8 +31,8 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

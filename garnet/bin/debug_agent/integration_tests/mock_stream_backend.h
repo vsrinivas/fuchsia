@@ -5,10 +5,10 @@
 #pragma once
 
 #include "garnet/bin/debug_agent/debug_agent.h"
-#include "garnet/lib/debug_ipc/client_protocol.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
+#include "src/developer/debug/ipc/client_protocol.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_ipc {
 class MessageReader;
@@ -46,7 +46,6 @@ class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
   // is connected to. It returns how much of the input message it could actually
   // write. For this tests purposes, we always read the whole message.
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;
-
 
  private:
   // This is the stream the debug agent will be given to write to.

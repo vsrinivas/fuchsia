@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/socket_connect.h"
 
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/lib/debug_ipc/debug/logging.h"
+#include "src/developer/debug/ipc/debug/logging.h"
 
 #if defined(__APPLE__)
 
@@ -185,4 +185,3 @@ Err ConnectToHost(const std::string& host, uint16_t port,
 #else
 #error Unsupported OS
 #endif
-

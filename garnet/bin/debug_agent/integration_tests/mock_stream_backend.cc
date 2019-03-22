@@ -4,9 +4,9 @@
 
 #include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 
-#include "garnet/lib/debug_ipc/message_reader.h"
 #include "lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
+#include "src/developer/debug/ipc/message_reader.h"
 
 namespace debug_agent {
 

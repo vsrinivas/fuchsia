@@ -11,9 +11,9 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/helper/regex.h"
-#include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/regex.h"
+#include "src/developer/debug/shared/zircon_exception_watcher.h"
 
 #include "lib/fxl/macros.h"
 
@@ -65,7 +65,6 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
     // We keep it around so we don't need to recompile it everytime we compare
     // against a new process.
     debug_ipc::Regex regex;
-
   };
   std::vector<FilterInfo> filters_;
 

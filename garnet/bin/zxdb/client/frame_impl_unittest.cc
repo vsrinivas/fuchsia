@@ -10,9 +10,9 @@
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace zxdb {
 
@@ -61,7 +61,7 @@ class MockThread : public Thread, public Stack::Delegate {
       std::function<void(const Err&, const RegisterSet&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE,
-        [ registers = register_contents_, cb ]() { cb(Err(), registers); });
+        [registers = register_contents_, cb]() { cb(Err(), registers); });
   }
 
  private:
@@ -69,9 +69,8 @@ class MockThread : public Thread, public Stack::Delegate {
   void SyncFramesForStack(std::function<void(const Err&)> callback) override {
     FXL_NOTREACHED();  // All frames are available.
   }
-  std::unique_ptr<Frame> MakeFrameForStack(
-      const debug_ipc::StackFrame& input,
-      Location location) override {
+  std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
+                                           Location location) override {
     FXL_NOTREACHED();  // Should not get called since we provide stack frames.
     return std::unique_ptr<Frame>();
   }

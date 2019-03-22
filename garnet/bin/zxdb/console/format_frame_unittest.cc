@@ -11,8 +11,8 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace zxdb {
 
@@ -96,9 +96,10 @@ TEST(FormatFrame, Inline) {
                                   symbol_context, LazySymbol(function)),
                          &physical_frame);
 
-  EXPECT_EQ("Function() • file.cc:22 (inline)\n"
-            "      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
-            SyncFormatFrameLong(&inline_frame, FormatExprValueOptions()));
+  EXPECT_EQ(
+      "Function() • file.cc:22 (inline)\n"
+      "      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
+      SyncFormatFrameLong(&inline_frame, FormatExprValueOptions()));
 }
 
 }  // namespace zxdb

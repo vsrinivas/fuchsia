@@ -8,8 +8,8 @@
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/symbols/test_symbol_module.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

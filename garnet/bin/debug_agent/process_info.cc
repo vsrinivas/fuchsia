@@ -17,8 +17,8 @@
 #include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/unwind.h"
-#include "garnet/lib/debug_ipc/helper/elf.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/shared/elf.h"
 
 namespace debug_agent {
 

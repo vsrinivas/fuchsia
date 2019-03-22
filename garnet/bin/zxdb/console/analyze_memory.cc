@@ -20,10 +20,10 @@
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 
@@ -77,13 +77,12 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
       if (opts.thread->GetStack().has_all_frames()) {
         OnFrames(opts.thread->GetWeakPtr());
       } else {
-        opts.thread->GetStack().SyncFrames([
-          this_ref, weak_thread = opts.thread->GetWeakPtr()
-        ](const Err&) {
-          // Can ignore the error, the frames will be re-queried from the
-          // thread and we'll check the weak pointer in case its destroyed.
-          this_ref->OnFrames(weak_thread);
-        });
+        opts.thread->GetStack().SyncFrames(
+            [this_ref, weak_thread = opts.thread->GetWeakPtr()](const Err&) {
+              // Can ignore the error, the frames will be re-queried from the
+              // thread and we'll check the weak pointer in case its destroyed.
+              this_ref->OnFrames(weak_thread);
+            });
       }
     }
   } else {

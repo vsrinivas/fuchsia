@@ -26,17 +26,17 @@
 #include "garnet/bin/zxdb/client/socket_connect.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
-#include "garnet/lib/debug_ipc/client_protocol.h"
-#include "garnet/lib/debug_ipc/helper/buffered_fd.h"
-#include "garnet/lib/debug_ipc/debug/block_timer.h"
-#include "garnet/lib/debug_ipc/debug/logging.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/message_writer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/client_protocol.h"
+#include "src/developer/debug/ipc/debug/block_timer.h"
+#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace zxdb {
 
@@ -324,10 +324,11 @@ void Session::OnStreamReadable() {
     // Find the transaction.
     auto found = pending_.find(header.transaction_id);
     if (found == pending_.end()) {
-      SendSessionNotification(SessionObserver::NotificationType::kError,
-              "Received reply for unexpected transaction %u (type = %u).\n",
-              static_cast<unsigned>(header.transaction_id),
-              static_cast<unsigned>(header.type));
+      SendSessionNotification(
+          SessionObserver::NotificationType::kError,
+          "Received reply for unexpected transaction %u (type = %u).\n",
+          static_cast<unsigned>(header.transaction_id),
+          static_cast<unsigned>(header.type));
       // Just ignore this bad message.
       continue;
     }
@@ -502,9 +503,8 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
 }
 
 // This is the main entrypoint for all thread stops notifications in the client.
-void Session::DispatchNotifyException(
-    const debug_ipc::NotifyException& notify,
-    bool set_metadata) {
+void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify,
+                                      bool set_metadata) {
   TIME_BLOCK();
   ThreadImpl* thread =
       ThreadImplFromKoid(notify.process_koid, notify.thread.koid);

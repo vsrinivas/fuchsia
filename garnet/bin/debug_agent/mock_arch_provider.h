@@ -8,7 +8,7 @@
 #include <map>
 
 #include "garnet/bin/debug_agent/arch.h"
-#include "garnet/lib/debug_ipc/records_utils.h"
+#include "src/developer/debug/ipc/records_utils.h"
 
 namespace debug_agent {
 

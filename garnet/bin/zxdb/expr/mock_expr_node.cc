@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/expr/mock_expr_node.h"
 
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 
@@ -19,7 +19,7 @@ void MockExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
     cb(Err(), value_);
   } else {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [ value = value_, cb ]() { cb(Err(), value); });
+        FROM_HERE, [value = value_, cb]() { cb(Err(), value); });
   }
 }
 

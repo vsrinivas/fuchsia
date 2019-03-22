@@ -9,8 +9,8 @@
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 
@@ -223,8 +223,9 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   // controller voting "continue" and one voting "unexpected" which should
   // continue the thread.
   bool continue_got_stop = false;
-  thread->ContinueWith(std::make_unique<ContinueThreadController>(&continue_got_stop),
-                       [](const Err& err) {});
+  thread->ContinueWith(
+      std::make_unique<ContinueThreadController>(&continue_got_stop),
+      [](const Err& err) {});
   InjectException(notification);
   EXPECT_FALSE(thread_observer.got_stopped());
 }
@@ -259,12 +260,11 @@ TEST_F(ThreadImplTest, JumpTo) {
   // Do jump.
   bool called = false;
   Err out_err;
-  thread->JumpTo(kDestAddress,
-                 [&called, &out_err](const Err& err) {
-                   called = true;
-                   out_err = err;
-                   debug_ipc::MessageLoop::Current()->QuitNow();
-                 });
+  thread->JumpTo(kDestAddress, [&called, &out_err](const Err& err) {
+    called = true;
+    out_err = err;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
   EXPECT_FALSE(called);
 
   // The command should have sent a request to write to the IP. There should

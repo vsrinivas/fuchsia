@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 
 #include "garnet/bin/debug_agent/debugged_job.h"
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/system_info.h"
-#include "garnet/lib/debug_ipc/debug/logging.h"
-#include "garnet/lib/debug_ipc/helper/component_utils.h"
-#include "garnet/lib/debug_ipc/helper/regex.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/shared/component_utils.h"
+#include "src/developer/debug/shared/regex.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 

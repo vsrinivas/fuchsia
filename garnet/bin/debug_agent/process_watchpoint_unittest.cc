@@ -12,7 +12,7 @@
 #include "garnet/bin/debug_agent/mock_process.h"
 #include "garnet/bin/debug_agent/process_watchpoint.h"
 #include "garnet/bin/debug_agent/watchpoint.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
@@ -23,7 +23,7 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
  public:
   using WatchpointMap =
       std::multimap<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
-               debug_ipc::AddressRangeCompare>;
+                    debug_ipc::AddressRangeCompare>;
 
   const WatchpointMap& watchpoint_map() const { return wps_; }
 
@@ -32,8 +32,9 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
   }
 
   // This only gets called if Breakpoint.SetSettings() is called.
-  zx_status_t RegisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
-                                 const debug_ipc::AddressRange& range) override {
+  zx_status_t RegisterWatchpoint(
+      Watchpoint* wp, zx_koid_t process_koid,
+      const debug_ipc::AddressRange& range) override {
     auto proc_it = procs_.find(process_koid);
     FXL_DCHECK(proc_it != procs_.end());
 
@@ -64,7 +65,6 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
   }
 
  private:
-
   WatchpointMap wps_;
   std::map<zx_koid_t, std::unique_ptr<MockProcess>> procs_;
 };

@@ -39,11 +39,11 @@
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
-#include "garnet/lib/debug_ipc/helper/regex.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/shared/regex.h"
 
 namespace zxdb {
 

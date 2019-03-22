@@ -4,7 +4,7 @@
 
 #include "garnet/bin/debug_agent/watchpoint.h"
 
-#include "garnet/lib/debug_ipc/records_utils.h"
+#include "src/developer/debug/ipc/records_utils.h"
 
 namespace debug_agent {
 
@@ -31,7 +31,7 @@ zx_status_t Watchpoint::SetSettings(
   // Removed locations.
   for (const auto& loc : installed_watchpoints_) {
     if (updated_locations.find(loc) == updated_locations.end())
-     delegate_ ->UnregisterWatchpoint(this, loc.process_koid, loc.range);
+      delegate_->UnregisterWatchpoint(this, loc.process_koid, loc.range);
   }
 
   // Added locations.
@@ -71,7 +71,8 @@ bool Watchpoint::ThreadsToInstall(zx_koid_t process_koid,
   return true;
 }
 
-bool Watchpoint::WatchpointInstallation::operator<(const WatchpointInstallation& other) const {
+bool Watchpoint::WatchpointInstallation::operator<(
+    const WatchpointInstallation& other) const {
   if (process_koid != other.process_koid)
     return process_koid < other.process_koid;
 

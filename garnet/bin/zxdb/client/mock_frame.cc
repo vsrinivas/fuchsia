@@ -6,7 +6,7 @@
 
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

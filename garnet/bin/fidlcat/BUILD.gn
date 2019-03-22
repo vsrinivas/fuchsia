@@ -19,7 +19,7 @@ import("//build/testing/environments.gni")
 #       "//garnet/bin/zxdb/client",
 #       "//garnet/bin/zxdb/common",
 #       "//garnet/bin/zxdb/console",
-#       "//garnet/lib/debug_ipc:client",
+#       "//src/developer/debug/ipc:client",
 #       "//garnet/public/lib/fxl",
 #     ]
 #   }

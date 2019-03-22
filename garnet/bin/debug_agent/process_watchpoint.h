@@ -10,8 +10,8 @@
 
 #include <zircon/types.h>
 
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 
@@ -47,7 +47,7 @@ class ProcessWatchpoint {
   // A Process Watchpoint is only related to one abstract watchpoint.
   // This is because watchpoint will differ in range most frequently and having
   // them be merged when possible is more trouble than it's worth.
-  Watchpoint* watchpoint_ = nullptr;     // Not-owning.
+  Watchpoint* watchpoint_ = nullptr;  // Not-owning.
 
   // The process this watchpoint is installed on.
   DebuggedProcess* process_ = nullptr;  // Not-owning.

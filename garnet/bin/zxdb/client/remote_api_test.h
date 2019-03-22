@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/remote_api.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
-#include "garnet/lib/debug_ipc/helper/test_stream_buffer.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/shared/test_stream_buffer.h"
 
 namespace zxdb {
 
@@ -54,16 +54,13 @@ class RemoteAPITest : public testing::Test {
   //
   // If you use the one that takes a NotifyException, the calling code need not
   // populate the thread vector and stack amount, they will be ignored.
+  void InjectExceptionWithStack(const debug_ipc::NotifyException& exception,
+                                std::vector<std::unique_ptr<Frame>> frames,
+                                bool has_all_frames);
   void InjectExceptionWithStack(
-      const debug_ipc::NotifyException& exception,
-      std::vector<std::unique_ptr<Frame>> frames,
-      bool has_all_frames);
-  void InjectExceptionWithStack(
-      uint64_t process_koid,
-      uint64_t thread_koid,
+      uint64_t process_koid, uint64_t thread_koid,
       debug_ipc::NotifyException::Type exception_type,
-      std::vector<std::unique_ptr<Frame>> frames,
-      bool has_all_frames,
+      std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
       const std::vector<debug_ipc::BreakpointStats>& breakpoints = {});
 
  protected:
@@ -74,9 +71,7 @@ class RemoteAPITest : public testing::Test {
 
   // Allows tests to override the architecture for the test to run in. Defaults
   // to x64.
-  virtual debug_ipc::Arch GetArch() const {
-    return debug_ipc::Arch::kX64;
-  }
+  virtual debug_ipc::Arch GetArch() const { return debug_ipc::Arch::kX64; }
 
  private:
   debug_ipc::PlatformMessageLoop loop_;

@@ -13,9 +13,9 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

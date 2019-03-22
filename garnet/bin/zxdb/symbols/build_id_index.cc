@@ -6,10 +6,10 @@
 
 #include <algorithm>
 
-#include "garnet/lib/debug_ipc/helper/elf.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/strings/trim.h"
+#include "src/developer/debug/shared/elf.h"
 
 namespace zxdb {
 

@@ -8,10 +8,10 @@
 #include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 #include "garnet/bin/debug_agent/integration_tests/so_wrapper.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/shared/message_loop_zircon.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 

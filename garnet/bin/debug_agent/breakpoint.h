@@ -9,8 +9,8 @@
 #include <set>
 #include <string>
 
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/macros.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 

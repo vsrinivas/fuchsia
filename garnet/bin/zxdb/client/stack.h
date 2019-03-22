@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

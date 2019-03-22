@@ -5,11 +5,11 @@
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 
 #include "garnet/bin/debug_agent/remote_api.h"
-#include "garnet/lib/debug_ipc/agent_protocol.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/message_writer.h"
-#include "garnet/lib/debug_ipc/protocol.h"
+#include "src/developer/debug/ipc/agent_protocol.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_agent {
 

@@ -8,8 +8,8 @@
 
 #include "garnet/bin/debug_agent/arch_x64_helpers.h"
 #include "garnet/bin/debug_agent/debugged_thread.h"
-#include "garnet/lib/debug_ipc/register_desc.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/register_desc.h"
 
 namespace debug_agent {
 namespace arch {

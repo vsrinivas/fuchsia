@@ -10,8 +10,8 @@
 #include <optional>
 #include <vector>
 
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/memory/ref_counted.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

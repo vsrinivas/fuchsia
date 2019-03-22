@@ -11,11 +11,11 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
-#include "garnet/lib/debug_ipc/debug/block_timer.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/debug/block_timer.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace zxdb {
 

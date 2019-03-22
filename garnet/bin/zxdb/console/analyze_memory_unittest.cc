@@ -10,8 +10,8 @@
 #include "garnet/bin/zxdb/client/stack.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace zxdb {
 

@@ -16,9 +16,9 @@
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/symbols/variable_test_support.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace zxdb {
 

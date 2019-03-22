@@ -12,8 +12,8 @@
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/console.h"
-#include "garnet/lib/debug_ipc/helper/buffered_zx_socket.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "src/developer/debug/shared/buffered_zx_socket.h"
+#include "src/developer/debug/shared/message_loop_zircon.h"
 
 namespace {
 

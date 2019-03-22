@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_REMOTE_API_H_
 #define GARNET_BIN_DEBUG_AGENT_REMOTE_API_H_
 
-#include "garnet/lib/debug_ipc/protocol.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {
 
@@ -44,7 +44,7 @@ class RemoteAPI {
                        debug_ipc::PauseReply* reply) = 0;
 
   virtual void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
-                       debug_ipc::QuitAgentReply* reply) = 0;
+                           debug_ipc::QuitAgentReply* reply) = 0;
 
   virtual void OnResume(const debug_ipc::ResumeRequest& request,
                         debug_ipc::ResumeReply* reply) = 0;

@@ -9,9 +9,9 @@
 #include <algorithm>
 
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

@@ -4,9 +4,9 @@
 
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace zxdb {
 

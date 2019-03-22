@@ -6,9 +6,9 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/debug_ipc/debug/file_line_function.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/lib/debug_ipc/register_test_support.h"
+#include "src/developer/debug/ipc/debug/file_line_function.h"
+#include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 #include "lib/fxl/logging.h"
 
@@ -26,8 +26,8 @@ zx_thread_state_debug_regs_t GetDefaultRegs() {
 }
 
 void SetupHWBreakpointTest(debug_ipc::FileLineFunction file_line,
-                              zx_thread_state_debug_regs_t* debug_regs,
-                              uint64_t address, zx_status_t expected_result) {
+                           zx_thread_state_debug_regs_t* debug_regs,
+                           uint64_t address, zx_status_t expected_result) {
   zx_status_t result = SetupHWBreakpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -36,8 +36,8 @@ void SetupHWBreakpointTest(debug_ipc::FileLineFunction file_line,
 }
 
 void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
-                               zx_thread_state_debug_regs_t* debug_regs,
-                               uint64_t address, zx_status_t expected_result) {
+                            zx_thread_state_debug_regs_t* debug_regs,
+                            uint64_t address, zx_status_t expected_result) {
   zx_status_t result = RemoveHWBreakpoint(address, debug_regs);
   ASSERT_EQ(result, expected_result)
       << "[" << file_line.ToString() << "] "
@@ -100,7 +100,7 @@ TEST(x64Helpers, SettingHWBreakpoints) {
 
   // No more registers left should not change anything.
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                           ZX_ERR_NO_RESOURCES);
+                        ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], kAddress3);
@@ -118,7 +118,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                           ZX_ERR_NO_RESOURCES);
+                        ZX_ERR_NO_RESOURCES);
 
   RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
@@ -130,7 +130,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
 
   // Removing same breakpoint should not work.
   RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                            ZX_ERR_OUT_OF_RANGE);
+                         ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -140,7 +140,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
 
   // Removing an unknown address should warn and change nothing.
   RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa,
-                            ZX_ERR_OUT_OF_RANGE);
+                         ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], kAddress1);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -184,7 +184,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
 
   // No more resources.
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                           ZX_ERR_NO_RESOURCES);
+                        ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], kAddress5);
   EXPECT_EQ(debug_regs.dr[1], kAddress2);
   EXPECT_EQ(debug_regs.dr[2], kAddress1);

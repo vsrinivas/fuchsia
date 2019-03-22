@@ -17,9 +17,9 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
-#include "garnet/lib/debug_ipc/helper/regex.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/shared/regex.h"
 
 namespace zxdb {
 

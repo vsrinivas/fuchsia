@@ -101,8 +101,8 @@ if (current_cpu == "arm64") {
     ]
 
     deps = [
-      "//garnet/lib/debug_ipc/helper",
       "//garnet/public/lib/fxl",
+      "//src/developer/debug/shared",
       "//zircon/public/lib/zx",
     ]
   }

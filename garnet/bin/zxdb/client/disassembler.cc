@@ -9,7 +9,6 @@
 
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "garnet/public/lib/fxl/strings/trim.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -17,6 +16,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

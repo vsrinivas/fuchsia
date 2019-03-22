@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/zxdb/console/format_register.cc"
-#include "garnet/lib/debug_ipc/helper/arch_arm64.h"
-#include "garnet/lib/debug_ipc/helper/arch_x86.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/shared/arch_arm64.h"
+#include "src/developer/debug/shared/arch_x86.h"
 
 namespace zxdb {
 
@@ -312,12 +312,9 @@ TEST(FormatRegisters, RFlagsValues) {
 
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) |
-                         X86_FLAG_MASK(RflagsPF) |
-                         X86_FLAG_MASK(RflagsAF) |
-                         X86_FLAG_MASK(RflagsZF) |
-                         X86_FLAG_MASK(RflagsTF) |
-                         X86_FLAG_MASK(RflagsDF));
+  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
+                             X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
+                             X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF));
 
   OutputBuffer out;
   err = FormatRegisters(options, filtered_set, &out);
@@ -349,29 +346,26 @@ TEST(FormatRegisters, RFlagsValuesExtended) {
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
 
-  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) |
-                         X86_FLAG_MASK(RflagsPF) |
-                         X86_FLAG_MASK(RflagsAF) |
-                         X86_FLAG_MASK(RflagsZF) |
-                         X86_FLAG_MASK(RflagsTF) |
-                         X86_FLAG_MASK(RflagsDF) |
-                         // Extended flags
-                         (0b10 << kRflagsIOPLShift) |
-                         X86_FLAG_MASK(RflagsNT) |
-                         X86_FLAG_MASK(RflagsVM) |
-                         X86_FLAG_MASK(RflagsVIF) |
-                         X86_FLAG_MASK(RflagsID));
+  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
+                             X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
+                             X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF) |
+                             // Extended flags
+                             (0b10 << kRflagsIOPLShift) |
+                             X86_FLAG_MASK(RflagsNT) | X86_FLAG_MASK(RflagsVM) |
+                             X86_FLAG_MASK(RflagsVIF) |
+                             X86_FLAG_MASK(RflagsID));
 
   OutputBuffer out;
   err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
-    "General Purpose Registers\n"
-    "rflags  0x002a6555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, OF=0\n"
-    "                   IOPL=2, NT=1, RF=0, VM=1, AC=0, VIF=1, VIP=0, ID=1\n"
-    "\n",
-    out.AsString());
+      "General Purpose Registers\n"
+      "rflags  0x002a6555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, "
+      "OF=0\n"
+      "                   IOPL=2, NT=1, RF=0, VM=1, AC=0, VIF=1, VIP=0, ID=1\n"
+      "\n",
+      out.AsString());
 }
 
 TEST(FormatRegisters, CPSRValues) {
@@ -390,8 +384,7 @@ TEST(FormatRegisters, CPSRValues) {
 
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) |
-                         ARM64_FLAG_MASK(Cpsr, N));
+  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N));
 
   OutputBuffer out;
   err = FormatRegisters(options, filtered_set, &out);
@@ -404,15 +397,12 @@ TEST(FormatRegisters, CPSRValues) {
       out.AsString());
 
   // Check out extended
-  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) |
-                         ARM64_FLAG_MASK(Cpsr, N) |
-                         // Extended flags.
-                         ARM64_FLAG_MASK(Cpsr, EL) |
-                         ARM64_FLAG_MASK(Cpsr, I) |
-                         ARM64_FLAG_MASK(Cpsr, A) |
-                         ARM64_FLAG_MASK(Cpsr, IL) |
-                         ARM64_FLAG_MASK(Cpsr, PAN) |
-                         ARM64_FLAG_MASK(Cpsr, UAO));
+  SetRegisterValue(&reg,
+                   ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N) |
+                       // Extended flags.
+                       ARM64_FLAG_MASK(Cpsr, EL) | ARM64_FLAG_MASK(Cpsr, I) |
+                       ARM64_FLAG_MASK(Cpsr, A) | ARM64_FLAG_MASK(Cpsr, IL) |
+                       ARM64_FLAG_MASK(Cpsr, PAN) | ARM64_FLAG_MASK(Cpsr, UAO));
 
   options.extended = true;
   err = FormatRegisters(options, filtered_set, &out);

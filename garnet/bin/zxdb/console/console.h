@@ -7,9 +7,9 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/line_input.h"
-#include "garnet/lib/debug_ipc/helper/fd_watcher.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "src/developer/debug/shared/fd_watcher.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

@@ -13,7 +13,7 @@
 #include "garnet/bin/zxdb/client/system_observer.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/common/string_util.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 
@@ -82,8 +82,7 @@ std::vector<TargetImpl*> SystemImpl::GetTargetImpls() const {
 }
 
 TargetImpl* SystemImpl::CreateNewTargetImpl(TargetImpl* clone) {
-  auto target = clone ? clone->Clone(this)
-                      : std::make_unique<TargetImpl>(this);
+  auto target = clone ? clone->Clone(this) : std::make_unique<TargetImpl>(this);
   TargetImpl* to_return = target.get();
   AddNewTarget(std::move(target));
   return to_return;

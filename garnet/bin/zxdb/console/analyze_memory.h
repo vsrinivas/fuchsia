@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

@@ -11,10 +11,10 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

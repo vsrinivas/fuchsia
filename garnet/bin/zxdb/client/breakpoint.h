@@ -7,10 +7,10 @@
 #include "garnet/bin/zxdb/client/breakpoint_observer.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/client_object.h"
-#include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "garnet/public/lib/fxl/observer_list.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

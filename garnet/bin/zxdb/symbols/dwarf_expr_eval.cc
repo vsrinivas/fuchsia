@@ -11,11 +11,11 @@
 
 #include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DataExtractor.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

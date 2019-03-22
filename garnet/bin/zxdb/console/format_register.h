@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/lib/debug_ipc/records.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {
 

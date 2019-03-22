@@ -8,9 +8,9 @@
 
 #include <optional>
 
-#include "garnet/lib/debug_ipc/debug/file_line_function.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/arraysize.h"
+#include "src/developer/debug/ipc/debug/file_line_function.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 namespace arch {

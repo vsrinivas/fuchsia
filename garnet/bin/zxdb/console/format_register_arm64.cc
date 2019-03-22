@@ -11,8 +11,8 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
-#include "garnet/lib/debug_ipc/helper/arch_arm64.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/shared/arch_arm64.h"
 
 using debug_ipc::RegisterCategory;
 using debug_ipc::RegisterID;

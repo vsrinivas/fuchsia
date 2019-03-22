@@ -6,9 +6,9 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
-#include "garnet/lib/debug_ipc/helper/test_stream_buffer.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/shared/test_stream_buffer.h"
 
 namespace zxdb {
 
@@ -78,7 +78,7 @@ class TargetImplTest : public testing::Test {
     loop_.Init();
     sink_ = new TargetSink;
     session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_),
-        debug_ipc::Arch::kX64);
+                                         debug_ipc::Arch::kX64);
   }
   ~TargetImplTest() {
     session_.reset();

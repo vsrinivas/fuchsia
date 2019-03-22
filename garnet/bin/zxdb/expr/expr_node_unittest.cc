@@ -21,8 +21,8 @@
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace zxdb {
 

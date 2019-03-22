@@ -7,8 +7,8 @@
 
 #include <functional>
 
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

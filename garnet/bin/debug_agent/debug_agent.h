@@ -15,9 +15,9 @@
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/bin/debug_agent/watchpoint.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "lib/fxl/macros.h"
 #include "lib/sys/cpp/service_directory.h"
+#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_agent {
 

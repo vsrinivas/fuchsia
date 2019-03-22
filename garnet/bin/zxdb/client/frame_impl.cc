@@ -13,8 +13,8 @@
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 #include "garnet/bin/zxdb/symbols/variable_location.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

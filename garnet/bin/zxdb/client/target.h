@@ -12,10 +12,10 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/setting_store.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "garnet/public/lib/fxl/observer_list.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

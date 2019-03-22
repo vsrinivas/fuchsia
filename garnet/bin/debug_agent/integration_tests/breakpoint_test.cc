@@ -4,13 +4,13 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 #include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
+#include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 #include "garnet/bin/debug_agent/integration_tests/so_wrapper.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
@@ -103,8 +103,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo,
-                                                      kExportedFunctionName);
+  uint64_t symbol_offset =
+      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
   ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;

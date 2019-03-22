@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
+#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
-#include "garnet/lib/debug_ipc/protocol.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 
@@ -381,7 +381,7 @@ TEST_F(StepThreadControllerTest, Inline) {
   // asynchronously. The Resume() call will cause the MockRemoteAPI to exit the
   // message loop.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Nothing yet.
-  loop().PostTask(FROM_HERE, [loop = &loop()](){ loop->QuitNow(); });
+  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
   loop().Run();
 
   // The operation should have unhidden the inline stack frame rather than

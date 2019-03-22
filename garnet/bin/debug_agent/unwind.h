@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <lib/zx/thread.h>
+#include <stdint.h>
 #include <vector>
 
-#include "garnet/lib/debug_ipc/records.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 

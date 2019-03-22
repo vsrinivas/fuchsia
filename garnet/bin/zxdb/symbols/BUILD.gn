@@ -110,9 +110,9 @@ static_library("symbols") {
   # base helpers.
   public_deps = [
     "//garnet/bin/zxdb/common",
-    "//garnet/lib/debug_ipc:client",
-    "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
+    "//src/developer/debug/ipc:client",
+    "//src/developer/debug/shared",
   ]
 
   deps = [
@@ -228,8 +228,8 @@ source_set("tests") {
     ":symbols",
     ":test_support",
     "//garnet/bin/zxdb/common:test_support",
-    "//garnet/lib/debug_ipc/helper:copy_test_file($host_toolchain)",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+    "//src/developer/debug/shared:copy_test_file($host_toolchain)",
     "//third_party/googletest:gtest",
   ]
 

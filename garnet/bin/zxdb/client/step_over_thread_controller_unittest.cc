@@ -11,7 +11,7 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
-#include "garnet/lib/debug_ipc/protocol.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 
@@ -85,11 +85,11 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   // Line information for the address following the inlined function but on
   // the same line (this is the code for the NonInlinedFunction() call).
   const uint64_t kNonInlinedAddress = second_inline_range.end();
-  AddressRange non_inlined_call_range(kNonInlinedAddress, kNonInlinedAddress + 4);
+  AddressRange non_inlined_call_range(kNonInlinedAddress,
+                                      kNonInlinedAddress + 4);
   module_symbols()->AddLineDetails(
       kNonInlinedAddress,
-      LineDetails(step_line,
-                  {LineDetails::LineEntry(non_inlined_call_range)}));
+      LineDetails(step_line, {LineDetails::LineEntry(non_inlined_call_range)}));
 
   // Code for the line after (the "bar()" call in the example). This maps to
   // a different line (immediately following) which is how we know to stop.
@@ -136,7 +136,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   // asynchronously. The Resume() call will cause the MockRemoteAPI to exit the
   // message loop.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Nothing yet.
-  loop().PostTask(FROM_HERE, [loop = &loop()](){ loop->QuitNow(); });
+  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
   loop().Run();
 
   // The synthetic exception will trigger the step over controller to exit
@@ -155,7 +155,8 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   mock_frames[0]->SetAddress(kTopInlineFunctionRange.begin() + 1);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Make the 2nd inline function.
@@ -163,9 +164,9 @@ TEST_F(StepOverThreadControllerTest, Inline) {
       fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   second_inline_func->set_assigned_name("SecondInlineFunction");
   second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
-  Location second_inline_loc(
-      second_inline_range.begin(), second_inline_line, 0,
-      SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
+  Location second_inline_loc(second_inline_range.begin(), second_inline_line, 0,
+                             SymbolContext::ForRelativeAddresses(),
+                             LazySymbol(second_inline_func));
 
   // The code exits the first inline function and is now at the first
   // instruction of the second inline function. This is an ambiguous location.
@@ -174,11 +175,10 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   //   SecondInline (ambiguous address @ beginning of inline block)
   //   Top
   mock_frames = GetStack();
-  mock_frames[0] =
-      std::make_unique<MockFrame>(
-          nullptr, nullptr,
-          debug_ipc::StackFrame(second_inline_range.begin(), kTopSP, kTopSP),
-          second_inline_loc, mock_frames[1].get(), true);
+  mock_frames[0] = std::make_unique<MockFrame>(
+      nullptr, nullptr,
+      debug_ipc::StackFrame(second_inline_range.begin(), kTopSP, kTopSP),
+      second_inline_loc, mock_frames[1].get(), true);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
@@ -195,7 +195,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   // step operation). This is an implementation detail, however, and may
   // change, so this test code doesn't make assumptions about asynchronous or
   // not for this step.
-  loop().PostTask(FROM_HERE, [loop = &loop()](){ loop->QuitNow(); });
+  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
   loop().Run();
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
   EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());

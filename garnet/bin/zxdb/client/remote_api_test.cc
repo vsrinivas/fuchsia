@@ -11,8 +11,8 @@
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 
@@ -72,8 +72,7 @@ void RemoteAPITest::InjectExceptionWithStack(
   // Create an exception record with a thread frame so it's valid. There must
   // be one frame even though the stack will be immediately overwritten.
   debug_ipc::NotifyException modified(exception);
-  modified.thread.stack_amount =
-      debug_ipc::ThreadRecord::StackAmount::kMinimal;
+  modified.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
   modified.thread.frames.clear();
   modified.thread.frames.emplace_back(frames[0]->GetAddress(),
                                       frames[0]->GetBasePointerRegister(),

@@ -10,8 +10,8 @@
 
 #include <zircon/types.h>
 
-#include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 
@@ -55,7 +55,7 @@ class Watchpoint {
     bool operator<(const WatchpointInstallation&) const;
   };
 
-  ProcessDelegate* delegate_ = nullptr;   // Not-owning.
+  ProcessDelegate* delegate_ = nullptr;  // Not-owning.
   debug_ipc::WatchpointSettings settings_ = {};
 
   std::set<WatchpointInstallation> installed_watchpoints_ = {};

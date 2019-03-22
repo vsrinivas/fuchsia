@@ -6,8 +6,8 @@
 
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/records.h"
+#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 
@@ -68,9 +68,8 @@ void MockProcess::ReadMemory(uint64_t address, uint32_t size,
                                    [cb]() { cb(Err(), MemoryDump()); });
 }
 
-void MockProcess::WriteMemory(
-      uint64_t address, std::vector<uint8_t> data,
-      std::function<void(const Err&)> callback) {
+void MockProcess::WriteMemory(uint64_t address, std::vector<uint8_t> data,
+                              std::function<void(const Err&)> callback) {
   // Currently always just report success.
   MessageLoop::Current()->PostTask(FROM_HERE,
                                    [cb = std::move(callback)]() { cb(Err()); });

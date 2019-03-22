@@ -9,9 +9,9 @@
 
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/common/address_range.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

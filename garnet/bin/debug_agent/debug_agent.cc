@@ -19,19 +19,19 @@
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/system_info.h"
-#include "garnet/lib/debug_ipc/agent_protocol.h"
-#include "garnet/lib/debug_ipc/debug/block_timer.h"
-#include "garnet/lib/debug_ipc/debug/logging.h"
-#include "garnet/lib/debug_ipc/helper/component_utils.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
-#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/message_writer.h"
-#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/agent_protocol.h"
+#include "src/developer/debug/ipc/debug/block_timer.h"
+#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/component_utils.h"
+#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/stream_buffer.h"
+#include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/files/file.h"
 
 namespace debug_agent {
 
@@ -618,8 +618,8 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   controller.events().OnTerminated =
-      [this, &pkg_url](
-          int64_t return_code, fuchsia::sys::TerminationReason reason) {
+      [this, &pkg_url](int64_t return_code,
+                       fuchsia::sys::TerminationReason reason) {
         if (reason != fuchsia::sys::TerminationReason::EXITED) {
           FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
                            << sys::HumanReadableTerminationReason(reason);

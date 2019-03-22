@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/mock_remote_api.h"
 
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

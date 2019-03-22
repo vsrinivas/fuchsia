@@ -21,7 +21,7 @@
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace zxdb {
 

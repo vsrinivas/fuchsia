@@ -18,9 +18,9 @@
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/lib/debug_ipc/debug/logging.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace zxdb {
 

@@ -10,9 +10,9 @@
 #include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 #include "garnet/bin/debug_agent/integration_tests/so_wrapper.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 // This test tests that the debug agent can effectively capture process being
 // launched by zircon, and set breakpoints on them.
@@ -312,8 +312,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
   // We launch two processes.
   processes.push_back(LaunchProcess(job, "breakpoint_test_exe",
                                     {"/pkg/bin/breakpoint_test_exe"}));
-  processes.push_back(LaunchProcess(job, "true",
-                                    {"/pkg/bin/debug_test_true"}));
+  processes.push_back(LaunchProcess(job, "true", {"/pkg/bin/debug_test_true"}));
 
   // Should only catch one.
   message_loop->Run();
@@ -342,8 +341,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_OneProcess) {
 
   // The exported symbol we're going to put the breakpoint on.
   const char* kExportedFunctionName = "InsertBreakpointFunction";
-  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo,
-                                                      kExportedFunctionName);
+  uint64_t symbol_offset =
+      so_wrapper.GetSymbolOffset(kTestSo, kExportedFunctionName);
   ASSERT_NE(symbol_offset, 0u);
 
   uint64_t base_address =

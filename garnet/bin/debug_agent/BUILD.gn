@@ -64,12 +64,12 @@ static_library("lib") {
   }
 
   public_deps = [
-    "//garnet/lib/debug_ipc:agent",
-    "//garnet/lib/debug_ipc/helper",
     "//garnet/lib/process",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/third_party/libunwindstack",
+    "//src/developer/debug/ipc:agent",
+    "//src/developer/debug/shared",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ngunwind",
@@ -147,8 +147,8 @@ executable("unit_tests") {
 
   deps = [
     ":lib",
-    "//garnet/lib/debug_ipc:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/developer/debug/ipc:tests",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

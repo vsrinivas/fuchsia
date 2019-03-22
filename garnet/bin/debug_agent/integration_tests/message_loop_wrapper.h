@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 
 namespace debug_agent {
 

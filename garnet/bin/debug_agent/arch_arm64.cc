@@ -4,12 +4,12 @@
 
 #include "garnet/bin/debug_agent/arch.h"
 
-#include <zircon/syscalls/exception.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/exception.h>
 
-#include "garnet/lib/debug_ipc/register_desc.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/register_desc.h"
 
 namespace debug_agent {
 namespace arch {
@@ -232,9 +232,8 @@ uint64_t ArchProvider::NextInstructionForHardwareExceptionAddress(
 debug_ipc::NotifyException::Type HardwareNotificationType(
     const DebuggedThread& thread) {
   // TODO(donosoc): Implement hw exception detection logic.
-    return debug_ipc::NotifyException::Type::kSingleStep;
+  return debug_ipc::NotifyException::Type::kSingleStep;
 }
-
 
 zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread*, uint64_t address) {
   return ZX_ERR_NOT_SUPPORTED;

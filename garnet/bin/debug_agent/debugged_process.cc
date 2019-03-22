@@ -15,13 +15,13 @@
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/bin/debug_agent/process_watchpoint.h"
-#include "garnet/lib/debug_ipc/agent_protocol.h"
-#include "garnet/lib/debug_ipc/debug/logging.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
-#include "garnet/lib/debug_ipc/helper/zx_status.h"
-#include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/message_writer.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/ipc/agent_protocol.h"
+#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 

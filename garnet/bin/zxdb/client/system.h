@@ -13,9 +13,9 @@
 #include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/bin/zxdb/client/setting_store_observer.h"
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/observer_list.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {
 

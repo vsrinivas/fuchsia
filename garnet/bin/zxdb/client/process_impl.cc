@@ -15,8 +15,8 @@
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
-#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/public/lib/fxl/logging.h"
+#include "src/developer/debug/ipc/debug/block_timer.h"
 
 namespace zxdb {
 

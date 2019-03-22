@@ -20,14 +20,14 @@
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
+#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/lib/elflib/elflib.h"
 
 namespace zxdb {
