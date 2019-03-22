@@ -29,6 +29,7 @@ use {
         DirectoryObject,
         NodeAttributes,
         NodeInfo,
+        NodeMarker,
         OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
         OPEN_FLAG_DESCRIBE,
@@ -828,10 +829,7 @@ pub mod server {
                 ($object:ident, $flags:expr, $supported_flags_bitmask:expr) => {
                     if has_unsupported_flags($flags, $supported_flags_bitmask) {
                         if ($flags & OPEN_FLAG_DESCRIBE) != 0 {
-                            let (_stream, control_handle) = $object.into_stream_and_control_handle()
-                                .context("fail to convert to stream and control handle")?;
-                            control_handle.send_on_open_(zx::sys::ZX_ERR_NOT_SUPPORTED, None)
-                                .context("fail sending OnOpenEvent")?;
+                            self.send_failed_on_open($object, zx::sys::ZX_ERR_NOT_SUPPORTED)?;
                         }
                         bail!("flags contains unsupported flags: {}", $flags);
                     }
@@ -856,8 +854,6 @@ pub mod server {
                     handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
 
                     let channel = object.into_channel();
-                    let node = self.nodes.get(connection.position)
-                        .expect("ServiceFs client connected at missing node");
 
                     if path == "." {
                         if let Err(e) = self.serve_connection_at(channel, connection.position,
@@ -867,13 +863,18 @@ pub mod server {
                         return Ok((None, ConnectionState::Open));
                     }
 
-                    let children = if let ServiceFsNode::Directory { children } = node {
-                        children
-                    } else {
-                        panic!("ServiceFs client connected at service node, expected directory node")
+                    let mut segments = path.rsplitn(2, "/");
+                    let end_segment = segments.next().unwrap();
+                    let directory_segment = segments.next();
+                    let children = match self.descend(connection.position, directory_segment) {
+                        Ok(children) => children,
+                        Err(e) => {
+                            eprintln!("invalid path {} - {}", path, e);
+                            return Ok((None, ConnectionState::Open));
+                        }
                     };
 
-                    if let Some(&target_node_position) = children.get(&path) {
+                    if let Some(&target_node_position) = children.get(end_segment) {
                         match self.nodes.get_mut(target_node_position)
                             .expect("Missing child node")
                         {
@@ -914,13 +915,7 @@ pub mod server {
                 DirectoryRequest::Sync { responder, } => unsupported!(responder)?,
                 DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::ReadDirents { max_bytes, responder, } => {
-                    let node = self.nodes.get(connection.position)
-                        .expect("ServiceFs client listing a missing node");
-                    let children = if let ServiceFsNode::Directory { children } = node {
-                        children
-                    } else {
-                        panic!("ServiceFs client listing a service node, expected dir node")
-                    };
+                    let children = self.open_dir(connection.position)?;
 
                     let dirents_buf = connection.dirents_buf.get_or_insert_with(|| {
                         (self.to_dirent_bytes(&children), 0)
@@ -945,6 +940,45 @@ pub mod server {
                 DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
             }
             Ok((None, ConnectionState::Open))
+        }
+
+        fn send_failed_on_open(&self, object: fidl::endpoints::ServerEnd<NodeMarker>,
+                               status: zx::sys::zx_status_t) -> Result<(), Error> {
+            let (_stream, control_handle) = object.into_stream_and_control_handle()
+                .context("fail to convert to stream and control handle")?;
+            control_handle.send_on_open_(status, None).context("fail sending OnOpenEvent")?;
+            Ok(())
+        }
+
+        /// Retrieve directory listing at |path| starting from node |start_pos|. If |path| is None,
+        /// simply return directory listing of node |start_pos|.
+        fn descend(&self, start_pos: usize, path: Option<&str>)
+            -> Result<&HashMap<String, usize>, Error>
+        {
+            let mut pos = start_pos;
+            let mut children = self.open_dir(pos)?;
+
+            if let Some(path) = path {
+                for segment in path.split("/") {
+                    match children.get(segment) {
+                        Some(next_pos) => pos = *next_pos,
+                        _ => bail!("segment not found: {}", segment),
+                    }
+                    children = self.open_dir(pos)
+                        .context(format!("cannot open segment {}", segment))?;
+                }
+            }
+            Ok(children)
+        }
+
+        /// Retrieve directory listing of node |pos|. Return an error if |pos| is not a directory
+        /// node
+        fn open_dir(&self, pos: usize) -> Result<&HashMap<String, usize>, Error> {
+            let node = self.nodes.get(pos).expect("missing child");
+            match node {
+                ServiceFsNode::Directory { children } => Ok(children),
+                _ => bail!("node not a directory: {}", pos),
+            }
         }
 
         fn to_dirent_bytes(&self, nodes: &HashMap<String, usize>) -> Vec<u8> {
