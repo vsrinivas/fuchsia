@@ -1136,8 +1136,8 @@ group("e2e_input_tests") {
 group("debug_agent") {
   testonly = true
   public_deps = [
-    "//garnet/bin/debug_agent:debug_agent_tests",
     "//garnet/packages/prod:debug_agent",
+    "//src/developer/debug/debug_agent:debug_agent_tests",
   ]
 }
 

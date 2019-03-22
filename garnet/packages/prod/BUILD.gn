@@ -1070,7 +1070,7 @@ group("appmgr") {
 group("debug_agent") {
   testonly = true
   public_deps = [
-    "//garnet/bin/debug_agent",
+    "//src/developer/debug/debug_agent",
   ]
 }
 
