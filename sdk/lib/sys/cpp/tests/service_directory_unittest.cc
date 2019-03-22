@@ -44,6 +44,22 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
 }
 
+TEST(ServiceDirectoryTest, Clone) {
+  zx::channel svc_server;
+
+  auto directory = sys::ServiceDirectory::CreateWithRequest(&svc_server);
+
+  fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
+  EXPECT_TRUE(directory->CloneChannel().is_valid());
+
+  fidl::MessageBuffer buffer;
+  auto message = buffer.CreateEmptyMessage();
+  message.Read(svc_server.get(), 0);
+
+  EXPECT_TRUE(message.has_header());
+  EXPECT_EQ(fuchsia_io_DirectoryCloneOrdinal, message.ordinal());
+}
+
 TEST(ServiceDirectoryTest, Invalid) {
   sys::ServiceDirectory directory((zx::channel()));
 

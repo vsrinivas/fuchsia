@@ -71,4 +71,16 @@ zx_status_t ServiceDirectory::Connect(const std::string& interface_name,
                                  channel.release());
 }
 
+fidl::InterfaceHandle<fuchsia::io::Directory> ServiceDirectory::CloneChannel()
+    const {
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  CloneChannel(dir.NewRequest());
+  return dir;
+}
+
+zx_status_t ServiceDirectory::CloneChannel(
+    fidl::InterfaceRequest<fuchsia::io::Directory> dir) const {
+  return fdio_service_clone_to(directory_.get(), dir.TakeChannel().release());
+}
+
 }  // namespace sys

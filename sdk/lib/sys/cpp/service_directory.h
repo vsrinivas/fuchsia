@@ -150,6 +150,34 @@ class ServiceDirectory {
   zx_status_t Connect(const std::string& interface_name,
                       zx::channel request) const;
 
+  // Clone underlying directory channel.
+  //
+  // This overload for |CloneHandle| discards the status of the underlying
+  // operation. Callers that wish to recieve that status should use
+  // other overload that returns a |zx_status_t|.
+  fidl::InterfaceHandle<fuchsia::io::Directory> CloneChannel() const;
+
+  // Clone underlying directory channel.
+  //
+  // Returns whether the request was successfully sent to the remote directory
+  // backing this service bundle.
+  //
+  // # Errors
+  //
+  // ZX_ERR_UNAVAILABLE: The directory backing this service bundle is invalid.
+  //
+  // Other transport- and application-level errors associated with
+  // |fuchsia.io.Node/Clone|.
+  //
+  // # Example
+  //
+  // ```
+  // fuchsia::io::DirectoryPtr dir;
+  // directory.CloneHandle(dir.NewRequest());
+  // ```
+  zx_status_t CloneChannel(
+      fidl::InterfaceRequest<fuchsia::io::Directory>) const;
+
  private:
   // The directory to which connection requests are routed.
   //
