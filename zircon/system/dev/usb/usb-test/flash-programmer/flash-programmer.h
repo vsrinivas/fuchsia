@@ -16,7 +16,7 @@ class FlashProgrammer;
 using FlashProgrammerBase = ddk::Device<FlashProgrammer, ddk::Messageable, ddk::Unbindable>;
 
 class FlashProgrammer : public FlashProgrammerBase,
-                        public ddk::EmptyProtocol<ZX_PROTOCOL_USB_TEST_FWLOADER> {
+                        public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
 
 public:
     // Spawns device node based on parent node.

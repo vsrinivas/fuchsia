@@ -16,7 +16,7 @@ class Dfu;
 using DfuBase = ddk::Device<Dfu, ddk::Messageable, ddk::Unbindable>;
 
 class Dfu : public DfuBase,
-            public ddk::EmptyProtocol<ZX_PROTOCOL_USB_TEST_FWLOADER> {
+            public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
 
 public:
     Dfu(zx_device_t* parent, const usb_protocol_t& usb,

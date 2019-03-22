@@ -42,7 +42,7 @@ enum class Mode {
     kDeviceFirmwareUpgrade = 2,  // Perform a DFU. The device must implement the USB DFU Spec.
 };
 
-constexpr char kFwLoaderDir[] = "/dev/class/usb-test-fwloader";
+constexpr char kFwLoaderDir[] = "/dev/class/usb-fwloader";
 constexpr char kUsbTesterDevDir[] = "/dev/class/usb-tester";
 
 constexpr char kFirmwareLoader[] = "fx3";

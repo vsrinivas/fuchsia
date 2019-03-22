@@ -261,7 +261,7 @@ static zx_status_t fx3_bind(void* ctx, zx_device_t* device) {
         .ctx = fx3,
         .ops = &fx3_device_protocol,
         .flags = DEVICE_ADD_NON_BINDABLE,
-        .proto_id = ZX_PROTOCOL_USB_TEST_FWLOADER,
+        .proto_id = ZX_PROTOCOL_USB_FWLOADER,
     };
 
     zx_status_t status = device_add(device, &args, &fx3->zxdev);
