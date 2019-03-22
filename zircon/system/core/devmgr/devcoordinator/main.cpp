@@ -238,8 +238,6 @@ int fuchsia_starter(void* arg) {
 }
 
 int console_starter(void* arg) {
-    // if no kernel shell on serial uart, start a sh there
-    printf("devcoordinator: shell startup\n");
     auto& boot_args = *static_cast<const devmgr::BootArgs*>(arg);
 
     // If we got a TERM environment variable (aka a TERM=... argument on
@@ -392,8 +390,6 @@ zx_status_t fuchsia_create_job() {
 }
 
 zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator) {
-    printf("devcoordinator: svc init\n");
-
     const auto& root_resource = coordinator->root_resource();
     zx::channel dir_request, svchost_local;
     zx::debuglog logger;
@@ -603,8 +599,6 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
 
 void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
                      bool needs_svc_mount) {
-    printf("devcoordinator: vfs init\n");
-
     fdio_ns_t* ns;
     zx_status_t r;
     r = fdio_ns_get_installed(&ns);
@@ -792,8 +786,6 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
 }
 
 zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) {
-    printf("devcoordinator: coordinator_init()\n");
-
     zx::job devhost_job;
     zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
     if (status != ZX_OK) {
@@ -854,8 +846,6 @@ zx::channel fs_clone(const char* path) {
 } // namespace devmgr
 
 int main(int argc, char** argv) {
-    printf("devcoordinator: main()\n");
-
     devmgr::BootArgs boot_args;
     zx::vmo args_vmo;
     size_t args_size;
