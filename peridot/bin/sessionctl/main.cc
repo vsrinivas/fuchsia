@@ -106,7 +106,10 @@ login_guest
   Logs in a guest user.
 
 restart_session
-  Restarts the current session.)";
+  Restarts the current session.
+  
+help
+  Lists the available commands.)";
 }
 
 void FindDebugServicesForPath(const char* glob_str, const char* regex_str,
@@ -231,6 +234,11 @@ int main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line);
   const auto& positional_args = command_line.positional_args();
   const auto& cmd = positional_args.empty() ? "" : positional_args[0];
+
+  if (cmd == modular::kHelpCommandString || cmd.empty()) {
+    std::cout << GetUsage() << std::endl;
+    return 1;
+  }
 
   const modular::Logger logger(
       command_line.HasOption(modular::kJsonOutFlagString));
