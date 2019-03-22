@@ -14,7 +14,7 @@ use log::debug;
 use packet::{MtuError, Serializer};
 
 use crate::device::ethernet::{EthernetDeviceState, Mac};
-use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr};
+use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -194,5 +194,18 @@ pub fn set_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
 pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) -> u32 {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_mtu(ctx, device.id),
+    }
+}
+
+/// Gets the IPv6 link-local address associated with this device.
+// TODO(brunodalbo) when our device model allows for multiple IPs we can have
+// a single function go get all the IP addresses associated with a device, which
+// would be cleaner and remove the need for this function.
+pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+) -> Ipv6Addr {
+    match device.protocol {
+        DeviceProtocol::Ethernet => self::ethernet::get_ipv6_link_local_addr(ctx, device.id),
     }
 }

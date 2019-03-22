@@ -310,6 +310,21 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     return get_device_state(ctx, device_id).ipv6_addr_sub;
 }
 
+/// Get the IPv6 link-local address associated with this device.
+///
+/// The IPv6 link-local address returned is constructed from this device's MAC
+/// address.
+pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+) -> Ipv6Addr {
+    // TODO(brunodalbo) the link local address is subject to the same collision
+    // verifications as prefix global addresses, we should keep a state machine
+    // about that check and cache the adopted address. For now, we just compose
+    // the link-local from the ethernet MAC.
+    get_device_state(ctx, device_id).mac.to_ipv6_link_local(None)
+}
+
 /// Set the IP address and subnet associated with this device.
 #[specialize_ip_address]
 pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(

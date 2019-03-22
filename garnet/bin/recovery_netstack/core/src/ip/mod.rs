@@ -336,8 +336,19 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
         .map(AddrSubnet::into_addr_subnet)
         .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
         .unwrap_or(dst_ip.is_global_broadcast());
+    // TODO(brunodalbo):
+    // Along with the host model described above, we need to be able to have
+    // multiple IPs per interface, it becomes imperative for IPv6.
+    //
+    // Also, only when we're a router we should accept
+    // Ipv6::ALL_ROUTERS_LINK_LOCAL.
     #[ipv6addr]
-    return log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted");
+    return crate::device::get_ip_addr_subnet(ctx, device)
+        .map(AddrSubnet::into_addr_subnet)
+        .map(|(addr, _): (Ipv6Addr, _)| addr.destination_matches(&dst_ip))
+        .unwrap_or(false)
+        || crate::device::get_ipv6_link_local_addr(ctx, device).destination_matches(&dst_ip)
+        || dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS;
 }
 
 // Should we forward this packet, and if so, to whom?
