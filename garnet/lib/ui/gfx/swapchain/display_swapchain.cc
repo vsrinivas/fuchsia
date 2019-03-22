@@ -64,7 +64,7 @@ const uint32_t kSwapchainImageCount = 3;
 // suitable one.
 vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues);
 
-// Determines if the VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION is supported.
+// Determines the necessary framebuffer image usage.
 vk::ImageUsageFlags GetFramebufferImageUsage();
 
 }  // namespace
@@ -567,25 +567,6 @@ void DisplaySwapchain::OnVsync(zx_time_t timestamp,
 namespace {
 
 vk::ImageUsageFlags GetFramebufferImageUsage() {
-  const std::string kGoogleImageUsageScanoutExtensionName(
-      VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME);
-  auto instance_extensions = vk::enumerateInstanceExtensionProperties();
-  if (instance_extensions.result != vk::Result::eSuccess) {
-    FXL_DLOG(ERROR) << "vkEnumerateInstanceExtensionProperties failed: "
-                    << vk::to_string(instance_extensions.result);
-    return vk::ImageUsageFlagBits::eColorAttachment;
-  }
-
-  for (auto& extension : instance_extensions.value) {
-    if (extension.extensionName == kGoogleImageUsageScanoutExtensionName) {
-      return vk::ImageUsageFlagBits::eScanoutGOOGLE |
-             vk::ImageUsageFlagBits::eColorAttachment;
-    }
-  }
-
-  FXL_DLOG(ERROR)
-      << "Unable to find optimal framebuffer image usage extension ("
-      << kGoogleImageUsageScanoutExtensionName << ").";
   return vk::ImageUsageFlagBits::eColorAttachment;
 }
 
