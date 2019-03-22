@@ -1,0 +1,98 @@
+_fx_set2__product_board() {
+  compset -P "*."
+  if [[ "$IPREFIX" = *. ]]; then
+    # complete board
+    compadd ${(u)$(echo ${fuchsia_dir}/boards/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/boards/*.gni(N:t:r))}
+  else
+    # complete product followed by a dot
+    compadd -S . ${(u)$(echo ${fuchsia_dir}/products/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/products/*.gni(N:t:r))}
+  fi
+}
+
+_fx_set2__package_caching_policy() {
+  test "${ninja_file}" -nt "$1"
+}
+
+# complete comma separated bundles labels
+_fx_set2__with() {
+  local -a package_patterns=( "//bundles/*" "//garnet/packages/*" "//peridot/packages/*" "//topaz/packages/*" )
+  for vendor in ${fuchsia_dir}/vendor/*(N/); do
+    package_patterns+=( "//vendor/${vendor}/bundles" "//vendor/${vendor}/packages" )
+  done
+
+  # apply a default caching policy if one isn't configured
+  local cache_policy
+  zstyle -s ":completion:${curcontext}:" cache-policy cache_policy
+  zstyle ":completion:${curcontext}:" cache-policy \
+      ${cache_policy:-_fx_set2__package_caching_policy}
+
+  # if this file is newer than the cache file then the cache is stale
+  local ninja_file=${fuchsia_dir}/${fuchsia_build_dir}/build.ninja
+
+  local -a fx_packages
+  if ! _retrieve_cache fx_packages ; then
+    fx_packages=( $(${fuchsia_dir}/buildtools/gn ls ${fuchsia_dir}/${fuchsia_build_dir} ${package_patterns[@]} ) )
+    _store_cache fx_packages fx_packages
+  fi
+
+  compset -P "*,"
+  compadd -q -S "," ${fx_packages}
+}
+
+_gn_args_caching_policy() {
+  test ${ninja_file} -nt $1
+}
+
+_fx_set2__gn_args() {
+  if [ -z ${fuchsia_build_dir} ]; then
+    return
+  fi
+
+  # apply a default caching policy if one isn't configured
+  local cache_policy
+  zstyle -s ":completion:${curcontext}:" cache-policy cache_policy
+  zstyle ":completion:${curcontext}:" cache-policy \
+      ${cache_policy:-_gn_args_caching_policy}
+
+  # if this file is newer than the cache file then the cache is stale
+  local ninja_file=${fuchsia_dir}/${fuchsia_build_dir}/build.ninja
+
+  local -a gn_args
+  if ! _retrieve_cache gn_args ; then
+    gn_args=( $(${fuchsia_dir}/buildtools/gn args ${fuchsia_dir}/${fuchsia_build_dir} --list --short|sed -e 's/ .*//') )
+    _store_cache gn_args gn_args
+  fi
+
+  echo $gn_args
+}
+
+_fx_set2__gn_arg_equals() {
+  # complete the list of gn args with an = suffix
+  compadd -S = (${fx_set2_gn_args})
+}
+
+_fx_set2__gn_arg_name() {
+  # complete the list of gn args
+  compadd (${fx_set2_gn_args})
+}
+
+# TODO:
+#  - complete --variant
+#  - complete --fuzz-with
+
+# arguments to fx set2
+_arguments '1:arch:{_fx_set2__product_board}' \
+  '(:)--with[Packages to include in the universe]:packages:_fx_set2__with' \
+  '(:)*--variant[Pass a select_variant GN arg]: ' \
+  '(:)*--fuzz-with[A sanitizer name to fuzz with]: ' \
+  '(:)*--args[Arguments for GN gen]:args:{_fx_set2___gn_arg_equals}' \
+  '(:)--help-args[Display GN argument documentation]:arg:{_fx_set2__gn_arg_name}' \
+  '(:)--goma[Use GOMA]' \
+  "(:)--no-goma[Don't use GOMA]" \
+  "(:)--no-ensure-goma[Don't make sure GOMA is running]" \
+  '(:)--goma-dir[GOMA directory to use]:directory:_files -/' \
+  "(:)--ccache[Use ccache]" \
+  "(:)--no-ccache[Don't use ccache]" \
+  '(:)--ide[Generate files for an IDE]:ide:(eclipse vs vs2013 vs2015 vs2017 xcode qcreator json)' \
+  '(:)--release[Release build]'
+
