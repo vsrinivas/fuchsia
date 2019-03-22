@@ -6,12 +6,11 @@
 ### runs source formatters on modified files
 
 ## Usage: fx format-code
-##           [--help] [--dry-run] [--verbose] [--all]
+##           [--dry-run] [--verbose] [--all]
 ##           [--files=FILES,[FILES ...]]
 ##           [--target=GN_TARGET]
 ##           [--git]
 ##
-##   --help    Prints this message
 ##   --dry-run Stops the program short of running the formatters
 ##   --all     Formats all code in the git repo under the current working
 ##             directory.
@@ -109,7 +108,6 @@ for ARG in "$@"; do
             "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
         RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
             $(fx rustfmt --print-sources ${ARG#--target=})) ;;
-    --help) usage && exit 1 ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
 done
@@ -173,3 +171,8 @@ for file in ${FILES}; do
   declare hgcmd=$(hg-cmd ${file})
   [[ -n "${hgcmd}" ]] && ${hgcmd} "${file}"
 done
+
+# The last thing this script does is often the [[ -n "${hgcmd}" ]], which will
+# often return a non-zero value.  So, we force the script to return 0 and rely
+# on "set -e" to catch real errors.
+exit 0
