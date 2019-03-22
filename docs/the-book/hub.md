@@ -104,7 +104,7 @@ The hub is organized as follows:
 > services.  May be absent if the component exports nothing.  May contain
 > read-write objects.
 
-**\<component instance id\>/out/process**: component’s exported public object directory
+**\<component instance id\>/out/public**: component’s exported public object directory
 > A directory containing objects which the component has exported to its host,
 > such as its services.  May contain read-write objects.
 
