@@ -6,6 +6,7 @@
 
 #include <functional>
 
+#include "garnet/bin/zxdb/expr/name_lookup.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -47,6 +48,12 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   virtual SymbolVariableResolver& GetVariableResolver() = 0;
 
   virtual fxl::RefPtr<SymbolDataProvider> GetDataProvider() = 0;
+
+  // Returns a callback the parser can use to lookup type names.
+  //
+  // It is assumed this callback is used for parsing and discarded rather than
+  // stored since it may have references back the eval context.
+  virtual NameLookupCallback GetSymbolNameLookupCallback() = 0;
 };
 
 }  // namespace zxdb

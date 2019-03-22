@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/expr/mock_expr_eval_context.h"
 
+#include "garnet/bin/zxdb/expr/builtin_types.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
 
@@ -38,6 +39,15 @@ SymbolVariableResolver& MockExprEvalContext::GetVariableResolver() {
 
 fxl::RefPtr<SymbolDataProvider> MockExprEvalContext::GetDataProvider() {
   return data_provider_;
+}
+
+NameLookupCallback MockExprEvalContext::GetSymbolNameLookupCallback() {
+  // This mock version just integrates with builtin types.
+  return [](const Identifier& ident) -> NameLookupResult {
+    if (auto type = GetBuiltinType(ident.GetFullName()))
+       return NameLookupResult(NameLookupResult::kType, std::move(type));
+    return NameLookupResult();
+  };
 }
 
 }  // namespace zxdv

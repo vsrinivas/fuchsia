@@ -90,20 +90,30 @@ TEST(ModifiedType, GetFullName) {
   typedef_void->set_assigned_name("VoidType");
   EXPECT_EQ("VoidType", typedef_void->GetFullName());
 
-  // void*
+  // void* (There are two ways to encode: pointer to nothing, and pointer to
+  // "none" base type).
   auto void_ptr =
       fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
   EXPECT_EQ("void*", void_ptr->GetFullName());
+  auto void_ptr2 = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kPointerType, LazySymbol(fxl::MakeRefCounted<BaseType>()));
+  EXPECT_EQ("void*", void_ptr2->GetFullName());
 
-  // const void
+  // const void (same two ways to encode as void*).
   auto const_void =
       fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol());
   EXPECT_EQ("const void", const_void->GetFullName());
+  auto const_void2 = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kConstType, LazySymbol(fxl::MakeRefCounted<BaseType>()));
+  EXPECT_EQ("const void", const_void2->GetFullName());
 
-  // const void*
+  // const void* (same two ways to encode as void*).
   auto const_void_ptr = fxl::MakeRefCounted<ModifiedType>(
       DwarfTag::kPointerType, LazySymbol(const_void));
   EXPECT_EQ("const void*", const_void_ptr->GetFullName());
+  auto const_void_ptr2 = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kPointerType, LazySymbol(const_void2));
+  EXPECT_EQ("const void*", const_void_ptr2->GetFullName());
 }
 
 }  // namespace zxdb

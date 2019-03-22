@@ -279,6 +279,11 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
         FormatUnsignedInt(value, options, &out);
         break;
       }
+      case BaseType::kBaseTypeNone: {
+        // Void. Just print the type name with no data.
+        out.Append(type->GetFullName());
+        break;
+      }
       default:
         if (value.data().empty()) {
           out.Append(ErrStringToOutput("no data"));

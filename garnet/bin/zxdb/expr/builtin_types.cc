@@ -23,6 +23,7 @@ struct BuiltinTypeInfo {
 const BuiltinTypeInfo kBuiltinInfo[] = {
     // clang-format off
 
+    { "void",     BaseType::kBaseTypeNone,         0 },
     { "bool",     BaseType::kBaseTypeBoolean,      1 },
 
     // Integer types.

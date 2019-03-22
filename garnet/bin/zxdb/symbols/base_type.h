@@ -24,7 +24,12 @@ class BaseType final : public Type {
   // handle every one of these values. To make it clear which values we handle,
   // the irrelevant values are removed. But code should not assume that only
   // these values might ever appear.
-  static constexpr int kBaseTypeNone = 0x00;  // Means uninitialized.
+  //
+  // Note on void types: DWARF encodes void* as a pointer to nothing and
+  // normally when there's nothing returned, it just lists no return type.
+  // But special-casing this in the expression evaluation code is awkward so
+  // we also treat "kBaseTypeNone" as refering to a void type.
+  static constexpr int kBaseTypeNone = 0x00;  // Means uninitialized or void.
   static constexpr int kBaseTypeAddress = 0x01;
   static constexpr int kBaseTypeBoolean = 0x02;
   static constexpr int kBaseTypeFloat = 0x04;
@@ -36,6 +41,7 @@ class BaseType final : public Type {
 
   // Symbol overrides.
   const BaseType* AsBaseType() const final;
+  const std::string& GetAssignedName() const final;
 
   // Returns one of kBaseType* or possibly something else if the language is
   // new or unusual. Don't handle, but also don't crash on unexpected values.

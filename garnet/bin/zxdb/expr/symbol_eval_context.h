@@ -51,6 +51,7 @@ class SymbolEvalContext : public ExprEvalContext {
   void GetNamedValue(const Identifier& name, ValueCallback cb) override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
+  NameLookupCallback GetSymbolNameLookupCallback() override;
 
  private:
   struct SearchResult {
@@ -80,6 +81,9 @@ class SymbolEvalContext : public ExprEvalContext {
   // Computes the value of the given variable and issues the callback (possibly
   // asynchronously, possibly not).
   void DoResolve(FoundVariable found, ValueCallback cb) const;
+
+  // Implements type name lookup on the target's symbol index.
+  NameLookupResult DoTargetSymbolsNameLookup(const Identifier& ident);
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   SymbolContext symbol_context_;

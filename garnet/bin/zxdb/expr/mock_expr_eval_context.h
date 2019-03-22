@@ -30,6 +30,7 @@ class MockExprEvalContext : public ExprEvalContext {
       override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
+  NameLookupCallback GetSymbolNameLookupCallback() override;
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;

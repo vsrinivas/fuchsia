@@ -15,7 +15,7 @@ class Type : public Symbol {
  public:
   // Symbol overrides.
   const Type* AsType() const final;
-  const std::string& GetAssignedName() const final { return assigned_name_; }
+  const std::string& GetAssignedName() const { return assigned_name_; }
 
   // Returns the type with no "const", "volatile", or similar modifiers that
   // don't affect the stored data, and expand typedef and using statements.

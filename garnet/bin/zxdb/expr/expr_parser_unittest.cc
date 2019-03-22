@@ -573,6 +573,16 @@ TEST_F(ExprParserTest, C_Cast) {
       " IDENTIFIER(\"b\")\n",
       GetParseString("(Type*)a && b", &TestLookupName));
 
+  EXPECT_EQ(
+      "CAST(C)\n"
+      " TYPE(Type)\n"
+      " ACCESSOR(->)\n"
+      "  ARRAY_ACCESS\n"
+      "   IDENTIFIER(\"a\")\n"
+      "   LITERAL(0)\n"
+      "  b\n",
+      GetParseString("(Type)a[0]->b", &TestLookupName));
+
   // Looks like a cast but it's not a type.
   auto result = Parse("(NotType)a", &TestLookupName);
   EXPECT_FALSE(result);

@@ -601,8 +601,11 @@ fxl::RefPtr<ExprNode> ExprParser::LeftParenPrefix(const ExprToken& token) {
     return nullptr;
 
   if (const TypeExprNode* type_expr = expr->AsType()) {
-    // Convert "(TypeName)..." into a cast.
-    auto cast_expr = ParseExpression(kPrecedenceCallAccess);
+    // Convert "(TypeName)..." into a cast. Note the "-1" here which converts
+    // to right-associative. With variable names, () is left-associative in
+    // that "(foo)(bar)[baz]" means to execute left-to-right. But when "(foo)"
+    // is a C-style cast, this means "(bar)[baz]" is a unit.
+    auto cast_expr = ParseExpression(kPrecedenceCallAccess - 1);
     if (has_error())
       return nullptr;
 

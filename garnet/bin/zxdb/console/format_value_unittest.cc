@@ -82,6 +82,39 @@ class FormatValueTest : public TestWithLoop {
 
 }  // namespace
 
+TEST_F(FormatValueTest, Void) {
+  FormatExprValueOptions opts;
+
+  // Bare void type (not valid in C++ but we can generate).
+  auto void_type = fxl::MakeRefCounted<BaseType>();
+  ExprValue val_void(void_type, {});
+  EXPECT_EQ("void", SyncFormatValue(val_void, opts));
+
+  // Void type with overridden name.
+  auto named_void_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeNone, 0, "VOID");
+  ExprValue val_named_void(named_void_type, {});
+  EXPECT_EQ("VOID", SyncFormatValue(val_named_void, opts));
+
+  // Void pointer encoded as a pointer to a "none" BaseType.
+  auto void_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
+                                                         LazySymbol(void_type));
+  ExprValue val_void_ptr(void_ptr_type, {8, 7, 6, 5, 4, 3, 2, 1});
+  EXPECT_EQ("(void*) 0x102030405060708", SyncFormatValue(val_void_ptr, opts));
+
+  // Void pointer encoded as a pointer to nothing.
+  auto void_ptr_type2 =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
+  ExprValue val_void_ptr2(void_ptr_type2, {8, 7, 6, 5, 4, 3, 2, 1});
+  EXPECT_EQ("(void*) 0x102030405060708", SyncFormatValue(val_void_ptr2, opts));
+
+  // Minimal verbosity with above values.
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMinimal;
+  EXPECT_EQ("void", SyncFormatValue(val_void, opts));
+  EXPECT_EQ("(*) 0x102030405060708", SyncFormatValue(val_void_ptr, opts));
+  EXPECT_EQ("(*) 0x102030405060708", SyncFormatValue(val_void_ptr2, opts));
+}
+
 TEST_F(FormatValueTest, Signed) {
   FormatExprValueOptions opts;
 

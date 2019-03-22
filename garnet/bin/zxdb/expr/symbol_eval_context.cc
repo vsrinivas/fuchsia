@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/expr/builtin_types.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/find_variable.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
@@ -103,6 +104,22 @@ fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
   return data_provider_;
 }
 
+NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
+  // The contract for this function is that the callback must not be stored
+  // so the callback can reference |this|.
+  return [this](const Identifier& ident) -> NameLookupResult {
+    // Look up the symbols in the symbol table if possible.
+    NameLookupResult result = DoTargetSymbolsNameLookup(ident);
+
+    // Fall back on builtin types.
+    if (result.kind == NameLookupResult::kOther) {
+      if (auto type = GetBuiltinType(ident.GetFullName()))
+        return NameLookupResult(NameLookupResult::kType, std::move(type));
+    }
+    return result;
+  };
+}
+
 void SymbolEvalContext::DoResolve(FoundVariable found, ValueCallback cb) const {
   if (!found.is_object_member()) {
     // Simple variable resolution.
@@ -142,6 +159,12 @@ void SymbolEvalContext::DoResolve(FoundVariable found, ValueCallback cb) const {
               }
             });
       });
+}
+
+NameLookupResult SymbolEvalContext::DoTargetSymbolsNameLookup(
+    const Identifier& ident) {
+  // TODO(brettw) hook up actual symbol lookup here.
+  return NameLookupResult();
 }
 
 }  // namespace zxdb

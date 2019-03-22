@@ -29,4 +29,18 @@ BaseType::~BaseType() = default;
 
 const BaseType* BaseType::AsBaseType() const { return this; }
 
+const std::string& BaseType::GetAssignedName() const {
+  const std::string& assigned_name = Type::GetAssignedName();
+  if (!assigned_name.empty())
+    return assigned_name;
+
+  // Special-case void types with no assigned names.
+  if (base_type_ == kBaseTypeNone) {
+    static std::string void_str("void");
+    return void_str;
+  }
+
+  return assigned_name;
+}
+
 }  // namespace zxdb
