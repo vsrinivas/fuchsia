@@ -26,41 +26,17 @@
 
 namespace zxcrypt {
 
-namespace {
-
-// TODO(aarongreen): See ZX-3257.  This thread automatically unseals the zxcrypt volume with the
-// fixed key.  Once Unseal/Seal and FIDL-able, they should be called from something like block
-// watcher.
-int AutoUnsealThread(void* arg) {
-    // It's safe to access this pointer since calls to |DdkUnbind| cannot release the device before
-    // |AutoUnseal| returns.
-    reinterpret_cast<zxcrypt::DeviceManager*>(arg)->AutoUnseal();
-    return 0;
-}
-
-} // namespace
-
 zx_status_t DeviceManager::Bind() {
     zx_status_t rc;
     fbl::AutoLock lock(&mtx_);
 
-    //  Create a thread to unseal the device and detach it.  This thread will
-    //  not run until we release the |lock|, and will not run if the device is
-    //  first unbound and the |state_| changed. Other calls to |DdkUnbind| or
-    //  |Unseal| will be blocked until the thread completes.
-    thrd_t t;
-    if (thrd_create(&t, AutoUnsealThread, this) != thrd_success) {
-        zxlogf(ERROR, "failed to unseal zxcrypt\n");
-        return ZX_ERR_INTERNAL;
-    }
-    thrd_detach(t);
-
-    if ((rc = DdkAdd("zxcrypt", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
+    if ((rc = DdkAdd("zxcrypt")) != ZX_OK) {
         zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));
         state_ = kRemoved;
         return rc;
     }
 
+    state_ = kSealed;
     return ZX_OK;
 }
 
@@ -122,28 +98,6 @@ zx_status_t DeviceManager::Seal() {
 
     state_ = kSealed;
     return ZX_OK;
-}
-
-void DeviceManager::AutoUnseal() {
-    zx_status_t rc;
-    fbl::AutoLock lock(&mtx_);
-    ZX_DEBUG_ASSERT(state_ == kBinding || state_ == kUnbinding);
-
-    if (state_ == kBinding) {
-        uint8_t key[zxcrypt::kZx1130KeyLen];
-        memset(key, 0, sizeof(key));
-        if ((rc = UnsealLocked(key, sizeof(key), 0)) != ZX_OK) {
-            zxlogf(ERROR, "failed to unseal zxcrypt: %s\n", zx_status_get_string(rc));
-            state_ = kUnbinding;
-        } else {
-            DdkMakeVisible();
-        }
-    }
-
-    if (state_ == kUnbinding) {
-        state_ = kRemoved;
-        DdkRemove();
-    }
 }
 
 zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) {

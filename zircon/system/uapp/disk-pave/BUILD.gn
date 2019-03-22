@@ -18,6 +18,7 @@ executable("install-disk-image") {
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/crypto",
     "$zx/system/ulib/fbl",

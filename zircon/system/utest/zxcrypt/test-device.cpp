@@ -374,6 +374,15 @@ bool TestDevice::Connect() {
     ZX_DEBUG_ASSERT(!zxcrypt_);
 
     ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume_));
+    zx::channel zxc_manager_chan;
+    ASSERT_OK(volume_->OpenManager(kTimeout, zxc_manager_chan.reset_and_get_address()));
+    FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
+    zx_status_t rc;
+    // Unseal may fail because the volume is already unsealed, so we also allow
+    // ZX_ERR_INVALID_STATE here.  If we fail to unseal the volume, the
+    // volume_->Open() call below will fail, so this is safe to ignore.
+    rc = volume_manager.Unseal(key_.get(), key_.len(), 0);
+    ASSERT_TRUE(rc == ZX_OK || rc == ZX_ERR_BAD_STATE);
     ASSERT_OK(volume_->Open(kTimeout, &zxcrypt_));
     zxcrypt_caller_.reset(zxcrypt_.get());
 
@@ -406,6 +415,15 @@ bool TestDevice::Connect() {
 }
 
 void TestDevice::Disconnect() {
+    if (volume_) {
+        zx::channel zxc_manager_chan;
+        volume_->OpenManager(kTimeout, zxc_manager_chan.reset_and_get_address());
+        if (zxc_manager_chan) {
+            FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
+            volume_manager.Seal();
+        }
+    }
+
     if (client_) {
         memset(&req_, 0, sizeof(req_));
         block_fifo_release_client(client_);

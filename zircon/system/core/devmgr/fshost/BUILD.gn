@@ -29,6 +29,7 @@ executable("fshost") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxcrypt",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
     "../shared",

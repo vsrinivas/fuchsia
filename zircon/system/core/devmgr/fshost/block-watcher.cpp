@@ -11,6 +11,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
+#include <fbl/string_buffer.h>
 #include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -26,10 +27,12 @@
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <loader-service/loader-service.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zxcrypt/fdio-volume.h>
 
 #include <utility>
 
@@ -478,6 +481,38 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 #define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
+// return value is ignored
+int unseal_zxcrypt_threadfunc(void* arg) {
+    fbl::unique_ptr<int> fd_ptr(static_cast<int*>(arg));
+    fbl::unique_fd fd(*fd_ptr);
+
+    zx_status_t rc;
+    fbl::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
+    if ((rc = zxcrypt::FdioVolume::Init(std::move(fd), &zxcrypt_volume)) != ZX_OK) {
+        printf("fshost: couldn't open zxcrypt fdio volume");
+        return ZX_OK;
+    }
+
+    zx::channel zxcrypt_volume_manager_chan;
+    if ((rc = zxcrypt_volume->OpenManager(zx::sec(2), zxcrypt_volume_manager_chan.reset_and_get_address())) != ZX_OK) {
+        printf("fshost: couldn't open zxcrypt manager device");
+        return 0;
+    }
+
+    zxcrypt::FdioVolumeManager zxcrypt_volume_manager(std::move(zxcrypt_volume_manager_chan));
+    // TODO(security): ZX-2670 we should call a separate binary to
+    // key this with a real key
+    uint8_t null_key[zxcrypt::kZx1130KeyLen];
+    memset(null_key, 0, zxcrypt::kZx1130KeyLen);
+    uint8_t slot = 0;
+    if ((rc = zxcrypt_volume_manager.Unseal(null_key, zxcrypt::kZx1130KeyLen, slot)) != ZX_OK) {
+        printf("fshost: couldn't unseal zxcrypt manager device");
+        return 0;
+    }
+
+    return 0;
+}
+
 zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
     auto watcher = static_cast<BlockWatcher*>(cookie);
 
@@ -537,10 +572,24 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         case DISK_FORMAT_ZXCRYPT: {
             if (!watcher->Netbooting()) {
                 printf("fshost: %s: zxcrypt?\n", device_path);
-                // TODO(security): ZX-1130. We need to bind with channel in order to pass a key
-                // here.  Where does the key come from?  We need to determine if this is unattended.
-                fuchsia_device_ControllerBind(disk->get(), ZXCRYPT_DRIVER_LIB,
-                                              STRLEN(ZXCRYPT_DRIVER_LIB), &call_status);
+                // Bind and unseal the driver from a separate thread, since we
+                // have to wait for a number of devices to do I/O and settle,
+                // and we don't want to block block-watcher for any nontrivial
+                // length of time.
+
+                // We transfer fd to the spawned thread.  Since it's UB to cast
+                // ints to pointers and back, we allocate the fd on the heap.
+                int loose_fd = fd.release();
+                int* raw_fd_ptr = new int(loose_fd);
+                thrd_t th;
+                int err = thrd_create_with_name(&th, &unseal_zxcrypt_threadfunc, raw_fd_ptr, "zxcrypt-unseal");
+                if (err != thrd_success) {
+                    printf("fshost: failed to spawn zxcrypt unseal thread");
+                    close(loose_fd);
+                    delete raw_fd_ptr;
+                } else {
+                    thrd_detach(th);
+                }
             }
             return ZX_OK;
         }

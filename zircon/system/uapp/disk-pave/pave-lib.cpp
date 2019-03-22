@@ -21,6 +21,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <fuchsia/hardware/zxcrypt/c/fidl.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
 #include <lib/cksum.h>
@@ -533,9 +534,26 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     memset(tmp, 0, key.len());
 
     fbl::unique_ptr<zxcrypt::FdioVolume> volume;
-    if ((status = zxcrypt::FdioVolume::Create(std::move(part->new_part), key, &volume)) != ZX_OK ||
-        (status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
+    if ((status = zxcrypt::FdioVolume::Create(std::move(part->new_part), key, &volume)) != ZX_OK ) {
         ERROR("Could not create zxcrypt volume\n");
+        return status;
+    }
+    zx::channel zxcrypt_manager_chan;
+    if ((status = volume->OpenManager(zx::sec(3), zxcrypt_manager_chan.reset_and_get_address())) != ZX_OK) {
+        ERROR("Could not open zxcrypt volume manager\n");
+        return status;
+    }
+    // TODO(security): ZX-2670. Pass this channel to another binary that bears
+    // responsibility for keying the partition.
+    zxcrypt::FdioVolumeManager zxcrypt_manager(std::move(zxcrypt_manager_chan));
+    uint8_t slot = 0;
+    if ((status = zxcrypt_manager.Unseal(key.get(), key.len(), slot)) != ZX_OK) {
+        ERROR("Could not unseal zxcrypt volume\n");
+        return status;
+    }
+
+    if ((status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
+        ERROR("Could not open zxcrypt volume\n");
         return status;
     }
 
@@ -1105,45 +1123,66 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
     }
 
     auto disk_format = detect_disk_format(part_fd.get());
-    zx::channel part_dev;
-    status = fdio_get_service_handle(part_fd.release(), part_dev.reset_and_get_address());
-    if (status != ZX_OK) {
-        ERROR("failed to get service handle\n");
-        return ZX_ERR_NOT_FOUND;
-    }
-
+    fbl::unique_fd mountpoint_dev_fd;
+    // By the end of this switch statement, mountpoint_dev_fd needs to be an
+    // open handle to the block device that we want to mount at mount_path.
     switch (disk_format) {
     case DISK_FORMAT_MINFS:
         // If the disk we found is actually minfs, we can just use the block
         // device path we were given by open_partition.
         strncpy(minfs_path, path, PATH_MAX);
+        mountpoint_dev_fd.reset(open(minfs_path, O_RDWR));
         break;
 
     case DISK_FORMAT_ZXCRYPT:
-        // Compute the topological path of the FVM block driver, and then tack
-        // the zxcrypt-device string onto the end. This should be improved.
-        zx_status_t call_status;
-        size_t path_len;
-        status = fuchsia_device_ControllerGetTopologicalPath(part_dev.get(), &call_status, path,
-                                                             sizeof(path) - 1, &path_len);
-        if (status != ZX_OK || call_status != ZX_OK) {
-            path[0] = 0;
-        } else {
-            path[path_len] = 0;
+        {
+            crypto::Secret key;
+            uint8_t* tmp;
+            if ((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
+                return status;
+            }
+            memset(tmp, 0, key.len());
+            zxcrypt::key_slot_t key_slot = 0;
+
+            fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
+            if ((status = zxcrypt::FdioVolume::Unlock(std::move(part_fd), key,
+                                                      key_slot, &zxc_volume)) != ZX_OK) {
+              ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
+              return status;
+            }
+
+            // Most of the time we'll expect the volume to actually already be
+            // unsealed, because we created it and unsealed it moments ago to
+            // format minfs.
+            if ((status = zxc_volume->Open(zx::sec(0), &mountpoint_dev_fd)) == ZX_OK) {
+              // Already unsealed, great, early exit.
+              break;
+            }
+
+            // Ensure zxcrypt volume manager is bound.
+            zx::channel zxc_manager_chan;
+            if ((status =
+                 zxc_volume->OpenManager(zx::sec(5),
+                                         zxc_manager_chan.reset_and_get_address())) != ZX_OK) {
+              ERROR("Couldn't open zxcrypt volume manager: %s\n", zx_status_get_string(status));
+              return status;
+            }
+
+            // Unseal.
+            // TODO(security): ZX-2670 call an external binary to unseal the volume instead
+            uint8_t slot = 0;
+            zxcrypt::FdioVolumeManager zxc_volume_manager(std::move(zxc_manager_chan));
+            if ((status = zxc_volume_manager.Unseal(key.get(), key.len(), slot)) != ZX_OK) {
+              ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
+              return status;
+            }
+
+            // Wait for the device to appear, and open it.
+            if ((status = zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd)) != ZX_OK) {
+              ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n", zx_status_get_string(status));
+              return status;
+            }
         }
-        snprintf(minfs_path, sizeof(minfs_path), "%s/zxcrypt/unsealed/block", path);
-
-        // TODO(security): ZX-1130. We need to bind with channel in order to
-        // pass a key here. Where does the key come from? We need to determine
-        // if this is unattended.
-        fuchsia_device_ControllerBind(part_dev.get(), ZXCRYPT_DRIVER_LIB,
-                                      strlen(ZXCRYPT_DRIVER_LIB), &call_status);
-
-        if ((status = wait_for_device(minfs_path, ZX_SEC(5))) != ZX_OK) {
-            ERROR("zxcrypt bind error: %s\n", zx_status_get_string(status));
-            return status;
-        }
-
         break;
 
     default:
@@ -1153,7 +1192,7 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
 
     mount_options_t opts(default_mount_options);
     opts.create_mountpoint = true;
-    if ((status = mount(open(minfs_path, O_RDWR), mount_path, DISK_FORMAT_MINFS,
+    if ((status = mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS,
                         &opts, launch_logs_async)) != ZX_OK) {
         ERROR("mount error: %s\n", zx_status_get_string(status));
         Drain(std::move(payload_fd));

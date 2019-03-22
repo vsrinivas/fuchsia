@@ -12,9 +12,12 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fuchsia/hardware/zxcrypt/c/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zircon-internal/debug.h>
+#include <lib/zx/channel.h>
 #include <ramdevice-client/ramdisk.h> // Why does wait_for_device() come from here?
 #include <zircon/status.h>
 #include <zxcrypt/fdio-volume.h>
@@ -28,6 +31,35 @@ namespace zxcrypt {
 
 // The zxcrypt driver
 const char* kDriverLib = "/boot/driver/zxcrypt.so";
+
+FdioVolumeManager::FdioVolumeManager(zx::channel&& chan) : chan_(std::move(chan)) {}
+
+zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_t slot) {
+    zx_status_t rc;
+    zx_status_t call_status;
+    if ((rc = fuchsia_hardware_zxcrypt_DeviceManagerUnseal(chan_.get(), key, key_len, slot, &call_status)) != ZX_OK) {
+        xprintf("failed to call Unseal: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    if (call_status != ZX_OK) {
+        xprintf("failed to Unseal: %s\n", zx_status_get_string(call_status));
+    }
+    return call_status;
+}
+
+zx_status_t FdioVolumeManager::Seal() {
+    zx_status_t rc;
+    zx_status_t call_status;
+    if ((rc = fuchsia_hardware_zxcrypt_DeviceManagerSeal(chan_.get(), &call_status)) != ZX_OK) {
+        xprintf("failed to call Seal: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if (call_status != ZX_OK) {
+        xprintf("failed to Seal: %s\n", zx_status_get_string(call_status));
+    }
+    return call_status;
+}
 
 FdioVolume::FdioVolume(fbl::unique_fd&& fd) : Volume(), fd_(std::move(fd)) {}
 
@@ -117,8 +149,18 @@ zx_status_t FdioVolume::Init() {
     return Volume::Init();
 }
 
+zx_status_t FdioVolume::OpenManager(const zx::duration& timeout, zx_handle_t* out) {
+    fzl::UnownedFdioCaller caller(fd_.get());
+    if (!caller) {
+        xprintf("could not convert fd to io\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    return OpenManagerWithCaller(caller, timeout, out);
+}
+
 zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     zx_status_t rc;
+    fbl::String path_base;
 
     fzl::UnownedFdioCaller caller(fd_.get());
     if (!caller) {
@@ -126,46 +168,25 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
         return ZX_ERR_BAD_STATE;
     }
 
-    // Get the full device path
-    fbl::StringBuffer<PATH_MAX> path;
-    path.Resize(path.capacity());
-    zx_status_t call_status;
-    size_t path_len;
-    rc = fuchsia_device_ControllerGetTopologicalPath(caller.borrow_channel(),
-                                                     &call_status, path.data(),
-                                                     path.capacity(), &path_len);
-    if (rc == ZX_OK) {
-        rc = call_status;
-    }
-    if (rc != ZX_OK) {
-        xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
+    if ((rc = TopologicalPath(caller, &path_base)) != ZX_OK) {
+        xprintf("could not get topological path: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    path.Resize(path_len);
-    path.Append("/zxcrypt/unsealed/block");
+    fbl::String path_block_exposed = fbl::String::Concat({path_base, "/zxcrypt/unsealed/block"});
 
-    // Early return if already bound
-    fbl::unique_fd fd(open(path.c_str(), O_RDWR));
+    // Early return if path_block_exposed is already present in the device tree
+    fbl::unique_fd fd(open(path_block_exposed.c_str(), O_RDWR));
     if (fd) {
         out->reset(fd.release());
         return ZX_OK;
     }
 
-    // Bind the device
-    rc = fuchsia_device_ControllerBind(caller.borrow_channel(), kDriverLib,
-                                       strlen(kDriverLib), &call_status);
-    if (rc == ZX_OK) {
-        rc = call_status;
-    }
-    if (rc != ZX_OK) {
-        xprintf("could not bind zxcrypt driver: %s\n", zx_status_get_string(rc));
+    // Wait for the unsealed and block devices to bind
+    if ((rc = wait_for_device(path_block_exposed.c_str(), timeout.get())) != ZX_OK) {
+        xprintf("timed out waiting for %s to exist: %s\n", path_block_exposed.c_str(), zx_status_get_string(rc));
         return rc;
     }
-    if ((rc = wait_for_device(path.c_str(), timeout.get())) != ZX_OK) {
-        xprintf("zxcrypt driver failed to bind: %s\n", zx_status_get_string(rc));
-        return rc;
-    }
-    fd.reset(open(path.c_str(), O_RDWR));
+    fd.reset(open(path_block_exposed.c_str(), O_RDWR));
     if (!fd) {
         xprintf("failed to open zxcrypt volume\n");
         return ZX_ERR_NOT_FOUND;
@@ -329,6 +350,76 @@ zx_status_t FdioVolume::Write() {
         xprintf("short write: have %zd, need %zu\n", res, block_.len());
         return ZX_ERR_IO;
     }
+    return ZX_OK;
+}
+
+zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
+                                              const zx::duration& timeout, zx_handle_t* out) {
+    zx_status_t rc;
+    fbl::String path_base;
+
+    if ((rc = TopologicalPath(caller, &path_base)) != ZX_OK) {
+      xprintf("could not get topological path: %s\n", zx_status_get_string(rc));
+      return rc;
+    }
+    fbl::String path_manager = fbl::String::Concat({path_base, "/zxcrypt"});
+
+    fbl::unique_fd fd(open(path_manager.c_str(), O_RDWR));
+    if (!fd) {
+        // No manager device in the /dev tree yet.  Try binding the zxcrypt
+        // driver and waiting for it to appear.
+        zx_status_t call_status;
+        rc = fuchsia_device_ControllerBind(caller.borrow_channel(), kDriverLib,
+                                           strlen(kDriverLib), &call_status);
+        if (rc == ZX_OK) {
+            rc = call_status;
+        }
+        if (rc != ZX_OK) {
+            xprintf("could not bind zxcrypt driver: %s\n", zx_status_get_string(rc));
+            return rc;
+        }
+
+        // Await the appearance of the zxcrypt device.
+        if ((rc = wait_for_device(path_manager.c_str(), timeout.get())) != ZX_OK) {
+            xprintf("zxcrypt driver failed to bind: %s\n", zx_status_get_string(rc));
+            return rc;
+        }
+
+        fd.reset(open(path_manager.c_str(), O_RDWR));
+        if (!fd) {
+            xprintf("failed to open zxcrypt manager\n");
+            return ZX_ERR_NOT_FOUND;
+        }
+    }
+
+    if ((rc = fdio_get_service_handle(fd.release(), out)) != ZX_OK) {
+        xprintf("failed to get service handle for zxcrypt manager: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t FdioVolume::TopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out) {
+    zx_status_t rc;
+
+    // Get the full device path
+    fbl::StringBuffer<PATH_MAX> path;
+    path.Resize(path.capacity());
+    zx_status_t call_status;
+    size_t path_len;
+    rc = fuchsia_device_ControllerGetTopologicalPath(caller.borrow_channel(),
+                                                     &call_status, path.data(),
+                                                     path.capacity(), &path_len);
+    if (rc == ZX_OK) {
+        rc = call_status;
+    }
+    if (rc != ZX_OK) {
+        xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    path.Resize(path_len);
+    *out = path.ToString();
     return ZX_OK;
 }
 
