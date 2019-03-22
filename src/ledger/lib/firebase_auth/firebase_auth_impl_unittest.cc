@@ -53,6 +53,9 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
   void LogCustomEvent(
       uint32_t metric_id,
       std::vector<fuchsia::cobalt::CustomEventValue> event_values) override {}
+  void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) override {}
+  void LogCobaltEvents(
+      std::vector<fuchsia::cobalt::CobaltEvent> events) override {}
 
  private:
   int* called_;

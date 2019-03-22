@@ -160,17 +160,17 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void EndTimer(std::string timer_id, uint64_t timestamp,
-                uint32_t timeout_s, EndTimerCallback callback) override {
+  void EndTimer(std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
+                EndTimerCallback callback) override {
     RecordCall(EventType::END_TIMER,
                std::make_unique<EndTimerEvent>(timer_id, timestamp, timeout_s));
     callback(fuchsia::cobalt::Status::OK);
   }
 
-  void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      std::vector<fuchsia::cobalt::HistogramBucket> histogram,
-      LogIntHistogramCallback callback) override {
+  void LogIntHistogram(uint32_t metric_id, uint32_t event_code,
+                       std::string component,
+                       std::vector<fuchsia::cobalt::HistogramBucket> histogram,
+                       LogIntHistogramCallback callback) override {
     RecordCall(EventType::INT_HISTOGRAM,
                std::make_unique<IntHistogramEvent>(
                    metric_id, event_code, component, std::move(histogram)));
@@ -184,6 +184,44 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     RecordCall(EventType::CUSTOM, std::make_unique<CustomEvent>(
                                       metric_id, std::move(event_values)));
     callback(fuchsia::cobalt::Status::OK);
+  }
+
+  void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
+                      LogCobaltEventCallback callback) override {
+    if (event.payload.is_event_count()) {
+      LogEventCount(event.metric_id, event.event_codes[0], event.component,
+                    event.payload.event_count().period_duration_micros,
+                    event.payload.event_count().count, std::move(callback));
+    } else if (event.payload.is_int_histogram()) {
+      LogIntHistogram(event.metric_id, event.event_codes[0], event.component,
+                      std::move(event.payload.int_histogram()),
+                      std::move(callback));
+
+    } else {
+      callback(fuchsia::cobalt::Status::INVALID_ARGUMENTS);
+    }
+  }
+
+  void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
+                       LogCobaltEventCallback callback) override {
+    auto failures = 0;
+
+    auto end = std::make_move_iterator(events.end());
+
+    for (auto it = std::make_move_iterator(events.begin()); it != end; it++) {
+      LogCobaltEvent(std::move(*it),
+                     [failures](fuchsia::cobalt::Status status) mutable {
+                       if (status != fuchsia::cobalt::Status::OK) {
+                         failures += 1;
+                       }
+                     });
+    }
+
+    if (failures == 0) {
+      callback(fuchsia::cobalt::Status::OK);
+    } else {
+      callback(fuchsia::cobalt::Status::INTERNAL_ERROR);
+    }
   }
 
   void ExpectCalledOnceWith(EventType type, const Event* expected) {
@@ -367,6 +405,42 @@ TEST_F(CobaltLoggerTest, LogEventCount) {
   logger()->ExpectCalledOnceWith(EventType::EVENT_COUNT, &event);
 }
 
+TEST_F(CobaltLoggerTest, LogCobaltEventEventCount) {
+  CountEvent count_event(kFakeCobaltMetricId, 123, "some_component", 2, 322);
+  fuchsia::cobalt::CobaltEvent event;
+  event.metric_id = count_event.metric_id();
+  event.event_codes.push_back(count_event.event_code());
+  event.component = count_event.component();
+  fuchsia::cobalt::CountEvent fuchsia_count_event;
+  fuchsia_count_event.period_duration_micros =
+      count_event.period_duration_micros();
+  fuchsia_count_event.count = count_event.count();
+  event.payload.set_event_count(fuchsia_count_event);
+  cobalt_logger()->LogCobaltEvent(std::move(event));
+  RunLoopUntilIdle();
+  logger()->ExpectCalledOnceWith(EventType::EVENT_COUNT, &count_event);
+}
+
+TEST_F(CobaltLoggerTest, LogCobaltEventsEventCount) {
+  CountEvent count_event(kFakeCobaltMetricId, 123, "some_component", 2, 322);
+  fuchsia::cobalt::CobaltEvent event;
+  event.metric_id = count_event.metric_id();
+  event.event_codes.push_back(count_event.event_code());
+  event.component = count_event.component();
+  fuchsia::cobalt::CountEvent fuchsia_count_event;
+  fuchsia_count_event.period_duration_micros =
+      count_event.period_duration_micros();
+  fuchsia_count_event.count = count_event.count();
+  event.payload.set_event_count(fuchsia_count_event);
+
+  std::vector<fuchsia::cobalt::CobaltEvent> events;
+  events.push_back(std::move(event));
+
+  cobalt_logger()->LogCobaltEvents(std::move(events));
+  RunLoopUntilIdle();
+  logger()->ExpectCalledOnceWith(EventType::EVENT_COUNT, &count_event);
+}
+
 TEST_F(CobaltLoggerTest, LogElapsedTime) {
   ElapsedTimeEvent event(kFakeCobaltMetricId, 123, "some_component", 321);
   cobalt_logger()->LogElapsedTime(
@@ -433,6 +507,53 @@ TEST_F(CobaltLoggerTest, LogIntHistogram) {
                                    event.component(), histogram.take());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::INT_HISTOGRAM, &event);
+}
+
+TEST_F(CobaltLoggerTest, LogCobaltEventIntHistogram) {
+  fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram(1);
+  histogram->at(0).index = 1;
+  histogram->at(0).count = 234;
+
+  fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram_clone;
+  ASSERT_EQ(ZX_OK, fidl::Clone(histogram, &histogram_clone));
+
+  IntHistogramEvent histogram_event(kFakeCobaltMetricId, 123, "some_component",
+                                    std::move(histogram_clone));
+
+  fuchsia::cobalt::CobaltEvent event;
+  event.metric_id = histogram_event.metric_id();
+  event.event_codes.push_back(histogram_event.event_code());
+  event.component = histogram_event.component();
+  event.payload.set_int_histogram(histogram.take());
+
+  cobalt_logger()->LogCobaltEvent(std::move(event));
+  RunLoopUntilIdle();
+  logger()->ExpectCalledOnceWith(EventType::INT_HISTOGRAM, &histogram_event);
+}
+
+TEST_F(CobaltLoggerTest, LogCobaltEventsIntHistogram) {
+  fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram(1);
+  histogram->at(0).index = 1;
+  histogram->at(0).count = 234;
+
+  fidl::VectorPtr<fuchsia::cobalt::HistogramBucket> histogram_clone;
+  ASSERT_EQ(ZX_OK, fidl::Clone(histogram, &histogram_clone));
+
+  IntHistogramEvent histogram_event(kFakeCobaltMetricId, 123, "some_component",
+                                    std::move(histogram_clone));
+
+  fuchsia::cobalt::CobaltEvent event;
+  event.metric_id = histogram_event.metric_id();
+  event.event_codes.push_back(histogram_event.event_code());
+  event.component = histogram_event.component();
+  event.payload.set_int_histogram(histogram.take());
+
+  std::vector<fuchsia::cobalt::CobaltEvent> events;
+  events.push_back(std::move(event));
+
+  cobalt_logger()->LogCobaltEvents(std::move(events));
+  RunLoopUntilIdle();
+  logger()->ExpectCalledOnceWith(EventType::INT_HISTOGRAM, &histogram_event);
 }
 
 TEST_F(CobaltLoggerTest, LogCustomEvent) {

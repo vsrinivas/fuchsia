@@ -295,6 +295,19 @@ class CobaltLogger {
   virtual void LogCustomEvent(
       uint32_t metric_id,
       std::vector<fuchsia::cobalt::CustomEventValue> event_values) = 0;
+
+  // Logs a CobaltEvent. This method offers an alternative API to Cobalt that
+  // uses a single method with a variadic parameter instead of the multiple
+  // methods defined above. The reason to use this method is that a CobaltEvent
+  // allows multiple event codes to be specified whereas the methods above only
+  // allow a single event code.
+  virtual void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) = 0;
+
+  // Logs a list of CobaltEvents. This method is equivalent to invoking
+  // LogCobaltEvent() multiple times but is more efficient as it requires only
+  // a single FIDL call.
+  virtual void LogCobaltEvents(
+      std::vector<fuchsia::cobalt::CobaltEvent> event) = 0;
 };
 
 // Returns a CobaltLogger initialized with the provided parameters.

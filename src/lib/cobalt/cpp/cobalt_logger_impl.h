@@ -18,13 +18,21 @@
 
 namespace cobalt {
 
-class Event {
+class BaseEvent {
  public:
-  Event(uint32_t metric_id) : metric_id_(metric_id) {}
-  virtual ~Event() = default;
+  BaseEvent() {}
+  virtual ~BaseEvent() = default;
   virtual void Log(fuchsia::cobalt::LoggerPtr* logger,
                    fit::function<void(fuchsia::cobalt::Status)> callback) = 0;
-  uint32_t metric_id() const { return metric_id_; }
+
+  virtual uint32_t metric_id() const { return 0; }
+};
+
+class Event : public BaseEvent {
+ public:
+  Event(uint32_t metric_id) : BaseEvent(), metric_id_(metric_id) {}
+  virtual ~Event() = default;
+  uint32_t metric_id() const override { return metric_id_; }
 
  private:
   const uint32_t metric_id_;
@@ -185,11 +193,11 @@ class StartTimerEvent : public Event {
   const uint32_t timeout_s_;
 };
 
-class EndTimerEvent : public Event {
+class EndTimerEvent : public BaseEvent {
  public:
   EndTimerEvent(const std::string& timer_id, uint64_t timestamp,
                 uint32_t timeout_s)
-      : Event(0),
+      : BaseEvent(),
         timer_id_(timer_id),
         timestamp_(timestamp),
         timeout_s_(timeout_s) {}
@@ -255,6 +263,36 @@ class CustomEvent : public Event {
   const std::vector<fuchsia::cobalt::CustomEventValue> event_values_;
 };
 
+class CobaltEvent : public Event {
+ public:
+  CobaltEvent(fuchsia::cobalt::CobaltEvent event)
+      : Event(event.metric_id), event_(std::move(event)) {}
+  void Log(fuchsia::cobalt::LoggerPtr* logger,
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
+    fuchsia::cobalt::CobaltEvent event;
+    FXL_CHECK(fidl::Clone(event_, &event) == ZX_OK);
+    (*logger)->LogCobaltEvent(std::move(event), std::move(callback));
+  }
+
+ private:
+  const fuchsia::cobalt::CobaltEvent event_;
+};
+
+class CobaltEvents : public BaseEvent {
+ public:
+  CobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events)
+      : BaseEvent(), events_(std::move(events)) {}
+  void Log(fuchsia::cobalt::LoggerPtr* logger,
+           fit::function<void(fuchsia::cobalt::Status)> callback) {
+    std::vector<fuchsia::cobalt::CobaltEvent> events;
+    FXL_CHECK(fidl::Clone(events_, &events) == ZX_OK);
+    (*logger)->LogCobaltEvents(std::move(events), std::move(callback));
+  }
+
+ private:
+  const std::vector<fuchsia::cobalt::CobaltEvent> events_;
+};
+
 class BaseCobaltLoggerImpl : public CobaltLogger {
  public:
   BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher,
@@ -283,6 +321,9 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
   void LogCustomEvent(
       uint32_t metric_id,
       std::vector<fuchsia::cobalt::CustomEventValue> event_values) override;
+  virtual void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) override;
+  virtual void LogCobaltEvents(
+      std::vector<fuchsia::cobalt::CobaltEvent> event) override;
 
  protected:
   void ConnectToCobaltApplication();
@@ -292,18 +333,18 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
  private:
   fuchsia::cobalt::ProjectProfile CloneProjectProfile();
   void OnConnectionError();
-  void LogEventOnMainThread(std::unique_ptr<Event> event);
+  void LogEventOnMainThread(std::unique_ptr<BaseEvent> event);
   void SendEvents();
   void OnTransitFail();
-  void LogEventCallback(const Event* event, fuchsia::cobalt::Status status);
-  void LogEvent(std::unique_ptr<Event> event);
+  void LogEventCallback(const BaseEvent* event, fuchsia::cobalt::Status status);
+  void LogEvent(std::unique_ptr<BaseEvent> event);
 
   backoff::ExponentialBackoff backoff_;
   async_dispatcher_t* const dispatcher_;
   fuchsia::cobalt::LoggerPtr logger_;
   const fuchsia::cobalt::ProjectProfile profile_;
-  std::set<std::unique_ptr<Event>> events_to_send_;
-  std::set<std::unique_ptr<Event>> events_in_transit_;
+  std::set<std::unique_ptr<BaseEvent>> events_to_send_;
+  std::set<std::unique_ptr<BaseEvent>> events_in_transit_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BaseCobaltLoggerImpl);
 };

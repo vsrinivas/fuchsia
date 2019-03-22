@@ -107,7 +107,16 @@ void BaseCobaltLoggerImpl::LogCustomEvent(
       std::vector<fuchsia::cobalt::CustomEventValue>(std::move(event_values))));
 }
 
-void BaseCobaltLoggerImpl::LogEvent(std::unique_ptr<Event> event) {
+void BaseCobaltLoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
+  LogEvent(std::make_unique<CobaltEvent>(std::move(event)));
+}
+
+void BaseCobaltLoggerImpl::LogCobaltEvents(
+    std::vector<fuchsia::cobalt::CobaltEvent> events) {
+  LogEvent(std::make_unique<CobaltEvents>(std::move(events)));
+}
+
+void BaseCobaltLoggerImpl::LogEvent(std::unique_ptr<BaseEvent> event) {
   if (dispatcher_ == async_get_default_dispatcher()) {
     LogEventOnMainThread(std::move(event));
     return;
@@ -157,7 +166,7 @@ void BaseCobaltLoggerImpl::OnTransitFail() {
   // Ugly way to move unique_ptrs between sets
   for (const auto& event : events_in_transit_) {
     events_to_send_.insert(
-        std::move(const_cast<std::unique_ptr<Event>&>(event)));
+        std::move(const_cast<std::unique_ptr<BaseEvent>&>(event)));
   }
 
   events_in_transit_.clear();
@@ -173,7 +182,8 @@ void BaseCobaltLoggerImpl::OnConnectionError() {
       backoff_.GetNext());
 }
 
-void BaseCobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<Event> event) {
+void BaseCobaltLoggerImpl::LogEventOnMainThread(
+    std::unique_ptr<BaseEvent> event) {
   events_to_send_.insert(std::move(event));
   if (!logger_ || !events_in_transit_.empty()) {
     return;
@@ -223,7 +233,8 @@ void BaseCobaltLoggerImpl::SendEvents() {
   });
 }
 
-void BaseCobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
+void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event,
+                                            Status status) {
   switch (status) {
     case Status::INVALID_ARGUMENTS:
     case Status::EVENT_TOO_BIG:  // fall through
@@ -235,7 +246,7 @@ void BaseCobaltLoggerImpl::LogEventCallback(const Event* event, Status status) {
       // Remove the event from the set of events to send.
       events_in_transit_.erase(std::lower_bound(
           events_in_transit_.begin(), events_in_transit_.end(), event,
-          [](const std::unique_ptr<Event>& a, const Event* b) {
+          [](const std::unique_ptr<BaseEvent>& a, const BaseEvent* b) {
             return a.get() < b;
           }));
       break;
