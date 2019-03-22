@@ -8,10 +8,10 @@
 #include "intl_wisdom_client.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async/default.h"
-#include "lib/sys/cpp/component_context.h"
 #include "lib/fxl/command_line.h"
-#include "lib/icu_data/cpp/icu_data.h"
+#include "lib/sys/cpp/component_context.h"
 #include "lib/zx/process.h"
+#include "src/lib/icu_data/cpp/icu_data.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/gregocal.h"
 #include "third_party/icu/source/i18n/unicode/smpdtfmt.h"
@@ -72,7 +72,7 @@ int main(int argc, const char** argv) {
       "timezone", kDefaultTimeZoneString);
 
   // We need to initialize ICU data in order to be able to parse |time_string|.
-  ZX_ASSERT(icu_data::Initialize(nullptr, nullptr));
+  ZX_ASSERT(icu_data::Initialize());
 
   zx::time timestamp = ParseTimestamp(time_string);
   auto time_zone = ParseOrGetDefaultTimeZone(time_zone_id);

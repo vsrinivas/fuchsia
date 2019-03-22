@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/icu_data/cpp/icu_data.h"
+#include "src/lib/icu_data/cpp/icu_data.h"
 
 #include <lib/zx/vmar.h>
 
@@ -29,8 +29,8 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 
   uintptr_t data = 0u;
   zx_status_t status = zx::vmar::root_self()->map(
-      0, icu_data.vmo(), 0, static_cast<size_t>(data_size),
-      ZX_VM_PERM_READ, &data);
+      0, icu_data.vmo(), 0, static_cast<size_t>(data_size), ZX_VM_PERM_READ,
+      &data);
   if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;
@@ -47,19 +47,14 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 // Then, initializes ICU with the data received.
 //
 // Return value indicates if initialization was successful.
-bool Initialize(void* unused, const char* optional_data_path) {
+bool Initialize() {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
     return false;
   }
 
-  const char* data_path = kIcuDataPath;
-  if (optional_data_path != 0) {
-    data_path = optional_data_path;
-  }
-
   fsl::SizedVmo icu_data;
-  if (!fsl::VmoFromFilename(data_path, &icu_data))
+  if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data))
     return false;
 
   size_t data_size = 0;

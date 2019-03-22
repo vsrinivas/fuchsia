@@ -9,7 +9,7 @@
 #include <sstream>
 
 #include "lib/sys/cpp/component_context.h"
-#include "lib/icu_data/cpp/icu_data.h"
+#include "src/lib/icu_data/cpp/icu_data.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"
 #include "third_party/icu/source/i18n/unicode/datefmt.h"
@@ -56,7 +56,7 @@ std::unique_ptr<Calendar> CalendarIdToCalendar(const CalendarId& calendar_id,
 IntlWisdomServerImpl::IntlWisdomServerImpl(
     std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {
-  ZX_ASSERT(icu_data::Initialize(startup_context_.get(), nullptr));
+  ZX_ASSERT(icu_data::Initialize());
   startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 

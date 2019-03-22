@@ -12,8 +12,8 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/examples/intl/fidl:wisdom",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//third_party/icu:icu",
   ]
 }
@@ -28,10 +28,10 @@ executable("intl_wisdom_client") {
   deps = [
     ":lib",
     "//garnet/examples/intl/fidl:wisdom",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/icu_data/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/icu_data/cpp",
     "//third_party/icu:icu",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

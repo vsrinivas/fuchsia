@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ICU_DATA_CPP_ICU_DATA_H_
-#define LIB_ICU_DATA_CPP_ICU_DATA_H_
+#ifndef SRC_LIB_ICU_DATA_CPP_ICU_DATA_H_
+#define SRC_LIB_ICU_DATA_CPP_ICU_DATA_H_
 
 namespace icu_data {
 
-bool Initialize(void* unused, const char* optional_data_path = 0);
+bool Initialize();
 bool Release();
 
 }  // namespace icu_data
 
-#endif  // LIB_ICU_DATA_CPP_ICU_DATA_H_
+#endif  // SRC_LIB_ICU_DATA_CPP_ICU_DATA_H_
