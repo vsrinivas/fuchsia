@@ -630,8 +630,7 @@ void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn) {
 #if FTLN_DEBUG
     // Read page spare area (exit if error) and assert VPNs match.
     ++ftl->stats.read_spare;
-    if (ftl->read_spare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) < 0)
-        exit(errno);
+    PfAssert(ftl->read_spare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) == 0);
     PfAssert(GET_SA_VPN(ftl->spare_buf) == vpn);
 #endif
 } //lint !e818
@@ -762,8 +761,7 @@ void FtlnCheckBlank(FTLN ftl, ui32 b) {
 
     do {
         rc = ftl->page_check(pn, ftl->main_buf, ftl->spare_buf, ftl->ndm);
-        if (rc != NDM_PAGE_ERASED)
-            exit(EINVAL);
+        PfAssert(rc == NDM_PAGE_ERASED);
     } while (++pn < end);
 }
 #endif // DEBUG_ELIST

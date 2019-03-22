@@ -59,18 +59,18 @@ static void check_cache(FTLMC* cache, ui32 mpn) {
         if (entry->mpn != (ui32)-1) {
             if (entry->hash_head != &cache->hash_tbl[hash(entry->mpn, cache->num_mpgs)]) {
                 printf("\nFTL MAP CACHE: mpn = %u hash_head != hash()\n", mpn);
-                exit(-1);
+                PfAssert(0);
             }
             if (entry->hash_head[0] == NULL) {
                 printf("\nFTL MAP CACHE: mpn = %u hash_head is NULL!\n", mpn);
-                exit(-1);
+                PfAssert(0);
             }
         }
     }
 
     if (count > 1) {
         printf("\nFTL MAP CACHE: mpn = %u is cached %d times\n", mpn, count);
-        exit(-1);
+        PfAssert(0);
     }
 }
 #endif // MC_DEBUG

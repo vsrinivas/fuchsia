@@ -1313,8 +1313,7 @@ void ndmCkMeta(NDM ndm0) {
 
     // Allocate TargetNDM control block for metadata comparison.
     ndm1 = FsCalloc(1, sizeof(struct ndm));
-    if (ndm1 == NULL)
-        exit(-1);
+    PfAssert(ndm1 != NULL);
 
     // Copy initialized (not read) structure values.
     memcpy(ndm1, ndm0, sizeof(struct ndm));
@@ -1322,13 +1321,11 @@ void ndmCkMeta(NDM ndm0) {
     // Read the latest control info into temporary control block, using
     // - if any - previously allocated partition memory.
     rc = read_ctrl_info(ndm1);
-    if (rc)
-        exit(-1);
+    PfAssert(rc == 0);
 
     // Compare control block used for writing with one used for reading.
     rc = memcmp(ndm1, ndm0, sizeof(struct ndm));
-    if (rc)
-        exit(-1);
+    PfAssert(rc == 0);
 
     // Free allocated TargetNDM test control block.
     free(ndm1);
