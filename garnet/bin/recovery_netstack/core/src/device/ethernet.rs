@@ -63,7 +63,7 @@ impl Mac {
     /// to form the identifier. If None, the standard 0xfffe will be used.
     ///
     /// TODO: remove `eui_magic` arg if/once it is unused.
-    pub(crate) fn to_slaac_ipv6(self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
+    pub(crate) fn to_ipv6_link_local(self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
         let mut ipv6_addr = [0; 16];
         ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64(eui_magic));
@@ -415,13 +415,13 @@ mod tests {
     #[test]
     fn test_slaac() {
         assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_slaac_ipv6(None),
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(None),
             Ipv6Addr::new([
                 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56
             ])
         );
         assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_slaac_ipv6(Some([0xfe, 0xfe])),
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(Some([0xfe, 0xfe])),
             Ipv6Addr::new([
                 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56
             ])

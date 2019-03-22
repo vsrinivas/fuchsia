@@ -259,6 +259,22 @@ mod internal {
         type Addr = Ipv6Addr;
     }
 
+    impl Ipv6 {
+        /// The IPv6 All Nodes multicast address in link-local scope,
+        /// as defined in [RFC 4291 section 2.7.1].
+        ///
+        /// [RFC 4291 section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
+        pub(crate) const ALL_NODES_LINK_LOCAL_ADDRESS: Ipv6Addr =
+            Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+
+        /// The IPv6 All Routers multicast address in link-local scope,
+        /// as defined in [RFC 4291 section 2.7.1].
+        ///
+        /// [RFC 4291 section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
+        pub(crate) const ALL_ROUTERS_LINK_LOCAL_ADDRESS: Ipv6Addr =
+            Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+    }
+
     /// The `IpAddress` trait which is part of the core's external API.
     ///
     /// This module exists to hold the external `IpAddress` trait. It is
@@ -445,6 +461,29 @@ mod internal {
         /// Get the bytes of the IPv6 address.
         pub const fn ipv6_bytes(&self) -> [u8; 16] {
             self.0
+        }
+
+        /// Converts this `Ipv6Addr` to the IPv6 Solicited-Node Address, used in
+        /// Neighbor Discovery. Defined in [RFC 4291 section 2.7.1].
+        ///
+        /// [RFC 4291 section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
+        pub(crate) const fn to_solicited_node_address(&self) -> Self {
+            // TODO(brunodalbo) benchmark this generation and evaluate if using
+            //  bit operations with u128 could be faster. This is very likely
+            //  going to be on a hot path.
+            Self::new([
+                0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, self.0[13], self.0[14],
+                self.0[15],
+            ])
+        }
+
+        /// Checks if packages addressed to the IPv6 address in `dst` should
+        /// be delivered to hosts with this IP.
+        ///
+        /// Checks if `dst` equals to `self` or the Solicited Node Address
+        /// version of `self`.
+        pub(crate) fn destination_matches(&self, dst: &Self) -> bool {
+            self == dst || self.to_solicited_node_address() == *dst
         }
     }
 
@@ -1067,5 +1106,18 @@ mod internal {
                 0   => [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
             }
         );
+
+        #[test]
+        fn test_ipv6_solicited_node() {
+            let addr = Ipv6Addr::new([
+                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,
+            ]);
+            let solicited = Ipv6Addr::new([
+                0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0,
+            ]);
+            assert_eq!(addr.to_solicited_node_address(), solicited);
+            assert!(addr.destination_matches(&addr));
+            assert!(addr.destination_matches(&solicited));
+        }
     }
 }
